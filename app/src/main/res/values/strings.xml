@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">FTA Helper</string>
+    <string name="title_monitor">Monitor</string>
+    <string name="title_flashcards">Flashcards</string>
+    <string name="title_references">References</string>
+    <string name="title_notes">Notes</string>
+</resources>

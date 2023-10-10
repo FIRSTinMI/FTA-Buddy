@@ -1,0 +1,23 @@
+{
+    "manifest_version": 3,
+    "name": "FTA Helper",
+    "description": "Enable the field monitor and notes sync for FTA Helper app",
+    "version": "1.0",
+    "permissions": [
+        "scripting",
+        "webNavigation",
+        "storage"
+    ],
+    "background": {
+        "service_worker": "sw.js"
+    },
+    "action": {
+        "default_popup": "menu.html",
+        "default_icon": "fta-helper.png"
+    },
+    "host_permissions": [
+        "https://*/FieldMonitor",
+        "http://*/FieldMonitor",
+        "file:///*/FieldMonitor.html"
+    ]
+}

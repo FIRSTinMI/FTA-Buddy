@@ -1,0 +1,53 @@
+package com.filipkin.ftahelper;
+
+import android.util.Log;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+
+import tech.gusavila92.websocketclient.WebSocketClient;
+
+public class WebSocket extends WebSocketClient {
+
+    WebSocket(URI uri) {
+        super(uri);
+
+        this.setConnectTimeout(10000);
+        this.setReadTimeout(60000);
+        this.enableAutomaticReconnection(5000);
+        this.connect();
+    }
+    @Override
+    public void onOpen() {
+        Log.i("WebSocket", "Session is starting");
+        this.send("Hello World!");
+    }
+
+    @Override
+    public void onTextReceived(String s) {
+        Log.i("WebSocket", s);
+    }
+
+    @Override
+    public void onBinaryReceived(byte[] data) {
+    }
+
+    @Override
+    public void onPingReceived(byte[] data) {
+    }
+
+    @Override
+    public void onPongReceived(byte[] data) {
+    }
+
+    @Override
+    public void onException(Exception e) {
+        System.out.println(e.getMessage());
+    }
+
+    @Override
+    public void onCloseReceived() {
+        Log.i("WebSocket", "Closed ");
+    }
+
+}

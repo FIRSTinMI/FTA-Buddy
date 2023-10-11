@@ -17,8 +17,6 @@ import com.filipkin.ftahelper.databinding.ActivityMainBinding;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import tech.gusavila92.websocketclient.WebSocketClient;
-
 public class MainActivity extends AppCompatActivity {
 
     private ActivityMainBinding binding;
@@ -35,13 +33,13 @@ public class MainActivity extends AppCompatActivity {
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
         AppBarConfiguration appBarConfiguration = new AppBarConfiguration.Builder(
-                R.id.navigation_home, R.id.navigation_dashboard, R.id.navigation_notifications)
+                R.id.navigation_monitor, R.id.navigation_flashcards, R.id.navigation_reference, R.id.navigation_notes)
                 .build();
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_activity_main);
         NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
         NavigationUI.setupWithNavController(binding.navView, navController);
 
-
+        /*
         URI uri;
         try {
             // Connect to local host
@@ -51,7 +49,6 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
             return;
         }
-
         ws = new WebSocket(uri) {
             @Override
             public void onTextReceived(String s) {
@@ -70,6 +67,6 @@ public class MainActivity extends AppCompatActivity {
                 });
             }
         };
-
+        */
     }
 }

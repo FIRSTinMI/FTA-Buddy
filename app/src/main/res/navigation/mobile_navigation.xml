@@ -3,23 +3,29 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/mobile_navigation"
-    app:startDestination="@+id/navigation_home">
+    app:startDestination="@+id/navigation_monitor">
 
     <fragment
-        android:id="@+id/navigation_home"
-        android:name="com.filipkin.ftahelper.ui.home.HomeFragment"
-        android:label="@string/title_home"
-        tools:layout="@layout/fragment_home" />
+        android:id="@+id/navigation_monitor"
+        android:name="com.filipkin.ftahelper.ui.monitor.MonitorFragment"
+        android:label="@string/title_monitor"
+        tools:layout="@layout/fragment_monitor" />
 
     <fragment
-        android:id="@+id/navigation_dashboard"
-        android:name="com.filipkin.ftahelper.ui.dashboard.DashboardFragment"
-        android:label="@string/title_dashboard"
-        tools:layout="@layout/fragment_dashboard" />
+        android:id="@+id/navigation_flashcards"
+        android:name="com.filipkin.ftahelper.ui.flashcards.FlashcardsFragment"
+        android:label="@string/title_flashcards"
+        tools:layout="@layout/fragment_monitor" />
 
     <fragment
-        android:id="@+id/navigation_notifications"
-        android:name="com.filipkin.ftahelper.ui.notifications.NotificationsFragment"
-        android:label="@string/title_notifications"
-        tools:layout="@layout/fragment_notifications" />
+        android:id="@+id/navigation_reference"
+        android:name="com.filipkin.ftahelper.ui.reference.ReferenceFragment"
+        android:label="@string/title_reference"
+        tools:layout="@layout/fragment_reference" />
+
+    <fragment
+        android:id="@+id/navigation_notes"
+        android:name="com.filipkin.ftahelper.ui.notes.NotesFragment"
+        android:label="@string/title_notes"
+        tools:layout="@layout/fragment_notes" />
 </navigation>

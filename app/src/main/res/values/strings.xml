@@ -1,6 +1,11 @@
 <resources>
-    <string name="app_name">FTA-Helper</string>
-    <string name="title_home">Home</string>
-    <string name="title_dashboard">Dashboard</string>
-    <string name="title_notifications">Notifications</string>
+    <string name="app_name">FTA Helper</string>
+    <string name="title_monitor">Monitor</string>
+    <string name="title_flashcards">Flashcards</string>
+    <string name="title_reference">References</string>
+    <string name="title_notes">Notes</string>
+    <string name="ds">DS</string>
+    <string name="radio">Radio</string>
+    <string name="rio">RIO</string>
+    <string name="team">Team</string>
 </resources>

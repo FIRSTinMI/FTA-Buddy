@@ -8,4 +8,18 @@
     <string name="radio">Radio</string>
     <string name="rio">RIO</string>
     <string name="team">Team</string>
+    <string name="match_display">M: %1$d</string>
+    <string-array name="field_state">
+        <item>Unknown</item>
+    </string-array>
+    <string-array name="ds_state">
+        <item> </item>
+        <item> </item>
+        <item>X</item>
+        <item>M</item>
+        <item>W</item>
+    </string-array>
+    <string name="battery">%1$2.1fv</string>
+    <string name="ping">%1$d ms</string>
+    <string name="bwu">%1$.2f mbps</string>
 </resources>

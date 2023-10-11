@@ -9,7 +9,7 @@ import tech.gusavila92.websocketclient.WebSocketClient;
 
 public class WebSocket extends WebSocketClient {
 
-    WebSocket(URI uri) {
+    public WebSocket(URI uri) {
         super(uri);
 
         this.setConnectTimeout(10000);
@@ -20,7 +20,6 @@ public class WebSocket extends WebSocketClient {
     @Override
     public void onOpen() {
         Log.i("WebSocket", "Session is starting");
-        this.send("Hello World!");
     }
 
     @Override

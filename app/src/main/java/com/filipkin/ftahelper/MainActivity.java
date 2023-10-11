@@ -4,9 +4,11 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.TextView;
 
+import com.filipkin.ftahelper.ui.monitor.MonitorViewModel;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
@@ -20,7 +22,6 @@ import java.net.URISyntaxException;
 public class MainActivity extends AppCompatActivity {
 
     private ActivityMainBinding binding;
-    private WebSocket ws;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,35 +39,5 @@ public class MainActivity extends AppCompatActivity {
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_activity_main);
         NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
         NavigationUI.setupWithNavController(binding.navView, navController);
-
-        /*
-        URI uri;
-        try {
-            // Connect to local host
-            uri = new URI("ws://127.0.0.1:3000/");
-        }
-        catch (URISyntaxException e) {
-            e.printStackTrace();
-            return;
-        }
-        ws = new WebSocket(uri) {
-            @Override
-            public void onTextReceived(String s) {
-                Log.i("WebSocket", "Message received");
-                final String message = s;
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        try{
-                            //TextView textView = findViewById(R.id.);
-                            //textView.setText(message);
-                        } catch (Exception e){
-                            e.printStackTrace();
-                        }
-                    }
-                });
-            }
-        };
-        */
     }
 }

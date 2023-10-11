@@ -42,7 +42,7 @@ function sendUpdate() {
     if (JSON.stringify(data) == JSON.stringify(lastData)) return;
     lastData = data;
 
-    fetch('http://127.0.0.1:3000/monitor', {
+    fetch('http://n.filipkin.com:9014/monitor', {
         method: 'POST',
         headers: {
             'content-type': 'application/json'

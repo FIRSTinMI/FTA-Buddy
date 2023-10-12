@@ -1,4 +1,4 @@
-export const DEFAULT_MONITOR = {
+exports.DEFAULT_MONITOR = {
     field: 0,
     match: 0,
     time: 'unk',

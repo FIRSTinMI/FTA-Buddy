@@ -14,6 +14,6 @@
         "cors": "^2.8.5",
         "express": "^4.18.2",
         "express-ws": "^5.0.2",
-        "mysql2-promise": "^0.1.4"
+        "mysql-promise": "^5.0.0"
     }
 }

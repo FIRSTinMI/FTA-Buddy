@@ -16,3 +16,4 @@ local.properties
 extension.crx
 extension.pem
 node_modules
+.vscode

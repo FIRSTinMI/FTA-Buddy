@@ -8,7 +8,7 @@ public class MonitorViewModel extends ViewModel {
 
     public MutableLiveData<FieldState> getField() {
         if (field == null) {
-            field = new MutableLiveData<FieldState>();
+            field = new MutableLiveData<>();
         }
 
         return field;

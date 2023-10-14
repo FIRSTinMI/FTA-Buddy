@@ -41,7 +41,7 @@ public class MonitorFragment extends Fragment {
         binding = FragmentMonitorBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
-        SharedPreferences eventCode = Objects.requireNonNull(getContext()).getSharedPreferences("eventCode", 0);
+        SharedPreferences eventCode = requireContext().getSharedPreferences("eventCode", 0);
         String savedEvent = eventCode.getString("eventCode", null);
         if (savedEvent != null) {
             binding.monitorEvent.setText(savedEvent);

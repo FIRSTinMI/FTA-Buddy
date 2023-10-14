@@ -27,12 +27,4 @@ public class FlashcardsFragment extends Fragment {
                              @Nullable Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_flashcards, container, false);
     }
-
-    @Override
-    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
-        mViewModel = new ViewModelProvider(this).get(FlashcardsViewModel.class);
-        // TODO: Use the ViewModel
-    }
-
 }

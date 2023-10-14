@@ -1,6 +1,6 @@
 function read(station) {
     return {
-        team: document.getElementById(station + 'Number').innerText,
+        number: document.getElementById(station + 'Number').innerText,
         ds: identifyStatus(document.getElementById(station + 'ds')),
         radio: identifyStatus(document.getElementById(station + 'radio')),
         rio: identifyStatus(document.getElementById(station + 'robot')),
@@ -42,7 +42,7 @@ function sendUpdate() {
     if (JSON.stringify(data) == JSON.stringify(lastData)) return;
     lastData = data;
 
-    fetch('http://n.filipkin.com:9014/monitor', {
+    fetch('http://127.0.0.1:8284/monitor', {
         method: 'POST',
         headers: {
             'content-type': 'application/json'

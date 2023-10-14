@@ -21,15 +21,16 @@ app.get('/monitor', (req, res) => {
 
 app.post('/monitor', (req, res) => {
     monitor = req.body;
-    console.log(monitor);
     res.send();
     pushUpdateToSockets(monitor);
 });
 
 app.ws('/', function (ws, req) {
+    console.log('New connection');
+    ws.send(JSON.stringify(monitor));
     clients.push(ws);
 
-    ws.on('message', function (msg) {
+    ws.on('message', (msg) => {
         console.log(msg);
     });
 });

@@ -18,18 +18,27 @@ import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.filipkin.ftahelper.R;
+import com.filipkin.ftahelper.util.Fetch;
 import com.filipkin.ftahelper.util.WebSocket;
 import com.filipkin.ftahelper.databinding.FragmentMonitorBinding;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.IOException;
 import java.net.URI;
-import java.util.Objects;
+import java.net.URLEncoder;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 public class MonitorFragment extends Fragment {
 
     private FragmentMonitorBinding binding;
+    private OkHttpClient client = new OkHttpClient();
     private URI uri;
     private final FieldState field = new FieldState() {};
     private MonitorViewModel monitorViewModel;
@@ -184,6 +193,35 @@ public class MonitorFragment extends Fragment {
             uri = URI.create("ws://" + eventInput + ":8284/");
             System.out.println(uri.toString());
             openWebSocket();
+        } else {
+            try {
+                String requestUrl = "https://ftahelper.filipkin.com/register/" + URLEncoder.encode(eventInput, "UTF-8");
+                Fetch.get(requestUrl, new Callback() {
+                    @Override
+                    public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                        requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Error connecting to cloud server", Toast.LENGTH_LONG).show());
+                    }
+
+                    @Override
+                    public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                        if (response.code() == 404) {
+                            requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Event code not found", Toast.LENGTH_SHORT).show());
+                            return;
+                        }
+                        try {
+                            JSONObject ipJson = new JSONObject(response.body().string());
+                            uri = URI.create("ws://" + ipJson.getString("local_ip") + ":8284/");
+                            System.out.println(uri.toString());
+                            openWebSocket();
+                        } catch (JSONException e) {
+                            requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Error parsing JSON response from cloud server", Toast.LENGTH_LONG).show());
+                        }
+                    }
+                });
+
+            } catch (IOException e) {
+                requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Error URI encoding event code", Toast.LENGTH_LONG).show());
+            }
         }
     }
 

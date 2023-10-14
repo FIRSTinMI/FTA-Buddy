@@ -42,6 +42,7 @@ dependencies {
     implementation 'androidx.navigation:navigation-ui:2.7.4'
     implementation 'tech.gusavila92:java-android-websocket-client:1.2.2'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+    implementation 'com.squareup.okhttp3:okhttp-android:5.0.0-alpha.11'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'

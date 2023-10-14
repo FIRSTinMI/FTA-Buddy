@@ -4,7 +4,7 @@ const cors = require('cors');
 const { DATABASE_CONFIG } = require('./config');
 const app = express();
 const expressWs = require('express-ws')(app);
-const port = process.env.PORT | 3000;
+const port = 9014;
 const db = require('mysql-promise')();
 
 db.configure(DATABASE_CONFIG);
@@ -56,8 +56,10 @@ app.post('/register/:event', (req, res) => {
     db.query('SELECT * FROM events WHERE code = ?;', [req.params.event]).spread(event => {
         if (event.length == 0) {
             db.query('INSERT INTO events VALUES (?, ?, NULL);', [req.params.event, req.body.ip]);
+            console.log(`Registered event ${req.params.event} at ${req.body.ip}`);
         } else {
             db.query('UPDATE events SET local_ip = ? WHERE code = ?;', [req.body.ip, req.params.event]);
+            console.log(`Updated event ${req.params.event} at ${req.body.ip}`);
         }
         res.send();
     });

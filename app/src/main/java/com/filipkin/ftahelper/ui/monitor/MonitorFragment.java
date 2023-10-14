@@ -18,7 +18,7 @@ import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.filipkin.ftahelper.R;
-import com.filipkin.ftahelper.WebSocket;
+import com.filipkin.ftahelper.util.WebSocket;
 import com.filipkin.ftahelper.databinding.FragmentMonitorBinding;
 
 import org.json.JSONException;
@@ -173,7 +173,7 @@ public class MonitorFragment extends Fragment {
             binding.red3Bwu.setText(getString(R.string.bwu, newField.red3.bwu));
         };
 
-        monitorViewModel.getField().observe(this, fieldObserver);
+        monitorViewModel.getField().observe(getViewLifecycleOwner(), fieldObserver);
         monitorViewModel.getField().setValue(field);
 
         return root;
@@ -198,7 +198,7 @@ public class MonitorFragment extends Fragment {
             @Override
             public void onTextReceived(String s) {
                 final String message = s;
-                Objects.requireNonNull(getActivity()).runOnUiThread(() -> {
+                requireActivity().runOnUiThread(() -> {
                     Log.i("WebSocket", message);
                     try {
                         JSONObject jObject = new JSONObject(message);
@@ -284,13 +284,13 @@ public class MonitorFragment extends Fragment {
             public void onOpen() {
                 if (!firstConnection) return;
                 firstConnection = false;
-                Objects.requireNonNull(getActivity()).runOnUiThread(() -> Toast.makeText(getContext(), "Connected to websocket", Toast.LENGTH_SHORT).show());
+                requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Connected to websocket", Toast.LENGTH_SHORT).show());
             }
 
             @Override
             public void onException(Exception e) {
                 System.out.println(e.getMessage());
-                Objects.requireNonNull(getActivity()).runOnUiThread(() -> Toast.makeText(getContext(), "Error connecting " + e.getMessage(), Toast.LENGTH_LONG).show());
+                requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Error connecting " + e.getMessage(), Toast.LENGTH_LONG).show());
             }
         };
     }

@@ -1,4 +1,4 @@
-package com.filipkin.ftahelper;
+package com.filipkin.ftahelper.util;
 
 import android.util.Log;
 

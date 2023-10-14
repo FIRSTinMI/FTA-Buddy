@@ -1,7 +1,5 @@
 package com.filipkin.ftahelper.ui.reference;
 
-import androidx.lifecycle.ViewModelProvider;
-
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -11,20 +9,30 @@ import androidx.fragment.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.WebView;
 
 import com.filipkin.ftahelper.R;
 
+import java.net.URI;
+
 public class ReferenceFragment extends Fragment {
 
-    private ReferenceViewModel mViewModel;
-
-    public static ReferenceFragment newInstance() {
-        return new ReferenceFragment();
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.fragment_reference, container, false);
     }
 
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
-                             @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_reference, container, false);
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+
+        WebView webView = (WebView) requireView().findViewById(R.id.webView);
+
+        webView.loadUrl("file:///android_asset/reference.html");
+    }
+
+    public interface OnFragmentInteractionListener {
+        // TODO: Update argument type and name
+        void onFragmentInteraction(URI uri);
     }
 }

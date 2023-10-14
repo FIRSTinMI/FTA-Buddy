@@ -13,6 +13,8 @@ let clients = [];
 app.use(bodyParser.json());
 app.use(cors());
 
+app.use(express.static('./server/public'));
+
 app.get('/monitor', (req, res) => {
     res.send(monitor);
 });

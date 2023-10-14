@@ -22,4 +22,5 @@
     <string name="battery">%1$2.1fv</string>
     <string name="ping">%1$d ms</string>
     <string name="bwu">%1$.2f mbps</string>
+    <string name="event_code_or_ip">Event Code or IP</string>
 </resources>

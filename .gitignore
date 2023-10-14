@@ -17,3 +17,4 @@ extension.crx
 extension.pem
 node_modules
 .vscode
+.idea/deploymentTargetDropDown.xml

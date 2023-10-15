@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">FTA Helper</string>
+    <string name="app_name">FTA Buddy</string>
     <string name="title_monitor">Monitor</string>
     <string name="title_flashcards">Flashcards</string>
     <string name="title_reference">References</string>

@@ -233,6 +233,7 @@ public class MonitorFragment extends Fragment {
 
     private void openWebSocket() {
         new WebSocket(uri) {
+            int failedConnections = 0;
             @Override
             public void onTextReceived(String s) {
                 final String message = s;
@@ -327,6 +328,8 @@ public class MonitorFragment extends Fragment {
 
             @Override
             public void onException(Exception e) {
+                failedConnections++;
+                if (failedConnections == 3) this.disableAutomaticReconnection();
                 System.out.println(e.getMessage());
                 requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Error connecting " + e.getMessage(), Toast.LENGTH_LONG).show());
             }

@@ -26,7 +26,7 @@ public class ReferenceFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        WebView webView = (WebView) requireView().findViewById(R.id.webView);
+        WebView webView = requireView().findViewById(R.id.webView);
 
         webView.loadUrl("file:///android_asset/reference.html");
     }

@@ -1,5 +1,6 @@
 const colors = require('colors/safe');
 const ip = require('ip');
+const WebSocket = require('ws')
 
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -24,6 +25,7 @@ const port = 8284;
 let monitor = DEFAULT_MONITOR;
 
 let clients = [];
+let cloud;
 
 app.use(bodyParser.json());
 app.use(cors());
@@ -51,6 +53,7 @@ app.ws('/', function (ws, req) {
 });
 
 function pushUpdateToSockets(monitor) {
+    cloud.send(JSON.stringify(monitor));
     for (let ws of clients) {
         ws.send(JSON.stringify(monitor));
     }
@@ -83,6 +86,15 @@ app.listen(port, async () => {
     }).then(res => {
         if (res.status == 200) {
             console.log(`Successfully registered with cloud server under event code ${colors.green.bold(code)}`);
+
+            cloud = new WebSocket(`ws://server.filipkin.com:9014/`);
+
+            cloud.on('error', console.error);
+            cloud.on('open', () => {
+                cloud.send(`server-${code}`);
+                console.log(`Connected to cloud websocket server for relaying`)
+            });
+
             return null;
         }
     }).then(res => {

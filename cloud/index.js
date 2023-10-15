@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const { DATABASE_CONFIG } = require('./config');
+const { DEFAULT_MONITOR } = require('../shared/constants');
 const app = express();
 const expressWs = require('express-ws')(app);
 const port = 9014;
@@ -43,6 +44,12 @@ app.use(express.static('./cloud/public'));
 
 // Get local server ip for an event
 app.get('/register/:event', (req, res) => {
+    if (events[req.params.code] && events[req.params.code].ip) {
+        return res.send({
+            'local_ip': events[req.params.code].ip
+        });
+    }
+
     db.query('SELECT local_ip FROM events WHERE code = ?;', [req.params.event]).spread(ip => {
         if (ip.length == 0) {
             return res.status(404).send();
@@ -53,6 +60,16 @@ app.get('/register/:event', (req, res) => {
 
 // Register a local server ip for an event
 app.post('/register/:event', (req, res) => {
+    if (events[req.params.code]) {
+        events[req.params.code].ip = req.body.ip;
+    } else {
+        events[req.params.code] = {
+            ip: req.body.ip,
+            socketClients: [],
+            monitor: DEFAULT_MONITOR
+        }
+    }
+
     db.query('SELECT * FROM events WHERE code = ?;', [req.params.event]).spread(event => {
         if (event.length == 0) {
             db.query('INSERT INTO events VALUES (?, ?, NULL);', [req.params.event, req.body.ip]);
@@ -140,29 +157,44 @@ app.post('/message/:team', (req, res) => {
     });
 });
 
-// Register client for an event
-app.ws('/:event', function (ws, req) {
-    events[req.params.event].socketClients.push(ws);
+app.ws('/', (ws, req) => {
+    ws.on('message', (msg) => {
+        if (msg.startsWith('server')) {
+            let eventCode = msg.substr(7);
+            console.log(`[WS ${eventCode} S] connected`);
+            if (events[eventCode]) {
+                events[eventCode].socketServer = ws;
+            } else {
+                events[eventCode] = {
+                    socketServer: ws,
+                    socketClients: [],
+                    monitor: DEFAULT_MONITOR
+                }
+            }
 
-    ws.on('message', function (msg) {
-        console.debug(`[WS ${req.params.event}] (client) ${msg}`);
+            // Register broadcast function for this server
+            ws.on('message', (msg) => {
+                console.log(`[WS ${eventCode} S] MSG Recieved`);
+                for (socketClient of events[eventCode].socketClients) {
+                    if (socketClient) socketClient.send(msg);
+                }
+            });
+
+        } else if (msg.startsWith('client')) {
+            let eventCode = msg.substr(7);
+            console.log(`[WS ${eventCode} C] connected`);
+            if (events[eventCode]) {
+                events[eventCode].socketClients.push(ws);
+            } else {
+                events[eventCode] = {
+                    socketClients: [ws],
+                    monitor: DEFAULT_MONITOR
+                }
+            }
+            ws.send(JSON.stringify(events[eventCode].monitor));
+        }
     });
 });
-
-// Register server for an event
-app.ws('/server/:event', function (ws, req) {
-    events[req.params.event].socketServer = ws;
-
-    ws.on('message', function (msg) {
-        console.debug(`[WS ${req.params.event}] (server) ${msg}`);
-    });
-});
-
-function pushUpdateToSockets(clients, monitor) {
-    for (let ws of clients) {
-        ws.send(JSON.stringify(monitor));
-    }
-}
 
 app.listen(port, () => {
     console.log(`FTA Helper cloud server listening on port ${port}`)

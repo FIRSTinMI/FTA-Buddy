@@ -7,7 +7,7 @@ import java.net.URI;
 import tech.gusavila92.websocketclient.WebSocketClient;
 
 public class WebSocket extends WebSocketClient {
-
+    public boolean open = false;
     public WebSocket(URI uri) {
         super(uri);
 
@@ -19,6 +19,7 @@ public class WebSocket extends WebSocketClient {
     @Override
     public void onOpen() {
         Log.i("WebSocket", "Session is starting");
+        open = true;
     }
 
     @Override

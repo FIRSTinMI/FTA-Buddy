@@ -695,14 +695,25 @@
         android:id="@+id/monitor_event"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="4dp"
+        android:autofillHints="none"
         android:ems="10"
-        android:inputType="text"
         android:hint="@string/event_code_or_ip"
         android:imeOptions="actionDone"
+        android:inputType="text"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.328"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/red3_row"
-        android:autofillHints="none" />
+        app:layout_constraintTop_toBottomOf="@+id/red3_row" />
+
+    <com.google.android.material.switchmaterial.SwitchMaterial
+        android:id="@+id/relay_switch"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/relay"
+        app:layout_constraintBottom_toBottomOf="@+id/monitor_event"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/monitor_event"
+        app:layout_constraintTop_toTopOf="@+id/monitor_event" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -9,6 +9,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
+import android.widget.CompoundButton;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -28,6 +29,7 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
+import java.util.Objects;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -40,6 +42,7 @@ public class MonitorFragment extends Fragment {
     private final FieldState field = new FieldState() {};
     private MonitorViewModel monitorViewModel;
     private boolean firstConnection = true;
+    private WebSocket ws;
 
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         monitorViewModel = new ViewModelProvider(this).get(MonitorViewModel.class);
@@ -48,6 +51,10 @@ public class MonitorFragment extends Fragment {
         View root = binding.getRoot();
 
         SharedPreferences eventCode = requireContext().getSharedPreferences("eventCode", 0);
+
+        boolean relayEnabled = eventCode.getBoolean("relayEnabled", false);
+        binding.relaySwitch.setChecked(relayEnabled);
+
         String savedEvent = eventCode.getString("eventCode", null);
         if (savedEvent != null) {
             binding.monitorEvent.setText(savedEvent);
@@ -67,6 +74,16 @@ public class MonitorFragment extends Fragment {
                 binding.monitorEvent.clearFocus();
             }
             return false;
+        });
+
+        // If the relay switch is changed then restart the connection procedure
+        binding.relaySwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            eventCode.edit().putBoolean("relayEnabled", isChecked).apply();
+
+            String eventInput = binding.monitorEvent.getText().toString();
+            if (!eventInput.isEmpty()) {
+                parseEventCodeAndConnect(eventInput);
+            }
         });
 
         Resources res = getResources();
@@ -187,34 +204,42 @@ public class MonitorFragment extends Fragment {
 
     private void parseEventCodeAndConnect(String eventInput) {
         if (eventInput.matches("^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$")) {
+            binding.relaySwitch.setChecked(false);
+            binding.relaySwitch.setEnabled(false);
             uri = URI.create("ws://" + eventInput + ":8284/");
             System.out.println(uri.toString());
             openWebSocket();
         } else {
             try {
-                String requestUrl = "https://ftahelper.filipkin.com/register/" + URLEncoder.encode(eventInput, "UTF-8");
-                Fetch.get(requestUrl, new Callback() {
-                    @Override
-                    public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                        requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Error connecting to cloud server", Toast.LENGTH_LONG).show());
-                    }
+                binding.relaySwitch.setEnabled(true);
 
-                    @Override
-                    public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                        if (response.code() == 404) {
-                            requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Event code not found", Toast.LENGTH_SHORT).show());
-                            return;
+                if (binding.relaySwitch.isChecked()) {
+                    uri = URI.create("ws://server.filipkin.com:9014/");
+                    openWebSocket(eventInput);
+                } else {
+                    String requestUrl = "https://ftahelper.filipkin.com/register/" + URLEncoder.encode(eventInput, "UTF-8");
+                    Fetch.get(requestUrl, new Callback() {
+                        @Override
+                        public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                            requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Error connecting to cloud server", Toast.LENGTH_LONG).show());
                         }
-                        try {
-                            JSONObject ipJson = new JSONObject(response.body().string());
-                            uri = URI.create("ws://" + ipJson.getString("local_ip") + ":8284/");
-                            System.out.println(uri.toString());
-                            openWebSocket();
-                        } catch (JSONException e) {
-                            requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Error parsing JSON response from cloud server", Toast.LENGTH_LONG).show());
+
+                        @Override
+                        public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                            if (response.code() == 404) {
+                                requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Event code not found", Toast.LENGTH_SHORT).show());
+                                return;
+                            }
+                            try {
+                                JSONObject ipJson = new JSONObject(response.body().string());
+                                uri = URI.create("ws://" + ipJson.getString("local_ip") + ":8284/");
+                                openWebSocket();
+                            } catch (JSONException e) {
+                                requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Error parsing JSON response from cloud server", Toast.LENGTH_LONG).show());
+                            }
                         }
-                    }
-                });
+                    });
+                }
 
             } catch (IOException e) {
                 requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Error URI encoding event code", Toast.LENGTH_LONG).show());
@@ -229,7 +254,14 @@ public class MonitorFragment extends Fragment {
     }
 
     private void openWebSocket() {
-        new WebSocket(uri) {
+        openWebSocket(null);
+    }
+    
+    private void openWebSocket(String eventInput) {
+        Log.i("Websocket", "Connection initializing to " + uri.toString());
+        firstConnection = true;
+        if (ws != null && ws.open) ws.close();
+        ws = new WebSocket(uri) {
             int failedConnections = 0;
             @Override
             public void onTextReceived(String s) {
@@ -318,8 +350,13 @@ public class MonitorFragment extends Fragment {
 
             @Override
             public void onOpen() {
+                Log.i("Websocket", "Connection established");
                 if (!firstConnection) return;
                 firstConnection = false;
+                if (eventInput != null) {
+                    this.send("client-"+eventInput);
+                }
+                this.open = true;
                 requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Connected to websocket", Toast.LENGTH_SHORT).show());
             }
 

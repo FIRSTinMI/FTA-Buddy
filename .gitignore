@@ -18,3 +18,4 @@ extension.pem
 node_modules
 .vscode
 .idea/deploymentTargetDropDown.xml
+.idea/statistic.xml

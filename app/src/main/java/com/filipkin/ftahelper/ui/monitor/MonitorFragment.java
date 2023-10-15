@@ -31,14 +31,11 @@ import java.net.URLEncoder;
 
 import okhttp3.Call;
 import okhttp3.Callback;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
 import okhttp3.Response;
 
 public class MonitorFragment extends Fragment {
 
     private FragmentMonitorBinding binding;
-    private OkHttpClient client = new OkHttpClient();
     private URI uri;
     private final FieldState field = new FieldState() {};
     private MonitorViewModel monitorViewModel;
@@ -329,7 +326,9 @@ public class MonitorFragment extends Fragment {
             @Override
             public void onException(Exception e) {
                 failedConnections++;
-                if (failedConnections == 3) this.disableAutomaticReconnection();
+                if (failedConnections == 3) {
+                    this.close();
+                }
                 System.out.println(e.getMessage());
                 requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Error connecting " + e.getMessage(), Toast.LENGTH_LONG).show());
             }

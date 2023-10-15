@@ -24,6 +24,12 @@
     <string name="bwu">%1$.2f mbps</string>
     <string name="event_code_or_ip">Event Code or IP</string>
     <string name="relay">Relay</string>
+    <string name="more">More</string>
+    <string name="type_message_here">Type message here</string>
+    <string name="send">Send</string>
+    <string name="add_or_remove_flashcards">Add or Remove Flashcards</string>
+    <string name="flashcard_text">Flashcard text</string>
+    <string name="finish_editing">Finish editing</string>
     <string-array name="default_flashcards">
         <item>Plug in Ethernet</item>
         <item>Turn on Robot</item>

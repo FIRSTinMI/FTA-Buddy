@@ -7,13 +7,72 @@
     android:layout_height="match_parent"
     tools:context=".ui.flashcards.FlashcardsFragment">
 
-    <LinearLayout
-        android:id="@+id/flashcard_buttons"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/flashcards_interface"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:padding="8dp">
-    </LinearLayout>
+        tools:layout_editor_absoluteX="177dp"
+        tools:layout_editor_absoluteY="0dp">
+
+        <LinearLayout
+            android:id="@+id/flashcard_buttons"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:orientation="vertical"
+            android:padding="8dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+            <!-- Left blank intentionally -->
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/add_or_remove"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="8dp"
+            android:text="@string/add_or_remove_flashcards"
+            android:textSize="18sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/add_container"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="1dp"
+            android:padding="4dp"
+            app:layout_constraintBottom_toTopOf="@+id/add_or_remove"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            android:visibility="gone">
+
+            <EditText
+                android:id="@+id/new_flashcard_text"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:ems="10"
+                android:hint="@string/flashcard_text"
+                android:inputType="text"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toStartOf="@+id/new_flashcard_add"
+                app:layout_constraintStart_toStartOf="parent"
+                android:autofillHints="none" />
+
+            <Button
+                android:id="@+id/new_flashcard_add"
+                android:layout_width="64dp"
+                android:layout_height="wrap_content"
+                app:icon="@android:drawable/ic_input_add"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/flashcard_display"
@@ -22,7 +81,8 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toTopOf="parent"
+        android:visibility="gone">
 
         <TextView
             android:id="@+id/flashcard_text"

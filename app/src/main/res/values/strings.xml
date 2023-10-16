@@ -32,6 +32,7 @@
     <string name="finish_editing">Finish editing</string>
     <string name="notes_login_dialog">Enter username for notes</string>
     <string name="notes_login_title">Notes Login</string>
+    <string name="message_container">Message container</string>
     <string-array name="default_flashcards">
         <item>Plug in Ethernet</item>
         <item>Turn on Robot</item>

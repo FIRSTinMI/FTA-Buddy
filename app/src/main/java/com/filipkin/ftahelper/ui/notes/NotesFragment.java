@@ -3,7 +3,6 @@ package com.filipkin.ftahelper.ui.notes;
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.SharedPreferences;
-import android.database.DataSetObserver;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -12,6 +11,7 @@ import androidx.fragment.app.DialogFragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 
+import android.text.Html;
 import android.text.InputType;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -21,7 +21,9 @@ import android.view.inputmethod.EditorInfo;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.ScrollView;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.filipkin.ftahelper.R;
@@ -37,6 +39,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Objects;
 
 import okhttp3.Call;
@@ -127,6 +130,31 @@ public class NotesFragment extends DialogFragment {
 
         notesViewModel.getTeams().observe(getViewLifecycleOwner(), teamsObserver);
 
+        // Update notes from live view
+        @SuppressLint("SetTextI18n")
+        final Observer<ArrayList<JSONObject>> messagesObserver = newMessages -> {
+            binding.messageContainer.removeAllViews();
+            for (JSONObject msg : newMessages) {
+                TextView textView = new TextView(requireContext());
+                String messageString = null;
+                try {
+                    messageString = String.format("<b>%s</b> @%s<br/><span style=\"font-size: 12px\">%s</span><br/>%s",
+                            msg.getString("username"),
+                            msg.getString("event"),
+                            msg.getString("created"),
+                            msg.getString("message"));
+                } catch (JSONException e) {
+                    throw new RuntimeException(e);
+                }
+                textView.setText(Html.fromHtml(messageString, Html.FROM_HTML_MODE_COMPACT));
+                binding.messageContainer.addView(textView);
+            }
+            ScrollView scrollView = binding.messageContainerScroll;
+            scrollView.postDelayed((Runnable) () -> scrollView.smoothScrollTo(0, binding.messageContainerScroll.getHeight() + 72),250);
+        };
+
+        notesViewModel.getMessages().observe(getViewLifecycleOwner(), messagesObserver);
+
         // Fetch team list
         try {
             Fetch.get("https://ftahelper.filipkin.com/teams/" + URLEncoder.encode(eventCode, "UTF-8"), new Callback() {
@@ -206,8 +234,29 @@ public class NotesFragment extends DialogFragment {
             }
 
             @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                System.out.println(response.body().string());
+            public void onResponse(@NonNull Call call, @NonNull Response response) {
+                try {
+                    JSONArray jsonMessages = new JSONArray(response.body().string());
+                    ArrayList<JSONObject> messages = new ArrayList<>();
+                    for (int i = 0; i < jsonMessages.length(); i++) {
+                        messages.add(jsonMessages.getJSONObject(i));
+                    }
+                    messages.sort((Comparator<JSONObject>) (o1, o2) -> {
+                        try {
+                            return o1.getString("created").compareTo(o2.getString("created"));
+                        } catch (JSONException e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+
+                    requireActivity().runOnUiThread(() -> notesViewModel.getMessages().setValue(messages));
+
+                } catch (JSONException e) {
+                    throw new RuntimeException(e);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+
             }
         });
     }

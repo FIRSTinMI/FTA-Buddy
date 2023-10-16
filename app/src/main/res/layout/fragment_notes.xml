@@ -7,6 +7,7 @@
     tools:context=".ui.notes.NotesFragment">
 
     <LinearLayout
+        android:id="@+id/linearLayout"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
@@ -17,13 +18,12 @@
         <Spinner
             android:id="@+id/team_selector"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:minHeight="48dp"
-            />
+            android:layout_height="48dp"
+            android:layout_weight="1" />
     </LinearLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/message_send_container"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:background="?attr/colorSurfaceContainerHigh"
@@ -46,18 +46,35 @@
             android:id="@+id/notes_message"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:minHeight="48dp"
             android:layout_marginEnd="8dp"
+            android:autofillHints="none"
             android:ems="10"
-            android:hint="@string/type_message_here"
             android:gravity="start|top"
+            android:hint="@string/type_message_here"
             android:imeOptions="actionSend"
+            android:minHeight="48dp"
             android:singleLine="true"
-            android:maxLines="3"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/send_button"
             app:layout_constraintStart_toStartOf="parent"
-            android:autofillHints="none" />
+            android:inputType="textCapSentences" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <ScrollView
+        android:id="@+id/message_container_scroll"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:contentDescription="@string/message_container"
+        app:layout_constraintBottom_toTopOf="@+id/message_send_container"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/linearLayout">
+
+        <LinearLayout
+            android:id="@+id/message_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </ScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>

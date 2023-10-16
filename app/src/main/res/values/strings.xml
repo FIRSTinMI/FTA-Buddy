@@ -30,6 +30,8 @@
     <string name="add_or_remove_flashcards">Add or Remove Flashcards</string>
     <string name="flashcard_text">Flashcard text</string>
     <string name="finish_editing">Finish editing</string>
+    <string name="notes_login_dialog">Enter username for notes</string>
+    <string name="notes_login_title">Notes Login</string>
     <string-array name="default_flashcards">
         <item>Plug in Ethernet</item>
         <item>Turn on Robot</item>

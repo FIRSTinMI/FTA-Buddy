@@ -39,13 +39,13 @@ public class FlashcardsFragment extends Fragment {
 
         layout = binding.flashcardButtons;
 
-        binding.flashcardDisplay.setOnClickListener(c -> {
+        binding.flashcardDisplay.setOnClickListener(v -> {
             binding.flashcardDisplay.setVisibility(View.GONE);
             binding.flashcardsInterface.setVisibility(View.VISIBLE);
         });
 
         // TODO: Create a way to add and remove your own flashcards
-        flashcardPrefs = requireContext().getSharedPreferences("flashcards", 0);
+        flashcardPrefs = requireContext().getSharedPreferences("FTABuddy", 0);
         flashcards = new HashSet<>(flashcardPrefs.getStringSet("flashcards", new HashSet<>(Arrays.asList(root.getResources().getStringArray(R.array.default_flashcards)))));
 
 
@@ -53,7 +53,7 @@ public class FlashcardsFragment extends Fragment {
             createFlashcardButton(flashcard);
         }
 
-        binding.newFlashcardAdd.setOnClickListener(c -> {
+        binding.newFlashcardAdd.setOnClickListener(v -> {
             String flashcard = String.valueOf(binding.newFlashcardText.getText());
             flashcards.add(flashcard);
             flashcardPrefs.edit().putStringSet("flashcards", flashcards).apply();
@@ -61,7 +61,7 @@ public class FlashcardsFragment extends Fragment {
             createFlashcardButton(flashcard);
         });
 
-        binding.addOrRemove.setOnClickListener(c -> {
+        binding.addOrRemove.setOnClickListener(v -> {
             editing = !editing;
             if (editing) {
                 binding.addOrRemove.setText(R.string.finish_editing);
@@ -91,7 +91,7 @@ public class FlashcardsFragment extends Fragment {
         btnTag.setText(flashcard);
         if (editing) btnTag.setBackgroundColor(getResources().getColor(R.color.red_600, root.getContext().getTheme()));
 
-        btnTag.setOnClickListener(c -> {
+        btnTag.setOnClickListener(v -> {
             if (editing) {
                 flashcards.remove(flashcard);
                 flashcardPrefs.edit().putStringSet("flashcards", flashcards).apply();

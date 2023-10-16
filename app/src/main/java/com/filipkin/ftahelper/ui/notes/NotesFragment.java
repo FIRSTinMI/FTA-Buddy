@@ -47,16 +47,19 @@ public class NotesFragment extends Fragment {
         binding = FragmentNotesBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
-        SharedPreferences sharedPreferences = requireContext().getSharedPreferences("eventCode", 0);
+        sharedPreferences = requireContext().getSharedPreferences("FTABuddy", 0);
         String eventCode = sharedPreferences.getString("eventCode", null);
         if (eventCode == null) {
             return root;
         }
 
         @SuppressLint("SetTextI18n")
-        final Observer<String[]> teamsObserver = newTeams -> {
+        final Observer<ArrayList<String>> teamsObserver = newTeams -> {
             Spinner spinner = binding.teamSelector;
-            spinner.setAdapter(new ArrayAdapter<String>(root.getContext(),  android.R.layout.simple_spinner_dropdown_item, newTeams));
+            spinner.setAdapter(new ArrayAdapter<>(root.getContext(),  android.R.layout.simple_spinner_dropdown_item, newTeams));
+            if (newTeams.contains(currentlySelectedTeam)) {
+                spinner.setSelection(newTeams.indexOf(currentlySelectedTeam));
+            }
         };
 
         notesViewModel.getTeams().observe(getViewLifecycleOwner(), teamsObserver);
@@ -71,14 +74,15 @@ public class NotesFragment extends Fragment {
                 @Override
                 public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                     try {
-                        JSONArray teamsArray = new JSONArray(response.body().string());
+                        JSONArray jsonArray = new JSONArray(response.body().string());
 
-                        String[] teams = new String[teamsArray.length()];
-                        for(int i = 0; i < teamsArray.length(); i++) {
-                            teams[i] = Integer.toString(teamsArray.getInt(i));
+                        String[] teamsArray = new String[jsonArray.length()];
+                        for(int i = 0; i < jsonArray.length(); i++) {
+                            teamsArray[i] = Integer.toString(jsonArray.getInt(i));
                         }
+                        Arrays.sort(teamsArray);
 
-                        requireActivity().runOnUiThread(() -> notesViewModel.getTeams().setValue(teams));
+                        requireActivity().runOnUiThread(() -> notesViewModel.getTeams().setValue(new ArrayList<>(Arrays.asList(teamsArray))));
                     } catch (JSONException e) {
                         requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Error getting teams list from cloud", Toast.LENGTH_LONG).show());
                     }

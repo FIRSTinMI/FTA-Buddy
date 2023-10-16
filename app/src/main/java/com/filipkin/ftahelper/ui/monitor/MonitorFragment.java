@@ -9,7 +9,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
-import android.widget.CompoundButton;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -50,12 +49,12 @@ public class MonitorFragment extends Fragment {
         binding = FragmentMonitorBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
-        SharedPreferences eventCode = requireContext().getSharedPreferences("eventCode", 0);
+        SharedPreferences sharedPreferences = requireContext().getSharedPreferences("FTABuddy", 0);
 
-        boolean relayEnabled = eventCode.getBoolean("relayEnabled", false);
+        boolean relayEnabled = sharedPreferences.getBoolean("relayEnabled", false);
         binding.relaySwitch.setChecked(relayEnabled);
 
-        String savedEvent = eventCode.getString("eventCode", null);
+        String savedEvent = sharedPreferences.getString("eventCode", null);
         if (savedEvent != null) {
             binding.monitorEvent.setText(savedEvent);
             parseEventCodeAndConnect(savedEvent);
@@ -66,7 +65,7 @@ public class MonitorFragment extends Fragment {
             if (actionId == EditorInfo.IME_ACTION_DONE) {
                 String eventInput = binding.monitorEvent.getText().toString();
 
-                eventCode.edit().putString("eventCode", eventInput).apply();
+                sharedPreferences.edit().putString("eventCode", eventInput).apply();
 
                 firstConnection = true;
                 parseEventCodeAndConnect(eventInput);
@@ -78,7 +77,7 @@ public class MonitorFragment extends Fragment {
 
         // If the relay switch is changed then restart the connection procedure
         binding.relaySwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            eventCode.edit().putBoolean("relayEnabled", isChecked).apply();
+            sharedPreferences.edit().putBoolean("relayEnabled", isChecked).apply();
 
             String eventInput = binding.monitorEvent.getText().toString();
             if (!eventInput.isEmpty()) {
@@ -97,6 +96,18 @@ public class MonitorFragment extends Fragment {
                 ContextCompat.getColor(root.getContext(), R.color.yellow),
                 ContextCompat.getColor(root.getContext(), R.color.yellow)
         };
+
+        // TODO: Navigate to notes by clicking team number
+        /*
+        binding.blue1Number.setOnClickListener(v -> {
+            System.out.println("Navigate away");
+            sharedPreferences.edit().putString("selectedTeam", ((TextView) v).getText().toString()).apply();
+            NavOptions.Builder navBuilder = new NavOptions.Builder();
+            NavOptions navOptions = navBuilder.setPopUpTo(R.id.navigation_notes, false).build();
+            NavController navController = NavHostFragment.findNavController(MonitorFragment.this);
+            navController.navigate(R.id.navigation_notes, null, navOptions);
+        });
+         */
 
         @SuppressLint("SetTextI18n")
         final Observer<FieldState> fieldObserver = newField -> {

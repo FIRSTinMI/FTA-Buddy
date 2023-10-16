@@ -121,10 +121,13 @@ app.post('/monitor/:event', (req, res) => {
 
 // Create a user profile for notes
 app.post('/profile', (req, res) => {
+    console.log(`New profile request for ${req.body.username}`);
     db.query('INSERT INTO profiles VALUES (null, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);', [req.body.username]).then(result => {
-        res.send(result[0].insertId.toString());
+        let id = result[0].insertId.toString();
+        console.log(`Created with id ${id}`)
+        res.send(id);
     }).catch(err => {
-        // TODO: handle duplicate usernames
+        res.status(400).send({ error: 'Username already in use' });
     });
 });
 

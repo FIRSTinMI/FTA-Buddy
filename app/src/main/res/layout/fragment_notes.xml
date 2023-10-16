@@ -33,7 +33,7 @@
         app:layout_constraintStart_toStartOf="parent">
 
         <Button
-            android:id="@+id/button"
+            android:id="@+id/send_button"
             android:layout_width="64dp"
             android:layout_height="wrap_content"
             android:contentDescription="@string/send"
@@ -43,7 +43,7 @@
             app:layout_constraintTop_toTopOf="parent" />
 
         <EditText
-            android:id="@+id/editTextTextMultiLine"
+            android:id="@+id/notes_message"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:minHeight="48dp"
@@ -53,7 +53,7 @@
             android:gravity="start|top"
             android:inputType="textMultiLine"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/button"
+            app:layout_constraintEnd_toStartOf="@+id/send_button"
             app:layout_constraintStart_toStartOf="parent"
             android:autofillHints="none" />
 

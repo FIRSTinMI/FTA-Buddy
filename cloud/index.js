@@ -152,8 +152,8 @@ app.get('/message/:team', (req, res) => {
 
 // Post a message on the notes for a team
 app.post('/message/:team', (req, res) => {
+    console.log(`[NOTE ${req.body.event}] ${req.params.team} (${req.body.profile}): ${req.body.message}`);
     db.query('INSERT INTO messages VALUES (null, ?, ?, ?, ?, CURRENT_TIMESTAMP);', [req.body.profile, req.body.event, req.params.team, req.body.message]).then(result => {
-        console.log(result);
         res.send();
     }).catch(err => {
         if (err) res.status(500).send(err)

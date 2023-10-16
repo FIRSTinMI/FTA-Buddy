@@ -51,28 +51,34 @@ public class NotesFragment extends DialogFragment {
     private int profileNumber;
     private String profileName;
     private SharedPreferences sharedPreferences;
+    private String currentlySelectedTeam;
+    private String eventCode;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        // Load view model and inflate view
         notesViewModel = new ViewModelProvider(this).get(NotesViewModel.class);
-
         binding = FragmentNotesBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
+        // Load shared preferences (event code, currently selected team, profile info)
         sharedPreferences = requireContext().getSharedPreferences("FTABuddy", 0);
-        String eventCode = sharedPreferences.getString("eventCode", null);
+        eventCode = sharedPreferences.getString("eventCode", null);
         if (eventCode == null) {
             return root;
         }
-        String currentlySelectedTeam = sharedPreferences.getString("selectedTeam", null);
+        currentlySelectedTeam = sharedPreferences.getString("selectedTeam", null);
 
         profileName = sharedPreferences.getString("profileName", null);
         profileNumber = sharedPreferences.getInt("profileNumber", -1);
 
+        // If there's no profile saved then ask user to create new profile
         if (profileNumber < 0) {
             AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
 
+            // Dialog text input
             final EditText usernameInput = new EditText(root.getContext());
+            usernameInput.setInputType(InputType.TYPE_CLASS_TEXT);
             usernameInput.setImeOptions(EditorInfo.IME_ACTION_DONE);
             usernameInput.setOnEditorActionListener((v, actionId, event) -> {
                 if (actionId == EditorInfo.IME_ACTION_DONE) {
@@ -81,8 +87,7 @@ public class NotesFragment extends DialogFragment {
                 return false;
             });
 
-            usernameInput.setInputType(InputType.TYPE_CLASS_TEXT);
-
+            // Build dialog
             builder.setMessage(R.string.notes_login_dialog)
                     .setView(usernameInput)
                     .setPositiveButton("OK", (dialog, which) -> {
@@ -98,6 +103,7 @@ public class NotesFragment extends DialogFragment {
             dialog.show();
         }
 
+        // Handle the team selector being changed
         binding.teamSelector.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
@@ -109,6 +115,7 @@ public class NotesFragment extends DialogFragment {
             public void onNothingSelected(AdapterView<?> parent) {}
         });
 
+        // Update team list in selector from live data
         @SuppressLint("SetTextI18n")
         final Observer<ArrayList<String>> teamsObserver = newTeams -> {
             Spinner spinner = binding.teamSelector;
@@ -120,6 +127,7 @@ public class NotesFragment extends DialogFragment {
 
         notesViewModel.getTeams().observe(getViewLifecycleOwner(), teamsObserver);
 
+        // Fetch team list
         try {
             Fetch.get("https://ftahelper.filipkin.com/teams/" + URLEncoder.encode(eventCode, "UTF-8"), new Callback() {
                 @Override
@@ -147,6 +155,15 @@ public class NotesFragment extends DialogFragment {
         } catch (UnsupportedEncodingException e) {
             Log.e("Notes", Objects.requireNonNull(e.getMessage()));
         }
+
+        // Handle message sending
+        binding.sendButton.setOnClickListener(v -> handleSend());
+        binding.notesMessage.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_SEND) {
+                handleSend();
+            }
+            return false;
+        });
 
         return root;
     }
@@ -181,7 +198,7 @@ public class NotesFragment extends DialogFragment {
         }
     }
 
-    void loadNotes(String team) {
+    private void loadNotes(String team) {
         Fetch.get("https://ftabuddy.filipkin.com/message/" + team, new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
@@ -191,6 +208,42 @@ public class NotesFragment extends DialogFragment {
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                 System.out.println(response.body().string());
+            }
+        });
+    }
+
+    private void handleSend() {
+        String msg = binding.notesMessage.getText().toString().trim();
+        if (msg.length() > 0 && profileNumber > 0 && currentlySelectedTeam != null && eventCode != null) {
+            binding.sendButton.setEnabled(false);
+            binding.notesMessage.setEnabled(false);
+            sendMessage(currentlySelectedTeam, msg);
+        }
+    }
+
+    private void sendMessage(String team, String msg) {
+        JSONObject body = new JSONObject();
+        try {
+            body.put("profile", profileNumber);
+            body.put("event", sharedPreferences.getString("eventCode", null));
+            body.put("message", msg);
+        } catch (JSONException e) {
+            requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Error encoding JSON body", Toast.LENGTH_LONG).show());
+        }
+        Fetch.post("https://ftabuddy.filipkin.com/message/" + team, body.toString(), new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Error posting message to cloud", Toast.LENGTH_LONG).show());
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                requireActivity().runOnUiThread(() -> {
+                    binding.notesMessage.setText("");
+                    binding.sendButton.setEnabled(true);
+                    binding.notesMessage.setEnabled(true);
+                });
+                // TODO: Append message to UI
             }
         });
     }

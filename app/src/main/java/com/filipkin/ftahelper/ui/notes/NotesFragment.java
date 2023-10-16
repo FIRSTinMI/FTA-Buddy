@@ -3,6 +3,7 @@ package com.filipkin.ftahelper.ui.notes;
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.SharedPreferences;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -21,6 +22,7 @@ import android.view.inputmethod.EditorInfo;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -37,10 +39,18 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Date;
+import java.util.Locale;
 import java.util.Objects;
+import java.util.TimeZone;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -56,13 +66,14 @@ public class NotesFragment extends DialogFragment {
     private SharedPreferences sharedPreferences;
     private String currentlySelectedTeam;
     private String eventCode;
+    private View root;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         // Load view model and inflate view
         notesViewModel = new ViewModelProvider(this).get(NotesViewModel.class);
         binding = FragmentNotesBinding.inflate(inflater, container, false);
-        View root = binding.getRoot();
+        root = binding.getRoot();
 
         // Load shared preferences (event code, currently selected team, profile info)
         sharedPreferences = requireContext().getSharedPreferences("FTABuddy", 0);
@@ -76,35 +87,7 @@ public class NotesFragment extends DialogFragment {
         profileNumber = sharedPreferences.getInt("profileNumber", -1);
 
         // If there's no profile saved then ask user to create new profile
-        if (profileNumber < 0) {
-            AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
-
-            // Dialog text input
-            final EditText usernameInput = new EditText(root.getContext());
-            usernameInput.setInputType(InputType.TYPE_CLASS_TEXT);
-            usernameInput.setImeOptions(EditorInfo.IME_ACTION_DONE);
-            usernameInput.setOnEditorActionListener((v, actionId, event) -> {
-                if (actionId == EditorInfo.IME_ACTION_DONE) {
-                    registerUsername(usernameInput);
-                }
-                return false;
-            });
-
-            // Build dialog
-            builder.setMessage(R.string.notes_login_dialog)
-                    .setView(usernameInput)
-                    .setPositiveButton("OK", (dialog, which) -> {
-                        registerUsername(usernameInput);
-                    });
-                    builder.setNegativeButton("Cancel", (dialog, which) -> {
-                        binding.notesMessage.setEnabled(false);
-                        binding.sendButton.setEnabled(false);
-                        dialog.cancel();
-                    });
-
-            AlertDialog dialog = builder.create();
-            dialog.show();
-        }
+        if (profileNumber < 0) createProfileDialog();
 
         // Handle the team selector being changed
         binding.teamSelector.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -132,26 +115,7 @@ public class NotesFragment extends DialogFragment {
 
         // Update notes from live view
         @SuppressLint("SetTextI18n")
-        final Observer<ArrayList<JSONObject>> messagesObserver = newMessages -> {
-            binding.messageContainer.removeAllViews();
-            for (JSONObject msg : newMessages) {
-                TextView textView = new TextView(requireContext());
-                String messageString = null;
-                try {
-                    messageString = String.format("<b>%s</b> @%s<br/><span style=\"font-size: 12px\">%s</span><br/>%s",
-                            msg.getString("username"),
-                            msg.getString("event"),
-                            msg.getString("created"),
-                            msg.getString("message"));
-                } catch (JSONException e) {
-                    throw new RuntimeException(e);
-                }
-                textView.setText(Html.fromHtml(messageString, Html.FROM_HTML_MODE_COMPACT));
-                binding.messageContainer.addView(textView);
-            }
-            ScrollView scrollView = binding.messageContainerScroll;
-            scrollView.postDelayed((Runnable) () -> scrollView.smoothScrollTo(0, binding.messageContainerScroll.getHeight() + 72),250);
-        };
+        final Observer<ArrayList<JSONObject>> messagesObserver = this::replaceMessageList;
 
         notesViewModel.getMessages().observe(getViewLifecycleOwner(), messagesObserver);
 
@@ -194,6 +158,93 @@ public class NotesFragment extends DialogFragment {
         });
 
         return root;
+    }
+
+    private void replaceMessageList(ArrayList<JSONObject> newMessages) {
+        binding.messageContainer.removeAllViews();
+        LocalDateTime now = LocalDateTime.now();
+
+        for (JSONObject msg : newMessages) {
+            try {
+                TextView textView = new TextView(requireContext());
+
+                String timestamp = "";
+                DateFormat utcFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+                utcFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+                Date shiftDate = utcFormat.parse(msg.getString("created"));
+                DateFormat localFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS", Locale.US);
+                localFormat.setTimeZone(TimeZone.getDefault());
+                assert shiftDate != null;
+                LocalDateTime created = LocalDateTime.parse(localFormat.format(shiftDate));
+
+                if (created.getDayOfMonth() == now.getDayOfMonth()) {
+                    timestamp += "Today " + created.format(DateTimeFormatter.ofPattern("hh:mm a"));
+                } else if (created.getDayOfMonth()+1 == now.getDayOfMonth()) {
+                    timestamp += "Yesterday " + created.format(DateTimeFormatter.ofPattern("hh:mm a"));
+                } else {
+                    timestamp += created.format(DateTimeFormatter.ofPattern("MM/dd/yyyy hh:mm a"));
+                }
+
+                String messageString = String.format("<b>%s</b> @%s - %s<br/>%s",
+                        msg.getString("username"),
+                        msg.getString("event"),
+                        timestamp,
+                        msg.getString("message"));
+
+                textView.setText(Html.fromHtml(messageString, Html.FROM_HTML_MODE_COMPACT));
+
+                LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                layoutParams.setMargins(8, 8, 0, 0);
+                textView.setLayoutParams(layoutParams);
+
+                textView.setPadding(20, 6, 20, 6);
+
+                textView.setBackgroundResource(R.drawable.rounded_corner);
+                int color = getResources().getColor(R.color.purple_500, requireActivity().getTheme());
+                if (msg.getInt("profile") == profileNumber) color = getResources().getColor(R.color.purple_700, requireActivity().getTheme());
+
+                GradientDrawable drawable = (GradientDrawable) textView.getBackground();
+                drawable.setColor(color);
+
+                binding.messageContainer.addView(textView);
+            } catch (JSONException e) {
+                throw new RuntimeException(e);
+            } catch (ParseException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        ScrollView scrollView = binding.messageContainerScroll;
+        scrollView.postDelayed((Runnable) () -> scrollView.smoothScrollTo(0, binding.messageContainerScroll.getHeight() + 72),250);
+    }
+
+    private void createProfileDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+
+        // Dialog text input
+        final EditText usernameInput = new EditText(root.getContext());
+        usernameInput.setInputType(InputType.TYPE_CLASS_TEXT);
+        usernameInput.setImeOptions(EditorInfo.IME_ACTION_DONE);
+        usernameInput.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                registerUsername(usernameInput);
+            }
+            return false;
+        });
+
+        // Build dialog
+        builder.setMessage(R.string.notes_login_dialog)
+                .setView(usernameInput)
+                .setPositiveButton("OK", (dialog, which) -> {
+                    registerUsername(usernameInput);
+                });
+        builder.setNegativeButton("Cancel", (dialog, which) -> {
+            binding.notesMessage.setEnabled(false);
+            binding.sendButton.setEnabled(false);
+            dialog.cancel();
+        });
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
     }
 
     private void registerUsername(EditText usernameInput) {

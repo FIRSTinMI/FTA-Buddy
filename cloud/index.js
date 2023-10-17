@@ -141,7 +141,6 @@ app.get('/message/:team', (req, res) => {
             }
 
             for (let m of messages) {
-                console.log(m);
                 m.username = profiles[m.profile].username; // Attatch a username to every message
             }
 
@@ -154,7 +153,17 @@ app.get('/message/:team', (req, res) => {
 app.post('/message/:team', (req, res) => {
     console.log(`[NOTE ${req.body.event}] ${req.params.team} (${req.body.profile}): ${req.body.message}`);
     db.query('INSERT INTO messages VALUES (null, ?, ?, ?, ?, CURRENT_TIMESTAMP);', [req.body.profile, req.body.event, req.params.team, req.body.message]).then(result => {
-        res.send();
+        db.query(`SELECT username FROM profiles WHERE id = ?;`, [req.body.profile]).spread(username => {
+            res.send({
+                id: result.insertId,
+                profile: req.body.profile,
+                username: username[0].username,
+                event: req.body.event,
+                team: req.params.team,
+                message: req.body.message,
+                created: (new Date()).toISOString()
+            });
+        });
     }).catch(err => {
         if (err) res.status(500).send(err)
     });

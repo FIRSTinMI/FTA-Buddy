@@ -165,56 +165,61 @@ public class NotesFragment extends DialogFragment {
         LocalDateTime now = LocalDateTime.now();
 
         for (JSONObject msg : newMessages) {
-            try {
-                TextView textView = new TextView(requireContext());
+            TextView textView = getMessageTextView(msg);
 
-                String timestamp = "";
-                DateFormat utcFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
-                utcFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-                Date shiftDate = utcFormat.parse(msg.getString("created"));
-                DateFormat localFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS", Locale.US);
-                localFormat.setTimeZone(TimeZone.getDefault());
-                assert shiftDate != null;
-                LocalDateTime created = LocalDateTime.parse(localFormat.format(shiftDate));
-
-                if (created.getDayOfMonth() == now.getDayOfMonth()) {
-                    timestamp += "Today " + created.format(DateTimeFormatter.ofPattern("hh:mm a"));
-                } else if (created.getDayOfMonth()+1 == now.getDayOfMonth()) {
-                    timestamp += "Yesterday " + created.format(DateTimeFormatter.ofPattern("hh:mm a"));
-                } else {
-                    timestamp += created.format(DateTimeFormatter.ofPattern("MM/dd/yyyy hh:mm a"));
-                }
-
-                String messageString = String.format("<b>%s</b> @%s - %s<br/>%s",
-                        msg.getString("username"),
-                        msg.getString("event"),
-                        timestamp,
-                        msg.getString("message"));
-
-                textView.setText(Html.fromHtml(messageString, Html.FROM_HTML_MODE_COMPACT));
-
-                LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                layoutParams.setMargins(8, 8, 0, 0);
-                textView.setLayoutParams(layoutParams);
-
-                textView.setPadding(20, 6, 20, 6);
-
-                textView.setBackgroundResource(R.drawable.rounded_corner);
-                int color = getResources().getColor(R.color.purple_500, requireActivity().getTheme());
-                if (msg.getInt("profile") == profileNumber) color = getResources().getColor(R.color.purple_700, requireActivity().getTheme());
-
-                GradientDrawable drawable = (GradientDrawable) textView.getBackground();
-                drawable.setColor(color);
-
-                binding.messageContainer.addView(textView);
-            } catch (JSONException e) {
-                throw new RuntimeException(e);
-            } catch (ParseException e) {
-                throw new RuntimeException(e);
-            }
+            binding.messageContainer.addView(textView);
         }
         ScrollView scrollView = binding.messageContainerScroll;
         scrollView.postDelayed((Runnable) () -> scrollView.smoothScrollTo(0, binding.messageContainerScroll.getHeight() + 72),250);
+    }
+
+    private TextView getMessageTextView(JSONObject msg) {
+        try {
+            TextView textView = new TextView(requireContext());
+
+            String timestamp = "";
+            LocalDateTime now = LocalDateTime.now();
+            DateFormat utcFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+            utcFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+            Date shiftDate = utcFormat.parse(msg.getString("created"));
+            DateFormat localFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS", Locale.US);
+            localFormat.setTimeZone(TimeZone.getDefault());
+            assert shiftDate != null;
+            LocalDateTime created = LocalDateTime.parse(localFormat.format(shiftDate));
+
+            if (created.getDayOfMonth() == now.getDayOfMonth()) {
+                timestamp += "Today " + created.format(DateTimeFormatter.ofPattern("hh:mm a"));
+            } else if (created.getDayOfMonth()+1 == now.getDayOfMonth()) {
+                timestamp += "Yesterday " + created.format(DateTimeFormatter.ofPattern("hh:mm a"));
+            } else {
+                timestamp += created.format(DateTimeFormatter.ofPattern("MM/dd/yyyy hh:mm a"));
+            }
+
+            String messageString = String.format("<b>%s</b> @%s - %s<br/>%s",
+                    msg.getString("username"),
+                    msg.getString("event"),
+                    timestamp,
+                    msg.getString("message"));
+
+            textView.setText(Html.fromHtml(messageString, Html.FROM_HTML_MODE_COMPACT));
+
+            LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            layoutParams.setMargins(8, 8, 0, 0);
+            textView.setLayoutParams(layoutParams);
+
+            textView.setPadding(20, 6, 20, 6);
+
+            textView.setBackgroundResource(R.drawable.rounded_corner);
+            int color = getResources().getColor(R.color.purple_500, requireActivity().getTheme());
+            if (msg.getInt("profile") == profileNumber) color = getResources().getColor(R.color.purple_700, requireActivity().getTheme());
+
+            GradientDrawable drawable = (GradientDrawable) textView.getBackground();
+            drawable.setColor(color);
+            return textView;
+        } catch (JSONException | ParseException e) {
+            requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Error parsing teams list from cloud", Toast.LENGTH_LONG).show());
+            return null;
+        }
     }
 
     private void createProfileDialog() {
@@ -302,10 +307,8 @@ public class NotesFragment extends DialogFragment {
 
                     requireActivity().runOnUiThread(() -> notesViewModel.getMessages().setValue(messages));
 
-                } catch (JSONException e) {
-                    throw new RuntimeException(e);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+                } catch (JSONException | IOException e) {
+                    requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Error decoding JSON response", Toast.LENGTH_LONG).show());
                 }
 
             }
@@ -337,13 +340,19 @@ public class NotesFragment extends DialogFragment {
             }
 
             @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+            public void onResponse(@NonNull Call call, @NonNull Response response) {
                 requireActivity().runOnUiThread(() -> {
                     binding.notesMessage.setText("");
                     binding.sendButton.setEnabled(true);
                     binding.notesMessage.setEnabled(true);
+                    try {
+                        String res = response.body().string();
+                        System.out.println(res);
+                        binding.messageContainer.addView(getMessageTextView(new JSONObject(res)));
+                    } catch (JSONException | IOException e) {
+                        requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Error decoding JSON response", Toast.LENGTH_LONG).show());
+                    }
                 });
-                // TODO: Append message to UI
             }
         });
     }

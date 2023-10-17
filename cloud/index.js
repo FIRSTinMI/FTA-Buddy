@@ -44,7 +44,7 @@ app.use(express.static('./cloud/public'));
 
 // Get local server ip for an event
 app.get('/register/:event', (req, res) => {
-    if (events[req.params.code] && events[req.params.code].ip) {
+    if (events[req.params.event] && events[req.params.event].ip) {
         return res.send({
             'local_ip': events[req.params.code].ip
         });
@@ -60,10 +60,10 @@ app.get('/register/:event', (req, res) => {
 
 // Register a local server ip for an event
 app.post('/register/:event', (req, res) => {
-    if (events[req.params.code]) {
-        events[req.params.code].ip = req.body.ip;
+    if (events[req.params.event]) {
+        events[req.params.event].ip = req.body.ip;
     } else {
-        events[req.params.code] = {
+        events[req.params.event] = {
             ip: req.body.ip,
             socketClients: [],
             monitor: DEFAULT_MONITOR

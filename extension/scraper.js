@@ -22,6 +22,13 @@ function identifyStatus(elm) {
 
 function identifyFieldStatus(elm) {
     if (elm.innerText === 'UNKNOWN') return 0;
+    if (elm.innerText === 'MATCH RUNNING (TELEOP)') return 1;
+    if (elm.innerText === 'MATCH RUNNING (AUTO)') return 2;
+    if (elm.innerText === 'MATCH READY') return 3;
+    if (elm.innerText === 'PRE-START COMPLETED') return 4;
+    if (elm.innerText === 'READY TO PRE-START') return 5;
+    if (elm.innerText === 'MATCH ABORTED') return 6;
+    if (elm.innerText === 'MATCH OVER') return 7;
 }
 
 let lastData = {};

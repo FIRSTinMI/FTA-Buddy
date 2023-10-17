@@ -20,3 +20,4 @@ node_modules
 .idea/deploymentTargetDropDown.xml
 .idea/statistic.xml
 /app/release/*
+/server/public/FMS_Field Monitor_files

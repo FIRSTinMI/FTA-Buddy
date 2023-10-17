@@ -1,23 +1,25 @@
 {
     "manifest_version": 3,
-    "name": "FTA Helper",
-    "description": "Enable the field monitor and notes sync for FTA Helper app",
+    "name": "FTA Buddy",
+    "description": "Enable the field monitor and notes sync for FTA Buddy app",
     "version": "1.0",
     "permissions": [
         "scripting",
-        "webNavigation",
-        "storage"
+        "webNavigation"
     ],
     "background": {
         "service_worker": "sw.js"
     },
+    "icons": {
+        "48": "logo48.png",
+        "128": "logo128.png"
+    },
     "action": {
         "default_popup": "menu.html",
-        "default_icon": "fta-helper.png"
+        "default_icon": "logo.png"
     },
     "host_permissions": [
         "https://*/FieldMonitor",
-        "http://*/FieldMonitor",
-        "file:///*/FieldMonitor.html"
+        "http://*/FieldMonitor"
     ]
 }

@@ -75,6 +75,9 @@
             android:id="@+id/message_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical" />
+            android:orientation="vertical"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:paddingBottom="8dp" />
     </ScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>

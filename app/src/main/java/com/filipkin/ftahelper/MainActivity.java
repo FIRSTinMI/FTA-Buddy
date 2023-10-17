@@ -1,6 +1,8 @@
 package com.filipkin.ftahelper;
 
 import android.os.Bundle;
+import android.view.View;
+
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -8,6 +10,9 @@ import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
+
+import net.yslibrary.android.keyboardvisibilityevent.KeyboardVisibilityEvent;
+import net.yslibrary.android.keyboardvisibilityevent.KeyboardVisibilityEventListener;
 
 import com.filipkin.ftahelper.databinding.ActivityMainBinding;
 
@@ -31,5 +36,13 @@ public class MainActivity extends AppCompatActivity {
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_activity_main);
         NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
         NavigationUI.setupWithNavController(binding.navView, navController);
+
+        KeyboardVisibilityEvent.setEventListener(this, isOpen -> {
+            if (isOpen) {
+                binding.navView.setVisibility(View.GONE);
+            } else {
+                binding.navView.setVisibility(View.VISIBLE);
+            }
+        });
     }
 }

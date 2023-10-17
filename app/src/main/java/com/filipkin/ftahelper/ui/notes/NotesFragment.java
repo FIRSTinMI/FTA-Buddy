@@ -32,6 +32,8 @@ import com.filipkin.ftahelper.R;
 import com.filipkin.ftahelper.databinding.FragmentNotesBinding;
 import com.filipkin.ftahelper.util.Fetch;
 
+import net.yslibrary.android.keyboardvisibilityevent.KeyboardVisibilityEvent;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -157,12 +159,17 @@ public class NotesFragment extends DialogFragment {
             return false;
         });
 
+        KeyboardVisibilityEvent.setEventListener(requireActivity(), isOpen -> {
+            if (isOpen) {
+                binding.messageContainerScroll.scrollTo(0, binding.messageContainerScroll.getHeight() + 72);
+            }
+        });
+
         return root;
     }
 
     private void replaceMessageList(ArrayList<JSONObject> newMessages) {
         binding.messageContainer.removeAllViews();
-        LocalDateTime now = LocalDateTime.now();
 
         for (JSONObject msg : newMessages) {
             TextView textView = getMessageTextView(msg);

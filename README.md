@@ -1,29 +1,11 @@
-<h1 align="center">
-  <a href="https://github.com/Filip-Kin/FTA-Buddy">
-    <!-- Please provide path to your logo here -->
-    <img src="shared/logo.svg" alt="Logo" width="100" height="100">
-  </a>
-</h1>
+# FTA Buddy [![code with love by Filip-Kin](https://img.shields.io/badge/%3C%2F%3E_with_%E2%99%A5_by-Filip_Kin-FF1414?style=flat-square)](https://github.com/Filip-Kin)
+<img src="shared/logo.svg" alt="Logo" width="120" height="120">
 
-<div align="center">
-  FTA Buddy
-  <br />
-  <a href="https://play.google.com/store/apps/details?id=com.filipkin.ftahelper"><strong>Open on Google Play</strong></a>
-  <br />
-  <br />
-  <a href="https://github.com/Filip-Kin/fta-buddy/issues/new?assignees=&labels=bug&template=01_BUG_REPORT.md&title=bug%3A+">Report a Bug</a>
-  ·
-  <a href="https://github.com/Filip-Kin/fta-buddy/issues/new?assignees=&labels=enhancement&template=02_FEATURE_REQUEST.md&title=feat%3A+">Request a Feature</a>
-</div>
-
-<div align="center">
+<a href="https://play.google.com/store/apps/details?id=com.filipkin.ftahelper"><strong>Open on Google Play</strong></a>
 <br />
-
-[![Project license](https://img.shields.io/github/license/Filip-Kin/fta-buddy.svg?style=flat-square)](LICENSE)
-
-[![code with love by Filip-Kin](https://img.shields.io/badge/%3C%2F%3E%20with%20%E2%99%A5%20by-Filip-Kin-ff1414.svg?style=flat-square)](https://github.com/Filip-Kin)
-
-</div>
+<a href="https://github.com/Filip-Kin/fta-buddy/issues/new?assignees=&labels=bug&template=01_BUG_REPORT.md&title=bug%3A+">Report a Bug</a>
+·
+<a href="https://github.com/Filip-Kin/fta-buddy/issues/new?assignees=&labels=enhancement&template=02_FEATURE_REQUEST.md&title=feat%3A+">Request a Feature</a>
 
 <details open="open">
 <summary>Table of Contents</summary>

@@ -29,7 +29,7 @@ The cloud server also enables the notes functionality. The notes are also persis
 
 ## Getting Started
 
-- Download latest release of local server and extension on laptop that will be hosting (probably FTA laptop).
+- (Download latest release)[https://github.com/Filip-Kin/FTA-Buddy/releases/latest] of local server and extension on laptop that will be hosting (probably FTA laptop).
 - To install the extension
     - Unzip it to a folder
     - Go to the [extensions page](chrome://extensions)

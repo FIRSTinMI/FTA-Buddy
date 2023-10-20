@@ -21,3 +21,5 @@ node_modules
 .idea/statistic.xml
 /app/release/*
 /server/public/FieldMonitor
+fta-buddy.exe
+fta-buddy.zip

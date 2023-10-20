@@ -1,11 +1,13 @@
 {
-    "name": "fta-helper",
+    "name": "fta-buddy",
     "version": "1.0.0",
     "description": "",
     "main": "./server/index.js",
+    "bin": "./server/index.js",
     "scripts": {
         "start": "node ./server/index.js",
-        "cloud": "node ./cloud/index.js"
+        "cloud": "node ./cloud/index.js",
+        "build": "npx pkg . --targets node18-win-x64"
     },
     "author": "Filip Kin",
     "license": "ISC",

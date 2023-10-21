@@ -44,16 +44,18 @@ app.post('/monitor', (req, res) => {
 
 app.ws('/', function (ws, req) {
     console.log('New connection');
-    ws.send(JSON.stringify(monitor));
     clients.push(ws);
+    // 500ms delay lets the UI load so the changes can be made
+    // Yeah, I know this should be done client side
+    setTimeout(() => ws.send(JSON.stringify(monitor)), 500);
 
     ws.on('message', (msg) => {
-        console.log(msg);
+        if (msg == 'ping') ws.send(JSON.stringify({ type: 'pong' }));
     });
 });
 
 function pushUpdateToSockets(monitor) {
-    cloud.send(JSON.stringify(monitor));
+    if (cloud) cloud.send(JSON.stringify(monitor));
     for (let ws of clients) {
         ws.send(JSON.stringify(monitor));
     }
@@ -93,6 +95,9 @@ app.listen(port, async () => {
             cloud.on('open', () => {
                 cloud.send(`server-${code}`);
                 console.log(`Connected to cloud websocket server for relaying`)
+                setInterval(() => {
+                    cloud.send('ping');
+                }, 60e3);
             });
 
             return null;
@@ -101,5 +106,7 @@ app.listen(port, async () => {
         if (res) return res.text()
     }).then(text => {
         if (text) console.log(text);
+    }).catch(err => {
+        if (err) console.error('Failed to connect to cloud, continuing in local only mode')
     });
 });

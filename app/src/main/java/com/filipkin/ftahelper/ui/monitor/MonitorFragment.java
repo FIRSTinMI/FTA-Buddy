@@ -28,7 +28,8 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
-import java.util.Objects;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -94,7 +95,8 @@ public class MonitorFragment extends Fragment {
                 ContextCompat.getColor(root.getContext(), R.color.green),
                 ContextCompat.getColor(root.getContext(), R.color.green),
                 ContextCompat.getColor(root.getContext(), R.color.yellow),
-                ContextCompat.getColor(root.getContext(), R.color.yellow)
+                ContextCompat.getColor(root.getContext(), R.color.yellow),
+                ContextCompat.getColor(root.getContext(), R.color.red_bypass)
         };
 
         // TODO: Navigate to notes by clicking team number
@@ -113,6 +115,7 @@ public class MonitorFragment extends Fragment {
         final Observer<FieldState> fieldObserver = newField -> {
             binding.matchNumber.setText(getString(R.string.match_display, newField.match));
             binding.fieldState.setText(fieldStates[newField.field]);
+            binding.fieldState.setBackgroundColor((newField.field == 1 || newField.field == 3 || newField.field == 4) ? colors[1] : colors[0]);
             binding.timeBehind.setText(newField.time);
 
             // Yes, I know... this is horrible.
@@ -281,6 +284,7 @@ public class MonitorFragment extends Fragment {
                     Log.i("WebSocket", message);
                     try {
                         JSONObject jObject = new JSONObject(message);
+                        if (!jObject.getString("type").equals("monitorUpdate")) return;
                         field.field = jObject.getInt("field");
                         field.match = jObject.getInt("match");
                         field.time = jObject.getString("time");
@@ -369,6 +373,14 @@ public class MonitorFragment extends Fragment {
                 }
                 this.open = true;
                 requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Connected to websocket", Toast.LENGTH_SHORT).show());
+
+                // Keep alive ping every minute
+                new Timer().scheduleAtFixedRate(new TimerTask() {
+                    @Override
+                    public void run() {
+                        ws.send("ping");
+                    }
+                }, 0, 60000);
             }
 
             @Override

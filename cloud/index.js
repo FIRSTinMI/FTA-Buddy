@@ -171,6 +171,7 @@ app.post('/message/:team', (req, res) => {
 
 app.ws('/', (ws, req) => {
     ws.on('message', (msg) => {
+        if (msg == 'ping') ws.send(JSON.stringify({ type: 'pong' }));
         if (msg.startsWith('server')) {
             let eventCode = msg.substr(7);
             console.log(`[WS ${eventCode} S] connected`);

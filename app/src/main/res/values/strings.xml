@@ -11,6 +11,16 @@
     <string name="match_display">M: %1$d</string>
     <string-array name="field_state">
         <item>Unknown</item>
+        <item>Match Running (Teleop)</item>
+        <item>Match Transitioning</item>
+        <item>Match Running (Auto)</item>
+        <item>Match Ready</item>
+        <item>Pre-Start Completed</item>
+        <item>Pre-Start Initiated</item>
+        <item>Ready to Pre-Start</item>
+        <item>Match Aborted</item>
+        <item>Match Over</item>
+        <item>Ready for Post-Result</item>
     </string-array>
     <string-array name="ds_state">
         <item> </item>
@@ -18,6 +28,7 @@
         <item>X</item>
         <item>M</item>
         <item>W</item>
+        <item>B</item>
     </string-array>
     <string name="battery">%1$2.1fv</string>
     <string name="ping">%1$d ms</string>

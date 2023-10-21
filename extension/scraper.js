@@ -1,7 +1,7 @@
 function read(station) {
     return {
         number: document.getElementById(station + 'Number').innerText,
-        ds: identifyStatus(document.getElementById(station + 'ds')),
+        ds: (document.getElementById(station + 'robot').classList.contains('fieldMonitor-redSquareB')) ? 5 : identifyStatus(document.getElementById(station + 'ds')),
         radio: identifyStatus(document.getElementById(station + 'radio')),
         rio: identifyStatus(document.getElementById(station + 'robot')),
         code: (document.getElementById(station + 'Row').classList.contains('notReadyYellow')) ? 0 : 1,
@@ -14,6 +14,7 @@ function read(station) {
 
 function identifyStatus(elm) {
     if (elm.classList.contains('fieldMonitor-redSquare')) return 0;
+    if (elm.classList.contains('fieldMonitor-redSquareB')) return 0;
     if (elm.classList.contains('fieldMonitor-greenCircle')) return 1;
     if (elm.classList.contains('fieldMonitor-greenCircleX')) return 2;
     if (elm.classList.contains('fieldMonitor-yellowCircleM')) return 3;
@@ -23,18 +24,22 @@ function identifyStatus(elm) {
 function identifyFieldStatus(elm) {
     if (elm.innerText === 'UNKNOWN') return 0;
     if (elm.innerText === 'MATCH RUNNING (TELEOP)') return 1;
-    if (elm.innerText === 'MATCH RUNNING (AUTO)') return 2;
-    if (elm.innerText === 'MATCH READY') return 3;
-    if (elm.innerText === 'PRE-START COMPLETED') return 4;
-    if (elm.innerText === 'READY TO PRE-START') return 5;
-    if (elm.innerText === 'MATCH ABORTED') return 6;
-    if (elm.innerText === 'MATCH OVER') return 7;
+    if (elm.innerText === 'MATCH TRANSITIONING') return 2;
+    if (elm.innerText === 'MATCH RUNNING (AUTO)') return 3;
+    if (elm.innerText === 'MATCH READY') return 4;
+    if (elm.innerText === 'PRE-START COMPLETED') return 5;
+    if (elm.innerText === 'PRE-START INITIATED') return 6;
+    if (elm.innerText === 'READY TO PRE-START') return 7;
+    if (elm.innerText === 'MATCH ABORTED') return 8;
+    if (elm.innerText === 'MATCH OVER') return 9;
+    if (elm.innerText === 'READY FOR POST-RESULT') return 10;
 }
 
 let lastData = {};
 
 function sendUpdate() {
     let data = {
+        type: 'monitorUpdate',
         field: identifyFieldStatus(document.getElementById('matchStateTop')),
         match: document.getElementById('MatchNumber').innerText.substring(3),
         time: document.getElementById('aheadbehind').innerText,
@@ -58,5 +63,5 @@ function sendUpdate() {
     });
 }
 
-setInterval(sendUpdate, 500);
+setInterval(sendUpdate, 200);
 sendUpdate();

@@ -4,6 +4,8 @@ import android.annotation.SuppressLint;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.os.Bundle;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -39,7 +41,8 @@ public class MonitorFragment extends Fragment {
 
     private FragmentMonitorBinding binding;
     private URI uri;
-    private final FieldState field = new FieldState() {};
+    private FieldState field = new FieldState() {};
+    private FieldState oldField = new FieldState() {};
     private MonitorViewModel monitorViewModel;
     private boolean firstConnection = true;
     private WebSocket ws;
@@ -97,7 +100,8 @@ public class MonitorFragment extends Fragment {
                 ContextCompat.getColor(root.getContext(), R.color.yellow),
                 ContextCompat.getColor(root.getContext(), R.color.yellow),
                 ContextCompat.getColor(root.getContext(), R.color.red_bypass),
-                ContextCompat.getColor(root.getContext(), R.color.red_bypass)
+                ContextCompat.getColor(root.getContext(), R.color.black),
+                ContextCompat.getColor(root.getContext(), R.color.white)
         };
 
         // TODO: Navigate to notes by clicking team number
@@ -123,6 +127,11 @@ public class MonitorFragment extends Fragment {
             binding.blue1Number.setText(Integer.toString(newField.blue1.number));
             binding.blue1Ds.setBackgroundColor(colors[newField.blue1.ds]);
             binding.blue1Ds.setText(dsStates[newField.blue1.ds]);
+            if (newField.blue1.ds == 6) {
+                binding.blue1Ds.setTextColor(colors[7]);
+            } else {
+                binding.blue1Ds.setTextColor(colors[6]);
+            }
             binding.blue1Radio.setBackgroundColor(colors[newField.blue1.radio]);
             if (newField.blue1.rio == 0) {
                 binding.blue1Rio.setBackgroundColor(colors[0]);
@@ -138,6 +147,11 @@ public class MonitorFragment extends Fragment {
             binding.blue2Number.setText(Integer.toString(newField.blue2.number));
             binding.blue2Ds.setBackgroundColor(colors[newField.blue2.ds]);
             binding.blue2Ds.setText(dsStates[newField.blue2.ds]);
+            if (newField.blue2.ds == 6) {
+                binding.blue2Ds.setTextColor(colors[7]);
+            } else {
+                binding.blue2Ds.setTextColor(colors[6]);
+            }
             binding.blue2Radio.setBackgroundColor(colors[newField.blue2.radio]);
             if (newField.blue2.rio == 0) {
                 binding.blue2Rio.setBackgroundColor(colors[0]);
@@ -153,6 +167,11 @@ public class MonitorFragment extends Fragment {
             binding.blue3Number.setText(Integer.toString(newField.blue3.number));
             binding.blue3Ds.setBackgroundColor(colors[newField.blue3.ds]);
             binding.blue3Ds.setText(dsStates[newField.blue3.ds]);
+            if (newField.blue3.ds == 6) {
+                binding.blue3Ds.setTextColor(colors[7]);
+            } else {
+                binding.blue3Ds.setTextColor(colors[6]);
+            }
             binding.blue3Radio.setBackgroundColor(colors[newField.blue3.radio]);
             if (newField.blue3.rio == 0) {
                 binding.blue3Rio.setBackgroundColor(colors[0]);
@@ -168,6 +187,11 @@ public class MonitorFragment extends Fragment {
             binding.red1Number.setText(Integer.toString(newField.red1.number));
             binding.red1Ds.setBackgroundColor(colors[newField.red1.ds]);
             binding.red1Ds.setText(dsStates[newField.red1.ds]);
+            if (newField.red1.ds == 6) {
+                binding.red1Ds.setTextColor(colors[7]);
+            } else {
+                binding.red1Ds.setTextColor(colors[6]);
+            }
             binding.red1Radio.setBackgroundColor(colors[newField.red1.radio]);
             if (newField.red1.rio == 0) {
                 binding.red1Rio.setBackgroundColor(colors[0]);
@@ -183,6 +207,11 @@ public class MonitorFragment extends Fragment {
             binding.red2Number.setText(Integer.toString(newField.red2.number));
             binding.red2Ds.setBackgroundColor(colors[newField.red2.ds]);
             binding.red2Ds.setText(dsStates[newField.red2.ds]);
+            if (newField.red2.ds == 6) {
+                binding.red2Ds.setTextColor(colors[7]);
+            } else {
+                binding.red2Ds.setTextColor(colors[6]);
+            }
             binding.red2Radio.setBackgroundColor(colors[newField.red2.radio]);
             if (newField.red2.rio == 0) {
                 binding.red2Rio.setBackgroundColor(colors[0]);
@@ -198,6 +227,11 @@ public class MonitorFragment extends Fragment {
             binding.red3Number.setText(Integer.toString(newField.red3.number));
             binding.red3Ds.setBackgroundColor(colors[newField.red3.ds]);
             binding.red3Ds.setText(dsStates[newField.red3.ds]);
+            if (newField.red3.ds == 6) {
+                binding.red3Ds.setTextColor(colors[7]);
+            } else {
+                binding.red3Ds.setTextColor(colors[6]);
+            }
             binding.red3Radio.setBackgroundColor(colors[newField.red3.radio]);
             if (newField.red3.rio == 0) {
                 binding.red3Rio.setBackgroundColor(colors[0]);
@@ -291,6 +325,59 @@ public class MonitorFragment extends Fragment {
                         field.time = jObject.getString("time");
 
                         JSONObject blue1 = jObject.getJSONObject("blue1");
+                        JSONObject blue2 = jObject.getJSONObject("blue2");
+                        JSONObject blue3 = jObject.getJSONObject("blue3");
+                        JSONObject red1 = jObject.getJSONObject("red1");
+                        JSONObject red2 = jObject.getJSONObject("red2");
+                        JSONObject red3 = jObject.getJSONObject("red3");
+
+                        Vibrator v = (Vibrator) requireActivity().getSystemService(requireContext().VIBRATOR_SERVICE);
+
+                        // Vibrate on lost connection if match in progress
+                        if (field.field < 4) {
+                            if ((field.blue1.ds == 1 && field.blue1.ds > blue1.getInt("ds")) ||
+                                    (field.blue2.ds == 1 && field.blue2.ds > blue2.getInt("ds")) ||
+                                    (field.blue3.ds == 1 && field.blue3.ds > blue3.getInt("ds")) ||
+                                    (field.red1.ds == 1 && field.red1.ds > red1.getInt("ds")) ||
+                                    (field.red2.ds == 1 && field.red2.ds > red2.getInt("ds")) ||
+                                    (field.red3.ds == 1 && field.red3.ds > red3.getInt("ds"))) {
+                                v.vibrate(VibrationEffect.createWaveform(new long[]{1000, 200, 300, 200, 300}, new int[]{255, 0, 255, 0, 255}, -1));
+                                Log.i("Monitor", "Lost Driverstation Ethernet");
+                            } else if ((field.blue1.ds == 1 && field.blue1.ds < blue1.getInt("ds")) ||
+                                    (field.blue2.ds == 1 && field.blue2.ds < blue2.getInt("ds")) ||
+                                    (field.blue3.ds == 1 && field.blue3.ds < blue3.getInt("ds")) ||
+                                    (field.red1.ds == 1 && field.red1.ds < red1.getInt("ds")) ||
+                                    (field.red2.ds == 1 && field.red2.ds < red2.getInt("ds")) ||
+                                    (field.red3.ds == 1 && field.red3.ds < red3.getInt("ds"))) {
+                                v.vibrate(VibrationEffect.createWaveform(new long[]{300, 200, 300, 200, 300}, new int[]{255, 0, 255, 0, 255}, -1));
+                                Log.i("Monitor", "Lost Driverstation");
+                            } else if (field.blue1.radio > blue1.getInt("radio") ||
+                                    field.blue2.radio > blue2.getInt("radio") ||
+                                    field.blue3.radio > blue3.getInt("radio") ||
+                                    field.red1.radio > red1.getInt("radio") ||
+                                    field.red2.radio > red2.getInt("radio") ||
+                                    field.red3.radio > red3.getInt("radio")) {
+                                v.vibrate(VibrationEffect.createWaveform(new long[]{300, 200, 300}, new int[]{255, 0, 255}, -1));
+                                Log.i("Monitor", "Lost Radio");
+                            } else if (field.blue1.rio > blue1.getInt("rio") ||
+                                    field.blue2.rio > blue2.getInt("rio") ||
+                                    field.blue3.rio > blue3.getInt("rio") ||
+                                    field.red1.rio > red1.getInt("rio") ||
+                                    field.red2.rio > red2.getInt("rio") ||
+                                    field.red3.rio > red3.getInt("rio")) {
+                                v.vibrate(VibrationEffect.createOneShot(500, 255));
+                                Log.i("Monitor", "Lost Rio");
+                            } else if (field.blue1.code > blue1.getInt("code") ||
+                                    field.blue2.code > blue2.getInt("code") ||
+                                    field.blue3.code > blue3.getInt("code") ||
+                                    field.red1.code > red1.getInt("code") ||
+                                    field.red2.code > red2.getInt("code") ||
+                                    field.red3.code > red3.getInt("code")) {
+                                v.vibrate(VibrationEffect.createOneShot(200, 255));
+                                Log.i("Monitor", "Lost Code");
+                            }
+                        }
+
                         field.blue1.number = blue1.getInt("number");
                         field.blue1.ds = blue1.getInt("ds");
                         field.blue1.radio = blue1.getInt("radio");
@@ -301,7 +388,6 @@ public class MonitorFragment extends Fragment {
                         field.blue1.ping = blue1.getInt("ping");
                         field.blue1.packets = blue1.getInt("packets");
 
-                        JSONObject blue2 = jObject.getJSONObject("blue2");
                         field.blue2.number = blue2.getInt("number");
                         field.blue2.ds = blue2.getInt("ds");
                         field.blue2.radio = blue2.getInt("radio");
@@ -312,7 +398,6 @@ public class MonitorFragment extends Fragment {
                         field.blue2.ping = blue2.getInt("ping");
                         field.blue2.packets = blue2.getInt("packets");
 
-                        JSONObject blue3 = jObject.getJSONObject("blue3");
                         field.blue3.number = blue3.getInt("number");
                         field.blue3.ds = blue3.getInt("ds");
                         field.blue3.radio = blue3.getInt("radio");
@@ -323,7 +408,6 @@ public class MonitorFragment extends Fragment {
                         field.blue3.ping = blue3.getInt("ping");
                         field.blue3.packets = blue3.getInt("packets");
 
-                        JSONObject red1 = jObject.getJSONObject("red1");
                         field.red1.number = red1.getInt("number");
                         field.red1.ds = red1.getInt("ds");
                         field.red1.radio = red1.getInt("radio");
@@ -334,7 +418,6 @@ public class MonitorFragment extends Fragment {
                         field.red1.ping = red1.getInt("ping");
                         field.red1.packets = red1.getInt("packets");
 
-                        JSONObject red2 = jObject.getJSONObject("red2");
                         field.red2.number = red2.getInt("number");
                         field.red2.ds = red2.getInt("ds");
                         field.red2.radio = red2.getInt("radio");
@@ -345,7 +428,6 @@ public class MonitorFragment extends Fragment {
                         field.red2.ping = red2.getInt("ping");
                         field.red2.packets = red2.getInt("packets");
 
-                        JSONObject red3 = jObject.getJSONObject("red3");
                         field.red3.number = red3.getInt("number");
                         field.red3.ds = red3.getInt("ds");
                         field.red3.radio = red3.getInt("radio");

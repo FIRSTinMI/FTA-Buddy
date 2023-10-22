@@ -10,8 +10,8 @@ android {
         applicationId "com.filipkin.ftahelper"
         minSdk 24
         targetSdk 34
-        versionCode 5
-        versionName "2.1.2-beta"
+        versionCode 6
+        versionName "2.2.0"
         minSdk 26
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"

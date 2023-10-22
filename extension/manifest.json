@@ -19,6 +19,7 @@
         "default_icon": "logo.png"
     },
     "host_permissions": [
-        "http://10.0.100.5/FieldMonitor"
+        "http://10.0.100.5/FieldMonitor",
+        "http://localhost/FieldMonitor"
     ]
 }

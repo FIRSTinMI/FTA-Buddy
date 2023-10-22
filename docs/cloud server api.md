@@ -22,16 +22,19 @@ The Field and DS fields have specific status codes
 | 4    | Wrong match                |
 
 **Field**
-| Code | Status               |
-| ---- | -------------------- |
-| 0    | Unknown              |
-| 1    | Match running teleop |
-| 2    | Match running auto   |
-| 3    | Match ready          |
-| 4    | Pre-start completed  |
-| 5    | Ready to pre-start   |
-| 6    | Match aborted        |
-| 7    | Match over           |
+| Code | Status                |
+| ---- | --------------------- |
+| 0    | Unknown               |
+| 1    | Match running teleop  |
+| 2    | Match transitioning   |
+| 3    | Match running auto    |
+| 4    | Match ready           |
+| 5    | Pre-start completed   |
+| 6    | Pre-start initiated   |
+| 7    | Ready to pre-start    |
+| 8    | Match aborted         |
+| 9    | Match over            |
+| 10   | Ready for post-result |
 
 ```json
 {

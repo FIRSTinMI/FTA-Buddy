@@ -37,6 +37,17 @@ db.query(`CREATE TABLE IF NOT EXISTS messages (
 
 let events = {};
 
+function updateTeamsListFromMonitor(event, monitor) {
+    let newTeamsAdded = false;
+    for (let team of [monitor.blue1.number, monitor.blue2.number, monitor.blue3.number, monitor.red1.number, monitor.red2.number, monitor.red3.number]) {
+        if (!events[event].teams.includes(team)) {
+            events[event].teams.push(team);
+            newTeamsAdded = true;
+        }
+    }
+    if (newTeamsAdded) db.query('UPDATE events SET teams = ? WHERE code = ?;', [JSON.stringify(events[event].teams), event]);
+}
+
 app.use(bodyParser.json());
 app.use(cors());
 
@@ -46,7 +57,7 @@ app.use(express.static('./cloud/public'));
 app.get('/register/:event', (req, res) => {
     if (events[req.params.event] && events[req.params.event].ip) {
         return res.send({
-            'local_ip': events[req.params.code].ip
+            'local_ip': events[req.params.event].ip
         });
     }
 
@@ -66,17 +77,19 @@ app.post('/register/:event', (req, res) => {
         events[req.params.event] = {
             ip: req.body.ip,
             socketClients: [],
-            monitor: DEFAULT_MONITOR
+            monitor: DEFAULT_MONITOR,
+            teams: []
         }
     }
 
     db.query('SELECT * FROM events WHERE code = ?;', [req.params.event]).spread(event => {
         if (event.length == 0) {
-            db.query('INSERT INTO events VALUES (?, ?, NULL);', [req.params.event, req.body.ip]);
+            db.query('INSERT INTO events VALUES (?, ?, "[]");', [req.params.event, req.body.ip]);
             console.log(`Registered event ${req.params.event} at ${req.body.ip}`);
         } else {
             db.query('UPDATE events SET local_ip = ? WHERE code = ?;', [req.body.ip, req.params.event]);
             console.log(`Updated event ${req.params.event} at ${req.body.ip}`);
+            events[req.params.event].teams = JSON.parse(event[0].teams);
         }
         res.send();
     });
@@ -117,6 +130,7 @@ app.post('/monitor/:event', (req, res) => {
     events[req.params.event].monitor = req.body;
     res.send();
     pushUpdateToSockets(events[req.params.event].socketClients, req.body);
+    updateTeamsListFromMonitor(req.params.event, req.body);
 });
 
 // Create a user profile for notes
@@ -182,7 +196,7 @@ app.post('/message/:team', (req, res) => {
 
 app.ws('/', (ws, req) => {
     ws.on('message', (msg) => {
-        if (msg == 'ping') ws.send(JSON.stringify({ type: 'pong' }));
+        if (msg == 'ping') return ws.send(JSON.stringify({ type: 'pong' }));
         if (msg.startsWith('server')) {
             let eventCode = msg.substr(7);
             console.log(`[WS ${eventCode} S] connected`);
@@ -192,15 +206,21 @@ app.ws('/', (ws, req) => {
                 events[eventCode] = {
                     socketServer: ws,
                     socketClients: [],
-                    monitor: DEFAULT_MONITOR
+                    monitor: DEFAULT_MONITOR,
+                    teams: []
                 }
             }
 
             // Register broadcast function for this server
             ws.on('message', (msg) => {
-                console.log(`[WS ${eventCode} S] MSG Recieved`);
+                if (msg == 'ping') return ws.send(JSON.stringify({ type: 'pong' }));
                 for (socketClient of events[eventCode].socketClients) {
                     if (socketClient) socketClient.send(msg);
+                }
+                events[eventCode].monitor = JSON.parse(msg);
+                // If field is ready to prestart, that means new teams are displayed
+                if (events[eventCode].monitor.field === 7) {
+                    updateTeamsListFromMonitor(eventCode, events[eventCode].monitor);
                 }
             });
 
@@ -212,7 +232,8 @@ app.ws('/', (ws, req) => {
             } else {
                 events[eventCode] = {
                     socketClients: [ws],
-                    monitor: DEFAULT_MONITOR
+                    monitor: DEFAULT_MONITOR,
+                    teams: []
                 }
             }
             ws.send(JSON.stringify(events[eventCode].monitor));

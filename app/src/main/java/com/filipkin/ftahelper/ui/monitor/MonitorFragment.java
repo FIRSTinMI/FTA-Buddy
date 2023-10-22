@@ -96,6 +96,7 @@ public class MonitorFragment extends Fragment {
                 ContextCompat.getColor(root.getContext(), R.color.green),
                 ContextCompat.getColor(root.getContext(), R.color.yellow),
                 ContextCompat.getColor(root.getContext(), R.color.yellow),
+                ContextCompat.getColor(root.getContext(), R.color.red_bypass),
                 ContextCompat.getColor(root.getContext(), R.color.red_bypass)
         };
 

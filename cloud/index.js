@@ -131,6 +131,17 @@ app.post('/profile', (req, res) => {
     });
 });
 
+// Check if a profile exists
+app.get('/profile/:profile', (req, res) => {
+    db.query('SELECT * FROM profiles WHERE id = ?;', [req.params.profile]).spread((profiles) => {
+        if (profiles.length !== 1) {
+            return res.status(404).send({ error: 'Profile not found' });
+        }
+
+        res.send(profiles[0]);
+    });
+});
+
 // Get notes for a team along with profile info
 app.get('/message/:team', (req, res) => {
     db.query('SELECT * FROM messages WHERE team = ?;', [req.params.team]).spread((messages) => {

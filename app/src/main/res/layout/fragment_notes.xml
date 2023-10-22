@@ -2,6 +2,7 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/notes"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".ui.notes.NotesFragment">
@@ -17,9 +18,17 @@
 
         <Spinner
             android:id="@+id/team_selector"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="48dp"
-            android:layout_weight="1" />
+            android:layout_weight="2" />
+
+        <ImageButton
+            android:id="@+id/notesSettings"
+            android:layout_width="72dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:src="@android:drawable/ic_menu_preferences"
+            android:contentDescription="@string/notes_settings" />
     </LinearLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -52,12 +61,12 @@
             android:gravity="start|top"
             android:hint="@string/type_message_here"
             android:imeOptions="actionSend"
+            android:inputType="textCapSentences"
             android:minHeight="48dp"
             android:singleLine="true"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/send_button"
-            app:layout_constraintStart_toStartOf="parent"
-            android:inputType="textCapSentences" />
+            app:layout_constraintStart_toStartOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

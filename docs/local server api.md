@@ -105,6 +105,8 @@ The Field and DS fields have specific status codes
 | 2    | Ethernet connected, no FMS |
 | 3    | Station mismatch           |
 | 4    | Wrong match                |
+| 5    | Bypassed                   |
+| 6    | EStopped                   |
 
 **Field**
 | Code | Status               |

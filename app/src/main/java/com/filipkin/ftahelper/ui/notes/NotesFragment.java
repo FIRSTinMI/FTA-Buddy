@@ -106,6 +106,13 @@ public class NotesFragment extends DialogFragment {
         // Update team list in selector from live data
         @SuppressLint("SetTextI18n")
         final Observer<ArrayList<String>> teamsObserver = newTeams -> {
+            newTeams.sort(new Comparator<String>() {
+                @Override
+                public int compare(String o1, String o2) {
+                    // Pad numbers with zeros so 33 is before 1684
+                    return (String.format("%1$4s", o1).replace(' ', '0')).compareTo(String.format("%1$4s", o2).replace(' ', '0'));
+                }
+            });
             Spinner spinner = binding.teamSelector;
             spinner.setAdapter(new ArrayAdapter<>(root.getContext(),  android.R.layout.simple_spinner_dropdown_item, newTeams));
             if (newTeams.contains(currentlySelectedTeam)) {

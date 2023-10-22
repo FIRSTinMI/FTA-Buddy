@@ -1,7 +1,7 @@
 function read(station) {
     return {
         number: document.getElementById(station + 'Number').innerText,
-        ds: (document.getElementById(station + 'robot').classList.contains('fieldMonitor-redSquareB')) ? 5 : identifyStatus(document.getElementById(station + 'ds')),
+        ds: identifyStatusDS(station),
         radio: identifyStatus(document.getElementById(station + 'radio')),
         rio: identifyStatus(document.getElementById(station + 'robot')),
         code: (document.getElementById(station + 'Row').classList.contains('notReadyYellow')) ? 0 : 1,
@@ -10,6 +10,12 @@ function read(station) {
         ping: parseInt(document.getElementById(station + 'AvgTrip').innerText),
         packets: parseInt(document.getElementById(station + 'MissedPackets').innerText)
     }
+}
+
+function identifyStatusDS(station) {
+    if (document.getElementById(station + 'robot').classList.contains('fieldMonitor-redSquareB')) return 5;
+    if (document.getElementById(station + 'enabled').classList.contains('fieldMonitor-blackDiamondE')) return 6;
+    return identifyStatus(document.getElementById(station + 'ds'));
 }
 
 function identifyStatus(elm) {

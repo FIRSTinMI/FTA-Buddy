@@ -29,6 +29,7 @@
         <item>M</item>
         <item>W</item>
         <item>B</item>
+        <item>E</item>
     </string-array>
     <string name="battery">%1$2.1fv</string>
     <string name="ping">%1$d ms</string>

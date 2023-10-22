@@ -165,6 +165,32 @@ public class NotesFragment extends DialogFragment {
             }
         });
 
+        binding.notesSettings.setOnClickListener(v -> {
+            if (profileNumber < 1) {
+                createProfileDialog();
+                return;
+            }
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+
+            builder.setTitle("Notes Settings")
+                    .setMessage("Current profile: "+profileName+" (id: "+profileNumber+")")
+                    .setPositiveButton("OK", (dialog, which) -> {
+                        dialog.cancel();
+                    }).setNegativeButton("Logout", (dialog, which) -> {
+                        profileNumber = -1;
+                        profileName = null;
+                        sharedPreferences.edit().remove("profileNumber").remove("profileName").apply();
+
+                        binding.notesMessage.setEnabled(false);
+                        binding.sendButton.setEnabled(false);
+                        dialog.cancel();
+                    });
+
+            AlertDialog dialog = builder.create();
+            dialog.show();
+        });
+
         return root;
     }
 
@@ -260,6 +286,11 @@ public class NotesFragment extends DialogFragment {
     }
 
     private void registerUsername(EditText usernameInput) {
+        // If username input is numeric, then user has entered a profile number they want to login as
+        if (usernameInput.getText().toString().matches("^[1-9][0-9]*$")) {
+            setProfile(Integer.parseInt(usernameInput.getText().toString()));
+            return;
+        }
         try {
             JSONObject body = (new JSONObject()).put("username", usernameInput.getText().toString());
             Fetch.post("https://ftabuddy.filipkin.com/profile", body.toString(), new Callback() {
@@ -287,6 +318,36 @@ public class NotesFragment extends DialogFragment {
         } catch(JSONException e) {
             requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Error parsing JSON", Toast.LENGTH_LONG).show());
         }
+    }
+
+    private void setProfile(Integer profileNumberInput) {
+        Fetch.get("https://ftabuddy.filipkin.com/profile/"+profileNumberInput, new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Error communicating with server", Toast.LENGTH_LONG).show());
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                if (response.code() == 404) {
+                    requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Profile not found", Toast.LENGTH_SHORT).show());
+                    return;
+                }
+                try {
+                    JSONObject responseJson = new JSONObject(response.body().string());
+                    profileName = responseJson.getString("username");
+                    profileNumber = profileNumberInput;
+                    sharedPreferences
+                            .edit()
+                            .putString("profileName", profileName)
+                            .putInt("profileNumber", profileNumber)
+                            .apply();
+                    requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Welcome "+profileName+" :)", Toast.LENGTH_SHORT).show());
+                } catch(JSONException e) {
+                    requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Error parsing JSON", Toast.LENGTH_LONG).show());
+                }
+            }
+        });
     }
 
     private void loadNotes(String team) {

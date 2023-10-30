@@ -42,7 +42,6 @@ public class MonitorFragment extends Fragment {
     private FragmentMonitorBinding binding;
     private URI uri;
     private FieldState field = new FieldState() {};
-    private FieldState oldField = new FieldState() {};
     private MonitorViewModel monitorViewModel;
     private boolean firstConnection = true;
     private WebSocket ws;
@@ -334,7 +333,7 @@ public class MonitorFragment extends Fragment {
                         Vibrator v = (Vibrator) requireActivity().getSystemService(requireContext().VIBRATOR_SERVICE);
 
                         // Vibrate on lost connection if match in progress
-                        if (field.field < 4) {
+                        if (field.field < 4 && field.field > 0) {
                             if ((field.blue1.ds == 1 && field.blue1.ds > blue1.getInt("ds")) ||
                                     (field.blue2.ds == 1 && field.blue2.ds > blue2.getInt("ds")) ||
                                     (field.blue3.ds == 1 && field.blue3.ds > blue3.getInt("ds")) ||

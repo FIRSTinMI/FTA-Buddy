@@ -2,24 +2,45 @@
     "manifest_version": 3,
     "name": "FTA Buddy",
     "description": "Enable the field monitor and notes sync for FTA Buddy app",
-    "version": "1.0",
+    "version": "1.1",
     "permissions": [
         "scripting",
-        "webNavigation"
+        "webNavigation",
+        "storage"
     ],
-    "background": {
-        "service_worker": "sw.js"
-    },
+    "content_scripts": [
+        {
+            "run_at": "document_end",
+            "matches": [
+                "http://10.0.100.5/FieldMonitor",
+                "http://localhost/FieldMonitor/"
+            ],
+            "js": [
+                "js/injector.js"
+            ]
+        }
+    ],
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "js/injected.js"
+            ],
+            "matches": [
+                "http://10.0.100.5/*",
+                "http://localhost/*"
+            ]
+        }
+    ],
     "icons": {
-        "48": "logo48.png",
-        "128": "logo128.png"
+        "48": "img/logo48.png",
+        "128": "img/logo128.png"
     },
     "action": {
         "default_popup": "menu.html",
-        "default_icon": "logo.png"
+        "default_icon": "img/logo.png"
     },
     "host_permissions": [
         "http://10.0.100.5/FieldMonitor",
-        "http://localhost/FieldMonitor"
+        "http://localhost/FieldMonitor/"
     ]
 }

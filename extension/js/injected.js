@@ -1,3 +1,7 @@
+console.log('Injection loaded');
+
+let url = document.getElementById('fta-buddy').dataset.host;
+
 function read(station) {
     return {
         number: document.getElementById(station + 'Number').innerText,
@@ -41,8 +45,6 @@ function identifyFieldStatus(elm) {
     if (elm.innerText === 'READY FOR POST-RESULT') return 10;
 }
 
-let lastData = {};
-
 function sendUpdate() {
     let data = {
         type: 'monitorUpdate',
@@ -57,10 +59,7 @@ function sendUpdate() {
         red3: read('red3')
     };
 
-    if (JSON.stringify(data) == JSON.stringify(lastData)) return;
-    lastData = data;
-
-    fetch('http://127.0.0.1:8284/monitor', {
+    fetch(`http://${url}:8284/monitor`, {
         method: 'POST',
         headers: {
             'content-type': 'application/json'
@@ -69,5 +68,5 @@ function sendUpdate() {
     });
 }
 
-setInterval(sendUpdate, 200);
+new MutationObserver(sendUpdate).observe(document.getElementById('monitorData'), { attributes: true, childList: true, subtree: true });
 sendUpdate();

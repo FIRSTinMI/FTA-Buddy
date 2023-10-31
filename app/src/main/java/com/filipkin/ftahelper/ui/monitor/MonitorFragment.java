@@ -1,6 +1,7 @@
 package com.filipkin.ftahelper.ui.monitor;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.os.Bundle;
@@ -41,9 +42,9 @@ public class MonitorFragment extends Fragment {
 
     private FragmentMonitorBinding binding;
     private URI uri;
-    private FieldState field = new FieldState() {};
     private MonitorViewModel monitorViewModel;
     private boolean firstConnection = true;
+    private URI last_connection_uri;
     private WebSocket ws;
 
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -245,7 +246,6 @@ public class MonitorFragment extends Fragment {
         };
 
         monitorViewModel.getField().observe(getViewLifecycleOwner(), fieldObserver);
-        monitorViewModel.getField().setValue(field);
 
         return root;
     }
@@ -306,8 +306,13 @@ public class MonitorFragment extends Fragment {
     }
     
     private void openWebSocket(String eventInput) {
+        // Don't reopen websocket if it's already connected to the same one
+        if (last_connection_uri != null && last_connection_uri.equals(uri)) return;
         Log.i("Websocket", "Connection initializing to " + uri.toString());
         firstConnection = true;
+        FieldState field = new FieldState() {};
+
+        // Close open websocket
         if (ws != null && ws.open) ws.close();
         ws = new WebSocket(uri) {
             int failedConnections = 0;
@@ -330,7 +335,8 @@ public class MonitorFragment extends Fragment {
                         JSONObject red2 = jObject.getJSONObject("red2");
                         JSONObject red3 = jObject.getJSONObject("red3");
 
-                        Vibrator v = (Vibrator) requireActivity().getSystemService(requireContext().VIBRATOR_SERVICE);
+                        requireContext();
+                        Vibrator v = (Vibrator) requireActivity().getSystemService(Context.VIBRATOR_SERVICE);
 
                         // Vibrate on lost connection if match in progress
                         if (field.field < 4 && field.field > 0) {
@@ -450,6 +456,7 @@ public class MonitorFragment extends Fragment {
                 Log.i("Websocket", "Connection established");
                 if (!firstConnection) return;
                 firstConnection = false;
+                last_connection_uri = uri;
                 if (eventInput != null) {
                     this.send("client-"+eventInput);
                 }
@@ -473,6 +480,12 @@ public class MonitorFragment extends Fragment {
                 }
                 System.out.println(e.getMessage());
                 requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Error connecting " + e.getMessage(), Toast.LENGTH_LONG).show());
+            }
+
+            @Override
+            public void onCloseReceived() {
+                Log.i("WebSocket", "Closed");
+                last_connection_uri = null;
             }
         };
     }

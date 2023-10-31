@@ -262,7 +262,7 @@ public class MonitorFragment extends Fragment {
                 binding.relaySwitch.setEnabled(true);
 
                 if (binding.relaySwitch.isChecked()) {
-                    uri = URI.create("ws://server.filipkin.com:9014/");
+                    uri = URI.create("ws://ftahelper.filipkin.com/ws");
                     openWebSocket(eventInput);
                 } else {
                     String requestUrl = "https://ftahelper.filipkin.com/register/" + URLEncoder.encode(eventInput, "UTF-8");

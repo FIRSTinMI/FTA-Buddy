@@ -68,5 +68,5 @@ function sendUpdate() {
     });
 }
 
-new MutationObserver(sendUpdate).observe(document.getElementById('monitorData'), { attributes: true, childList: true, subtree: true });
+new MutationObserver(sendUpdate).observe(document.getElementById('monitorData'), { attributes: true, characterData: true, childList: true, subtree: true });
 sendUpdate();

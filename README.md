@@ -29,12 +29,8 @@ The cloud server also enables the notes functionality. The notes are also persis
 
 ## Getting Started
 
-- [Download latest release](https://github.com/Filip-Kin/FTA-Buddy/releases/latest) of local server and extension on laptop that will be hosting (probably FTA laptop).
-- To install the extension
-    - Unzip it to a folder
-    - Go to the [extensions page](chrome://extensions)
-    - Enable developer mode (top right corner)
-    - Click `Load unpacked` and browse to where you unzipped the folder
+- [Download latest release](https://github.com/Filip-Kin/FTA-Buddy/releases/latest) of local server and extension on laptop that will be hosting (probably FTA laptop) (requires win 8.1 or newer).
+- Install the extension from the [Chrome webstore](https://chrome.google.com/webstore/detail/fta-buddy/kddnhihfpfnehnnhbkfajdldlgigohjc)
 - Run the local server and enter event code when prompted in the window (e.g. 2023mitry).
     - The IP address of the laptop is automatically queried and sent to the cloud server. If it happens to grab the wrong NIC you can specify the local ip manually with the `--ip` flag.
     - You can also set the event code with a `-e` flag.

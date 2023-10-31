@@ -89,7 +89,7 @@ app.listen(port, async () => {
         if (res.status == 200) {
             console.log(`Successfully registered with cloud server under event code ${colors.green.bold(code)}`);
 
-            cloud = new WebSocket(`ws://server.filipkin.com:9014/`);
+            cloud = new WebSocket(`ws://ftabuddy.filipkin.com/ws`);
 
             cloud.on('error', console.error);
             cloud.on('open', () => {

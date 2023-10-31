@@ -265,10 +265,10 @@ public class MonitorFragment extends Fragment {
                 binding.relaySwitch.setEnabled(true);
 
                 if (binding.relaySwitch.isChecked()) {
-                    uri = URI.create("ws://ftahelper.filipkin.com/ws");
+                    uri = URI.create("ws://ftabuddy.filipkin.com/ws");
                     openWebSocket(eventInput);
                 } else {
-                    String requestUrl = "https://ftahelper.filipkin.com/register/" + URLEncoder.encode(eventInput, "UTF-8");
+                    String requestUrl = "https://ftabuddy.filipkin.com/register/" + URLEncoder.encode(eventInput, "UTF-8");
                     Fetch.get(requestUrl, new Callback() {
                         @Override
                         public void onFailure(@NonNull Call call, @NonNull IOException e) {

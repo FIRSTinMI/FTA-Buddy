@@ -1,0 +1,29 @@
+<script lang="ts">
+    import { Router, Route } from "svelte-routing";
+    import Home from "./pages/Home.svelte";
+    import { Button } from "flowbite-svelte";
+    import Icon from "@iconify/svelte";
+
+    let page = window.location.pathname;
+</script>
+
+<main class="min-h-screen h-full bg-neutral-800 w-screen">
+    <Router basepath="/app/">
+        <Route path="/" component={Home} />
+    </Router>
+</main>
+
+<div class="flex justify-around py-2 fixed w-full bottom-0 bg-neutral-700">
+    <Button class="!p-2">
+        <Icon icon="mdi:television" class="w-8 h-8" />
+    </Button>
+    <Button class="!p-2">
+        <Icon icon="mdi:message-alert" class="w-8 h-8" />
+    </Button>
+    <Button class="!p-2">
+        <Icon icon="mdi:file-document-outline" class="w-8 h-8" />
+    </Button>
+    <Button class="!p-2">
+        <Icon icon="mdi:message-text" class="w-8 h-8" />
+    </Button>
+</div>

@@ -5,7 +5,7 @@ const { DATABASE_CONFIG } = require('./config');
 const { DEFAULT_MONITOR } = require('../shared/constants');
 const app = express();
 const expressWs = require('express-ws')(app);
-const port = 9014;
+const port = process.env.PORT || 3001;
 const db = require('mysql-promise')();
 
 db.configure(DATABASE_CONFIG);
@@ -52,6 +52,10 @@ app.use(bodyParser.json());
 app.use(cors());
 
 app.use(express.static('./cloud/public'));
+
+app.get('/', (req, res) => {
+    res.redirect('/app/');
+});
 
 // Get local server ip for an event
 app.get('/register/:event', (req, res) => {

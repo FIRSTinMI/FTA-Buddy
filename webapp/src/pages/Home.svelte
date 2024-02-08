@@ -1,6 +1,7 @@
 <script lang="ts">
-    import { BYPASS, ESTOP, GREEN_X, MOVE_STATION, WRONG_MATCH, type MonitorFrame } from "./../../../shared/types.ts";
+    import { BYPASS, ESTOP, GREEN_X, MOVE_STATION, WRONG_MATCH, type MonitorFrame } from "./../../../shared/types";
     import {
+  Button,
         Input,
         Label,
         Table,
@@ -9,23 +10,53 @@
         TableBodyRow,
         TableHead,
         TableHeadCell,
+        Toggle,
     } from "flowbite-svelte";
-    import { eventStore } from "../stores/event";
+    import { eventStore, relayStore } from "../stores/event";
     import { get } from "svelte/store";
     import { onMount } from "svelte";
 
     let monitorEvent = get(eventStore) || "";
-    let ws;
+    let relayOn = get(relayStore);
+    let secureOnly = false;
+    let ws: WebSocket;
     let monitorFrame: MonitorFrame;
+    
+    if (window.location.href.startsWith('https')) {
+    	relayOn = true;
+        secureOnly = true;
+    }
 
-    function connectToMonitor(evt: Event) {
+    async function connectToMonitor(evt: Event) {
         evt.preventDefault();
+        if (ws) ws?.close();
         if (monitorEvent.match("^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$")) {
             let uri = "ws://" + monitorEvent + ":8284/";
             eventStore.set(monitorEvent);
             openWebSocket(uri);
         } else if (monitorEvent.trim().length > 0) {
+            console.log(relayOn);
+            eventStore.set(monitorEvent);
+            const response = await fetch('https://ftabuddy.filipkin.com/register/'+monitorEvent);
+            const eventData = await response.json();
+            if (response.status !== 200) {
+                alert(response.statusText);
+                return;
+            }
+
+            let uri = "ws://" + eventData.local_ip + ":8284/";
+            if (relayOn) {
+                uri = "wss://ftabuddy.filipkin.com/ws";
+            }
+            
+            openWebSocket(uri);
         }
+    }
+
+    function relayChanged() {
+        console.log(!relayOn);
+        relayStore.set(!relayOn);
+        connectToMonitor(new Event("submit"));
     }
 
     function openWebSocket(uri: string) {
@@ -33,10 +64,17 @@
         ws = new WebSocket(uri);
         ws.onopen = function () {
             console.log("Connected to " + uri);
+            if (relayOn) {
+                this.send("client-"+monitorEvent);
+            }
         };
         ws.onmessage = function (evt) {
             console.log(evt.data);
-            monitorFrame = JSON.parse(evt.data);
+            try {
+            	monitorFrame = JSON.parse(evt.data);
+            } catch (e) {
+            	console.error(e);
+            }
         };
         ws.onclose = function () {
             console.log("Disconnected from " + uri);
@@ -63,14 +101,14 @@
 </script>
 
 <div>
-    <Table>
-        <TableHead>
-            <TableHeadCell class="w-24">Team</TableHeadCell>
-            <TableHeadCell class="w-24">DS</TableHeadCell>
-            <TableHeadCell class="w-12">Radio</TableHeadCell>
-            <TableHeadCell class="w-12">Rio</TableHeadCell>
-            <TableHeadCell class="w-24">Bat</TableHeadCell>
-            <TableHeadCell class="w-24">Net</TableHeadCell>
+    <Table class="w-fit mx-auto">
+        <TableHead class="dark:bg-primary dark:text-black">
+            <TableHeadCell class="w-20">Team</TableHeadCell>
+            <TableHeadCell class="w-20">DS</TableHeadCell>
+            <TableHeadCell class="w-10">Radio</TableHeadCell>
+            <TableHeadCell class="w-10">Rio</TableHeadCell>
+            <TableHeadCell class="w-12">Bat</TableHeadCell>
+            <TableHeadCell class="w-12">Net</TableHeadCell>
         </TableHead>
         <TableBody>
             {#if monitorFrame}
@@ -101,14 +139,15 @@
             {/if}
         </TableBody>
     </Table>
-    <form on:submit={connectToMonitor} class="flex w-screen">
-        <Label class="space-y-2 mx-auto">
-            <span>Event Code</span>
+    <form on:submit={connectToMonitor} class="flex w-screen justify-center items-center space-x-4 mt-4">
+        <Toggle class="toggle" bind:checked={relayOn} on:click={relayChanged} bind:disabled={secureOnly}>Relay</Toggle>
+        <Label class="space-y-2">
             <Input
                 class="max-w-64 w-full"
                 bind:value={monitorEvent}
                 placeholder="Event Code or IP"
             />
         </Label>
+        <Button color="primary" on:click={connectToMonitor}>Connect</Button>
     </form>
 </div>

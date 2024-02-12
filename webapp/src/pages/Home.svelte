@@ -1,17 +1,6 @@
 <script lang="ts">
     import { BYPASS, ESTOP, GREEN_X, MOVE_STATION, WRONG_MATCH, type MonitorFrame } from "./../../../shared/types";
-    import {
-  Button,
-        Input,
-        Label,
-        Table,
-        TableBody,
-        TableBodyCell,
-        TableBodyRow,
-        TableHead,
-        TableHeadCell,
-        Toggle,
-    } from "flowbite-svelte";
+    import { Button, Input, Label, Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell, Toggle } from "flowbite-svelte";
     import { eventStore, relayStore } from "../stores/event";
     import { get } from "svelte/store";
     import { onMount } from "svelte";
@@ -21,9 +10,9 @@
     let secureOnly = false;
     let ws: WebSocket;
     let monitorFrame: MonitorFrame;
-    
-    if (window.location.href.startsWith('https')) {
-    	relayOn = true;
+
+    if (window.location.href.startsWith("https")) {
+        relayOn = true;
         secureOnly = true;
     }
 
@@ -37,7 +26,7 @@
         } else if (monitorEvent.trim().length > 0) {
             console.log(relayOn);
             eventStore.set(monitorEvent);
-            const response = await fetch('https://ftabuddy.filipkin.com/register/'+monitorEvent);
+            const response = await fetch("https://ftabuddy.com/register/" + monitorEvent);
             const eventData = await response.json();
             if (response.status !== 200) {
                 alert(response.statusText);
@@ -46,9 +35,9 @@
 
             let uri = "ws://" + eventData.local_ip + ":8284/";
             if (relayOn) {
-                uri = "wss://ftabuddy.filipkin.com/ws";
+                uri = "wss://ftabuddy.com/ws";
             }
-            
+
             openWebSocket(uri);
         }
     }
@@ -65,15 +54,15 @@
         ws.onopen = function () {
             console.log("Connected to " + uri);
             if (relayOn) {
-                this.send("client-"+monitorEvent);
+                this.send("client-" + monitorEvent);
             }
         };
         ws.onmessage = function (evt) {
             console.log(evt.data);
             try {
-            	monitorFrame = JSON.parse(evt.data);
+                monitorFrame = JSON.parse(evt.data);
             } catch (e) {
-            	console.error(e);
+                console.error(e);
             }
         };
         ws.onclose = function () {
@@ -97,7 +86,7 @@
         4: "bg-yellow-500",
         5: "bg-red-700",
         6: "bg-neutral-900",
-    }
+    };
 </script>
 
 <div>
@@ -114,7 +103,7 @@
             {#if monitorFrame}
                 {#each [monitorFrame.blue1, monitorFrame.blue2, monitorFrame.blue3, monitorFrame.red1, monitorFrame.red2, monitorFrame.red3] as team}
                     <TableBodyRow class="h-20">
-                        <TableBodyCell class={(getKey(team)?.startsWith('blue')) ? "bg-blue-600" : "bg-red-600"}>{team.number}</TableBodyCell>
+                        <TableBodyCell class={getKey(team)?.startsWith("blue") ? "bg-blue-600" : "bg-red-600"}>{team.number}</TableBodyCell>
                         <TableBodyCell class="{DS_Colors[team.ds]} text-4xl text-black">
                             {#if team.ds === GREEN_X}
                                 X
@@ -131,9 +120,7 @@
                         <TableBodyCell class={DS_Colors[team.radio]}></TableBodyCell>
                         <TableBodyCell class={DS_Colors[team.rio]}></TableBodyCell>
                         <TableBodyCell>{team.battery}v</TableBodyCell>
-                        <TableBodyCell
-                            >{team.ping} ms<br />{team.bwu} mbps</TableBodyCell
-                        >
+                        <TableBodyCell>{team.ping} ms<br />{team.bwu} mbps</TableBodyCell>
                     </TableBodyRow>
                 {/each}
             {/if}
@@ -142,12 +129,17 @@
     <form on:submit={connectToMonitor} class="flex w-screen justify-center items-center space-x-4 mt-4">
         <Toggle class="toggle" bind:checked={relayOn} on:click={relayChanged} bind:disabled={secureOnly}>Relay</Toggle>
         <Label class="space-y-2">
-            <Input
-                class="max-w-64 w-full"
-                bind:value={monitorEvent}
-                placeholder="Event Code or IP"
-            />
+            <Input class="max-w-64 w-full" bind:value={monitorEvent} placeholder="Event Code or IP" />
         </Label>
-        <Button color="primary" on:click={connectToMonitor}>Connect</Button>
+        <Button color="primary" class="dark:bg-primary" on:click={connectToMonitor}>Connect</Button>
     </form>
+    {#if secureOnly}
+        <div class="flex justify-center text-xs dark:text-gray-700 underline mt-2">
+            <a
+                on:click={() => {
+                    window.location.href = "http://ftabuddy.filipkin.com/app/";
+                }}>Go to insecure website to connect to server locally</a
+            >
+        </div>
+    {/if}
 </div>

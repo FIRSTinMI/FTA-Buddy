@@ -104,7 +104,7 @@
                 {#each [monitorFrame.blue1, monitorFrame.blue2, monitorFrame.blue3, monitorFrame.red1, monitorFrame.red2, monitorFrame.red3] as team}
                     <TableBodyRow class="h-20">
                         <TableBodyCell class={getKey(team)?.startsWith("blue") ? "bg-blue-600" : "bg-red-600"}>{team.number}</TableBodyCell>
-                        <TableBodyCell class="{DS_Colors[team.ds]} text-4xl text-black">
+                        <TableBodyCell class="{DS_Colors[team.ds]} text-4xl text-black text-center">
                             {#if team.ds === GREEN_X}
                                 X
                             {:else if team.ds === MOVE_STATION}

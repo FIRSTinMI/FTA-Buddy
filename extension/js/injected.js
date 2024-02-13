@@ -1,6 +1,8 @@
 console.log('Injection loaded');
 
 let url = document.getElementById('fta-buddy').dataset.host;
+let cloud = document.getElementById('fta-buddy').dataset.cloud;
+let eventCode = document.getElementById('fta-buddy').dataset.event;
 
 function read(station) {
     return {
@@ -59,14 +61,38 @@ function sendUpdate() {
         red3: read('red3')
     };
 
-    fetch(`http://${url}:8284/monitor`, {
-        method: 'POST',
-        headers: {
-            'content-type': 'application/json'
-        },
-        body: JSON.stringify(data)
-    });
+    if (cloud) {
+        if (ws.readyState === 1) ws.send(JSON.stringify(data));
+    } else {
+        fetch(`http://${url}:8284/monitor`, {
+            method: 'POST',
+            headers: {
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+    }
 }
 
+let ws;
+
+function connectToWS() {
+    if (ws) ws.close();
+
+    ws = new WebSocket(`wss://ftabuddy.com/ws/`);
+    ws.onopen = () => {
+        ws.send(`server-${eventCode}`);
+        console.log('Connected to cloud server');
+    }
+    ws.onclose = () => {
+        console.log('Disconnected from cloud server, reconnecting in 5 seconds.');
+        setTimeout(connectToWS, 5000);
+    }
+    ws.onerror = (err) => {
+        console.error(err);
+    }
+}
+
+connectToWS();
 new MutationObserver(sendUpdate).observe(document.getElementById('monitorData'), { attributes: true, characterData: true, childList: true, subtree: true });
 sendUpdate();

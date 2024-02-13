@@ -2,7 +2,7 @@
     import { Accordion, AccordionItem } from "flowbite-svelte";
 </script>
 
-<div class="container mx-auto">
+<div class="container mx-auto p-2 pr-3 w-full">
     <Accordion flush>
         <AccordionItem>
             <span slot="header">Robot Radio Lights</span>

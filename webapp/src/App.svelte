@@ -4,6 +4,7 @@
     import Flashcard from "./pages/Flashcards.svelte";
     import { Button } from "flowbite-svelte";
     import Icon from "@iconify/svelte";
+    import Reference from "./pages/Reference.svelte";
 
     let page = window.location.pathname;
 </script>
@@ -12,6 +13,7 @@
     <Router basepath="/app/">
         <Route path="/" component={Home} />
         <Route path="/flashcards" component={Flashcard} />
+        <Route path="/references" component={Reference} />
     </Router>
 </main>
 
@@ -22,7 +24,7 @@
     <Button class="!p-2" href="./flashcards">
         <Icon icon="mdi:message-alert" class="w-8 h-8" />
     </Button>
-    <Button class="!p-2">
+    <Button class="!p-2" href="./references">
         <Icon icon="mdi:file-document-outline" class="w-8 h-8" />
     </Button>
     <Button class="!p-2">

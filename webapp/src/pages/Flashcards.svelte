@@ -28,7 +28,7 @@
 <div class="space-y-2 p-4">
     {#each flashcards as card}
         <div>
-            <Button pill class="dark:bg-primary w-full" on:click={openFlashcard}>{card}</Button>
+            <Button pill class="dark:bg-primary w-full" size="lg" on:click={openFlashcard}>{card}</Button>
         </div>
     {/each}
 </div>

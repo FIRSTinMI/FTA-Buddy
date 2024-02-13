@@ -89,15 +89,15 @@
     };
 </script>
 
-<div>
-    <Table class="w-fit mx-auto">
+<div class="w-full mx-auto container md:p-2">
+    <Table class="w-full sm:w-fit mx-auto">
         <TableHead class="dark:bg-primary dark:text-black">
             <TableHeadCell class="w-20">Team</TableHeadCell>
             <TableHeadCell class="w-20">DS</TableHeadCell>
             <TableHeadCell class="w-10">Radio</TableHeadCell>
             <TableHeadCell class="w-10">Rio</TableHeadCell>
-            <TableHeadCell class="w-12">Bat</TableHeadCell>
-            <TableHeadCell class="w-12">Net</TableHeadCell>
+            <TableHeadCell>Bat</TableHeadCell>
+            <TableHeadCell>Net</TableHeadCell>
         </TableHead>
         <TableBody>
             {#if monitorFrame}
@@ -126,7 +126,7 @@
             {/if}
         </TableBody>
     </Table>
-    <form on:submit={connectToMonitor} class="flex w-screen justify-center items-center space-x-4 mt-4">
+    <form on:submit={connectToMonitor} class="flex w-full justify-center items-center space-x-4 mt-4 px-2">
         <Toggle class="toggle" bind:checked={relayOn} on:click={relayChanged} bind:disabled={secureOnly}>Relay</Toggle>
         <Label class="space-y-2">
             <Input class="max-w-64 w-full" bind:value={monitorEvent} placeholder="Event Code or IP" />
@@ -135,10 +135,10 @@
     </form>
     {#if secureOnly}
         <div class="flex justify-center text-xs dark:text-gray-700 underline mt-2">
-            <a
+            <button
                 on:click={() => {
                     window.location.href = "http://ftabuddy.filipkin.com/app/";
-                }}>Go to insecure website to connect to server locally</a
+                }}>Go to insecure website to connect to server localy</button
             >
         </div>
     {/if}

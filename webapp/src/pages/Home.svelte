@@ -91,7 +91,7 @@
 
 <div class="w-full mx-auto container md:p-2">
     <Table class="w-full sm:w-fit mx-auto">
-        <TableHead class="dark:bg-primary dark:text-black">
+        <TableHead class="dark:bg-neutral-500 dark:text-white">
             <TableHeadCell class="w-20">Team</TableHeadCell>
             <TableHeadCell class="w-20">DS</TableHeadCell>
             <TableHeadCell class="w-10">Radio</TableHeadCell>
@@ -102,9 +102,9 @@
         <TableBody>
             {#if monitorFrame}
                 {#each [monitorFrame.blue1, monitorFrame.blue2, monitorFrame.blue3, monitorFrame.red1, monitorFrame.red2, monitorFrame.red3] as team}
-                    <TableBodyRow class="h-20">
+                    <TableBodyRow class="h-20 border-y border-gray-800">
                         <TableBodyCell class={getKey(team)?.startsWith("blue") ? "bg-blue-600" : "bg-red-600"}>{team.number}</TableBodyCell>
-                        <TableBodyCell class="{DS_Colors[team.ds]} text-4xl text-black text-center">
+                        <TableBodyCell class="{DS_Colors[team.ds]} text-4xl text-black text-center border-x border-gray-800">
                             {#if team.ds === GREEN_X}
                                 X
                             {:else if team.ds === MOVE_STATION}
@@ -117,8 +117,8 @@
                                 E
                             {/if}
                         </TableBodyCell>
-                        <TableBodyCell class={DS_Colors[team.radio]}></TableBodyCell>
-                        <TableBodyCell class={DS_Colors[team.rio]}></TableBodyCell>
+                        <TableBodyCell class="{DS_Colors[team.radio]} border-x border-gray-800"></TableBodyCell>
+                        <TableBodyCell class="{DS_Colors[team.rio]} border-x border-gray-800"></TableBodyCell>
                         <TableBodyCell>{team.battery}v</TableBodyCell>
                         <TableBodyCell>{team.ping} ms<br />{team.bwu} mbps</TableBodyCell>
                     </TableBodyRow>

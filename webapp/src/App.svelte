@@ -17,17 +17,17 @@
     </Router>
 </main>
 
-<div class="flex justify-around py-2 fixed w-full bottom-0 bg-neutral-700">
-    <Button class="!p-2" href="./">
+<div class="flex justify-around py-2 fixed w-full bottom-0 bg-neutral-700" id="nav-bar">
+    <Button class="!p-2 {(page == '/') ? 'active' : ''}" href="./">
         <Icon icon="mdi:television" class="w-8 h-8" />
     </Button>
-    <Button class="!p-2" href="./flashcards">
+    <Button class="!p-2 {(page == '/flashcards') ? 'active' : ''}" href="./flashcards">
         <Icon icon="mdi:message-alert" class="w-8 h-8" />
     </Button>
-    <Button class="!p-2" href="./references">
+    <Button class="!p-2 {(page == '/references') ? 'active' : ''}" href="./references">
         <Icon icon="mdi:file-document-outline" class="w-8 h-8" />
     </Button>
-    <Button class="!p-2">
+    <Button class="!p-2 {(page == '/notes') ? 'active' : ''}" href="./notes" disabled>
         <Icon icon="mdi:message-text" class="w-8 h-8" />
     </Button>
 </div>

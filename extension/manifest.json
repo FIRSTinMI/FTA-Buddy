@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "FTA Buddy",
     "description": "Enable the field monitor and notes sync for FTA Buddy app",
-    "version": "1.1",
+    "version": "1.2",
     "permissions": [
         "scripting",
         "webNavigation",

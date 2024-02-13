@@ -65,7 +65,7 @@ app.listen(port, async () => {
     let myip = options.ip
     if (!myip) myip = ip.address();
 
-    console.log(`FTA-Helper app listening on port ${port} of ${colors.green.bold(myip)}`);
+    console.log(`FTA Buddy app listening on port ${port} of ${colors.green.bold(myip)}`);
 
     let code = options.event;
     if (!options.event) {

@@ -22,7 +22,7 @@ The cloud server also enables the notes functionality. The notes are also persis
 
 ### Cloud Based
 - Install the extension from the [Chrome webstore](https://chrome.google.com/webstore/detail/fta-buddy/kddnhihfpfnehnnhbkfajdldlgigohjc)
-- Make sure the cloud checkbox is checked, then enter the event code into the extension (i.e. 2023MIKet) and open the field monitor
+- Make sure the cloud checkbox is checked, then enter the event code into the extension (e.g. 2023mitry) and open the field monitor
 - Go to the [web app](https://ftabuddy.com/app/) on your phone, click the three dots button in your browser, and click install app.
     - On android you can also install it from the [Play Store](https://play.google.com/store/apps/details?id=com.filipkin.ftahelper)
 - Open the app from the home screen and enter the event code

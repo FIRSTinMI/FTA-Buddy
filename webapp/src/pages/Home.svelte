@@ -4,6 +4,7 @@
         Button,
         Input,
         Label,
+        Modal,
         Table,
         TableBody,
         TableBodyCell,
@@ -15,10 +16,11 @@
     import { eventStore, relayStore } from "../stores/event";
     import { get } from "svelte/store";
     import { onMount } from "svelte";
+    import { navigate } from "svelte-routing";
 
-    let monitorEvent = get(eventStore) || "";
-    let relayOn = get(relayStore);
-    let secureOnly = false;
+    let monitorEvent = get(eventStore) || "test";
+    let relayOn = true; //get(relayStore);
+    let secureOnly = true;
     let ws: WebSocket;
     let monitorFrame: MonitorFrame;
 
@@ -89,7 +91,7 @@
         return Object.keys(monitorFrame).find((key) => (monitorFrame as any)[key] === value);
     }
 
-    const DS_Colors = {
+    const DS_Colors: { [key: number]: string } = {
         0: "bg-red-600",
         1: "bg-green-500",
         2: "bg-green-500",
@@ -98,7 +100,28 @@
         5: "bg-red-700",
         6: "bg-neutral-900",
     };
+
+    const RIO_Colors: { [key: number]: string } = {
+        0: "bg-red-600",
+        1: "bg-yellow-500",
+        2: "bg-green-500",
+    };
+
+    function navigateToNotes(evt: Event) {
+        let target = evt.target as HTMLElement;
+        let team = target.parentElement?.id.replace("-row", "");
+        navigate("/app/notes/" + team);
+    }
+
+    let modalOpen = false;
+    function detailView(evt: Event) {
+        let target = evt.target as HTMLElement;
+        let team = target.parentElement?.id.replace("-row", "");
+        modalOpen = true;
+    }
 </script>
+
+<Modal bind:open={modalOpen} size="lg"></Modal>
 
 <div class="w-full mx-auto container md:p-2">
     <Table class="w-full sm:w-fit mx-auto">
@@ -113,12 +136,16 @@
         <TableBody>
             {#if monitorFrame}
                 {#each [monitorFrame.blue1, monitorFrame.blue2, monitorFrame.blue3, monitorFrame.red1, monitorFrame.red2, monitorFrame.red3] as team}
-                    <TableBodyRow class="h-20 border-y border-gray-800">
-                        <TableBodyCell class={getKey(team)?.startsWith("blue") ? "bg-blue-600" : "bg-red-600"}
-                            >{team.number}</TableBodyCell
+                    <TableBodyRow class="h-20 border-y border-gray-800 cursor-pointer" id="{team.number}-row">
+                        <TableBodyCell
+                            class={getKey(team)?.startsWith("blue") ? "bg-blue-600" : "bg-red-600"}
+                            on:click={navigateToNotes}
                         >
+                            {team.number}
+                        </TableBodyCell>
                         <TableBodyCell
                             class="{DS_Colors[team.ds]} text-4xl text-black text-center border-x border-gray-800"
+                            on:click={detailView}
                         >
                             {#if team.ds === GREEN_X}
                                 X
@@ -132,23 +159,27 @@
                                 E
                             {/if}
                         </TableBodyCell>
-                        <TableBodyCell class="{DS_Colors[team.radio]} border-x border-gray-800"></TableBodyCell>
-                        <TableBodyCell class="{DS_Colors[team.rio]} border-x border-gray-800"></TableBodyCell>
-                        <TableBodyCell>{team.battery}v</TableBodyCell>
-                        <TableBodyCell>{team.ping} ms<br />{team.bwu} mbps</TableBodyCell>
+                        <TableBodyCell class="{DS_Colors[team.radio]} border-x border-gray-800" on:click={detailView}
+                        ></TableBodyCell>
+                        <TableBodyCell
+                            class="{RIO_Colors[team.rio + team.code]} border-x border-gray-800"
+                            on:click={detailView}
+                        ></TableBodyCell>
+                        <TableBodyCell on:click={detailView}>{team.battery}v</TableBodyCell>
+                        <TableBodyCell on:click={detailView}>{team.ping} ms<br />{team.bwu} mbps</TableBodyCell>
                     </TableBodyRow>
                 {/each}
             {/if}
         </TableBody>
     </Table>
     <form on:submit={connectToMonitor} class="flex w-full justify-center items-center space-x-4 mt-4 px-2">
-        <Toggle class="toggle" bind:checked={relayOn} on:click={relayChanged} bind:disabled={secureOnly}>Relay</Toggle>
+        <!-- <Toggle class="toggle" bind:checked={relayOn} on:click={relayChanged} bind:disabled={secureOnly}>Relay</Toggle> -->
         <Label class="space-y-2">
             <Input class="max-w-64 w-full" bind:value={monitorEvent} placeholder="Event Code or IP" />
         </Label>
         <Button color="primary" class="dark:bg-primary" on:click={connectToMonitor}>Connect</Button>
     </form>
-    {#if secureOnly}
+    <!-- {#if secureOnly}
         <div class="flex justify-center text-xs dark:text-gray-700 underline mt-2">
             <button
                 on:click={() => {
@@ -156,5 +187,5 @@
                 }}>Go to insecure website to connect to server localy</button
             >
         </div>
-    {/if}
+    {/if} -->
 </div>

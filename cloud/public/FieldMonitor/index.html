@@ -1,0 +1,422 @@
+<html lang="en" class=" ssuekogps idc0_350"><!--
+    ____ _       __    __
+   / __/(_)___  / /___/ /
+  / _/ / // -_)/ // _  /
+ /_/  /_/ \__//_/ \_,_/
+    __  ___                                             __
+   /  |/  /___ _ ___  ___ _ ___ _ ___  __ _  ___  ___  / /_
+  / /|_/ // _ `// _ \/ _ `// _ `// -_)/  ' \/ -_)/ _ \/ __/
+ /_/  /_/ \_,_//_//_/\_,_/ \_, / \__//_/_/_/\__//_//_/\__/
+    ____           __     /___/
+   / __/__ __ ___ / /_ ___  __ _
+  _\ \ / // /(_-</ __// -_)/  ' \
+ /___/ \_, //___/\__/ \__//_/_/_/
+      /___/
+ -->
+    <head>
+        <title>FMS : Field Monitor</title>
+    </head>
+
+    <body>
+        <environment names="Development,Staging,Production">
+            <link rel="stylesheet" href="./dist/vendor.css">
+            <link rel="stylesheet" href="./dist/app.css">
+            <script src="https://code.jquery.com/jquery-3.6.0.min.js" type="text/javascript"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.3/jquery.easing.min.js" type="text/javascript"></script>
+
+            <link href="https://cdn.syncfusion.com/18.4.0.47/js/web/flat-azure/ej.web.all.min.css" rel="stylesheet" type="text/css">
+
+            <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.4/css/dataTables.bootstrap5.min.css">
+            <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/fixedheader/3.2.1/css/fixedHeader.bootstrap5.min.css">
+            <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.11.3/js/jquery.dataTables.js"></script>
+            <script type="text/javascript" src="https://cdn.datatables.net/fixedheader/3.2.1/js/dataTables.fixedHeader.min.js"></script>
+        </environment>
+        <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=yes">
+        <link rel="icon" type="image/ico" href="./dist/images/favicon.ico">
+        <nav class="navbar navbar-expand-lg navbar-dark">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="/" title="Home">
+                    <img id="firstLogo" class="d-none d-md-inline-block" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJkAAAAoCAYAAADtylhqAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAABAFpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuNi1jMDY3IDc5LjE1Nzc0NywgMjAxNS8wMy8zMC0yMzo0MDo0MiAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOmRjPSJodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyIgeG1wTU06T3JpZ2luYWxEb2N1bWVudElEPSJ1dWlkOjVEMjA4OTI0OTNCRkRCMTE5MTRBODU5MEQzMTUwOEM4IiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOkVGNDczRjZEOEQzRjExRTU5MzE1RTZFQUUyQTgyQTFCIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOkVGNDczRjZDOEQzRjExRTU5MzE1RTZFQUUyQTgyQTFCIiB4bXA6Q3JlYXRvclRvb2w9IkFkb2JlIFBob3Rvc2hvcCBDQyAyMDE1IChXaW5kb3dzKSI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOjQ0YzIxMDkzLTcyNzYtMWQ0ZS1hNjIxLTQ2YjMxZDM1ZTNiNCIgc3RSZWY6ZG9jdW1lbnRJRD0iYWRvYmU6ZG9j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">
+                    <img id="firstLogoNoText" class="d-inline-block d-md-none" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEQAAAAoCAYAAABHJVyTAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA+tpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuNi1jMDY3IDc5LjE1Nzc0NywgMjAxNS8wMy8zMC0yMzo0MDo0MiAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOmRjPSJodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyIgeG1wTU06T3JpZ2luYWxEb2N1bWVudElEPSJ1dWlkOjVEMjA4OTI0OTNCRkRCMTE5MTRBODU5MEQzMTUwOEM4IiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjc4RjU3NEE2OEQ3QjExRTVCNkQ4Rjk4NDBDNTFDMEU5IiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjc4RjU3NEE1OEQ3QjExRTVCNkQ4Rjk4NDBDNTFDMEU5IiB4bXA6Q3JlYXRvclRvb2w9IkFkb2JlIFBob3Rvc2hvcCBDQyAyMDE1IChXaW5kb3dzKSI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOkVGNDczRjZDOEQzRjExRTU5MzE1RTZFQUUyQTgyQTFCIiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOkVGNDcz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">&nbsp;&nbsp;
+                    <strong>FMS</strong>
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        <li class="nav-item">
+                            <a href="/" class="nav-link" title="Home">
+                                <i class="fas fa-home"></i> Home
+                            </a>
+                        </li>
+                        <li class="active  nav-item">
+                            <a href="/FieldMonitor" class="nav-link" title="Field Monitor">
+                                <i class="fas fa-heartbeat"></i> Field Monitor
+                            </a>
+                        </li>
+                        <li class=" nav-item">
+                            <a href="/FieldMonitor/Matches" class="nav-link" title="Match Logs">
+                                <i class="fas fa-table"></i> Match Logs
+                            </a>
+                        </li>
+                        <li class=" nav-item">
+                            <a href="/ManualScoring" class="nav-link" title="Manual Scoring">
+                                <i class="fas fa-baseball-ball"></i> Manual Scoring
+                            </a>
+                        </li>
+                        <li class=" nav-item">
+                            <a href="/Reports" class="nav-link" title="Reports">
+                                <i class="fas fa-file-alt"></i> Reports
+                            </a>
+                        </li>
+                        <li class=" nav-item">
+                            <a href="/Pit" class="nav-link" title="Pit">
+                                <i class="fas
+                            fa-list-ol"></i> Pit
+                            </a>
+                        </li>
+                        <li class=" nav-item">
+                            <a href="/VideoSwitch" class="nav-link" title="Video Switch">
+                                <i class="fas fa-video"></i> Video Switch
+                            </a>
+                        </li>
+                        <li class=" nav-item">
+                            <a href="/FMSInstallers" class="nav-link" title="Downloads">
+                                <i class="fas fa-download"></i> Downloads
+                            </a>
+                        </li>
+                        <li class=" nav-item">
+                            <a href="/About" class="nav-link" title="About">
+                                <i class="fas fa-info-circle"></i> About
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="gameLogo"></div>
+            </div>
+        </nav>
+        <main role="main">
+
+            <div class="container bg-white py-3" style="padding-bottom: 0.75rem; min-height: 640px;">
+                <environment names="Development,Staging,Production">
+                    <link rel="stylesheet" href="./dist/FieldMonitor.css">
+                </environment>
+
+                <div class="row text-center" id="monitorDataError" style="display: none;">
+                    <div class="col-lg-10">
+                        <br><br>
+                        <p class="lead" style="color:red">SignalR Connection Error. Please check connection status and try again.</p>
+                    </div>
+                </div>
+
+                <table class="table-bordered text-center" id="monitorData" style="visibility: visible;">
+                    <thead>
+                        <tr>
+                            <th colspan="2" class="matchNumber" scope="col" id="MatchNumber">M: 0</th>
+                            <th colspan="8" id="matchStateTop" class="matchStateRed matchState" scope="col" style="font-size: 2.5em;">UNKNOWN</th>
+                        </tr>
+                        <tr>
+                            <th colspan="2" scope="col" id="aheadbehind" style="font-size:22px;color:white;">23m Ahead</th>
+                            <th scope="col">DS</th>
+                            <th scope="col">BWU</th>
+                            <th scope="col">Radio</th>
+                            <th scope="col">RIO</th>
+                            <th scope="col">Battery</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Trip Time (ms)</th>
+                            <th scope="col">Missed Packets</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="teamRow notReadyYellow" id="blue1Row">
+                            <td class="teamblue">
+                                <div class="teamblue stationNumber">1</div>
+                                <div id="blue1versionmm" class="fieldMonitor-warning" title="Robot Version Data Mismatch" style="display: none;"></div>
+                            </td>
+                            <td class="teamblue teamNumber" id="blue1Number" title="MAC: null">1</td>
+                            <td>
+                                <div id="blue1ds" class="fieldMonitor-redSquare">
+                                </div>
+                            </td>
+                            <td id="blue1BWU" class="teamRowData" title="Signal: null (dBm) Noise: null (dBm) SNR: 0 TX Rate: nullTX MCS: null RX Rate: null RX MCS: null">0.000</td>
+                            <td>
+                                <div id="blue1radio" class="fieldMonitor-redSquare">
+                                </div>
+                            </td>
+                            <td>
+                                <div id="blue1robot" class="fieldMonitor-redSquare">
+                                </div>
+                            </td>
+                            <td id="blue1Battery" class="teamRowData">0.00</td>
+                            <td>
+                                <div id="blue1enabled" class="fieldMonitor-redSquare">
+                                </div>
+                            </td>
+                            <td id="blue1AvgTrip" class="teamRowData">0</td>
+                            <td id="blue1MissedPackets" class="teamRowData">0</td>
+                        </tr>
+                        <tr class="teamRow notReadyYellow" id="blue2Row">
+                            <td class="teamblue">
+                                <div class="teamblue stationNumber">2</div>
+                                <div id="blue2versionmm" class="fieldMonitor-warning" title="Robot Version Data Mismatch" style="display: none;"></div>
+                            </td>
+                            <td class="teamblue teamNumber" id="blue2Number" title="MAC: null">2</td>
+                            <td>
+                                <div id="blue2ds" class="fieldMonitor-redSquare">
+                                </div>
+                            </td>
+                            <td id="blue2BWU" class="teamRowData" title="Signal: null (dBm) Noise: null (dBm) SNR: 0 TX Rate: nullTX MCS: null RX Rate: null RX MCS: null">0.000</td>
+                            <td>
+                                <div id="blue2radio" class="fieldMonitor-redSquare">
+                                </div>
+                            </td>
+                            <td>
+                                <div id="blue2robot" class="fieldMonitor-redSquare">
+                                </div>
+                            </td>
+                            <td id="blue2Battery" class="teamRowData">0.00</td>
+                            <td>
+                                <div id="blue2enabled" class="fieldMonitor-redSquare">
+                                </div>
+                            </td>
+                            <td id="blue2AvgTrip" class="teamRowData">0</td>
+                            <td id="blue2MissedPackets" class="teamRowData">0</td>
+                        </tr>
+                        <tr class="teamRow notReadyYellow" id="blue3Row">
+                            <td class="teamblue">
+                                <div class="teamblue stationNumber">3</div>
+                                <div id="blue3versionmm" class="fieldMonitor-warning" title="Robot Version Data Mismatch" style="display: none;"></div>
+                            </td>
+                            <td class="teamblue teamNumber" id="blue3Number" title="MAC: null">3</td>
+                            <td>
+                                <div id="blue3ds" class="fieldMonitor-redSquare">
+                                </div>
+                            </td>
+                            <td id="blue3BWU" class="teamRowData" title="Signal: null (dBm) Noise: null (dBm) SNR: 0 TX Rate: nullTX MCS: null RX Rate: null RX MCS: null">0.000</td>
+                            <td>
+                                <div id="blue3radio" class="fieldMonitor-redSquare">
+                                </div>
+                            </td>
+                            <td>
+                                <div id="blue3robot" class="fieldMonitor-redSquare">
+                                </div>
+                            </td>
+                            <td id="blue3Battery" class="teamRowData">0.00</td>
+                            <td>
+                                <div id="blue3enabled" class="fieldMonitor-redSquare">
+                                </div>
+                            </td>
+                            <td id="blue3AvgTrip" class="teamRowData">0</td>
+                            <td id="blue3MissedPackets" class="teamRowData">0</td>
+                        </tr>
+                        <tr class="teamRow notReadyYellow" id="red1Row">
+                            <td class="teamred">
+                                <div class="teamred stationNumber">1</div>
+                                <div id="red1versionmm" class="fieldMonitor-warning" title="Robot Version Data Mismatch" style="display: none;"></div>
+                            </td>
+                            <td class="teamred teamNumber" id="red1Number" title="MAC: null">4</td>
+                            <td>
+                                <div id="red1ds" class="fieldMonitor-redSquare">
+                                </div>
+                            </td>
+                            <td id="red1BWU" class="teamRowData" title="Signal: null (dBm) Noise: null (dBm) SNR: 0 TX Rate: nullTX MCS: null RX Rate: null RX MCS: null">0.000</td>
+                            <td>
+                                <div id="red1radio" class="fieldMonitor-redSquare">
+                                </div>
+                            </td>
+                            <td>
+                                <div id="red1robot" class="fieldMonitor-redSquare">
+                                </div>
+                            </td>
+                            <td id="red1Battery" class="teamRowData">0.00</td>
+                            <td>
+                                <div id="red1enabled" class="fieldMonitor-redSquare">
+                                </div>
+                            </td>
+                            <td id="red1AvgTrip" class="teamRowData">0</td>
+                            <td id="red1MissedPackets" class="teamRowData">0</td>
+                        </tr>
+                        <tr class="teamRow notReadyYellow" id="red2Row">
+                            <td class="teamred">
+                                <div class="teamred stationNumber">2</div>
+                                <div id="red2versionmm" class="fieldMonitor-warning" title="Robot Version Data Mismatch" style="display: none;"></div>
+                            </td>
+                            <td class="teamred teamNumber" id="red2Number" title="MAC: null">5</td>
+                            <td>
+                                <div id="red2ds" class="fieldMonitor-redSquare">
+                                </div>
+                            </td>
+                            <td id="red2BWU" class="teamRowData" title="Signal: null (dBm) Noise: null (dBm) SNR: 0 TX Rate: nullTX MCS: null RX Rate: null RX MCS: null">0.000</td>
+                            <td>
+                                <div id="red2radio" class="fieldMonitor-redSquare">
+                                </div>
+                            </td>
+                            <td>
+                                <div id="red2robot" class="fieldMonitor-redSquare">
+                                </div>
+                            </td>
+                            <td id="red2Battery" class="teamRowData">0.00</td>
+                            <td>
+                                <div id="red2enabled" class="fieldMonitor-redSquare">
+                                </div>
+                            </td>
+                            <td id="red2AvgTrip" class="teamRowData">0</td>
+                            <td id="red2MissedPackets" class="teamRowData">0</td>
+                        </tr>
+                        <tr class="teamRow notReadyYellow" id="red3Row">
+                            <td class="teamred">
+                                <div class="teamred stationNumber">3</div>
+                                <div id="red3versionmm" class="fieldMonitor-warning" title="Robot Version Data Mismatch" style="display: none;"></div>
+                            </td>
+                            <td class="teamred teamNumber" id="red3Number" title="MAC: null">6</td>
+                            <td>
+                                <div id="red3ds" class="fieldMonitor-redSquare">
+                                </div>
+                            </td>
+                            <td id="red3BWU" class="teamRowData" title="Signal: null (dBm) Noise: null (dBm) SNR: 0 TX Rate: nullTX MCS: null RX Rate: null RX MCS: null">0.000</td>
+                            <td>
+                                <div id="red3radio" class="fieldMonitor-redSquare">
+                                </div>
+                            </td>
+                            <td>
+                                <div id="red3robot" class="fieldMonitor-redSquare">
+                                </div>
+                            </td>
+                            <td id="red3Battery" class="teamRowData">0.00</td>
+                            <td>
+                                <div id="red3enabled" class="fieldMonitor-redSquare">
+                                </div>
+                            </td>
+                            <td id="red3AvgTrip" class="teamRowData">0</td>
+                            <td id="red3MissedPackets" class="teamRowData">0</td>
+                        </tr>
+                        <tr>
+                            <th colspan="2" id="MatchNumber2" class="matchNumber">M: 0</th>
+                            <th colspan="8" id="matchStateBottom" class="matchStateRed matchState" style="font-size: 2.5em;">UNKNOWN</th>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="row text-center" id="working" style="display:none;">
+                    <div class="col-lg-12">
+                        <br><br>
+                        <div class="whirly-loader" style="display:inline-block;margin-bottom:40px;margin-top:25px;">Loading…</div>
+                        <p class="lead">Please wait while we load log data.</p>
+                    </div>
+                </div>
+
+                <ejs-scripts></ejs-scripts>
+                <div class="d-none d-sm-block d-md-none alert alert-danger alert-dismissible fade show hidden-print text-center" role="alert">
+                    Some content is hidden on small displays like yours. Please try rotating your device or using a larger screen to see more content.
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                    <br>
+                </div>
+            </div> <!-- /container -->
+        </main>
+        <!--Page was rendered Friday, February 16, 2024 8:38:08 PM UTC-->
+        <!-- Syncfusion reporting script manager -->
+        <sf-script-manager></sf-script-manager>
+
+        <!-- Syncfusion Essential JS 2 ScriptManager -->
+        <ejs-scripts></ejs-scripts>
+
+        <script>
+
+
+            for (let row of document.querySelectorAll('.teamRow')) {
+                for (let cell of row.children) {
+                    console.log(cell);
+                    if (cell.children.length > 1) {
+                        cell.addEventListener('click', (evt) => {
+                            let elm = evt.target;
+                            if (elm.children.length < 1) elm = elm.parentElement;
+                            elm = elm.children[1];
+
+                            if (elm.style.display == 'none') {
+                                elm.style.display = 'block'
+                            } else {
+                                elm.style.display = 'none'
+                            }
+                        })
+                    } else if (cell.id.endsWith('Number')) {
+                        cell.addEventListener('click', (evt) => {
+                            let elm = evt.target;
+                            elm.innerText = Math.floor(Math.random()*9999) + 1
+                        })
+                    } else if (cell.children[0] && cell.children[0].id.endsWith('ds')) {
+                        cell.children[0].addEventListener('click', (evt) => {
+                            let elm = evt.target;
+                            if (elm.classList.contains('fieldMonitor-redSquare')) {
+                                elm.classList.remove('fieldMonitor-redSquare');
+                                elm.classList.add('fieldMonitor-greenCircleX');
+                            } else if (elm.classList.contains('fieldMonitor-greenCircleX')) {
+                                elm.classList.remove('fieldMonitor-greenCircleX');
+                                elm.classList.add('fieldMonitor-greenCircle');
+                            } else if (elm.classList.contains('fieldMonitor-greenCircle')) {
+                                elm.classList.remove('fieldMonitor-greenCircle');
+                                elm.classList.add('fieldMonitor-yellowCircleM');
+                            } else if (elm.classList.contains('fieldMonitor-yellowCircleM')) {
+                                elm.classList.remove('fieldMonitor-yellowCircleM');
+                                elm.classList.add('fieldMonitor-yellowCircleW');
+                            } else if (elm.classList.contains('fieldMonitor-yellowCircleW')) {
+                                elm.classList.remove('fieldMonitor-yellowCircleW');
+                                elm.classList.add('fieldMonitor-redSquareB');
+                            } else if (elm.classList.contains('fieldMonitor-redSquareB')) {
+                                elm.classList.remove('fieldMonitor-redSquareB');
+                                elm.classList.add('fieldMonitor-redSquare');
+                            }
+                        })
+                    } else if (cell.id.endsWith('BWU')) {
+                        cell.addEventListener('click', (evt) => {
+                            let elm = evt.target;
+                            elm.innerText = Math.floor(Math.random()*4000)/1000
+                        })
+                    } else if (cell.id.endsWith('Battery')) {
+                        cell.addEventListener('click', (evt) => {
+                            let elm = evt.target;
+                            elm.innerText = Math.floor(Math.random()*1200)/1000
+                        })
+                    } else if (cell.id.endsWith('AvgTrip')) {
+                        cell.addEventListener('click', (evt) => {
+                            let elm = evt.target;
+                            elm.innerText = Math.floor(200**Math.random())
+                        })
+                    } else if (cell.id.endsWith('MissedPackets')) {
+                        cell.addEventListener('click', (evt) => {
+                            let elm = evt.target;
+                            elm.innerText = Math.floor(2000*20**Math.random())
+                        })
+                    } else if (cell.children[0] && cell.children[0].id.endsWith('radio')) {
+                        cell.children[0].addEventListener('click', (evt) => {
+                            let elm = evt.target;
+                            if (elm.classList.contains('fieldMonitor-redSquare')) {
+                                elm.classList.remove('fieldMonitor-redSquare');
+                                elm.classList.add('fieldMonitor-greenCircle');
+                            } else if (elm.classList.contains('fieldMonitor-greenCircle')) {
+                                elm.classList.remove('fieldMonitor-greenCircle');
+                                elm.classList.add('fieldMonitor-redSquare');
+                            }
+                        })
+                    } else if (cell.children[0] && cell.children[0].id.endsWith('robot')) {
+                        cell.children[0].addEventListener('click', (evt) => {
+                            let elm = evt.target;
+                            if (elm.classList.contains('fieldMonitor-redSquare')) {
+                                elm.classList.remove('fieldMonitor-redSquare');
+                                elm.classList.add('fieldMonitor-greenCircle');
+                            } else if (elm.classList.contains('fieldMonitor-greenCircle') && row.classList.contains('notReadyYellow')) {
+                                row.classList.remove('notReadyYellow');
+                            } else if (elm.classList.contains('fieldmonitor-greenCircle')) {
+                                row.classList.add('notReadyYellow');
+                                elm.classList.remove('fieldMonitor-greenCircle');
+                                elm.classList.add('fieldMonitor-redSquare');
+                            }
+                        })
+                    }
+                }
+            }
+        </script>
+
+    </body>
+</html>

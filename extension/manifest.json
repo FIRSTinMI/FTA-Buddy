@@ -13,7 +13,8 @@
             "run_at": "document_end",
             "matches": [
                 "http://10.0.100.5/FieldMonitor",
-                "http://localhost/FieldMonitor/"
+                "http://localhost/FieldMonitor/",
+                "https://ftabuddy.com/FieldMonitor/"
             ],
             "js": [
                 "js/injector.js"
@@ -27,7 +28,8 @@
             ],
             "matches": [
                 "http://10.0.100.5/*",
-                "http://localhost/*"
+                "http://localhost/*",
+                "https://ftabuddy.com/*"
             ]
         }
     ],
@@ -41,6 +43,7 @@
     },
     "host_permissions": [
         "http://10.0.100.5/FieldMonitor",
-        "http://localhost/FieldMonitor/"
+        "http://localhost/FieldMonitor/",
+        "https://ftabuddy.com/FieldMonitor/"
     ]
 }

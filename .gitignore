@@ -23,3 +23,5 @@ node_modules
 /server/public/FieldMonitor
 fta-buddy.exe
 fta-buddy.zip
+cloud/dist/*
+*.rsls

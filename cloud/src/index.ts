@@ -209,7 +209,7 @@ app.get('/message/:team', (req, res) => {
                 });
             }
 
-            res.send(messages);
+            res.send(messagesWithUsernames);
         });
     });
 });

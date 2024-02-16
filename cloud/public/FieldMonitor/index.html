@@ -376,7 +376,8 @@
                     } else if (cell.id.endsWith('Battery')) {
                         cell.addEventListener('click', (evt) => {
                             let elm = evt.target;
-                            elm.innerText = Math.floor(Math.random()*1200)/1000
+                            let x = Math.random();
+                            elm.innerText = Math.round((-10 * x**3 + 6.5 * x**2 + -2.8*x + 14.4)*100)/100;
                         })
                     } else if (cell.id.endsWith('AvgTrip')) {
                         cell.addEventListener('click', (evt) => {

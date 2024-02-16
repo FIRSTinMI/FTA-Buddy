@@ -69,6 +69,7 @@
             if (relayOn) {
                 this.send("client-" + monitorEvent);
             }
+            setInterval(() => ws.send('ping'), 60e3);
         };
         ws.onmessage = function (evt) {
             console.log(evt.data);

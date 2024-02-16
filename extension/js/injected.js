@@ -79,7 +79,7 @@ let ws;
 function connectToWS() {
     if (ws) ws.close();
 
-    ws = new WebSocket(`wss://ftabuddy.com/ws/`);
+    ws = new WebSocket(`wss://ftabuddy.com/ws`);
     ws.onopen = () => {
         ws.send(`server-${eventCode}`);
         console.log('Connected to cloud server');

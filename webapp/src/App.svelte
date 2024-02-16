@@ -17,7 +17,7 @@
                 </Button>
             </div>
 
-            <div class="overflow-y-auto flex-grow pb-4">
+            <div class="overflow-y-auto flex-grow pb-2">
                 <Route path="/" component={Home} />
                 <Route path="/flashcards" component={Flashcard} />
                 <Route path="/references" component={Reference} />
@@ -25,9 +25,7 @@
                 <Route path="/notes/:team" component={Notes} />
             </div>
 
-            <div
-                class="flex justify-around py-2 bg-neutral-700"
-            >
+            <div class="flex justify-around py-2 bg-neutral-700">
                 <Link to="/app/">
                     <Button class="!p-2">
                         <Icon icon="mdi:television" class="w-8 h-8" />
@@ -40,10 +38,7 @@
                 </Link>
                 <Link to="/app/references">
                     <Button class="!p-2">
-                        <Icon
-                            icon="mdi:file-document-outline"
-                            class="w-8 h-8"
-                        />
+                        <Icon icon="mdi:file-document-outline" class="w-8 h-8" />
                     </Button>
                 </Link>
                 <Link to="/app/notes">

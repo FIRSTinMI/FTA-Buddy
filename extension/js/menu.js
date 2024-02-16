@@ -4,8 +4,10 @@ const urlContainer = document.getElementById('url-container');
 const eventInput = document.getElementById('event');
 const eventContainer = document.getElementById('event-container');
 
-chrome.storage.local.get('url', item => {
-    if (item.url == undefined) {
+chrome.storage.local.get(['url', 'cloud', 'event'], item => {
+    console.log(item);
+
+    if (item.url == undefined || item.cloud == undefined || item.event == undefined) {
         chrome.storage.local.set({ url: '127.0.0.1', cloud: true, event: 'test' });
         item = { url: '127.0.0.1', cloud: true, event: 'test' };
     }
@@ -23,6 +25,7 @@ chrome.storage.local.get('url', item => {
 });
 
 function handleUpdate() {
+    console.log({ url: urlInput.value, cloud: cloudCheckbox.checked, event: eventInput.value })
     chrome.storage.local.set({ url: urlInput.value, cloud: cloudCheckbox.checked, event: eventInput.value });
 
     if (cloudCheckbox.checked) {
@@ -34,6 +37,6 @@ function handleUpdate() {
     }
 }
 
-cloudCheckbox.addEventListener('change', handleUpdate);
-urlInput.addEventListener('change', handleUpdate);
-eventInput.addEventListener('change', handleUpdate);
+cloudCheckbox.addEventListener('input', handleUpdate);
+urlInput.addEventListener('input', handleUpdate);
+eventInput.addEventListener('input', handleUpdate);

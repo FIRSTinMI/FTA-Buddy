@@ -1,14 +1,22 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors');
-const { DATABASE_CONFIG } = require('./config');
-const { DEFAULT_MONITOR } = require('../shared/constants');
-const app = express();
-const expressWs = require('express-ws')(app);
+import express from 'express';
+import expressWs from 'express-ws';
+import { json } from 'body-parser';
+import cors from 'cors';
+import { DATABASE_CONFIG } from './config';
+import { MonitorFrame, Event, Message } from '../../shared/types';
+import { DEFAULT_MONITOR } from '../../shared/constants';
+
+const { app, getWss, applyTo } = expressWs(express());
 const port = process.env.PORT || 3001;
 const db = require('mysql-promise')();
 
 db.configure(DATABASE_CONFIG);
+
+interface EventsRow {
+    code: string;
+    local_ip: string;
+    teams: string;
+}
 
 db.query(`CREATE TABLE IF NOT EXISTS events (
     code VARCHAR(255) NOT NULL,
@@ -17,6 +25,13 @@ db.query(`CREATE TABLE IF NOT EXISTS events (
     PRIMARY KEY (code)
     );`)
 
+interface ProfilesRow {
+    id: number;
+    username: string;
+    created: Date;
+    last_seen: Date;
+}
+
 db.query(`CREATE TABLE IF NOT EXISTS profiles (
     id INT NOT NULL AUTO_INCREMENT,
     username VARCHAR(1023) UNIQUE,
@@ -24,6 +39,15 @@ db.query(`CREATE TABLE IF NOT EXISTS profiles (
     last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id)
     );`)
+
+interface MessagesRow {
+    id: number;
+    profile: number;
+    event: string;
+    team: number;
+    message: string;
+    created: Date;
+}
 
 db.query(`CREATE TABLE IF NOT EXISTS messages (
     id INT NOT NULL AUTO_INCREMENT,
@@ -35,9 +59,9 @@ db.query(`CREATE TABLE IF NOT EXISTS messages (
     PRIMARY KEY (id)
     );`);
 
-let events = {};
+let events: { [key: string]: Event } = {};
 
-function updateTeamsListFromMonitor(event, monitor) {
+function updateTeamsListFromMonitor(event: string, monitor: MonitorFrame) {
     let newTeamsAdded = false;
     for (let team of [monitor.blue1.number, monitor.blue2.number, monitor.blue3.number, monitor.red1.number, monitor.red2.number, monitor.red3.number]) {
         if (!events[event].teams.includes(team)) {
@@ -48,7 +72,7 @@ function updateTeamsListFromMonitor(event, monitor) {
     if (newTeamsAdded) db.query('UPDATE events SET teams = ? WHERE code = ?;', [JSON.stringify(events[event].teams), event]);
 }
 
-app.use(bodyParser.json());
+app.use(json());
 app.use(cors());
 
 app.use(express.static('./cloud/public'));
@@ -65,7 +89,7 @@ app.get('/register/:event', (req, res) => {
         });
     }
 
-    db.query('SELECT local_ip FROM events WHERE code = ?;', [req.params.event]).spread(ip => {
+    db.query('SELECT local_ip FROM events WHERE code = ?;', [req.params.event]).spread((ip: string[]) => {
         if (ip.length == 0) {
             return res.status(404).send();
         }
@@ -86,7 +110,7 @@ app.post('/register/:event', (req, res) => {
         }
     }
 
-    db.query('SELECT * FROM events WHERE code = ?;', [req.params.event]).spread(event => {
+    db.query('SELECT * FROM events WHERE code = ?;', [req.params.event]).spread((event: EventsRow[]) => {
         if (event.length == 0) {
             db.query('INSERT INTO events VALUES (?, ?, "[]");', [req.params.event, req.body.ip]);
             console.log(`Registered event ${req.params.event} at ${req.body.ip}`);
@@ -101,7 +125,7 @@ app.post('/register/:event', (req, res) => {
 
 // Get team list for an event
 app.get('/teams/:event', (req, res) => {
-    db.query('SELECT teams FROM events WHERE code = ?;', [req.params.event]).spread(teams => {
+    db.query('SELECT teams FROM events WHERE code = ?;', [req.params.event]).spread((teams: EventsRow[]) => {
         // TODO: Add TBA integration to get team names and stuff
         teams = JSON.parse(teams[0].teams)
         res.send(teams);
@@ -110,7 +134,7 @@ app.get('/teams/:event', (req, res) => {
 
 // Set team list for an event
 app.post('/teams/:event', (req, res) => {
-    db.query('SELECT * FROM events WHERE code = ?;', [req.params.event]).spread(event => {
+    db.query('SELECT * FROM events WHERE code = ?;', [req.params.event]).spread((event: EventsRow[]) => {
         if (event) {
             db.query('UPDATE events SET teams = ? WHERE code = ?;', [JSON.stringify(req.body.teams), req.params.event]);
         } else {
@@ -130,28 +154,36 @@ app.get('/monitor/:event', (req, res) => {
 app.post('/monitor/:event', (req, res) => {
     console.debug(`[${req.params.event}] Field monitor update received ${JSON.stringify(req.body)}`);
 
-    if (!events.hasOwnProperty(req.params.event)) events[req.params.event] = { socketClients: [] };
+    if (!events.hasOwnProperty(req.params.event)) events[req.params.event] = {
+        socketClients: [],
+        monitor: DEFAULT_MONITOR,
+        teams: []
+    };
     events[req.params.event].monitor = req.body;
     res.send();
-    pushUpdateToSockets(events[req.params.event].socketClients, req.body);
+
+    for (let socketClient of events[req.params.event].socketClients) {
+        if (socketClient) socketClient.send(req.body);
+    }
+
     updateTeamsListFromMonitor(req.params.event, req.body);
 });
 
 // Create a user profile for notes
 app.post('/profile', (req, res) => {
     console.log(`New profile request for ${req.body.username}`);
-    db.query('INSERT INTO profiles VALUES (null, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);', [req.body.username]).then(result => {
+    db.query('INSERT INTO profiles VALUES (null, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);', [req.body.username]).then((result: any) => {
         let id = result[0].insertId.toString();
         console.log(`Created with id ${id}`)
         res.send(id);
-    }).catch(err => {
+    }).catch((err: Error) => {
         res.status(400).send({ error: 'Username already in use' });
     });
 });
 
 // Check if a profile exists
 app.get('/profile/:profile', (req, res) => {
-    db.query('SELECT * FROM profiles WHERE id = ?;', [req.params.profile]).spread((profiles) => {
+    db.query('SELECT * FROM profiles WHERE id = ?;', [req.params.profile]).spread((profiles: ProfilesRow[]) => {
         if (profiles.length !== 1) {
             return res.status(404).send({ error: 'Profile not found' });
         }
@@ -162,15 +194,19 @@ app.get('/profile/:profile', (req, res) => {
 
 // Get notes for a team along with profile info
 app.get('/message/:team', (req, res) => {
-    db.query('SELECT * FROM messages WHERE team = ?;', [req.params.team]).spread((messages) => {
-        db.query(`SELECT * FROM profiles WHERE id IN (SELECT profile FROM messages WHERE team = ?);`, [req.params.team]).spread((profiles_raw) => {
-            let profiles = {};
-            for (profile of profiles_raw) {
+    db.query('SELECT * FROM messages WHERE team = ?;', [req.params.team]).spread((messages: MessagesRow[]) => {
+        db.query(`SELECT * FROM profiles WHERE id IN (SELECT profile FROM messages WHERE team = ?);`, [req.params.team]).spread((profiles_raw: ProfilesRow[]) => {
+            let profiles: { [key: number]: ProfilesRow } = {};
+            for (let profile of profiles_raw) {
                 profiles[profile.id] = profile;
             }
 
+            let messagesWithUsernames: Message[] = [];
             for (let m of messages) {
-                m.username = profiles[m.profile].username; // Attatch a username to every message
+                messagesWithUsernames.push({
+                    ...m,
+                    username: profiles[m.profile].username
+                });
             }
 
             res.send(messages);
@@ -181,8 +217,8 @@ app.get('/message/:team', (req, res) => {
 // Post a message on the notes for a team
 app.post('/message/:team', (req, res) => {
     console.log(`[NOTE ${req.body.event}] ${req.params.team} (${req.body.profile}): ${req.body.message}`);
-    db.query('INSERT INTO messages VALUES (null, ?, ?, ?, ?, CURRENT_TIMESTAMP);', [req.body.profile, req.body.event, req.params.team, req.body.message]).then(result => {
-        db.query(`SELECT username FROM profiles WHERE id = ?;`, [req.body.profile]).spread(username => {
+    db.query('INSERT INTO messages VALUES (null, ?, ?, ?, ?, CURRENT_TIMESTAMP);', [req.body.profile, req.body.event, req.params.team, req.body.message]).then((result: any) => {
+        db.query(`SELECT username FROM profiles WHERE id = ?;`, [req.body.profile]).spread((username: ProfilesRow[]) => {
             res.send({
                 id: result.insertId,
                 profile: req.body.profile,
@@ -193,13 +229,14 @@ app.post('/message/:team', (req, res) => {
                 created: (new Date()).toISOString()
             });
         });
-    }).catch(err => {
+    }).catch((err: Error) => {
         if (err) res.status(500).send(err)
     });
 });
 
 app.ws('/', (ws, req) => {
-    ws.on('message', (msg) => {
+    ws.on('message', (rawData) => {
+        let msg = rawData.toString();
         if (msg == 'ping') return ws.send(JSON.stringify({ type: 'pong' }));
         if (msg.startsWith('server')) {
             let eventCode = msg.substr(7);
@@ -216,9 +253,10 @@ app.ws('/', (ws, req) => {
             }
 
             // Register broadcast function for this server
-            ws.on('message', (msg) => {
+            ws.on('message', (rawData) => {
+                let msg = rawData.toString();
                 if (msg == 'ping') return ws.send(JSON.stringify({ type: 'pong' }));
-                for (socketClient of events[eventCode].socketClients) {
+                for (let socketClient of events[eventCode].socketClients) {
                     if (socketClient) socketClient.send(msg);
                 }
                 events[eventCode].monitor = JSON.parse(msg);

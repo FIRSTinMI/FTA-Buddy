@@ -1,3 +1,5 @@
+import WebSocket from "ws";
+
 export interface MonitorFrame {
     field: FieldState;
     match: number;
@@ -17,13 +19,31 @@ export interface TeamInfo {
     rio: RioState;
     code: CodeState;
     bwu: number;
-    battery: number; 
+    battery: number;
     ping: number;
     packets: number;
 }
 
+export interface Event {
+    teams: number[];
+    monitor: MonitorFrame;
+    ip?: string;
+    socketClients: WebSocket[];
+    socketServer?: WebSocket;
+}
+
+export interface Message {
+    id: number;
+    profile: number;
+    event: string;
+    team: number;
+    message: string;
+    created: Date;
+    username: string;
+}
+
 type FieldState = typeof UNKNOWN | typeof MATCH_RUNNING_TELEOP | typeof MATCH_TRANSITIONING | typeof MATCH_RUNNING_AUTO | typeof MATCH_READY | typeof PRESTART_COMPLETED | typeof PRESTART_INITIATED | typeof READY_TO_PRESTART | typeof MATCH_ABORTED | typeof MATCH_OVER | typeof READY_FOR_POST_RESULT;
-type DSState =  typeof RED | typeof GREEN | typeof GREEN_X | typeof MOVE_STATION | typeof WRONG_MATCH | typeof BYPASS | typeof ESTOP;
+type DSState = typeof RED | typeof GREEN | typeof GREEN_X | typeof MOVE_STATION | typeof WRONG_MATCH | typeof BYPASS | typeof ESTOP;
 type CodeState = typeof NO_CODE | typeof CODE;
 type RadioState = typeof RED | typeof GREEN;
 type RioState = typeof RED | typeof GREEN;

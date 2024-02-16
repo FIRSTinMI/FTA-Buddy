@@ -6,7 +6,7 @@
     "bin": "./server/index.js",
     "scripts": {
         "start": "node ./server/index.js",
-        "cloud": "node ./cloud/index.js",
+        "cloud": "node ./cloud/dist/cloud/src/index.js",
         "build": "npx pkg . --targets node18-win-x64"
     },
     "author": "Filip Kin",
@@ -21,5 +21,10 @@
         "ip": "^1.1.8",
         "mysql-promise": "^5.0.0",
         "ws": "^8.14.2"
+    },
+    "devDependencies": {
+        "@types/cors": "^2.8.17",
+        "@types/express": "^4.17.21",
+        "@types/express-ws": "^3.0.4"
     }
 }

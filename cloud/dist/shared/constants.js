@@ -1,3 +1,6 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.DEFAULT_MONITOR = void 0;
 exports.DEFAULT_MONITOR = {
     field: 0,
     match: 0,
@@ -26,7 +29,7 @@ exports.DEFAULT_MONITOR = {
     },
     blue3: {
         number: 9997,
-        ds: 3,
+        ds: 4,
         radio: 0,
         rio: 0,
         code: 0,
@@ -37,8 +40,8 @@ exports.DEFAULT_MONITOR = {
     },
     red1: {
         number: 9996,
-        ds: 4,
-        radio: 0,
+        ds: 1,
+        radio: 1,
         rio: 0,
         code: 0,
         bwu: 0,

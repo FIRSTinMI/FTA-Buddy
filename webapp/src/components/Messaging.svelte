@@ -10,9 +10,7 @@
     let messages = [];
 
     async function getMessages() {
-        messages = await fetch(
-            "https://ftabuddy.com/message/" + encodeURIComponent(team),
-        ).then((res) => res.json());
+        messages = await fetch("https://ftabuddy.com/message/" + encodeURIComponent(team)).then((res) => res.json());
 
         messages = messages.map((message: any) => ({
             ...message,
@@ -30,9 +28,7 @@
     {:then messages}
         <div class="flex-grow flex flex-col justify-end">
             {#each messages as message}
-                <Message
-                    message={message}
-                />
+                <Message {message} />
             {/each}
         </div>
     {/await}

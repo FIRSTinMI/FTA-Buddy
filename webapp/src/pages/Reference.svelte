@@ -7,11 +7,7 @@
         <AccordionItem>
             <span slot="header">Robot Radio Lights</span>
 
-            <img
-                src="/app/openmesh-radio-status-lights-1100.png"
-                width="325px"
-                alt="Radio with LEDs labeled"
-            />
+            <img src="/app/openmesh-radio-status-lights-1100.png" width="325px" alt="Radio with LEDs labeled" />
 
             <table cellpadding="5" cellspacing="0" class="led-table">
                 <tr>
@@ -234,9 +230,7 @@
                     <td>
                         <table class="section-table">
                             <tr>
-                                <td colspan="2" class="bold"
-                                    >Fault Conditions</td
-                                >
+                                <td colspan="2" class="bold">Fault Conditions</td>
                             </tr>
                             <tr>
                                 <td class="magenta slow-orange led"> </td>
@@ -266,9 +260,7 @@
                     <td>
                         <table class="section-table">
                             <tr>
-                                <td colspan="2" class="bold"
-                                    >Identification, Updating, and Recovery</td
-                                >
+                                <td colspan="2" class="bold">Identification, Updating, and Recovery</td>
                             </tr>
                             <tr>
                                 <td class="magenta fast-white led"> </td>
@@ -338,9 +330,7 @@
                     <td>
                         <table class="section-table">
                             <tr>
-                                <td colspan="3" class="bold"
-                                    >Lights alternate rather than blink</td
-                                >
+                                <td colspan="3" class="bold">Lights alternate rather than blink</td>
                             </tr>
                             <tr>
                                 <td class="black led"> </td>
@@ -407,8 +397,7 @@
                                 <td>USB plugged in but no comms</td>
                             </tr>
                             <tr>
-                                <td class="orange double-blink-orange led">
-                                </td>
+                                <td class="orange double-blink-orange led"> </td>
                                 <td>CAN disabled, no power</td>
                             </tr>
                             <tr>
@@ -475,9 +464,7 @@
                     <td>
                         <table class="section-table">
                             <tr>
-                                <td colspan="2" class="bold"
-                                    >CAN (double blink = termination disabled)</td
-                                >
+                                <td colspan="2" class="bold">CAN (double blink = termination disabled)</td>
                             </tr>
                             <tr>
                                 <td class="red led"> </td>
@@ -596,11 +583,7 @@
                             </tr>
                             <tr>
                                 <td></td>
-                                <td
-                                    ><span class="highlight"
-                                        >(subnet 255.0.0.0)</span
-                                    ></td
-                                >
+                                <td><span class="highlight">(subnet 255.0.0.0)</span></td>
                             </tr>
                         </table>
                     </td>

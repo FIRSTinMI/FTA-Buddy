@@ -17,9 +17,9 @@
     updateTeams();
 
     async function updateTeams() {
-        const teamsData = await fetch(
-            "https://ftabuddy.com/teams/" + encodeURIComponent(event),
-        ).then((res) => res.json());
+        const teamsData = await fetch("https://ftabuddy.com/teams/" + encodeURIComponent(event)).then((res) =>
+            res.json(),
+        );
         teams = teamsData.map((team: string) => ({
             name: team.toString(),
             value: team.toString(),
@@ -40,12 +40,7 @@
     <form class="flex w-full">
         <Label class="w-full text-left">
             Select Team
-            <Select
-                class="mt-2"
-                items={teams}
-                bind:value={team}
-                on:change={selectTeam}
-            />
+            <Select class="mt-2" items={teams} bind:value={team} on:change={selectTeam} />
         </Label>
     </form>
     {#key team}

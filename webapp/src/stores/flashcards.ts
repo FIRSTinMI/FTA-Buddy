@@ -8,12 +8,11 @@ if (!initialFlashcards) {
         'Turn on Robot',
         'Come here',
         'Switch driver stations',
-        'Setup game pieces',
         'Preload?'
     ]);
 }
 
-export const flashcardsStore = writable(JSON.parse(initialFlashcards));
+export const flashcardsStore = writable<string[]>(JSON.parse(initialFlashcards));
 flashcardsStore.subscribe((value: string[]) => {
     localStorage.setItem('flashcards', JSON.stringify(value));
 });

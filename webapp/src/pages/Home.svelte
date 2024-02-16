@@ -1,6 +1,17 @@
 <script lang="ts">
     import { BYPASS, ESTOP, GREEN_X, MOVE_STATION, WRONG_MATCH, type MonitorFrame } from "./../../../shared/types";
-    import { Button, Input, Label, Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell, Toggle } from "flowbite-svelte";
+    import {
+        Button,
+        Input,
+        Label,
+        Table,
+        TableBody,
+        TableBodyCell,
+        TableBodyRow,
+        TableHead,
+        TableHeadCell,
+        Toggle,
+    } from "flowbite-svelte";
     import { eventStore, relayStore } from "../stores/event";
     import { get } from "svelte/store";
     import { onMount } from "svelte";
@@ -103,8 +114,12 @@
             {#if monitorFrame}
                 {#each [monitorFrame.blue1, monitorFrame.blue2, monitorFrame.blue3, monitorFrame.red1, monitorFrame.red2, monitorFrame.red3] as team}
                     <TableBodyRow class="h-20 border-y border-gray-800">
-                        <TableBodyCell class={getKey(team)?.startsWith("blue") ? "bg-blue-600" : "bg-red-600"}>{team.number}</TableBodyCell>
-                        <TableBodyCell class="{DS_Colors[team.ds]} text-4xl text-black text-center border-x border-gray-800">
+                        <TableBodyCell class={getKey(team)?.startsWith("blue") ? "bg-blue-600" : "bg-red-600"}
+                            >{team.number}</TableBodyCell
+                        >
+                        <TableBodyCell
+                            class="{DS_Colors[team.ds]} text-4xl text-black text-center border-x border-gray-800"
+                        >
                             {#if team.ds === GREEN_X}
                                 X
                             {:else if team.ds === MOVE_STATION}

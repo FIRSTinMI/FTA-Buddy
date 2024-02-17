@@ -13,7 +13,10 @@
             "run_at": "document_end",
             "matches": [
                 "http://10.0.100.5/FieldMonitor",
+                "http://10.0.100.5/FieldMonitor/",
+                "http://localhost/FieldMonitor",
                 "http://localhost/FieldMonitor/",
+                "https://ftabuddy.com/FieldMonitor",
                 "https://ftabuddy.com/FieldMonitor/"
             ],
             "js": [
@@ -40,10 +43,5 @@
     "action": {
         "default_popup": "menu.html",
         "default_icon": "img/logo.png"
-    },
-    "host_permissions": [
-        "http://10.0.100.5/FieldMonitor",
-        "http://localhost/FieldMonitor/",
-        "https://ftabuddy.com/FieldMonitor/"
-    ]
+    }
 }

@@ -69,17 +69,21 @@
             if (relayOn) {
                 this.send("client-" + monitorEvent);
             }
+            setInterval(() => ws.send('ping'), 60e3);
         };
         ws.onmessage = function (evt) {
             console.log(evt.data);
             try {
-                monitorFrame = JSON.parse(evt.data);
+                let data = JSON.parse(evt.data);
+                if (data.type === 'monitorUpdate')
+                    monitorFrame = data;
             } catch (e) {
                 console.error(e);
             }
         };
         ws.onclose = function () {
-            console.log("Disconnected from " + uri);
+            console.log("Disconnected from " + uri + " reconnecting in 5 sec");
+            setTimeout(() => openWebSocket(uri), 5e3);
         };
     }
 
@@ -107,6 +111,21 @@
         2: "bg-green-500",
     };
 
+    const FieldStates = {
+        0: "Unknown",
+        1: "Match Running Teleop",
+        2: "Match Transistioning",
+        3: "Match Running Auto",
+        4: "Match Ready",
+        5: "Prestart Completed",
+        6: "Prestart Initiated",
+        7: "Ready to Prestart",
+        8: "Match Aborted",
+        9: "Match Over",
+        10: "Ready for Post Result",
+        11: "Match Not Ready"
+    }
+
     function navigateToNotes(evt: Event) {
         let target = evt.target as HTMLElement;
         let team = target.parentElement?.id.replace("-row", "");
@@ -123,7 +142,15 @@
 
 <Modal bind:open={modalOpen} size="lg"></Modal>
 
-<div class="w-full mx-auto container md:p-2">
+<div class="w-full mx-auto container md:max-w-lg md:p-2">
+    {#key monitorFrame}
+    <div class="flex w-full mb-1">
+        {#if monitorFrame}
+        <div>M: {monitorFrame.match}</div>
+        <div class="grow">{FieldStates[monitorFrame.field]}</div>
+        <div>{monitorFrame.time}</div>
+        {/if}
+    </div>
     <Table class="w-full sm:w-fit mx-auto">
         <TableHead class="dark:bg-neutral-500 dark:text-white">
             <TableHeadCell class="w-20">Team</TableHeadCell>
@@ -138,13 +165,13 @@
                 {#each [monitorFrame.blue1, monitorFrame.blue2, monitorFrame.blue3, monitorFrame.red1, monitorFrame.red2, monitorFrame.red3] as team}
                     <TableBodyRow class="h-20 border-y border-gray-800 cursor-pointer" id="{team.number}-row">
                         <TableBodyCell
-                            class={getKey(team)?.startsWith("blue") ? "bg-blue-600" : "bg-red-600"}
+                            class="{getKey(team)?.startsWith("blue") ? "bg-blue-600" : "bg-red-600"} font-mono"
                             on:click={navigateToNotes}
                         >
                             {team.number}
                         </TableBodyCell>
                         <TableBodyCell
-                            class="{DS_Colors[team.ds]} text-4xl text-black text-center border-x border-gray-800"
+                            class="{DS_Colors[team.ds]} text-4xl text-black text-center border-x border-gray-800 font-mono"
                             on:click={detailView}
                         >
                             {#if team.ds === GREEN_X}
@@ -172,6 +199,7 @@
             {/if}
         </TableBody>
     </Table>
+    {/key}
     <form on:submit={connectToMonitor} class="flex w-full justify-center items-center space-x-4 mt-4 px-2">
         <!-- <Toggle class="toggle" bind:checked={relayOn} on:click={relayChanged} bind:disabled={secureOnly}>Relay</Toggle> -->
         <Label class="space-y-2">

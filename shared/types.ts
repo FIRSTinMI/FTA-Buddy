@@ -68,3 +68,4 @@ export const READY_TO_PRESTART = 7;
 export const MATCH_ABORTED = 8;
 export const MATCH_OVER = 9;
 export const READY_FOR_POST_RESULT = 10;
+export const MATCH_NOT_READY = 11;

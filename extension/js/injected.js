@@ -5,7 +5,7 @@ let cloud = document.getElementById('fta-buddy').dataset.cloud;
 let eventCode = document.getElementById('fta-buddy').dataset.event;
 
 function read(station) {
-    return {
+    let obj = {
         number: document.getElementById(station + 'Number').innerText,
         ds: identifyStatusDS(station),
         radio: identifyStatus(document.getElementById(station + 'radio')),
@@ -15,7 +15,15 @@ function read(station) {
         battery: parseFloat(document.getElementById(station + 'Battery').innerText),
         ping: parseInt(document.getElementById(station + 'AvgTrip').innerText),
         packets: parseInt(document.getElementById(station + 'MissedPackets').innerText)
+    };
+
+    if (obj.ds === 5) {
+        obj.radio = 0;
+        obj.rio = 0;
+        obj.code = 0;
     }
+
+    return obj
 }
 
 function identifyStatusDS(station) {
@@ -39,6 +47,7 @@ function identifyFieldStatus(elm) {
     if (elm.innerText === 'MATCH TRANSITIONING') return 2;
     if (elm.innerText === 'MATCH RUNNING (AUTO)') return 3;
     if (elm.innerText === 'MATCH READY') return 4;
+    if (elm.innerText === 'MATCH NOT READY') return 11;
     if (elm.innerText === 'PRE-START COMPLETED') return 5;
     if (elm.innerText === 'PRE-START INITIATED') return 6;
     if (elm.innerText === 'READY TO PRE-START') return 7;

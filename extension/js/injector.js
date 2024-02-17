@@ -1,5 +1,5 @@
 console.log('Loaded injector');
-chrome.storage.local.get('url', item => {
+chrome.storage.local.get(['url', 'cloud', 'event'], item => {
     const script = document.createElement('script');
     script.src = chrome.runtime.getURL('js/injected.js');
     script.dataset.host = item.url || '127.0.0.1';

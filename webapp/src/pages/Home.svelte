@@ -1,22 +1,12 @@
 <script lang="ts">
-    import { BYPASS, ESTOP, GREEN_X, MOVE_STATION, WRONG_MATCH, type MonitorFrame } from "./../../../shared/types";
-    import {
-        Button,
-        Input,
-        Label,
-        Modal,
-        Table,
-        TableBody,
-        TableBodyCell,
-        TableBodyRow,
-        TableHead,
-        TableHeadCell,
-        Toggle,
-    } from "flowbite-svelte";
+    import { type MonitorFrame, type TeamInfo } from "./../../../shared/types";
+    import { Button, Input, Label, Modal, Table, TableBody, TableHead, TableHeadCell } from "flowbite-svelte";
     import { eventStore, relayStore } from "../stores/event";
     import { get } from "svelte/store";
     import { onMount } from "svelte";
     import { navigate } from "svelte-routing";
+    import MonitorRow from "../components/MonitorRow.svelte";
+    import TeamModal from "../components/TeamModal.svelte";
 
     let monitorEvent = get(eventStore) || "test";
     let relayOn = true; //get(relayStore);
@@ -69,14 +59,13 @@
             if (relayOn) {
                 this.send("client-" + monitorEvent);
             }
-            setInterval(() => ws.send('ping'), 60e3);
+            setInterval(() => ws.send("ping"), 60e3);
         };
         ws.onmessage = function (evt) {
             console.log(evt.data);
             try {
                 let data = JSON.parse(evt.data);
-                if (data.type === 'monitorUpdate')
-                    monitorFrame = data;
+                if (data.type === "monitorUpdate") monitorFrame = data;
             } catch (e) {
                 console.error(e);
             }
@@ -91,26 +80,6 @@
         connectToMonitor(new Event("submit"));
     });
 
-    function getKey(value: any) {
-        return Object.keys(monitorFrame).find((key) => (monitorFrame as any)[key] === value);
-    }
-
-    const DS_Colors: { [key: number]: string } = {
-        0: "bg-red-600",
-        1: "bg-green-500",
-        2: "bg-green-500",
-        3: "bg-yellow-500",
-        4: "bg-yellow-500",
-        5: "bg-red-700",
-        6: "bg-neutral-900",
-    };
-
-    const RIO_Colors: { [key: number]: string } = {
-        0: "bg-red-600",
-        1: "bg-yellow-500",
-        2: "bg-green-500",
-    };
-
     const FieldStates = {
         0: "Unknown",
         1: "Match Running Teleop",
@@ -123,8 +92,8 @@
         8: "Match Aborted",
         9: "Match Over",
         10: "Ready for Post Result",
-        11: "Match Not Ready"
-    }
+        11: "Match Not Ready",
+    };
 
     function navigateToNotes(evt: Event) {
         let target = evt.target as HTMLElement;
@@ -133,72 +102,45 @@
     }
 
     let modalOpen = false;
+    let modalStation = "blue1";
+    let modalTeam: TeamInfo;
+
     function detailView(evt: Event) {
         let target = evt.target as HTMLElement;
-        let team = target.parentElement?.id.replace("-row", "");
+        let station = target.parentElement?.id.replace("-row", "");
+        modalStation = station || "blue1";
         modalOpen = true;
     }
 </script>
 
-<Modal bind:open={modalOpen} size="lg"></Modal>
+<TeamModal bind:modalOpen bind:modalStation bind:monitorFrame {navigateToNotes} />
 
 <div class="w-full mx-auto container md:max-w-lg md:p-2">
     {#key monitorFrame}
-    <div class="flex w-full mb-1">
-        {#if monitorFrame}
-        <div>M: {monitorFrame.match}</div>
-        <div class="grow">{FieldStates[monitorFrame.field]}</div>
-        <div>{monitorFrame.time}</div>
-        {/if}
-    </div>
-    <Table class="w-full sm:w-fit mx-auto">
-        <TableHead class="dark:bg-neutral-500 dark:text-white">
-            <TableHeadCell class="w-20">Team</TableHeadCell>
-            <TableHeadCell class="w-20">DS</TableHeadCell>
-            <TableHeadCell class="w-10">Radio</TableHeadCell>
-            <TableHeadCell class="w-10">Rio</TableHeadCell>
-            <TableHeadCell>Bat</TableHeadCell>
-            <TableHeadCell>Net</TableHeadCell>
-        </TableHead>
-        <TableBody>
+        <div class="flex w-full mb-1">
             {#if monitorFrame}
-                {#each [monitorFrame.blue1, monitorFrame.blue2, monitorFrame.blue3, monitorFrame.red1, monitorFrame.red2, monitorFrame.red3] as team}
-                    <TableBodyRow class="h-20 border-y border-gray-800 cursor-pointer" id="{team.number}-row">
-                        <TableBodyCell
-                            class="{getKey(team)?.startsWith("blue") ? "bg-blue-600" : "bg-red-600"} font-mono"
-                            on:click={navigateToNotes}
-                        >
-                            {team.number}
-                        </TableBodyCell>
-                        <TableBodyCell
-                            class="{DS_Colors[team.ds]} text-4xl text-black text-center border-x border-gray-800 font-mono"
-                            on:click={detailView}
-                        >
-                            {#if team.ds === GREEN_X}
-                                X
-                            {:else if team.ds === MOVE_STATION}
-                                M
-                            {:else if team.ds === WRONG_MATCH}
-                                W
-                            {:else if team.ds === BYPASS}
-                                B
-                            {:else if team.ds === ESTOP}
-                                E
-                            {/if}
-                        </TableBodyCell>
-                        <TableBodyCell class="{DS_Colors[team.radio]} border-x border-gray-800" on:click={detailView}
-                        ></TableBodyCell>
-                        <TableBodyCell
-                            class="{RIO_Colors[team.rio + team.code]} border-x border-gray-800"
-                            on:click={detailView}
-                        ></TableBodyCell>
-                        <TableBodyCell on:click={detailView}>{team.battery}v</TableBodyCell>
-                        <TableBodyCell on:click={detailView}>{team.ping} ms<br />{team.bwu} mbps</TableBodyCell>
-                    </TableBodyRow>
-                {/each}
+                <div>M: {monitorFrame.match}</div>
+                <div class="grow">{FieldStates[monitorFrame.field]}</div>
+                <div>{monitorFrame.time}</div>
             {/if}
-        </TableBody>
-    </Table>
+        </div>
+        <Table class="w-full sm:w-fit mx-auto">
+            <TableHead class="dark:bg-neutral-500 dark:text-white">
+                <TableHeadCell class="w-20">Team</TableHeadCell>
+                <TableHeadCell class="w-20">DS</TableHeadCell>
+                <TableHeadCell class="w-10">Radio</TableHeadCell>
+                <TableHeadCell class="w-10">Rio</TableHeadCell>
+                <TableHeadCell>Bat</TableHeadCell>
+                <TableHeadCell>Net</TableHeadCell>
+            </TableHead>
+            <TableBody>
+                {#if monitorFrame}
+                    {#each ["blue1", "blue2", "blue3", "red1", "red2", "red3"] as station}
+                        <MonitorRow {station} {monitorFrame} {detailView} />
+                    {/each}
+                {/if}
+            </TableBody>
+        </Table>
     {/key}
     <form on:submit={connectToMonitor} class="flex w-full justify-center items-center space-x-4 mt-4 px-2">
         <!-- <Toggle class="toggle" bind:checked={relayOn} on:click={relayChanged} bind:disabled={secureOnly}>Relay</Toggle> -->

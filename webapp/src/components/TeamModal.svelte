@@ -26,9 +26,6 @@
 <Modal bind:open={modalOpen} size="lg" outsideclose>
     {#if modalTeam}
         <div class="flex flex-col w-full items-center space-y-4">
-            <h1 class="text-2xl">
-                Team {modalTeam.number}
-            </h1>
             <div>
                 <Table class="w-full sm:w-fit mx-auto">
                     <TableHead class="dark:bg-neutral-500 dark:text-white">
@@ -103,15 +100,47 @@
                             It may take up to 2 minutes for the radio to boot.
                         </li>
                         <li>
-                            Make sure the WIFI light (opposite of the power light) is amber, if it is green the radio
-                            needs to be programmed. If it is red, the radio is trying to connect to the field network
-                            but failing. If this issue is isolated to one robot, try reprogramming the radio.
+                            Make sure the WIFI light (opposite of the power light) is amber, if it is amber or off the
+                            radio needs to be programmed.
                         </li>
                     </ol>
                 {:else if modalTeam.rio === RED}
                     Radio connected but no communication with RIO
+                    <ol class="text-left list-decimal">
+                        <li>
+                            Check the status lights on the RIO, power should be green, link lights should be flashing,
+                            status should be off.<br />
+                            If the link lights are not flashing, go to 2. <br />
+                            If the status light is flashing, this means "Unrecoverable error", go to 5.<br />
+                            A solid status light means the RIO is still booting, this should take about 40 seconds.
+                        </li>
+                        <li>
+                            Make sure the ethernet cable is plugged into the RIO and the radio. Try unplugging and
+                            plugging it back in. Try a different cable.<br />
+                            If the team is using a switch, try connecting directly to the radio.
+                        </li>
+                        <li>If time allows, try power cycling only the RIO.</li>
+                        <li>Use the team number setter tool to verify the RIO has the correct team number.</li>
+                        <li>
+                            If the status light is flashing, and it is a RIO 2, try turning off the RIO, reseating the
+                            SD card, and turning it back on.<br />
+                            If the unrecoverable error persists, try reimaging the SD card, sometimes it may even require
+                            a new SD card. Keep in mind this require code to be deployed again.<br />
+                            If it is a RIO 1, try entering safe mode by holding the reset button for 5 seconds and then using
+                            the RIO imaging tool. <br />
+                            If the issue persists, replace the RIO.
+                        </li>
+                    </ol>
                 {:else if modalTeam.code === RED}
                     Radio and RIO connected, but code not running
+                    <ol class="text-left list-decimal">
+                        <li>If it is a RIO 2, try restarting the RIO, this can be done from the DS.</li>
+                        <li>
+                            Check the DS log to see if there's any error messages.<br />
+                            Ask the team if they've recently deployed code, a recent change or a bad deploy could be the
+                            cause.
+                        </li>
+                    </ol>
                 {:else}
                     Robot Connected
                     {#if modalTeam.battery < 11}

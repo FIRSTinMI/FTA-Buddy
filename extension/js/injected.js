@@ -92,6 +92,7 @@ function connectToWS() {
     ws.onopen = () => {
         ws.send(`server-${eventCode}`);
         console.log('Connected to cloud server');
+        setTimeout(sendUpdate, 100);
     }
     ws.onclose = () => {
         console.log('Disconnected from cloud server, reconnecting in 5 seconds.');

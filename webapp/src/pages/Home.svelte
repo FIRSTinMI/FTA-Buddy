@@ -1,10 +1,9 @@
 <script lang="ts">
-    import { type MonitorFrame, type TeamInfo } from "./../../../shared/types";
+    import { type MonitorFrame, type TeamInfo, type Station } from "./../../../shared/types";
     import { Button, Input, Label, Modal, Table, TableBody, TableHead, TableHeadCell } from "flowbite-svelte";
     import { eventStore, relayStore } from "../stores/event";
     import { get } from "svelte/store";
     import { onMount } from "svelte";
-    import { navigate } from "svelte-routing";
     import MonitorRow from "../components/MonitorRow.svelte";
     import TeamModal from "../components/TeamModal.svelte";
 
@@ -62,7 +61,7 @@
             setInterval(() => ws.send("ping"), 60e3);
         };
         ws.onmessage = function (evt) {
-            console.log(evt.data);
+            //console.log(evt.data);
             try {
                 let data = JSON.parse(evt.data);
                 if (data.type === "monitorUpdate") monitorFrame = data;
@@ -95,36 +94,33 @@
         11: "Match Not Ready",
     };
 
-    function navigateToNotes(evt: Event) {
-        let target = evt.target as HTMLElement;
-        let team = target.parentElement?.id.replace("-row", "");
-        navigate("/app/notes/" + team);
-    }
-
     let modalOpen = false;
-    let modalStation = "blue1";
-    let modalTeam: TeamInfo;
+    let modalStation: Station = "blue1";
 
     function detailView(evt: Event) {
         let target = evt.target as HTMLElement;
         let station = target.parentElement?.id.replace("-row", "");
-        modalStation = station || "blue1";
+        modalStation = (station as Station) || "blue1";
         modalOpen = true;
     }
+
+    const stations: Station[] = ["blue1", "blue2", "blue3", "red1", "red2", "red3"];
 </script>
 
-<TeamModal bind:modalOpen bind:modalStation bind:monitorFrame {navigateToNotes} />
+{#if monitorFrame}
+    <TeamModal bind:modalOpen bind:modalStation bind:monitorFrame />
+{/if}
 
-<div class="w-full mx-auto container md:max-w-lg md:p-2">
+<div class="w-full mx-auto container md:max-w-xl md:p-2">
     {#key monitorFrame}
         <div class="flex w-full mb-1">
             {#if monitorFrame}
-                <div>M: {monitorFrame.match}</div>
+                <div class="w-24">M: {monitorFrame.match}</div>
                 <div class="grow">{FieldStates[monitorFrame.field]}</div>
-                <div>{monitorFrame.time}</div>
+                <div class="w-32">{monitorFrame.time}</div>
             {/if}
         </div>
-        <Table class="w-full sm:w-fit mx-auto">
+        <Table class="w-full mx-auto">
             <TableHead class="dark:bg-neutral-500 dark:text-white">
                 <TableHeadCell class="w-20">Team</TableHeadCell>
                 <TableHeadCell class="w-20">DS</TableHeadCell>
@@ -135,7 +131,7 @@
             </TableHead>
             <TableBody>
                 {#if monitorFrame}
-                    {#each ["blue1", "blue2", "blue3", "red1", "red2", "red3"] as station}
+                    {#each stations as station}
                         <MonitorRow {station} {monitorFrame} {detailView} />
                     {/each}
                 {/if}

@@ -323,11 +323,55 @@
         <ejs-scripts></ejs-scripts>
 
         <script>
+            let teams = ['4384', '4376', '3536', '6193', '6087', '8399', '6128', '453', '5674', '9665', '2054', '6538', '8323', '1711', '4325', '5531', '6097', '5048', '9679', '3773', '8126', '910', '2834', '3655', '9754', '9248', '9733', '6098', '5530', '6193', '5205', '3617', '5676', '9210', '5194', '5086', '5067', '1254', '8364', '9754', '9255']
+            let inUseTeams = new Set();
 
+            document.getElementById('matchStateTop').addEventListener('click', (evt) => {
+                let elm = evt.target;
+                if (elm.innerText === 'UNKNOWN') {
+                    elm.innerText = 'READY TO PRE-START';
+                } else if (elm.innerText === 'READY TO PRE-START') {
+                    elm.innerText = 'PRE-START COMPLETED';
+                } else if (elm.innerText === 'PRE-START INITIATED') {
+                    elm.innerText = 'PRE-START COMPLETED';
+                } else if (elm.innerText === 'PRE-START COMPLETED') {
+                    elm.innerText = 'MATCH NOT READY';
+                } else if (elm.innerText === 'MATCH NOT READY') {
+                    elm.innerText = 'MATCH READY';
+                } else if (elm.innerText === 'MATCH READY') {
+                    elm.innerText = 'MATCH RUNNING (AUTO)';
+                } else if (elm.innerText === 'MATCH RUNNING (AUTO)') {
+                    elm.innerText = 'MATCH TRANSITIONING';
+                } else if (elm.innerText === 'MATCH TRANSITIONING') {
+                    elm.innerText = 'MATCH RUNNING (TELEOP)';
+                } else if (elm.innerText === 'MATCH RUNNING (TELEOP)') {
+                    elm.innerText = 'MATCH OVER';
+                } else if (elm.innerText === 'MATCH OVER') {
+                    elm.innerText = 'MATCH ABORTED';
+                } else if (elm.innerText === 'MATCH ABORTED') {
+                    elm.innerText = 'READY FOR POST-RESULT';
+                } else if (elm.innerText === 'READY FOR POST-RESULT') {
+                    elm.innerText = 'UNKNOWN';
+                }
+            });
+
+            document.getElementById('MatchNumber').addEventListener('click', (evt) => {
+                let elm = evt.target;
+                elm.innerText = `M: ${Math.floor(Math.random() * 85) + 1}`;
+            });
+
+            document.getElementById('aheadbehind').addEventListener('click', (evt) => {
+                let elm = evt.target;
+                let time = 180 ** Math.random();
+                if (time >= 60) {
+                    elm.innerText = `${Math.floor(time / 60)}h${Math.floor(time % 60)}m ${Math.random() > 0.5 ? 'Ahead' : 'Behind'}`
+                } else {
+                    elm.innerText = `${Math.floor(time)}m ${Math.random() > 0.5 ? 'Ahead' : 'Behind'}`
+                }
+            });
 
             for (let row of document.querySelectorAll('.teamRow')) {
                 for (let cell of row.children) {
-                    console.log(cell);
                     if (cell.children.length > 1) {
                         cell.addEventListener('click', (evt) => {
                             let elm = evt.target;
@@ -343,7 +387,16 @@
                     } else if (cell.id.endsWith('Number')) {
                         cell.addEventListener('click', (evt) => {
                             let elm = evt.target;
-                            elm.innerText = Math.floor(Math.random()*9999) + 1
+                            if (inUseTeams.has(elm.innerText)) {
+                                inUseTeams.delete(elm.innerText);
+                            }
+
+                            let team = teams[Math.floor(Math.random() * teams.length)];
+                            while (inUseTeams.has(team)) {
+                                team = teams[Math.floor(Math.random() * teams.length)];
+                            }
+                            inUseTeams.add(team);
+                            elm.innerText = team;
                         })
                     } else if (cell.children[0] && cell.children[0].id.endsWith('ds')) {
                         cell.children[0].addEventListener('click', (evt) => {
@@ -371,23 +424,23 @@
                     } else if (cell.id.endsWith('BWU')) {
                         cell.addEventListener('click', (evt) => {
                             let elm = evt.target;
-                            elm.innerText = Math.floor(Math.random()*4000)/1000
+                            elm.innerText = Math.floor(Math.random() * 4000) / 1000
                         })
                     } else if (cell.id.endsWith('Battery')) {
                         cell.addEventListener('click', (evt) => {
                             let elm = evt.target;
                             let x = Math.random();
-                            elm.innerText = Math.round((-10 * x**3 + 6.5 * x**2 + -2.8*x + 14.4)*100)/100;
+                            elm.innerText = Math.round((-10 * x ** 3 + 6.5 * x ** 2 + -2.8 * x + 14.4) * 100) / 100;
                         })
                     } else if (cell.id.endsWith('AvgTrip')) {
                         cell.addEventListener('click', (evt) => {
                             let elm = evt.target;
-                            elm.innerText = Math.floor(200**Math.random())
+                            elm.innerText = Math.floor(200 ** Math.random())
                         })
                     } else if (cell.id.endsWith('MissedPackets')) {
                         cell.addEventListener('click', (evt) => {
                             let elm = evt.target;
-                            elm.innerText = Math.floor(2000*20**Math.random())
+                            elm.innerText = Math.floor(2000 * 20 ** Math.random())
                         })
                     } else if (cell.children[0] && cell.children[0].id.endsWith('radio')) {
                         cell.children[0].addEventListener('click', (evt) => {
@@ -408,7 +461,7 @@
                                 elm.classList.add('fieldMonitor-greenCircle');
                             } else if (elm.classList.contains('fieldMonitor-greenCircle') && row.classList.contains('notReadyYellow')) {
                                 row.classList.remove('notReadyYellow');
-                            } else if (elm.classList.contains('fieldmonitor-greenCircle')) {
+                            } else if (elm.classList.contains('fieldMonitor-greenCircle')) {
                                 row.classList.add('notReadyYellow');
                                 elm.classList.remove('fieldMonitor-greenCircle');
                                 elm.classList.add('fieldMonitor-redSquare');
@@ -417,6 +470,102 @@
                     }
                 }
             }
+
+            let states = [];
+
+            function randomizeAll() {
+                const rows = document.querySelectorAll('.teamRow');
+
+                document.getElementById('MatchNumber').click();
+                document.getElementById('aheadbehind').click();
+                document.getElementById('matchStateTop').innerText = 'READY TO PRE-START';
+
+                states = [];
+                while (states.length < 6) {
+                    let state = Math.floor((6 ** Math.random()) - 1).toString() + Math.floor((5 ** Math.random()) - 1).toString();
+                    if (state.charAt(0) < 0 || state.charAt(0) > 3) {
+                        state = state.charAt(0) + '0';
+                    }
+                    if (!states.includes(state)) {
+                        states.push(state);
+                    }
+                }
+
+                for (let i = 0; i < rows.length; i++) {
+                    let row = rows[i];
+                    let state = states[i];
+
+                    row.children[1].click();
+                    row.classList.remove('notReadyYellow');
+                    row.children[2].children[0].className = '';
+                    row.children[3].innerText = '0.000';
+                    row.children[4].children[0].className = '';
+                    row.children[5].children[0].className = '';
+                    row.children[6].innerText = '0.00';
+                    row.children[7].children[0].className = '';
+                    row.children[8].innerText = '0';
+                    row.children[9].innerText = '0';
+
+
+                    switch (state.charAt(0)) {
+                        case '0':
+                            switch (state.charAt(1)) {
+                                case '0':
+                                    row.children[2].children[0].classList.add('fieldMonitor-redSquare');
+                                    break;
+                                case '1':
+                                    row.children[2].children[0].classList.add('fieldMonitor-greenCircleX');
+                                    break;
+                                case '2':
+                                    row.children[2].children[0].classList.add('fieldMonitor-yellowCircleM');
+                                    break;
+                                case '3':
+                                    row.children[2].children[0].classList.add('fieldMonitor-yellowCircleW');
+                                    break;
+                            }
+                            row.classList.add('notReadyYellow');
+                            row.children[4].children[0].classList.add('fieldMonitor-redSquare');
+                            row.children[5].children[0].classList.add('fieldMonitor-redSquare');
+                            row.children[7].children[0].classList.add('fieldMonitor-redSquare');
+                            break;
+                        case '1':
+                            row.children[2].children[0].classList.add('fieldMonitor-greenCircle');
+                            row.children[4].children[0].classList.add('fieldMonitor-redSquare');
+                            row.children[5].children[0].classList.add('fieldMonitor-redSquare');
+                            row.children[7].children[0].classList.add('fieldMonitor-redSquare');
+                            row.classList.add('notReadyYellow');
+                            break;
+                        case '2':
+                            row.children[2].children[0].classList.add('fieldMonitor-greenCircle');
+                            row.children[4].children[0].classList.add('fieldMonitor-greenCircle');
+                            row.children[5].children[0].classList.add('fieldMonitor-redSquare');
+                            row.children[7].children[0].classList.add('fieldMonitor-redSquare');
+                            row.classList.add('notReadyYellow');
+                            break;
+                        case '3':
+                            row.children[2].children[0].classList.add('fieldMonitor-greenCircle');
+                            row.children[4].children[0].classList.add('fieldMonitor-greenCircle');
+                            row.children[5].children[0].classList.add('fieldMonitor-greenCircle');
+                            row.children[3].click();
+                            row.children[6].click();
+                            row.children[8].click();
+                            row.children[9].click();
+                            row.children[7].children[0].classList.add('fieldMonitor-redSquare');
+                            break;
+                        case '4':
+                            row.children[2].children[0].classList.add('fieldMonitor-greenCircle');
+                            row.children[4].children[0].classList.add('fieldMonitor-greenCircle');
+                            row.children[5].children[0].classList.add('fieldMonitor-greenCircle');
+                            row.children[3].click();
+                            row.children[6].click();
+                            row.children[8].click();
+                            row.children[9].click();
+                            row.children[7].children[0].classList.add('fieldMonitor-redSquare');
+                            break;
+                    }
+                }
+            }
+            randomizeAll();
         </script>
 
     </body>

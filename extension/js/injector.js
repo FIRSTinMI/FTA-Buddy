@@ -4,7 +4,7 @@ chrome.storage.local.get(['url', 'cloud', 'event'], item => {
     script.src = chrome.runtime.getURL('js/injected.js');
     script.dataset.host = item.url || '127.0.0.1';
     script.dataset.cloud = item.cloud || true;
-    script.dataset.event = item.event || 'test';
+    script.dataset.event = item.event || '2024event';
     script.id = 'fta-buddy';
     document.body.appendChild(script);
 });

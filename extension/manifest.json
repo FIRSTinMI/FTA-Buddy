@@ -2,10 +2,8 @@
     "manifest_version": 3,
     "name": "FTA Buddy",
     "description": "Enable the field monitor and notes sync for FTA Buddy app",
-    "version": "1.2",
+    "version": "1.3",
     "permissions": [
-        "scripting",
-        "webNavigation",
         "storage"
     ],
     "content_scripts": [
@@ -15,8 +13,6 @@
                 "http://10.0.100.5/FieldMonitor",
                 "http://10.0.100.5/FieldMonitor/",
                 "http://localhost/FieldMonitor",
-                "http://localhost/FieldMonitor/",
-                "https://ftabuddy.com/FieldMonitor",
                 "https://ftabuddy.com/FieldMonitor/"
             ],
             "js": [

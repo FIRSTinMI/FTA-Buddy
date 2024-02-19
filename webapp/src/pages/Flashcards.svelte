@@ -40,13 +40,7 @@
 
 {#key currentFlashcard}
     {#if currentFlashcard}
-        <div
-            class="overlay flex flex-col justify-center items-center"
-            on:click={dismissFlashcard}
-            on:keydown={dismissFlashcard}
-            role="presentation"
-            id="flashcard-overlay"
-        >
+        <div class="overlay flex flex-col justify-center items-center" on:click={dismissFlashcard} on:keydown={dismissFlashcard} role="presentation" id="flashcard-overlay">
             <h1 class="text-3xl font-bold">{currentFlashcard}</h1>
         </div>
     {/if}
@@ -55,12 +49,7 @@
 <div class="flex flex-col p-4 h-full">
     <div class="space-y-2 grow">
         {#each flashcards as card}
-            <Button
-                pill
-                class="w-full {addRemoveState ? 'dark:bg-red-500' : 'dark:bg-primary'}"
-                size="lg"
-                on:click={openFlashcard}>{card}</Button
-            >
+            <Button pill class="w-full {addRemoveState ? 'dark:bg-red-500' : 'dark:bg-primary-500'}" size="lg" on:click={openFlashcard}>{card}</Button>
         {/each}
     </div>
     {#if addRemoveState}
@@ -70,10 +59,10 @@
                 New Flashcard Text
                 <Input bind:value={newFlashcard} />
             </Label>
-            <Button pill class="dark:bg-primary h-10 my-1" type="submit">Add</Button>
+            <Button pill class="h-10 my-1" type="submit">Add</Button>
         </form>
     {/if}
-    <Button pill class="dark:bg-primary w-full mt-2" size="lg" on:click={switchToAddRemove}>
+    <Button pill class="w-full mt-2" size="lg" on:click={switchToAddRemove}>
         {addRemoveState ? "Save" : "Add/Remove Flashcard"}
     </Button>
 </div>

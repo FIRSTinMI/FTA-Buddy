@@ -1,7 +1,8 @@
 <script lang="ts">
     import { get } from "svelte/store";
     import { formatTime } from "../util/formatTime";
-    import { notesStore } from "../stores/notes";
+    import { eventStore } from "../stores/event";
+    import { userStore } from "../stores/user";
 
     interface Message {
         created: Date;
@@ -14,17 +15,42 @@
     }
 
     export let message: Message;
-    let { username } = get(notesStore);
+    let user = get(userStore);
+    let event = get(eventStore);
+
+    const MESSAGE_CLASSES = {
+        self: "dark:bg-secondary-500 text-right self-end",
+        other: "dark:bg-gray-800 text-left",
+        selfOld: "dark:bg-secondary-900 text-right self-end",
+        otherOld: "dark:bg-gray-800 text-left",
+    };
+
+    let classToApply = MESSAGE_CLASSES.other;
+
+    if (message.profile == user.id) {
+        if (message.event == event) {
+            classToApply = MESSAGE_CLASSES.self;
+        } else {
+            classToApply = MESSAGE_CLASSES.selfOld;
+        }
+    } else {
+        if (message.event == event) {
+            classToApply = MESSAGE_CLASSES.other;
+        } else {
+            classToApply = MESSAGE_CLASSES.otherOld;
+        }
+    }
+
+    let formattedTime = formatTime(message.created);
+    setInterval(() => {
+        formattedTime = formatTime(message.created);
+    }, 1000);
 </script>
 
-<div
-    class="{username === message.username
-        ? 'dark:bg-accent text-right self-end'
-        : 'dark:bg-gray-800 text-left'} rounded-xl py-2 px-4 my-3 w-fit"
->
+<div class="rounded-xl py-2 px-4 my-3 w-fit {classToApply}">
     <span class="text-sm">
         <span class="font-bold">{message.username}</span> - {message.event}
-        {formatTime(message.created)}
+        {formattedTime}
     </span>
     <p>{message.message}</p>
 </div>

@@ -1,7 +1,9 @@
 import express from 'express';
 import expressWs from 'express-ws';
 import { json } from 'body-parser';
+import { randomUUID } from 'crypto';
 import cors from 'cors';
+import { compare, hash } from 'bcrypt';
 import { DATABASE_CONFIG } from './config';
 import { MonitorFrame, Event, Message } from '../../shared/types';
 import { DEFAULT_MONITOR } from '../../shared/constants';
@@ -30,6 +32,8 @@ interface ProfilesRow {
     username: string;
     created: Date;
     last_seen: Date;
+    password: string;
+    token: string;
 }
 
 db.query(`CREATE TABLE IF NOT EXISTS profiles (
@@ -37,6 +41,8 @@ db.query(`CREATE TABLE IF NOT EXISTS profiles (
     username VARCHAR(1023) UNIQUE,
     created DATETIME DEFAULT CURRENT_TIMESTAMP,
     last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+    password VARCHAR(1023),
+    token VARCHAR(1023),
     PRIMARY KEY (id)
     );`)
 
@@ -170,14 +176,36 @@ app.post('/monitor/:event', (req, res) => {
 });
 
 // Create a user profile for notes
-app.post('/profile', (req, res) => {
+app.post('/profile', async (req, res) => {
     console.log(`New profile request for ${req.body.username}`);
-    db.query('INSERT INTO profiles VALUES (null, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);', [req.body.username]).then((result: any) => {
-        let id = result[0].insertId.toString();
-        console.log(`Created with id ${id}`)
-        res.send(id);
-    }).catch((err: Error) => {
-        res.status(400).send({ error: 'Username already in use' });
+
+    const hashedPassword = await hash(req.body.password, 16);
+    const token = randomUUID().replace(/-/g, '');
+
+    db.query('INSERT INTO profiles VALUES (null, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?, ?);', [req.body.username, hashedPassword, token])
+        .then((result: any) => {
+            let id = result[0].insertId.toString();
+            console.log(`Created with id ${id}`)
+            res.send({ id: id, token: token });
+        }).catch((err: Error) => {
+            res.status(400).send({ error: 'Username already in use' });
+        });
+});
+
+app.post('/login', async (req, res) => {
+    console.log(`Login request for ${req.body.username}`);
+    db.query('SELECT * FROM profiles WHERE username = ?;', [req.body.username]).spread(async (profiles: ProfilesRow[]) => {
+        if (profiles.length !== 1) {
+            return res.status(404).send({ error: 'Profile not found' });
+        }
+
+        const match = await compare(req.body.password, profiles[0].password);
+        if (match) {
+            db.query('UPDATE profiles SET last_seen = CURRENT_TIMESTAMP WHERE id = ?;', [profiles[0].id]);
+            res.send(profiles[0]);
+        } else {
+            res.status(401).send({ error: 'Incorrect password' });
+        }
     });
 });
 
@@ -217,20 +245,40 @@ app.get('/message/:team', (req, res) => {
 // Post a message on the notes for a team
 app.post('/message/:team', (req, res) => {
     console.log(`[NOTE ${req.body.event}] ${req.params.team} (${req.body.profile}): ${req.body.message}`);
-    db.query('INSERT INTO messages VALUES (null, ?, ?, ?, ?, CURRENT_TIMESTAMP);', [req.body.profile, req.body.event, req.params.team, req.body.message]).then((result: any) => {
-        db.query(`SELECT username FROM profiles WHERE id = ?;`, [req.body.profile]).spread((username: ProfilesRow[]) => {
-            res.send({
+
+    db.query('SELECT * FROM profiles WHERE id = ?;', [req.body.profile]).spread((profiles: ProfilesRow[]) => {
+        if (profiles.length !== 1) {
+            return res.status(404).send({ error: 'Profile not found' });
+        }
+
+        if (req.body.token !== profiles[0].token) {
+            return res.status(401).send('Invalid token');
+        }
+
+        db.query('INSERT INTO messages VALUES (null, ?, ?, ?, ?, CURRENT_TIMESTAMP);', [req.body.profile, req.body.event, req.params.team, req.body.message]).then((result: any) => {
+            const message = {
                 id: result.insertId,
                 profile: req.body.profile,
-                username: username[0].username,
+                username: profiles[0].username,
                 event: req.body.event,
                 team: req.params.team,
                 message: req.body.message,
                 created: (new Date()).toISOString()
-            });
+            };
+
+            res.send(message);
+
+            for (let socketClient of events[req.body.event].socketClients) {
+                if (socketClient) socketClient.send(JSON.stringify({
+                    type: 'message',
+                    team: req.params.team,
+                    message: message,
+                }));
+            }
+
+        }).catch((err: Error) => {
+            if (err) res.status(500).send(err)
         });
-    }).catch((err: Error) => {
-        if (err) res.status(500).send(err)
     });
 });
 

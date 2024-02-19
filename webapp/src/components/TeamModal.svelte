@@ -13,7 +13,7 @@
     }
 </script>
 
-<Modal bind:open={modalOpen} size="lg" outsideclose>
+<Modal bind:open={modalOpen} size="lg" outsideclose id="team-modal">
     {#if modalTeam}
         <div class="flex flex-col w-full items-center space-y-4">
             <div>
@@ -133,8 +133,8 @@
                 {/if}
             </p>
             <div class="flex space-x-4">
-                <Button color="primary" class="dark:bg-primary" on:click={navigate("/app/notes/" + modalTeam.number)}>Notes</Button>
-                <Button color="primary" class="dark:bg-primary" on:click={() => (modalOpen = false)}>Close</Button>
+                <Button color="primary" on:click={navigate("/app/notes/" + modalTeam.number)}>Notes</Button>
+                <Button color="primary" on:click={() => (modalOpen = false)}>Close</Button>
             </div>
         </div>
     {/if}

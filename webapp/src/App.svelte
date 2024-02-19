@@ -2,7 +2,7 @@
     import { Router, Route, Link } from "svelte-routing";
     import Home from "./pages/Home.svelte";
     import Flashcard from "./pages/Flashcards.svelte";
-    import { Button } from "flowbite-svelte";
+    import { Button, Modal } from "flowbite-svelte";
     import Icon from "@iconify/svelte";
     import Reference from "./pages/Reference.svelte";
     import Notes from "./pages/Notes.svelte";
@@ -12,13 +12,36 @@
     import { onMount } from "svelte";
     import { type MonitorFrame } from "../../shared/types";
     import { settingsStore } from "./stores/settings";
+    import { VERSIONS } from "./util/updater";
 
-    const version = "v2.1.0";
+    const version = "2.1.1";
     let settings = get(settingsStore);
+    let changelogOpen = false;
+    let changelog = "";
+
     if (settings.version !== version) {
+        let updatesToDo = [];
+
+        for (let v in VERSIONS) {
+            if (v > settings.version) {
+                updatesToDo.push(v);
+                changelog += VERSIONS[v].changelog;
+            }
+        }
+
+        changelogOpen = true;
+
+        console.log("Queued updates: " + updatesToDo.join(", "));
+
+        for (let v of updatesToDo) {
+            console.log("Running update " + v);
+            VERSIONS[v].update();
+        }
+
         settings.version = version;
         settingsStore.set(settings);
-        console.log("Updated to " + version);
+
+        console.log("Sucessfully updated to " + version);
     }
 
     let lastFrameTime: Date;
@@ -115,6 +138,13 @@
         connectToMonitor(new Event("submit"));
     });
 </script>
+
+<Modal bind:open={changelogOpen}>
+    <slot name="header">
+        <h1 class="text-2xl font-bold">Changelog</h1>
+    </slot>
+    <div bind:innerHTML={changelog} contenteditable class="text-left" />
+</Modal>
 
 <SettingsModal bind:settingsOpen />
 

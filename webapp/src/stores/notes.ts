@@ -28,5 +28,12 @@ if (!initialNotes) {
 
 export const notesStore = writable<Notes>(JSON.parse(initialNotes));
 notesStore.subscribe((value: Notes) => {
+    if (value === undefined) {
+        value = {
+            teams: [],
+            lastTeam: '',
+            notes: {},
+        };
+    }
     localStorage.setItem('notes', JSON.stringify(value));
 });

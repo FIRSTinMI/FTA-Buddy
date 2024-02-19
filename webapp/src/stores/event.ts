@@ -7,6 +7,9 @@ const initialRelay = (localStorage.getItem('relay') == "true");
 // Create a writable store for the event
 export const eventStore = writable(initialEvent);
 eventStore.subscribe((value) => {
+    if (value === undefined) {
+        value = "";
+    }
     localStorage.setItem('event', value);
 });
 

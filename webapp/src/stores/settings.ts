@@ -26,5 +26,8 @@ if (!initialSettings) {
 
 export const settingsStore = writable<Settings>(JSON.parse(initialSettings));
 settingsStore.subscribe((value: Settings) => {
+    if (value === undefined) {
+        value = defaultSettings;
+    }
     localStorage.setItem('settings', JSON.stringify(value));
 });

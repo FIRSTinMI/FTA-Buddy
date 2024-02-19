@@ -23,8 +23,11 @@
     let user = get(userStore);
 
     export let team: string;
-    if (team === undefined) {
+    if (team == undefined || team == "") {
         team = notesStoreData.lastTeam;
+        if (team == undefined || team == "") {
+            team = notesStoreData.teams[0];
+        }
     }
 
     let messages = notesStoreData.notes[team];
@@ -126,9 +129,13 @@
     </form>
     <div class="overflow-y-auto h-full" bind:this={element}>
         <div class="flex flex-col justify-end">
-            {#each messages as message}
-                <Message {message} />
-            {/each}
+            {#if !messages || messages.length < 1}
+                <div class="text-center">No messages</div>
+            {:else}
+                {#each messages as message}
+                    <Message {message} />
+                {/each}
+            {/if}
         </div>
     </div>
     {#if user.id > 0}

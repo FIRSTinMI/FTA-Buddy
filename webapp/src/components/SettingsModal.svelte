@@ -39,9 +39,9 @@
             if (response.ok) {
                 toastText = "Account created successfully";
                 userStore.set({ id: body.id, username: username, token: body.token });
+                setTimeout(window.location.reload, 500);
             } else {
                 toastText = body.error;
-                showToast = true;
             }
         } catch (error) {
             toastText = "Error creating account";
@@ -69,6 +69,7 @@
                 toastText = "Logged in successfully";
                 userStore.set({ id: body.id, username: username, token: body.token });
                 user = get(userStore);
+                setTimeout(window.location.reload, 500);
             } else {
                 toastText = body.error;
             }

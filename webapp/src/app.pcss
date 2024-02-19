@@ -53,7 +53,6 @@ body {
 }
 
 @media only screen and (max-width: 600px) {
-
   Table .px-6 {
     padding-left: .8rem;
     padding-right: .8rem;
@@ -82,7 +81,6 @@ body {
 }
 
 @media only screen and (min-width: 600px and max-width: 800px) {
-
   Table .px-6 {
     padding-left: 1rem;
     padding-right: 1rem;
@@ -111,15 +109,19 @@ body {
 }
 
 .overlay {
-    position: fixed;
-    height: 100vh;
-    width: 100vw;
-    z-index: 100;
-    background-color: #424242;
+  position: fixed;
+  height: 100vh;
+  width: 100vw;
+  z-index: 100;
+  background-color: #424242;
 }
 
 a[aria-current="page"] {
-    background: rgba(0, 0, 0, 0.2) !important;
+  background: rgba(0, 0, 0, 0.2) !important;
+}
+
+div[aria-modal="true"] {
+  outline: none;
 }
 
 @tailwind components;

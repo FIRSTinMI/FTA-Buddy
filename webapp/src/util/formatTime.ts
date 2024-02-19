@@ -1,6 +1,7 @@
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export function formatTime(time: Date) {
+    if (typeof time === 'string') time = new Date(time);
     let diff = (new Date()).getTime() - time.getTime();
 
     const past = diff > 0;

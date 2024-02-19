@@ -24,21 +24,19 @@
 
     export let team: string;
     if (team == undefined || team == "") {
-        team = notesStoreData.lastTeam;
-        if (team == undefined || team == "") {
-            team = notesStoreData.teams[0];
-        }
+        team = notesStoreData?.lastTeam || notesStoreData?.teams[0] || "";
     }
 
-    let messages = notesStoreData.notes[team];
+    let messages = notesStoreData?.notes[team] || [];
 
-    let teams: SelectOptionType<string>[] = sortTeams(notesStoreData.teams).map((team: string) => ({
+    let teams: SelectOptionType<string>[] = sortTeams(notesStoreData?.teams || []).map((team: string) => ({
         name: team,
         value: team,
     }));
     updateTeams();
 
     async function updateTeams() {
+        if (!event) return;
         let teamsData = await fetch("https://ftabuddy.com/teams/" + encodeURIComponent(event)).then((res) => res.json());
         teamsData = sortTeams(teamsData);
 
@@ -60,6 +58,7 @@
     let element;
 
     async function getMessages(team: string) {
+        if (!team) return;
         messages = await fetch("https://ftabuddy.com/message/" + encodeURIComponent(team)).then((res) => res.json());
 
         messages = messages.map((message: any) => ({
@@ -138,7 +137,7 @@
             {/if}
         </div>
     </div>
-    {#if user.id > 0}
+    {#if user && user.id > 0}
         <form on:submit={sendMessage}>
             <label for="chat" class="sr-only">Your message</label>
             <Alert color="dark" class="px-0 py-2">

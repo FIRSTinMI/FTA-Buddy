@@ -18,5 +18,12 @@ if (!initialUser) {
 
 export const userStore = writable<User>(JSON.parse(initialUser));
 userStore.subscribe((value: User) => {
+    if (value === undefined) {
+        value = {
+            username: '',
+            id: 0,
+            token: '',
+        };
+    }
     localStorage.setItem('user', JSON.stringify(value));
 });

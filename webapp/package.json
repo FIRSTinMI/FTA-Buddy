@@ -30,6 +30,7 @@
         "vite": "^5.0.8"
     },
     "dependencies": {
-        "svelte-material-icons": "^3.0.5"
+        "svelte-material-icons": "^3.0.5",
+        "svelte-qrcode": "^1.0.0"
     }
 }

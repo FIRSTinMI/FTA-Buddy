@@ -1,5 +1,6 @@
 <script lang="ts">
     import { Accordion, AccordionItem } from "flowbite-svelte";
+    import QrCode from "svelte-qrcode";
 </script>
 
 <div class="container mx-auto p-2 pr-3 w-full">
@@ -630,6 +631,39 @@
                     </td>
                 </tr>
             </table>
+        </AccordionItem>
+        <AccordionItem>
+            <span slot="header">Field Manual QR Codes</span>
+            <Accordion flush>
+                <AccordionItem>
+                    <span slot="header">Pack Case 23/24 Amp and Truss</span>
+                    <QrCode value="https://roadcase.frc.tools/23" padding={5} />
+                </AccordionItem>
+                <AccordionItem>
+                    <span slot="header">Pack Case 31 Speaker</span>
+                    <QrCode value="https://roadcase.frc.tools/31" padding={5} />
+                </AccordionItem>
+                <AccordionItem>
+                    <span slot="header">Pack Case 32 Practice Field</span>
+                    <QrCode value="https://roadcase.frc.tools/32" padding={5} />
+                </AccordionItem>
+                <AccordionItem>
+                    <span slot="header">Build Stage</span>
+                    <QrCode value="https://usfirst.box.com/s/gtg2693z807lyl27cowy3shn80dg7bjn" padding={5} />
+                </AccordionItem>
+                <AccordionItem>
+                    <span slot="header">Build Speaker</span>
+                    <QrCode value="https://usfirst.box.com/s/xhae645948mtyvp22dqa7w0taabkuq7b" padding={5} />
+                </AccordionItem>
+                <AccordionItem>
+                    <span slot="header">Build Amp</span>
+                    <QrCode value="https://usfirst.box.com/s/dy0t42vpsdsb02bkppdajtimbpnn12b2" padding={5} />
+                </AccordionItem>
+                <AccordionItem>
+                    <span slot="header">Build Source</span>
+                    <QrCode value="https://usfirst.box.com/s/dy0t42vpsdsb02bkppdajtimbpnn12b2" padding={5} />
+                </AccordionItem>
+            </Accordion>
         </AccordionItem>
     </Accordion>
 </div>

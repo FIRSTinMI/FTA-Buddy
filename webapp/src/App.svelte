@@ -2,7 +2,7 @@
     import { Router, Route, Link } from "svelte-routing";
     import Home from "./pages/Home.svelte";
     import Flashcard from "./pages/Flashcards.svelte";
-    import { Button, Modal } from "flowbite-svelte";
+    import { Button, Modal, Toast } from "flowbite-svelte";
     import Icon from "@iconify/svelte";
     import Reference from "./pages/Reference.svelte";
     import Notes from "./pages/Notes.svelte";
@@ -13,13 +13,23 @@
     import { type MonitorFrame } from "../../shared/types";
     import { settingsStore } from "./stores/settings";
     import { VERSIONS } from "./util/updater";
+    import WelcomeModal from "./components/WelcomeModal.svelte";
 
-    const version = "2.1.1";
+    const version = Object.keys(VERSIONS).sort().pop() || "0";
     let settings = get(settingsStore);
     let changelogOpen = false;
     let changelog = "";
+    let welcomeOpen = false;
+    let showToast = false;
+    let toastTitle = "";
+    let toastText = "";
 
-    if (settings.version !== version) {
+    console.log(settings.version, version);
+    if (settings.version == "0") {
+        settings.version = version;
+        settingsStore.set(settings);
+        welcomeOpen = true;
+    } else if (settings.version !== version) {
         let updatesToDo = [];
 
         for (let v in VERSIONS) {
@@ -66,8 +76,8 @@
         secureOnly = true;
     }
 
-    async function connectToMonitor(evt: Event) {
-        evt.preventDefault();
+    async function connectToMonitor(event: string) {
+        monitorEvent = event;
         if (ws) ws?.close();
         if (monitorEvent.match("^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$")) {
             let uri = "ws://" + monitorEvent + ":8284/";
@@ -76,19 +86,28 @@
         } else if (monitorEvent.trim().length > 0) {
             console.log(relayOn);
             eventStore.set(monitorEvent);
-            const response = await fetch("https://ftabuddy.com/register/" + monitorEvent);
-            const eventData = await response.json();
-            if (response.status !== 200) {
-                alert(response.statusText);
+            try {
+                const response = await fetch("https://ftabuddy.com/register/" + monitorEvent);
+                if (response.status === 404) {
+                    throw new Error(
+                        "Event not found, make sure the chrome extension is setup and the field monitor is open",
+                    );
+                }
+                const eventData = await response.json();
+
+                let uri = "ws://" + eventData.local_ip + ":8284/";
+                if (relayOn) {
+                    uri = "wss://ftabuddy.com/ws";
+                }
+
+                openWebSocket(uri);
+            } catch (err: any) {
+                console.error(err);
+                toastTitle = "Failed to connect to monitor";
+                toastText = err.message;
+                showToast = true;
                 return;
             }
-
-            let uri = "ws://" + eventData.local_ip + ":8284/";
-            if (relayOn) {
-                uri = "wss://ftabuddy.com/ws";
-            }
-
-            openWebSocket(uri);
         }
     }
 
@@ -135,18 +154,46 @@
     let notesChild: Notes;
 
     onMount(() => {
-        connectToMonitor(new Event("submit"));
+        connectToMonitor(monitorEvent);
+    });
+
+    settingsStore.subscribe((value) => {
+        settings = value;
     });
 </script>
 
-<Modal bind:open={changelogOpen}>
-    <slot name="header">
+{#if showToast}
+    <div class="fixed bottom-0 left-0 p-4">
+        <Toast
+            bind:open={showToast}
+            class="dark:bg-red-500"
+            divClass="w-lg p-4 text-gray-500 bg-white shadow dark:text-gray-400 dark:bg-gray-800 gap-3"
+        >
+            <h3 class="text-lg font-bold text-white text-left">{toastTitle}</h3>
+            <p class="text-white text-left">{toastText}</p>
+        </Toast>
+    </div>
+{/if}
+
+<WelcomeModal bind:welcomeOpen />
+
+<Modal bind:open={changelogOpen} dismissable autoclose outsideclose>
+    <div slot="header">
         <h1 class="text-2xl font-bold">Changelog</h1>
-    </slot>
+    </div>
     <div bind:innerHTML={changelog} contenteditable class="text-left" />
+    <div slot="footer">
+        <Button color="primary">Close</Button>
+    </div>
 </Modal>
 
-<SettingsModal bind:settingsOpen />
+<SettingsModal
+    bind:settingsOpen
+    openHelp={() => {
+        settingsOpen = false;
+        welcomeOpen = true;
+    }}
+/>
 
 <main>
     <Router basepath="/app/">
@@ -172,7 +219,7 @@
 
             <div class="overflow-y-auto flex-grow pb-2">
                 <Route path="/">
-                    <Home bind:monitorFrame updateEvent={connectToMonitor} />
+                    <Home bind:monitorFrame {connectToMonitor} />
                 </Route>
                 <Route path="/flashcards" component={Flashcard} />
                 <Route path="/references" component={Reference} />

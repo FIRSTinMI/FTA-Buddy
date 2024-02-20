@@ -3,6 +3,15 @@ import { settingsStore } from "../stores/settings";
 import { userStore } from "../stores/user";
 
 export const VERSIONS = {
+    '2.2.0': {
+        changelog: `
+        <h1 class="text-lg">v2.2.0</h1>
+        <ul>
+        <li>Added a welcome screen</li>
+        <li>Error handling for websocket connection</li>
+        </ul>`,
+        update: () => { }
+    },
     '2.1.1': {
         changelog: `
         <h1 class="text-lg">v2.1.1</h1>

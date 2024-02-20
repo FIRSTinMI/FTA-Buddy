@@ -13,6 +13,18 @@
             "sizes": "512x512",
             "src": "icon512_rounded.png",
             "type": "image/png"
+        },
+        {
+            "purpose": "maskable",
+            "sizes": "192x192",
+            "src": "icon192_maskable.png",
+            "type": "image/png"
+        },
+        {
+            "purpose": "any",
+            "sizes": "192x192",
+            "src": "icon192_rounded.png",
+            "type": "image/png"
         }
     ],
     "orientation": "portrait",
@@ -20,6 +32,7 @@
     "dir": "auto",
     "lang": "en-US",
     "name": "FTA Buddy",
+    "prefer_related_applications": false,
     "start_url": "https://ftabuddy.com/app/",
     "scope": "https://ftabuddy.com/app/",
     "description": "FTA Buddy"

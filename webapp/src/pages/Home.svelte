@@ -79,9 +79,16 @@
     <form on:submit={updateEvent} class="flex w-full justify-center items-center space-x-4 mt-4 px-2">
         <!-- <Toggle class="toggle" bind:checked={relayOn} on:click={relayChanged} bind:disabled={secureOnly}>Relay</Toggle> -->
         <Label class="space-y-2">
-            <Input class="max-w-64 w-full" bind:value={monitorEvent} placeholder="Event Code or IP" />
+            Event Code
+            <div class="flex">
+                <Input
+                    class="max-w-64 w-full rounded-none rounded-l-lg"
+                    bind:value={monitorEvent}
+                    placeholder="Event Code or IP"
+                />
+                <Button color="primary" class="rounded-none rounded-r-lg" on:click={updateEvent}>Connect</Button>
+            </div>
         </Label>
-        <Button color="primary" on:click={updateEvent}>Connect</Button>
     </form>
     {#if !monitorFrame}
         <p>Requires Chrome Extension to be setup on field network</p>

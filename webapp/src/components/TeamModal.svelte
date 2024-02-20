@@ -24,26 +24,26 @@
 </script>
 
 <Modal bind:open={modalOpen} size="lg" outsideclose id="team-modal">
+    <div slot="header" class="w-full">
+        <Table class="w-full sm:w-fit mx-auto">
+            <TableHead class="dark:bg-neutral-500 dark:text-white">
+                <TableHeadCell class="w-20">Team</TableHeadCell>
+                <TableHeadCell class="w-20">DS</TableHeadCell>
+                <TableHeadCell class="w-10">Radio</TableHeadCell>
+                <TableHeadCell class="w-10">Rio</TableHeadCell>
+                <TableHeadCell>Bat</TableHeadCell>
+                <TableHeadCell>Net</TableHeadCell>
+            </TableHead>
+            <TableBody>
+                <MonitorRow station={modalStation} bind:monitorFrame detailView={() => {}} />
+            </TableBody>
+        </Table>
+    </div>
     {#if modalTeam}
-        <div class="flex flex-col w-full items-center space-y-4">
-            <div>
-                <Table class="w-full sm:w-fit mx-auto">
-                    <TableHead class="dark:bg-neutral-500 dark:text-white">
-                        <TableHeadCell class="w-20">Team</TableHeadCell>
-                        <TableHeadCell class="w-20">DS</TableHeadCell>
-                        <TableHeadCell class="w-10">Radio</TableHeadCell>
-                        <TableHeadCell class="w-10">Rio</TableHeadCell>
-                        <TableHeadCell>Bat</TableHeadCell>
-                        <TableHeadCell>Net</TableHeadCell>
-                    </TableHead>
-                    <TableBody>
-                        <MonitorRow station={modalStation} bind:monitorFrame detailView={() => {}} />
-                    </TableBody>
-                </Table>
-            </div>
+        <div class="flex flex-col w-full items-center space-y-4 -mt-4">
             <p>
                 {#if modalTeam.ds === RED}
-                    Ethernet not plugged in
+                    <span class="font-bold">Ethernet not plugged in</span>
                     <ol class="text-left list-decimal">
                         <li>Make sure the cable is plugged into the laptop</li>
                         <li>Check if there are link lights on the port</li>
@@ -51,7 +51,7 @@
                         <li>Try replacing the ethernet cable</li>
                     </ol>
                 {:else if modalTeam.ds === GREEN_X}
-                    Ethernet plugged in but no communication with DS
+                    <span class="font-bold">Ethernet plugged in but no communication with DS</span>
                     <ol class="text-left list-decimal">
                         <li>Make sure DS is open, and only one instance is open</li>
                         <li>Check if there are link lights on the port</li>
@@ -74,25 +74,25 @@
                         </li>
                     </ol>
                 {:else if modalTeam.ds === MOVE_STATION}
-                    Team is in wrong station<br />
+                    <span class="font-bold">Team is in wrong station</span><br />
                     Their DS will tell them which station to move to.
                 {:else if modalTeam.ds === WRONG_MATCH}
-                    Team is in wrong match
+                    <span class="font-bold">Team is in wrong match</span>
                     <ol class="text-left list-decimal">
                         <li>Double check the schedule</li>
                         <li>If they're on the schedule, check if the team number in their DS is set correctly</li>
                     </ol>
                 {:else if modalTeam.ds === BYPASS}
-                    Team is bypassed
+                    <span class="font-bold">Team is bypassed</span>
                 {:else if modalTeam.ds === ESTOP}
-                    Team is E-stopped
+                    <span class="font-bold">Team is E-stopped</span>
                     <ol class="text-left list-decimal">
                         <li>
                             To clear an E-stop the roborio must be physically restarted and the DS software restarted
                         </li>
                     </ol>
                 {:else if modalTeam.radio === RED}
-                    Radio not connected to field
+                    <span class="font-bold">Radio not connected to field</span>
                     <ol class="text-left list-decimal">
                         <li>Make sure robot is on</li>
                         <li>
@@ -105,7 +105,7 @@
                         </li>
                     </ol>
                 {:else if modalTeam.rio === RED}
-                    Radio connected but no communication with RIO
+                    <span class="font-bold">Radio connected but no communication with RIO</span>
                     <ol class="text-left list-decimal">
                         <li>
                             Check the status lights on the RIO, power should be green, link lights should be flashing,
@@ -132,7 +132,7 @@
                         </li>
                     </ol>
                 {:else if modalTeam.code === RED}
-                    Radio and RIO connected, but code not running
+                    <span class="font-bold">Radio and RIO connected, but code not running</span>
                     <ol class="text-left list-decimal">
                         <li>If it is a RIO 2, try restarting the RIO, this can be done from the DS.</li>
                         <li>
@@ -142,7 +142,7 @@
                         </li>
                     </ol>
                 {:else}
-                    Robot Connected<br />
+                    <span class="font-bold">Robot Connected</span><br />
                     {#if modalTeam.battery < 11}
                         Low Battery {modalTeam.battery.toFixed(1)}V<br />
                     {/if}
@@ -157,10 +157,10 @@
                     {/if}
                 {/if}
             </p>
-            <div class="flex space-x-4">
-                <Button color="primary" on:click={navigate("/app/notes/" + modalTeam.number)}>Notes</Button>
-                <Button color="primary" on:click={() => (modalOpen = false)}>Close</Button>
-            </div>
         </div>
     {/if}
+    <div slot="footer">
+        <Button color="primary" on:click={() => navigate("/app/notes/" + modalTeam?.number)}>Notes</Button>
+        <Button color="primary" on:click={() => (modalOpen = false)}>Close</Button>
+    </div>
 </Modal>

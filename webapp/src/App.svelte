@@ -14,6 +14,7 @@
     import { settingsStore } from "./stores/settings";
     import { VERSIONS } from "./util/updater";
     import WelcomeModal from "./components/WelcomeModal.svelte";
+    import LoginModal from "./components/LoginModal.svelte";
 
     const version = Object.keys(VERSIONS).sort().pop() || "0";
     let settings = get(settingsStore);
@@ -170,6 +171,8 @@
     window.addEventListener("appinstalled", () => {
         installPrompt = null;
     });
+
+    let loginOpen = false;
 </script>
 
 {#if showToast}
@@ -210,7 +213,13 @@
         settingsOpen = false;
         welcomeOpen = true;
     }}
+    openLogin={() => {
+        settingsOpen = false;
+        loginOpen = true;
+    }}
 />
+
+<LoginModal bind:loginOpen />
 
 <main>
     <Router basepath="/app/">
@@ -241,7 +250,13 @@
                 <Route path="/flashcards" component={Flashcard} />
                 <Route path="/references" component={Reference} />
                 <Route path="/notes">
-                    <Notes bind:this={notesChild} team={undefined} />
+                    <Notes
+                        bind:this={notesChild}
+                        team={undefined}
+                        openLogin={() => {
+                            loginOpen = true;
+                        }}
+                    />
                 </Route>
                 <Route path="/notes/:team" component={Notes} />
             </div>

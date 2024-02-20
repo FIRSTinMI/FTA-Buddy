@@ -2,9 +2,11 @@
     import { Button, Modal } from "flowbite-svelte";
 
     export let welcomeOpen = false;
+    export let installPrompt: Event | null;
+    export let closeModal: () => void;
 </script>
 
-<Modal bind:open={welcomeOpen} dismissable autoclose outsideclose size="lg">
+<Modal bind:open={welcomeOpen} dismissable outsideclose size="lg">
     <div slot="header">
         <h1 class="text-xl">Welcome to FTA Buddy</h1>
     </div>
@@ -12,6 +14,17 @@
         <p>
             Hi, hello, I recommened installing this page as an app so it's on your homescreen and the UI looks better.
         </p>
+        {#if installPrompt}
+            <Button
+                color="primary"
+                class="w-fit"
+                size="sm"
+                on:click={() => {
+                    // @ts-ignore
+                    if (installPrompt) installPrompt.prompt();
+                }}>Install</Button
+            >
+        {/if}
         <h2 class="text-lg font-bold">Field Monitor</h2>
         <p>
             The field monitor is mostly the same as the real one, some things have been moved around to make it fit
@@ -46,6 +59,6 @@
         </p>
     </div>
     <div slot="footer">
-        <Button color="primary">Close</Button>
+        <Button color="primary" on:click={closeModal}>Close</Button>
     </div>
 </Modal>

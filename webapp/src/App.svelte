@@ -160,6 +160,16 @@
     settingsStore.subscribe((value) => {
         settings = value;
     });
+
+    let installPrompt: Event | null = null;
+
+    window.addEventListener("beforeinstallprompt", (event) => {
+        event.preventDefault();
+        installPrompt = event;
+    });
+    window.addEventListener("appinstalled", () => {
+        installPrompt = null;
+    });
 </script>
 
 {#if showToast}
@@ -175,7 +185,13 @@
     </div>
 {/if}
 
-<WelcomeModal bind:welcomeOpen />
+<WelcomeModal
+    bind:welcomeOpen
+    bind:installPrompt
+    closeModal={() => {
+        welcomeOpen = false;
+    }}
+/>
 
 <Modal bind:open={changelogOpen} dismissable autoclose outsideclose>
     <div slot="header">
@@ -189,6 +205,7 @@
 
 <SettingsModal
     bind:settingsOpen
+    bind:installPrompt
     openHelp={() => {
         settingsOpen = false;
         welcomeOpen = true;

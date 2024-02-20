@@ -8,6 +8,7 @@
     export let openHelp: () => void;
     let user = get(userStore);
     let settings = get(settingsStore);
+    export let installPrompt: Event | null;
 
     let createAccount = true;
     let username = "";
@@ -113,6 +114,17 @@
 >
     <form class="space-y-4 justify-start text-left grid grid-cols-1">
         <h1 class="text-2xl">Settings</h1>
+        {#if installPrompt}
+            <Button
+                color="primary"
+                class="w-fit"
+                size="xs"
+                on:click={() => {
+                    // @ts-ignore
+                    if (installPrompt) installPrompt.prompt();
+                }}>Install</Button
+            >
+        {/if}
         <Button on:click={openHelp} size="xs" color="primary" class="w-fit">Help</Button>
         <Button on:click={clearStorage} size="xs" color="dark" class="w-fit">Clear All Data</Button>
         <Toggle bind:checked={settings.developerMode} on:change={updateSettings}>Developer Mode</Toggle>

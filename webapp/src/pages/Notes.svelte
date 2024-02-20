@@ -1,6 +1,6 @@
 <script lang="ts">
     import { notesStore } from "./../stores/notes";
-    import { Alert, Textarea, ToolbarButton, Label, Select, type SelectOptionType } from "flowbite-svelte";
+    import { Alert, Textarea, ToolbarButton, Label, Select, type SelectOptionType, Button } from "flowbite-svelte";
     import { eventStore } from "../stores/event";
     import { get } from "svelte/store";
     import Message from "../components/Message.svelte";
@@ -8,7 +8,9 @@
     import Icon from "@iconify/svelte";
     import { sortTeams } from "../util/sortTeams";
 
-    export const newMessage = (message) => {
+    let element: HTMLElement;
+
+    export const newMessage = (message: any) => {
         console.log(message);
         if (message.team === team) {
             messages = [...messages, message.message];
@@ -21,6 +23,8 @@
     let event = get(eventStore);
     let notesStoreData = get(notesStore);
     let user = get(userStore);
+
+    export let openLogin: () => void;
 
     export let team: string;
     if (team == undefined || team == "") {
@@ -37,7 +41,9 @@
 
     async function updateTeams() {
         if (!event) return;
-        let teamsData = await fetch("https://ftabuddy.com/teams/" + encodeURIComponent(event)).then((res) => res.json());
+        let teamsData = await fetch("https://ftabuddy.com/teams/" + encodeURIComponent(event)).then((res) =>
+            res.json(),
+        );
         teamsData = sortTeams(teamsData);
 
         teams = teamsData.map((team: string) => ({
@@ -55,8 +61,6 @@
         notesStore.set(notesStoreData);
     }
 
-    let element;
-
     async function getMessages(team: string) {
         if (!team) return;
         messages = await fetch("https://ftabuddy.com/message/" + encodeURIComponent(team)).then((res) => res.json());
@@ -73,7 +77,7 @@
         return messages;
     }
 
-    async function sendMessage(evt) {
+    async function sendMessage(evt: Event) {
         evt.preventDefault();
         const message = (document.getElementById("chat") as HTMLTextAreaElement).value;
         if (message.trim().length > 0) {
@@ -99,7 +103,7 @@
         }
     }
 
-    function sendKey(evt) {
+    function sendKey(evt: KeyboardEvent) {
         if (evt.key === "Enter" && !evt.shiftKey) {
             sendMessage(new Event("submit"));
         }
@@ -109,7 +113,7 @@
         getMessages(team);
     }
 
-    function scrollToBottom(node) {
+    function scrollToBottom(node: HTMLElement) {
         console.log(node.scrollHeight);
         if (node) node.scroll({ top: node.scrollHeight, behavior: "instant" });
     }
@@ -117,6 +121,10 @@
     $: {
         getMessages(team);
     }
+
+    userStore.subscribe((value) => {
+        user = value;
+    });
 </script>
 
 <div class="container mx-auto px-2 pt-2 h-full flex flex-col">
@@ -143,12 +151,18 @@
             <Alert color="dark" class="px-0 py-2">
                 <svelte:fragment slot="icon">
                     <Textarea id="chat" class="ml-3" rows="1" placeholder="Your message..." on:keydown={sendKey} />
-                    <ToolbarButton type="submit" color="blue" class="rounded-full text-primary-600 dark:text-primary-500">
+                    <ToolbarButton
+                        type="submit"
+                        color="blue"
+                        class="rounded-full text-primary-600 dark:text-primary-500"
+                    >
                         <Icon icon="mdi:send" class="w-6 h-8" />
                         <span class="sr-only">Send message</span>
                     </ToolbarButton>
                 </svelte:fragment>
             </Alert>
         </form>
+    {:else}
+        <Button on:click={openLogin}>Log in to send messages</Button>
     {/if}
 </div>

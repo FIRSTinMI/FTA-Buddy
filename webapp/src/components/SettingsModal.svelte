@@ -99,6 +99,10 @@
         localStorage.clear();
         window.location.reload();
     }
+
+    userStore.subscribe((value) => {
+        user = value;
+    });
 </script>
 
 {#if loading}
@@ -119,7 +123,7 @@
             <Button on:click={openLogin}>Login or Create Account</Button>
         {:else}
             <h2 class="text-lg">Logged in as {user.username}</h2>
-            <Button on:click={logout}>Logout</Button>
+            <Button on:click={logout} size="xs" class="mt-2">Logout</Button>
         {/if}
     </div>
     <form class="space-y-4 justify-start text-left grid grid-cols-1 border-t border-neutral-500 pt-2 mt-0">

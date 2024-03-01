@@ -8,7 +8,7 @@
         "build": "vite build",
         "preview": "vite preview --port 9019",
         "check": "svelte-check --tsconfig ./tsconfig.json",
-        "start": "vite --host --port 9019"
+        "start": "node server.cjs"
     },
     "devDependencies": {
         "@iconify/svelte": "^3.1.6",
@@ -30,6 +30,7 @@
         "vite": "^5.0.8"
     },
     "dependencies": {
+        "express": "^4.18.3",
         "svelte-material-icons": "^3.0.5",
         "svelte-qrcode": "^1.0.0"
     }

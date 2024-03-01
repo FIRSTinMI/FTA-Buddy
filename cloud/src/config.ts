@@ -3,4 +3,5 @@ export const DATABASE_CONFIG = {
     user: "foo",
     password: "bar",
     database: "db"
-}
+};
+export const TBA_KEY = "foo";

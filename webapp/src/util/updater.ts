@@ -3,6 +3,14 @@ import { settingsStore } from "../stores/settings";
 import { userStore } from "../stores/user";
 
 export const VERSIONS = {
+    '2.2.1': {
+        changelog: `
+        <h1 class="text-lg">v2.2.1</h1>
+        <ul>
+        <li>Monitor will auto-reconnect after the app is inactive for a longer period of time</li>
+        </ul>`,
+        update: () => { }
+    },
     '2.2.0': {
         changelog: `
         <h1 class="text-lg">v2.2.0</h1>

@@ -4,7 +4,7 @@ import { json } from 'body-parser';
 import { randomUUID } from 'crypto';
 import cors from 'cors';
 import { compare, hash } from 'bcrypt';
-import { DATABASE_CONFIG } from './config';
+import { DATABASE_CONFIG, TBA_KEY } from './config';
 import { MonitorFrame, Event, Message } from '../../shared/types';
 import { DEFAULT_MONITOR } from '../../shared/constants';
 
@@ -65,7 +65,13 @@ db.query(`CREATE TABLE IF NOT EXISTS messages (
     PRIMARY KEY (id)
     );`);
 
-let events: { [key: string]: Event } = {};
+let events: { [key: string]: Event } = {
+    'test': {
+        socketClients: [],
+        monitor: DEFAULT_MONITOR,
+        teams: [],
+    },
+};
 
 function updateTeamsListFromMonitor(event: string, monitor: MonitorFrame) {
     let newTeamsAdded = false;
@@ -97,7 +103,7 @@ app.get('/register/:event', (req, res) => {
 
     db.query('SELECT local_ip FROM events WHERE code = ?;', [req.params.event]).spread((ip: string[]) => {
         if (ip.length == 0) {
-            return res.status(404).send();
+            return res.send({ 'local_ip': "0.0.0.0" });
         }
         res.send(ip[0]);
     });
@@ -133,8 +139,32 @@ app.post('/register/:event', (req, res) => {
 app.get('/teams/:event', (req, res) => {
     db.query('SELECT teams FROM events WHERE code = ?;', [req.params.event]).spread((teams: EventsRow[]) => {
         // TODO: Add TBA integration to get team names and stuff
-        teams = JSON.parse(teams[0].teams)
-        res.send(teams);
+        if (teams.length > 0) {
+            teams = JSON.parse(teams[0].teams)
+            res.send(teams);
+        } else {
+            fetch(`https://www.thebluealliance.com/api/v3/event/${req.params.event}/teams/simple`, {
+                headers: {
+                    'X-TBA-Auth-Key': TBA_KEY
+                }
+            }).then(async (response) => {
+                let teams = [];
+                if (response.status == 200) {
+                    let teamsData = await response.json();
+                    for (let team of teamsData) {
+                        teams.push(team.team_number);
+                    }
+                    res.send(teams);
+                    db.query('SELECT * FROM events WHERE code = ?;', [req.params.event]).spread((event: EventsRow[]) => {
+                        if (event) {
+                            db.query('UPDATE events SET teams = ? WHERE code = ?;', [JSON.stringify(req.body.teams), req.params.event]);
+                        }
+                    });
+                } else {
+                    res.send([]);
+                }
+            });
+        }
     });
 });
 
@@ -283,7 +313,7 @@ app.post('/message/:team', (req, res) => {
 });
 
 app.ws('/', (ws, req) => {
-    ws.on('message', (rawData) => {
+    ws.on('message', async (rawData) => {
         let msg = rawData.toString();
         if (msg == 'ping') return ws.send(JSON.stringify({ type: 'pong' }));
         if (msg.startsWith('server')) {
@@ -292,14 +322,32 @@ app.ws('/', (ws, req) => {
             if (events[eventCode]) {
                 events[eventCode].socketServer = ws;
             } else {
-                events[eventCode] = {
-                    socketServer: ws,
-                    socketClients: [],
-                    monitor: DEFAULT_MONITOR,
-                    teams: []
-                }
-            }
+                fetch(`https://www.thebluealliance.com/api/v3/event/${eventCode}/teams/simple`, {
+                    headers: {
+                        'X-TBA-Auth-Key': TBA_KEY
+                    }
+                }).then(async (response) => {
+                    let teams = [];
+                    if (response.status == 200) {
+                        let teamsData = await response.json();
+                        for (let team of teamsData) {
+                            teams.push(team.team_number);
+                        }
+                        db.query('SELECT * FROM events WHERE code = ?;', [req.params.event]).spread((event: EventsRow[]) => {
+                            if (event) {
+                                db.query('UPDATE events SET teams = ? WHERE code = ?;', [JSON.stringify(req.body.teams), req.params.event]);
+                            }
+                        });
+                    }
 
+                    events[eventCode] = {
+                        socketServer: ws,
+                        socketClients: [],
+                        monitor: DEFAULT_MONITOR,
+                        teams: []
+                    }
+                });
+            }
             // Register broadcast function for this server
             ws.on('message', (rawData) => {
                 let msg = rawData.toString();

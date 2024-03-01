@@ -67,6 +67,8 @@
     let ws: WebSocket;
     let monitorFrame: MonitorFrame;
 
+    let timeoutID: Timeout;
+
     let settingsOpen = false;
     function openSettings() {
         settingsOpen = true;
@@ -145,7 +147,7 @@
             if (!evt.wasClean) {
                 console.log(evt);
                 console.log("Disconnected from " + uri + " reconnecting in 5 sec");
-                setTimeout(() => openWebSocket(uri), 5e3);
+                timeoutID = setTimeout(() => openWebSocket(uri), 5e3);
             } else {
                 console.log("Disconnected cleanly");
             }
@@ -173,6 +175,17 @@
     });
 
     let loginOpen = false;
+
+    document.addEventListener("visibilitychange", (evt) => {
+        if (document.visibilityState === "visible") {
+            console.log("Returning from inactive");
+            console.log(ws.readyState == 1 ? "Connected" : "Disconnected");
+            if (!ws || ws.readyState !== 1) {
+                if (timeoutID) clearTimeout(timeoutID);
+                openWebSocket(ws.url);
+            }
+        }
+    });
 </script>
 
 {#if showToast}

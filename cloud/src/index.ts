@@ -95,6 +95,7 @@ app.get('/', (req, res) => {
 
 // Get local server ip for an event
 app.get('/register/:event', (req, res) => {
+    req.params.event = req.params.event.toLowerCase();
     if (events[req.params.event] && events[req.params.event].ip) {
         return res.send({
             'local_ip': events[req.params.event].ip
@@ -111,6 +112,7 @@ app.get('/register/:event', (req, res) => {
 
 // Register a local server ip for an event
 app.post('/register/:event', (req, res) => {
+    req.params.event = req.params.event.toLowerCase();
     if (events[req.params.event]) {
         events[req.params.event].ip = req.body.ip;
     } else {
@@ -137,6 +139,7 @@ app.post('/register/:event', (req, res) => {
 
 // Get team list for an event
 app.get('/teams/:event', (req, res) => {
+    req.params.event = req.params.event.toLowerCase();
     db.query('SELECT teams FROM events WHERE code = ?;', [req.params.event]).spread((teams: EventsRow[]) => {
         // TODO: Add TBA integration to get team names and stuff
         if (teams.length > 0) {
@@ -170,6 +173,7 @@ app.get('/teams/:event', (req, res) => {
 
 // Set team list for an event
 app.post('/teams/:event', (req, res) => {
+    req.params.event = req.params.event.toLowerCase();
     db.query('SELECT * FROM events WHERE code = ?;', [req.params.event]).spread((event: EventsRow[]) => {
         if (event) {
             db.query('UPDATE events SET teams = ? WHERE code = ?;', [JSON.stringify(req.body.teams), req.params.event]);
@@ -182,12 +186,14 @@ app.post('/teams/:event', (req, res) => {
 
 // Get latest update of field monitor
 app.get('/monitor/:event', (req, res) => {
+    req.params.event = req.params.event.toLowerCase();
     if (!events.hasOwnProperty(req.params.event)) return res.status(404).send();
     res.send(events[req.params.event].monitor);
 });
 
 // Post update of field monitor
 app.post('/monitor/:event', (req, res) => {
+    req.params.event = req.params.event.toLowerCase();
     console.debug(`[${req.params.event}] Field monitor update received ${JSON.stringify(req.body)}`);
 
     if (!events.hasOwnProperty(req.params.event)) events[req.params.event] = {
@@ -317,7 +323,7 @@ app.ws('/', (ws, req) => {
         let msg = rawData.toString();
         if (msg == 'ping') return ws.send(JSON.stringify({ type: 'pong' }));
         if (msg.startsWith('server')) {
-            let eventCode = msg.substr(7);
+            let eventCode = msg.substring(7).toLowerCase();
             console.log(`[WS ${eventCode} S] connected`);
             if (events[eventCode]) {
                 events[eventCode].socketServer = ws;
@@ -352,18 +358,25 @@ app.ws('/', (ws, req) => {
             ws.on('message', (rawData) => {
                 let msg = rawData.toString();
                 if (msg == 'ping') return ws.send(JSON.stringify({ type: 'pong' }));
-                for (let socketClient of events[eventCode].socketClients) {
-                    if (socketClient) socketClient.send(msg);
-                }
-                events[eventCode].monitor = JSON.parse(msg);
-                // If field is ready to prestart, that means new teams are displayed
-                if (events[eventCode].monitor.field === 7) {
-                    updateTeamsListFromMonitor(eventCode, events[eventCode].monitor);
+
+                // This happens if the event immeidetly sends a monitor frame before the TBA request is done
+                if (!events[eventCode]) {
+                    console.log(`[WS ${eventCode} S] No event found for ${eventCode}`);
+                } else {
+                    for (let socketClient of events[eventCode].socketClients) {
+                        if (socketClient)
+                            socketClient.send(msg);
+                    }
+                    events[eventCode].monitor = JSON.parse(msg);
+                    // If field is ready to prestart, that means new teams are displayed
+                    if (events[eventCode].monitor.field === 7) {
+                        updateTeamsListFromMonitor(eventCode, events[eventCode].monitor);
+                    }
                 }
             });
 
         } else if (msg.startsWith('client')) {
-            let eventCode = msg.substr(7);
+            let eventCode = msg.substring(7).toLowerCase();
             console.log(`[WS ${eventCode} C] connected`);
             if (events[eventCode]) {
                 events[eventCode].socketClients.push(ws);

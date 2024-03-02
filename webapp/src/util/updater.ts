@@ -8,6 +8,7 @@ export const VERSIONS = {
         <h1 class="text-lg">v2.2.1</h1>
         <ul>
         <li>Monitor will auto-reconnect after the app is inactive for a longer period of time</li>
+        <li>Handle rio but no code correctly for new 2024 monitor update</li>
         </ul>`,
         update: () => { }
     },

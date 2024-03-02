@@ -256,6 +256,28 @@ app.get('/profile/:profile', (req, res) => {
     });
 });
 
+app.get('/message/feed/:event', (req, res) => {
+    req.params.event = req.params.event.toLowerCase();
+    db.query('SELECT * FROM messages WHERE event = ? ORDER BY created ASC LIMIT 100;', [req.params.event]).spread((messages: MessagesRow[]) => {
+        db.query(`SELECT * FROM profiles WHERE id IN (SELECT profile FROM messages WHERE event = ?);`, [req.params.event]).spread((profiles_raw: ProfilesRow[]) => {
+            let profiles: { [key: number]: ProfilesRow } = {};
+            for (let profile of profiles_raw) {
+                profiles[profile.id] = profile;
+            }
+
+            let messagesWithUsernames: Message[] = [];
+            for (let m of messages) {
+                messagesWithUsernames.push({
+                    ...m,
+                    username: profiles[m.profile].username
+                });
+            }
+
+            res.send(messagesWithUsernames);
+        });
+    });
+});
+
 // Get notes for a team along with profile info
 app.get('/message/:team', (req, res) => {
     db.query('SELECT * FROM messages WHERE team = ?;', [req.params.team]).spread((messages: MessagesRow[]) => {
@@ -274,6 +296,43 @@ app.get('/message/:team', (req, res) => {
             }
 
             res.send(messagesWithUsernames);
+        });
+    });
+});
+
+app.post('/message/feed/:event', (req, res) => {
+    req.params.event = req.params.event.toLowerCase();
+    console.log(`[NOTE ${req.body.event}] ${req.body.profile}: ${req.body.message}`);
+    db.query('SELECT * FROM profiles WHERE id = ?;', [req.body.profile]).spread((profiles: ProfilesRow[]) => {
+        if (profiles.length !== 1) {
+            return res.status(404).send({ error: 'Profile not found' });
+        }
+
+        if (req.body.token !== profiles[0].token) {
+            return res.status(401).send('Invalid token');
+        }
+
+        db.query('INSERT INTO messages VALUES (null, ?, ?, null, ?, CURRENT_TIMESTAMP);', [req.body.profile, req.body.event, req.body.message]).then((result: any) => {
+            const message = {
+                id: result.insertId,
+                profile: req.body.profile,
+                username: profiles[0].username,
+                event: req.body.event,
+                message: req.body.message,
+                created: (new Date()).toISOString()
+            };
+
+            res.send(message);
+
+            for (let socketClient of events[req.body.event].socketClients) {
+                if (socketClient) socketClient.send(JSON.stringify({
+                    type: 'message',
+                    message: message,
+                }));
+            }
+
+        }).catch((err: Error) => {
+            if (err) res.status(500).send(err)
         });
     });
 });

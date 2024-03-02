@@ -24,6 +24,7 @@
     let notesStoreData = get(notesStore);
     let user = get(userStore);
 
+    export let notifications: number;
     export let openLogin: () => void;
 
     export let team: string;
@@ -46,10 +47,16 @@
         );
         teamsData = sortTeams(teamsData);
 
-        teams = teamsData.map((team: string) => ({
-            name: team.toString(),
-            value: team.toString(),
-        }));
+        teams = [
+            {
+                name: "Feed",
+                value: "feed",
+            },
+            ...teamsData.map((team: string) => ({
+                name: team.toString(),
+                value: team.toString(),
+            })),
+        ];
         notesStoreData.teams = teamsData.map((team: string) => team.toString());
         notesStore.set(notesStoreData);
         console.log(teams);
@@ -63,18 +70,29 @@
 
     async function getMessages(team: string) {
         if (!team) return;
-        messages = await fetch("https://ftabuddy.com/message/" + encodeURIComponent(team)).then((res) => res.json());
+        if (team == "feed") {
+            // Get feed
+            messages = await fetch("https://ftabuddy.com/message/feed/" + encodeURIComponent(event)).then((res) =>
+                res.json(),
+            );
 
-        messages = messages.map((message: any) => ({
-            ...message,
-            created: new Date(message.created),
-        }));
+            setTimeout(() => scrollToBottom(element), 100);
+        } else {
+            messages = await fetch("https://ftabuddy.com/message/" + encodeURIComponent(team)).then((res) =>
+                res.json(),
+            );
 
-        notesStoreData.notes[team] = messages;
+            messages = messages.map((message: any) => ({
+                ...message,
+                created: new Date(message.created),
+            }));
 
-        console.log(messages);
-        setTimeout(() => scrollToBottom(element), 100);
-        return messages;
+            notesStoreData.notes[team] = messages;
+
+            console.log(messages);
+            setTimeout(() => scrollToBottom(element), 100);
+            return messages;
+        }
     }
 
     async function sendMessage(evt: Event) {
@@ -88,17 +106,33 @@
                 message: message.trim(),
             };
             console.log(body);
-            const response = await fetch("https://ftabuddy.com/message/" + encodeURIComponent(team), {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(body),
-            });
+            if (team == "feed") {
+                const response = await fetch("https://ftabuddy.com/message/feed/" + encodeURIComponent(event), {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(body),
+                });
 
-            if (response.ok) {
-                (document.getElementById("chat") as HTMLTextAreaElement).value = "";
-                getMessages(team);
+                if (response.ok) {
+                    (document.getElementById("chat") as HTMLTextAreaElement).value = "";
+                    getMessages(team);
+                }
+                return;
+            } else {
+                const response = await fetch("https://ftabuddy.com/message/" + encodeURIComponent(team), {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(body),
+                });
+
+                if (response.ok) {
+                    (document.getElementById("chat") as HTMLTextAreaElement).value = "";
+                    getMessages(team);
+                }
             }
         }
     }
@@ -118,16 +152,31 @@
         if (node) node.scroll({ top: node.scrollHeight, behavior: "instant" });
     }
 
-    $: {
-        getMessages(team);
-    }
-
     userStore.subscribe((value) => {
         user = value;
+    });
+
+    notesStore.subscribe((value) => {
+        if (value.unread > 0) {
+            notesStore.update((n) => {
+                n.unread = 0;
+                return n;
+            });
+        }
+    });
+
+    notesStore.update((n) => {
+        n.unread = 0;
+        return n;
     });
 </script>
 
 <div class="container mx-auto px-2 pt-2 h-full flex flex-col">
+    <Button
+        on:click={() => {
+            team = "feed";
+        }}>Feed</Button
+    >
     <form class="flex">
         <Label class="w-full text-left">
             Select Team
@@ -140,7 +189,7 @@
                 <div class="text-center">No messages</div>
             {:else}
                 {#each messages as message}
-                    <Message {message} />
+                    <Message {message} {team} />
                 {/each}
             {/if}
         </div>

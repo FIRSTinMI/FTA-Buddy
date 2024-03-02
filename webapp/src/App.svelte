@@ -194,6 +194,10 @@
             }
         }
     });
+
+    notesStore.subscribe((value) => {
+        notifications = value.unread;
+    });
 </script>
 
 {#if showToast}

@@ -3,6 +3,18 @@ import { settingsStore } from "../stores/settings";
 import { userStore } from "../stores/user";
 
 export const VERSIONS = {
+    '2.2.2': {
+        changelog: `
+        <h1 class="text-lg">v2.2.2</h1>
+        <ul>
+        <li>Event feed in notes for CSAs</li>
+        <li>Notification icon on notes tab</li>
+        <li>Various bug fixes</li>
+        </ul>`,
+        update: () => {
+            notesStore.set(undefined);
+        }
+    },
     '2.2.1': {
         changelog: `
         <h1 class="text-lg">v2.2.1</h1>

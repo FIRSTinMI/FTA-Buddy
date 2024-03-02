@@ -14,6 +14,7 @@ export interface Notes {
     teams: string[];
     lastTeam: string;
     notes: { [key: string]: Message[] };
+    unread: number;
 }
 
 let initialNotes = localStorage.getItem('notes');
@@ -23,6 +24,7 @@ if (!initialNotes) {
         teams: [],
         lastTeam: '',
         notes: {},
+        unread: 0,
     });
 }
 
@@ -33,6 +35,7 @@ notesStore.subscribe((value: Notes) => {
             teams: [],
             lastTeam: '',
             notes: {},
+            unread: 0,
         };
     }
     localStorage.setItem('notes', JSON.stringify(value));

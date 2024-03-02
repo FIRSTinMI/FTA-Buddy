@@ -15,6 +15,7 @@
     }
 
     export let message: Message;
+    export let team: string;
     let user = get(userStore);
     let event = get(eventStore);
 
@@ -49,7 +50,12 @@
 
 <div class="rounded-xl py-2 px-4 my-3 w-fit {classToApply}">
     <span class="text-sm">
-        <span class="font-bold">{message.username}</span> - {message.event}
+        {#if team == "feed"}
+            <span class="font-bold text-lg">{message.team == null ? "" : message.team}</span>
+            <span class="font-bold">{message.username}</span> - {message.event}
+        {:else}
+            <span class="font-bold">{message.username}</span> - {message.event}
+        {/if}
         {formattedTime}
     </span>
     <p>{message.message}</p>

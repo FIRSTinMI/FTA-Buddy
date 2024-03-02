@@ -2,7 +2,7 @@
     import { Router, Route, Link } from "svelte-routing";
     import Home from "./pages/Home.svelte";
     import Flashcard from "./pages/Flashcards.svelte";
-    import { Button, Modal, Toast } from "flowbite-svelte";
+    import { Button, Indicator, Modal, Toast } from "flowbite-svelte";
     import Icon from "@iconify/svelte";
     import Reference from "./pages/Reference.svelte";
     import Notes from "./pages/Notes.svelte";
@@ -15,6 +15,7 @@
     import { VERSIONS } from "./util/updater";
     import WelcomeModal from "./components/WelcomeModal.svelte";
     import LoginModal from "./components/LoginModal.svelte";
+    import { notesStore } from "./stores/notes";
 
     const version = Object.keys(VERSIONS).sort().pop() || "0";
     let settings = get(settingsStore);
@@ -24,6 +25,8 @@
     let showToast = false;
     let toastTitle = "";
     let toastText = "";
+
+    let notifications = get(notesStore).unread || 0;
 
     console.log(settings.version, version);
     if (settings.version == "0") {
@@ -135,9 +138,14 @@
                     frameCount++;
                     monitorFrame = data;
                 } else if (data.type === "message") {
+                    notifications++;
+                    notesStore.update((s) => {
+                        s.unread = notifications;
+                        return s;
+                    });
                     lastMessageTime = new Date();
                     messageCount++;
-                    notesChild.newMessage(data);
+                    if (notesChild) notesChild.newMessage(data);
                 }
             } catch (e) {
                 console.error(e);
@@ -266,6 +274,7 @@
                     <Notes
                         bind:this={notesChild}
                         team={undefined}
+                        bind:notifications
                         openLogin={() => {
                             loginOpen = true;
                         }}
@@ -291,8 +300,13 @@
                     </Button>
                 </Link>
                 <Link to="/app/notes">
-                    <Button class="!p-2" color="none">
+                    <Button class="!p-2 relative" color="none">
                         <Icon icon="mdi:message-text" class="w-8 h-8" />
+                        {#if notifications > 0}
+                            <Indicator color="red" border size="xl" placement="top-left">
+                                <span class="text-white text-xs">{notifications}</span>
+                            </Indicator>
+                        {/if}
                     </Button>
                 </Link>
             </div>

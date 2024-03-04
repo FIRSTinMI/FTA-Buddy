@@ -247,7 +247,7 @@
 <LoginModal bind:loginOpen />
 
 <main>
-    <Router basepath="/app/">
+    <Router basepath="/">
         <div class="bg-neutral-800 w-screen h-screen flex flex-col">
             <div class="bg-primary-500 flex w-full justify-between px-2">
                 <Button class="!py-0 !px-0" color="none" on:click={openSettings}>
@@ -288,22 +288,22 @@
             </div>
 
             <div class="flex justify-around py-2 bg-neutral-700">
-                <Link to="/app/">
+                <Link to="/">
                     <Button class="!p-2" color="none">
                         <Icon icon="mdi:television" class="w-8 h-8" />
                     </Button>
                 </Link>
-                <Link to="/app/flashcards">
+                <Link to="/flashcards">
                     <Button class="!p-2" color="none">
                         <Icon icon="mdi:message-alert" class="w-8 h-8" />
                     </Button>
                 </Link>
-                <Link to="/app/references">
+                <Link to="/references">
                     <Button class="!p-2" color="none">
                         <Icon icon="mdi:file-document-outline" class="w-8 h-8" />
                     </Button>
                 </Link>
-                <Link to="/app/notes">
+                <Link to="/notes">
                     <Button class="!p-2 relative" color="none">
                         <Icon icon="mdi:message-text" class="w-8 h-8" />
                         {#if notifications > 0}

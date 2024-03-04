@@ -81,11 +81,7 @@
         <Label class="space-y-2">
             Event Code
             <div class="flex">
-                <Input
-                    class="max-w-64 w-full rounded-none rounded-l-lg"
-                    bind:value={monitorEvent}
-                    placeholder="Event Code or IP"
-                />
+                <Input class="max-w-64 w-full rounded-none rounded-l-lg" bind:value={monitorEvent} placeholder="Event Code or IP" />
                 <Button color="primary" class="rounded-none rounded-r-lg" on:click={updateEvent}>Connect</Button>
             </div>
         </Label>
@@ -97,7 +93,7 @@
         <div class="flex justify-center text-xs dark:text-gray-700 underline mt-2">
             <button
                 on:click={() => {
-                    window.location.href = "http://ftabuddy.filipkin.com/app/";
+                    window.location.href = "http://ftabuddy.filipkin.com/";
                 }}>Go to insecure website to connect to server localy</button
             >
         </div>

@@ -3,6 +3,11 @@
     "background_color": "#413c4e",
     "icons": [
         {
+            "src": "/favicon.ico",
+            "type": "image/x-icon",
+            "sizes": "16x16 32x32"
+        },
+        {
             "purpose": "maskable",
             "sizes": "512x512",
             "src": "icon512_maskable.png",
@@ -33,7 +38,7 @@
     "lang": "en-US",
     "name": "FTA Buddy",
     "prefer_related_applications": false,
-    "start_url": "https://ftabuddy.com/app/",
-    "scope": "https://ftabuddy.com/app/",
+    "start_url": "https://ftabuddy.com/",
+    "scope": "https://ftabuddy.com/",
     "description": "FTA Buddy"
 }

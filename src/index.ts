@@ -1,52 +1,41 @@
-import express from 'express';
-import expressWs from 'express-ws';
-import { json } from 'body-parser';
-import { randomUUID } from 'crypto';
-import cors from 'cors';
-import { compare, hash } from 'bcrypt';
-import { MonitorFrame, Event, Message } from '../shared/types';
-import { DEFAULT_MONITOR } from '../shared/constants';
-import { connect, db } from './db/db';
-import { user } from './db/schema';
 import 'dotenv/config';
+import { connect, db } from './db/db';
+import { router } from './trpc';
+import { userRouter } from './router/user';
+import { initTRPC } from '@trpc/server';
+import * as trpcExpress from '@trpc/server/adapters/express';
+import express from 'express';
 
-const { app, getWss, applyTo } = expressWs(express());
 const port = process.env.PORT || 3001;
 
+const createContext = ({ req, res }: trpcExpress.CreateExpressContextOptions) => ({}); // no context
+type Context = Awaited<ReturnType<typeof createContext>>;
+const t = initTRPC.context<Context>().create();
 
-interface EventsRow {
-    code: string;
-    local_ip: string;
-    teams: string;
-}
+const appRouter = router({
+    user: userRouter
+});
 
+export type AppRouter = typeof appRouter;
 
-interface ProfilesRow {
-    id: number;
-    username: string;
-    created: Date;
-    last_seen: Date;
-    password: string;
-    token: string;
-}
+const app = express();
 
+app.use(
+    '/trpc',
+    trpcExpress.createExpressMiddleware({
+        router: appRouter,
+        createContext,
+    }),
+);
 
-interface MessagesRow {
-    id: number;
-    profile: number;
-    event: string;
-    team: number;
-    message: string;
-    created: Date;
-}
+app.use(express.static('app/dist'));
 
-let events: { [key: string]: Event } = {
-    'test': {
-        socketClients: [],
-        monitor: DEFAULT_MONITOR,
-        teams: [],
-    },
-};
+connect().then(async () => {
+    await db.query.users.findMany().then(console.log);
+    app.listen(port, () => {
+        console.log(`Server listening on port ${port}`);
+    });
+});
 
 // function updateTeamsListFromMonitor(event: string, monitor: MonitorFrame) {
 //     let newTeamsAdded = false;
@@ -65,7 +54,7 @@ let events: { [key: string]: Event } = {
 // app.use(express.static('./cloud/public'));
 
 // app.get('/', (req, res) => {
-//     res.redirect('/app/');
+//     res.redirect('/');
 // });
 
 // // Get local server ip for an event
@@ -184,53 +173,7 @@ let events: { [key: string]: Event } = {
 //     }
 
 //     updateTeamsListFromMonitor(req.params.event, req.body);
-// });
-
-// // Create a user profile for notes
-// app.post('/profile', async (req, res) => {
-//     console.log(`New profile request for ${req.body.username}`);
-
-//     const hashedPassword = await hash(req.body.password, 16);
-//     const token = randomUUID().replace(/-/g, '');
-
-//     db.query('INSERT INTO profiles VALUES (null, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?, ?);', [req.body.username, hashedPassword, token])
-//         .then((result: any) => {
-//             let id = result[0].insertId.toString();
-//             console.log(`Created with id ${id}`)
-//             res.send({ id: id, token: token });
-//         }).catch((err: Error) => {
-//             res.status(400).send({ error: 'Username already in use' });
-//         });
-// });
-
-// app.post('/login', async (req, res) => {
-//     console.log(`Login request for ${req.body.username}`);
-//     db.query('SELECT * FROM profiles WHERE username = ?;', [req.body.username]).spread(async (profiles: ProfilesRow[]) => {
-//         if (profiles.length !== 1) {
-//             return res.status(404).send({ error: 'Profile not found' });
-//         }
-
-//         const match = await compare(req.body.password, profiles[0].password);
-//         if (match) {
-//             db.query('UPDATE profiles SET last_seen = CURRENT_TIMESTAMP WHERE id = ?;', [profiles[0].id]);
-//             res.send(profiles[0]);
-//         } else {
-//             res.status(401).send({ error: 'Incorrect password' });
-//         }
-//     });
-// });
-
-// // Check if a profile exists
-// app.get('/profile/:profile', (req, res) => {
-//     db.query('SELECT * FROM profiles WHERE id = ?;', [req.params.profile]).spread((profiles: ProfilesRow[]) => {
-//         if (profiles.length !== 1) {
-//             return res.status(404).send({ error: 'Profile not found' });
-//         }
-
-//         res.send(profiles[0]);
-//     });
-// });
-
+// }); 
 // app.get('/message/feed/:event', (req, res) => {
 //     req.params.event = req.params.event.toLowerCase();
 //     db.query('SELECT * FROM messages WHERE event = ? ORDER BY created ASC LIMIT 100;', [req.params.event]).spread((messages: MessagesRow[]) => {
@@ -352,83 +295,76 @@ let events: { [key: string]: Event } = {
 //     });
 // });
 
-app.ws('/', (ws, req) => {
-    ws.on('message', async (rawData) => {
-        let msg = rawData.toString();
-        if (msg == 'ping') return ws.send(JSON.stringify({ type: 'pong' }));
-        if (msg.startsWith('server')) {
-            let eventCode = msg.substring(7).toLowerCase();
-            console.log(`[WS ${eventCode} S] connected`);
-            if (events[eventCode]) {
-                events[eventCode].socketServer = ws;
-            } else {
-                fetch(`https://www.thebluealliance.com/api/v3/event/${eventCode}/teams/simple`, {
-                    headers: {
-                        'X-TBA-Auth-Key': process.env.TBA_KEY ?? ''
-                    }
-                }).then(async (response) => {
-                    let teams = [];
-                    if (response.status == 200) {
-                        let teamsData = await response.json();
-                        for (let team of teamsData) {
-                            teams.push(team.team_number);
-                        }
-                        // db.query('SELECT * FROM events WHERE code = ?;', [req.params.event]).spread((event: EventsRow[]) => {
-                        //     if (event) {
-                        //         db.query('UPDATE events SET teams = ? WHERE code = ?;', [JSON.stringify(req.body.teams), req.params.event]);
-                        //     }
-                        // });
-                    }
+// app.ws('/', (ws, req) => {
+//     ws.on('message', async (rawData) => {
+//         let msg = rawData.toString();
+//         if (msg == 'ping') return ws.send(JSON.stringify({ type: 'pong' }));
+//         if (msg.startsWith('server')) {
+//             let eventCode = msg.substring(7).toLowerCase();
+//             console.log(`[WS ${eventCode} S] connected`);
+//             if (events[eventCode]) {
+//                 events[eventCode].socketServer = ws;
+//             } else {
+//                 fetch(`https://www.thebluealliance.com/api/v3/event/${eventCode}/teams/simple`, {
+//                     headers: {
+//                         'X-TBA-Auth-Key': process.env.TBA_KEY ?? ''
+//                     }
+//                 }).then(async (response) => {
+//                     let teams = [];
+//                     if (response.status == 200) {
+//                         let teamsData = await response.json();
+//                         for (let team of teamsData) {
+//                             teams.push(team.team_number);
+//                         }
+//                         // db.query('SELECT * FROM events WHERE code = ?;', [req.params.event]).spread((event: EventsRow[]) => {
+//                         //     if (event) {
+//                         //         db.query('UPDATE events SET teams = ? WHERE code = ?;', [JSON.stringify(req.body.teams), req.params.event]);
+//                         //     }
+//                         // });
+//                     }
 
-                    events[eventCode] = {
-                        socketServer: ws,
-                        socketClients: [],
-                        monitor: DEFAULT_MONITOR,
-                        teams: []
-                    }
-                });
-            }
-            // Register broadcast function for this server
-            ws.on('message', (rawData) => {
-                let msg = rawData.toString();
-                if (msg == 'ping') return ws.send(JSON.stringify({ type: 'pong' }));
+//                     events[eventCode] = {
+//                         socketServer: ws,
+//                         socketClients: [],
+//                         monitor: DEFAULT_MONITOR,
+//                         teams: []
+//                     }
+//                 });
+//             }
+//             // Register broadcast function for this server
+//             ws.on('message', (rawData) => {
+//                 let msg = rawData.toString();
+//                 if (msg == 'ping') return ws.send(JSON.stringify({ type: 'pong' }));
 
-                // This happens if the event immeidetly sends a monitor frame before the TBA request is done
-                if (!events[eventCode]) {
-                    console.log(`[WS ${eventCode} S] No event found for ${eventCode}`);
-                } else {
-                    for (let socketClient of events[eventCode].socketClients) {
-                        if (socketClient)
-                            socketClient.send(msg);
-                    }
-                    events[eventCode].monitor = JSON.parse(msg);
-                    // If field is ready to prestart, that means new teams are displayed
-                    if (events[eventCode].monitor.field === 7) {
-                        //updateTeamsListFromMonitor(eventCode, events[eventCode].monitor);
-                    }
-                }
-            });
+//                 // This happens if the event immeidetly sends a monitor frame before the TBA request is done
+//                 if (!events[eventCode]) {
+//                     console.log(`[WS ${eventCode} S] No event found for ${eventCode}`);
+//                 } else {
+//                     for (let socketClient of events[eventCode].socketClients) {
+//                         if (socketClient)
+//                             socketClient.send(msg);
+//                     }
+//                     events[eventCode].monitor = JSON.parse(msg);
+//                     // If field is ready to prestart, that means new teams are displayed
+//                     if (events[eventCode].monitor.field === 7) {
+//                         //updateTeamsListFromMonitor(eventCode, events[eventCode].monitor);
+//                     }
+//                 }
+//             });
 
-        } else if (msg.startsWith('client')) {
-            let eventCode = msg.substring(7).toLowerCase();
-            console.log(`[WS ${eventCode} C] connected`);
-            if (events[eventCode]) {
-                events[eventCode].socketClients.push(ws);
-            } else {
-                events[eventCode] = {
-                    socketClients: [ws],
-                    monitor: DEFAULT_MONITOR,
-                    teams: []
-                }
-            }
-            ws.send(JSON.stringify(events[eventCode].monitor));
-        }
-    });
-});
-
-connect().then(async () => {
-    await db.query.user.findMany().then(console.log);
-    app.listen(port, () => {
-        console.log(`FTA Helper cloud server listening on port ${port}`)
-    });
-});
+//         } else if (msg.startsWith('client')) {
+//             let eventCode = msg.substring(7).toLowerCase();
+//             console.log(`[WS ${eventCode} C] connected`);
+//             if (events[eventCode]) {
+//                 events[eventCode].socketClients.push(ws);
+//             } else {
+//                 events[eventCode] = {
+//                     socketClients: [ws],
+//                     monitor: DEFAULT_MONITOR,
+//                     teams: []
+//                 }
+//             }
+//             ws.send(JSON.stringify(events[eventCode].monitor));
+//         }
+//     });
+// });

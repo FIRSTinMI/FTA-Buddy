@@ -10,6 +10,8 @@
     "author": "Filip Kin",
     "license": "ISC",
     "dependencies": {
+        "@trpc/client": "^11.0.0-next-beta.305",
+        "@trpc/server": "^11.0.0-next-beta.305",
         "bcrypt": "^5.1.1",
         "body-parser": "^1.20.2",
         "colors": "^1.4.0",
@@ -22,7 +24,8 @@
         "ip": "^1.1.8",
         "mysql-promise": "^5.0.0",
         "pg": "^8.11.3",
-        "ws": "^8.14.2"
+        "ws": "^8.14.2",
+        "zod": "^3.22.4"
     },
     "devDependencies": {
         "@types/bcrypt": "^5.0.2",

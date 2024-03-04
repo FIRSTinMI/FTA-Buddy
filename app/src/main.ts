@@ -8,5 +8,5 @@ const app = new App({
 export default app;
 
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register("/app/serviceworker.js");
+    navigator.serviceWorker.register("/serviceworker.js");
 }

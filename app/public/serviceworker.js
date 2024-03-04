@@ -1,9 +1,9 @@
 let cacheName = 'ftabuddy';
 let contentToCache = [
-    '/app/assets/index.css',
-    '/app/assets/index.js',
-    '/app/index.html',
-    '/app/openmesh-radio-status-lights-1100.png'
+    '/assets/index.css',
+    '/assets/index.js',
+    '/index.html',
+    '/openmesh-radio-status-lights-1100.png'
 ]
 
 

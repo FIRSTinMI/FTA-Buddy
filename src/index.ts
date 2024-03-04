@@ -1,16 +1,11 @@
 import 'dotenv/config';
 import { connect, db } from './db/db';
-import { router } from './trpc';
 import { userRouter } from './router/user';
-import { initTRPC } from '@trpc/server';
 import * as trpcExpress from '@trpc/server/adapters/express';
 import express from 'express';
+import { createContext, publicProcedure, router } from './trpc';
 
 const port = process.env.PORT || 3001;
-
-const createContext = ({ req, res }: trpcExpress.CreateExpressContextOptions) => ({}); // no context
-type Context = Awaited<ReturnType<typeof createContext>>;
-const t = initTRPC.context<Context>().create();
 
 const appRouter = router({
     user: userRouter

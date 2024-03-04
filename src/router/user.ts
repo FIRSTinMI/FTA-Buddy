@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { db } from "../db/db";
 import { router, publicProcedure } from "../trpc";
-import { compare } from "bcrypt";
+import { compare, hash } from "bcrypt";
 import { users } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -11,11 +11,10 @@ export const userRouter = router({
         email: z.string(),
         password: z.string()
     })).query(async ({ input }) => {
-        const user = await db.query.users.findFirst({
-            with: {
-                email: input.email
-            }
-        });
+        console.log(input);
+        const user = await db.query.users.findFirst({ where: eq(users.email, input.email) });
+
+        console.log(user);
 
         if (!user) throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
 
@@ -25,6 +24,40 @@ export const userRouter = router({
         } else {
             throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Incorrect password' });
         }
+    }),
+    changePassword: publicProcedure.input(z.object({
+        email: z.string(),
+        oldPassword: z.string(),
+        newPassword: z.string()
+    })).query(async ({ input }) => {
+        const user = await db.query.users.findFirst({ where: eq(users.email, input.email) });
+
+        if (!user) throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
+
+        if (await compare(input.oldPassword, user.password)) {
+            const hashedPassword = await hash(input.newPassword, 12);
+            await db.update(users).set({ password: hashedPassword }).where(eq(users.id, user.id));
+            return true;
+        } else {
+            throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Incorrect password' });
+        }
+    }),
+    createAccount: publicProcedure.input(z.object({
+        email: z.string(),
+        username: z.string(),
+        password: z.string(),
+        role: z.enum(['ADMIN', 'FTA', 'FTAA', 'CSA'])
+    })).query(async ({ input }) => {
+        if (input.role === 'ADMIN') throw new TRPCError({ code: 'FORBIDDEN', message: 'Cannot create an admin account' });
+
+        const hashedPassword = await hash(input.password, 12);
+        await db.insert(users).values({
+            email: input.email,
+            username: input.username,
+            password: hashedPassword,
+            role: input.role
+        });
+        return true;
     })
 });
 

@@ -1,176 +1,65 @@
 <script lang="ts">
-    import { Router, Route, Link } from "svelte-routing";
-    import Home from "./pages/Home.svelte";
-    import Flashcard from "./pages/Flashcards.svelte";
-    import { Button, Indicator, Modal, Toast } from "flowbite-svelte";
-    import Icon from "@iconify/svelte";
-    import Reference from "./pages/Reference.svelte";
-    import Notes from "./pages/Notes.svelte";
-    import SettingsModal from "./components/SettingsModal.svelte";
-    import { eventStore } from "./stores/event";
+    import { Button, Modal, Toast } from "flowbite-svelte";
     import { get } from "svelte/store";
-    import { onMount } from "svelte";
-    import { type MonitorFrame } from "../../shared/types";
-    import { settingsStore } from "./stores/settings";
-    import { VERSIONS } from "./util/updater";
-    import WelcomeModal from "./components/WelcomeModal.svelte";
+    import Router from "./Router.svelte";
     import LoginModal from "./components/LoginModal.svelte";
-    import { notesStore } from "./stores/notes";
+    import SettingsModal from "./components/SettingsModal.svelte";
+    import WelcomeModal from "./components/WelcomeModal.svelte";
+    import { settingsStore } from "./stores/settings";
+    import { VERSIONS, update } from "./util/updater";
+    import { authStore } from "./stores/auth";
+    import Login from "./pages/Login.svelte";
+    import Icon from "@iconify/svelte";
 
-    const version = Object.keys(VERSIONS).sort().pop() || "0";
     let settings = get(settingsStore);
-    let changelogOpen = false;
-    let changelog = "";
-    let welcomeOpen = false;
-    let showToast = false;
-    let toastTitle = "";
-    let toastText = "";
-
-    let notifications = get(notesStore).unread || 0;
-
-    console.log(settings.version, version);
-    if (settings.version == "0") {
-        settings.version = version;
-        settingsStore.set(settings);
-        welcomeOpen = true;
-    } else if (settings.version !== version) {
-        let updatesToDo = [];
-
-        for (let v in VERSIONS) {
-            if (v > settings.version) {
-                updatesToDo.push(v);
-                changelog += VERSIONS[v].changelog;
-            }
-        }
-
-        changelogOpen = true;
-
-        console.log("Queued updates: " + updatesToDo.join(", "));
-
-        for (let v of updatesToDo) {
-            console.log("Running update " + v);
-            VERSIONS[v].update();
-        }
-
-        settings.version = version;
-        settingsStore.set(settings);
-
-        console.log("Sucessfully updated to " + version);
-    }
-
-    let lastFrameTime: Date;
-    let frameCount = 0;
-    let lastMessageTime: Date;
-    let messageCount = 0;
-    let reconnects = -1;
-
-    let monitorEvent = get(eventStore) || "test";
-    let relayOn = true; //get(relayStore);
-    let secureOnly = true;
-    let ws: WebSocket;
-    let monitorFrame: MonitorFrame;
-
-    let timeoutID: Timeout;
+    settingsStore.subscribe((value) => {
+        settings = value;
+    });
 
     let settingsOpen = false;
     function openSettings() {
         settingsOpen = true;
     }
 
-    if (window.location.href.startsWith("https")) {
-        relayOn = true;
-        secureOnly = true;
+    const version = Object.keys(VERSIONS).sort().pop() || "0";
+    let changelogOpen = false;
+    let changelog = "";
+    function openChangelog(text: string) {
+        changelog = text;
+        changelogOpen = true;
+    }
+    update(settings.version, version, openWelcome, openChangelog);
+
+    let welcomeOpen = false;
+    function openWelcome() {
+        welcomeOpen = true;
     }
 
-    async function connectToMonitor(event: string) {
-        monitorEvent = event;
-        if (ws) ws?.close();
-        if (monitorEvent.match("^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$")) {
-            let uri = "ws://" + monitorEvent + ":8284/";
-            eventStore.set(monitorEvent);
-            openWebSocket(uri);
-        } else if (monitorEvent.trim().length > 0) {
-            console.log(relayOn);
-            eventStore.set(monitorEvent);
-            try {
-                const response = await fetch("https://ftabuddy.com/register/" + monitorEvent);
-                if (response.status === 404) {
-                    throw new Error(
-                        "Event not found, make sure the chrome extension is setup and the field monitor is open",
-                    );
-                }
-                const eventData = await response.json();
-
-                let uri = "ws://" + eventData.local_ip + ":8284/";
-                if (relayOn) {
-                    uri = "wss://ftabuddy.com/ws";
-                }
-
-                openWebSocket(uri);
-            } catch (err: any) {
-                console.error(err);
-                toastTitle = "Failed to connect to monitor";
-                toastText = err.message;
-                showToast = true;
-                return;
-            }
-        }
+    let showToast = false;
+    let toastTitle = "";
+    let toastText = "";
+    function toast(title: string, text: string) {
+        toastTitle = title;
+        toastText = text;
+        showToast = true;
+        setTimeout(() => {
+            showToast = false;
+        }, 5000);
     }
 
-    function openWebSocket(uri: string) {
-        console.log(uri);
-        reconnects++;
-        if (ws) ws.close();
-        ws = new WebSocket(uri);
-        ws.onopen = function () {
-            console.log("Connected to " + uri);
-            if (relayOn) {
-                this.send("client-" + monitorEvent);
-            }
-            setInterval(() => ws.send("ping"), 60e3);
-        };
-        ws.onmessage = function (evt) {
-            //console.log(evt.data);
-            try {
-                let data = JSON.parse(evt.data);
-                if (data.type === "monitorUpdate") {
-                    lastFrameTime = new Date();
-                    frameCount++;
-                    monitorFrame = data;
-                } else if (data.type === "message") {
-                    notifications++;
-                    notesStore.update((s) => {
-                        s.unread = notifications;
-                        return s;
-                    });
-                    lastMessageTime = new Date();
-                    messageCount++;
-                    if (notesChild) notesChild.newMessage(data);
-                }
-            } catch (e) {
-                console.error(e);
-            }
-        };
-        ws.onclose = function (evt) {
-            if (!evt.wasClean) {
-                console.log(evt);
-                console.log("Disconnected from " + uri + " reconnecting in 5 sec");
-                timeoutID = setTimeout(() => openWebSocket(uri), 5e3);
-            } else {
-                console.log("Disconnected cleanly");
-            }
-        };
+    let _lastFrameTime: Date;
+    let _frameCount = 0;
+    let _lastMessageTime: Date;
+    let _messageCount = 0;
+    let _reconnects = -1;
+
+    function updateDevStats(lastFrameTime: Date, frameCount: number, lastMessageTime: Date, messageCount: number, reconnects: number) {
+        _lastFrameTime = lastFrameTime;
+        _frameCount = frameCount;
+        _lastMessageTime = lastMessageTime;
+        _messageCount = messageCount;
+        _reconnects = reconnects;
     }
-
-    let notesChild: Notes;
-
-    onMount(() => {
-        connectToMonitor(monitorEvent);
-    });
-
-    settingsStore.subscribe((value) => {
-        settings = value;
-    });
 
     let installPrompt: Event | null = null;
 
@@ -178,35 +67,19 @@
         event.preventDefault();
         installPrompt = event;
     });
+
     window.addEventListener("appinstalled", () => {
         installPrompt = null;
     });
 
-    let loginOpen = false;
+    let auth = get(authStore);
 
-    document.addEventListener("visibilitychange", (evt) => {
-        if (document.visibilityState === "visible") {
-            console.log("Returning from inactive");
-            console.log(ws.readyState == 1 ? "Connected" : "Disconnected");
-            if (!ws || ws.readyState !== 1) {
-                if (timeoutID) clearTimeout(timeoutID);
-                openWebSocket(ws.url);
-            }
-        }
-    });
-
-    notesStore.subscribe((value) => {
-        notifications = value.unread;
-    });
+    let showLogin = true;
 </script>
 
 {#if showToast}
     <div class="fixed bottom-0 left-0 p-4">
-        <Toast
-            bind:open={showToast}
-            class="dark:bg-red-500"
-            divClass="w-lg p-4 text-gray-500 bg-white shadow dark:text-gray-400 dark:bg-gray-800 gap-3"
-        >
+        <Toast bind:open={showToast} class="dark:bg-red-500" divClass="w-lg p-4 text-gray-500 bg-white shadow dark:text-gray-400 dark:bg-gray-800 gap-3">
             <h3 class="text-lg font-bold text-white text-left">{toastTitle}</h3>
             <p class="text-white text-left">{toastText}</p>
         </Toast>
@@ -238,82 +111,32 @@
         settingsOpen = false;
         welcomeOpen = true;
     }}
-    openLogin={() => {
-        settingsOpen = false;
-        loginOpen = true;
-    }}
 />
 
-<LoginModal bind:loginOpen />
-
 <main>
-    <Router basepath="/">
-        <div class="bg-neutral-800 w-screen h-screen flex flex-col">
-            <div class="bg-primary-500 flex w-full justify-between px-2">
-                <Button class="!py-0 !px-0" color="none" on:click={openSettings}>
-                    <Icon icon="mdi:dots-vertical" class="w-6 h-8 sm:w-10 sm:h-12" />
-                </Button>
-                {#if settings.developerMode}
-                    <div class="text-white text-left flex-grow text-sm">
-                        <p>{settings.version} FS:{monitorFrame?.field}</p>
-                        <p>Frames: {frameCount} {lastFrameTime?.toLocaleTimeString()}</p>
-                        <p>Messages: {messageCount} {lastMessageTime?.toLocaleTimeString()}</p>
-                        <p>Reconnects: {reconnects}</p>
-                    </div>
-                {/if}
-                <div>
-                    {#if !ws || ws.readyState !== 1}
-                        <Icon icon="mdi:offline-bolt" class="w-6 h-8 sm:w-12 sm:h-12" />
-                    {/if}
+    <div class="bg-neutral-800 w-screen h-screen flex flex-col">
+        <div class="bg-primary-500 flex w-full justify-between px-2">
+            <Button class="!py-0 !px-0" color="none" on:click={openSettings}>
+                <Icon icon="mdi:dots-vertical" class="w-6 h-8 sm:w-10 sm:h-12" />
+            </Button>
+            {#if settings.developerMode}
+                <div class="text-white text-left flex-grow text-sm">
+                    <p>{settings.version}</p>
+                    <p>Frames: {_frameCount} {_lastFrameTime?.toLocaleTimeString()}</p>
+                    <p>Messages: {_messageCount} {_lastMessageTime?.toLocaleTimeString()}</p>
+                    <p>Reconnects: {_reconnects}</p>
                 </div>
-            </div>
-
-            <div class="overflow-y-auto flex-grow pb-2">
-                <Route path="/">
-                    <Home bind:monitorFrame {connectToMonitor} />
-                </Route>
-                <Route path="/flashcards" component={Flashcard} />
-                <Route path="/references" component={Reference} />
-                <Route path="/notes">
-                    <Notes
-                        bind:this={notesChild}
-                        team={undefined}
-                        bind:notifications
-                        openLogin={() => {
-                            loginOpen = true;
-                        }}
-                    />
-                </Route>
-                <Route path="/notes/:team" component={Notes} />
-            </div>
-
-            <div class="flex justify-around py-2 bg-neutral-700">
-                <Link to="/">
-                    <Button class="!p-2" color="none">
-                        <Icon icon="mdi:television" class="w-8 h-8" />
-                    </Button>
-                </Link>
-                <Link to="/flashcards">
-                    <Button class="!p-2" color="none">
-                        <Icon icon="mdi:message-alert" class="w-8 h-8" />
-                    </Button>
-                </Link>
-                <Link to="/references">
-                    <Button class="!p-2" color="none">
-                        <Icon icon="mdi:file-document-outline" class="w-8 h-8" />
-                    </Button>
-                </Link>
-                <Link to="/notes">
-                    <Button class="!p-2 relative" color="none">
-                        <Icon icon="mdi:message-text" class="w-8 h-8" />
-                        {#if notifications > 0}
-                            <Indicator color="red" border size="xl" placement="top-left">
-                                <span class="text-white text-xs">{notifications}</span>
-                            </Indicator>
-                        {/if}
-                    </Button>
-                </Link>
+            {/if}
+            <div>
+                <!-- {#if !ws || ws.readyState !== 1}
+                    <Icon icon="mdi:offline-bolt" class="w-6 h-8 sm:w-12 sm:h-12" />
+                {/if} -->
             </div>
         </div>
-    </Router>
+        {#if auth.token && auth.eventToken && !showLogin}
+            <Router {toast} {openSettings} {updateDevStats} />
+        {:else}
+            <Login {toast} />
+        {/if}
+    </div>
 </main>

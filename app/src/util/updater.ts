@@ -2,6 +2,7 @@ import { notesStore } from "../stores/notes"
 import { settingsStore } from "../stores/settings";
 import { userStore } from "../stores/user";
 
+
 export const VERSIONS = {
     '2.2.2': {
         changelog: `
@@ -54,5 +55,44 @@ export const VERSIONS = {
             settingsStore.set(undefined);
             userStore.set(undefined);
         }
+    }
+}
+
+export function update(currentVersion: string, newVersion: string, openWelcome: () => void, openChangelog: (string) => void) {
+    let changelog = "";
+    console.log(currentVersion, newVersion);
+    if (currentVersion == "0") {
+        currentVersion = newVersion;
+        settingsStore.update(s => {
+            s.version = newVersion;
+            return s;
+        });
+        openWelcome();
+    } else if (currentVersion !== newVersion) {
+        let updatesToDo = [];
+
+        for (let v in VERSIONS) {
+            if (v > currentVersion) {
+                updatesToDo.push(v);
+                changelog += VERSIONS[v].changelog;
+            }
+        }
+
+        openChangelog(changelog);
+
+        console.log("Queued updates: " + updatesToDo.join(", "));
+
+        for (let v of updatesToDo) {
+            console.log("Running update " + v);
+            VERSIONS[v].update();
+        }
+
+        currentVersion = newVersion;
+        settingsStore.update(s => {
+            s.version = newVersion;
+            return s;
+        });
+
+        console.log("Sucessfully updated to " + newVersion);
     }
 }

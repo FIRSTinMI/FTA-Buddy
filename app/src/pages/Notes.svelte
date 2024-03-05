@@ -25,7 +25,6 @@
     let user = get(userStore);
 
     export let notifications: number;
-    export let openLogin: () => void;
 
     export let team: string;
     if (team == undefined || team == "") {
@@ -42,9 +41,7 @@
 
     async function updateTeams() {
         if (!event) return;
-        let teamsData = await fetch("https://ftabuddy.com/teams/" + encodeURIComponent(event)).then((res) =>
-            res.json(),
-        );
+        let teamsData = await fetch("https://ftabuddy.com/teams/" + encodeURIComponent(event)).then((res) => res.json());
         teamsData = sortTeams(teamsData);
 
         teams = [
@@ -72,15 +69,11 @@
         if (!team) return;
         if (team == "feed") {
             // Get feed
-            messages = await fetch("https://ftabuddy.com/message/feed/" + encodeURIComponent(event)).then((res) =>
-                res.json(),
-            );
+            messages = await fetch("https://ftabuddy.com/message/feed/" + encodeURIComponent(event)).then((res) => res.json());
 
             setTimeout(() => scrollToBottom(element), 100);
         } else {
-            messages = await fetch("https://ftabuddy.com/message/" + encodeURIComponent(team)).then((res) =>
-                res.json(),
-            );
+            messages = await fetch("https://ftabuddy.com/message/" + encodeURIComponent(team)).then((res) => res.json());
 
             messages = messages.map((message: any) => ({
                 ...message,
@@ -200,11 +193,7 @@
             <Alert color="dark" class="px-0 py-2">
                 <svelte:fragment slot="icon">
                     <Textarea id="chat" class="ml-3" rows="1" placeholder="Your message..." on:keydown={sendKey} />
-                    <ToolbarButton
-                        type="submit"
-                        color="blue"
-                        class="rounded-full text-primary-600 dark:text-primary-500"
-                    >
+                    <ToolbarButton type="submit" color="blue" class="rounded-full text-primary-600 dark:text-primary-500">
                         <Icon icon="mdi:send" class="w-6 h-8" />
                         <span class="sr-only">Send message</span>
                     </ToolbarButton>
@@ -212,6 +201,6 @@
             </Alert>
         </form>
     {:else}
-        <Button on:click={openLogin}>Log in to send messages</Button>
+        Not logged in
     {/if}
 </div>

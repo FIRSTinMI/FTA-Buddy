@@ -1,5 +1,4 @@
 import { boolean, jsonb, pgEnum, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core"
-import e from "express";
 
 export const roleEnum = pgEnum('role', ['ADMIN', 'FTA', 'FTAA', 'CSA']);
 
@@ -11,7 +10,8 @@ export const users = pgTable('users', {
     created_at: timestamp('created_at').notNull().defaultNow(),
     last_seen: timestamp('last_seen').notNull().defaultNow(),
     events: jsonb('events').notNull().default('[]'),
-    role: roleEnum('role').notNull().default('FTA')
+    role: roleEnum('role').notNull().default('FTA'),
+    token: varchar('token').notNull().default(''),
 });
 
 export const User = typeof users.$inferInsert;
@@ -20,7 +20,8 @@ export const events = pgTable('events', {
     code: varchar('code').primaryKey(),
     pin: varchar('pin').notNull().unique(),
     teams: jsonb('teams').notNull().default('[]'),
-    created_at: timestamp('created_at').notNull().defaultNow()
+    created_at: timestamp('created_at').notNull().defaultNow(),
+    token: varchar('token').notNull().default(''),
 });
 
 export const Event = typeof events.$inferInsert;
@@ -32,6 +33,7 @@ export const messages = pgTable('messages', {
     user_id: serial('user_id').references(() => users.id).notNull(),
     team: varchar('team').notNull(),
     event_code: varchar('event_code').references(() => events.code).notNull(),
+    thread_id: serial('thread'),
     is_ticket: boolean('is_ticket').notNull().default(false),
     is_open: boolean('is_open').notNull().default(true),
     assigned_to: jsonb('assigned_to').notNull().default('[]'),

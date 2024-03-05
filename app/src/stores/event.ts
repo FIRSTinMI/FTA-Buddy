@@ -1,19 +1,26 @@
 import { writable } from 'svelte/store';
 
-// Define the initial state of the event store
-const initialEvent = localStorage.getItem('event') || "";
-const initialRelay = (localStorage.getItem('relay') == "true");
+let initialEvent = localStorage.getItem('event');
 
-// Create a writable store for the event
-export const eventStore = writable(initialEvent);
+if (!initialEvent) {
+    initialEvent = JSON.stringify({
+        code: '',
+        pin: '',
+        teams: []
+    });
+}
+
+try {
+    JSON.parse(initialEvent);
+} catch (e) {
+    initialEvent = JSON.stringify({
+        code: '',
+        pin: '',
+        teams: []
+    });
+}
+
+export const eventStore = writable(JSON.parse(initialEvent));
 eventStore.subscribe((value) => {
-    if (value === undefined) {
-        value = "";
-    }
-    localStorage.setItem('event', value);
-});
-
-export const relayStore = writable(initialRelay);
-relayStore.subscribe((value) => {
-    localStorage.setItem('relay', value.toString());
+    localStorage.setItem('event', JSON.stringify(value));
 });

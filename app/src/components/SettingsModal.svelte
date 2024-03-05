@@ -1,12 +1,12 @@
 <script lang="ts">
-    import { Button, ButtonGroup, Input, Label, Modal, Spinner, Toast, Toggle } from "flowbite-svelte";
+    import { Button, Modal, Spinner, Toggle } from "flowbite-svelte";
     import { get } from "svelte/store";
-    import { userStore } from "../stores/user";
     import { settingsStore } from "../stores/settings";
+    import { userStore } from "../stores/user";
 
     export let settingsOpen = false;
     export let openHelp: () => void;
-    export let openLogin: () => void;
+
     let user = get(userStore);
     let settings = get(settingsStore);
     export let installPrompt: Event | null;
@@ -111,21 +111,8 @@
     </div>
 {/if}
 
-<Modal
-    bind:open={settingsOpen}
-    size="lg"
-    outsideclose
-    dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex"
->
+<Modal bind:open={settingsOpen} size="lg" outsideclose dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
     <div slot="header"><h1 class="text-2xl">Settings</h1></div>
-    <div>
-        {#if !user || user.id < 1}
-            <Button on:click={openLogin}>Login or Create Account</Button>
-        {:else}
-            <h2 class="text-lg">Logged in as {user.username}</h2>
-            <Button on:click={logout} size="xs" class="mt-2">Logout</Button>
-        {/if}
-    </div>
     <form class="space-y-4 justify-start text-left grid grid-cols-1 border-t border-neutral-500 pt-2 mt-0">
         {#if installPrompt}
             <Button

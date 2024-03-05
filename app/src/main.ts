@@ -1,5 +1,29 @@
 import "./app.pcss";
 import App from "./App.svelte";
+import { createTRPCClient, httpBatchLink } from '@trpc/client';
+import type { AppRouter } from '../../src/index';
+import { authStore } from "./stores/auth";
+import { get } from "svelte/store";
+
+let token = get(authStore).token;
+let eventToken = get(authStore).eventToken;
+
+authStore.subscribe((value) => {
+    token = value.token;
+    eventToken = value.eventToken;
+});
+
+export const trpc = createTRPCClient<AppRouter>({
+    links: [
+        httpBatchLink({
+            url: 'http://localhost:3001/trpc',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Event-Token': eventToken
+            }
+        }),
+    ],
+});
 
 const app = new App({
     target: document.getElementById("app"),

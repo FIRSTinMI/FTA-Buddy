@@ -21,8 +21,10 @@ export const eventRouter = router({
         return event;
     }),
 
-    get: adminProcedure.input(z.string()).query(async ({ input }) => {
-        const event = await db.query.events.findFirst({ where: eq(events.code, input) });
+    get: adminProcedure.input(z.object({
+        code: z.string()
+    })).query(async ({ input }) => {
+        const event = await db.query.events.findFirst({ where: eq(events.code, input.code) });
 
         if (!event) throw new TRPCError({ code: 'NOT_FOUND', message: 'Event not found' });
 

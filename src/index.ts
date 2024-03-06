@@ -1,11 +1,16 @@
 import 'dotenv/config';
-import { connect } from './db/db';
+import { connect, db } from './db/db';
 import { userRouter } from './router/user';
 import * as trpcExpress from '@trpc/server/adapters/express';
 import express from 'express';
 import { createContext, router } from './trpc';
 import cors from 'cors';
 import { eventRouter } from './router/event';
+import expressWs from 'express-ws';
+import { eq } from 'drizzle-orm';
+import { events } from './db/schema';
+import { DEFAULT_MONITOR } from '../shared/constants';
+const { app, getWss, applyTo } = expressWs(express());
 
 const port = process.env.PORT || 3001;
 
@@ -14,11 +19,77 @@ const appRouter = router({
     event: eventRouter
 });
 
+const eventList: { [key: string]: { socketServer?: any, socketClients: any[], monitor: any, teams: any[], token: string } } = {};
+
 export type AppRouter = typeof appRouter;
 
-const app = express();
-
 app.use(cors())
+
+app.ws('/ws/', (ws, req) => {
+    ws.on('message', async (rawData) => {
+        let msg = rawData.toString();
+        if (msg == 'ping') return ws.send(JSON.stringify({ type: 'pong' }));
+        if (msg.startsWith('server')) {
+            let eventCode = msg.substring(7).toLowerCase();
+            console.log(`[WS ${eventCode} S] connected`);
+            if (eventList[eventCode]) {
+                eventList[eventCode].socketServer = ws;
+            } else {
+                const res = await db.query.events.findFirst({ where: eq(events.code, eventCode) });
+                if (!res) {
+                    return ws.send(JSON.stringify({ type: 'error', message: 'Event not found' }));
+                } else {
+                    eventList[eventCode] = {
+                        socketServer: ws,
+                        socketClients: [],
+                        monitor: DEFAULT_MONITOR,
+                        teams: res.teams as string[],
+                        token: res.token
+                    }
+                }
+            }
+
+            // Register broadcast function for this server
+            ws.on('message', (rawData) => {
+                let msg = rawData.toString();
+                if (msg == 'ping') return ws.send(JSON.stringify({ type: 'pong' }));
+
+                // This happens if the event immeidetly sends a monitor frame
+                if (!eventList[eventCode]) {
+                    console.log(`[WS ${eventCode} S] No event found for ${eventCode}`);
+                } else {
+                    for (let socketClient of eventList[eventCode].socketClients) {
+                        if (socketClient)
+                            socketClient.send(msg);
+                    }
+                    eventList[eventCode].monitor = JSON.parse(msg);
+                }
+            });
+
+        } else if (msg.startsWith('client')) {
+            let eventToken = msg.substring(7).toLowerCase();
+            console.log(eventToken);
+
+            const res = await db.query.events.findFirst({ where: eq(events.token, eventToken) });
+            if (!res) {
+                return ws.send(JSON.stringify({ type: 'error', message: 'Event not found' }));
+            }
+
+            console.log(`[WS ${res.code} C] connected`);
+            if (eventList[eventToken]) {
+                eventList[eventToken].socketClients.push(ws);
+            } else {
+                eventList[eventToken] = {
+                    socketClients: [ws],
+                    monitor: DEFAULT_MONITOR,
+                    teams: res.teams as string[],
+                    token: res.token
+                }
+            }
+            ws.send(JSON.stringify(eventList[eventToken].monitor));
+        }
+    });
+});
 
 app.use(
     '/trpc',
@@ -160,76 +231,4 @@ connect().then(async () => {
 //     });
 // });
 
-// app.ws('/', (ws, req) => {
-//     ws.on('message', async (rawData) => {
-//         let msg = rawData.toString();
-//         if (msg == 'ping') return ws.send(JSON.stringify({ type: 'pong' }));
-//         if (msg.startsWith('server')) {
-//             let eventCode = msg.substring(7).toLowerCase();
-//             console.log(`[WS ${eventCode} S] connected`);
-//             if (events[eventCode]) {
-//                 events[eventCode].socketServer = ws;
-//             } else {
-//                 fetch(`https://www.thebluealliance.com/api/v3/event/${eventCode}/teams/simple`, {
-//                     headers: {
-//                         'X-TBA-Auth-Key': process.env.TBA_KEY ?? ''
-//                     }
-//                 }).then(async (response) => {
-//                     let teams = [];
-//                     if (response.status == 200) {
-//                         let teamsData = await response.json();
-//                         for (let team of teamsData) {
-//                             teams.push(team.team_number);
-//                         }
-//                         // db.query('SELECT * FROM events WHERE code = ?;', [req.params.event]).spread((event: EventsRow[]) => {
-//                         //     if (event) {
-//                         //         db.query('UPDATE events SET teams = ? WHERE code = ?;', [JSON.stringify(req.body.teams), req.params.event]);
-//                         //     }
-//                         // });
-//                     }
 
-//                     events[eventCode] = {
-//                         socketServer: ws,
-//                         socketClients: [],
-//                         monitor: DEFAULT_MONITOR,
-//                         teams: []
-//                     }
-//                 });
-//             }
-//             // Register broadcast function for this server
-//             ws.on('message', (rawData) => {
-//                 let msg = rawData.toString();
-//                 if (msg == 'ping') return ws.send(JSON.stringify({ type: 'pong' }));
-
-//                 // This happens if the event immeidetly sends a monitor frame before the TBA request is done
-//                 if (!events[eventCode]) {
-//                     console.log(`[WS ${eventCode} S] No event found for ${eventCode}`);
-//                 } else {
-//                     for (let socketClient of events[eventCode].socketClients) {
-//                         if (socketClient)
-//                             socketClient.send(msg);
-//                     }
-//                     events[eventCode].monitor = JSON.parse(msg);
-//                     // If field is ready to prestart, that means new teams are displayed
-//                     if (events[eventCode].monitor.field === 7) {
-//                         //updateTeamsListFromMonitor(eventCode, events[eventCode].monitor);
-//                     }
-//                 }
-//             });
-
-//         } else if (msg.startsWith('client')) {
-//             let eventCode = msg.substring(7).toLowerCase();
-//             console.log(`[WS ${eventCode} C] connected`);
-//             if (events[eventCode]) {
-//                 events[eventCode].socketClients.push(ws);
-//             } else {
-//                 events[eventCode] = {
-//                     socketClients: [ws],
-//                     monitor: DEFAULT_MONITOR,
-//                     teams: []
-//                 }
-//             }
-//             ws.send(JSON.stringify(events[eventCode].monitor));
-//         }
-//     });
-// });

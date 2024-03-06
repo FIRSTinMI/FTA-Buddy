@@ -1,14 +1,10 @@
 <script lang="ts">
     import { type MonitorFrame, type Station } from "./../../../shared/types";
-    import { Button, Input, Label, Table, TableBody, TableHead, TableHeadCell } from "flowbite-svelte";
-    import { eventStore } from "../stores/event";
-    import { get } from "svelte/store";
+    import { Table, TableBody, TableHead, TableHeadCell } from "flowbite-svelte";
     import MonitorRow from "../components/MonitorRow.svelte";
     import TeamModal from "../components/TeamModal.svelte";
 
-    let monitorEvent = get(eventStore) || "test";
     export let monitorFrame: MonitorFrame;
-    export let connectToMonitor: (event: string) => void;
 
     const FieldStates = {
         0: "Unknown",
@@ -36,13 +32,6 @@
     }
 
     const stations: Station[] = ["blue1", "blue2", "blue3", "red1", "red2", "red3"];
-
-    function updateEvent(evt: Event) {
-        evt.preventDefault();
-
-        eventStore.set(monitorEvent);
-        connectToMonitor(monitorEvent);
-    }
 </script>
 
 {#if monitorFrame}
@@ -76,26 +65,7 @@
             </TableBody>
         </Table>
     {/key}
-    <form on:submit={updateEvent} class="flex w-full justify-center items-center space-x-4 mt-4 px-2">
-        <!-- <Toggle class="toggle" bind:checked={relayOn} on:click={relayChanged} bind:disabled={secureOnly}>Relay</Toggle> -->
-        <Label class="space-y-2">
-            Event Code
-            <div class="flex">
-                <Input class="max-w-64 w-full rounded-none rounded-l-lg" bind:value={monitorEvent} placeholder="Event Code or IP" />
-                <Button color="primary" class="rounded-none rounded-r-lg" on:click={updateEvent}>Connect</Button>
-            </div>
-        </Label>
-    </form>
     {#if !monitorFrame}
         <p>Requires Chrome Extension to be setup on field network</p>
     {/if}
-    <!-- {#if secureOnly}
-        <div class="flex justify-center text-xs dark:text-gray-700 underline mt-2">
-            <button
-                on:click={() => {
-                    window.location.href = "http://ftabuddy.filipkin.com/";
-                }}>Go to insecure website to connect to server localy</button
-            >
-        </div>
-    {/if} -->
 </div>

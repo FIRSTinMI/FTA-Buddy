@@ -12,6 +12,7 @@
     import { notesStore } from "./stores/notes";
     import { onMount } from "svelte";
     import { settingsStore } from "./stores/settings";
+    import { authStore } from "./stores/auth";
 
     export let toast: (title: string, text: string) => void;
     export let openSettings: () => void;
@@ -44,51 +45,21 @@
 
     let notesChild: Notes;
 
-    async function connectToMonitor(event: string) {
-        monitorEvent = event;
-        if (ws) ws?.close();
-        if (monitorEvent.match("^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$")) {
-            let uri = "ws://" + monitorEvent + ":8284/";
-            eventStore.set(monitorEvent);
-            openWebSocket(uri);
-        } else if (monitorEvent.trim().length > 0) {
-            console.log(relayOn);
-            eventStore.set(monitorEvent);
-            try {
-                const response = await fetch("https://ftabuddy.com/register/" + monitorEvent);
-                if (response.status === 404) {
-                    throw new Error("Event not found, make sure the chrome extension is setup and the field monitor is open");
-                }
-                const eventData = await response.json();
+    function openWebSocket() {
+        const uri = "ws://localhost:3001/ws/";
 
-                let uri = "ws://" + eventData.local_ip + ":8284/";
-                if (relayOn) {
-                    uri = "wss://ftabuddy.com/ws";
-                }
+        console.log("Connecting to " + uri);
 
-                openWebSocket(uri);
-            } catch (err: any) {
-                console.error(err);
-                toast("Failed to connect to monitor", err.message);
-                return;
-            }
-        }
-    }
-
-    function openWebSocket(uri: string) {
-        console.log(uri);
         reconnects++;
         if (ws) ws.close();
         ws = new WebSocket(uri);
         ws.onopen = function () {
             console.log("Connected to " + uri);
-            if (relayOn) {
-                this.send("client-" + monitorEvent);
-            }
+            this.send("client-" + get(authStore).eventToken);
             setInterval(() => ws.send("ping"), 60e3);
         };
+
         ws.onmessage = function (evt) {
-            //console.log(evt.data);
             try {
                 let data = JSON.parse(evt.data);
                 if (data.type === "monitorUpdate") {
@@ -109,11 +80,12 @@
                 console.error(e);
             }
         };
+
         ws.onclose = function (evt) {
             if (!evt.wasClean) {
                 console.log(evt);
-                console.log("Disconnected from " + uri + " reconnecting in 5 sec");
-                timeoutID = setTimeout(() => openWebSocket(uri), 5e3);
+                console.log("Webscocket disconnected from reconnecting in 5 sec");
+                timeoutID = setTimeout(() => openWebSocket(), 5e3);
             } else {
                 console.log("Disconnected cleanly");
             }
@@ -126,20 +98,20 @@
             console.log(ws.readyState == 1 ? "Connected" : "Disconnected");
             if (!ws || ws.readyState !== 1) {
                 if (timeoutID) clearTimeout(timeoutID);
-                openWebSocket(ws.url);
+                openWebSocket();
             }
         }
     });
 
     onMount(() => {
-        connectToMonitor(monitorEvent);
+        openWebSocket();
     });
 </script>
 
 <Router basepath="/">
     <div class="overflow-y-auto flex-grow pb-2">
         <Route path="/">
-            <Home bind:monitorFrame {connectToMonitor} />
+            <Home bind:monitorFrame />
         </Route>
         <Route path="/flashcards" component={Flashcard} />
         <Route path="/references" component={Reference} />

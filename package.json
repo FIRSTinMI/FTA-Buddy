@@ -4,6 +4,7 @@
     "description": "",
     "scripts": {
         "start": "npx tsx ./src/index.ts",
+        "build": "tsc; cd app; npm ci; npm run build",
         "generate-migration": "drizzle-kit generate:pg",
         "migrate": "ts-node src/db/migrate"
     },
@@ -35,6 +36,7 @@
         "@types/pg": "^8.11.2",
         "drizzle-kit": "^0.20.14",
         "nodemon": "^3.1.0",
-        "tsx": "^4.7.1"
+        "tsx": "^4.7.1",
+        "typescript": "^5.3.3"
     }
 }

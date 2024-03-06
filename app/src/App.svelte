@@ -44,7 +44,7 @@
         showToast = true;
         setTimeout(() => {
             showToast = false;
-        }, 5000);
+        }, 10000);
     }
 
     let _lastFrameTime: Date;

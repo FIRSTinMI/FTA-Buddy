@@ -30,8 +30,8 @@ export const eventRouter = router({
     }),
 
     create: protectedProcedure.input(z.object({
-        code: z.string(),
-        pin: z.string()
+        code: z.string().startsWith('202').min(6),
+        pin: z.string().min(4)
     })).query(async ({ input }) => {
         const token = generateToken();
         const teams: string[] = [];

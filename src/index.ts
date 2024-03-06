@@ -28,7 +28,10 @@ app.use(
     }),
 );
 
-app.use(express.static('app/dist'));
+if (process.env.NODE_ENV === 'dev') {
+} else {
+    app.use(express.static('app/dist'));
+}
 
 connect().then(async () => {
     app.listen(port, () => {

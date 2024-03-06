@@ -1,8 +1,7 @@
 <script lang="ts">
     import { Button, Modal, Toast } from "flowbite-svelte";
     import { get } from "svelte/store";
-    import Router from "./Router.svelte";
-    import LoginModal from "./components/LoginModal.svelte";
+    import AppRouter from "./AppRouter.svelte";
     import SettingsModal from "./components/SettingsModal.svelte";
     import WelcomeModal from "./components/WelcomeModal.svelte";
     import { settingsStore } from "./stores/settings";
@@ -10,6 +9,7 @@
     import { authStore } from "./stores/auth";
     import Login from "./pages/Login.svelte";
     import Icon from "@iconify/svelte";
+    import { Router, Route } from "svelte-routing";
 
     let settings = get(settingsStore);
     settingsStore.subscribe((value) => {
@@ -28,19 +28,22 @@
         changelog = text;
         changelogOpen = true;
     }
-    update(settings.version, version, openWelcome, openChangelog);
 
     let welcomeOpen = false;
     function openWelcome() {
         welcomeOpen = true;
     }
 
+    update(settings.version, version, openWelcome, openChangelog);
+
     let showToast = false;
     let toastTitle = "";
     let toastText = "";
-    function toast(title: string, text: string) {
+    let toastColor = "red-500";
+    function toast(title: string, text: string, color = "red-500") {
         toastTitle = title;
         toastText = text;
+        toastColor = color;
         showToast = true;
         setTimeout(() => {
             showToast = false;
@@ -74,12 +77,14 @@
 
     let auth = get(authStore);
 
-    let showLogin = true;
+    if ((!auth.token || !auth.eventToken) && window.location.pathname !== "/login") {
+        window.location.pathname = "/login";
+    }
 </script>
 
 {#if showToast}
     <div class="fixed bottom-0 left-0 p-4">
-        <Toast bind:open={showToast} class="dark:bg-red-500" divClass="w-lg p-4 text-gray-500 bg-white shadow dark:text-gray-400 dark:bg-gray-800 gap-3">
+        <Toast bind:open={showToast} class="dark:bg-{toastColor}" divClass="w-lg p-4 text-gray-500 bg-white shadow dark:text-gray-400 dark:bg-gray-800 gap-3">
             <h3 class="text-lg font-bold text-white text-left">{toastTitle}</h3>
             <p class="text-white text-left">{toastText}</p>
         </Toast>
@@ -133,10 +138,13 @@
                 {/if} -->
             </div>
         </div>
-        {#if auth.token && auth.eventToken && !showLogin}
-            <Router {toast} {openSettings} {updateDevStats} />
-        {:else}
-            <Login {toast} />
-        {/if}
+        <Router>
+            <Route path="/">
+                <AppRouter {toast} {openSettings} {updateDevStats}></AppRouter>
+            </Route>
+            <Route path="/login">
+                <Login {toast} />
+            </Route>
+        </Router>
     </div>
 </main>

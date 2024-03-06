@@ -3,8 +3,9 @@
     import { trpc } from "../main";
     import { authStore } from "../stores/auth";
     import { eventStore } from "../stores/event";
+    import { navigate } from "svelte-routing";
 
-    export let toast: (title: string, text: string) => void;
+    export let toast: (title: string, text: string, color?: string) => void;
 
     let auth = $authStore;
     let event = $eventStore;
@@ -40,7 +41,7 @@
                 },
             });
 
-            toast("Success", "Account created successfully");
+            toast("Success", "Account created successfully", "green-500");
         } catch (err: any) {
             toast("Error Creating Account", err.message);
             console.error(err);
@@ -66,7 +67,7 @@
                 },
             });
 
-            toast("Success", "Logged in successfully");
+            toast("Success", "Logged in successfully", "green-500");
         } catch (err: any) {
             toast("Error Logging In", err.message);
             console.error(err);
@@ -95,7 +96,8 @@
             console.log(res);
             authStore.set({ ...auth, eventToken: res.token });
             eventStore.set({ code: eventCode, pin: eventPin, teams: res.teams });
-            toast("Success", "Event created successfully");
+            toast("Success", "Event created successfully", "green-500");
+            updateEventList();
         } catch (err: any) {
             toast("Error Creating Event", err.message);
             console.error(err);
@@ -106,7 +108,7 @@
 
     let eventList: SelectOptionType<string>[] = [];
 
-    if (auth.user?.role === "ADMIN") {
+    function updateEventList() {
         trpc.event.getAll.query().then((res) => {
             eventList = res.map((e) => ({ value: e.code, name: e.code }));
             eventList.unshift({ value: "none", name: "None" });
@@ -115,16 +117,20 @@
         });
     }
 
+    if (auth.user?.role === "ADMIN") updateEventList();
+
     async function adminSelectEvent() {
-        if (eventCode === "none") {
+        if (event.code === "none") {
             authStore.set({ ...auth, eventToken: "" });
             eventStore.set({ code: "", pin: "", teams: [] });
             return;
         }
         try {
-            const res = await trpc.event.get.query(eventCode);
+            const res = await trpc.event.get.query({ code: event.code });
             authStore.set({ ...auth, eventToken: res.token });
-            eventStore.set({ code: eventCode, pin: res.pin, teams: res.teams });
+            eventStore.set({ code: event.code, pin: res.pin, teams: res.teams });
+            eventCode = event.code;
+            eventPin = res.pin;
         } catch (err: any) {
             toast("Error", err.message);
             console.error(err);
@@ -141,32 +147,69 @@
 <div class="container mx-auto flex flex-col justify-center p-4 h-full space-y-6">
     <h1 class="text-3xl">Welcome to FTA Buddy</h1>
     {#if !auth || !auth.token}
+        <!-- Create Account -->
         {#if view === "create"}
             <h2 class="text-xl">Create Account</h2>
-            <form class="flex flex-col space-y-2 mt-2" on:submit={createUser}>
-                <Input bind:value={username} placeholder="Username" bind:disabled={loading} />
-                <Input bind:value={email} placeholder="Email" bind:disabled={loading} type="email" />
-                <Input bind:value={password} type="password" placeholder="Password" bind:disabled={loading} />
-                <Input bind:value={verifyPassword} type="password" placeholder="Verify Password" bind:disabled={loading} />
+            <form class="flex flex-col space-y-2 mt-2 text-left" on:submit={createUser}>
+                <div>
+                    <Label for="username">Username</Label>
+                    <Input id="username" bind:value={username} placeholder="John" bind:disabled={loading} />
+                </div>
+
+                <div>
+                    <Label for="email">Email</Label>
+                    <Input id="email" bind:value={email} placeholder="me@example.com" bind:disabled={loading} type="email" />
+                </div>
+
+                <div>
+                    <Label for="password">Password</Label>
+                    <Input id="password" bind:value={password} type="password" bind:disabled={loading} />
+                </div>
+
+                <div>
+                    <Label for="verify-password">Verify Password</Label>
+                    <Input id="verify-password" bind:value={verifyPassword} type="password" bind:disabled={loading} />
+                </div>
+
+                <div>
+                    <Label for="role">Role</Label>
+                    <Select id="role" bind:value={role} items={["FTA", "FTAA", "CSA"].map((v) => ({ name: v, value: v }))} bind:disabled={loading} />
+                </div>
+
                 <Button type="submit" bind:disabled={loading}>Create Account</Button>
             </form>
             <Button on:click={() => (view = "login")} bind:disabled={loading}>Login</Button>
+
+            <!-- Login -->
         {:else if view === "login"}
             <h2 class="text-xl">Login</h2>
-            <form class="flex flex-col space-y-2 mt-2" on:submit={login}>
-                <Input bind:value={email} placeholder="Email" bind:disabled={loading} type="email" />
-                <Input bind:value={password} type="password" placeholder="Password" bind:disabled={loading} />
+            <form class="flex flex-col space-y-2 mt-2 text-left" on:submit={login}>
+                <div>
+                    <Label for="email">Email</Label>
+                    <Input id="email" bind:value={email} placeholder="me@example.com" bind:disabled={loading} type="email" />
+                </div>
+
+                <div>
+                    <Label for="password">Password</Label>
+                    <Input id="password" bind:value={password} type="password" bind:disabled={loading} />
+                </div>
                 <Button type="submit" bind:disabled={loading}>Login</Button>
             </form>
             <Button on:click={() => (view = "create")} bind:disabled={loading}>Create Account</Button>
+
+            <!-- Login Prompt -->
         {:else}
             <h2 class="text-xl">Login or Create Account</h2>
             <Button on:click={() => (view = "create")} bind:disabled={loading}>Create Account</Button>
             <Button on:click={() => (view = "login")} bind:disabled={loading}>Login</Button>
         {/if}
+
+        <!-- Logged In -->
     {:else}
         <h2 class="text-lg">Logged in as {auth.user?.username}</h2>
         <Button on:click={logout}>Logout</Button>
+
+        <!-- Event selector for admins -->
         {#if auth.user?.role === "ADMIN"}
             <div class="flex flex-col border-t border-neutral-500 pt-10 space-y-4">
                 <Select bind:value={event.code} items={eventList} placeholder="Select Event" on:change={adminSelectEvent} />
@@ -181,12 +224,22 @@
                     </div>
                     <Button on:click={createEvent}>Create Event</Button>
                 </form>
+                <div class="pt-10 border-t border-neutral-500">
+                    <Button href="/" on:click={() => navigate("/")}>Go to App</Button>
+                </div>
             </div>
+
+            <!-- Currently have an event selected -->
         {:else if auth.eventToken}
             <div class="flex flex-col border-t border-neutral-500 pt-10 space-y-2">
                 <h3 class="text-lg">Event: {event.code}</h3>
                 <Button on:click={() => (eventStore.set({ code: "", pin: "", teams: [] }), authStore.set({ ...auth, eventToken: "" }))}>Leave Event</Button>
+                <div class="pt-10 border-t border-neutral-500">
+                    <Button href="/" on:click={() => navigate("/")}>Go to App</Button>
+                </div>
             </div>
+
+            <!-- No event selected -->
         {:else}
             <div class="flex flex-col border-t border-neutral-500 pt-10">
                 <h3 class="text-lg">Create/Join Event</h3>

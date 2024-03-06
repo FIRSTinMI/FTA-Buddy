@@ -8,12 +8,7 @@ import { get } from "svelte/store";
 let token = get(authStore).token;
 let eventToken = get(authStore).eventToken;
 
-authStore.subscribe((value) => {
-    token = value.token;
-    eventToken = value.eventToken;
-});
-
-export const trpc = createTRPCClient<AppRouter>({
+export let trpc = createTRPCClient<AppRouter>({
     links: [
         httpBatchLink({
             url: 'http://localhost:3001/trpc',
@@ -23,6 +18,22 @@ export const trpc = createTRPCClient<AppRouter>({
             }
         }),
     ],
+});
+
+authStore.subscribe((value) => {
+    token = value.token;
+    eventToken = value.eventToken;
+    trpc = createTRPCClient<AppRouter>({
+        links: [
+            httpBatchLink({
+                url: 'http://localhost:3001/trpc',
+                headers: {
+                    'Authorization': `Bearer ${get(authStore).token}`,
+                    'Event-Token': eventToken
+                }
+            }),
+        ],
+    });
 });
 
 const app = new App({

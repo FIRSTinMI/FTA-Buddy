@@ -18,10 +18,10 @@ export const User = typeof users.$inferInsert;
 
 export const events = pgTable('events', {
     code: varchar('code').primaryKey(),
-    pin: varchar('pin').notNull().unique(),
+    pin: varchar('pin').notNull(),
     teams: jsonb('teams').notNull().default('[]'),
     created_at: timestamp('created_at').notNull().defaultNow(),
-    token: varchar('token').notNull().default(''),
+    token: varchar('token').notNull().default('').unique(),
 });
 
 export const Event = typeof events.$inferInsert;

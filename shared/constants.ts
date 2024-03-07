@@ -1,6 +1,7 @@
 import { MonitorFrame } from "./types";
 
 export const DEFAULT_MONITOR: MonitorFrame = {
+    type: 'monitorUpdate',
     field: 0,
     match: 0,
     time: 'unk',

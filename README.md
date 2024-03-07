@@ -1,7 +1,7 @@
 # FTA Buddy
 <img src="shared/logo.svg" alt="Logo" width="120" height="120">
 
-<a href="https://ftabuddy.com/app/"><strong>Web App</strong></a>
+<a href="https://ftabuddy.com/"><strong>Web App</strong></a>
 <br />
 <a href="https://play.google.com/store/apps/details?id=com.filipkin.ftahelper"><strong>Open on Google Play</strong></a>
 <br />
@@ -23,7 +23,7 @@ The cloud server also enables the notes functionality. The notes are also persis
 ### Cloud Based
 - Install the extension from the [Chrome webstore](https://chrome.google.com/webstore/detail/fta-buddy/kddnhihfpfnehnnhbkfajdldlgigohjc)
 - Make sure the cloud checkbox is checked, then enter the event code into the extension (e.g. 2023mitry) and open the field monitor
-- Go to the [web app](https://ftabuddy.com/app/) on your phone, click the three dots button in your browser, and click install app.
+- Go to the [web app](https://ftabuddy.com/) on your phone, click the three dots button in your browser, and click install app.
     - On android you can also install it from the [Play Store](https://play.google.com/store/apps/details?id=com.filipkin.ftahelper)
 - Open the app from the home screen and enter the event code
 
@@ -34,7 +34,7 @@ The cloud server also enables the notes functionality. The notes are also persis
 - Run the local server and enter event code when prompted in the window (e.g. 2023mitry).
     - The IP address of the laptop is automatically queried and sent to the cloud server. If it happens to grab the wrong NIC you can specify the local ip manually with the `--ip` flag.
     - You can also set the event code with a `-e` flag.
-- Install the [android app](https://play.google.com/store/apps/details?id=com.filipkin.ftahelper) or visit the [web app](http://ftabuddy.filipkin.com/app/)
+- Install the [android app](https://play.google.com/store/apps/details?id=com.filipkin.ftahelper) or visit the [web app](http://ftabuddy.filipkin.com/)
 - Enter the event code or the ip address of the local server (event code needed for notes functionality).
 - When on the field network you can connect directly to the local server, if your phone is not on the field network you can turn on the relay switch and get field monitor data from the cloud server.
 

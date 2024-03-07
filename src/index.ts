@@ -50,6 +50,8 @@ app.ws('/ws/', (ws, req) => {
                 }
             }
 
+            console.log(eventList[eventCode]);
+
             // Register broadcast function for this server
             ws.on('message', (rawData) => {
                 let msg = rawData.toString();
@@ -88,6 +90,7 @@ app.ws('/ws/', (ws, req) => {
                 }
             }
             ws.send(JSON.stringify(eventList[eventToken].monitor));
+            console.log(eventList[eventToken]);
         }
     });
 });

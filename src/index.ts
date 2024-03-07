@@ -50,12 +50,11 @@ app.ws('/ws/', (ws, req) => {
                 }
             }
 
-            console.log(eventList[eventCode]);
-
             // Register broadcast function for this server
             ws.on('message', (rawData) => {
                 let msg = rawData.toString();
                 if (msg == 'ping') return ws.send(JSON.stringify({ type: 'pong' }));
+                console.log(msg);
 
                 // This happens if the event immeidetly sends a monitor frame
                 if (!eventList[eventCode]) {
@@ -90,7 +89,6 @@ app.ws('/ws/', (ws, req) => {
                 }
             }
             ws.send(JSON.stringify(eventList[eventToken].monitor));
-            console.log(eventList[eventToken]);
         }
     });
 });

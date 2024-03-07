@@ -77,8 +77,8 @@
 
     let auth = get(authStore);
 
-    if ((!auth.token || !auth.eventToken) && window.location.pathname !== "/login") {
-        window.location.pathname = "/login";
+    if ((!auth.token || !auth.eventToken) && window.location.pathname !== "/app/login") {
+        window.location.pathname = "/app/login";
     }
 </script>
 
@@ -138,7 +138,7 @@
                 {/if} -->
             </div>
         </div>
-        <Router>
+        <Router basepath="/app">
             <Route path="/">
                 <AppRouter {toast} {openSettings} {updateDevStats}></AppRouter>
             </Route>

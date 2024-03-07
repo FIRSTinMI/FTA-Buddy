@@ -26,8 +26,6 @@
 
     $: updateDevStats(lastFrameTime, frameCount, lastMessageTime, messageCount, reconnects);
 
-    let monitorEvent = get(eventStore) || "test";
-    let relayOn = true;
     let ws: WebSocket;
     let monitorFrame: MonitorFrame;
 

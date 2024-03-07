@@ -2,22 +2,14 @@
     import { get } from "svelte/store";
     import { formatTime } from "../util/formatTime";
     import { eventStore } from "../stores/event";
-    import { userStore } from "../stores/user";
-
-    interface Message {
-        created: Date;
-        event: string;
-        id: number;
-        message: string;
-        profile: number;
-        team: number;
-        username: string;
-    }
+    import type { Message } from "../stores/messages";
+    import { authStore } from "../stores/auth";
 
     export let message: Message;
     export let team: string;
-    let user = get(userStore);
-    let event = get(eventStore);
+    let auth = get(authStore);
+    let user = auth.user;
+    let event = get(eventStore).code;
 
     const MESSAGE_CLASSES = {
         self: "dark:bg-secondary-500 text-right self-end",
@@ -28,23 +20,23 @@
 
     let classToApply = MESSAGE_CLASSES.other;
 
-    if (message.profile == user.id) {
-        if (message.event == event) {
+    if (message.user_id == user?.id) {
+        if (message.event_code == event) {
             classToApply = MESSAGE_CLASSES.self;
         } else {
             classToApply = MESSAGE_CLASSES.selfOld;
         }
     } else {
-        if (message.event == event) {
+        if (message.event_code == event) {
             classToApply = MESSAGE_CLASSES.other;
         } else {
             classToApply = MESSAGE_CLASSES.otherOld;
         }
     }
 
-    let formattedTime = formatTime(message.created);
+    let formattedTime = formatTime(message.created_at);
     setInterval(() => {
-        formattedTime = formatTime(message.created);
+        formattedTime = formatTime(message.created_at);
     }, 1000);
 </script>
 
@@ -52,9 +44,9 @@
     <span class="text-sm">
         {#if team == "feed"}
             <span class="font-bold text-lg">{message.team == null ? "" : message.team}</span>
-            <span class="font-bold">{message.username}</span> - {message.event}
+            <span class="font-bold">{message.username}</span> - {message.event_code}
         {:else}
-            <span class="font-bold">{message.username}</span> - {message.event}
+            <span class="font-bold">{message.username}</span> - {message.event_code}
         {/if}
         {formattedTime}
     </span>

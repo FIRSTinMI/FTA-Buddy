@@ -36,7 +36,7 @@ export const eventRouter = router({
         pin: z.string().min(4)
     })).query(async ({ input }) => {
         const token = generateToken();
-        const teams: string[] = [];
+        const teams: ({number: string, name: string})[] = [];
 
         if (await db.query.events.findFirst({ where: eq(events.code, input.code) })) {
             throw new TRPCError({ code: 'CONFLICT', message: 'Event already exists' });
@@ -50,7 +50,7 @@ export const eventRouter = router({
 
         if (teamsData) {
             for (let team of teamsData) {
-                teams.push(team.team_number);
+                teams.push({number: team.team_number, name: team.nickname});
             }
         }
 

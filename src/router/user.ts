@@ -67,8 +67,12 @@ export const userRouter = router({
             token: token
         });
 
+        const res = await db.query.users.findFirst({ where: eq(users.email, input.email) });
+        if (!res) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'User not created' });
+
         return {
-            token
+            token,
+            id: res.id,
         };
     })
 });

@@ -1,5 +1,11 @@
 import { writable } from 'svelte/store';
 
+export interface Event {
+    code: string;
+    pin: string;
+    teams: ({ number: string, name: string })[];
+}
+
 let initialEvent = localStorage.getItem('event');
 
 if (!initialEvent) {
@@ -20,7 +26,7 @@ try {
     });
 }
 
-export const eventStore = writable(JSON.parse(initialEvent));
+export const eventStore = writable<Event>(JSON.parse(initialEvent));
 eventStore.subscribe((value) => {
     localStorage.setItem('event', JSON.stringify(value));
 });

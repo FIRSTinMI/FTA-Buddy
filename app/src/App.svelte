@@ -10,12 +10,18 @@
     import Flashcard from "./pages/Flashcards.svelte";
     import Home from "./pages/Home.svelte";
     import Login from "./pages/Login.svelte";
-    import Notes from "./pages/Notes.svelte";
+    import Messages from "./pages/Messages.svelte";
     import Reference from "./pages/Reference.svelte";
     import { authStore } from "./stores/auth";
-    import { notesStore } from "./stores/notes";
+    import { messagesStore } from "./stores/messages";
     import { settingsStore } from "./stores/settings";
     import { VERSIONS, update } from "./util/updater";
+
+    let auth = get(authStore);
+
+    if ((!auth.token || !auth.eventToken) && window.location.pathname !== "/app/login") {
+        window.location.pathname = "/app/login";
+    }
 
     let settings = get(settingsStore);
     settingsStore.subscribe((value) => {
@@ -32,6 +38,13 @@
     let changelog = "";
     function openChangelog(text: string) {
         changelog = text;
+        changelogOpen = true;
+    }
+
+    function openFullChangelog() {
+        for (let version in VERSIONS) {
+            changelog += VERSIONS[version as keyof typeof VERSIONS].changelog;
+        }
         changelogOpen = true;
     }
 
@@ -81,12 +94,6 @@
         installPrompt = null;
     });
 
-    let auth = get(authStore);
-
-    if ((!auth.token || !auth.eventToken) && window.location.pathname !== "/app/login") {
-        window.location.pathname = "/app/login";
-    }
-
     let lastFrameTime: Date;
     let frameCount = 0;
     let lastMessageTime: Date;
@@ -98,14 +105,14 @@
     let ws: WebSocket;
     let monitorFrame: MonitorFrame;
 
-    let notifications = get(notesStore).unread || 0;
-    notesStore.subscribe((value) => {
+    let notifications = get(messagesStore).unread || 0;
+    messagesStore.subscribe((value) => {
         notifications = value.unread;
     });
 
     let timeoutID: NodeJS.Timeout;
 
-    let notesChild: Notes;
+    let messagesChild: Messages;
 
     function openWebSocket() {
         const uri = `${window.location.protocol.endsWith("s:") ? "wss" : "ws"}://${window.location.host}/ws/`;
@@ -130,13 +137,13 @@
                     monitorFrame = data;
                 } else if (data.type === "message") {
                     notifications++;
-                    notesStore.update((s) => {
+                    messagesStore.update((s) => {
                         s.unread = notifications;
                         return s;
                     });
                     lastMessageTime = new Date();
                     messageCount++;
-                    if (notesChild) notesChild.newMessage(data);
+                    if (messagesChild) messagesChild.newMessage(data);
                 }
             } catch (e) {
                 console.error(e);
@@ -182,6 +189,10 @@
 <WelcomeModal
     bind:welcomeOpen
     bind:installPrompt
+    openChangelog={() => {
+        welcomeOpen = false;
+        openFullChangelog();
+    }}
     closeModal={() => {
         welcomeOpen = false;
     }}
@@ -233,42 +244,44 @@
                 </Route>
                 <Route path="/flashcards" component={Flashcard} />
                 <Route path="/references" component={Reference} />
-                <Route path="/notes">
-                    <Notes bind:this={notesChild} team={undefined} bind:notifications />
+                <Route path="/messages">
+                    <Messages bind:this={messagesChild} team={undefined} />
                 </Route>
-                <Route path="/notes/:team" component={Notes} />
-            </div>
-
-            <div class="flex justify-around py-2 bg-neutral-700">
-                <Link to="/app/">
-                    <Button class="!p-2" color="none">
-                        <Icon icon="mdi:television" class="w-8 h-8" />
-                    </Button>
-                </Link>
-                <Link to="/app/flashcards">
-                    <Button class="!p-2" color="none">
-                        <Icon icon="mdi:message-alert" class="w-8 h-8" />
-                    </Button>
-                </Link>
-                <Link to="/app/references">
-                    <Button class="!p-2" color="none">
-                        <Icon icon="mdi:file-document-outline" class="w-8 h-8" />
-                    </Button>
-                </Link>
-                <Link to="/app/notes">
-                    <Button class="!p-2 relative" color="none">
-                        <Icon icon="mdi:message-text" class="w-8 h-8" />
-                        {#if notifications > 0}
-                            <Indicator color="red" border size="xl" placement="top-left">
-                                <span class="text-white text-xs">{notifications}</span>
-                            </Indicator>
-                        {/if}
-                    </Button>
-                </Link>
+                <Route path="/messages/:team" component={Messages} />
             </div>
             <Route path="/login">
                 <Login {toast} />
             </Route>
+
+            {#if window.location.pathname !== "/app/login"}
+                <div class="flex justify-around py-2 bg-neutral-700">
+                    <Link to="/app/">
+                        <Button class="!p-2" color="none">
+                            <Icon icon="mdi:television" class="w-8 h-8" />
+                        </Button>
+                    </Link>
+                    <Link to="/app/flashcards">
+                        <Button class="!p-2" color="none">
+                            <Icon icon="mdi:message-alert" class="w-8 h-8" />
+                        </Button>
+                    </Link>
+                    <Link to="/app/references">
+                        <Button class="!p-2" color="none">
+                            <Icon icon="mdi:file-document-outline" class="w-8 h-8" />
+                        </Button>
+                    </Link>
+                    <Link to="/app/messages">
+                        <Button class="!p-2 relative" color="none">
+                            <Icon icon="mdi:message-text" class="w-8 h-8" />
+                            {#if notifications > 0}
+                                <Indicator color="red" border size="xl" placement="top-left">
+                                    <span class="text-white text-xs">{notifications}</span>
+                                </Indicator>
+                            {/if}
+                        </Button>
+                    </Link>
+                </div>
+            {/if}
         </Router>
     </div>
 </main>

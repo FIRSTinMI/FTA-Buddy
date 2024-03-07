@@ -115,6 +115,7 @@ if (process.env.NODE_ENV === 'dev') {
     app.use('/app', express.static('app/dist'));
     app.use('/app/*', express.static('app/dist/index.html'));
     app.use('/FieldMonitor', express.static('app/dist/FieldMonitor'));
+    app.use('/FieldMonitor/dist', express.static('app/dist/FieldMonitor/dist'));
 }
 
 

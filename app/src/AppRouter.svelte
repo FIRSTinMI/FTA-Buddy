@@ -106,7 +106,7 @@
     });
 </script>
 
-<Router basepath="/">
+<Router basepath="/app/">
     <div class="overflow-y-auto flex-grow pb-2">
         <Route path="/">
             <Home bind:monitorFrame />
@@ -120,22 +120,22 @@
     </div>
 
     <div class="flex justify-around py-2 bg-neutral-700">
-        <Link to="/">
+        <Link to="/app/">
             <Button class="!p-2" color="none">
                 <Icon icon="mdi:television" class="w-8 h-8" />
             </Button>
         </Link>
-        <Link to="/flashcards">
+        <Link to="/app/flashcards">
             <Button class="!p-2" color="none">
                 <Icon icon="mdi:message-alert" class="w-8 h-8" />
             </Button>
         </Link>
-        <Link to="/references">
+        <Link to="/app/references">
             <Button class="!p-2" color="none">
                 <Icon icon="mdi:file-document-outline" class="w-8 h-8" />
             </Button>
         </Link>
-        <Link to="/notes">
+        <Link to="/app/notes">
             <Button class="!p-2 relative" color="none">
                 <Icon icon="mdi:message-text" class="w-8 h-8" />
                 {#if notifications > 0}

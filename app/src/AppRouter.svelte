@@ -46,7 +46,7 @@
     let notesChild: Notes;
 
     function openWebSocket() {
-        const uri = `${window.location.protocol.endsWith("s") ? "wss" : "ws"}://${window.location.host}/ws/`;
+        const uri = `${window.location.protocol.endsWith("s:") ? "wss" : "ws"}://${window.location.host}/ws/`;
 
         console.log("Connecting to " + uri);
 

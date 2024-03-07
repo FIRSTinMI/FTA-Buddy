@@ -1,9 +1,17 @@
-import { notesStore } from "../stores/notes"
 import { settingsStore } from "../stores/settings";
-import { userStore } from "../stores/user";
 
 
 export const VERSIONS = {
+    '2.3.0': {
+        changelog: `
+        <h1 class="text-lg">v2.3.0</h1>
+        <ul>
+        <li>Major overhaul of the backend</li>
+        <li>Added authentication for events</li>
+        <li>WIP on redoing the notes and tickets page</li>
+        </ul>`,
+        update: () => { }
+    },
     '2.2.2': {
         changelog: `
         <h1 class="text-lg">v2.2.2</h1>
@@ -12,9 +20,7 @@ export const VERSIONS = {
         <li>Notification icon on notes tab</li>
         <li>Various bug fixes</li>
         </ul>`,
-        update: () => {
-            notesStore.set(undefined);
-        }
+        update: () => { }
     },
     '2.2.1': {
         changelog: `
@@ -38,9 +44,7 @@ export const VERSIONS = {
         changelog: `
         <h1 class="text-lg">v2.1.1</h1>
         Fixed note store`,
-        update: () => {
-            notesStore.set(undefined);
-        }
+        update: () => { }
     },
     '2.1.0': {
         changelog: `
@@ -50,11 +54,7 @@ export const VERSIONS = {
         <li>Added a new settings page</li>
         <li>Added a new developer mode setting</li>
         </ul>`,
-        update: () => {
-            notesStore.set(undefined);
-            settingsStore.set(undefined);
-            userStore.set(undefined);
-        }
+        update: () => { }
     }
 }
 

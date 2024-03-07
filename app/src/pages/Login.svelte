@@ -38,6 +38,7 @@
                     username,
                     email,
                     role,
+                    id: res.id,
                 },
             });
 
@@ -64,6 +65,7 @@
                     username: res.username,
                     email: res.email,
                     role: res.role,
+                    id: res.id,
                 },
             });
 

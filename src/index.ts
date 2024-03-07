@@ -55,6 +55,7 @@ app.ws('/ws/', (ws, req) => {
                 let msg = rawData.toString();
                 if (msg == 'ping') return ws.send(JSON.stringify({ type: 'pong' }));
                 console.log(msg);
+                console.log(eventList[eventCode].socketClients.length);
 
                 // This happens if the event immeidetly sends a monitor frame
                 if (!eventList[eventCode]) {

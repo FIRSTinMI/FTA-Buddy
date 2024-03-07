@@ -54,8 +54,6 @@ app.ws('/ws/', (ws, req) => {
             ws.on('message', (rawData) => {
                 let msg = rawData.toString();
                 if (msg == 'ping') return ws.send(JSON.stringify({ type: 'pong' }));
-                console.log(msg);
-                console.log(eventList[eventCode].socketClients.length);
 
                 // This happens if the event immeidetly sends a monitor frame
                 if (!eventList[eventCode]) {
@@ -79,19 +77,17 @@ app.ws('/ws/', (ws, req) => {
             }
 
             console.log(`[WS ${res.code} C] connected`);
-            console.log(eventList[eventToken]);
-            if (eventList[eventToken]) {
-                eventList[eventToken].socketClients.push(ws);
+            if (eventList[res.code]) {
+                eventList[res.code].socketClients.push(ws);
             } else {
-                eventList[eventToken] = {
+                eventList[res.code] = {
                     socketClients: [ws],
                     monitor: DEFAULT_MONITOR,
                     teams: res.teams as string[],
                     token: res.token
                 }
             }
-            console.log(eventList[eventToken].socketClients.length);
-            ws.send(JSON.stringify(eventList[eventToken].monitor));
+            ws.send(JSON.stringify(eventList[res.code].monitor));
         }
     });
 });

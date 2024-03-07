@@ -9,6 +9,7 @@ import { eventRouter } from './router/event';
 import expressWs from 'express-ws';
 import { eq } from 'drizzle-orm';
 import { events } from './db/schema';
+import { readFileSync, readdirSync } from 'fs';
 import { DEFAULT_MONITOR } from '../shared/constants';
 const { app, getWss, applyTo } = expressWs(express());
 
@@ -98,6 +99,15 @@ app.use(
         createContext,
     }),
 );
+
+app.get('/serviceworker.js', async (req, res) => {
+    let assets = readdirSync('./app/dist/assets');
+    let serviceWorkerFile = readFileSync('./app/dist/serviceworker.js').toString();
+    serviceWorkerFile = serviceWorkerFile.replace('{{CSS_FILE}}', assets.filter(f => f.endsWith('.css'))[0]);
+    serviceWorkerFile = serviceWorkerFile.replace('{{JS_FILE}}', assets.filter(f => f.endsWith('.js'))[0]);
+    res.setHeader('Content-Type', 'application/javascript');
+    res.send(serviceWorkerFile);
+});
 
 if (process.env.NODE_ENV === 'dev') {
 } else {

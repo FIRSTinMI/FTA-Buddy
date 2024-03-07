@@ -110,10 +110,13 @@ app.get('/serviceworker.js', async (req, res) => {
 });
 
 if (process.env.NODE_ENV === 'dev') {
+    app.use('/FieldMonitor', express.static('app/src/public/FieldMonitor'));
 } else {
     app.use('/app', express.static('app/dist'));
     app.use('/app/*', express.static('app/dist/index.html'));
+    app.use('/FieldMonitor', express.static('app/FieldMonitor'));
 }
+
 
 app.get('/', (req, res) => {
     res.redirect('/app/');

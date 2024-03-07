@@ -79,6 +79,7 @@ app.ws('/ws/', (ws, req) => {
             }
 
             console.log(`[WS ${res.code} C] connected`);
+            console.log(eventList[eventToken]);
             if (eventList[eventToken]) {
                 eventList[eventToken].socketClients.push(ws);
             } else {
@@ -89,6 +90,7 @@ app.ws('/ws/', (ws, req) => {
                     token: res.token
                 }
             }
+            console.log(eventList[eventToken].socketClients.length);
             ws.send(JSON.stringify(eventList[eventToken].monitor));
         }
     });

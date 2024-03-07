@@ -101,8 +101,13 @@ app.use(
 
 if (process.env.NODE_ENV === 'dev') {
 } else {
-    app.use(express.static('app/dist'));
+    app.use('/app', express.static('app/dist'));
+    app.use('/app/*', express.static('app/dist/index.html'));
 }
+
+app.get('/', (req, res) => {
+    res.redirect('/app/');
+});
 
 connect().then(async () => {
     app.listen(port, () => {

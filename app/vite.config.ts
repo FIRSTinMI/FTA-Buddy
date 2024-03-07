@@ -10,7 +10,7 @@ export default defineConfig({
             compiler: 'svelte',
         })
     ],
-    base: "/",
+    base: "/app/",
     server: {
         proxy: {
             '/trpc': {

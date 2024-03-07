@@ -1,15 +1,21 @@
 <script lang="ts">
-    import { Button, Modal, Toast } from "flowbite-svelte";
+    import Icon from "@iconify/svelte";
+    import { Button, Indicator, Modal, Toast } from "flowbite-svelte";
+    import { onMount } from "svelte";
+    import { Link, Route, Router } from "svelte-routing";
     import { get } from "svelte/store";
-    import AppRouter from "./AppRouter.svelte";
+    import type { MonitorFrame } from "../../shared/types";
     import SettingsModal from "./components/SettingsModal.svelte";
     import WelcomeModal from "./components/WelcomeModal.svelte";
+    import Flashcard from "./pages/Flashcards.svelte";
+    import Home from "./pages/Home.svelte";
+    import Login from "./pages/Login.svelte";
+    import Notes from "./pages/Notes.svelte";
+    import Reference from "./pages/Reference.svelte";
+    import { authStore } from "./stores/auth";
+    import { notesStore } from "./stores/notes";
     import { settingsStore } from "./stores/settings";
     import { VERSIONS, update } from "./util/updater";
-    import { authStore } from "./stores/auth";
-    import Login from "./pages/Login.svelte";
-    import Icon from "@iconify/svelte";
-    import { Router, Route } from "svelte-routing";
 
     let settings = get(settingsStore);
     settingsStore.subscribe((value) => {
@@ -80,6 +86,88 @@
     if ((!auth.token || !auth.eventToken) && window.location.pathname !== "/app/login") {
         window.location.pathname = "/app/login";
     }
+
+    let lastFrameTime: Date;
+    let frameCount = 0;
+    let lastMessageTime: Date;
+    let messageCount = 0;
+    let reconnects = -1;
+
+    $: updateDevStats(lastFrameTime, frameCount, lastMessageTime, messageCount, reconnects);
+
+    let ws: WebSocket;
+    let monitorFrame: MonitorFrame;
+
+    let notifications = get(notesStore).unread || 0;
+    notesStore.subscribe((value) => {
+        notifications = value.unread;
+    });
+
+    let timeoutID: NodeJS.Timeout;
+
+    let notesChild: Notes;
+
+    function openWebSocket() {
+        const uri = `${window.location.protocol.endsWith("s:") ? "wss" : "ws"}://${window.location.host}/ws/`;
+
+        console.log("Connecting to " + uri);
+
+        reconnects++;
+        if (ws) ws.close();
+        ws = new WebSocket(uri);
+        ws.onopen = function () {
+            console.log("Connected to " + uri);
+            this.send("client-" + get(authStore).eventToken);
+            setInterval(() => ws.send("ping"), 60e3);
+        };
+
+        ws.onmessage = function (evt) {
+            try {
+                let data = JSON.parse(evt.data);
+                if (data.type === "monitorUpdate") {
+                    lastFrameTime = new Date();
+                    frameCount++;
+                    monitorFrame = data;
+                } else if (data.type === "message") {
+                    notifications++;
+                    notesStore.update((s) => {
+                        s.unread = notifications;
+                        return s;
+                    });
+                    lastMessageTime = new Date();
+                    messageCount++;
+                    if (notesChild) notesChild.newMessage(data);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        };
+
+        ws.onclose = function (evt) {
+            if (!evt.wasClean) {
+                console.log(evt);
+                console.log("Webscocket disconnected from reconnecting in 5 sec");
+                timeoutID = setTimeout(() => openWebSocket(), 5e3);
+            } else {
+                console.log("Disconnected cleanly");
+            }
+        };
+    }
+
+    document.addEventListener("visibilitychange", (evt) => {
+        if (document.visibilityState === "visible") {
+            console.log("Returning from inactive");
+            console.log(ws.readyState == 1 ? "Connected" : "Disconnected");
+            if (!ws || ws.readyState !== 1) {
+                if (timeoutID) clearTimeout(timeoutID);
+                openWebSocket();
+            }
+        }
+    });
+
+    onMount(() => {
+        openWebSocket();
+    });
 </script>
 
 {#if showToast}
@@ -138,10 +226,46 @@
                 {/if} -->
             </div>
         </div>
-        <Router basepath="/app">
-            <Route path="/">
-                <AppRouter {toast} {openSettings} {updateDevStats}></AppRouter>
-            </Route>
+        <Router basepath="/app/">
+            <div class="overflow-y-auto flex-grow pb-2">
+                <Route path="/">
+                    <Home bind:monitorFrame />
+                </Route>
+                <Route path="/flashcards" component={Flashcard} />
+                <Route path="/references" component={Reference} />
+                <Route path="/notes">
+                    <Notes bind:this={notesChild} team={undefined} bind:notifications />
+                </Route>
+                <Route path="/notes/:team" component={Notes} />
+            </div>
+
+            <div class="flex justify-around py-2 bg-neutral-700">
+                <Link to="/app/">
+                    <Button class="!p-2" color="none">
+                        <Icon icon="mdi:television" class="w-8 h-8" />
+                    </Button>
+                </Link>
+                <Link to="/app/flashcards">
+                    <Button class="!p-2" color="none">
+                        <Icon icon="mdi:message-alert" class="w-8 h-8" />
+                    </Button>
+                </Link>
+                <Link to="/app/references">
+                    <Button class="!p-2" color="none">
+                        <Icon icon="mdi:file-document-outline" class="w-8 h-8" />
+                    </Button>
+                </Link>
+                <Link to="/app/notes">
+                    <Button class="!p-2 relative" color="none">
+                        <Icon icon="mdi:message-text" class="w-8 h-8" />
+                        {#if notifications > 0}
+                            <Indicator color="red" border size="xl" placement="top-left">
+                                <span class="text-white text-xs">{notifications}</span>
+                            </Indicator>
+                        {/if}
+                    </Button>
+                </Link>
+            </div>
             <Route path="/login">
                 <Login {toast} />
             </Route>

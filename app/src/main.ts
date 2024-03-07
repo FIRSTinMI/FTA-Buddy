@@ -11,7 +11,7 @@ let eventToken = get(authStore).eventToken;
 export let trpc = createTRPCClient<AppRouter>({
     links: [
         httpBatchLink({
-            url: 'http://localhost:3001/trpc',
+            url: window.location.origin + '/trpc',
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Event-Token': eventToken
@@ -26,7 +26,7 @@ authStore.subscribe((value) => {
     trpc = createTRPCClient<AppRouter>({
         links: [
             httpBatchLink({
-                url: 'http://localhost:3001/trpc',
+                url: window.location.origin + '/trpc',
                 headers: {
                     'Authorization': `Bearer ${get(authStore).token}`,
                     'Event-Token': eventToken

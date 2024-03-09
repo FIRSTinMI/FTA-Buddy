@@ -138,6 +138,24 @@
             console.error(err);
         }
     }
+
+    async function joinEvent(evt: Event) {
+        evt.preventDefault();
+        loading = true;
+
+        try {
+            const res = await trpc.event.join.query({ code: eventCode, pin: eventPin });
+            authStore.set({ ...auth, eventToken: res.token });
+            eventStore.set({ code: eventCode, pin: eventPin, teams: res.teams as any || [] });
+            toast("Success", "Event joined successfully", "green-500");
+        } catch (err: any) {
+            toast("Error Joining Event", err.message);
+            console.error(err);
+        }
+
+        loading = false;
+    
+    }
 </script>
 
 {#if loading}
@@ -245,7 +263,7 @@
         {:else}
             <div class="flex flex-col border-t border-neutral-500 pt-10">
                 <h3 class="text-lg">Create/Join Event</h3>
-                <form class="grid md:grid-cols-2 gap-2 text-left">
+                <form class="grid md:grid-cols-2 gap-2 text-left" on:submit={joinEvent}>
                     <div class="col-span-2">
                         <Label for="event-code">Event Code</Label>
                         <Input id="event-code" bind:value={eventCode} placeholder="2024miket" />

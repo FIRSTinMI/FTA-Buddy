@@ -87,9 +87,9 @@
         ></TableBodyCell>
         <TableBodyCell
             on:click={detailView}
-            style="background-color: rgba(255,0,0,{team.battery < 12 &&
+            style="background-color: rgba(255,0,0,{team.battery < 11 &&
             team.battery > 0
-                ? ((-1.5 * team.battery ** 2) - (3.2 * team.battery) + 255) / 255
+                ? ((-1.5 * team.battery ** 2) - (6.6 * team.battery) + 255) / 255
                 : 0})"
         >
             {team.battery.toFixed(1)}v

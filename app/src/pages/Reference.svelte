@@ -8,7 +8,7 @@
         <AccordionItem>
             <span slot="header">Robot Radio Lights</span>
 
-            <img src="/openmesh-radio-status-lights-1100.png" width="325px" alt="Radio with LEDs labeled" />
+            <img src="/app/openmesh-radio-status-lights-1100.png" width="325px" alt="Radio with LEDs labeled" />
 
             <table cellpadding="5" cellspacing="0" class="led-table">
                 <tr>

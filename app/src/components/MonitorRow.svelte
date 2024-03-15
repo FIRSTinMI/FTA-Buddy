@@ -71,7 +71,7 @@
             class="{RIO_Colors[(team.rio > 0 ? 1 : 0) + team.code]} border-x border-gray-800"
             on:click={detailView}
         ></TableBodyCell>
-        <TableBodyCell on:click={detailView}>{team.battery.toFixed(1)}v</TableBodyCell>
+        <TableBodyCell on:click={detailView} style="background-color: rgba(255,0,0,{(team.battery < 12 && team.battery > 0) ? ((-1.5 * (team.battery ** 2) + 255)/255): 0})">{team.battery.toFixed(1)}v</TableBodyCell>
         <TableBodyCell on:click={detailView}>{team.ping} ms<br />{team.bwu.toFixed(2)} mbps</TableBodyCell>
     </TableBodyRow>
 {/key}

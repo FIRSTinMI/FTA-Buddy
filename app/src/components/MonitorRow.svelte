@@ -22,7 +22,9 @@
     export let detailView: (evt: Event) => void;
 
     function getKey(value: any) {
-        return Object.keys(monitorFrame).find((key) => (monitorFrame as any)[key] === value);
+        return Object.keys(monitorFrame).find(
+            (key) => (monitorFrame as any)[key] === value,
+        );
     }
 
     const DS_Colors: { [key: number]: string } = {
@@ -43,15 +45,22 @@
 </script>
 
 {#key team}
-    <TableBodyRow class="h-20 border-y border-gray-800 cursor-pointer" id="{station}-row">
+    <TableBodyRow
+        class="h-20 border-y border-gray-800 cursor-pointer"
+        id="{station}-row"
+    >
         <TableBodyCell
-            class="{getKey(team)?.startsWith('blue') ? 'bg-blue-600' : 'bg-red-600'} font-mono"
+            class="{getKey(team)?.startsWith('blue')
+                ? 'bg-blue-600'
+                : 'bg-red-600'} font-mono"
             on:click={() => navigate("/notes/" + team.number)}
         >
             {team.number}
         </TableBodyCell>
         <TableBodyCell
-            class="{DS_Colors[team.ds]} text-4xl text-black text-center border-x border-gray-800 font-mono"
+            class="{DS_Colors[
+                team.ds
+            ]} text-4xl text-black text-center border-x border-gray-800 font-mono"
             on:click={detailView}
         >
             {#if team.ds === GREEN_X}
@@ -66,12 +75,27 @@
                 E
             {/if}
         </TableBodyCell>
-        <TableBodyCell class="{DS_Colors[team.radio]} border-x border-gray-800" on:click={detailView}></TableBodyCell>
         <TableBodyCell
-            class="{RIO_Colors[(team.rio > 0 ? 1 : 0) + team.code]} border-x border-gray-800"
+            class="{DS_Colors[team.radio]} border-x border-gray-800"
             on:click={detailView}
         ></TableBodyCell>
-        <TableBodyCell on:click={detailView} style="background-color: rgba(255,0,0,{(team.battery < 12 && team.battery > 0) ? ((-1.5 * (team.battery ** 2) + 255)/255): 0})">{team.battery.toFixed(1)}v</TableBodyCell>
-        <TableBodyCell on:click={detailView}>{team.ping} ms<br />{team.bwu.toFixed(2)} mbps</TableBodyCell>
+        <TableBodyCell
+            class="{RIO_Colors[
+                (team.rio > 0 ? 1 : 0) + team.code
+            ]} border-x border-gray-800"
+            on:click={detailView}
+        ></TableBodyCell>
+        <TableBodyCell
+            on:click={detailView}
+            style="background-color: rgba(255,0,0,{team.battery < 12 &&
+            team.battery > 0
+                ? ((-1.5 * team.battery ** 2) - (3.2 * team.battery) + 255) / 255
+                : 0})"
+        >
+            {team.battery.toFixed(1)}v
+        </TableBodyCell>
+        <TableBodyCell on:click={detailView}
+            >{team.ping} ms<br />{team.bwu.toFixed(2)} mbps</TableBodyCell
+        >
     </TableBodyRow>
 {/key}

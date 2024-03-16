@@ -39,7 +39,7 @@
     <TeamModal bind:modalOpen bind:modalStation bind:monitorFrame />
 {/if}
 
-<div class="w-full mx-auto container md:max-w-xl md:p-2">
+<div class="w-full mx-auto container md:max-w-2xl md:p-2">
     {#key monitorFrame}
         <div class="flex w-full mb-1">
             {#if monitorFrame}
@@ -48,7 +48,7 @@
                 <div class="w-32">{monitorFrame.time}</div>
             {/if}
         </div>
-        <Table class="w-full mx-auto !overflow-none">
+        <Table class="w-full mx-auto !overflow-none monitor">
             <TableHead class="dark:bg-neutral-500 dark:text-white">
                 <TableHeadCell class="w-20">Team</TableHeadCell>
                 <TableHeadCell class="w-20">DS</TableHeadCell>

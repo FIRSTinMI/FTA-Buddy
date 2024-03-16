@@ -100,7 +100,7 @@
             <div class="absolute w-full text-center top-0 p-2">
                 <BatteryGraph data={parsedData} />
             </div>
-            <div class="absolute w-full h-full top-0 p-2">
+            <div class="absolute w-full bottom-0 p-2">
                 {team.battery.toFixed(1)}v
             </div>
         </TableBodyCell>

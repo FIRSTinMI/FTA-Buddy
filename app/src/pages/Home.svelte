@@ -54,7 +54,7 @@
                 <TableHeadCell class="w-20">DS</TableHeadCell>
                 <TableHeadCell class="w-10 lg:w-20">Radio</TableHeadCell>
                 <TableHeadCell class="w-10 lg:w-20">Rio</TableHeadCell>
-                <TableHeadCell>Bat</TableHeadCell>
+                <TableHeadCell class="w-15 lg:w-20">Bat</TableHeadCell>
                 <TableHeadCell>Net</TableHeadCell>
             </TableHead>
             <TableBody>

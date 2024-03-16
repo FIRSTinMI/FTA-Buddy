@@ -8,10 +8,12 @@ import { get } from "svelte/store";
 let token = get(authStore).token;
 let eventToken = get(authStore).eventToken;
 
+export const server = 'https://ftabuddy.com';//window.location.origin;
+
 export let trpc = createTRPCClient<AppRouter>({
     links: [
         httpBatchLink({
-            url: window.location.origin + '/trpc',
+            url: server + '/trpc',
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Event-Token': eventToken
@@ -26,7 +28,7 @@ authStore.subscribe((value) => {
     trpc = createTRPCClient<AppRouter>({
         links: [
             httpBatchLink({
-                url: window.location.origin + '/trpc',
+                url: server + '/trpc',
                 headers: {
                     'Authorization': `Bearer ${get(authStore).token}`,
                     'Event-Token': eventToken

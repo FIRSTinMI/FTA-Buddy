@@ -16,6 +16,7 @@
     import { messagesStore } from "./stores/messages";
     import { settingsStore } from "./stores/settings";
     import { VERSIONS, update } from "./util/updater";
+    import { server } from "./main";
 
     let auth = get(authStore);
 
@@ -114,8 +115,10 @@
 
     let messagesChild: Messages;
 
+    let batteryData = {red1: [], red2: [], red3: [], blue1: [], blue2: [], blue3: []};
+
     function openWebSocket() {
-        const uri = `${window.location.protocol.endsWith("s:") ? "wss" : "ws"}://${window.location.host}/ws/`;
+        const uri = `${server.split('://')[0].endsWith("s") ? "wss" : "ws"}://${server.split('://')[1]}/ws/`;
 
         console.log("Connecting to " + uri);
 
@@ -134,6 +137,18 @@
                 if (data.type === "monitorUpdate") {
                     lastFrameTime = new Date();
                     frameCount++;
+                    for (let key of Object.keys(batteryData)) {
+                        // @ts-ignore
+                        let array = batteryData[key];
+                        array.push(data[key].battery);
+                        if (array.length > 20) {
+                            array.shift();
+                        }
+                        // @ts-ignore
+                        batteryData[key] = array;
+                    }
+                    batteryData = batteryData;
+                    console.log(batteryData["red1"]);
                     monitorFrame = data;
                 } else if (data.type === "message") {
                     notifications++;
@@ -240,7 +255,7 @@
         <Router basepath="/app/">
             <div class="overflow-y-auto flex-grow pb-2">
                 <Route path="/">
-                    <Home bind:monitorFrame />
+                    <Home bind:monitorFrame bind:batteryData />
                 </Route>
                 <Route path="/flashcards" component={Flashcard} />
                 <Route path="/references" component={Reference} />

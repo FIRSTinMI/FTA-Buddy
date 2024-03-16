@@ -5,6 +5,7 @@
     import TeamModal from "../components/TeamModal.svelte";
 
     export let monitorFrame: MonitorFrame;
+    export let batteryData: { [key: string]: number[] } = {};
 
     const FieldStates = {
         0: "Unknown",
@@ -47,7 +48,7 @@
                 <div class="w-32">{monitorFrame.time}</div>
             {/if}
         </div>
-        <Table class="w-full mx-auto">
+        <Table class="w-full mx-auto !overflow-none">
             <TableHead class="dark:bg-neutral-500 dark:text-white">
                 <TableHeadCell class="w-20">Team</TableHeadCell>
                 <TableHeadCell class="w-20">DS</TableHeadCell>
@@ -59,7 +60,7 @@
             <TableBody>
                 {#if monitorFrame}
                     {#each stations as station}
-                        <MonitorRow {station} {monitorFrame} {detailView} />
+                        <MonitorRow {station} {monitorFrame} {detailView} battery={batteryData[station]}/>
                     {/each}
                 {/if}
             </TableBody>

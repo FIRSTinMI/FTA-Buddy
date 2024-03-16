@@ -2,6 +2,15 @@ import { settingsStore } from "../stores/settings";
 
 
 export const VERSIONS = {
+    '2.3.1': {
+        changelog: `
+        <h1 class="text-lg">v2.3.1</h1>
+        <ul>
+        <li>Better battery monitoring</li>
+        <li>Handles A-Stops</li>
+        </ul>`,
+        update: () => { }
+    },
     '2.3.0': {
         changelog: `
         <h1 class="text-lg">v2.3.0</h1>

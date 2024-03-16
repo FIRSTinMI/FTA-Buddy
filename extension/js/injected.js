@@ -27,8 +27,9 @@ function read(station) {
 }
 
 function identifyStatusDS(station) {
-    if (document.getElementById(station + 'robot').classList.contains('fieldMonitor-redSquareB')) return 5;
+    if (document.getElementById(station + 'Row').classList.contains('bypassed')) return 5;
     if (document.getElementById(station + 'enabled').classList.contains('fieldMonitor-blackDiamondE')) return 6;
+    if (document.getElementById(station + 'enabled').classList.contains('fieldMonitor-blackDiamondA')) return 6;
     return identifyStatus(document.getElementById(station + 'ds'));
 }
 

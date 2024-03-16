@@ -27,9 +27,11 @@
         "tslib": "^2.6.2",
         "typescript": "^5.2.2",
         "unplugin-icons": "^0.18.2",
-        "vite": "^5.0.8"
+        "vite": "^5.0.8",
+        "@types/d3": "^7.4.3"
     },
     "dependencies": {
+        "d3": "^7.9.0",
         "express": "^4.18.3",
         "svelte-material-icons": "^3.0.5",
         "svelte-qrcode": "^1.0.0"

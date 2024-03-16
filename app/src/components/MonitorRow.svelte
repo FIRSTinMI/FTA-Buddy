@@ -11,6 +11,7 @@
         type Station,
     } from "../../../shared/types";
     import { navigate } from "svelte-routing";
+    import BatteryGraph from "./BatteryGraph.svelte";
 
     export let station: Station;
     export let monitorFrame: MonitorFrame;
@@ -42,6 +43,9 @@
         1: "bg-yellow-500",
         2: "bg-green-500",
     };
+
+    export let battery: number[] = [];
+    let parsedData = battery.map((d, i) => ({time: i, voltage: d}));
 </script>
 
 {#key team}
@@ -86,13 +90,19 @@
             on:click={detailView}
         ></TableBodyCell>
         <TableBodyCell
+            class="p-0 relative"
             on:click={detailView}
             style="background-color: rgba(255,0,0,{team.battery < 11 &&
             team.battery > 0
                 ? ((-1.5 * team.battery ** 2) - (6.6 * team.battery) + 255) / 255
                 : 0})"
         >
-            {team.battery.toFixed(1)}v
+            <div class="absolute w-full text-center top-0 p-2">
+                <BatteryGraph data={parsedData} />
+            </div>
+            <div class="absolute w-full h-full top-0 p-2">
+                {team.battery.toFixed(1)}v
+            </div>
         </TableBodyCell>
         <TableBodyCell on:click={detailView}
             >{team.ping} ms<br />{team.bwu.toFixed(2)} mbps</TableBodyCell

@@ -50,7 +50,7 @@
 
 {#key team}
     <TableBodyRow
-        class="h-20 border-y border-gray-800 cursor-pointer"
+        class="h-20 lg:h-24 border-y border-gray-800 cursor-pointer"
         id="{station}-row"
     >
         <TableBodyCell

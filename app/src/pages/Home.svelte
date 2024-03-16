@@ -49,11 +49,11 @@
             {/if}
         </div>
         <Table class="w-full mx-auto !overflow-none monitor">
-            <TableHead class="dark:bg-neutral-500 dark:text-white">
+            <TableHead class="dark:bg-neutral-500 dark:text-white text-center">
                 <TableHeadCell class="w-20">Team</TableHeadCell>
                 <TableHeadCell class="w-20">DS</TableHeadCell>
-                <TableHeadCell class="w-10">Radio</TableHeadCell>
-                <TableHeadCell class="w-10">Rio</TableHeadCell>
+                <TableHeadCell class="w-10 lg:w-20">Radio</TableHeadCell>
+                <TableHeadCell class="w-10 lg:w-20">Rio</TableHeadCell>
                 <TableHeadCell>Bat</TableHeadCell>
                 <TableHeadCell>Net</TableHeadCell>
             </TableHead>

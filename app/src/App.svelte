@@ -148,7 +148,6 @@
                         batteryData[key] = array;
                     }
                     batteryData = batteryData;
-                    console.log(batteryData["red1"]);
                     monitorFrame = data;
                 } else if (data.type === "message") {
                     notifications++;

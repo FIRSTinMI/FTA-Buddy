@@ -65,7 +65,7 @@ export const eventRouter = router({
     }),
 
     getAll: adminProcedure.query(async () => {
-        return (await db.query.events.findMany()).sort((a, b) => a.created_at.getTime() - b.created_at.getTime());
+        return (await db.query.events.findMany()).sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
     })
 });
 

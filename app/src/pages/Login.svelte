@@ -85,6 +85,7 @@
     authStore.subscribe((value) => {
         console.log(value);
         auth = value;
+        updateEventList();
     });
 
     let eventCode = "";
@@ -146,7 +147,7 @@
         try {
             const res = await trpc.event.join.query({ code: eventCode, pin: eventPin });
             authStore.set({ ...auth, eventToken: res.token });
-            eventStore.set({ code: eventCode, pin: eventPin, teams: res.teams as any || [] });
+            eventStore.set({ code: eventCode, pin: eventPin, teams: (res.teams as any) || [] });
             toast("Success", "Event joined successfully", "green-500");
         } catch (err: any) {
             toast("Error Joining Event", err.message);
@@ -154,7 +155,6 @@
         }
 
         loading = false;
-    
     }
 </script>
 

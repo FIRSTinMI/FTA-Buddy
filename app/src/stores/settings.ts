@@ -3,6 +3,7 @@ import { writable } from "svelte/store";
 export interface Settings {
     version: string;
     developerMode: boolean;
+    vibrations: boolean;
 }
 
 let initialSettings = localStorage.getItem('settings');
@@ -10,6 +11,7 @@ let initialSettings = localStorage.getItem('settings');
 const defaultSettings: Settings = {
     version: '0',
     developerMode: false,
+    vibrations: true
 };
 
 if (!initialSettings) {

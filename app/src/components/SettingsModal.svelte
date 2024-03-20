@@ -51,6 +51,7 @@
         {/if}
         <Button on:click={openHelp} size="xs" color="primary">Help</Button>
         <Button on:click={clearStorage} size="xs" color="red">Clear All Data</Button>
+        <Toggle bind:checked={settings.vibrations} on:change={updateSettings}>Vibrations</Toggle>
         <Toggle bind:checked={settings.developerMode} on:change={updateSettings}>Developer Mode</Toggle>
     </form>
     <div class="border-t border-neutral-500 pt-2 mt-0 flex flex-col">

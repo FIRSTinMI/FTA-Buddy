@@ -2,8 +2,6 @@
     import { Button, Modal, Spinner, Toggle } from "flowbite-svelte";
     import { get } from "svelte/store";
     import { settingsStore } from "../stores/settings";
-    import { userStore } from "../stores/user";
-    import { navigate } from "svelte-routing";
 
     export let settingsOpen = false;
     export let openHelp: () => void;
@@ -34,6 +32,9 @@
     <form class="space-y-2 justify-start text-left grid grid-cols-1">
         <Toggle bind:checked={settings.vibrations} on:change={updateSettings}>Vibrations</Toggle>
         <Toggle bind:checked={settings.developerMode} on:change={updateSettings}>Developer Mode</Toggle>
+        {#if settings.developerMode}
+            <Toggle bind:checked={settings.forceCloud} on:change={updateSettings}>Force cloud server</Toggle>
+        {/if}
         {#if installPrompt}
             <Button
                 color="primary"

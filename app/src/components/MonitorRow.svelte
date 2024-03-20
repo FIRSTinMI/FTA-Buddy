@@ -1,16 +1,6 @@
 <script lang="ts">
     import { TableBodyCell, TableBodyRow } from "flowbite-svelte";
-    import {
-        BYPASS,
-        ESTOP,
-        GREEN_X,
-        MOVE_STATION,
-        WRONG_MATCH,
-        type MonitorFrame,
-        type TeamInfo,
-        type Station,
-        ASTOP,
-    } from "../../../shared/types";
+    import { BYPASS, ESTOP, GREEN_X, MOVE_STATION, WRONG_MATCH, type MonitorFrame, type TeamInfo, type Station, ASTOP } from "../../../shared/types";
     import { navigate } from "svelte-routing";
     import BatteryGraph from "./BatteryGraph.svelte";
 
@@ -44,10 +34,8 @@
         2: "bg-green-500",
     };
 
-    export let battery: number[] = new Array(20);
-    for (let i = 0; i < 20; ++i) battery[i] = 0;
+    export let battery: number[];
     let parsedData = battery.map((d, i) => ({ time: i, voltage: d }));
-    console.log(battery);
 </script>
 
 {#key team}

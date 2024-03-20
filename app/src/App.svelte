@@ -154,7 +154,7 @@
                         batteryData[key] = array;
                     }
 
-                    if ([MATCH_RUNNING_TELEOP, MATCH_RUNNING_AUTO, MATCH_TRANSITIONING].includes(data.field)) {
+                    if (settings.vibrations && [MATCH_RUNNING_TELEOP, MATCH_RUNNING_AUTO, MATCH_TRANSITIONING].includes(data.field)) {
                         vibrateHandleMonitorFrame(data, monitorFrame);
                     }
 

@@ -4,7 +4,7 @@
     import { onMount } from "svelte";
     import { Link, Route, Router, navigate } from "svelte-routing";
     import { get } from "svelte/store";
-    import type { MonitorFrame } from "../../shared/types";
+    import { MATCH_RUNNING_AUTO, MATCH_RUNNING_TELEOP, MATCH_TRANSITIONING, type MonitorFrame } from "../../shared/types";
     import SettingsModal from "./components/SettingsModal.svelte";
     import WelcomeModal from "./components/WelcomeModal.svelte";
     import Flashcard from "./pages/Flashcards.svelte";
@@ -17,6 +17,7 @@
     import { settingsStore } from "./stores/settings";
     import { VERSIONS, update } from "./util/updater";
     import { server } from "./main";
+    import { vibrateHandleMonitorFrame } from "./util/vibrateOnDrop";
 
     let auth = get(authStore);
 
@@ -145,6 +146,11 @@
                         // @ts-ignore
                         batteryData[key] = array;
                     }
+
+                    if ([MATCH_RUNNING_TELEOP, MATCH_RUNNING_AUTO, MATCH_TRANSITIONING].includes(data.field)) {
+                        vibrateHandleMonitorFrame(data, monitorFrame);
+                    }
+
                     batteryData = batteryData;
                     monitorFrame = data;
                 } else if (data.type === "message") {

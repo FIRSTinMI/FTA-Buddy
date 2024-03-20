@@ -1,7 +1,11 @@
 import { settingsStore } from "../stores/settings";
 
+interface Version {
+    changelog: string;
+    update: () => void;
+}
 
-export const VERSIONS = {
+export const VERSIONS: {[key: string]: Version} = {
     '2.3.2': {
         changelog: `
         <h1 class="text-lg font-bold">v2.3.2</h1>
@@ -83,7 +87,7 @@ export const VERSIONS = {
     }
 }
 
-export function update(currentVersion: string, newVersion: string, openWelcome: () => void, openChangelog: (string) => void) {
+export function update(currentVersion: string, newVersion: string, openWelcome: () => void, openChangelog: (arg0: string) => void) {
     let changelog = "";
     console.log(currentVersion, newVersion);
     if (currentVersion == "0" && window.location.pathname === "/app/login") {

@@ -35,6 +35,7 @@
     };
 
     export let battery: number[];
+    console.log(battery);
     let parsedData = battery.map((d, i) => ({ time: i, voltage: d }));
 </script>
 
@@ -61,11 +62,11 @@
         <TableBodyCell class="{DS_Colors[team.radio]} border-x border-gray-800" on:click={detailView}></TableBodyCell>
         <TableBodyCell class="{RIO_Colors[(team.rio > 0 ? 1 : 0) + team.code]} border-x border-gray-800" on:click={detailView}></TableBodyCell>
         <TableBodyCell
-            class="p-0 relative"
+            class="p-0 relative aspect-square"
             on:click={detailView}
             style="background-color: rgba(255,0,0,{team.battery < 11 && team.battery > 0 ? (-1.5 * team.battery ** 2 - 6.6 * team.battery + 255) / 255 : 0})"
         >
-            <div class="absolute w-full text-center top-0 p-2">
+            <div class="absolute h-full text-center top-0 px-0.5 aspect-square">
                 <BatteryGraph data={parsedData} />
             </div>
             <div class="absolute w-full bottom-0 p-2">

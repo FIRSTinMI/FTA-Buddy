@@ -31,14 +31,9 @@
 
 <Modal bind:open={settingsOpen} size="lg" outsideclose dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
     <div slot="header"><h1 class="text-2xl">Settings</h1></div>
-    <form class="space-y-2 justify-start text-left grid grid-cols-1 border-t border-neutral-500 pt-2 mt-0">
-        <Button
-            on:click={() => {
-                settingsOpen = false;
-                navigate("/app/login");
-            }}
-            size="xs">Change Event/Account</Button
-        >
+    <form class="space-y-2 justify-start text-left grid grid-cols-1">
+        <Toggle bind:checked={settings.vibrations} on:change={updateSettings}>Vibrations</Toggle>
+        <Toggle bind:checked={settings.developerMode} on:change={updateSettings}>Developer Mode</Toggle>
         {#if installPrompt}
             <Button
                 color="primary"
@@ -49,10 +44,7 @@
                 }}>Install</Button
             >
         {/if}
-        <Button on:click={openHelp} size="xs" color="primary">Help</Button>
         <Button on:click={clearStorage} size="xs" color="red">Clear All Data</Button>
-        <Toggle bind:checked={settings.vibrations} on:change={updateSettings}>Vibrations</Toggle>
-        <Toggle bind:checked={settings.developerMode} on:change={updateSettings}>Developer Mode</Toggle>
     </form>
     <div class="border-t border-neutral-500 pt-2 mt-0 flex flex-col">
         <h1 class="text-lg">About</h1>

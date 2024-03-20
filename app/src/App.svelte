@@ -1,26 +1,10 @@
 <script lang="ts">
     import Icon from "@iconify/svelte";
-    import {
-        Button,
-        CloseButton,
-        Drawer,
-        Indicator,
-        Modal,
-        Sidebar,
-        SidebarGroup,
-        SidebarItem,
-        SidebarWrapper,
-        Toast,
-    } from "flowbite-svelte";
+    import { Button, CloseButton, Drawer, Indicator, Modal, Sidebar, SidebarGroup, SidebarItem, SidebarWrapper, Toast } from "flowbite-svelte";
     import { onMount } from "svelte";
     import { Link, Route, Router, navigate } from "svelte-routing";
     import { get } from "svelte/store";
-    import {
-        MATCH_RUNNING_AUTO,
-        MATCH_RUNNING_TELEOP,
-        MATCH_TRANSITIONING,
-        type MonitorFrame,
-    } from "../../shared/types";
+    import { MATCH_RUNNING_AUTO, MATCH_RUNNING_TELEOP, MATCH_TRANSITIONING, type MonitorFrame } from "../../shared/types";
     import SettingsModal from "./components/SettingsModal.svelte";
     import WelcomeModal from "./components/WelcomeModal.svelte";
     import Flashcard from "./pages/Flashcards.svelte";
@@ -38,10 +22,7 @@
 
     let auth = get(authStore);
 
-    if (
-        (!auth.token || !auth.eventToken) &&
-        window.location.pathname !== "/app/login"
-    ) {
+    if ((!auth.token || !auth.eventToken) && window.location.pathname !== "/app/login") {
         navigate("/app/login");
     }
 
@@ -91,26 +72,6 @@
         }, 10000);
     }
 
-    let _lastFrameTime: Date;
-    let _frameCount = 0;
-    let _lastMessageTime: Date;
-    let _messageCount = 0;
-    let _reconnects = -1;
-
-    function updateDevStats(
-        lastFrameTime: Date,
-        frameCount: number,
-        lastMessageTime: Date,
-        messageCount: number,
-        reconnects: number,
-    ) {
-        _lastFrameTime = lastFrameTime;
-        _frameCount = frameCount;
-        _lastMessageTime = lastMessageTime;
-        _messageCount = messageCount;
-        _reconnects = reconnects;
-    }
-
     let installPrompt: Event | null = null;
 
     window.addEventListener("beforeinstallprompt", (event) => {
@@ -127,14 +88,6 @@
     let lastMessageTime: Date;
     let messageCount = 0;
     let reconnects = -1;
-
-    $: updateDevStats(
-        lastFrameTime,
-        frameCount,
-        lastMessageTime,
-        messageCount,
-        reconnects,
-    );
 
     let ws: WebSocket;
     let monitorFrame: MonitorFrame;
@@ -176,24 +129,15 @@
                     lastFrameTime = new Date();
                     frameCount++;
                     for (let key of Object.keys(batteryData)) {
-                        // @ts-ignore
-                        let array = batteryData[key];
+                        let array = batteryData[key as keyof typeof batteryData];
                         array.push(data[key].battery);
                         if (array.length > 20) {
                             array.shift();
                         }
-                        // @ts-ignore
-                        batteryData[key] = array;
+                        batteryData[key as keyof typeof batteryData] = array;
                     }
 
-                    if (
-                        settings.vibrations &&
-                        [
-                            MATCH_RUNNING_TELEOP,
-                            MATCH_RUNNING_AUTO,
-                            MATCH_TRANSITIONING,
-                        ].includes(data.field)
-                    ) {
+                    if (settings.vibrations && [MATCH_RUNNING_TELEOP, MATCH_RUNNING_AUTO, MATCH_TRANSITIONING].includes(data.field)) {
                         vibrateHandleMonitorFrame(data, monitorFrame);
                     }
 
@@ -217,9 +161,7 @@
         ws.onclose = function (evt) {
             if (!evt.wasClean) {
                 console.log(evt);
-                console.log(
-                    "Webscocket disconnected from reconnecting in 5 sec",
-                );
+                console.log("Webscocket disconnected from reconnecting in 5 sec");
                 timeoutID = setTimeout(() => openWebSocket(), 5e3);
             } else {
                 console.log("Disconnected cleanly");
@@ -249,10 +191,7 @@
     }
     authStore.subscribe((value) => {
         auth = value;
-        if (
-            (!auth.token || !auth.eventToken) &&
-            window.location.pathname !== "/app/login"
-        ) {
+        if ((!auth.token || !auth.eventToken) && window.location.pathname !== "/app/login") {
             navigate("/app/login");
         }
     });
@@ -264,11 +203,7 @@
 
 {#if showToast}
     <div class="fixed bottom-0 left-0 p-4">
-        <Toast
-            bind:open={showToast}
-            class="dark:bg-{toastColor}"
-            divClass="w-lg p-4 text-gray-500 bg-white shadow dark:text-gray-400 dark:bg-gray-800 gap-3"
-        >
+        <Toast bind:open={showToast} class="dark:bg-{toastColor}" divClass="w-lg p-4 text-gray-500 bg-white shadow dark:text-gray-400 dark:bg-gray-800 gap-3">
             <h3 class="text-lg font-bold text-white text-left">{toastTitle}</h3>
             <p class="text-white text-left">{toastText}</p>
         </Toast>
@@ -306,28 +241,13 @@
     }}
 />
 
-<Drawer
-    transitionType="fly"
-    {transitionParams}
-    bind:hidden={hideMenu}
-    id="sidebar"
->
+<Drawer transitionType="fly" {transitionParams} bind:hidden={hideMenu} id="sidebar">
     <div class="flex items-center">
-        <h5
-            id="drawer-navigation-label-3"
-            class="text-base font-semibold text-gray-500 uppercase dark:text-gray-400"
-        >
-            Menu
-        </h5>
-        <CloseButton
-            on:click={() => (hideMenu = true)}
-            class="mb-4 dark:text-white"
-        />
+        <h5 id="drawer-navigation-label-3" class="text-base font-semibold text-gray-500 uppercase dark:text-gray-400">Menu</h5>
+        <CloseButton on:click={() => (hideMenu = true)} class="mb-4 dark:text-white" />
     </div>
     <Sidebar>
-        <SidebarWrapper
-            divClass="overflow-y-auto py-4 px-3 rounded dark:bg-gray-800"
-        >
+        <SidebarWrapper divClass="overflow-y-auto py-4 px-3 rounded dark:bg-gray-800">
             {#if auth.token && auth.eventToken}
                 <SidebarGroup>
                     <SidebarItem
@@ -360,10 +280,7 @@
                         }}
                     >
                         <svelte:fragment slot="icon">
-                            <Icon
-                                icon="mdi:file-document-outline"
-                                class="w-8 h-8"
-                            />
+                            <Icon icon="mdi:file-document-outline" class="w-8 h-8" />
                         </svelte:fragment>
                     </SidebarItem>
                     <SidebarItem
@@ -377,12 +294,7 @@
                             <Icon icon="mdi:message-text" class="w-8 h-8" />
                         </svelte:fragment>
                         {#if notifications > 0}
-                            <Indicator
-                                color="red"
-                                border
-                                size="xl"
-                                placement="top-left"
-                            >
+                            <Indicator color="red" border size="xl" placement="top-left">
                                 <span
                                     class="text-white
                                 text-xs">{notifications}</span
@@ -437,29 +349,26 @@
     <div class="bg-neutral-800 w-screen h-screen flex flex-col">
         <div class="bg-primary-500 flex w-full justify-between px-2">
             <Button class="!py-0 !px-0" color="none" on:click={openMenu}>
-                <Icon icon="mdi:menu" class="w-6 h-8 sm:w-10 sm:h-12" />
+                <Icon icon="mdi:menu" class="w-8 h-10" />
             </Button>
-            <!-- <Button class="!py-0 !px-0" color="none" on:click={openSettings}>
-                <Icon icon="mdi:dots-vertical" class="w-6 h-8 sm:w-10 sm:h-12" />
-            </Button> -->
             {#if settings.developerMode}
                 <div class="text-white text-left flex-grow text-sm">
                     <p>{settings.version}</p>
                     <p>
-                        Frames: {_frameCount}
-                        {_lastFrameTime?.toLocaleTimeString()}
+                        Frames: {frameCount}
+                        {lastFrameTime?.toLocaleTimeString()}
                     </p>
                     <p>
-                        Messages: {_messageCount}
-                        {_lastMessageTime?.toLocaleTimeString()}
+                        Messages: {messageCount}
+                        {lastMessageTime?.toLocaleTimeString()}
                     </p>
-                    <p>Reconnects: {_reconnects}</p>
+                    <p>Reconnects: {reconnects}</p>
                 </div>
             {/if}
             <div>
-                <!-- {#if !ws || ws.readyState !== 1}
-                    <Icon icon="mdi:offline-bolt" class="w-6 h-8 sm:w-12 sm:h-12" />
-                {/if} -->
+                {#if !ws || ws.readyState !== 1}
+                    <Icon icon="mdi:offline-bolt" class="w-8 h-10" />
+                {/if}
             </div>
         </div>
         <Router basepath="/app/">
@@ -492,25 +401,15 @@
                     </Link>
                     <Link to="/app/references">
                         <Button class="!p-2" color="none">
-                            <Icon
-                                icon="mdi:file-document-outline"
-                                class="w-8 h-8"
-                            />
+                            <Icon icon="mdi:file-document-outline" class="w-8 h-8" />
                         </Button>
                     </Link>
                     <Link to="/app/messages">
                         <Button class="!p-2 relative" color="none">
                             <Icon icon="mdi:message-text" class="w-8 h-8" />
                             {#if notifications > 0}
-                                <Indicator
-                                    color="red"
-                                    border
-                                    size="xl"
-                                    placement="top-left"
-                                >
-                                    <span class="text-white text-xs"
-                                        >{notifications}</span
-                                    >
+                                <Indicator color="red" border size="xl" placement="top-left">
+                                    <span class="text-white text-xs">{notifications}</span>
                                 </Indicator>
                             {/if}
                         </Button>

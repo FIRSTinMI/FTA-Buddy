@@ -4,6 +4,8 @@ let url = document.getElementById('fta-buddy').dataset.host;
 let cloud = document.getElementById('fta-buddy').dataset.cloud;
 let eventCode = document.getElementById('fta-buddy').dataset.event;
 
+console.log(url, cloud, eventCode);
+
 function read(station) {
     let obj = {
         number: document.getElementById(station + 'Number').innerText,
@@ -29,7 +31,7 @@ function read(station) {
 function identifyStatusDS(station) {
     if (document.getElementById(station + 'Row').classList.contains('bypassed')) return 5;
     if (document.getElementById(station + 'enabled').classList.contains('fieldMonitor-blackDiamondE')) return 6;
-    if (document.getElementById(station + 'enabled').classList.contains('fieldMonitor-blackDiamondA')) return 6;
+    if (document.getElementById(station + 'enabled').classList.contains('fieldMonitor-blackDiamondA')) return 7;
     return identifyStatus(document.getElementById(station + 'ds'));
 }
 
@@ -89,7 +91,8 @@ let ws;
 function connectToWS() {
     if (ws) ws.close();
 
-    ws = new WebSocket(`wss://ftabuddy.com/ws`);
+    console.log('Trying to connect to cloud server');
+    ws = new WebSocket(`wss://ftabuddy.com/ws/`);
     ws.onopen = () => {
         ws.send(`server-${eventCode}`);
         console.log('Connected to cloud server');

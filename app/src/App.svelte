@@ -122,8 +122,6 @@
 
         console.log("Connecting to " + uri);
 
-        reconnects++;
-        if (ws) ws.close();
         ws = new WebSocket(uri);
         ws.onopen = function () {
             console.log("Connected to " + uri);

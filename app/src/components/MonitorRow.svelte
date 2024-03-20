@@ -1,6 +1,16 @@
 <script lang="ts">
     import { TableBodyCell, TableBodyRow } from "flowbite-svelte";
-    import { BYPASS, ESTOP, GREEN_X, MOVE_STATION, WRONG_MATCH, type MonitorFrame, type TeamInfo, type Station } from "../../../shared/types";
+    import {
+        BYPASS,
+        ESTOP,
+        GREEN_X,
+        MOVE_STATION,
+        WRONG_MATCH,
+        type MonitorFrame,
+        type TeamInfo,
+        type Station,
+        ASTOP,
+    } from "../../../shared/types";
     import { navigate } from "svelte-routing";
     import BatteryGraph from "./BatteryGraph.svelte";
 
@@ -25,6 +35,7 @@
         4: "bg-yellow-500",
         5: "bg-red-700",
         6: "bg-neutral-900",
+        7: "bg-neutral-900",
     };
 
     const RIO_Colors: { [key: number]: string } = {
@@ -55,6 +66,8 @@
                 B
             {:else if team.ds === ESTOP}
                 E
+            {:else if team.ds === ASTOP}
+                A
             {/if}
         </TableBodyCell>
         <TableBodyCell class="{DS_Colors[team.radio]} border-x border-gray-800" on:click={detailView}></TableBodyCell>

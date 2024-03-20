@@ -2,9 +2,25 @@ import { settingsStore } from "../stores/settings";
 
 
 export const VERSIONS = {
+    '2.3.2': {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.3.2</h1>
+        <ul>
+        <li>Vibrations when a robot looses connection during a match</li>
+        <li>Hamburger menu for easier use in web browser</li>
+        <li>Larger text on desktop for easier reading</li>
+        </ul>
+        <p class="font-bold mt-2">Chrome extension (v1.4):</p>
+        <ul>
+        <li>Toggle to enable/disable extension</li>
+        <li>Automatically disable extension after the event ends</li>
+        <li>Option to manually specify server url (for development)</li>
+        </ul>`,
+        update: () => { }
+    },
     '2.3.1': {
         changelog: `
-        <h1 class="text-lg">v2.3.1</h1>
+        <h1 class="text-lg font-bold">v2.3.1</h1>
         <ul>
         <li>Better battery monitoring</li>
         <li>Handles A-Stops</li>
@@ -13,7 +29,7 @@ export const VERSIONS = {
     },
     '2.3.0': {
         changelog: `
-        <h1 class="text-lg">v2.3.0</h1>
+        <h1 class="text-lg font-bold">v2.3.0</h1>
         <ul>
         <li>Major overhaul of the backend</li>
         <li>Added authentication for events</li>
@@ -23,7 +39,7 @@ export const VERSIONS = {
     },
     '2.2.2': {
         changelog: `
-        <h1 class="text-lg">v2.2.2</h1>
+        <h1 class="text-lg font-bold">v2.2.2</h1>
         <ul>
         <li>Event feed in notes for CSAs</li>
         <li>Notification icon on notes tab</li>
@@ -33,7 +49,7 @@ export const VERSIONS = {
     },
     '2.2.1': {
         changelog: `
-        <h1 class="text-lg">v2.2.1</h1>
+        <h1 class="text-lg font-bold">v2.2.1</h1>
         <ul>
         <li>Monitor will auto-reconnect after the app is inactive for a longer period of time</li>
         <li>Handle rio but no code correctly for new 2024 monitor update</li>
@@ -42,7 +58,7 @@ export const VERSIONS = {
     },
     '2.2.0': {
         changelog: `
-        <h1 class="text-lg">v2.2.0</h1>
+        <h1 class="text-lg font-bold">v2.2.0</h1>
         <ul>
         <li>Added a welcome screen</li>
         <li>Error handling for websocket connection</li>
@@ -51,13 +67,13 @@ export const VERSIONS = {
     },
     '2.1.1': {
         changelog: `
-        <h1 class="text-lg">v2.1.1</h1>
+        <h1 class="text-lg font-bold">v2.1.1</h1>
         Fixed note store`,
         update: () => { }
     },
     '2.1.0': {
         changelog: `
-        <h1 class="text-lg">v2.1.0</h1>
+        <h1 class="text-lg font-bold">v2.1.0</h1>
         <ul>
         <li>Made notes work</li>
         <li>Added a new settings page</li>

@@ -8,7 +8,7 @@ import { get } from "svelte/store";
 let token = get(authStore).token;
 let eventToken = get(authStore).eventToken;
 
-export const server = 'https://ftabuddy.com';//window.location.origin;
+export let server = window.location.origin;
 
 export let trpc = createTRPCClient<AppRouter>({
     links: [

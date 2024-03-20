@@ -1,15 +1,6 @@
 <script lang="ts">
     import { TableBodyCell, TableBodyRow } from "flowbite-svelte";
-    import {
-        BYPASS,
-        ESTOP,
-        GREEN_X,
-        MOVE_STATION,
-        WRONG_MATCH,
-        type MonitorFrame,
-        type TeamInfo,
-        type Station,
-    } from "../../../shared/types";
+    import { BYPASS, ESTOP, GREEN_X, MOVE_STATION, WRONG_MATCH, type MonitorFrame, type TeamInfo, type Station } from "../../../shared/types";
     import { navigate } from "svelte-routing";
     import BatteryGraph from "./BatteryGraph.svelte";
 
@@ -23,9 +14,7 @@
     export let detailView: (evt: Event) => void;
 
     function getKey(value: any) {
-        return Object.keys(monitorFrame).find(
-            (key) => (monitorFrame as any)[key] === value,
-        );
+        return Object.keys(monitorFrame).find((key) => (monitorFrame as any)[key] === value);
     }
 
     const DS_Colors: { [key: number]: string } = {
@@ -44,29 +33,18 @@
         2: "bg-green-500",
     };
 
-    export let battery: number[] = [];
-    let parsedData = battery.map((d, i) => ({time: i, voltage: d}));
+    export let battery: number[] = new Array(20);
+    for (let i = 0; i < 20; ++i) battery[i] = 0;
+    let parsedData = battery.map((d, i) => ({ time: i, voltage: d }));
+    console.log(battery);
 </script>
 
 {#key team}
-    <TableBodyRow
-        class="h-20 lg:h-24 border-y border-gray-800 cursor-pointer"
-        id="{station}-row"
-    >
-        <TableBodyCell
-            class="{getKey(team)?.startsWith('blue')
-                ? 'bg-blue-600'
-                : 'bg-red-600'} font-mono"
-            on:click={() => navigate("/notes/" + team.number)}
-        >
+    <TableBodyRow class="h-20 lg:h-24 border-y border-gray-800 cursor-pointer" id="{station}-row">
+        <TableBodyCell class="{getKey(team)?.startsWith('blue') ? 'bg-blue-600' : 'bg-red-600'} font-mono" on:click={() => navigate("/notes/" + team.number)}>
             {team.number}
         </TableBodyCell>
-        <TableBodyCell
-            class="{DS_Colors[
-                team.ds
-            ]} text-4xl text-black text-center border-x border-gray-800 font-mono"
-            on:click={detailView}
-        >
+        <TableBodyCell class="{DS_Colors[team.ds]} text-4xl text-black text-center border-x border-gray-800 font-mono" on:click={detailView}>
             {#if team.ds === GREEN_X}
                 X
             {:else if team.ds === MOVE_STATION}
@@ -79,23 +57,12 @@
                 E
             {/if}
         </TableBodyCell>
-        <TableBodyCell
-            class="{DS_Colors[team.radio]} border-x border-gray-800"
-            on:click={detailView}
-        ></TableBodyCell>
-        <TableBodyCell
-            class="{RIO_Colors[
-                (team.rio > 0 ? 1 : 0) + team.code
-            ]} border-x border-gray-800"
-            on:click={detailView}
-        ></TableBodyCell>
+        <TableBodyCell class="{DS_Colors[team.radio]} border-x border-gray-800" on:click={detailView}></TableBodyCell>
+        <TableBodyCell class="{RIO_Colors[(team.rio > 0 ? 1 : 0) + team.code]} border-x border-gray-800" on:click={detailView}></TableBodyCell>
         <TableBodyCell
             class="p-0 relative"
             on:click={detailView}
-            style="background-color: rgba(255,0,0,{team.battery < 11 &&
-            team.battery > 0
-                ? ((-1.5 * team.battery ** 2) - (6.6 * team.battery) + 255) / 255
-                : 0})"
+            style="background-color: rgba(255,0,0,{team.battery < 11 && team.battery > 0 ? (-1.5 * team.battery ** 2 - 6.6 * team.battery + 255) / 255 : 0})"
         >
             <div class="absolute w-full text-center top-0 p-2">
                 <BatteryGraph data={parsedData} />
@@ -104,8 +71,6 @@
                 {team.battery.toFixed(1)}v
             </div>
         </TableBodyCell>
-        <TableBodyCell on:click={detailView}
-            >{team.ping} ms<br />{team.bwu.toFixed(2)} mbps</TableBodyCell
-        >
+        <TableBodyCell on:click={detailView}>{team.ping} ms<br />{team.bwu.toFixed(2)} mbps</TableBodyCell>
     </TableBodyRow>
 {/key}

@@ -2,7 +2,7 @@
     import Icon from "@iconify/svelte";
     import { Button, Indicator, Modal, Toast } from "flowbite-svelte";
     import { onMount } from "svelte";
-    import { Link, Route, Router } from "svelte-routing";
+    import { Link, Route, Router, navigate } from "svelte-routing";
     import { get } from "svelte/store";
     import type { MonitorFrame } from "../../shared/types";
     import SettingsModal from "./components/SettingsModal.svelte";
@@ -21,7 +21,7 @@
     let auth = get(authStore);
 
     if ((!auth.token || !auth.eventToken) && window.location.pathname !== "/app/login") {
-        window.location.pathname = "/app/login";
+        navigate("/app/login");
     }
 
     let settings = get(settingsStore);
@@ -115,10 +115,10 @@
 
     let messagesChild: Messages;
 
-    let batteryData = {red1: [], red2: [], red3: [], blue1: [], blue2: [], blue3: []};
+    let batteryData = { red1: [], red2: [], red3: [], blue1: [], blue2: [], blue3: [] };
 
     function openWebSocket() {
-        const uri = `${server.split('://')[0].endsWith("s") ? "wss" : "ws"}://${server.split('://')[1]}/ws/`;
+        const uri = `${server.split("://")[0].endsWith("s") ? "wss" : "ws"}://${server.split("://")[1]}/ws/`;
 
         console.log("Connecting to " + uri);
 

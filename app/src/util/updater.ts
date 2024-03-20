@@ -70,7 +70,7 @@ export const VERSIONS = {
 export function update(currentVersion: string, newVersion: string, openWelcome: () => void, openChangelog: (string) => void) {
     let changelog = "";
     console.log(currentVersion, newVersion);
-    if (currentVersion == "0") {
+    if (currentVersion == "0" && window.location.pathname === "/app/login") {
         currentVersion = newVersion;
         settingsStore.update(s => {
             s.version = newVersion;

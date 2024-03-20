@@ -4,11 +4,12 @@ import { createTRPCClient, httpBatchLink } from '@trpc/client';
 import type { AppRouter } from '../../src/index';
 import { authStore } from "./stores/auth";
 import { get } from "svelte/store";
+import { settingsStore } from "./stores/settings";
 
 let token = get(authStore).token;
 let eventToken = get(authStore).eventToken;
 
-export let server = window.location.origin;
+export let server = (get(settingsStore).forceCloud) ? 'https://ftabuddy.com' : window.location.origin;
 
 export let trpc = createTRPCClient<AppRouter>({
     links: [

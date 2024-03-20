@@ -14,16 +14,16 @@ export function vibrateHandleMonitorFrame(frame: MonitorFrame, previousFrame: Mo
     for (let robot of ['blue1', 'blue2', 'blue3', 'red1', 'red2', 'red3']) {
         const currentRobot = (frame[robot as keyof MonitorFrame] as TeamInfo);
         const previousRobot = (previousFrame[robot as keyof MonitorFrame] as TeamInfo);
-        
+
         if (previousRobot.ds === GREEN && [GREEN_X, RED, WRONG_MATCH, MOVE_STATION].includes(currentRobot.ds)) {
             window.navigator.vibrate(VIBRATION_PATTERNS.ds);
-        } else if (previousRobot.radio === GREEN && currentRobot.radio === RED) {
+        } else if (previousRobot.radio === GREEN && currentRobot.radio !== GREEN) {
             window.navigator.vibrate(VIBRATION_PATTERNS.radio);
-        } else if (previousRobot.rio === GREEN && currentRobot.rio !== RED) {
+        } else if (previousRobot.rio === GREEN && currentRobot.rio !== GREEN) {
             window.navigator.vibrate(VIBRATION_PATTERNS.rio);
-        } else if (previousRobot.code === CODE && currentRobot.code === NO_CODE) {
+        } else if (previousRobot.code === CODE && currentRobot.code !== CODE) {
             window.navigator.vibrate(VIBRATION_PATTERNS.code);
-        } else if (![ASTOP, ESTOP].includes(previousRobot.ds)  && [ASTOP, ESTOP].includes(currentRobot.ds)) {
+        } else if (![ASTOP, ESTOP].includes(previousRobot.ds) && [ASTOP, ESTOP].includes(currentRobot.ds)) {
             window.navigator.vibrate(VIBRATION_PATTERNS.estop);
         }
     }

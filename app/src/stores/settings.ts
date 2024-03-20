@@ -4,6 +4,7 @@ export interface Settings {
     version: string;
     developerMode: boolean;
     vibrations: boolean;
+    forceCloud: boolean;
 }
 
 let initialSettings = localStorage.getItem('settings');
@@ -11,7 +12,8 @@ let initialSettings = localStorage.getItem('settings');
 const defaultSettings: Settings = {
     version: '0',
     developerMode: false,
-    vibrations: true
+    vibrations: true,
+    forceCloud: true
 };
 
 if (!initialSettings) {

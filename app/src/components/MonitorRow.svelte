@@ -35,7 +35,6 @@
     };
 
     export let battery: number[];
-    console.log(battery);
     let parsedData = battery.map((d, i) => ({ time: i, voltage: d }));
 </script>
 

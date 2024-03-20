@@ -4,8 +4,6 @@ let url = document.getElementById('fta-buddy').dataset.host;
 let cloud = document.getElementById('fta-buddy').dataset.cloud;
 let eventCode = document.getElementById('fta-buddy').dataset.event;
 
-console.log(url, cloud, eventCode);
-
 function read(station) {
     let obj = {
         number: document.getElementById(station + 'Number').innerText,
@@ -73,17 +71,7 @@ function sendUpdate() {
         red3: read('red3')
     };
 
-    if (cloud) {
-        if (ws.readyState === 1) ws.send(JSON.stringify(data));
-    } else {
-        fetch(`http://${url}:8284/monitor`, {
-            method: 'POST',
-            headers: {
-                'content-type': 'application/json'
-            },
-            body: JSON.stringify(data)
-        });
-    }
+    if (ws.readyState === 1) ws.send(JSON.stringify(data));
 }
 
 let ws;
@@ -91,15 +79,15 @@ let ws;
 function connectToWS() {
     if (ws) ws.close();
 
-    console.log('Trying to connect to cloud server');
-    ws = new WebSocket(`wss://ftabuddy.com/ws/`);
+    console.log('Trying to connect to ' + ((cloud == "true") ? 'cloud' : url));
+    ws = new WebSocket((cloud == "true") ? `wss://ftabuddy.com/ws/` : url);
     ws.onopen = () => {
         ws.send(`server-${eventCode}`);
-        console.log('Connected to cloud server');
+        console.log('Connected to server');
         setTimeout(sendUpdate, 100);
     }
     ws.onclose = () => {
-        console.log('Disconnected from cloud server, reconnecting in 5 seconds.');
+        console.log('Disconnected from server, reconnecting in 5 seconds.');
         setTimeout(connectToWS, 5000);
     }
     ws.onerror = (err) => {

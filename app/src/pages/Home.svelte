@@ -36,7 +36,7 @@
 </script>
 
 {#if monitorFrame}
-    <TeamModal bind:modalOpen bind:modalStation bind:monitorFrame />
+    <TeamModal bind:modalOpen bind:modalStation bind:monitorFrame bind:batteryData />
 {/if}
 
 <div class="w-full mx-auto container md:max-w-2xl md:p-2">
@@ -54,13 +54,13 @@
                 <TableHeadCell class="w-20">DS</TableHeadCell>
                 <TableHeadCell class="w-10 lg:w-20">Radio</TableHeadCell>
                 <TableHeadCell class="w-10 lg:w-20">Rio</TableHeadCell>
-                <TableHeadCell class="w-15 lg:w-20">Bat</TableHeadCell>
+                <TableHeadCell class="w-15 lg:w-20 max-w-20 lg:max-w-24">Bat</TableHeadCell>
                 <TableHeadCell>Net</TableHeadCell>
             </TableHead>
             <TableBody>
                 {#if monitorFrame}
                     {#each stations as station}
-                        <MonitorRow {station} {monitorFrame} {detailView} battery={batteryData[station]}/>
+                        <MonitorRow {station} {monitorFrame} {detailView} battery={batteryData[station]} />
                     {/each}
                 {/if}
             </TableBody>

@@ -42,13 +42,7 @@ function handleUpdate() {
     console.log({ url: urlInput.value, cloud: cloudCheckbox.checked, event: eventInput.value, changed: new Date().getTime(), enabled: enabled.checked })
     chrome.storage.local.set({ url: urlInput.value, cloud: cloudCheckbox.checked, event: eventInput.value, changed: new Date().getTime(), enabled: enabled.checked });
 
-    if (cloudCheckbox.checked) {
-        urlContainer.style.display = 'none';
-        eventContainer.style.display = 'block';
-    } else {
-        urlContainer.style.display = 'block';
-        eventContainer.style.display = 'none';
-    }
+    urlContainer.style.display = item.cloud ? 'none' : 'block';
 }
 
 cloudCheckbox.addEventListener('input', handleUpdate);

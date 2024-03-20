@@ -116,7 +116,14 @@
 
     let messagesChild: Messages;
 
-    let batteryData = { red1: [], red2: [], red3: [], blue1: [], blue2: [], blue3: [] };
+    let batteryData = {
+        red1: new Array(20).fill(0),
+        red2: new Array(20).fill(0),
+        red3: new Array(20).fill(0),
+        blue1: new Array(20).fill(0),
+        blue2: new Array(20).fill(0),
+        blue3: new Array(20).fill(0),
+    };
 
     function openWebSocket() {
         const uri = `${server.split("://")[0].endsWith("s") ? "wss" : "ws"}://${server.split("://")[1]}/ws/`;

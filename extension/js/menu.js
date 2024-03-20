@@ -7,9 +7,9 @@ const eventContainer = document.getElementById('event-container');
 chrome.storage.local.get(['url', 'cloud', 'event'], item => {
     console.log(item);
 
-    if (item.url == undefined || item.cloud == undefined || item.event == undefined) {
-        chrome.storage.local.set({ url: '127.0.0.1', cloud: true, event: '2024event' });
-        item = { url: '127.0.0.1', cloud: true, event: '2024event' };
+    if (item.url == undefined || item.cloud == undefined || item.event == undefined || item.changed == undefined) {
+        item = { url: item.url || '127.0.0.1', cloud: item.cloud || true, event: item.event || '2024event', changed: item.changed || new Date().getTime() };
+        chrome.storage.local.set(item);
     }
     cloudCheckbox.checked = item.cloud;
     urlInput.value = item.url;
@@ -22,6 +22,12 @@ chrome.storage.local.get(['url', 'cloud', 'event'], item => {
         urlContainer.style.display = 'block';
         eventContainer.style.display = 'none';
     }
+
+    if (item.changed + (1000 * 60 * 60 * 24 * 4) < new Date().getTime()) {
+        item.event = '2024event';
+        item.changed = new Date();
+        chrome.storage.local.set(item);
+    }
 });
 
 function handleUpdate() {
@@ -32,8 +38,8 @@ function handleUpdate() {
         urlInput.value = '127.0.0.1';
     }
 
-    console.log({ url: urlInput.value, cloud: cloudCheckbox.checked, event: eventInput.value })
-    chrome.storage.local.set({ url: urlInput.value, cloud: cloudCheckbox.checked, event: eventInput.value });
+    console.log({ url: urlInput.value, cloud: cloudCheckbox.checked, event: eventInput.value, changed: new Date().getTime() })
+    chrome.storage.local.set({ url: urlInput.value, cloud: cloudCheckbox.checked, event: eventInput.value, changed: new Date().getTime() });
 
     if (cloudCheckbox.checked) {
         urlContainer.style.display = 'none';

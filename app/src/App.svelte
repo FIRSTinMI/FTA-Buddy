@@ -17,7 +17,7 @@
     import { settingsStore } from "./stores/settings";
     import { VERSIONS, update } from "./util/updater";
     import { server } from "./main";
-    import { vibrateHandleMonitorFrame } from "./util/vibrateOnDrop";
+    import { detectStatusChange, vibrateHandleMonitorFrame, type StatusChange } from "./util/vibrateOnDrop";
     import { sineIn } from "svelte/easing";
 
     let auth = get(authStore);
@@ -110,6 +110,15 @@
         blue3: new Array(20).fill(0),
     };
 
+    let statusChanges: StatusChange = {
+        red1: { lastChange: new Date(), improved: true },
+        red2: { lastChange: new Date(), improved: true },
+        red3: { lastChange: new Date(), improved: true },
+        blue1: { lastChange: new Date(), improved: true },
+        blue2: { lastChange: new Date(), improved: true },
+        blue3: { lastChange: new Date(), improved: true },
+    };
+
     function openWebSocket() {
         const uri = `${server.split("://")[0].endsWith("s") ? "wss" : "ws"}://${server.split("://")[1]}/ws/`;
 
@@ -136,6 +145,8 @@
                         }
                         batteryData[key as keyof typeof batteryData] = array;
                     }
+
+                    statusChanges = detectStatusChange(statusChanges, data, monitorFrame);
 
                     if (settings.vibrations && [MATCH_RUNNING_TELEOP, MATCH_RUNNING_AUTO, MATCH_TRANSITIONING].includes(data.field)) {
                         vibrateHandleMonitorFrame(data, monitorFrame);
@@ -374,7 +385,7 @@
         <Router basepath="/app/">
             <div class="overflow-y-auto flex-grow pb-2">
                 <Route path="/">
-                    <Home bind:monitorFrame bind:batteryData />
+                    <Home bind:monitorFrame bind:batteryData bind:statusChanges />
                 </Route>
                 <Route path="/flashcards" component={Flashcard} />
                 <Route path="/references" component={Reference} />

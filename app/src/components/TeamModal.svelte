@@ -58,7 +58,7 @@
                 <TableHeadCell>Net</TableHeadCell>
             </TableHead>
             <TableBody>
-                <MonitorRow station={modalStation} bind:monitorFrame detailView={() => {}} bind:battery />
+                <MonitorRow station={modalStation} bind:monitorFrame detailView={() => {}} bind:battery statusChange={statusChanges[modalStation]} />
             </TableBody>
         </Table>
     </div>

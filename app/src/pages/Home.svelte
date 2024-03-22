@@ -3,9 +3,11 @@
     import { Table, TableBody, TableHead, TableHeadCell } from "flowbite-svelte";
     import MonitorRow from "../components/MonitorRow.svelte";
     import TeamModal from "../components/TeamModal.svelte";
+    import type { StatusChange } from "../util/vibrateOnDrop";
 
     export let monitorFrame: MonitorFrame;
     export let batteryData: { [key: string]: number[] } = {};
+    export let statusChanges: StatusChange;
 
     const FieldStates = {
         0: "Unknown",
@@ -36,7 +38,7 @@
 </script>
 
 {#if monitorFrame}
-    <TeamModal bind:modalOpen bind:modalStation bind:monitorFrame bind:batteryData />
+    <TeamModal bind:modalOpen bind:modalStation bind:monitorFrame bind:batteryData bind:statusChanges />
 {/if}
 
 <div class="w-full mx-auto container md:max-w-2xl md:p-2">

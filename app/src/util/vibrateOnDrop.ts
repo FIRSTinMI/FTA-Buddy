@@ -1,11 +1,41 @@
 import { GREEN, GREEN_X, RED, type MonitorFrame, type TeamInfo, WRONG_MATCH, MOVE_STATION, ASTOP, ESTOP, CODE, NO_CODE } from "../../../shared/types";
 
 const VIBRATION_PATTERNS = {
-    ds: [1000, 200, 1000],
-    radio: [500, 200, 1000],
-    rio: [500, 200, 500],
-    code: [500],
-    estop: [200]
+    ds: [500, 200, 500],
+    radio: [200, 200, 500],
+    rio: [200, 100, 200],
+    code: [200],
+    estop: [100]
+}
+
+export interface StatusChange { [key: string]: { lastChange: Date, improved: boolean } };
+
+export function detectStatusChange(statusChanges: StatusChange, currentFrame: MonitorFrame, previousFrame: MonitorFrame | null) {
+    if (!previousFrame) return statusChanges;
+
+    for (let robot of ['blue1', 'blue2', 'blue3', 'red1', 'red2', 'red3']) {
+        const currentRobot = (currentFrame[robot as keyof MonitorFrame] as TeamInfo);
+        const previousRobot = (previousFrame[robot as keyof MonitorFrame] as TeamInfo);
+
+        if (previousRobot.ds !== currentRobot.ds) {
+            statusChanges[robot].lastChange = new Date();
+            // DS states are numbered 0: red, 1: green, 2: green x, 3: move station, 4: wrong match, 5: bypass, 6: estop, 7: astop
+            statusChanges[robot].improved = (currentRobot.ds === RED) ? false : currentRobot.ds < previousRobot.ds;
+        } else if (previousRobot.radio !== currentRobot.radio) {
+            statusChanges[robot].lastChange = new Date();
+            statusChanges[robot].improved = (currentRobot.radio === GREEN);
+        } else if (previousRobot.rio !== currentRobot.rio) {
+            statusChanges[robot].lastChange = new Date();
+            statusChanges[robot].improved = (currentRobot.rio === GREEN || currentRobot.rio === GREEN_X);
+            console.log('rio', robot, currentRobot.rio, previousRobot.rio);
+        } else if (previousRobot.code !== currentRobot.code) {
+            statusChanges[robot].lastChange = new Date();
+            statusChanges[robot].improved = (currentRobot.code === CODE);
+            console.log('code', robot, currentRobot.code, previousRobot.code);
+        }
+    }
+
+    return statusChanges;
 }
 
 export function vibrateHandleMonitorFrame(frame: MonitorFrame, previousFrame: MonitorFrame | null) {

@@ -47,7 +47,7 @@ export type FieldState = typeof UNKNOWN | typeof MATCH_RUNNING_TELEOP | typeof M
 export type DSState = typeof RED | typeof GREEN | typeof GREEN_X | typeof MOVE_STATION | typeof WRONG_MATCH | typeof BYPASS | typeof ESTOP | typeof ASTOP;
 export type CodeState = typeof NO_CODE | typeof CODE;
 export type RadioState = typeof RED | typeof GREEN;
-export type RioState = typeof RED | typeof GREEN;
+export type RioState = typeof RED | typeof GREEN | typeof GREEN_X;
 
 export const RED = 0;
 export const GREEN = 1;

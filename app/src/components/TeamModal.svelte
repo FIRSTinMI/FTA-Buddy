@@ -20,15 +20,28 @@
     } from "../../../shared/types";
     import MonitorRow from "./MonitorRow.svelte";
     import { navigate } from "svelte-routing";
+    import type { StatusChange } from "../util/vibrateOnDrop";
+    import { formatTimeShort } from "../util/formatTime";
 
     export let modalOpen: boolean;
     export let modalStation: Station;
     export let monitorFrame: MonitorFrame;
     export let batteryData: { [key: string]: number[] };
+    export let statusChanges: StatusChange;
+
     let modalTeam: TeamInfo | undefined;
     $: {
         modalTeam = monitorFrame[modalStation];
+        timeSinceChange = formatTimeShort(statusChanges[modalStation].lastChange);
     }
+
+    let timeSinceChange = formatTimeShort(statusChanges[modalStation].lastChange);
+
+    setInterval(() => {
+        if (modalOpen) {
+            timeSinceChange = formatTimeShort(statusChanges[modalStation].lastChange);
+        }
+    }, 1000);
 </script>
 
 <Modal bind:open={modalOpen} size="lg" outsideclose id="team-modal" dismissable={false}>
@@ -51,7 +64,8 @@
         <div class="flex flex-col w-full items-center space-y-4 -mt-4">
             <p>
                 {#if modalTeam.ds === RED}
-                    <span class="font-bold">Ethernet not plugged in</span>
+                    <p class="font-bold">Ethernet not plugged in</p>
+                    <p>Unplugged {timeSinceChange}</p>
                     <ol class="text-left list-decimal space-y-2">
                         <li>Make sure the cable is plugged into the laptop</li>
                         <li>Check if there are link lights on the port</li>
@@ -59,7 +73,12 @@
                         <li>Try replacing the ethernet cable</li>
                     </ol>
                 {:else if modalTeam.ds === GREEN_X}
-                    <span class="font-bold">Ethernet plugged in but no communication with DS</span>
+                    <p class="font-bold">Ethernet plugged in but no communication with DS</p>
+                    {#if statusChanges[modalStation].improved}
+                        <p>Plugged in {timeSinceChange}</p>
+                    {:else}
+                        <p>Lost FMS {timeSinceChange}</p>
+                    {/if}
                     <ol class="text-left list-decimal space-y-2">
                         <li>Make sure DS is open, and only one instance is open.</li>
                         <li>Check if there are link lights on the port.</li>
@@ -77,11 +96,22 @@
                         <li>If none of the above works, try the spare DS laptop. Advise the team to come during lunch or at the end of the day to do a connection test.</li>
                     </ol>
                 {:else if modalTeam.ds === MOVE_STATION}
-                    <span class="font-bold">Team is in wrong station</span><br />
+                    <p class="font-bold">Team is in wrong station</p>
+                    {#if statusChanges[modalStation].improved}
+                        <p>Plugged in {timeSinceChange}</p>
+                    {:else}
+                        <p>{timeSinceChange}</p>
+                    {/if}
+                    <br />
                     Their DS will tell them which station to move to.<br />
                     If this is during playoffs, double check with the HR and Scorekeeper before instructing teams to move.
                 {:else if modalTeam.ds === WRONG_MATCH}
-                    <span class="font-bold">Team is in wrong match</span>
+                    <p class="font-bold">Team is in wrong match</p>
+                    {#if statusChanges[modalStation].improved}
+                        <p>Plugged in {timeSinceChange}</p>
+                    {:else}
+                        <p>{timeSinceChange}</p>
+                    {/if}
                     <ol class="text-left list-decimal space-y-2">
                         {#if [READY_TO_PRESTART, PRESTART_INITIATED, MATCH_OVER, MATCH_ABORTED].includes(monitorFrame.field)}
                             <li>DS is connected but the field hasn't been prestarted yet.</li>
@@ -95,20 +125,28 @@
                         </li>
                     </ol>
                 {:else if modalTeam.ds === BYPASS}
-                    <span class="font-bold">Team is bypassed</span>
+                    <p class="font-bold">Team is bypassed</p>
+                    <p>{timeSinceChange}</p>
                 {:else if modalTeam.ds === ESTOP}
-                    <span class="font-bold">Team is E-stopped</span>
+                    <p class="font-bold">Team is E-stopped</p>
+                    <p>{timeSinceChange}</p>
                     <ol class="text-left list-decimal space-y-2">
                         <li>To clear an E-stop the roborio must be physically restarted and the DS software restarted.</li>
                         <li>If the robot was E-stopped by the HR, you should let the team know why.</li>
                     </ol>
                 {:else if modalTeam.ds === ASTOP}
-                    <span class="font-bold">Team is A-stopped</span>
+                    <p class="font-bold">Team is A-stopped</p>
+                    <p>{timeSinceChange}</p>
                     <ol class="text-left list-decimal space-y-2">
                         <li>The A-stop will clear once teleop starts, remember to reset the button after the match.</li>
                     </ol>
                 {:else if modalTeam.radio === RED}
-                    <span class="font-bold">Radio not connected to field</span>
+                    <p class="font-bold">Radio not connected to field</p>
+                    {#if statusChanges[modalStation].improved}
+                        <p>DS Connected {timeSinceChange}</p>
+                    {:else}
+                        <p>Lost Radio {timeSinceChange}</p>
+                    {/if}
                     <ol class="text-left list-decimal space-y-2">
                         <li>Make sure robot is on</li>
                         <li>
@@ -119,7 +157,12 @@
                         <li>If you notice all the lights are solid for a while, the radio may have gotten stuck. Reboot the radio.</li>
                     </ol>
                 {:else if modalTeam.rio === RED}
-                    <span class="font-bold">Radio connected but no communication with RIO</span>
+                    <p class="font-bold">Radio connected but no communication with RIO</p>
+                    {#if statusChanges[modalStation].improved}
+                        <p>Radio Connected {timeSinceChange}</p>
+                    {:else}
+                        <p>Lost RIO {timeSinceChange}</p>
+                    {/if}
                     <ol class="text-left list-decimal space-y-2">
                         <li>
                             <p>Check the status lights on the RIO, power should be green, link lights should be flashing, status should be off.</p>
@@ -145,7 +188,12 @@
                         </li>
                     </ol>
                 {:else if modalTeam.code === RED}
-                    <span class="font-bold">Radio and RIO connected, but code not running</span>
+                    <p class="font-bold">Radio and RIO connected, but code not running</p>
+                    {#if statusChanges[modalStation].improved}
+                        <p>RIO Connected {timeSinceChange}</p>
+                    {:else}
+                        <p>Lost Code {timeSinceChange}</p>
+                    {/if}
                     <ol class="text-left list-decimal space-y-2">
                         <li>If it is a RIO 2, try restarting the RIO, this can be done from the DS.</li>
                         <li>
@@ -154,7 +202,9 @@
                         </li>
                     </ol>
                 {:else}
-                    <span class="font-bold">Robot Connected</span><br />
+                    <p class="font-bold">Robot Connected</p>
+                    <p>{timeSinceChange}</p>
+                    <br />
                     {#if modalTeam.battery < 11}
                         Low Battery {modalTeam.battery.toFixed(1)}V<br />
                     {/if}

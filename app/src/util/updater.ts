@@ -6,6 +6,14 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+    '2.4.1': {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.4.1</h1>
+        <ul>
+        <li>Added a timer in the detailed status view that shows how long since the last status change</li>
+        </ul>`,
+        update: () => { }
+    },
     '2.4.0': {
         changelog: `
         <h1 class="text-lg font-bold">v2.4.0</h1>

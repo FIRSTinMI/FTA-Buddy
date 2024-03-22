@@ -129,11 +129,11 @@
                                 <td>No Comms</td>
                             </tr>
                             <tr>
-                                <td class="red blink led"> </td>
+                                <td class="red led"> </td>
                                 <td>Comms, no code</td>
                             </tr>
                             <tr>
-                                <td class="red led"> </td>
+                                <td class="red blink led"> </td>
                                 <td>E-Stop</td>
                             </tr>
                             <tr>

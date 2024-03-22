@@ -20,7 +20,7 @@ export function detectStatusChange(statusChanges: StatusChange, currentFrame: Mo
         if (previousRobot.ds !== currentRobot.ds) {
             statusChanges[robot].lastChange = new Date();
             // DS states are numbered 0: red, 1: green, 2: green x, 3: move station, 4: wrong match, 5: bypass, 6: estop, 7: astop
-            statusChanges[robot].improved = (currentRobot.ds === RED) ? false : currentRobot.ds < previousRobot.ds;
+            statusChanges[robot].improved = (currentRobot.ds === RED) ? false : (previousRobot.ds === RED) ? true : currentRobot.ds < previousRobot.ds;
         } else if (previousRobot.radio !== currentRobot.radio) {
             statusChanges[robot].lastChange = new Date();
             statusChanges[robot].improved = (currentRobot.radio === GREEN);

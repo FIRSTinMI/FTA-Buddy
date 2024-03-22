@@ -30,9 +30,11 @@
     export let statusChanges: StatusChange;
 
     let modalTeam: TeamInfo | undefined;
+    let battery: number[] = [];
     $: {
         modalTeam = monitorFrame[modalStation];
         timeSinceChange = formatTimeShort(statusChanges[modalStation].lastChange);
+        battery = batteryData[modalStation];
     }
 
     let timeSinceChange = formatTimeShort(statusChanges[modalStation].lastChange);
@@ -56,7 +58,7 @@
                 <TableHeadCell>Net</TableHeadCell>
             </TableHead>
             <TableBody>
-                <MonitorRow station={modalStation} bind:monitorFrame detailView={() => {}} bind:battery={batteryData[modalStation]} />
+                <MonitorRow station={modalStation} bind:monitorFrame detailView={() => {}} bind:battery />
             </TableBody>
         </Table>
     </div>

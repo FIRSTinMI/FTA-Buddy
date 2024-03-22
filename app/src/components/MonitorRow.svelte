@@ -9,6 +9,7 @@
     let team: TeamInfo;
     $: {
         team = monitorFrame[station];
+        parsedData = battery.map((d, i) => ({ time: i, voltage: d }));
     }
 
     export let detailView: (evt: Event) => void;

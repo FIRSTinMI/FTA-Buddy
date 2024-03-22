@@ -62,7 +62,7 @@
             <TableBody>
                 {#if monitorFrame}
                     {#each stations as station}
-                        <MonitorRow {station} {monitorFrame} {detailView} battery={batteryData[station]} />
+                        <MonitorRow {station} {monitorFrame} {detailView} battery={batteryData[station]} statusChange={statusChanges[station]} />
                     {/each}
                 {/if}
             </TableBody>

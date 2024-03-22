@@ -1,11 +1,12 @@
 <script lang="ts">
     import { TableBodyCell, TableBodyRow } from "flowbite-svelte";
-    import { BYPASS, ESTOP, GREEN_X, MOVE_STATION, WRONG_MATCH, type MonitorFrame, type TeamInfo, type Station, ASTOP } from "../../../shared/types";
+    import { BYPASS, ESTOP, GREEN_X, MOVE_STATION, WRONG_MATCH, type MonitorFrame, type TeamInfo, type Station, ASTOP, NO_CODE, RED } from "../../../shared/types";
     import { navigate } from "svelte-routing";
     import BatteryGraph from "./BatteryGraph.svelte";
 
     export let station: Station;
     export let monitorFrame: MonitorFrame;
+    export let statusChange: { lastChange: Date; improved: boolean };
     let team: TeamInfo;
     $: {
         team = monitorFrame[station];
@@ -41,8 +42,17 @@
 
 {#key team}
     <TableBodyRow class="h-20 lg:h-24 border-y border-gray-800 cursor-pointer" id="{station}-row">
-        <TableBodyCell class="{getKey(team)?.startsWith('blue') ? 'bg-blue-600' : 'bg-red-600'} font-mono" on:click={() => navigate("/notes/" + team.number)}>
-            {team.number}
+        <TableBodyCell class="text-center {getKey(team)?.startsWith('blue') ? 'bg-blue-600' : 'bg-red-600'} font-mono" on:click={() => navigate("/notes/" + team.number)}>
+            <p>{team.number}</p>
+            {#if team.ds === GREEN_X && statusChange.lastChange.getTime() + 30e3 < Date.now()}
+                <p>👀</p>
+            {:else if team.radio === RED && statusChange.lastChange.getTime() + 180e3 < Date.now()}
+                <p>👀</p>
+            {:else if team.rio === RED && statusChange.lastChange.getTime() + 45e3 < Date.now()}
+                <p>👀</p>
+            {:else if team.code === NO_CODE && statusChange.lastChange.getTime() + 30e3 < Date.now()}
+                <p>👀</p>
+            {/if}
         </TableBodyCell>
         <TableBodyCell class="{DS_Colors[team.ds]} text-4xl text-black text-center border-x border-gray-800 font-mono" on:click={detailView}>
             {#if team.ds === GREEN_X}
@@ -66,7 +76,7 @@
             on:click={detailView}
             style="background-color: rgba(255,0,0,{team.battery < 11 && team.battery > 0 ? (-1.5 * team.battery ** 2 - 6.6 * team.battery + 255) / 255 : 0})"
         >
-            <div class="absolute h-full text-center top-0 px-0.5 aspect-square">
+            <div class="h-full text-center top-0 px-0.5 aspect-square">
                 <BatteryGraph data={parsedData} />
             </div>
             <div class="absolute w-full bottom-0 p-2">

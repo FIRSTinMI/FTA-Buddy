@@ -1,6 +1,22 @@
 <script lang="ts">
     import { TableBodyCell, TableBodyRow } from "flowbite-svelte";
-    import { BYPASS, ESTOP, GREEN_X, MOVE_STATION, WRONG_MATCH, type MonitorFrame, type TeamInfo, type Station, ASTOP, NO_CODE, RED } from "../../../shared/types";
+    import {
+        BYPASS,
+        ESTOP,
+        GREEN_X,
+        MOVE_STATION,
+        WRONG_MATCH,
+        type MonitorFrame,
+        type TeamInfo,
+        type Station,
+        ASTOP,
+        NO_CODE,
+        RED,
+        MATCH_OVER,
+        MATCH_ABORTED,
+        READY_FOR_POST_RESULT,
+        READY_TO_PRESTART,
+    } from "../../../shared/types";
     import { navigate } from "svelte-routing";
     import BatteryGraph from "./BatteryGraph.svelte";
 
@@ -44,14 +60,16 @@
     <TableBodyRow class="h-20 lg:h-24 border-y border-gray-800 cursor-pointer" id="{station}-row">
         <TableBodyCell class="text-center {getKey(team)?.startsWith('blue') ? 'bg-blue-600' : 'bg-red-600'} font-mono" on:click={() => navigate("/notes/" + team.number)}>
             <p>{team.number}</p>
-            {#if team.ds === GREEN_X && statusChange.lastChange.getTime() + 30e3 < Date.now()}
-                <p>👀</p>
-            {:else if team.radio === RED && statusChange.lastChange.getTime() + 180e3 < Date.now()}
-                <p>👀</p>
-            {:else if team.rio === RED && statusChange.lastChange.getTime() + 45e3 < Date.now()}
-                <p>👀</p>
-            {:else if team.code === NO_CODE && statusChange.lastChange.getTime() + 30e3 < Date.now()}
-                <p>👀</p>
+            {#if ![MATCH_OVER, MATCH_ABORTED, READY_FOR_POST_RESULT, READY_TO_PRESTART].includes(monitorFrame.field)}
+                {#if team.ds === GREEN_X && statusChange.lastChange.getTime() + 30e3 < Date.now()}
+                    <p>👀</p>
+                {:else if team.radio === RED && statusChange.lastChange.getTime() + 180e3 < Date.now()}
+                    <p>👀</p>
+                {:else if team.rio === RED && statusChange.lastChange.getTime() + 45e3 < Date.now()}
+                    <p>👀</p>
+                {:else if team.code === NO_CODE && statusChange.lastChange.getTime() + 30e3 < Date.now()}
+                    <p>👀</p>
+                {/if}
             {/if}
         </TableBodyCell>
         <TableBodyCell class="{DS_Colors[team.ds]} text-4xl text-black text-center border-x border-gray-800 font-mono" on:click={detailView}>

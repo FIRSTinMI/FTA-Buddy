@@ -11,6 +11,7 @@ import { eq } from 'drizzle-orm';
 import { events } from './db/schema';
 import { readFileSync, readdirSync } from 'fs';
 import { DEFAULT_MONITOR } from '../shared/constants';
+import { StatusChange, detectStatusChange } from './stateChange';
 const { app, getWss, applyTo } = expressWs(express());
 
 const port = process.env.PORT || 3001;
@@ -20,7 +21,7 @@ const appRouter = router({
     event: eventRouter
 });
 
-const eventList: { [key: string]: { socketServer?: any, socketClients: any[], monitor: any, teams: any[], token: string } } = {};
+const eventList: { [key: string]: { socketServer?: any, socketClients: any[], monitor: any, teams: any[], token: string, statusChanges: StatusChange } } = {};
 
 export type AppRouter = typeof appRouter;
 
@@ -45,7 +46,15 @@ app.ws('/ws/', (ws, req) => {
                         socketClients: [],
                         monitor: DEFAULT_MONITOR,
                         teams: res.teams as string[],
-                        token: res.token
+                        token: res.token,
+                        statusChanges: {
+                            blue1: { lastChange: new Date(), improved: false },
+                            blue2: { lastChange: new Date(), improved: false },
+                            blue3: { lastChange: new Date(), improved: false },
+                            red1: { lastChange: new Date(), improved: false },
+                            red2: { lastChange: new Date(), improved: false },
+                            red3: { lastChange: new Date(), improved: false }
+                        }
                     }
                 }
             }
@@ -59,9 +68,14 @@ app.ws('/ws/', (ws, req) => {
                 if (!eventList[eventCode]) {
                     console.log(`[WS ${eventCode} S] No event found for ${eventCode}`);
                 } else {
+                    const frame = JSON.parse(msg);
+                    eventList[eventCode].statusChanges = detectStatusChange(eventList[eventCode].statusChanges, frame, eventList[eventCode].monitor);
                     for (let socketClient of eventList[eventCode].socketClients) {
                         if (socketClient)
-                            socketClient.send(msg);
+                            socketClient.send({
+                                ...frame,
+                                statusChanges: eventList[eventCode].statusChanges
+                            });
                     }
                     eventList[eventCode].monitor = JSON.parse(msg);
                 }
@@ -84,10 +98,18 @@ app.ws('/ws/', (ws, req) => {
                     socketClients: [ws],
                     monitor: DEFAULT_MONITOR,
                     teams: res.teams as string[],
-                    token: res.token
+                    token: res.token,
+                    statusChanges: {
+                        blue1: { lastChange: new Date(), improved: false },
+                        blue2: { lastChange: new Date(), improved: false },
+                        blue3: { lastChange: new Date(), improved: false },
+                        red1: { lastChange: new Date(), improved: false },
+                        red2: { lastChange: new Date(), improved: false },
+                        red3: { lastChange: new Date(), improved: false }
+                    }
                 }
             }
-            ws.send(JSON.stringify(eventList[res.code].monitor));
+            ws.send(JSON.stringify({...eventList[res.code].monitor, statusChanges: eventList[res.code].statusChanges}));
         }
     });
 });
@@ -127,126 +149,4 @@ connect().then(async () => {
         console.log(`Server listening on port ${port}`);
     });
 });
-
-// app.get('/message/feed/:event', (req, res) => {
-//     req.params.event = req.params.event.toLowerCase();
-//     db.query('SELECT * FROM messages WHERE event = ? ORDER BY created ASC LIMIT 100;', [req.params.event]).spread((messages: MessagesRow[]) => {
-//         db.query(`SELECT * FROM profiles WHERE id IN (SELECT profile FROM messages WHERE event = ?);`, [req.params.event]).spread((profiles_raw: ProfilesRow[]) => {
-//             let profiles: { [key: number]: ProfilesRow } = {};
-//             for (let profile of profiles_raw) {
-//                 profiles[profile.id] = profile;
-//             }
-
-//             let messagesWithUsernames: Message[] = [];
-//             for (let m of messages) {
-//                 messagesWithUsernames.push({
-//                     ...m,
-//                     username: profiles[m.profile].username
-//                 });
-//             }
-
-//             res.send(messagesWithUsernames);
-//         });
-//     });
-// });
-
-// // Get notes for a team along with profile info
-// app.get('/message/:team', (req, res) => {
-//     db.query('SELECT * FROM messages WHERE team = ?;', [req.params.team]).spread((messages: MessagesRow[]) => {
-//         db.query(`SELECT * FROM profiles WHERE id IN (SELECT profile FROM messages WHERE team = ?);`, [req.params.team]).spread((profiles_raw: ProfilesRow[]) => {
-//             let profiles: { [key: number]: ProfilesRow } = {};
-//             for (let profile of profiles_raw) {
-//                 profiles[profile.id] = profile;
-//             }
-
-//             let messagesWithUsernames: Message[] = [];
-//             for (let m of messages) {
-//                 messagesWithUsernames.push({
-//                     ...m,
-//                     username: profiles[m.profile].username
-//                 });
-//             }
-
-//             res.send(messagesWithUsernames);
-//         });
-//     });
-// });
-
-// app.post('/message/feed/:event', (req, res) => {
-//     req.params.event = req.params.event.toLowerCase();
-//     console.log(`[NOTE ${req.body.event}] ${req.body.profile}: ${req.body.message}`);
-//     db.query('SELECT * FROM profiles WHERE id = ?;', [req.body.profile]).spread((profiles: ProfilesRow[]) => {
-//         if (profiles.length !== 1) {
-//             return res.status(404).send({ error: 'Profile not found' });
-//         }
-
-//         if (req.body.token !== profiles[0].token) {
-//             return res.status(401).send('Invalid token');
-//         }
-
-//         db.query('INSERT INTO messages VALUES (null, ?, ?, null, ?, CURRENT_TIMESTAMP);', [req.body.profile, req.body.event, req.body.message]).then((result: any) => {
-//             const message = {
-//                 id: result.insertId,
-//                 profile: req.body.profile,
-//                 username: profiles[0].username,
-//                 event: req.body.event,
-//                 message: req.body.message,
-//                 created: (new Date()).toISOString()
-//             };
-
-//             res.send(message);
-
-//             for (let socketClient of events[req.body.event].socketClients) {
-//                 if (socketClient) socketClient.send(JSON.stringify({
-//                     type: 'message',
-//                     message: message,
-//                 }));
-//             }
-
-//         }).catch((err: Error) => {
-//             if (err) res.status(500).send(err)
-//         });
-//     });
-// });
-
-// // Post a message on the notes for a team
-// app.post('/message/:team', (req, res) => {
-//     console.log(`[NOTE ${req.body.event}] ${req.params.team} (${req.body.profile}): ${req.body.message}`);
-
-//     db.query('SELECT * FROM profiles WHERE id = ?;', [req.body.profile]).spread((profiles: ProfilesRow[]) => {
-//         if (profiles.length !== 1) {
-//             return res.status(404).send({ error: 'Profile not found' });
-//         }
-
-//         if (req.body.token !== profiles[0].token) {
-//             return res.status(401).send('Invalid token');
-//         }
-
-//         db.query('INSERT INTO messages VALUES (null, ?, ?, ?, ?, CURRENT_TIMESTAMP);', [req.body.profile, req.body.event, req.params.team, req.body.message]).then((result: any) => {
-//             const message = {
-//                 id: result.insertId,
-//                 profile: req.body.profile,
-//                 username: profiles[0].username,
-//                 event: req.body.event,
-//                 team: req.params.team,
-//                 message: req.body.message,
-//                 created: (new Date()).toISOString()
-//             };
-
-//             res.send(message);
-
-//             for (let socketClient of events[req.body.event].socketClients) {
-//                 if (socketClient) socketClient.send(JSON.stringify({
-//                     type: 'message',
-//                     team: req.params.team,
-//                     message: message,
-//                 }));
-//             }
-
-//         }).catch((err: Error) => {
-//             if (err) res.status(500).send(err)
-//         });
-//     });
-// });
-
 

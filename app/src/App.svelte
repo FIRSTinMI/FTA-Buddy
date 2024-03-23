@@ -17,8 +17,9 @@
     import { settingsStore } from "./stores/settings";
     import { VERSIONS, update } from "./util/updater";
     import { server } from "./main";
-    import { detectStatusChange, vibrateHandleMonitorFrame, type StatusChange } from "./util/vibrateOnDrop";
+    import { vibrateHandleMonitorFrame } from "./util/vibrateOnDrop";
     import { sineIn } from "svelte/easing";
+    import type { StatusChange } from "../../src/stateChange";
 
     let auth = get(authStore);
 
@@ -146,7 +147,15 @@
                         batteryData[key as keyof typeof batteryData] = array;
                     }
 
-                    statusChanges = detectStatusChange(statusChanges, data, monitorFrame);
+                    for (let key of Object.keys(data.statusChanges)) {
+                        let change = data.statusChanges[key];
+                        statusChanges[key as keyof typeof statusChanges] = {
+                            lastChange: new Date(change.lastChange),
+                            improved: change.improved,
+                        };
+                    }
+
+                    statusChanges = statusChanges;
 
                     if (settings.vibrations && [MATCH_RUNNING_TELEOP, MATCH_RUNNING_AUTO, MATCH_TRANSITIONING].includes(data.field)) {
                         vibrateHandleMonitorFrame(data, monitorFrame);

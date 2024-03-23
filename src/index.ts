@@ -72,10 +72,10 @@ app.ws('/ws/', (ws, req) => {
                     eventList[eventCode].statusChanges = detectStatusChange(eventList[eventCode].statusChanges, frame, eventList[eventCode].monitor);
                     for (let socketClient of eventList[eventCode].socketClients) {
                         if (socketClient)
-                            socketClient.send({
+                            socketClient.send(JSON.stringify({
                                 ...frame,
                                 statusChanges: eventList[eventCode].statusChanges
-                            });
+                            }));
                     }
                     eventList[eventCode].monitor = JSON.parse(msg);
                 }

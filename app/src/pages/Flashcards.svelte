@@ -41,7 +41,7 @@
 {#key currentFlashcard}
     {#if currentFlashcard}
         <div class="overlay flex flex-col justify-center items-center" on:click={dismissFlashcard} on:keydown={dismissFlashcard} role="presentation" id="flashcard-overlay">
-            <h1 class="text-3xl font-bold">{currentFlashcard}</h1>
+            <h1 class="text-6xl font-bold mx-1">{currentFlashcard}</h1>
         </div>
     {/if}
 {/key}

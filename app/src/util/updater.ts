@@ -13,6 +13,7 @@ export const VERSIONS: { [key: string]: Version } = {
         <li>Server side time tracking so it's more accurate</li>
         <li>Reset time tracking when prestart completes</li>
         <li>Larger text on flashcards</li>
+        <li>General UI Improvements</li>
         </ul>`,
         update: () => { }
     },

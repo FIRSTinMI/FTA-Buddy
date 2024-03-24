@@ -1,6 +1,6 @@
 import { boolean, jsonb, pgEnum, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core"
 
-export const roleEnum = pgEnum('role', ['ADMIN', 'FTA', 'FTAA', 'CSA']);
+export const roleEnum = pgEnum('role', ['ADMIN', 'FTA', 'FTAA', 'CSA', 'RI']);
 
 export const users = pgTable('users', {
     id: serial('id').primaryKey(),

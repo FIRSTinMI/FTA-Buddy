@@ -61,7 +61,9 @@
         <TableBodyCell class="text-center {getKey(team)?.startsWith('blue') ? 'bg-blue-600' : 'bg-red-600'} font-mono" on:click={() => navigate("/notes/" + team.number)}>
             <p>{team.number}</p>
             {#if ![MATCH_OVER, MATCH_ABORTED, READY_FOR_POST_RESULT, READY_TO_PRESTART].includes(monitorFrame.field)}
-                {#if team.ds === GREEN_X && statusChange.lastChange.getTime() + 30e3 < Date.now()}
+                {#if team.ds === RED && statusChange.lastChange.getTime() + 30e3 < Date.now()}
+                    <p>👀</p>
+                {:else if team.ds === GREEN_X && statusChange.lastChange.getTime() + 30e3 < Date.now()}
                     <p>👀</p>
                 {:else if team.radio === RED && statusChange.lastChange.getTime() + 180e3 < Date.now()}
                     <p>👀</p>

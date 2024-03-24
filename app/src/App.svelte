@@ -407,7 +407,7 @@
                 <Login {toast} />
             </Route>
 
-            {#if window.location.pathname !== "/app/login"}
+            {#if auth.token && auth.eventToken}
                 <div class="flex justify-around py-2 bg-neutral-700">
                     <Link to="/app/">
                         <Button class="!p-2" color="none">

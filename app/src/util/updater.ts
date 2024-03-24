@@ -11,6 +11,8 @@ export const VERSIONS: { [key: string]: Version } = {
         <h1 class="text-lg font-bold">v2.4.3</h1>
         <ul>
         <li>Server side time tracking so it's more accurate</li>
+        <li>Reset time tracking when prestart completes</li>
+        <li>Larger text on flashcards</li>
         </ul>`,
         update: () => { }
     },

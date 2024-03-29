@@ -11,6 +11,10 @@
     import { authStore } from "../stores/auth";
     import { eventStore } from "../stores/event";
     import { navigate } from "svelte-routing";
+    import { GoogleAuthProvider } from "firebase/auth";
+
+    const provider = new GoogleAuthProvider();
+    provider.addScope('https://www.googleapis.com/auth/contacts.readonly');
 
     export let toast: (title: string, text: string, color?: string) => void;
 

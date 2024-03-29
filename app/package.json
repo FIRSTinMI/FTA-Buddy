@@ -14,6 +14,7 @@
         "@iconify/svelte": "^3.1.6",
         "@sveltejs/vite-plugin-svelte": "^3.0.1",
         "@tsconfig/svelte": "^5.0.2",
+        "@types/d3": "^7.4.3",
         "autoprefixer": "^10.4.16",
         "flowbite": "^2.2.1",
         "flowbite-svelte": "^0.44.23",
@@ -27,12 +28,13 @@
         "tslib": "^2.6.2",
         "typescript": "^5.2.2",
         "unplugin-icons": "^0.18.2",
-        "vite": "^5.0.8",
-        "@types/d3": "^7.4.3"
+        "vite": "^5.0.8"
     },
     "dependencies": {
+        "@firebase/auth": "^1.6.2",
         "d3": "^7.9.0",
         "express": "^4.18.3",
+        "firebase": "^10.9.0",
         "svelte-material-icons": "^3.0.5",
         "svelte-qrcode": "^1.0.0"
     }

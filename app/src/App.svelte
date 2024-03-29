@@ -136,6 +136,11 @@
             try {
                 let data = JSON.parse(evt.data);
                 if (data.type === "monitorUpdate") {
+                    if (data.time && data.time + 3000 < new Date().getTime()) {
+                        console.log("Skipping stale frame");
+                        return;
+                    }
+                    
                     lastFrameTime = new Date();
                     frameCount++;
                     for (let key of Object.keys(batteryData)) {
@@ -189,14 +194,20 @@
         };
     }
 
+    let inactiveStartTime = new Date().getTime();
+
     document.addEventListener("visibilitychange", (evt) => {
         if (document.visibilityState === "visible") {
             console.log("Returning from inactive");
             console.log(ws.readyState == 1 ? "Connected" : "Disconnected");
-            if (!ws || ws.readyState !== 1) {
+            console.log("Inactive for " + (new Date().getTime() - inactiveStartTime) + "ms");
+            if (!ws || ws.readyState !== 1 || new Date().getTime() - inactiveStartTime > 60e3) {
                 if (timeoutID) clearTimeout(timeoutID);
                 openWebSocket();
             }
+        } else {
+            console.log("Going inactive");
+            inactiveStartTime = new Date().getTime();
         }
     });
 

@@ -6,7 +6,6 @@ let eventCode = document.getElementById('fta-buddy').dataset.event;
 
 function read(station) {
     let obj = {
-        time: new Date().getTime(),
         number: document.getElementById(station + 'Number').innerText,
         ds: identifyStatusDS(station),
         radio: identifyStatus(document.getElementById(station + 'radio')),
@@ -62,6 +61,7 @@ function identifyFieldStatus(elm) {
 
 function sendUpdate() {
     let data = {
+        frameTime: (new Date()).getTime(),
         type: 'monitorUpdate',
         field: identifyFieldStatus(document.getElementById('matchStateTop')),
         match: document.getElementById('MatchNumber').innerText.substring(3),

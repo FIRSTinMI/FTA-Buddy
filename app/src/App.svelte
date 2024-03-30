@@ -4,7 +4,7 @@
     import { onMount } from "svelte";
     import { Link, Route, Router, navigate } from "svelte-routing";
     import { get } from "svelte/store";
-    import { MATCH_RUNNING_AUTO, MATCH_RUNNING_TELEOP, MATCH_TRANSITIONING, type MonitorFrame } from "../../shared/types";
+    import { MATCH_READY, MATCH_RUNNING_AUTO, MATCH_RUNNING_TELEOP, MATCH_TRANSITIONING, type MonitorFrame, type StatusChanges } from "../../shared/types";
     import SettingsModal from "./components/SettingsModal.svelte";
     import WelcomeModal from "./components/WelcomeModal.svelte";
     import Flashcard from "./pages/Flashcards.svelte";
@@ -17,9 +17,8 @@
     import { settingsStore } from "./stores/settings";
     import { VERSIONS, update } from "./util/updater";
     import { server } from "./main";
-    import { vibrateHandleMonitorFrame } from "./util/vibrateOnDrop";
+    import { playGreenAlert, statusChangeAlertHandler, susRobotsAlert } from "./util/statusAlerts";
     import { sineIn } from "svelte/easing";
-    import type { StatusChange } from "../../src/stateChange";
 
     let auth = get(authStore);
 
@@ -111,7 +110,7 @@
         blue3: new Array(20).fill(0),
     };
 
-    let statusChanges: StatusChange = {
+    let statusChanges: StatusChanges = {
         red1: { lastChange: new Date(), improved: true },
         red2: { lastChange: new Date(), improved: true },
         red3: { lastChange: new Date(), improved: true },
@@ -161,9 +160,20 @@
                     }
 
                     statusChanges = statusChanges;
+                    try {
+                        if (data.field === MATCH_READY && monitorFrame.field !== MATCH_READY) {
+                            if (settings.soundAlerts) playGreenAlert();
+                        }
+                    } catch (e) {
+                        console.error(e);
+                    }
 
-                    if (settings.vibrations && [MATCH_RUNNING_TELEOP, MATCH_RUNNING_AUTO, MATCH_TRANSITIONING].includes(data.field)) {
-                        vibrateHandleMonitorFrame(data, monitorFrame);
+                    if ([MATCH_RUNNING_TELEOP, MATCH_RUNNING_AUTO, MATCH_TRANSITIONING].includes(data.field)) {
+                        statusChangeAlertHandler(data, monitorFrame, settings.vibrations, settings.soundAlerts);
+                    }
+
+                    if (settings.susRobots) {
+                        susRobotsAlert(data, monitorFrame, statusChanges);
                     }
 
                     batteryData = batteryData;

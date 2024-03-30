@@ -4,7 +4,7 @@
     import { onMount } from "svelte";
     import { Link, Route, Router, navigate } from "svelte-routing";
     import { get } from "svelte/store";
-    import { MATCH_READY, MATCH_RUNNING_AUTO, MATCH_RUNNING_TELEOP, MATCH_TRANSITIONING, type MonitorFrame, type StatusChanges } from "../../shared/types";
+    import { MATCH_READY, MATCH_RUNNING_AUTO, MATCH_RUNNING_TELEOP, MATCH_TRANSITIONING, PRESTART_COMPLETED, type MonitorFrame, type StatusChanges, MATCH_NOT_READY } from "../../shared/types";
     import SettingsModal from "./components/SettingsModal.svelte";
     import WelcomeModal from "./components/WelcomeModal.svelte";
     import Flashcard from "./pages/Flashcards.svelte";
@@ -172,7 +172,7 @@
                         statusChangeAlertHandler(data, monitorFrame, settings.vibrations, settings.soundAlerts);
                     }
 
-                    if (settings.susRobots) {
+                    if (settings.susRobots && [PRESTART_COMPLETED, MATCH_NOT_READY, MATCH_READY].includes(data.field)) {
                         susRobotsAlert(data, monitorFrame, statusChanges);
                     }
 

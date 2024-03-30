@@ -110,19 +110,24 @@ export function susRobotsAlert(frame: MonitorFrame, previousFrame: MonitorFrame 
         if (alertsPlayed[_robot].rio && currentRobot.rio !== previousRobot.rio) alertsPlayed[_robot].rio = false;
         if (alertsPlayed[_robot].code && currentRobot.code !== previousRobot.code) alertsPlayed[_robot].code = false;
 
-        if (currentRobot.ds === RED && statusChanges[_robot].lastChange.getTime() + 30e3 < new Date().getTime() && !alertsPlayed[_robot].ds) {
+        if (currentRobot.ds === RED && statusChanges[_robot].lastChange.getTime() + 30e3 < new Date().getTime()) {
+            if (alertsPlayed[_robot].ds) continue;
             alertsPlayed[_robot].ds = true;
             AUDIO_ALERTS[_robot].ds.play();
-        } else if (currentRobot.ds === GREEN_X && statusChanges[_robot].lastChange.getTime() + 30e3 < new Date().getTime() && !alertsPlayed[_robot].ds) {
+        } else if (currentRobot.ds === GREEN_X && statusChanges[_robot].lastChange.getTime() + 30e3 < new Date().getTime()) {
+            if (alertsPlayed[_robot].ds) continue;
             alertsPlayed[_robot].ds = true;
             AUDIO_ALERTS[_robot].ds.play();
-        } else if (currentRobot.radio === RED && statusChanges[_robot].lastChange.getTime() + 240e3 < new Date().getTime() && !alertsPlayed[_robot].radio) {
+        } else if (currentRobot.radio === RED && statusChanges[_robot].lastChange.getTime() + 240e3 < new Date().getTime()) {
+            if (alertsPlayed[_robot].radio) continue;
             alertsPlayed[_robot].radio = true;
             AUDIO_ALERTS[_robot].radio.play();
-        } else if (currentRobot.rio === RED && statusChanges[_robot].lastChange.getTime() + 45e3 < new Date().getTime() && !alertsPlayed[_robot].rio) {
+        } else if (currentRobot.rio === RED && statusChanges[_robot].lastChange.getTime() + 45e3 < new Date().getTime()) {
+            if (alertsPlayed[_robot].rio) continue;
             alertsPlayed[_robot].rio = true;
             AUDIO_ALERTS[_robot].rio.play();
-        } else if (currentRobot.code === NO_CODE && statusChanges[_robot].lastChange.getTime() + 30e3 < new Date().getTime() && !alertsPlayed[_robot].code) {
+        } else if (currentRobot.code === NO_CODE && statusChanges[_robot].lastChange.getTime() + 30e3 < new Date().getTime()) {
+            if (alertsPlayed[_robot].code) continue;
             alertsPlayed[_robot].code = true;
             AUDIO_ALERTS[_robot].code.play();
         }

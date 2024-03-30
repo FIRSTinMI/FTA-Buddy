@@ -50,8 +50,7 @@ const AUDIO_ALERTS: {[key in ROBOT]: {ds: HTMLAudioElement, radio: HTMLAudioElem
 const GREEN_ALERTS = [
     new Audio('/app/audio/green1.ogg'),
     new Audio('/app/audio/green2.ogg'),
-    new Audio('/app/audio/green3.ogg'),
-    new Audio('/app/audio/green4.ogg')
+    new Audio('/app/audio/green3.ogg')
 ]
 
 export function playGreenAlert() {

@@ -1,11 +1,10 @@
-import { CODE, GREEN, GREEN_X, MonitorFrame, PRESTART_COMPLETED, PRESTART_INITIATED, RED, TeamInfo } from "../shared/types";
+import { CODE, GREEN, GREEN_X, MonitorFrame, PRESTART_COMPLETED, PRESTART_INITIATED, RED, ROBOT, StatusChanges, TeamInfo } from "../shared/types";
 
-export interface StatusChange { [key: string]: { lastChange: Date, improved: boolean } };
-
-export function detectStatusChange(statusChanges: StatusChange, currentFrame: MonitorFrame, previousFrame: MonitorFrame | null) {
+export function detectStatusChange(statusChanges: StatusChanges, currentFrame: MonitorFrame, previousFrame: MonitorFrame | null) {
     if (!previousFrame) return statusChanges;
 
-    for (let robot of ['blue1', 'blue2', 'blue3', 'red1', 'red2', 'red3']) {
+    for (let _robot in ROBOT) {
+        const robot = _robot as ROBOT;
         const currentRobot = (currentFrame[robot as keyof MonitorFrame] as TeamInfo);
         const previousRobot = (previousFrame[robot as keyof MonitorFrame] as TeamInfo);
         

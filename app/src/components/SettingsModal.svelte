@@ -31,6 +31,9 @@
     <div slot="header"><h1 class="text-2xl">Settings</h1></div>
     <form class="space-y-2 justify-start text-left grid grid-cols-1">
         <Toggle bind:checked={settings.vibrations} on:change={updateSettings}>Vibrations</Toggle>
+        <Toggle bind:checked={settings.soundAlerts} on:change={updateSettings}>Sound Alerts</Toggle>
+        <Toggle bind:checked={settings.fieldGreen} on:change={updateSettings}>Field Green Alert</Toggle>
+        <Toggle bind:checked={settings.susRobots} on:change={updateSettings}>👀 Sound Alerts</Toggle>
         <Toggle bind:checked={settings.developerMode} on:change={updateSettings}>Developer Mode</Toggle>
         {#if settings.developerMode}
             <Toggle bind:checked={settings.forceCloud} on:change={updateSettings}>Force cloud server</Toggle>

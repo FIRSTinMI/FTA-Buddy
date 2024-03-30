@@ -42,6 +42,17 @@ export interface Message {
     username: string;
 }
 
+export enum ROBOT {
+    blue1 = 'blue1',
+    blue2 = 'blue2',
+    blue3 = 'blue3',
+    red1 = 'red1',
+    red2 = 'red2',
+    red3 = 'red3'
+}
+
+export type StatusChanges = { [key in ROBOT]: { lastChange: Date, improved: boolean } };
+
 export type Station = "red1" | "red2" | "red3" | "blue1" | "blue2" | "blue3";
 export type FieldState = typeof UNKNOWN | typeof MATCH_RUNNING_TELEOP | typeof MATCH_TRANSITIONING | typeof MATCH_RUNNING_AUTO | typeof MATCH_READY | typeof PRESTART_COMPLETED | typeof PRESTART_INITIATED | typeof READY_TO_PRESTART | typeof MATCH_ABORTED | typeof MATCH_OVER | typeof READY_FOR_POST_RESULT;
 export type DSState = typeof RED | typeof GREEN | typeof GREEN_X | typeof MOVE_STATION | typeof WRONG_MATCH | typeof BYPASS | typeof ESTOP | typeof ASTOP;

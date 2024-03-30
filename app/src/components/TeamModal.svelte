@@ -20,14 +20,14 @@
     } from "../../../shared/types";
     import MonitorRow from "./MonitorRow.svelte";
     import { navigate } from "svelte-routing";
-    import type { StatusChange } from "../util/vibrateOnDrop";
+    import type { StatusChanges } from "../util/statusAlerts";
     import { formatTimeShort } from "../util/formatTime";
 
     export let modalOpen: boolean;
     export let modalStation: Station;
     export let monitorFrame: MonitorFrame;
     export let batteryData: { [key: string]: number[] };
-    export let statusChanges: StatusChange;
+    export let statusChanges: StatusChanges;
 
     let modalTeam: TeamInfo | undefined;
     let battery: number[] = [];

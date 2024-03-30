@@ -102,7 +102,7 @@ export function susRobotsAlert(frame: MonitorFrame, previousFrame: MonitorFrame 
         const previousRobot = (previousFrame[robot as keyof MonitorFrame] as TeamInfo);
 
         if (currentRobot.ds === BYPASS) continue;
-        
+
         const _robot = robot as ROBOT;
 
         if (alertsPlayed[_robot].ds && currentRobot.ds !== previousRobot.ds) alertsPlayed[_robot].ds = false;
@@ -110,19 +110,19 @@ export function susRobotsAlert(frame: MonitorFrame, previousFrame: MonitorFrame 
         if (alertsPlayed[_robot].rio && currentRobot.rio !== previousRobot.rio) alertsPlayed[_robot].rio = false;
         if (alertsPlayed[_robot].code && currentRobot.code !== previousRobot.code) alertsPlayed[_robot].code = false;
 
-        if (currentRobot.ds === RED && statusChanges[_robot].lastChange.getTime() + 30e3 > new Date().getTime() && !alertsPlayed[_robot].ds) {
+        if (currentRobot.ds === RED && statusChanges[_robot].lastChange.getTime() + 30e3 < new Date().getTime() && !alertsPlayed[_robot].ds) {
             alertsPlayed[_robot].ds = true;
             AUDIO_ALERTS[_robot].ds.play();
-        } else if (currentRobot.ds === GREEN_X && statusChanges[_robot].lastChange.getTime() + 30e3 > new Date().getTime() && !alertsPlayed[_robot].ds) {
+        } else if (currentRobot.ds === GREEN_X && statusChanges[_robot].lastChange.getTime() + 30e3 < new Date().getTime() && !alertsPlayed[_robot].ds) {
             alertsPlayed[_robot].ds = true;
             AUDIO_ALERTS[_robot].ds.play();
-        } else if (currentRobot.radio === RED && statusChanges[_robot].lastChange.getTime() + 240e3 > new Date().getTime() && !alertsPlayed[_robot].radio) {
+        } else if (currentRobot.radio === RED && statusChanges[_robot].lastChange.getTime() + 240e3 < new Date().getTime() && !alertsPlayed[_robot].radio) {
             alertsPlayed[_robot].radio = true;
             AUDIO_ALERTS[_robot].radio.play();
-        } else if (currentRobot.rio === RED && statusChanges[_robot].lastChange.getTime() + 45e3 > new Date().getTime() && !alertsPlayed[_robot].rio) {
+        } else if (currentRobot.rio === RED && statusChanges[_robot].lastChange.getTime() + 45e3 < new Date().getTime() && !alertsPlayed[_robot].rio) {
             alertsPlayed[_robot].rio = true;
             AUDIO_ALERTS[_robot].rio.play();
-        } else if (currentRobot.code === NO_CODE && statusChanges[_robot].lastChange.getTime() + 30e3 > new Date().getTime() && !alertsPlayed[_robot].code) {
+        } else if (currentRobot.code === NO_CODE && statusChanges[_robot].lastChange.getTime() + 30e3 < new Date().getTime() && !alertsPlayed[_robot].code) {
             alertsPlayed[_robot].code = true;
             AUDIO_ALERTS[_robot].code.play();
         }

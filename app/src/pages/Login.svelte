@@ -407,4 +407,8 @@
             </div>
         {/if}
     {/if}
+    <p class="text-sm text-neutral-500">
+        <a href="/app/privacy.html" class="underline">Privacy Policy</a><br />
+        TL;DR Personal info only used for authentication and identification in notes/tickets
+    </p>
 </div>

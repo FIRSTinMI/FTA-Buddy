@@ -3,20 +3,24 @@ import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db/db";
-import { events } from "../db/schema";
-import { adminProcedure, eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
+import { events, users } from "../db/schema";
+import { adminProcedure, protectedProcedure, router } from "../trpc";
 import { generateToken } from "./user";
 
 export const eventRouter = router({
-    join: publicProcedure.input(z.object({
+    join: protectedProcedure.input(z.object({
         code: z.string(),
         pin: z.string()
-    })).query(async ({ input }) => {
+    })).query(async ({ input, ctx }) => {
         const event = await db.query.events.findFirst({ where: eq(events.code, input.code.trim().toLowerCase()) });
 
         if (!event) throw new TRPCError({ code: 'NOT_FOUND', message: 'Event not found' });
 
         if (event.pin !== input.pin) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Incorrect pin' });
+        
+        const eventList = ctx.user.events as string[];
+
+        await db.update(users).set({ events: [...eventList, event.code] }).where(eq(users.id, ctx.user.id));
 
         return event;
     }),

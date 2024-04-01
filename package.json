@@ -4,7 +4,7 @@
     "description": "",
     "scripts": {
         "start": "npx tsx ./src/index.ts",
-        "dev": "concurrently \"export NODE_ENV=dev && nodemon ./\" \"cd app && npm run dev\" --kill-others --success first",
+        "dev": "concurrently \"set NODE_ENV=dev && nodemon ./\" \"cd app && npm run dev\" --kill-others --success first",
         "build": "tsc; cd app; npm ci; npm run build",
         "generate-migration": "drizzle-kit generate:pg",
         "migrate": "ts-node src/db/migrate"

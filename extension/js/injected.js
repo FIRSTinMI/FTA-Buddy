@@ -14,14 +14,16 @@ function read(station) {
         bwu: parseFloat(document.getElementById(station + 'BWU').innerText),
         battery: parseFloat(document.getElementById(station + 'Battery').innerText),
         ping: parseInt(document.getElementById(station + 'AvgTrip').innerText),
-        packets: parseInt(document.getElementById(station + 'MissedPackets').innerText)
+        packets: parseInt(document.getElementById(station + 'MissedPackets').innerText),
+        versionmm: document.getElementById(station + 'versionmm').style.display === 'none' ? 0 : 1,
     };
 
-    if (obj.ds === 5) {
-        obj.radio = 0;
-        obj.rio = 0;
-        obj.code = 0;
-    }
+    // If the station is bypassed, set all statuses to 0
+    // if (obj.ds === 5) {
+    //     obj.radio = 0;
+    //     obj.rio = 0;
+    //     obj.code = 0;
+    // }
 
     return obj
 }
@@ -59,6 +61,7 @@ function identifyFieldStatus(elm) {
 
 function sendUpdate() {
     let data = {
+        frameTime: (new Date()).getTime(),
         type: 'monitorUpdate',
         field: identifyFieldStatus(document.getElementById('matchStateTop')),
         match: document.getElementById('MatchNumber').innerText.substring(3),

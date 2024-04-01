@@ -4,7 +4,7 @@
     import { onMount } from "svelte";
     import { Link, Route, Router, navigate } from "svelte-routing";
     import { get } from "svelte/store";
-    import { MATCH_RUNNING_AUTO, MATCH_RUNNING_TELEOP, MATCH_TRANSITIONING, type MonitorFrame } from "../../shared/types";
+    import { MATCH_READY, MATCH_RUNNING_AUTO, MATCH_RUNNING_TELEOP, MATCH_TRANSITIONING, PRESTART_COMPLETED, type MonitorFrame, type StatusChanges, MATCH_NOT_READY } from "../../shared/types";
     import SettingsModal from "./components/SettingsModal.svelte";
     import WelcomeModal from "./components/WelcomeModal.svelte";
     import Flashcard from "./pages/Flashcards.svelte";
@@ -17,9 +17,8 @@
     import { settingsStore } from "./stores/settings";
     import { VERSIONS, update } from "./util/updater";
     import { server } from "./main";
-    import { vibrateHandleMonitorFrame } from "./util/vibrateOnDrop";
+    import { playGreenAlert, statusChangeAlertHandler, susRobotsAlert } from "./util/statusAlerts";
     import { sineIn } from "svelte/easing";
-    import type { StatusChange } from "../../src/stateChange";
 
     let auth = get(authStore);
 
@@ -111,7 +110,7 @@
         blue3: new Array(20).fill(0),
     };
 
-    let statusChanges: StatusChange = {
+    let statusChanges: StatusChanges = {
         red1: { lastChange: new Date(), improved: true },
         red2: { lastChange: new Date(), improved: true },
         red3: { lastChange: new Date(), improved: true },
@@ -136,6 +135,11 @@
             try {
                 let data = JSON.parse(evt.data);
                 if (data.type === "monitorUpdate") {
+                    if (data.frameTime && data.frameTime + 3000 < new Date().getTime()) {
+                        console.log("Skipping stale frame");
+                        return;
+                    }
+                    
                     lastFrameTime = new Date();
                     frameCount++;
                     for (let key of Object.keys(batteryData)) {
@@ -156,9 +160,20 @@
                     }
 
                     statusChanges = statusChanges;
+                    try {
+                        if (data.field === MATCH_READY && monitorFrame.field !== MATCH_READY) {
+                            if (settings.soundAlerts) playGreenAlert();
+                        }
+                    } catch (e) {
+                        console.error(e);
+                    }
 
-                    if (settings.vibrations && [MATCH_RUNNING_TELEOP, MATCH_RUNNING_AUTO, MATCH_TRANSITIONING].includes(data.field)) {
-                        vibrateHandleMonitorFrame(data, monitorFrame);
+                    if ([MATCH_RUNNING_TELEOP, MATCH_RUNNING_AUTO, MATCH_TRANSITIONING].includes(data.field)) {
+                        statusChangeAlertHandler(data, monitorFrame, settings.vibrations, settings.soundAlerts);
+                    }
+
+                    if (settings.susRobots && [PRESTART_COMPLETED, MATCH_NOT_READY, MATCH_READY].includes(data.field)) {
+                        susRobotsAlert(data, monitorFrame, statusChanges);
                     }
 
                     batteryData = batteryData;
@@ -189,14 +204,20 @@
         };
     }
 
+    let inactiveStartTime = new Date().getTime();
+
     document.addEventListener("visibilitychange", (evt) => {
         if (document.visibilityState === "visible") {
             console.log("Returning from inactive");
             console.log(ws.readyState == 1 ? "Connected" : "Disconnected");
-            if (!ws || ws.readyState !== 1) {
+            console.log("Inactive for " + (new Date().getTime() - inactiveStartTime) + "ms");
+            if (!ws || ws.readyState !== 1 || new Date().getTime() - inactiveStartTime > 60e3) {
                 if (timeoutID) clearTimeout(timeoutID);
                 openWebSocket();
             }
+        } else {
+            console.log("Going inactive");
+            inactiveStartTime = new Date().getTime();
         }
     });
 

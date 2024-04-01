@@ -6,6 +6,16 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+    '2.4.4': {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.4.4</h1>
+        <ul>
+        <li>More robust websocket connection</li>
+        <li>Audio alerts! (enable in settings)</li>
+        </ul>
+        `,
+        update: () => { }
+    },
     '2.4.3': {
         changelog: `
         <h1 class="text-lg font-bold">v2.4.3</h1>

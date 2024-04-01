@@ -1,3 +1,6 @@
+<svelte:head>
+<script src="https://accounts.google.com/gsi/client" async></script>
+</svelte:head>
 <script lang="ts">
     import {
         Button,
@@ -191,6 +194,29 @@
 
         loading = false;
     }
+
+    async function completeLogin(googleUser: any) {
+        console.log(googleUser);
+        const id_token = googleUser.getAuthResponse().id_token;
+        console.log(id_token);
+        try {
+            // const res = await trpc.user.googleLogin.query({ id_token });
+            // authStore.set({
+            //     token: res.token,
+            //     eventToken: "",
+            //     user: {
+            //         username: res.username,
+            //         email: res.email,
+            //         role: res.role,
+            //         id: res.id,
+            //     },
+            // });
+            toast("Success", "Logged in successfully", "green-500");
+        } catch (err: any) {
+            toast("Error Logging In", err.message);
+            console.error(err);
+        }
+    }
 </script>
 
 {#if loading}
@@ -200,7 +226,7 @@
 {/if}
 
 <div
-    class="container mx-auto flex flex-col justify-center p-4 h-full space-y-6"
+    class="container mx-auto md:max-w-3xl flex flex-col justify-center p-4 h-full space-y-4"
 >
     <h1 class="text-3xl">Welcome to FTA Buddy</h1>
     {#if !auth || !auth.token}
@@ -312,7 +338,25 @@
 
             <!-- Login Prompt -->
         {:else}
-            <h2 class="text-xl">Login or Create Account</h2>
+            <div class="w-fit mx-auto">
+                <div id="g_id_onload"
+                    data-client_id="211223782093-ahalvkbdfdnjnv29svdvu3phsg40hlqi.apps.googleusercontent.com"
+                    data-context="signin"
+                    data-ux_mode="popup"
+                    data-callback="completeLogin"
+                    data-auto_prompt="false">
+                </div>
+
+                <div class="g_id_signin"
+                    data-type="standard"
+                    data-shape="pill"
+                    data-theme="filled_blue"
+                    data-text="continue_with"
+                    data-size="large"
+                    data-logo_alignment="left">
+                </div>
+            </div>
+            <div class="border-t border-neutral-500"></div>
             <Button on:click={() => (view = "create")} bind:disabled={loading}
                 >Create Account</Button
             >
@@ -412,7 +456,6 @@
         {/if}
     {/if}
     <p class="text-sm text-neutral-500">
-        <a href="/app/privacy.html" class="underline">Privacy Policy</a><br />
-        TL;DR Personal info only used for authentication and identification in notes/tickets
+        <a href="/app/privacy.html" class="underline">Privacy Policy</a>
     </p>
 </div>

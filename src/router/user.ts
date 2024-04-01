@@ -89,6 +89,8 @@ export const userRouter = router({
         const payload = ticket.getPayload();
         if (!payload) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid token' });
 
+        console.log(payload);
+
         const email = payload['email'] as string;
         const user = await db.query.users.findFirst({ where: eq(users.email, email) });
 
@@ -102,6 +104,48 @@ export const userRouter = router({
                 return { ...user, token };
             }
             return user;
+        }
+    }),
+
+    createGoogleUser: publicProcedure.input(z.object({
+        token: z.string(),
+        username: z.string(),
+        role: z.enum(['ADMIN', 'FTA', 'FTAA', 'CSA', 'RI'])
+    })).query(async ({ input }) => {
+        const ticket = await client.verifyIdToken({
+            idToken: input.token,
+            audience: process.env.GOOGLE_CLIENT_ID
+        });
+
+        const payload = ticket.getPayload();
+        if (!payload) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid token' });
+
+        console.log(payload);
+
+        const email = payload['email'] as string;
+        const user = await db.query.users.findFirst({ where: eq(users.email, email) });
+
+        if (user) {
+            throw new TRPCError({ code: 'CONFLICT', message: 'User already exists' });
+        } else {
+            const username = payload['name'] as string;
+            const token = generateToken();
+            await db.insert(users).values({
+                email,
+                username,
+                password: 'google',
+                role: 'FTA',
+                token
+            });
+
+            const res = await db.query.users.findFirst({ where: eq(users.email, email) });
+            if (!res) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'User not created' });
+
+            return {
+                token,
+                id: res.id,
+                email
+            };
         }
     }),
 

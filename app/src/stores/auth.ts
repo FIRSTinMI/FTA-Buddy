@@ -9,6 +9,7 @@ export interface Auth {
         role: string;
         id: number;
     }
+    googleToken?: string;
 }
 
 let initialAuth = localStorage.getItem('auth');

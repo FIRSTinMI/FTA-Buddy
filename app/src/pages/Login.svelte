@@ -14,6 +14,7 @@
     import { authStore } from "../stores/auth";
     import { eventStore } from "../stores/event";
     import { navigate } from "svelte-routing";
+    import { get } from "svelte/store";
 
     export let toast: (title: string, text: string, color?: string) => void;
 
@@ -27,7 +28,7 @@
     let role: "ADMIN" | "FTA" | "FTAA" | "CSA" = "FTA";
 
     let loading = false;
-    let view: null | "login" | "create" = null;
+    let view: null | "login" | "create" | "googleCreate" = null;
 
     async function createUser(evt: Event) {
         evt.preventDefault();
@@ -211,12 +212,56 @@
                     role: res.role,
                     id: res.id,
                 },
+                googleToken: googleUser.credential
             });
             toast("Success", "Logged in successfully", "green-500");
         } catch (err: any) {
-            toast("Error Logging In", err.message);
+            if (err.code === 404) {
+                view = "googleCreate";
+                authStore.set({
+                    token: "",
+                    eventToken: "",
+                    user: undefined,
+                    googleToken: googleUser.credential
+                });
+            } else {
+                toast("Error Logging In", err.message);
+                console.error(err);
+            }
+        }
+    }
+
+    async function createGoogleUser(evt: Event) {
+        evt.preventDefault();
+        loading = true;
+        const googleToken = get(authStore).googleToken;
+
+        try {
+            const res = await trpc.user.createGoogleUser.query({
+                token: googleToken || "",
+                username,
+                role,
+            });
+
+            authStore.set({
+                token: res.token,
+                eventToken: "",
+                user: {
+                    username,
+                    email: res.email,
+                    role,
+                    id: res.id,
+                },
+                googleToken
+            });
+
+            toast("Success", "Account created successfully", "green-500");
+        } catch (err: any) {
+            toast("Error Creating Account", err.message);
             console.error(err);
         }
+
+        loading = false;
     }
 </script>
 
@@ -366,6 +411,41 @@
                 >Login</Button
             >
         {/if}
+
+        <!-- Google create account -->
+    {:else if view === "googleCreate"}
+        <h2 class="text-xl">Finish Creating Account</h2>
+        <form
+            class="flex flex-col space-y-2 mt-2 text-left"
+            on:submit={createGoogleUser}
+        >
+            <div>
+                <Label for="username">Username</Label>
+                <Input
+                    id="username"
+                    bind:value={username}
+                    placeholder="John"
+                    bind:disabled={loading}
+                />
+            </div>
+
+            <div>
+                <Label for="role">Role</Label>
+                <Select
+                    id="role"
+                    bind:value={role}
+                    items={["FTA", "FTAA", "CSA", "RI"].map((v) => ({
+                        name: v,
+                        value: v,
+                    }))}
+                    bind:disabled={loading}
+                />
+            </div>
+
+            <Button type="submit" bind:disabled={loading}
+                >Create Account</Button
+            >
+        </form>
 
         <!-- Logged In -->
     {:else}

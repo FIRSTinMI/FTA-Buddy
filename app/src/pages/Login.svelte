@@ -200,15 +200,8 @@
     // @ts-ignore
     window.googleLogin = async (googleUser: any) => {
         console.log(googleUser);
-        const profile = googleUser.getBasicProfile();
-        console.log('ID: ' + profile.getId());
-        console.log('Name: ' + profile.getName());
-        console.log('Image URL: ' + profile.getImageUrl());
-        console.log('Email: ' + profile.getEmail());
-        const id_token = googleUser.getAuthResponse().id_token;
-        console.log(id_token);
         try {
-            const res = await trpc.user.googleLogin.query({ token: id_token });
+            const res = await trpc.user.googleLogin.query({ token: googleUser.credential });
             authStore.set({
                 token: res.token,
                 eventToken: "",
@@ -362,7 +355,7 @@
                     data-text="continue_with"
                     data-size="large"
                     data-logo_alignment="left"
-                    style="colorScheme: 'light'">
+                    style="color-scheme: light">
                 </div>
             </div>
             <div class="border-t border-neutral-500"></div>

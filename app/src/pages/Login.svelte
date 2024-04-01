@@ -197,7 +197,8 @@
         loading = false;
     }
 
-    async function googleLogin(googleUser: any) {
+    // @ts-ignore
+    window.googleLogin = async (googleUser: any) => {
         console.log(googleUser);
         const profile = googleUser.getBasicProfile();
         console.log('ID: ' + profile.getId());
@@ -360,7 +361,8 @@
                     data-theme="filled_blue"
                     data-text="continue_with"
                     data-size="large"
-                    data-logo_alignment="left">
+                    data-logo_alignment="left"
+                    style="colorScheme: 'light'">
                 </div>
             </div>
             <div class="border-t border-neutral-500"></div>

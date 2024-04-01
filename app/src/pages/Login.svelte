@@ -212,7 +212,8 @@
             toast("Success", "Logged in successfully", "green-500");
         } catch (err: any) {
             if (err.code === 404 || err.message.startsWith("User not found")) {
-                view = "googleCreate";
+                // @ts-ignore
+                window.view = "googleCreate";
                 authStore.set({
                     token: "",
                     eventToken: "",
@@ -408,7 +409,7 @@
         {/if}
 
         <!-- Google create account -->
-    {:else if view === "googleCreate"}
+    {:else if window.view === "googleCreate"}
         <h2 class="text-xl">Finish Creating Account</h2>
         <form
             class="flex flex-col space-y-2 mt-2 text-left"

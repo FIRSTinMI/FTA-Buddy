@@ -96,12 +96,7 @@
 
     function logout() {
         authStore.set({ token: "", eventToken: "", user: undefined });
-        
-        // @ts-ignore
-        const auth2 = gapi.auth2.getAuthInstance();
-        auth2.signOut().then(() => {
-            console.log('User signed out.');
-        });
+        window.location.reload();
     }
 
     authStore.subscribe((value) => {
@@ -216,7 +211,7 @@
             });
             toast("Success", "Logged in successfully", "green-500");
         } catch (err: any) {
-            if (err.code === 404) {
+            if (err.code === 404 || err.message.startsWith("User not found")) {
                 view = "googleCreate";
                 authStore.set({
                     token: "",

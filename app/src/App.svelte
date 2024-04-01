@@ -19,6 +19,7 @@
     import { server } from "./main";
     import { playGreenAlert, statusChangeAlertHandler, susRobotsAlert } from "./util/statusAlerts";
     import { sineIn } from "svelte/easing";
+    import CompleteGoogleSignup from "./pages/CompleteGoogleSignup.svelte";
 
     let auth = get(authStore);
 
@@ -127,7 +128,7 @@
         ws = new WebSocket(uri);
         ws.onopen = function () {
             console.log("Connected to " + uri);
-            this.send("client-" + get(authStore).eventToken);
+            this.send("client-" + auth.eventToken);
             setInterval(() => ws.send("ping"), 60e3);
         };
 
@@ -235,6 +236,7 @@
         if ((!auth.token || !auth.eventToken) && window.location.pathname !== "/app/login") {
             navigate("/app/login");
         }
+        openWebSocket();
     });
 
     onMount(() => {
@@ -276,10 +278,6 @@
 <SettingsModal
     bind:settingsOpen
     bind:installPrompt
-    openHelp={() => {
-        settingsOpen = false;
-        welcomeOpen = true;
-    }}
 />
 
 <Drawer transitionType="fly" {transitionParams} bind:hidden={hideMenu} id="sidebar">
@@ -426,6 +424,9 @@
             </div>
             <Route path="/login">
                 <Login {toast} />
+            </Route>
+            <Route path="/google-signup">
+                <CompleteGoogleSignup {toast} />
             </Route>
 
             {#if auth.token && auth.eventToken}

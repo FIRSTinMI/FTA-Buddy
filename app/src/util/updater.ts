@@ -6,6 +6,16 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+    '2.4.5': {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.4.5</h1>
+        <ul>
+        <li>Google sign in! If you already created an account using the same email as your gmail, you can sign in with either.</li>
+        <li>You can click on the QR Codes in references to navigate to the PDF yourself.</li>
+        </ul>
+        `,
+        update: () => { }
+    },
     '2.4.4': {
         changelog: `
         <h1 class="text-lg font-bold">v2.4.4</h1>

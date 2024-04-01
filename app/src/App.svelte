@@ -128,7 +128,7 @@
         ws = new WebSocket(uri);
         ws.onopen = function () {
             console.log("Connected to " + uri);
-            this.send("client-" + get(authStore).eventToken);
+            this.send("client-" + auth.eventToken);
             setInterval(() => ws.send("ping"), 60e3);
         };
 
@@ -236,6 +236,7 @@
         if ((!auth.token || !auth.eventToken) && window.location.pathname !== "/app/login") {
             navigate("/app/login");
         }
+        openWebSocket();
     });
 
     onMount(() => {

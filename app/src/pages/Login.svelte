@@ -183,7 +183,6 @@
                 teams: (res.teams as any) || [],
             });
             toast("Success", "Event joined successfully", "green-500");
-            setTimeout(() => navigate("/app/"), 200);
         } catch (err: any) {
             toast("Error Joining Event", err.message);
             console.error(err);

@@ -11,7 +11,6 @@ export const userRouter = router({
         email: z.string(),
         password: z.string()
     })).query(async ({ input }) => {
-        console.log(input);
         const user = await db.query.users.findFirst({ where: eq(users.email, input.email) });
 
         console.log(user);

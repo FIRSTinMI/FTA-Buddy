@@ -3,11 +3,11 @@
     import { Table, TableBody, TableHead, TableHeadCell } from "flowbite-svelte";
     import MonitorRow from "../components/MonitorRow.svelte";
     import TeamModal from "../components/TeamModal.svelte";
-    import type { StatusChange } from "../util/vibrateOnDrop";
+    import type { StatusChanges } from "../util/statusAlerts";
 
     export let monitorFrame: MonitorFrame;
     export let batteryData: { [key: string]: number[] } = {};
-    export let statusChanges: StatusChange;
+    export let statusChanges: StatusChanges;
 
     const FieldStates = {
         0: "Unknown",

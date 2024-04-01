@@ -42,7 +42,7 @@ function handleUpdate() {
     console.log({ url: urlInput.value, cloud: cloudCheckbox.checked, event: eventInput.value, changed: new Date().getTime(), enabled: enabled.checked })
     chrome.storage.local.set({ url: urlInput.value, cloud: cloudCheckbox.checked, event: eventInput.value, changed: new Date().getTime(), enabled: enabled.checked });
 
-    urlContainer.style.display = item.cloud ? 'none' : 'block';
+    urlContainer.style.display = cloudCheckbox.checked ? 'none' : 'block';
 }
 
 cloudCheckbox.addEventListener('input', handleUpdate);

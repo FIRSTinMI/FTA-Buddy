@@ -5,6 +5,9 @@ export interface Settings {
     developerMode: boolean;
     vibrations: boolean;
     forceCloud: boolean;
+    soundAlerts: boolean;
+    fieldGreen: boolean;
+    susRobots: boolean;
 }
 
 let initialSettings = localStorage.getItem('settings');
@@ -13,7 +16,10 @@ const defaultSettings: Settings = {
     version: '0',
     developerMode: false,
     vibrations: true,
-    forceCloud: true
+    forceCloud: true,
+    soundAlerts: false,
+    fieldGreen: true,
+    susRobots: false
 };
 
 if (!initialSettings) {

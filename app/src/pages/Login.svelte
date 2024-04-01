@@ -14,10 +14,6 @@
     import { authStore } from "../stores/auth";
     import { eventStore } from "../stores/event";
     import { navigate } from "svelte-routing";
-    import { GoogleAuthProvider } from "firebase/auth";
-
-    const provider = new GoogleAuthProvider();
-    provider.addScope('https://www.googleapis.com/auth/contacts.readonly');
 
     export let toast: (title: string, text: string, color?: string) => void;
 
@@ -99,6 +95,12 @@
 
     function logout() {
         authStore.set({ token: "", eventToken: "", user: undefined });
+        
+        // @ts-ignore
+        const auth2 = gapi.auth2.getAuthInstance();
+        auth2.signOut().then(() => {
+            console.log('User signed out.');
+        });
     }
 
     authStore.subscribe((value) => {
@@ -195,22 +197,27 @@
         loading = false;
     }
 
-    async function completeLogin(googleUser: any) {
+    async function googleLogin(googleUser: any) {
         console.log(googleUser);
+        const profile = googleUser.getBasicProfile();
+        console.log('ID: ' + profile.getId());
+        console.log('Name: ' + profile.getName());
+        console.log('Image URL: ' + profile.getImageUrl());
+        console.log('Email: ' + profile.getEmail());
         const id_token = googleUser.getAuthResponse().id_token;
         console.log(id_token);
         try {
-            // const res = await trpc.user.googleLogin.query({ id_token });
-            // authStore.set({
-            //     token: res.token,
-            //     eventToken: "",
-            //     user: {
-            //         username: res.username,
-            //         email: res.email,
-            //         role: res.role,
-            //         id: res.id,
-            //     },
-            // });
+            const res = await trpc.user.googleLogin.query({ token: id_token });
+            authStore.set({
+                token: res.token,
+                eventToken: "",
+                user: {
+                    username: res.username,
+                    email: res.email,
+                    role: res.role,
+                    id: res.id,
+                },
+            });
             toast("Success", "Logged in successfully", "green-500");
         } catch (err: any) {
             toast("Error Logging In", err.message);
@@ -343,7 +350,7 @@
                     data-client_id="211223782093-ahalvkbdfdnjnv29svdvu3phsg40hlqi.apps.googleusercontent.com"
                     data-context="signin"
                     data-ux_mode="popup"
-                    data-callback="completeLogin"
+                    data-callback="googleLogin"
                     data-auto_prompt="false">
                 </div>
 

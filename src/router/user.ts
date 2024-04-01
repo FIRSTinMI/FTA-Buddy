@@ -5,6 +5,9 @@ import { compare, hash } from "bcrypt";
 import { users } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+import { OAuth2Client } from "google-auth-library";
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export const userRouter = router({
     login: publicProcedure.input(z.object({
@@ -73,7 +76,35 @@ export const userRouter = router({
             token,
             id: res.id,
         };
-    })
+    }),
+
+    googleLogin: publicProcedure.input(z.object({
+        token: z.string()
+    })).query(async ({ input }) => {
+        const ticket = await client.verifyIdToken({
+            idToken: input.token,
+            audience: process.env.GOOGLE_CLIENT_ID
+        });
+
+        const payload = ticket.getPayload();
+        if (!payload) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid token' });
+
+        const email = payload['email'] as string;
+        const user = await db.query.users.findFirst({ where: eq(users.email, email) });
+
+        if (!user) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
+        } else {
+            db.update(users).set({ last_seen: new Date() }).where(eq(users.id, user.id));
+            if (user.token === '') {
+                let token = generateToken();
+                await db.update(users).set({ token }).where(eq(users.id, user.id));
+                return { ...user, token };
+            }
+            return user;
+        }
+    }),
+
 });
 
 export function generateToken() {

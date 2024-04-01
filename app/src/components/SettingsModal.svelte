@@ -4,7 +4,6 @@
     import { settingsStore } from "../stores/settings";
 
     export let settingsOpen = false;
-    export let openHelp: () => void;
 
     let settings = get(settingsStore);
     export let installPrompt: Event | null;

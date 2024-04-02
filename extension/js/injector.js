@@ -1,4 +1,5 @@
 console.log('Loaded injector');
+const manifestData = chrome.runtime.getManifest();
 chrome.storage.local.get(['url', 'cloud', 'event', 'changed', 'enabled'], item => {
     console.log(item);
     if (!item.enabled) {
@@ -13,6 +14,7 @@ chrome.storage.local.get(['url', 'cloud', 'event', 'changed', 'enabled'], item =
     script.dataset.host = item.url;
     script.dataset.cloud = item.cloud;
     script.dataset.event = item.event;
+    script.dataset.version = manifestData.version;
     script.id = 'fta-buddy';
     document.body.appendChild(script);
 });

@@ -19,6 +19,8 @@
     import { server } from "./main";
     import { playGreenAlert, statusChangeAlertHandler, susRobotsAlert } from "./util/statusAlerts";
     import { sineIn } from "svelte/easing";
+    import CompleteGoogleSignup from "./pages/CompleteGoogleSignup.svelte";
+    import { eventStore } from "./stores/event";
 
     let auth = get(authStore);
 
@@ -119,7 +121,14 @@
         blue3: { lastChange: new Date(), improved: true },
     };
 
+    let event = get(eventStore);
+    eventStore.subscribe((value) => {
+        event = value;
+    });
+
     function openWebSocket() {
+        if (ws) ws.close();
+
         const uri = `${server.split("://")[0].endsWith("s") ? "wss" : "ws"}://${server.split("://")[1]}/ws/`;
 
         console.log("Connecting to " + uri);
@@ -127,7 +136,7 @@
         ws = new WebSocket(uri);
         ws.onopen = function () {
             console.log("Connected to " + uri);
-            this.send("client-" + get(authStore).eventToken);
+            this.send("client-" + auth.eventToken);
             setInterval(() => ws.send("ping"), 60e3);
         };
 
@@ -231,15 +240,28 @@
         hideMenu = false;
     }
     authStore.subscribe((value) => {
-        auth = value;
-        if ((!auth.token || !auth.eventToken) && window.location.pathname !== "/app/login") {
+        if ((!value.token || !value.eventToken) && window.location.pathname !== "/app/login") {
             navigate("/app/login");
+        }
+
+        if (auth.eventToken !== value.eventToken) {
+            auth = value;
+            openWebSocket();
+        } else {
+            auth = value;
         }
     });
 
     onMount(() => {
         openWebSocket();
     });
+
+    let fullscreen = (window.outerWidth > 1900) ? !(!screenTop && !screenY) : false;
+
+    setInterval(() => {
+        if (window.outerWidth > 1900)
+            fullscreen = !(!screenTop && !screenY);
+    }, 200);
 </script>
 
 {#if showToast}
@@ -276,10 +298,6 @@
 <SettingsModal
     bind:settingsOpen
     bind:installPrompt
-    openHelp={() => {
-        settingsOpen = false;
-        welcomeOpen = true;
-    }}
 />
 
 <Drawer transitionType="fly" {transitionParams} bind:hidden={hideMenu} id="sidebar">
@@ -348,6 +366,7 @@
             <SidebarGroup class="border-t-2 mt-2 pt-2 border-neutral-400">
                 <SidebarItem
                     label="Settings"
+                    class="text-sm"
                     on:click={(evt) => {
                         evt.preventDefault();
                         hideMenu = true;
@@ -360,6 +379,7 @@
                 </SidebarItem>
                 <SidebarItem
                     label="Change Event/Account"
+                    class="text-sm"
                     on:click={() => {
                         hideMenu = true;
                         navigate("/app/login");
@@ -370,7 +390,25 @@
                     </svelte:fragment>
                 </SidebarItem>
                 <SidebarItem
+                    label="Fullscreen"
+                    class="hidden md:flex text-sm"
+                    on:click={(evt) => {
+                        evt.preventDefault();
+                        fullscreen = !fullscreen;
+                        if (fullscreen) {
+                            document.documentElement.requestFullscreen();
+                        } else {
+                            document.exitFullscreen();
+                        }
+                    }}
+                >
+                    <svelte:fragment slot="icon">
+                        <Icon icon="mdi:fullscreen" class="w-8 h-8" />
+                    </svelte:fragment>
+                </SidebarItem>
+                <SidebarItem
                     label="Help"
+                    class="text-sm"
                     on:click={(evt) => {
                         evt.preventDefault();
                         hideMenu = true;
@@ -388,6 +426,7 @@
 
 <main>
     <div class="bg-neutral-800 w-screen h-screen flex flex-col">
+        {#if !fullscreen}
         <div class="bg-primary-500 flex w-full justify-between px-2">
             <Button class="!py-0 !px-0" color="none" on:click={openMenu}>
                 <Icon icon="mdi:menu" class="w-8 h-10" />
@@ -406,16 +445,20 @@
                     <p>Reconnects: {reconnects}</p>
                 </div>
             {/if}
+            <div class="flex-grow">
+                <h1 class="text-white text-lg">{event.code}</h1>
+            </div>
             <div>
                 {#if !ws || ws.readyState !== 1}
                     <Icon icon="mdi:offline-bolt" class="w-8 h-10" />
                 {/if}
             </div>
         </div>
+        {/if}
         <Router basepath="/app/">
             <div class="overflow-y-auto flex-grow pb-2">
                 <Route path="/">
-                    <Home bind:monitorFrame bind:batteryData bind:statusChanges />
+                    <Home bind:monitorFrame bind:batteryData bind:statusChanges bind:fullscreen />
                 </Route>
                 <Route path="/flashcards" component={Flashcard} />
                 <Route path="/references" component={Reference} />
@@ -427,8 +470,11 @@
             <Route path="/login">
                 <Login {toast} />
             </Route>
+            <Route path="/google-signup">
+                <CompleteGoogleSignup {toast} />
+            </Route>
 
-            {#if auth.token && auth.eventToken}
+            {#if auth.token && auth.eventToken && !fullscreen}
                 <div class="flex justify-around py-2 bg-neutral-700">
                     <Link to="/app/">
                         <Button class="!p-2" color="none">

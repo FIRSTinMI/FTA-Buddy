@@ -4,7 +4,7 @@
 </script>
 
 <div class="container mx-auto p-2 pr-3 w-full">
-    <Accordion flush>
+    <Accordion flush class="text-left">
         <AccordionItem>
             <span slot="header">Robot Radio Lights</span>
 
@@ -547,6 +547,10 @@
                                 <td>Team 1234</td>
                                 <td>10.12.34.x</td>
                             </tr>
+                            <tr>
+                                <td>Team 12345</td>
+                                <td>10.123.45.x</td>
+                            </tr>
                         </table>
                     </td>
                 </tr>
@@ -637,31 +641,31 @@
             <Accordion flush>
                 <AccordionItem>
                     <span slot="header">Pack Case 23/24 Amp and Truss</span>
-                    <QrCode value="https://roadcase.frc.tools/23" padding={5} />
+                    <a href="https://roadcase.frc.tools/23"><QrCode value="https://roadcase.frc.tools/23" padding={5} /></a>
                 </AccordionItem>
                 <AccordionItem>
                     <span slot="header">Pack Case 31 Speaker</span>
-                    <QrCode value="https://roadcase.frc.tools/31" padding={5} />
+                    <a href="https://roadcase.frc.tools/31"><QrCode value="https://roadcase.frc.tools/31" padding={5} /></a>
                 </AccordionItem>
                 <AccordionItem>
                     <span slot="header">Pack Case 32 Practice Field</span>
-                    <QrCode value="https://roadcase.frc.tools/32" padding={5} />
+                    <a href="https://roadcase.frc.tools/32"><QrCode value="https://roadcase.frc.tools/32" padding={5} /></a>
                 </AccordionItem>
                 <AccordionItem>
                     <span slot="header">Build Stage</span>
-                    <QrCode value="https://usfirst.box.com/s/gtg2693z807lyl27cowy3shn80dg7bjn" padding={5} />
+                    <a href="https://usfirst.box.com/s/we7ufqu61k303jnjfmm6o8wg3jp2lkso"><QrCode value="https://usfirst.box.com/s/we7ufqu61k303jnjfmm6o8wg3jp2lkso" padding={5} /></a>
                 </AccordionItem>
                 <AccordionItem>
                     <span slot="header">Build Speaker</span>
-                    <QrCode value="https://usfirst.box.com/s/xhae645948mtyvp22dqa7w0taabkuq7b" padding={5} />
+                    <a href="https://usfirst.box.com/s/dybf27uuqtskqpkljy37jkezgludm3f0"><QrCode value="https://usfirst.box.com/s/dybf27uuqtskqpkljy37jkezgludm3f0" padding={5} /></a>
                 </AccordionItem>
                 <AccordionItem>
                     <span slot="header">Build Amp</span>
-                    <QrCode value="https://usfirst.box.com/s/dy0t42vpsdsb02bkppdajtimbpnn12b2" padding={5} />
+                    <a href="https://usfirst.box.com/s/3oilb7ji2ehr1sd7fg2tb31snwxs64kw"><QrCode value="https://usfirst.box.com/s/3oilb7ji2ehr1sd7fg2tb31snwxs64kw" padding={5} /></a>
                 </AccordionItem>
                 <AccordionItem>
                     <span slot="header">Build Source</span>
-                    <QrCode value="https://usfirst.box.com/s/dy0t42vpsdsb02bkppdajtimbpnn12b2" padding={5} />
+                    <a href="https://usfirst.box.com/s/ah6oy40oqy07wfi3dldjfecx7hteoeg1"><QrCode value="https://usfirst.box.com/s/ah6oy40oqy07wfi3dldjfecx7hteoeg1" padding={5} /></a>
                 </AccordionItem>
             </Accordion>
         </AccordionItem>
@@ -669,9 +673,6 @@
 </div>
 
 <style>
-    AccordionItem {
-        text-align: left;
-    }
     table td {
         text-align: left;
     }
@@ -726,10 +727,6 @@
     .slow {
         animation: blink 2000ms infinite;
         animation-timing-function: steps(2, jump-none);
-    }
-    .double-blink-red {
-        animation: double-blink-orange 1000ms infinite;
-        animation-timing-function: steps(3, jump-none);
     }
     .double-blink-orange {
         animation: double-blink-orange 1000ms infinite;

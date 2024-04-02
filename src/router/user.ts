@@ -112,6 +112,8 @@ export const userRouter = router({
         username: z.string(),
         role: z.enum(['ADMIN', 'FTA', 'FTAA', 'CSA', 'RI'])
     })).query(async ({ input }) => {
+        if (input.role === 'ADMIN') throw new TRPCError({ code: 'FORBIDDEN', message: 'Cannot create an admin account' });
+
         const ticket = await client.verifyIdToken({
             idToken: input.token,
             audience: process.env.GOOGLE_CLIENT_ID

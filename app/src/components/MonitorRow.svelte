@@ -100,13 +100,13 @@
             <div class="h-full text-center top-0 px-0.5 aspect-square">
                 <BatteryGraph data={parsedData} />
             </div>
-            <div class="absolute w-full bottom-0 p-2">
+            <div class="absolute w-full bottom-0 p-2 monitor-battery {fullscreen ? "monitor-fullscreen" : ""}">
                 {team.battery.toFixed(1)}v
             </div>
         </TableBodyCell>
         {#if fullscreen}
-            <TableBodyCell on:click={detailView}>{team.ping} ms</TableBodyCell>
-            <TableBodyCell on:click={detailView}>{team.bwu.toFixed(2)} mbps</TableBodyCell>
+            <TableBodyCell on:click={detailView} class="monitor-ping monitor-fullscreen">{team.ping} ms</TableBodyCell>
+            <TableBodyCell on:click={detailView} class="monitor-bwu monitor-fullscreen">{team.bwu.toFixed(2)} mbps</TableBodyCell>
         {:else}
             <TableBodyCell on:click={detailView}>{team.ping} ms<br />{team.bwu.toFixed(2)} mbps</TableBodyCell>
         {/if}

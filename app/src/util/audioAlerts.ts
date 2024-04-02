@@ -105,6 +105,16 @@ export class AudioQueuer {
         if (!this.playing) this.playNext();
     }
 
+    public addOtherClip(clip: keyof AudioClips['other']) {
+        this.queue.push({ audio: audioClips.other[clip], robot: undefined, clip: 'ds' });
+        if (!this.playing) this.playNext();
+    }
+
+    public addGreenClip() {
+        this.queue.push({ audio: audioClips.green[Math.floor(Math.random() * audioClips.green.length)], robot: undefined, clip: 'ds' });
+        if (!this.playing) this.playNext();
+    }
+
     private playNext() {
         if (this.queue.length === 0) {
             this.playing = false;

@@ -12,6 +12,7 @@ export interface MonitorFrame {
     red1: TeamInfo;
     red2: TeamInfo;
     red3: TeamInfo;
+    statusChanges: StatusChanges;
 }
 
 export interface TeamInfo {

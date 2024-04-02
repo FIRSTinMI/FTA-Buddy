@@ -249,11 +249,11 @@
         openWebSocket();
     });
 
-    let fullscreen = !(!screenTop && !screenY);
+    let fullscreen = false;
 
-    setInterval(() => {
-        fullscreen = !(!screenTop && !screenY);
-    }, 200);
+    // setInterval(() => {
+    //     fullscreen = !(!screenTop && !screenY);
+    // }, 200);
 </script>
 
 {#if showToast}

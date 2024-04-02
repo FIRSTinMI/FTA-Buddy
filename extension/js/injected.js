@@ -29,12 +29,10 @@ function read(station) {
         enabled: (radioStats) ? identifyEnableStatus(document.getElementById(station + 'enabled')) : null,
     };
 
-    // If the station is bypassed, set all statuses to 0
-    // if (obj.ds === 5) {
-    //     obj.radio = 0;
-    //     obj.rio = 0;
-    //     obj.code = 0;
-    // }
+    // If the station is bypassed
+    if (obj.ds === 5) {
+        obj.code = 0;
+    }
 
     return obj
 }
@@ -57,8 +55,10 @@ function identifyStatus(elm) {
 
 function identifyEnableStatus(elm) {
     if (elm.classList.contains('fieldMonitor-redSquare')) return 0;
-    if (elm.classList.contains('fieldMonitor-greenCircleA')) return 1;
-    if (elm.classList.contains('fieldMonitor-greenCircleT')) return 2;
+    if (elm.classList.contains('fieldMonitor-redSquareA')) return 8;
+    if (elm.classList.contains('fieldMonitor-redSquareT')) return 9;
+    if (elm.classList.contains('fieldMonitor-greenCircleA')) return 10;
+    if (elm.classList.contains('fieldMonitor-greenCircleT')) return 11;
     if (elm.classList.contains('fieldMonitor-blackDiamondE')) return 6;
     if (elm.classList.contains('fieldMonitor-blackDiamondA')) return 7;
 }

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Table, TableBodyCell, TableBodyRow } from "flowbite-svelte";
+    import { Table, TableBody, TableBodyCell, TableBodyRow } from "flowbite-svelte";
     import {
         BYPASS,
         ESTOP,
@@ -107,8 +107,13 @@
         {#if fullscreen}
             <TableBodyCell on:click={detailView} class="monitor-ping monitor-fullscreen">{team.ping} ms</TableBodyCell>
             <TableBodyCell on:click={detailView} class="monitor-bwu monitor-fullscreen">{team.bwu.toFixed(2)} mbps</TableBodyCell>
+            <TableBodyCell on:click={detailView} class="monitor-radio monitor-fullscreen">{(team.signal) ? team.signal?.toFixed(2) : 0} dBm</TableBodyCell>
         {:else}
-            <TableBodyCell on:click={detailView}>{team.ping} ms<br />{team.bwu.toFixed(2)} mbps</TableBodyCell>
+            <TableBodyCell on:click={detailView} class="monitor-net">
+                {team.ping} ms<br />
+                {team.bwu.toFixed(2)} mbps<br />
+                {(team.signal) ? team.signal?.toFixed(2) : 0} dBm
+            </TableBodyCell>
         {/if}
     </TableBodyRow>
 {/key}

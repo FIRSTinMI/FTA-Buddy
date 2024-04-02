@@ -13,6 +13,7 @@ export const VERSIONS: { [key: string]: Version } = {
         <li>A fullscreen mode</li>
         <li>Google sign in! If you already created an account using the same email as your gmail, you can sign in with either.</li>
         <li>You can click on the QR Codes in references to navigate to the PDF yourself.</li>
+        <li>Radio signal strength is now displayed</li>
         </ul>
         `,
         update: () => { }

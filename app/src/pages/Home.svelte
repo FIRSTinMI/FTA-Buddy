@@ -69,6 +69,7 @@
                 <TableHeadCell class="w-40">Bat</TableHeadCell>
                 <TableHeadCell class="w-40">Ping</TableHeadCell>
                 <TableHeadCell>BWU</TableHeadCell>
+                <TableHeadCell>Signal</TableHeadCell>
                 {/if}
             </TableHead>
             <TableBody>

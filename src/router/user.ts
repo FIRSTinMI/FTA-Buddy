@@ -53,7 +53,7 @@ export const userRouter = router({
 
     createAccount: publicProcedure.input(z.object({
         email: z.string().email(),
-        username: z.string(),
+        username: z.string().min(3),
         password: z.string().min(8),
         role: z.enum(['ADMIN', 'FTA', 'FTAA', 'CSA', 'RI'])
     })).query(async ({ input }) => {
@@ -109,7 +109,7 @@ export const userRouter = router({
 
     createGoogleUser: publicProcedure.input(z.object({
         token: z.string(),
-        username: z.string(),
+        username: z.string().min(3),
         role: z.enum(['ADMIN', 'FTA', 'FTAA', 'CSA', 'RI'])
     })).query(async ({ input }) => {
         const ticket = await client.verifyIdToken({

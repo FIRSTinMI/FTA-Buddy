@@ -52,12 +52,15 @@ export const userRouter = router({
     }),
 
     createAccount: publicProcedure.input(z.object({
-        email: z.string(),
-        username: z.string(),
-        password: z.string(),
+        email: z.string().email({ message: "Invalid email address" }),
+        username: z.string().min(3, { message: "Username must be at least 3 characters long" }),
+        password: z.string().min(8, { message: "Password must be at least 8 characters long" }),
         role: z.enum(['ADMIN', 'FTA', 'FTAA', 'CSA', 'RI'])
     })).query(async ({ input }) => {
         if (input.role === 'ADMIN') throw new TRPCError({ code: 'FORBIDDEN', message: 'Cannot create an admin account' });
+        if (z.string().email().safeParse(input.email).success === false) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid email address' });
+        if (input.username.length < 3) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Username must be at least 3 characters long' });
+        if (input.password.length < 8) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Password must be at least 8 characters long' });
 
         const hashedPassword = await hash(input.password, 12);
         const token = generateToken();
@@ -109,7 +112,7 @@ export const userRouter = router({
 
     createGoogleUser: publicProcedure.input(z.object({
         token: z.string(),
-        username: z.string(),
+        username: z.string().min(3, { message: "Username must be at least 3 characters long" }),
         role: z.enum(['ADMIN', 'FTA', 'FTAA', 'CSA', 'RI'])
     })).query(async ({ input }) => {
         if (input.role === 'ADMIN') throw new TRPCError({ code: 'FORBIDDEN', message: 'Cannot create an admin account' });

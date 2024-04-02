@@ -4,7 +4,7 @@ export const roleEnum = pgEnum('role', ['ADMIN', 'FTA', 'FTAA', 'CSA', 'RI']);
 
 export const users = pgTable('users', {
     id: serial('id').primaryKey(),
-    username: varchar('username').unique().notNull(),
+    username: varchar('username').notNull(),
     email: varchar('email').unique().notNull(),
     password: text('password').notNull(),
     created_at: timestamp('created_at').notNull().defaultNow(),

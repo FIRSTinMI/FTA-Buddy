@@ -10,6 +10,7 @@ export const VERSIONS: { [key: string]: Version } = {
         changelog: `
         <h1 class="text-lg font-bold">v2.4.5</h1>
         <ul>
+        <li>A fullscreen mode</li>
         <li>Google sign in! If you already created an account using the same email as your gmail, you can sign in with either.</li>
         <li>You can click on the QR Codes in references to navigate to the PDF yourself.</li>
         </ul>

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { TableBodyCell, TableBodyRow } from "flowbite-svelte";
+    import { Table, TableBodyCell, TableBodyRow } from "flowbite-svelte";
     import {
         BYPASS,
         ESTOP,
@@ -22,6 +22,7 @@
 
     export let station: Station;
     export let monitorFrame: MonitorFrame;
+    export let fullscreen = false;
     export let statusChange: { lastChange: Date; improved: boolean };
     let team: TeamInfo;
     $: {
@@ -57,8 +58,8 @@
 </script>
 
 {#key team}
-    <TableBodyRow class="h-20 lg:h-24 border-y border-gray-800 cursor-pointer" id="{station}-row">
-        <TableBodyCell class="text-center {getKey(team)?.startsWith('blue') ? 'bg-blue-600' : 'bg-red-600'} font-mono" on:click={() => navigate("/notes/" + team.number)}>
+    <TableBodyRow class="{fullscreen ? "h-16" : "h-20 lg:h-24"} border-y border-gray-800 cursor-pointer" id="{station}-row">
+        <TableBodyCell class="text-center {getKey(team)?.startsWith('blue') ? 'bg-blue-600' : 'bg-red-600'} font-mono monitor-team {fullscreen ? "monitor-fullscreen" : ""}" on:click={() => navigate("/notes/" + team.number)}>
             <p>{team.number}</p>
             {#if ![MATCH_OVER, MATCH_ABORTED, READY_FOR_POST_RESULT, READY_TO_PRESTART].includes(monitorFrame.field)}
                 {#if team.ds === RED && statusChange.lastChange.getTime() + 30e3 < Date.now()}
@@ -74,7 +75,7 @@
                 {/if}
             {/if}
         </TableBodyCell>
-        <TableBodyCell class="{DS_Colors[team.ds]} text-4xl text-black text-center border-x border-gray-800 font-mono" on:click={detailView}>
+        <TableBodyCell class="{DS_Colors[team.ds]} text-4xl text-black text-center border-x border-gray-800 font-mono monitor-ds {fullscreen ? "monitor-fullscreen" : ""}" on:click={detailView}>
             {#if team.ds === GREEN_X}
                 X
             {:else if team.ds === MOVE_STATION}
@@ -103,6 +104,11 @@
                 {team.battery.toFixed(1)}v
             </div>
         </TableBodyCell>
-        <TableBodyCell on:click={detailView}>{team.ping} ms<br />{team.bwu.toFixed(2)} mbps</TableBodyCell>
+        {#if fullscreen}
+            <TableBodyCell on:click={detailView}>{team.ping} ms</TableBodyCell>
+            <TableBodyCell on:click={detailView}>{team.bwu.toFixed(2)} mbps</TableBodyCell>
+        {:else}
+            <TableBodyCell on:click={detailView}>{team.ping} ms<br />{team.bwu.toFixed(2)} mbps</TableBodyCell>
+        {/if}
     </TableBodyRow>
 {/key}

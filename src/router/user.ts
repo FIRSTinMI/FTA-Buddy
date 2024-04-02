@@ -128,13 +128,12 @@ export const userRouter = router({
         if (user) {
             throw new TRPCError({ code: 'CONFLICT', message: 'User already exists' });
         } else {
-            const username = payload['name'] as string;
             const token = generateToken();
             await db.insert(users).values({
                 email,
-                username,
+                username: input.username,
                 password: 'google',
-                role: 'FTA',
+                role: input.role,
                 token
             });
 

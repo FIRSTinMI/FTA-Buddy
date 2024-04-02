@@ -52,9 +52,9 @@ export const userRouter = router({
     }),
 
     createAccount: publicProcedure.input(z.object({
-        email: z.string(),
+        email: z.string().email(),
         username: z.string(),
-        password: z.string(),
+        password: z.string().min(8),
         role: z.enum(['ADMIN', 'FTA', 'FTAA', 'CSA', 'RI'])
     })).query(async ({ input }) => {
         if (input.role === 'ADMIN') throw new TRPCError({ code: 'FORBIDDEN', message: 'Cannot create an admin account' });

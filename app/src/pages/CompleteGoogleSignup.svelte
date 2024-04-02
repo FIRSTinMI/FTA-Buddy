@@ -37,8 +37,15 @@
 
             toast("Success", "Account created successfully", "green-500");
         } catch (err: any) {
-            toast("Error Creating Account", err.message);
             console.error(err);
+            if (err.message.startsWith("[")) {
+                const obj = JSON.parse(err.message);
+                for (const key in obj) {
+                    toast("Error Creating Account", obj[key].message);
+                }
+            } else {
+                toast("Error Creating Account", err.message);
+            }
         }
 
         loading = false;

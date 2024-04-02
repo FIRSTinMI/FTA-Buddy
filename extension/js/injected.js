@@ -3,9 +3,11 @@ console.log('Injection loaded');
 let url = document.getElementById('fta-buddy').dataset.host;
 let cloud = document.getElementById('fta-buddy').dataset.cloud;
 let eventCode = document.getElementById('fta-buddy').dataset.event;
+let version = document.getElementById('fta-buddy').dataset.version;
 
 function read(station) {
-    let obj = {
+    const radioStats = document.getElementById(station + 'BWU').title;
+    const obj = {
         number: document.getElementById(station + 'Number').innerText,
         ds: identifyStatusDS(station),
         radio: identifyStatus(document.getElementById(station + 'radio')),
@@ -16,6 +18,15 @@ function read(station) {
         ping: parseInt(document.getElementById(station + 'AvgTrip').innerText),
         packets: parseInt(document.getElementById(station + 'MissedPackets').innerText),
         versionmm: document.getElementById(station + 'versionmm').style.display === 'none' ? 0 : 1,
+        signal: (radioStats) ? parseInt(radioStats.split('Signal: ')[1].split(' (')[0]) : null,
+        noise: (radioStats) ? parseInt(radioStats.split('Noise: ')[1].split(' (')[0]) : null,
+        SNR: (radioStats) ? parseInt(radioStats.split('SNR: ')[1].split(' ')[0]) : null,
+        TX: (radioStats) ? parseInt(radioStats.split('TX Rate: ')[1].split(' ')[0]) : null,
+        TXMCS: (radioStats) ? parseInt(radioStats.split('TX MCS: ')[1].split(' ')[0]) : null,
+        RX: (radioStats) ? parseInt(radioStats.split('RX Rate: ')[1].split(' ')[0]) : null,
+        RXMCS: (radioStats) ? parseInt(radioStats.split('RX MCS: ')[1].split(' ')[0]) : null,
+        MAC: (radioStats) ? document.getElementById(station + 'Number').title.split('MAC: ')[1] : null,
+        enabled: (radioStats) ? identifyEnableStatus(document.getElementById(station + 'enabled')) : null,
     };
 
     // If the station is bypassed, set all statuses to 0
@@ -44,6 +55,14 @@ function identifyStatus(elm) {
     if (elm.classList.contains('fieldMonitor-yellowCircleW')) return 4;
 }
 
+function identifyEnableStatus(elm) {
+    if (elm.classList.contains('fieldMonitor-redSquare')) return 0;
+    if (elm.classList.contains('fieldMonitor-greenCircleA')) return 1;
+    if (elm.classList.contains('fieldMonitor-greenCircleT')) return 2;
+    if (elm.classList.contains('fieldMonitor-blackDiamondE')) return 6;
+    if (elm.classList.contains('fieldMonitor-blackDiamondA')) return 7;
+}
+
 function identifyFieldStatus(elm) {
     if (elm.innerText === 'UNKNOWN') return 0;
     if (elm.innerText === 'MATCH RUNNING (TELEOP)') return 1;
@@ -63,6 +82,7 @@ function sendUpdate() {
     let data = {
         frameTime: (new Date()).getTime(),
         type: 'monitorUpdate',
+        version: version,
         field: identifyFieldStatus(document.getElementById('matchStateTop')),
         match: document.getElementById('MatchNumber').innerText.substring(3),
         time: document.getElementById('aheadbehind').innerText,

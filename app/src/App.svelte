@@ -127,6 +127,8 @@
     });
 
     function openWebSocket() {
+        if (ws) ws.close();
+
         const uri = `${server.split("://")[0].endsWith("s") ? "wss" : "ws"}://${server.split("://")[1]}/ws/`;
 
         console.log("Connecting to " + uri);
@@ -238,22 +240,28 @@
         hideMenu = false;
     }
     authStore.subscribe((value) => {
-        auth = value;
-        if ((!auth.token || !auth.eventToken) && window.location.pathname !== "/app/login") {
+        if ((!value.token || !value.eventToken) && window.location.pathname !== "/app/login") {
             navigate("/app/login");
         }
-        openWebSocket();
+
+        if (auth.eventToken !== value.eventToken) {
+            auth = value;
+            openWebSocket();
+        } else {
+            auth = value;
+        }
     });
 
     onMount(() => {
         openWebSocket();
     });
 
-    let fullscreen = false;
+    let fullscreen = (window.outerWidth > 1900) ? !(!screenTop && !screenY) : false;
 
-    // setInterval(() => {
-    //     fullscreen = !(!screenTop && !screenY);
-    // }, 200);
+    setInterval(() => {
+        if (window.outerWidth > 1900)
+            fullscreen = !(!screenTop && !screenY);
+    }, 200);
 </script>
 
 {#if showToast}
@@ -358,6 +366,7 @@
             <SidebarGroup class="border-t-2 mt-2 pt-2 border-neutral-400">
                 <SidebarItem
                     label="Settings"
+                    class="text-sm"
                     on:click={(evt) => {
                         evt.preventDefault();
                         hideMenu = true;
@@ -370,6 +379,7 @@
                 </SidebarItem>
                 <SidebarItem
                     label="Change Event/Account"
+                    class="text-sm"
                     on:click={() => {
                         hideMenu = true;
                         navigate("/app/login");
@@ -381,6 +391,7 @@
                 </SidebarItem>
                 <SidebarItem
                     label="Fullscreen"
+                    class="hidden md:flex text-sm"
                     on:click={(evt) => {
                         evt.preventDefault();
                         fullscreen = !fullscreen;
@@ -397,6 +408,7 @@
                 </SidebarItem>
                 <SidebarItem
                     label="Help"
+                    class="text-sm"
                     on:click={(evt) => {
                         evt.preventDefault();
                         hideMenu = true;

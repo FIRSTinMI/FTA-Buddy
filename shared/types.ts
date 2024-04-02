@@ -4,6 +4,8 @@ export interface MonitorFrame {
     field: FieldState;
     match: number;
     time: string;
+    version: string;
+    frameTime: number;
     blue1: TeamInfo;
     blue2: TeamInfo;
     blue3: TeamInfo;
@@ -22,6 +24,15 @@ export interface TeamInfo {
     battery: number;
     ping: number;
     packets: number;
+    MAC: string | null;
+    RX: number | null;
+    RXMCS: number | null;
+    TX: number | null;
+    TXMCS: number | null;
+    SNR: number | null;
+    noise: number | null;
+    signal: number | null;
+    versionmm: 0 | 1;
 }
 
 export interface Event {

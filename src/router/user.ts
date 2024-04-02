@@ -58,6 +58,9 @@ export const userRouter = router({
         role: z.enum(['ADMIN', 'FTA', 'FTAA', 'CSA', 'RI'])
     })).query(async ({ input }) => {
         if (input.role === 'ADMIN') throw new TRPCError({ code: 'FORBIDDEN', message: 'Cannot create an admin account' });
+        if (z.string().email().safeParse(input.email).success === false) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid email address' });
+        if (input.username.length < 3) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Username must be at least 3 characters long' });
+        if (input.password.length < 8) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Password must be at least 8 characters long' });
 
         const hashedPassword = await hash(input.password, 12);
         const token = generateToken();
@@ -112,6 +115,9 @@ export const userRouter = router({
         username: z.string().min(3, { message: "Username must be at least 3 characters long" }),
         role: z.enum(['ADMIN', 'FTA', 'FTAA', 'CSA', 'RI'])
     })).query(async ({ input }) => {
+        if (input.role === 'ADMIN') throw new TRPCError({ code: 'FORBIDDEN', message: 'Cannot create an admin account' });
+        if (input.username.length < 3) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Username must be at least 3 characters long' });
+        
         const ticket = await client.verifyIdToken({
             idToken: input.token,
             audience: process.env.GOOGLE_CLIENT_ID

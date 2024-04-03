@@ -4,7 +4,7 @@
     import { onMount } from "svelte";
     import { Link, Route, Router, navigate } from "svelte-routing";
     import { get } from "svelte/store";
-    import { MATCH_READY, MATCH_RUNNING_AUTO, MATCH_RUNNING_TELEOP, MATCH_TRANSITIONING, PRESTART_COMPLETED, type MonitorFrame, type StatusChanges, MATCH_NOT_READY, ROBOT, ESTOP, ASTOP, BYPASS } from "../../shared/types";
+    import { type MonitorFrame, type StatusChanges, ROBOT, ESTOP, ASTOP, BYPASS } from "../../shared/types";
     import SettingsModal from "./components/SettingsModal.svelte";
     import WelcomeModal from "./components/WelcomeModal.svelte";
     import Flashcard from "./pages/Flashcards.svelte";
@@ -17,13 +17,11 @@
     import { settingsStore } from "./stores/settings";
     import { VERSIONS, update } from "./util/updater";
     import { server } from "./main";
-    import { playGreenAlert, statusChangeAlertHandler, susRobotsAlert } from "./util/statusAlerts";
     import { sineIn } from "svelte/easing";
     import CompleteGoogleSignup from "./pages/CompleteGoogleSignup.svelte";
     import { eventStore } from "./stores/event";
     import { MatchState, MonitorFrameHandler, type MonitorEvent } from "./util/monitorFrameHandler";
     import { AudioQueuer } from "./util/audioAlerts";
-    import e from "express";
 
     let auth = get(authStore);
 

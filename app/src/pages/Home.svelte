@@ -47,7 +47,7 @@
     {#key monitorFrame}
         <div class="flex w-full mb-1">
             {#if monitorFrame}
-                <div class="w-32 {fullscreen ? "text-6xl" : "md:text-2xl"}">M: {monitorFrame.match}</div>
+                <div class="w-42 {fullscreen ? "text-6xl" : "md:text-2xl"}">M: {monitorFrame.match}</div>
                 <div class="grow {fullscreen ? "text-6xl" : "md:text-2xl"}">{FieldStates[monitorFrame.field]}</div>
                 <div class="w-36 {fullscreen ? "text-6xl" : "md:text-2xl"}">{monitorFrame.time}</div>
             {/if}

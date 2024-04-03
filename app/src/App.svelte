@@ -144,7 +144,7 @@
             try {
                 let data = JSON.parse(evt.data);
                 if (data.type === "monitorUpdate") {
-                    if (data.frameTime && data.frameTime + 3000 < new Date().getTime()) {
+                    if (data.frameTime && data.frameTime + 60000 < new Date().getTime()) {
                         console.log("Skipping stale frame");
                         return;
                     }

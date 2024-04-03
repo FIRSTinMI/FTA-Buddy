@@ -75,7 +75,7 @@
                 {/if}
             {/if}
         </TableBodyCell>
-        <TableBodyCell class="{DS_Colors[team.ds]} text-4xl text-black text-center border-x border-gray-800 font-mono monitor-ds {fullscreen ? "monitor-fullscreen" : ""}" on:click={detailView}>
+        <TableBodyCell class="{DS_Colors[team.ds]} text-4xl text-black text-center {fullscreen ? "border-4":"border-x"} border-gray-800 font-mono monitor-ds {fullscreen ? "monitor-fullscreen" : ""}" on:click={detailView}>
             {#if team.ds === GREEN_X}
                 X
             {:else if team.ds === MOVE_STATION}
@@ -90,8 +90,8 @@
                 A
             {/if}
         </TableBodyCell>
-        <TableBodyCell class="{DS_Colors[team.radio]} border-x border-gray-800" on:click={detailView}></TableBodyCell>
-        <TableBodyCell class="{RIO_Colors[(team.rio > 0 ? 1 : 0) + team.code]} border-x border-gray-800" on:click={detailView}></TableBodyCell>
+        <TableBodyCell class="{DS_Colors[team.radio]} {fullscreen ? "border-4":"border-x"} border-gray-800 " on:click={detailView}></TableBodyCell>
+        <TableBodyCell class="{RIO_Colors[(team.rio > 0 ? 1 : 0) + team.code]} {fullscreen ? "border-4":"border-x"} border-gray-800" on:click={detailView}></TableBodyCell>
         <TableBodyCell
             class="p-0 relative aspect-square"
             on:click={detailView}

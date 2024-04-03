@@ -47,9 +47,9 @@
     {#key monitorFrame}
         <div class="flex w-full mb-1">
             {#if monitorFrame}
-                <div class="w-24">M: {monitorFrame.match}</div>
-                <div class="grow">{FieldStates[monitorFrame.field]}</div>
-                <div class="w-32">{monitorFrame.time}</div>
+                <div class="w-24 {fullscreen ? "text-4xl" : "md:text-2xl"}">M: {monitorFrame.match}</div>
+                <div class="grow {fullscreen ? "text-4xl" : "md:text-2xl"}">{FieldStates[monitorFrame.field]}</div>
+                <div class="w-32 {fullscreen ? "text-4xl" : "md:text-2xl"}">{monitorFrame.time}</div>
             {/if}
         </div>
         <Table class="w-full mx-auto !overflow-none monitor max-h-screen">
@@ -62,11 +62,11 @@
                 <TableHeadCell class="w-15 lg:w-20 max-w-20 lg:max-w-24">Bat</TableHeadCell>
                 <TableHeadCell>Net</TableHeadCell>
                 {:else}
-                <TableHeadCell class="w-40">Team</TableHeadCell>
-                <TableHeadCell class="w-40">DS</TableHeadCell>
-                <TableHeadCell class="w-40">Radio</TableHeadCell>
-                <TableHeadCell class="w-40">Rio</TableHeadCell>
-                <TableHeadCell class="w-40">Bat</TableHeadCell>
+                <TableHeadCell class="w-38">Team</TableHeadCell>
+                <TableHeadCell class="w-38">DS</TableHeadCell>
+                <TableHeadCell class="w-38">Radio</TableHeadCell>
+                <TableHeadCell class="w-38">Rio</TableHeadCell>
+                <TableHeadCell class="w-38">Bat</TableHeadCell>
                 <TableHeadCell>Ping</TableHeadCell>
                 <TableHeadCell>BWU</TableHeadCell>
                 <TableHeadCell>Signal</TableHeadCell>

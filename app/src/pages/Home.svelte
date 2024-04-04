@@ -4,7 +4,7 @@
     import MonitorRow from "../components/MonitorRow.svelte";
     import TeamModal from "../components/TeamModal.svelte";
     import type { StatusChanges } from "../../../shared/types";
-    import { formatTimeShort } from "../util/formatTime";
+    import { formatTimeShort, formatTimeShortNoAgo } from "../util/formatTime";
     import type { MonitorFrameHandler } from "../util/monitorFrameHandler";
 
     export let monitorFrame: MonitorFrame;
@@ -92,7 +92,7 @@
             </TableBody>
         </Table>
         <div class="flex w-full mt-1">
-            <div class="w-48 {fullscreen ? "text-4xl" : "md:text-2xl"}">C: {formatTimeShort(lastMatchStartTime, matchStartTime)}</div>
+            <div class="w-48 text-left {fullscreen ? "text-4xl" : "md:text-2xl"}">C: {formatTimeShortNoAgo(lastMatchStartTime, matchStartTime)}</div>
         </div>
     {/key}
     {#if !monitorFrame}

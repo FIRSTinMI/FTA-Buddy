@@ -117,12 +117,14 @@
     const audioQueuer = new AudioQueuer();
 
     frameHandler.addEventListener('match-ready', (evt) => {
+        console.log('Match ready');
         if (settings.fieldGreen) audioQueuer.addGreenClip();
     });
 
     for (let type of ['radio', 'rio', 'code']) {
         frameHandler.addEventListener(`${type}-drop`, (e) => {
             const evt = e as MonitorEvent;
+            console.log(type+' drop', evt.detail);
             if (evt.detail.match === MatchState.RUNNING && evt.detail.frame[evt.detail.robot].ds !== BYPASS) {
                 if (settings.vibrations) navigator.vibrate(VIBRATION_PATTERNS[type as 'radio' | 'rio' | 'code']);
                 if (settings.soundAlerts) audioQueuer.addRobotClip(evt.detail.robot, type as 'radio' | 'rio' | 'code');
@@ -132,6 +134,7 @@
 
     frameHandler.addEventListener(`ds-drop`, (e) => {
         const evt = e as MonitorEvent;
+        console.log('DS drop', evt.detail);
         if (evt.detail.match === MatchState.RUNNING) {
             if (evt.detail.frame[evt.detail.robot].ds === ESTOP) {
                 stops[evt.detail.robot].e = true;
@@ -147,6 +150,7 @@
     });
 
     frameHandler.addEventListener('match-over', (evt) => {
+        console.log('Match over');
         for (let robot in stops) {
             if (stops[robot as ROBOT].a) {
                 if (settings.soundAlerts) audioQueuer.addRobotClip(robot as ROBOT, 'astop');

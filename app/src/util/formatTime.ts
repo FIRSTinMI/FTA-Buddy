@@ -1,8 +1,8 @@
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-export function formatTime(time: Date) {
+export function formatTime(time: Date, compare: Date = new Date()) {
     if (typeof time === 'string') time = new Date(time);
-    let diff = (new Date()).getTime() - time.getTime();
+    let diff = compare.getTime() - time.getTime();
 
     const past = diff > 0;
     diff = Math.abs(diff);
@@ -27,9 +27,9 @@ export function formatTime(time: Date) {
     }
 }
 
-export function formatTimeShort(time: Date) {
+export function formatTimeShort(time: Date, compare: Date = new Date()) {
     if (typeof time === 'string') time = new Date(time);
-    let diff = (new Date()).getTime() - time.getTime();
+    let diff = (compare).getTime() - time.getTime();
 
     const past = diff > 0;
     diff = Math.abs(diff);

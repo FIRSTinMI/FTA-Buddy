@@ -4,7 +4,7 @@
     import { onMount } from "svelte";
     import { Link, Route, Router, navigate } from "svelte-routing";
     import { get } from "svelte/store";
-    import { MATCH_READY, MATCH_RUNNING_AUTO, MATCH_RUNNING_TELEOP, MATCH_TRANSITIONING, PRESTART_COMPLETED, type MonitorFrame, type StatusChanges, MATCH_NOT_READY } from "../../shared/types";
+    import { type MonitorFrame, type StatusChanges, ROBOT, ESTOP, ASTOP, BYPASS } from "../../shared/types";
     import SettingsModal from "./components/SettingsModal.svelte";
     import WelcomeModal from "./components/WelcomeModal.svelte";
     import Flashcard from "./pages/Flashcards.svelte";
@@ -17,10 +17,11 @@
     import { settingsStore } from "./stores/settings";
     import { VERSIONS, update } from "./util/updater";
     import { server } from "./main";
-    import { playGreenAlert, statusChangeAlertHandler, susRobotsAlert } from "./util/statusAlerts";
     import { sineIn } from "svelte/easing";
     import CompleteGoogleSignup from "./pages/CompleteGoogleSignup.svelte";
     import { eventStore } from "./stores/event";
+    import { MatchState, MonitorFrameHandler, type MonitorEvent } from "./util/monitorFrameHandler";
+    import { AudioQueuer } from "./util/audioAlerts";
 
     let auth = get(authStore);
 
@@ -94,6 +95,77 @@
     let ws: WebSocket;
     let monitorFrame: MonitorFrame;
 
+    const VIBRATION_PATTERNS = {
+        ds: [500, 200, 500],
+        radio: [200, 200, 500],
+        rio: [200, 100, 200],
+        code: [200],
+        estop: [100]
+    }
+
+    
+    const stops: {[key in ROBOT]: {a: boolean, e: boolean}} = {
+        red1: { a: false, e: false },
+        red2: { a: false, e: false },
+        red3: { a: false, e: false },
+        blue1: { a: false, e: false },
+        blue2: { a: false, e: false },
+        blue3: { a: false, e: false }
+    }
+
+    const frameHandler = new MonitorFrameHandler();
+    const audioQueuer = new AudioQueuer();
+
+    frameHandler.addEventListener('match-ready', (evt) => {
+        console.log('Match ready');
+        if (settings.fieldGreen) audioQueuer.addGreenClip();
+    });
+
+    for (let type of ['radio', 'rio', 'code']) {
+        frameHandler.addEventListener(`${type}-drop`, (e) => {
+            const evt = e as MonitorEvent;
+            console.log(type+' drop', evt.detail);
+            if (evt.detail.match === MatchState.RUNNING && evt.detail.frame[evt.detail.robot].ds !== BYPASS) {
+                if (settings.vibrations) navigator.vibrate(VIBRATION_PATTERNS[type as 'radio' | 'rio' | 'code']);
+                if (settings.soundAlerts) audioQueuer.addRobotClip(evt.detail.robot, type as 'radio' | 'rio' | 'code');
+            }
+        });
+    }
+
+    frameHandler.addEventListener(`ds-drop`, (e) => {
+        const evt = e as MonitorEvent;
+        console.log('DS drop', evt.detail);
+        if (evt.detail.match === MatchState.RUNNING) {
+            if (evt.detail.frame[evt.detail.robot].ds === ESTOP) {
+                stops[evt.detail.robot].e = true;
+                if (settings.vibrations) navigator.vibrate(VIBRATION_PATTERNS.estop);
+            } else if (evt.detail.frame[evt.detail.robot].ds === ASTOP) {
+                stops[evt.detail.robot].a = true;
+                if (settings.vibrations) navigator.vibrate(VIBRATION_PATTERNS.estop);
+            } else {
+                if (settings.vibrations) navigator.vibrate(VIBRATION_PATTERNS.ds);
+                if (settings.soundAlerts) audioQueuer.addRobotClip(evt.detail.robot, 'ds');
+            }
+        }
+    });
+
+    frameHandler.addEventListener('match-over', (evt) => {
+        console.log('Match over');
+        for (let robot in stops) {
+            if (stops[robot as ROBOT].a) {
+                if (settings.soundAlerts) audioQueuer.addRobotClip(robot as ROBOT, 'astop');
+            }
+            if (stops[robot as ROBOT].e) {
+                if (settings.soundAlerts) audioQueuer.addRobotClip(robot as ROBOT, 'estop');
+            }
+            stops[robot as ROBOT] = { a: false, e: false };
+        }
+    });
+
+    frameHandler.addEventListener('match-start', (evt) => {
+        console.log('Match started');
+    });
+
     let notifications = get(messagesStore).unread || 0;
     messagesStore.subscribe((value) => {
         notifications = value.unread;
@@ -151,39 +223,15 @@
                     
                     lastFrameTime = new Date();
                     frameCount++;
-                    for (let key of Object.keys(batteryData)) {
-                        let array = batteryData[key as keyof typeof batteryData];
-                        array.push(data[key].battery);
-                        if (array.length > 20) {
-                            array.shift();
-                        }
-                        batteryData[key as keyof typeof batteryData] = array;
+
+                    frameHandler.feed(data);
+
+                    for (let robot in ROBOT) {
+                        batteryData[robot as ROBOT] = frameHandler.getHistory(robot as ROBOT, "battery", 20);
                     }
 
-                    for (let key of Object.keys(data.statusChanges)) {
-                        let change = data.statusChanges[key];
-                        statusChanges[key as keyof typeof statusChanges] = {
-                            lastChange: new Date(change.lastChange),
-                            improved: change.improved,
-                        };
-                    }
-
-                    statusChanges = statusChanges;
-                    try {
-                        if (data.field === MATCH_READY && monitorFrame.field !== MATCH_READY) {
-                            if (settings.soundAlerts) playGreenAlert();
-                        }
-                    } catch (e) {
-                        console.error(e);
-                    }
-
-                    if ([MATCH_RUNNING_TELEOP, MATCH_RUNNING_AUTO, MATCH_TRANSITIONING].includes(data.field)) {
-                        statusChangeAlertHandler(data, monitorFrame, settings.vibrations, settings.soundAlerts);
-                    }
-
-                    if (settings.susRobots && [PRESTART_COMPLETED, MATCH_NOT_READY, MATCH_READY].includes(data.field)) {
-                        susRobotsAlert(data, monitorFrame, statusChanges);
-                    }
+                    const _statusChanges = frameHandler.getStatusChanges();
+                    if (_statusChanges) statusChanges = _statusChanges;
 
                     batteryData = batteryData;
                     monitorFrame = data;
@@ -458,7 +506,7 @@
         <Router basepath="/app/">
             <div class="overflow-y-auto flex-grow pb-2">
                 <Route path="/">
-                    <Home bind:monitorFrame bind:batteryData bind:statusChanges bind:fullscreen />
+                    <Home bind:monitorFrame bind:batteryData bind:statusChanges bind:fullscreen {frameHandler} />
                 </Route>
                 <Route path="/flashcards" component={Flashcard} />
                 <Route path="/references" component={Reference} />

@@ -101,7 +101,7 @@
                 <BatteryGraph data={parsedData} />
             </div>
             <div class="absolute w-full bottom-0 p-2 monitor-battery {fullscreen ? "monitor-fullscreen" : ""}">
-                {team.battery.toFixed(1)}v
+                {team.battery?.toFixed(1)}v
             </div>
         </TableBodyCell>
         {#if fullscreen}

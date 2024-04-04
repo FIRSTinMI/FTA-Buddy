@@ -1,13 +1,24 @@
 <script lang="ts">
     import { type MonitorFrame, type Station } from "./../../../shared/types";
-    import { Button, Table, TableBody, TableHead, TableHeadCell } from "flowbite-svelte";
+    import { Table, TableBody, TableHead, TableHeadCell } from "flowbite-svelte";
     import MonitorRow from "../components/MonitorRow.svelte";
     import TeamModal from "../components/TeamModal.svelte";
-    import type { StatusChanges } from "../util/statusAlerts";
+    import type { StatusChanges } from "../../../shared/types";
+    import { formatTimeShort } from "../util/formatTime";
+    import type { MonitorFrameHandler } from "../util/monitorFrameHandler";
 
     export let monitorFrame: MonitorFrame;
     export let batteryData: { [key: string]: number[] } = {};
     export let statusChanges: StatusChanges;
+    export let frameHandler: MonitorFrameHandler;
+
+    let lastMatchStartTime = new Date();
+    let matchStartTime = new Date();
+
+    frameHandler.addEventListener("match-start", (evt) => {
+        lastMatchStartTime = matchStartTime;
+        matchStartTime = new Date();
+    });
 
     const FieldStates = {
         0: "Unknown",
@@ -49,7 +60,7 @@
             {#if monitorFrame}
                 <div class="w-42 {fullscreen ? "text-6xl" : "md:text-2xl"}">M: {monitorFrame.match}</div>
                 <div class="grow {fullscreen ? "text-6xl" : "md:text-2xl"}">{FieldStates[monitorFrame.field]}</div>
-                <div class="w-36 {fullscreen ? "text-6xl" : "md:text-2xl"}">{monitorFrame.time}</div>
+                <div class="w-42 {fullscreen ? "text-6xl" : "md:text-2xl"}">{monitorFrame.time}</div>
             {/if}
         </div>
         <Table class="w-full mx-auto !overflow-none monitor max-h-screen">
@@ -80,6 +91,9 @@
                 {/if}
             </TableBody>
         </Table>
+        <div class="flex w-full mt-1">
+            <div class="w-36 {fullscreen ? "text-4xl" : "md:text-2xl"}">C: {formatTimeShort(lastMatchStartTime, matchStartTime)}</div>
+        </div>
     {/key}
     {#if !monitorFrame}
         <p>Requires Chrome Extension to be setup on field network</p>

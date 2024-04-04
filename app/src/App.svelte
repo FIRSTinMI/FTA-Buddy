@@ -506,7 +506,7 @@
         <Router basepath="/app/">
             <div class="overflow-y-auto flex-grow pb-2">
                 <Route path="/">
-                    <Home bind:monitorFrame bind:batteryData bind:statusChanges bind:fullscreen />
+                    <Home bind:monitorFrame bind:batteryData bind:statusChanges bind:fullscreen {frameHandler} />
                 </Route>
                 <Route path="/flashcards" component={Flashcard} />
                 <Route path="/references" component={Reference} />

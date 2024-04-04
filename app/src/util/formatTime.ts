@@ -55,3 +55,28 @@ export function formatTimeShort(time: Date, compare: Date = new Date()) {
         return `${time.toLocaleDateString()} at ${time.toLocaleTimeString()}`;
     }
 }
+
+export function formatTimeShortNoAgo(time: Date, compare: Date = new Date()) {
+    if (typeof time === 'string') time = new Date(time);
+    let diff = (compare).getTime() - time.getTime();
+
+    const past = diff > 0;
+    diff = Math.abs(diff);
+
+    if (diff < 1e3) {
+        return '0';
+    } else if (diff < 60e3) {
+        const seconds = Math.floor(diff / 1e3);
+        return `${seconds}s`;
+    } else if (diff < 60 * 60e3) {
+        const minutes = Math.floor(diff / 60e3);
+        const seconds = Math.floor((diff / 1e3) - (minutes * 60));
+        return `${minutes}m${seconds}s`;
+    } else if (diff < 24 * 60 * 60e3) {
+        const hours = Math.floor(diff / 3600e3);
+        const minutes = Math.floor((diff / 60e3) - (hours * 60));
+        return `${hours}h${minutes}m`;
+    } else {
+        return `${time.toLocaleTimeString()}`;
+    }
+}

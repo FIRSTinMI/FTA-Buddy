@@ -80,6 +80,9 @@
                 {/if}
             </TableBody>
         </Table>
+        <div class="flex w-full mt-1">
+            <div class="w-48 {fullscreen ? "text-4xl" : "md:text-2xl"}">C: {formatTimeShort(lastMatchStartTime, matchStartTime)}</div>
+        </div>
     {/key}
     {#if !monitorFrame}
         <p>Requires Chrome Extension to be setup on field network</p>

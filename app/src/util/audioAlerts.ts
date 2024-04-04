@@ -114,6 +114,7 @@ export class AudioQueuer {
 
     public addGreenClip() {
         console.log('Adding clip Green');
+        if (this.queue.some(({ audio }) => audio.src.includes('green'))) return; // Green debounce
         this.queue.push({ audio: audioClips.green[Math.floor(Math.random() * audioClips.green.length)], robot: undefined, clip: 'ds' });
         if (!this.playing) this.playNext();
     }

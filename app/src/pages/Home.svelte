@@ -4,7 +4,7 @@
     import MonitorRow from "../components/MonitorRow.svelte";
     import TeamModal from "../components/TeamModal.svelte";
     import type { StatusChanges } from "../../../shared/types";
-    import { formatTimeShort, formatTimeShortNoAgo } from "../util/formatTime";
+    import { formatTimeShortNoAgo } from "../util/formatTime";
     import type { MonitorFrameHandler } from "../util/monitorFrameHandler";
 
     export let monitorFrame: MonitorFrame;

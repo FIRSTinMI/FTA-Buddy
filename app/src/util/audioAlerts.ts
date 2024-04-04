@@ -101,31 +101,37 @@ export class AudioQueuer {
             }
         }
 
+        console.log('Adding clip', robot, clip);
         this.queue.push({ audio: audioClips.robot[robot][clip], robot, clip });
         if (!this.playing) this.playNext();
     }
 
     public addOtherClip(clip: keyof AudioClips['other']) {
+        console.log('Adding clip', clip);
         this.queue.push({ audio: audioClips.other[clip], robot: undefined, clip: 'ds' });
         if (!this.playing) this.playNext();
     }
 
     public addGreenClip() {
+        console.log('Adding clip Green');
         this.queue.push({ audio: audioClips.green[Math.floor(Math.random() * audioClips.green.length)], robot: undefined, clip: 'ds' });
         if (!this.playing) this.playNext();
     }
 
     private playNext() {
+        console.log('Playing next');
         if (this.queue.length === 0) {
+            console.log('Queue empty')
             this.playing = false;
             return;
         }
+        console.log('Playing next');
 
         const audio = this.queue.shift();
         if (!audio) return;
         
         this.playing = true;
+        audio.audio.addEventListener('ended', () => this.playNext());
         audio.audio.play();
-        audio.audio.onended = this.playNext;
     }
 }

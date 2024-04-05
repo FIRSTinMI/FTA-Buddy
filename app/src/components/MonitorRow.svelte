@@ -38,7 +38,6 @@
         parsedData = battery.map((d, i) => ({ time: i, data: d }));
         signalData = processSignalStrengthForGraph(frameHandler
         .getHistory(station, "signal", 20) as number[]);
-        console.log(signalData);
     }
 
     export let detailView: (evt: Event) => void;

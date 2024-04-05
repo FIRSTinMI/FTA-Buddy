@@ -36,10 +36,8 @@
     $: {
         team = monitorFrame[station];
         parsedData = battery.map((d, i) => ({ time: i, data: d }));
-        // signalData = processSignalStrengthForGraph(frameHandler
-        // .getHistory(station, "signal", 20) as number[]);
-        signalData = frameHandler
-        .getHistory(station, "signal", 20).map((d, i) => ({ time: i, data: d+80 }));
+        signalData = processSignalStrengthForGraph(frameHandler
+        .getHistory(station, "signal", 20) as number[]);
         console.log(signalData);
     }
 
@@ -70,8 +68,8 @@
 
     export let battery: number[];
     let parsedData = battery.map((d, i) => ({ time: i, data: d }));
-    let signalData = frameHandler
-        .getHistory(station, "signal", 20).map((d, i) => ({ time: i, data: d+80 }));
+    let signalData = processSignalStrengthForGraph(frameHandler
+        .getHistory(station, "signal", 20) as number[]);
 </script>
 
 {#key team}
@@ -175,7 +173,7 @@
                 on:click={detailView}
             >
                 <div class="h-full text-center top-0 px-0.5 aspect-square">
-                    <Graph data={signalData} min={-50} max={100} time={20} />
+                    <Graph data={signalData} min={-140} max={100} time={20} />
                 </div>
                 <div
                     class="absolute w-full bottom-0 p-2 monitor-signal monitor-fullscreen"

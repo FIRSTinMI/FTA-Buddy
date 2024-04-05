@@ -18,6 +18,6 @@ export function processSignalStrength(signalStrength: number[]): number[] {
 export function processSignalStrengthForGraph(signalStrength: number[]): ({time: number, data: number})[] {
     const processedSignalStrength = processSignalStrength(signalStrength);
     return processedSignalStrength.map((strength, i) => {
-        return { time: i, data: Math.log10(Math.abs(strength))/2 };
+        return { time: i, data: Math.log10(Math.abs(strength))/2*100 };
     });
 }

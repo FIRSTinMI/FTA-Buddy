@@ -94,7 +94,7 @@
         <div class="flex w-full mt-1">
             <div class="w-48 text-left {fullscreen ? "text-4xl" : "md:text-2xl"}">C: {formatTimeShortNoAgo(lastMatchStartTime, matchStartTime)}</div>
             <div class="grow {fullscreen ? "text-4xl" : "md:text-2xl"}"></div>
-            <div class="w-48 text-right {fullscreen ? "text-4xl" : "md:text-2xl"}">N: {formatTimeShortNoAgo(matchStartTime)}</div>
+            <div class="w-48 text-right {fullscreen ? "text-4xl" : "md:text-2xl"}">T: {formatTimeShortNoAgo(matchStartTime)}</div>
         </div>
     {/key}
     {#if !monitorFrame}

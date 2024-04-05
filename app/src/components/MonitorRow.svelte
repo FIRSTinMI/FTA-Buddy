@@ -1,5 +1,10 @@
 <script lang="ts">
-    import { Table, TableBody, TableBodyCell, TableBodyRow } from "flowbite-svelte";
+    import {
+        Table,
+        TableBody,
+        TableBodyCell,
+        TableBodyRow,
+    } from "flowbite-svelte";
     import {
         BYPASS,
         ESTOP,
@@ -18,22 +23,32 @@
         READY_TO_PRESTART,
     } from "../../../shared/types";
     import { navigate } from "svelte-routing";
-    import BatteryGraph from "./BatteryGraph.svelte";
+    import Graph from "./Graph.svelte";
+    import type { MonitorFrameHandler } from "../util/monitorFrameHandler";
+    import { processSignalStrengthForGraph } from "../util/signalStrengthProcessor";
 
     export let station: Station;
     export let monitorFrame: MonitorFrame;
     export let fullscreen = false;
     export let statusChange: { lastChange: Date; improved: boolean };
+    export let frameHandler: MonitorFrameHandler;
     let team: TeamInfo;
     $: {
         team = monitorFrame[station];
-        parsedData = battery.map((d, i) => ({ time: i, voltage: d }));
+        parsedData = battery.map((d, i) => ({ time: i, data: d }));
+        // signalData = processSignalStrengthForGraph(frameHandler
+        // .getHistory(station, "signal", 20) as number[]);
+        signalData = frameHandler
+        .getHistory(station, "signal", 20).map((d, i) => ({ time: i, data: d+80 }));
+        console.log(signalData);
     }
 
     export let detailView: (evt: Event) => void;
 
     function getKey(value: any) {
-        return Object.keys(monitorFrame).find((key) => (monitorFrame as any)[key] === value);
+        return Object.keys(monitorFrame).find(
+            (key) => (monitorFrame as any)[key] === value,
+        );
     }
 
     const DS_Colors: { [key: number]: string } = {
@@ -54,12 +69,26 @@
     };
 
     export let battery: number[];
-    let parsedData = battery.map((d, i) => ({ time: i, voltage: d }));
+    let parsedData = battery.map((d, i) => ({ time: i, data: d }));
+    let signalData = frameHandler
+        .getHistory(station, "signal", 20).map((d, i) => ({ time: i, data: d+80 }));
 </script>
 
 {#key team}
-    <TableBodyRow class="{fullscreen ? "h-16" : "h-20 lg:h-24"} border-y border-gray-800 cursor-pointer" id="{station}-row">
-        <TableBodyCell class="text-center {getKey(team)?.startsWith('blue') ? 'bg-blue-600' : 'bg-red-600'} font-mono monitor-team {fullscreen ? "monitor-fullscreen" : ""}" on:click={() => navigate("/notes/" + team.number)}>
+    <TableBodyRow
+        class="{fullscreen
+            ? 'h-16'
+            : 'h-20 lg:h-24'} border-y border-gray-800 cursor-pointer"
+        id="{station}-row"
+    >
+        <TableBodyCell
+            class="text-center {getKey(team)?.startsWith('blue')
+                ? 'bg-blue-600'
+                : 'bg-red-600'} font-mono monitor-team {fullscreen
+                ? 'monitor-fullscreen'
+                : ''}"
+            on:click={() => navigate("/notes/" + team.number)}
+        >
             <p>{team.number}</p>
             {#if ![MATCH_OVER, MATCH_ABORTED, READY_FOR_POST_RESULT, READY_TO_PRESTART].includes(monitorFrame.field)}
                 {#if team.ds === RED && statusChange.lastChange.getTime() + 30e3 < Date.now()}
@@ -75,7 +104,16 @@
                 {/if}
             {/if}
         </TableBodyCell>
-        <TableBodyCell class="{DS_Colors[team.ds]} text-4xl text-black text-center {fullscreen ? "ring-inset ring-4 ring-gray-800":""} border-x-2 border-gray-800 font-mono monitor-ds {fullscreen ? "monitor-fullscreen" : ""}" on:click={detailView}>
+        <TableBodyCell
+            class="{DS_Colors[
+                team.ds
+            ]} text-4xl text-black text-center {fullscreen
+                ? 'ring-inset ring-4 ring-gray-800'
+                : ''} border-x-2 border-gray-800 font-mono monitor-ds {fullscreen
+                ? 'monitor-fullscreen'
+                : ''}"
+            on:click={detailView}
+        >
             {#if team.ds === GREEN_X}
                 X
             {:else if team.ds === MOVE_STATION}
@@ -90,29 +128,66 @@
                 A
             {/if}
         </TableBodyCell>
-        <TableBodyCell class="{DS_Colors[team.radio]} {fullscreen ? "ring-inset ring-4 ring-gray-800":"border-x"} border-gray-800 " on:click={detailView}></TableBodyCell>
-        <TableBodyCell class="{RIO_Colors[(team.rio > 0 ? 1 : 0) + team.code]} {fullscreen ? "ring-inset ring-4 ring-gray-800":"border-x"} border-gray-800" on:click={detailView}></TableBodyCell>
+        <TableBodyCell
+            class="{DS_Colors[team.radio]} {fullscreen
+                ? 'ring-inset ring-4 ring-gray-800'
+                : 'border-x'} border-gray-800 "
+            on:click={detailView}
+        ></TableBodyCell>
+        <TableBodyCell
+            class="{RIO_Colors[(team.rio > 0 ? 1 : 0) + team.code]} {fullscreen
+                ? 'ring-inset ring-4 ring-gray-800'
+                : 'border-x'} border-gray-800"
+            on:click={detailView}
+        ></TableBodyCell>
         <TableBodyCell
             class="p-0 relative aspect-square"
             on:click={detailView}
-            style="background-color: rgba(255,0,0,{team.battery < 11 && team.battery > 0 ? (-1.5 * team.battery ** 2 - 6.6 * team.battery + 255) / 255 : 0})"
+            style="background-color: rgba(255,0,0,{team.battery < 11 &&
+            team.battery > 0
+                ? (-1.5 * team.battery ** 2 - 6.6 * team.battery + 255) / 255
+                : 0})"
         >
             <div class="h-full text-center top-0 px-0.5 aspect-square">
-                <BatteryGraph data={parsedData} />
+                <Graph data={parsedData} min={0} max={14} time={20} />
             </div>
-            <div class="absolute w-full bottom-0 p-2 monitor-battery {fullscreen ? "monitor-fullscreen" : ""}">
+            <div
+                class="absolute w-full bottom-0 p-2 monitor-battery {fullscreen
+                    ? 'monitor-fullscreen'
+                    : ''}"
+            >
                 {team.battery?.toFixed(1)}v
             </div>
         </TableBodyCell>
         {#if fullscreen}
-            <TableBodyCell on:click={detailView} class="monitor-ping monitor-fullscreen">{team.ping} ms</TableBodyCell>
-            <TableBodyCell on:click={detailView} class="monitor-bwu monitor-fullscreen">{team.bwu.toFixed(2)} mbps</TableBodyCell>
-            <TableBodyCell on:click={detailView} class="monitor-radio monitor-fullscreen">{(team.signal) ? team.signal?.toFixed(2) : 0} dBm</TableBodyCell>
+            <TableBodyCell
+                on:click={detailView}
+                class="monitor-ping monitor-fullscreen"
+                >{team.ping} ms</TableBodyCell
+            >
+            <TableBodyCell
+                on:click={detailView}
+                class="monitor-bwu monitor-fullscreen"
+                >{team.bwu.toFixed(2)} mbps</TableBodyCell
+            >
+            <TableBodyCell
+                class="p-0 relative aspect-square"
+                on:click={detailView}
+            >
+                <div class="h-full text-center top-0 px-0.5 aspect-square">
+                    <Graph data={signalData} min={-50} max={100} time={20} />
+                </div>
+                <div
+                    class="absolute w-full bottom-0 p-2 monitor-signal monitor-fullscreen"
+                >
+                    {team.signal ? team.signal : 0} dBm
+                </div>
+            </TableBodyCell>
         {:else}
             <TableBodyCell on:click={detailView} class="monitor-net">
                 {team.ping} ms<br />
                 {team.bwu.toFixed(2)} mbps<br />
-                {(team.signal) ? team.signal?.toFixed(2) : 0} dBm
+                {team.signal ? team.signal : 0} dBm
             </TableBodyCell>
         {/if}
     </TableBodyRow>

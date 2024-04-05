@@ -2,17 +2,21 @@
     import { curveBasis, line, scaleLinear } from "d3";
 
     // props
-    export let data: { time: number; voltage: number }[];
+    export let data: { time: number; data: number }[];
+
+    export let min = 0;
+    export let max = 14;
+    export let time = 20;
 
     // scales
-    const xScale = scaleLinear().domain([0, 20]).range([5, 95]);
+    const xScale = scaleLinear().domain([0, time]).range([5, 95]);
 
-    const yScale = scaleLinear().domain([0, 14]).range([5, 75]);
+    const yScale = scaleLinear().domain([min, max]).range([5, 75]);
 
     // the path generator
     const pathLine = line()
         .x((d) => xScale(d.time))
-        .y((d) => yScale(14 - d.voltage))
+        .y((d) => yScale(14 - d.data))
         .curve(curveBasis);
 </script>
 

@@ -17,17 +17,19 @@
         MATCH_OVER,
         PRESTART_INITIATED,
         ASTOP,
+        type StatusChanges,
     } from "../../../shared/types";
     import MonitorRow from "./MonitorRow.svelte";
     import { navigate } from "svelte-routing";
-    import type { StatusChanges } from "../util/statusAlerts";
     import { formatTimeShort } from "../util/formatTime";
+    import type { MonitorFrameHandler } from "../util/monitorFrameHandler";
 
     export let modalOpen: boolean;
     export let modalStation: Station;
     export let monitorFrame: MonitorFrame;
     export let batteryData: { [key: string]: number[] };
     export let statusChanges: StatusChanges;
+    export let frameHandler: MonitorFrameHandler;
 
     let modalTeam: TeamInfo | undefined;
     let battery: number[] = [];
@@ -58,7 +60,7 @@
                 <TableHeadCell>Net</TableHeadCell>
             </TableHead>
             <TableBody>
-                <MonitorRow station={modalStation} bind:monitorFrame detailView={() => {}} bind:battery statusChange={statusChanges[modalStation]} />
+                <MonitorRow station={modalStation} bind:monitorFrame detailView={() => {}} bind:battery statusChange={statusChanges[modalStation]} {frameHandler} />
             </TableBody>
         </Table>
     </div>

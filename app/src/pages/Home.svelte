@@ -51,7 +51,7 @@
 </script>
 
 {#if monitorFrame}
-    <TeamModal bind:modalOpen bind:modalStation bind:monitorFrame bind:batteryData bind:statusChanges />
+    <TeamModal bind:modalOpen bind:modalStation bind:monitorFrame bind:batteryData bind:statusChanges {frameHandler} />
 {/if}
 
 <div class="w-full mx-auto {fullscreen ? "" : "container md:max-w-2xl"} md:p-2 space-y-2">
@@ -78,21 +78,23 @@
                 <TableHeadCell class="w-38">Radio</TableHeadCell>
                 <TableHeadCell class="w-38">Rio</TableHeadCell>
                 <TableHeadCell class="w-38">Bat</TableHeadCell>
-                <TableHeadCell>Ping</TableHeadCell>
-                <TableHeadCell>BWU</TableHeadCell>
-                <TableHeadCell>Signal</TableHeadCell>
+                <TableHeadCell class="w-fit">Ping</TableHeadCell>
+                <TableHeadCell class="w-fit">BWU</TableHeadCell>
+                <TableHeadCell class="w-38">Signal</TableHeadCell>
                 {/if}
             </TableHead>
             <TableBody>
                 {#if monitorFrame}
                     {#each stations as station}
-                        <MonitorRow {station} {monitorFrame} {detailView} battery={batteryData[station]} statusChange={statusChanges[station]} {fullscreen} />
+                        <MonitorRow {station} {monitorFrame} {detailView} battery={batteryData[station]} statusChange={statusChanges[station]} {fullscreen} {frameHandler} />
                     {/each}
                 {/if}
             </TableBody>
         </Table>
         <div class="flex w-full mt-1">
             <div class="w-48 text-left {fullscreen ? "text-4xl" : "md:text-2xl"}">C: {formatTimeShortNoAgo(lastMatchStartTime, matchStartTime)}</div>
+            <div class="grow {fullscreen ? "text-4xl" : "md:text-2xl"}"></div>
+            <div class="w-48 text-right {fullscreen ? "text-4xl" : "md:text-2xl"}">N: {formatTimeShortNoAgo(lastMatchStartTime)}</div>
         </div>
     {/key}
     {#if !monitorFrame}

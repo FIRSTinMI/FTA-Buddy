@@ -1,6 +1,7 @@
 <script lang="ts">
     import { Accordion, AccordionItem } from "flowbite-svelte";
     import QrCode from "svelte-qrcode";
+    import { settingsStore } from "../stores/settings";
 </script>
 
 <div class="container mx-auto p-2 pr-3 w-full">
@@ -641,15 +642,27 @@
             <Accordion flush>
                 <AccordionItem>
                     <span slot="header">Pack Case 23/24 Amp and Truss</span>
-                    <a href="https://roadcase.frc.tools/23"><QrCode value="https://roadcase.frc.tools/23" padding={5} /></a>
+                    {#if $settingsStore.fimSpecifics}
+                        <a href="/app/pdf/FIM_Case_23_24.pdf"><QrCode value="https://ftabuddy.com/app/pdf/FIM_Case_23_24.pdf" padding={5}></QrCode></a>
+                    {:else}
+                        <a href="https://roadcase.frc.tools/23"><QrCode value="https://roadcase.frc.tools/23" padding={5} /></a>
+                    {/if}
                 </AccordionItem>
                 <AccordionItem>
                     <span slot="header">Pack Case 31 Speaker</span>
-                    <a href="https://roadcase.frc.tools/31"><QrCode value="https://roadcase.frc.tools/31" padding={5} /></a>
+                    {#if $settingsStore.fimSpecifics}
+                        <a href="/app/pdf/FIM_Case_31.pdf"><QrCode value="https://ftabuddy.com/app/pdf/FIM_Case_31.pdf" padding={5}></QrCode></a>
+                    {:else}
+                        <a href="https://roadcase.frc.tools/31"><QrCode value="https://roadcase.frc.tools/31" padding={5} /></a>
+                    {/if}
                 </AccordionItem>
                 <AccordionItem>
-                    <span slot="header">Pack Case 32 Practice Field</span>
-                    <a href="https://roadcase.frc.tools/32"><QrCode value="https://roadcase.frc.tools/32" padding={5} /></a>
+                    <span slot="header">Pack Case 32 {#if $settingsStore.fimSpecifics}Stage Walls{:else}Practice Field{/if}</span>
+                    {#if $settingsStore.fimSpecifics}
+                        <a href="/app/pdf/FIM_Case_32.pdf"><QrCode value="https://ftabuddy.com/app/pdf/FIM_Case_32.pdf" padding={5}></QrCode></a>
+                    {:else}
+                        <a href="https://roadcase.frc.tools/32"><QrCode value="https://roadcase.frc.tools/32" padding={5} /></a>
+                    {/if}
                 </AccordionItem>
                 <AccordionItem>
                     <span slot="header">Build Stage</span>

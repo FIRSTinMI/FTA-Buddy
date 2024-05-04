@@ -8,6 +8,9 @@ export interface Settings {
     soundAlerts: boolean;
     fieldGreen: boolean;
     susRobots: boolean;
+    fimSpecifics: boolean;
+    notifications: boolean;
+    darkMode: boolean;
 }
 
 let initialSettings = localStorage.getItem('settings');
@@ -19,7 +22,10 @@ const defaultSettings: Settings = {
     forceCloud: true,
     soundAlerts: false,
     fieldGreen: true,
-    susRobots: false
+    susRobots: false,
+    fimSpecifics: true,
+    notifications: true,
+    darkMode: true
 };
 
 if (!initialSettings) {

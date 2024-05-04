@@ -9,7 +9,7 @@
         <AccordionItem>
             <span slot="header">Robot Radio Lights</span>
 
-            <img src="/app/openmesh-radio-status-lights-1100.png" width="325px" alt="Radio with LEDs labeled" />
+            <img src="/app/vh103.png" width="325px" alt="Radio with LEDs labeled" />
 
             <table cellpadding="5" cellspacing="0" class="led-table">
                 <tr>
@@ -19,12 +19,8 @@
                                 <td colspan="2" class="bold">Power</td>
                             </tr>
                             <tr>
-                                <td class="blue blink led"> </td>
-                                <td>Powering Up</td>
-                            </tr>
-                            <tr>
-                                <td class="blue led"> </td>
-                                <td>Powered Up</td>
+                                <td class="green led"> </td>
+                                <td>Has Power</td>
                             </tr>
                         </table>
                     </td>
@@ -34,23 +30,49 @@
                     <td>
                         <table class="section-table">
                             <tr>
-                                <td colspan="2" class="bold">Wifi</td>
+                                <td colspan="2" class="bold">Sys</td>
                             </tr>
                             <tr>
                                 <td class="black led"> </td>
-                                <td>Needs Programming</td>
+                                <td>Booting</td>
                             </tr>
                             <tr>
-                                <td class="red led"> </td>
-                                <td>AP, unlinked</td>
+                                <td class="green blink led"> </td>
+                                <td>Unable to ping field</td>
                             </tr>
                             <tr>
-                                <td class="orange led"> </td>
-                                <td>AP, linked</td>
+                                <td class="green hz-20-fast led"> </td>
+                                <td>Firmware being flashed</td>
                             </tr>
                             <tr>
                                 <td class="green led"> </td>
-                                <td>Bridge mode, linked</td>
+                                <td>Connected to field</td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        If the Sys, 2.4 GHz, and 6GHz are all blinking fast: The radio is configured as an AP and a battery was detected. Wireless is disabled until corrected and power cycled.
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <table class="section-table">
+                            <tr>
+                                <td colspan="2" class="bold">DIP Switches</td>
+                            </tr>
+                            <tr>
+                                <td>1</td>
+                                <td>Aux1 POE passthrough</td>
+                            </tr>
+                            <tr>
+                                <td>2</td>
+                                <td>Aux2 POE passthrough</td>
+                            </tr>
+                            <tr>
+                                <td>3</td>
+                                <td>Enable 2.4 GHz Radio</td>
                             </tr>
                         </table>
                     </td>
@@ -741,6 +763,14 @@
         animation: blink 2000ms infinite;
         animation-timing-function: steps(2, jump-none);
     }
+    .hz-20-fast {
+        animation: blink 100ms infinite;
+        animation-timing-function: steps(2, jump-none);
+    }
+    .hz-50-fast {
+        animation: blink 40ms infinite;
+        animation-timing-function: steps(2, jump-none);
+    }
     .double-blink-orange {
         animation: double-blink-orange 1000ms infinite;
         animation-timing-function: steps(3, jump-none);
@@ -753,8 +783,8 @@
         animation: blink-white 1000ms infinite;
         animation-timing-function: steps(2, jump-none);
     }
-    .fast-white {
-        animation: blink-white 1000ms infinite;
+    .fast-green {
+        animation: blink-green 1000ms infinite;
         animation-timing-function: steps(2, jump-none);
     }
     .blink-orange {

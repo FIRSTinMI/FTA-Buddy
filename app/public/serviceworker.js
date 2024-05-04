@@ -3,7 +3,7 @@ let contentToCache = [
     '/app/assets/{{CSS_FILE}}',
     '/app/assets/{{JS_FILE}}',
     '/app/index.html',
-    '/app/openmesh-radio-status-lights-1100.png',
+    '/app/vh103.png',
     '/app/audio/red1_ds.ogg',
     '/app/audio/red1_code.ogg',
     '/app/audio/red1_rio.ogg',

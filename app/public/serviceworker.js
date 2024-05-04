@@ -32,6 +32,9 @@ let contentToCache = [
     '/app/audio/green2.ogg',
     '/app/audio/green3.ogg',
     '/app/audio/good_job.ogg',
+    '/app/FIM_Case_23_24.pdf',
+    '/app/FIM_Case_31.pdf',
+    '/app/FIM_Case_32.pdf',
 ]
 
 

@@ -16,11 +16,6 @@ const appExtensionData = chrome.runtime.getManifest();
         });
     });
     
-    const extensionSocket = chrome.runtime.connect({ name: 'ftabuddy' });
-    extensionSocket.onMessage.addListener((msg) => {
-        console.log(msg);
-    });
-
     window.addEventListener('message', async (evt) => {
         console.log(evt.data);
 

@@ -28,10 +28,11 @@
     // Checking authentication
 
     let auth = get(authStore);
-    const publicPaths = ["/app/login", "/app/google-signup", "/app/host", "/app/event-created"]
+    const publicPaths = ["/app", "/app/", "/app/login", "/app/google-signup", "/app/host", "/app/event-created"]
 
     if (!auth.token) {
-        if (!auth.eventToken && window.location.pathname == "/app") {
+        console.log(auth.eventToken, (window.location.pathname == "/app/" || window.location.pathname == "/app"))
+        if (!auth.eventToken && (window.location.pathname == "/app/" || window.location.pathname == "/app")) {
             navigate("/app/login");
         } else if (!publicPaths.includes(window.location.pathname)) {
             navigate("/app/login");

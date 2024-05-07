@@ -21,7 +21,7 @@ const appExtensionData = chrome.runtime.getManifest();
         console.log(msg);
     });
 
-    window.addEventListener('message', (evt) => {
+    window.addEventListener('message', async (evt) => {
         console.log(evt.data);
 
         if (evt.data.source !== 'page') return;
@@ -34,7 +34,8 @@ const appExtensionData = chrome.runtime.getManifest();
                 cloud,
                 eventCode,
                 enabled,
-                signalR
+                signalR,
+                fms: await pingFMS()
             });
         } else if (evt.data.type === "enable") {
             enabled = true;
@@ -46,7 +47,8 @@ const appExtensionData = chrome.runtime.getManifest();
                 cloud,
                 eventCode,
                 enabled,
-                signalR
+                signalR,
+                fms: await pingFMS()
             });
         } else if (evt.data.type === "eventCode") {
             eventCode = evt.data.code;
@@ -58,7 +60,8 @@ const appExtensionData = chrome.runtime.getManifest();
                 cloud,
                 eventCode,
                 enabled,
-                signalR
+                signalR,
+                fms: await pingFMS()
             });
         } else if (evt.data.type === "enableSignalR") {
             signalR = true;
@@ -70,8 +73,18 @@ const appExtensionData = chrome.runtime.getManifest();
                 cloud,
                 eventCode,
                 enabled,
-                signalR
+                signalR,
+                fms: await pingFMS()
             });
         }
     });
 })();
+
+async function pingFMS() {
+    return new Promise((resolve) => {
+        chrome.runtime.sendMessage({ type: "ping" }, (response) => {
+            console.log(response);
+            resolve(response.fms);
+        });
+    });
+}

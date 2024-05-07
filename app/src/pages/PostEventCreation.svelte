@@ -9,7 +9,6 @@
     import { onMount } from "svelte";
     import { authStore } from "../stores/auth";
     import { eventStore } from "../stores/event";
-    import { trpc } from "../main";
     import { navigate } from "svelte-routing";
 
     export let toast: (title: string, text: string, color?: string) => void;
@@ -21,57 +20,31 @@
     let extensionVersion = "unknown version";
     let fmsDetected = false;
 
-    const FMS_IP = "192.168.1.220"; // "10.0.100.5";
-
     window.addEventListener("message", (event) => {
         if (event.data.type === "pong") {
             extensionDetected = true;
             extensionVersion = "v" + event.data.version;
             extensionEnabled = event.data.enabled;
-            signalREnabled = event.data.signalR;
             extensionEventCode = event.data.eventCode;
+            signalREnabled = event.data.signalR;
+            fmsDetected = event.data.fms;
         }
     });
 
     async function checkConnection() {
         window.postMessage({ source: "page", type: "ping" }, "*");
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        if (!extensionDetected) {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        if (!extensionDetected || !extensionEnabled || !signalREnabled || !fmsDetected) {
             checkConnection();
-        }
-    }
-
-    async function checkFMSConnection() {
-        const img = new Image();
-        img.src = `http://${FMS_IP}/dist/images/FIRST_Logo_Reverse_Horizontal.png`;
-
-        img.onload = () => {
-            fmsDetected = true;
-        };
-
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        if (img.height > 0) {
-            fmsDetected = true;
         } else {
-            if (fmsDetected) {
-                toast(
-                    "Connection Lost",
-                    "Lost connection to FMS. Please check the connection and try again.",
-                );
-            }
-            fmsDetected = false;
+            // If everything is connected and good, still check every 10 seconds
+            setTimeout(checkConnection, 10000);
         }
-
-        img.remove();
-        // loop
-        await new Promise((resolve) => setTimeout(resolve, 4000));
-        checkFMSConnection();
     }
+
 
     onMount(() => {
-        checkFMSConnection();
-        checkConnection();
+        setTimeout(checkConnection, 200);
     });
 </script>
 
@@ -79,14 +52,6 @@
     class="container mx-auto md:max-w-4xl flex flex-col justify-center p-4 h-full space-y-4"
 >
     <h1 class="text-3xl font-bold">Host a FTA Buddy Instance</h1>
-    <span class="inline-flex gap-2 font-bold mx-auto">
-        <Indicator color={fmsDetected ? "green" : "red"} class="my-auto" />
-        {#if fmsDetected}
-            <span class="text-green-500">FMS Detected</span>
-        {:else}
-            <span class="text-red-500">FMS Not Detected</span>
-        {/if}
-    </span>
     <span class="inline-flex gap-2 font-bold mx-auto">
         {#if extensionDetected}
             {#if extensionEnabled}
@@ -111,6 +76,14 @@
                 class="text-blue-400 hover:underline"
                 target="_blank">Install</a
             >
+        {/if}
+    </span>
+    <span class="inline-flex gap-2 font-bold mx-auto">
+        <Indicator color={fmsDetected ? "green" : "red"} class="my-auto" />
+        {#if fmsDetected}
+            <span class="text-green-500">FMS Detected</span>
+        {:else}
+            <span class="text-red-500">FMS Not Detected</span>
         {/if}
     </span>
     <p class="text-lg">

@@ -34,6 +34,13 @@ export class SignalR {
             .withKeepAliveInterval(15000) // 15 seconds per FMS Audience Display
             .configureLogging({
                 log: (logLevel, message) => {
+                    // Prevent showing errors in the extension for things that are expected to fail sometimes
+                    if (
+                        message.startsWith('Failed to complete negotiation') ||
+                        message.startsWith('Failed to start the connection') ||
+                        message.startsWith('Error from HTTP request')
+                    ) return console.log(`[SignalR ${logLevel}] ${message}`);
+                    
                     [console.debug, console.debug, console.log, console.warn, console.error][logLevel](`[SignalR ${logLevel}] ${message}`);
                 },
             })
@@ -55,13 +62,20 @@ export class SignalR {
             .withKeepAliveInterval(15000) // 15 seconds per FMS Audience Display
             .configureLogging({
                 log: (logLevel, message) => {
+                    // Prevent showing errors in the extension for things that are expected to fail sometimes
+                    if (
+                        message.startsWith('Failed to complete negotiation') ||
+                        message.startsWith('Failed to start the connection') ||
+                        message.startsWith('Error from HTTP request')
+                    ) return console.log(`[SignalR ${logLevel}] ${message}`);
+
                     [console.debug, console.debug, console.log, console.warn, console.error][logLevel](`[SignalR ${logLevel}] ${message}`);
                 },
             })
             // .withHubProtocol(new MessagePackHubProtocol())
             .withAutomaticReconnect({
                 nextRetryDelayInMilliseconds(retryContext) {
-                    console.warn('Retrying SignalR connection...');
+                    console.log('Retrying SignalR connection...');
                     return Math.min(
                         2_000 * retryContext.previousRetryCount,
                         120_000
@@ -138,7 +152,7 @@ export class SignalR {
         // Register listener for the "TeamInfoChanged" event (team connects, disconnects, etc)
         this.connection.on('fieldmonitordatachanged', async (data: SignalRTeamInfo[]) => {
             for (let i = 0; i < data.length; i++) {
-                const team: ROBOT = (((data[i].Alliance === "Red") ? 'red' : 'blue' ) + SignalREnums.StationType[data[i].Station]) as ROBOT;
+                const team: ROBOT = (((data[i].Alliance === "Red") ? 'red' : 'blue') + SignalREnums.StationType[data[i].Station]) as ROBOT;
 
                 this.frame[team] = {
                     number: data[i].TeamNumber,
@@ -184,7 +198,7 @@ export class SignalR {
             }
             */
 
-            const team: ROBOT = (((data.p1 === SignalREnums.AllianceType.Red) ? 'red' : 'blue' ) + data.p2) as ROBOT;
+            const team: ROBOT = (((data.p1 === SignalREnums.AllianceType.Red) ? 'red' : 'blue') + data.p2) as ROBOT;
 
             this.frame[team].versionmm = data.p3.length > 0 ? 1 : 0;
         });
@@ -304,9 +318,9 @@ export class SignalR {
         });
 
         // Start connection to SignalR Hub
-        return Promise.all([this.infrastructureConnection.start(), this.connection.start()]);
+        return Promise.all([this.infrastructureConnection.start(), this.connection.start()]).catch(console.log);
     }
-    
+
     /**
     * This function is used to invoke a SignalR event and wait for a response.
     * @param eventName The name of the event to invoke
@@ -345,6 +359,6 @@ function dsState(data: SignalRTeamInfo): DSState {
         if (data.StationStatus === SignalREnums.StationStatusType.WrongMatch) return WRONG_MATCH;
         return GREEN_X;
     }
-    
+
     return RED;
 }

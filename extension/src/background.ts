@@ -1,7 +1,7 @@
 import { SignalR } from "./signalR";
 
 const manifestData = chrome.runtime.getManifest();
-let signalRConnection = new SignalR('192.168.1.220', manifestData.version, sendFrame);
+let signalRConnection = new SignalR('10.0.100.5', manifestData.version, sendFrame);
 let ws: WebSocket;
 
 async function start() {
@@ -20,11 +20,19 @@ async function start() {
         });
     });
 
-    chrome.runtime.onConnect.addListener((port) => {
-        console.assert(port.name === 'ftabuddy');
-        port.onMessage.addListener(async (msg) => {
-            console.log(msg);
-        });
+    chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+        console.log(msg);
+        if (msg.type === "ping") {
+            pingFMS().then((fms) => {
+                sendResponse({
+                    source: 'ext',
+                    version: manifestData.version,
+                    type: "pong",
+                    fms
+                });
+            });
+        }
+        return true;
     });
 
     if (!enabled) {
@@ -64,6 +72,19 @@ function connectToWS(cloud: boolean, url: string | undefined, eventCode: string)
     }
     ws.onerror = (err) => {
         console.error(err);
+    }
+}
+
+async function pingFMS() {
+    try {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 500)
+        const res = await fetch('http://10.0.100.5/FieldMonitor', {
+            signal: controller.signal
+        });
+        return res.ok;
+    } catch (e) {
+        return false;
     }
 }
 

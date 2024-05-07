@@ -8,7 +8,6 @@
         "scripting"
     ],
     "host_permissions" : [
-        "http://192.168.1.220/fieldMonitorHub/*",
         "http://10.0.100.5/fieldMonitorHub/*"
     ],
     "content_scripts": [
@@ -17,7 +16,6 @@
             "matches": [
                 "http://10.0.100.5/FieldMonitor",
                 "http://10.0.100.5/FieldMonitor/",
-                "http://filips-laptop.local/FieldMonitor",
                 "https://ftabuddy.com/FieldMonitor/"
             ],
             "js": [
@@ -42,7 +40,7 @@
             ],
             "matches": [
                 "http://10.0.100.5/*",
-                "http://filips-laptop.local/*",
+                "http://localhost:5173/*",
                 "https://ftabuddy.com/*"
             ]
         }

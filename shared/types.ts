@@ -138,7 +138,10 @@ export interface SignalRTeamInfo {
     pee: boolean; // DS is official
     pff: number; // Station status 
     pgg: boolean; // brownout
-    phh: string; // ?
+    phh: string; // EStopSource
+    pii: boolean; // isAStop pressed
+    pjj: boolean; // isAStopped
+    pjk: string; // MoveToStation
 }
 export namespace SignalREnums {
     export enum TournamentLevel {
@@ -164,6 +167,7 @@ export namespace SignalREnums {
     export enum MonitorStatusType {
         Unknown,
         EStopped,
+        AStopped,
         DisabledAuto,
         DisabledTeleop,
         EnabledAuto,
@@ -185,8 +189,8 @@ export namespace SignalREnums {
 
     export enum StationStatusType {
         Good,
-        Bad,
-        Waiting,
+        WrongStation,
+        WrongMatch,
         Unknown
     }
 }

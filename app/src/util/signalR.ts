@@ -26,7 +26,7 @@ export class SignalR {
             .withKeepAliveInterval(15000) // 15 seconds per FMS Audience Display
             .configureLogging({
                 log: (logLevel, message) => {
-                    [console.debug, console.log, console.warn, console.error][logLevel](`[SignalR ${logLevel}] ${message}`);
+                    [console.debug, console.debug, console.log, console.warn, console.error][logLevel](`[SignalR ${logLevel}] ${message}`);
                 },
             })
             // .withHubProtocol(new MessagePackHubProtocol())
@@ -103,7 +103,7 @@ export class SignalR {
                 }
 
                 try {
-                    const response = await fetch(`http://${ip}/FieldMonitor/MatchNumberAndPlay`);
+                    const response = await fetch(`http://${this.ip}/FieldMonitor/MatchNumberAndPlay`);
                     const json = await response.json();
                     this.frame.match = json[0];
                 } catch (err) {
@@ -253,8 +253,8 @@ function dsState(data: any) {
     if (data.pc) return ESTOP;
     if (data.p3) {
         if (data.pf === SignalREnums.StationStatusType.Good) return GREEN;
-        if (data.pf === SignalREnums.StationStatusType.Bad) return MOVE_STATION;
-        if (data.pf === SignalREnums.StationStatusType.Waiting) return WRONG_MATCH;
+        if (data.pf === SignalREnums.StationStatusType.WrongStation) return MOVE_STATION;
+        if (data.pf === SignalREnums.StationStatusType.WrongMatch) return WRONG_MATCH;
         return GREEN_X;
     }
     

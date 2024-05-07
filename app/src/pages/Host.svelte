@@ -8,12 +8,12 @@
 
     let fmsDetected = false;
     let detectedEventName: string | undefined = undefined;
-    let signalR = new SignalR('localhost:8189', (e) => {frame = e});
+    let signalR = new SignalR('filips-laptop.local', (e) => {frame = e});
     let frame: MonitorFrame | undefined = undefined;
 
     async function checkFMSConnection() {
         try {
-            const response = await fetch("http://localhost/FieldMonitor", {mode: "no-cors"});
+            const response = await fetch("http://filips-laptop.local/FieldMonitor", {mode: "no-cors"});
             if (response.ok || response.status === 0) {
                 fmsDetected = true;
 
@@ -36,7 +36,7 @@
 
     onMount(() => {
         checkFMSConnection();
-        setInterval(checkFMSConnection, 5000);
+        //setInterval(checkFMSConnection, 5000);
     });
 </script>
 

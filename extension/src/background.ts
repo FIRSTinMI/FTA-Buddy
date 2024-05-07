@@ -24,10 +24,6 @@ async function start() {
         console.assert(port.name === 'ftabuddy');
         port.onMessage.addListener(async (msg) => {
             console.log(msg);
-            if (msg.type === "eventCode") {
-                const eventCode = await signalRConnection.fetchEventName();
-                port.postMessage({ type: 'eventCode', code: eventCode });
-            }
         });
     });
 

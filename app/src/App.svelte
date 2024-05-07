@@ -23,14 +23,19 @@
     import { MatchState, MonitorFrameHandler, type MonitorEvent } from "./util/monitorFrameHandler";
     import { AudioQueuer } from "./util/audioAlerts";
     import Host from "./pages/Host.svelte";
+    import PostEventCreation from "./pages/PostEventCreation.svelte";
 
     // Checking authentication
 
     let auth = get(authStore);
-    const publicPaths = ["/app/login", "/app/google-signup", "/app/host"]
+    const publicPaths = ["/app/login", "/app/google-signup", "/app/host", "/app/event-created"]
 
-    if ((!auth.token || !auth.eventToken) && !publicPaths.includes(window.location.pathname)) {
-        navigate("/app/login");
+    if (!auth.token) {
+        if (!auth.eventToken && window.location.pathname == "/app") {
+            navigate("/app/login");
+        } else if (!publicPaths.includes(window.location.pathname)) {
+            navigate("/app/login");
+        }
     }
 
     authStore.subscribe((value) => {
@@ -574,6 +579,9 @@
             </Route>
             <Route path="/host">
                 <Host {toast} />
+            </Route>
+            <Route path="/event-created">
+                <PostEventCreation {toast} />
             </Route>
             <Route path="/google-signup">
                 <CompleteGoogleSignup {toast} />

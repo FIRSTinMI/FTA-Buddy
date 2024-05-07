@@ -115,31 +115,6 @@
     let eventCode = "";
     let eventPin = "";
 
-    async function createEvent() {
-        loading = true;
-
-        try {
-            const res = await trpc.event.create.query({
-                code: eventCode,
-                pin: eventPin,
-            });
-            console.log(res);
-            authStore.set({ ...auth, eventToken: res.token });
-            eventStore.set({
-                code: eventCode,
-                pin: eventPin,
-                teams: res.teams,
-            });
-            toast("Success", "Event created successfully", "green-500");
-            updateEventList();
-        } catch (err: any) {
-            toast("Error Creating Event", err.message);
-            console.error(err);
-        }
-
-        loading = false;
-    }
-
     let eventList: SelectOptionType<string>[] = [];
 
     function updateEventList() {
@@ -191,6 +166,7 @@
                 teams: (res.teams as any) || [],
             });
             toast("Success", "Event joined successfully", "green-500");
+            setTimeout(() => navigate("/app"), 700);
         } catch (err: any) {
             toast("Error Joining Event", err.message);
             console.error(err);
@@ -363,9 +339,20 @@
                 <div class="flex h-full">
                     <div class="my-auto w-full">
                         <h2 class="text-xl">Run FTA Buddy from this computer</h2>
-                        <Button on:click={() => navigate("/app/host")} class="w-full mt-4"
-                            >Host</Button
-                        >
+                        {#if auth.eventToken}
+                            <Button on:click={() => navigate("/app")} class="w-full mt-4"
+                                >Open Field Monitor</Button>
+                            <Button on:click={() => navigate("/app/event-created")} class="w-full mt-4"
+                                >See Event Pin</Button
+                            >
+                            <Button on:click={() => navigate("/app/host")} class="w-full mt-4"
+                                >Host New Event</Button
+                            >
+                        {:else}
+                            <Button on:click={() => navigate("/app/host")} class="w-full mt-4"
+                                >Host</Button
+                            >
+                        {/if}
                         <p class="text-gray-700 mt-2">Requires this computer to be on the field network</p>
                     </div>
                 </div>
@@ -412,16 +399,30 @@
 
         <!-- Event selector for admins -->
         {#if auth.user?.role === "ADMIN"}
+            {#if desktop}
+                <div class="flex  border-t border-neutral-500 pt-4">
+                    <div class="my-auto w-full">
+                        <h2 class="text-xl">Run FTA Buddy from this computer</h2>
+                        <Button on:click={() => navigate("/app/host")} class="w-full mt-4"
+                            >Host</Button
+                        >
+                        <p class="text-gray-700 mt-2">Requires this computer to be on the field network</p>
+                    </div>
+                </div>
+            {/if}
+
             <div
                 class="flex flex-col border-t border-neutral-500 pt-10 space-y-4"
             >
+                <Label for="event-selector">Admin Event Selector</Label>
                 <Select
+                    id="event-selector"
                     bind:value={event.code}
                     items={eventList}
                     placeholder="Select Event"
                     on:change={adminSelectEvent}
                 />
-                <form class="flex flex-col space-y-2 text-left">
+                <!-- <form class="flex flex-col space-y-2 text-left">
                     <div class="col-span-2">
                         <Label for="event-code">Event Code</Label>
                         <Input
@@ -439,7 +440,7 @@
                         />
                     </div>
                     <Button on:click={createEvent}>Create Event</Button>
-                </form>
+                </form> -->
                 <div class="pt-10 border-t border-neutral-500">
                     <Button href="/" on:click={() => navigate("/")}
                         >Go to App</Button
@@ -468,20 +469,20 @@
             <!-- No event selected -->
         {:else}
             <div class="flex flex-col border-t border-neutral-500 pt-10">
-                <h3 class="text-lg">Create/Join Event</h3>
+                <h3 class="text-lg">Join Event</h3>
                 <form
-                    class="grid md:grid-cols-2 gap-2 text-left"
+                    class="flex flex-col gap-2 text-left"
                     on:submit={joinEvent}
                 >
-                    <div class="col-span-2">
+                    <div>
                         <Label for="event-code">Event Code</Label>
                         <Input
                             id="event-code"
                             bind:value={eventCode}
-                            placeholder="2024miket"
+                            placeholder="2024mitry"
                         />
                     </div>
-                    <div class="col-span-2">
+                    <div>
                         <Label for="event-pin">Event Pin</Label>
                         <Input
                             id="event-pin"
@@ -489,10 +490,20 @@
                             placeholder="1234"
                         />
                     </div>
-                    <Button on:click={createEvent} outline>Create Event</Button>
                     <Button type="submit">Join Event</Button>
                 </form>
             </div>
+            {#if desktop}
+                <div class="flex  border-t border-neutral-500 pt-4">
+                    <div class="my-auto w-full">
+                        <h2 class="text-xl">Run FTA Buddy from this computer</h2>
+                        <Button on:click={() => navigate("/app/host")} class="w-full mt-4"
+                            >Host</Button
+                        >
+                        <p class="text-gray-700 mt-2">Requires this computer to be on the field network</p>
+                    </div>
+                </div>
+            {/if}
         {/if}
     {/if}
     <p class="text-sm text-neutral-500">

@@ -14,6 +14,8 @@ export class SignalR {
 
     private callback: (frame: MonitorFrame) => void;
 
+    private lastCycleTime: string = 'unknown';
+    private lastTime: string = 'unknown';
     private version: string;
 
     constructor(ip: string, version: string, callback: (frame: MonitorFrame) => void) {
@@ -273,10 +275,14 @@ export class SignalR {
 
         this.infrastructureConnection.on('lastcycletimecalculated', (data) => {
             console.log('lastcycletimecalculated: ', data);
+            this.lastCycleTime = data;
+            this.frame.lastCycleTime = data;
         });
 
         this.infrastructureConnection.on('scheduleaheadbehindchanged', (data) => {
             console.log('scheduleaheadbehindchanged: ', data);
+            this.lastTime = data;
+            this.frame.time = data;
         });
 
         // Register connected/disconnected events
@@ -300,47 +306,8 @@ export class SignalR {
         // Start connection to SignalR Hub
         return Promise.all([this.infrastructureConnection.start(), this.connection.start()]);
     }
-
-    // Fetch the event name
-    public async fetchEventName(): Promise<string | null> {
-        return this.invokeExpectResponse<Event[]>('GetEvent', 'Events').then((events: Event[]) => {
-            console.log(events);
-            return this.getCurrentEvent(events)
-        }).then((e) => {
-            console.log(e);
-            // @ts-ignore
-            return e ? e.name : null;
-        }).catch((e) => {
-            console.log(
-                `‼️ Error Fetching Event Name: ${e}`,
-                'err'
-            );
-            return null;
-        });
-    }
-
+    
     /**
-     * Find the currently active event from a list of events
-     * @param events Events list
-     * @returns Currently active event, if any
-     */
-    public async getCurrentEvent(events: Event[]): Promise<Event | null> {
-        if (events.length > 0) {
-            const now = new Date();
-            const currentEvent = events.find(
-                // @ts-ignore
-                (e) => now >= new Date(e.start) && now <= new Date(e.end)
-            );
-            if (currentEvent) {
-                return Promise.resolve(currentEvent);
-            }
-        }
-
-        // No Active Event
-        return Promise.resolve(null);
-    };
-
-    /*
     * This function is used to invoke a SignalR event and wait for a response.
     * @param eventName The name of the event to invoke
     * @param eventResponse The name of the event to listen for the response

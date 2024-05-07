@@ -19,9 +19,6 @@ const appExtensionData = chrome.runtime.getManifest();
     const extensionSocket = chrome.runtime.connect({ name: 'ftabuddy' });
     extensionSocket.onMessage.addListener((msg) => {
         console.log(msg);
-        if (msg.type === "eventCode") {
-            window.postMessage({ source: 'ext', type: 'eventCode', code: msg.code }, '*');
-        }
     });
 
     window.addEventListener('message', (evt) => {
@@ -52,7 +49,29 @@ const appExtensionData = chrome.runtime.getManifest();
                 signalR
             });
         } else if (evt.data.type === "eventCode") {
-            extensionSocket.postMessage({ source: 'page', type: 'eventCode' });
+            eventCode = evt.data.code;
+            chrome.storage.local.set({ event: eventCode });
+            window.postMessage({
+                source: 'ext',
+                version: appExtensionData.version,
+                type: "pong",
+                cloud,
+                eventCode,
+                enabled,
+                signalR
+            });
+        } else if (evt.data.type === "enableSignalR") {
+            signalR = true;
+            chrome.storage.local.set({ signalR: signalR });
+            window.postMessage({
+                source: 'ext',
+                version: appExtensionData.version,
+                type: "pong",
+                cloud,
+                eventCode,
+                enabled,
+                signalR
+            });
         }
     });
 })();

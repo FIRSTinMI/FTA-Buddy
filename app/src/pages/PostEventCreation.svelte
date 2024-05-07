@@ -17,6 +17,7 @@
     let extensionDetected = false;
     let extensionEnabled = false;
     let signalREnabled = false;
+    let extensionEventCode = '';
     let extensionVersion = "unknown version";
     let fmsDetected = false;
 
@@ -28,6 +29,7 @@
             extensionVersion = "v" + event.data.version;
             extensionEnabled = event.data.enabled;
             signalREnabled = event.data.signalR;
+            extensionEventCode = event.data.eventCode;
         }
     });
 
@@ -71,84 +73,6 @@
         checkFMSConnection();
         checkConnection();
     });
-
-    let eventCode = "";
-    let eventCodeHelperText = "Event code must match the code on TBA";
-    let eventCodeError = false;
-    let eventPin = Math.random().toString().slice(2, 6);
-    let loading = false;
-
-    async function createEvent(evt: Event) {
-        evt.preventDefault();
-
-        loading = true;
-
-        try {
-            const res = await trpc.event.create.query({
-                code: eventCode,
-                pin: eventPin,
-            });
-
-            toast("Success", "Event created successfully", "green-500");
-
-            console.log(res);
-
-            authStore.set({ ...$authStore, eventToken: res.token });
-            eventStore.set({
-                code: eventCode,
-                pin: eventPin,
-                teams: res.teams,
-            });
-
-            window.postMessage({ source: "page", type: "eventCode", code: eventCode }, "*");
-
-            await new Promise((resolve) => setTimeout(resolve, 500));
-
-            navigate('/app/event-created');
-        } catch (err: any) {
-            toast("Error Creating Event", err.message);
-            console.error(err);
-        }
-
-        loading = false;
-    }
-
-    async function checkEventCode() {
-        try {
-            if (eventCode.length < 1) {
-                eventCodeHelperText = "Event code must match the code on TBA";
-                eventCodeError = false;
-                return;
-            }
-            if (eventCode.length < 6) {
-                eventCodeHelperText = "Event code must be at least 6 characters";
-                eventCodeError = true;
-                return;
-            }
-            const res = await trpc.event.checkCode.query({ code: eventCode });
-            console.log(res);
-            if (res.error) {
-                eventCodeHelperText = res.message;
-                eventCodeError = true;
-            } else {
-                if ("eventData" in res) eventCodeHelperText = res.eventData.name;
-                eventCodeError = false;
-            }
-        } catch (err: any) {
-            eventCodeHelperText = err.message;
-            eventCodeError = true;
-        }
-    }
-
-    $: blockSubmit = !(
-        eventCode.length > 6 &&
-        eventPin.length >= 4 &&
-        !loading &&
-        fmsDetected &&
-        extensionDetected &&
-        extensionEnabled &&
-        !eventCodeError
-    );
 </script>
 
 <div
@@ -192,34 +116,66 @@
     <p class="text-lg">
         In order to work, FTA Buddy needs a host to send data to it from FMS.
         The extension must be installed and be able to communicate with FMS at <code
-            class="bg-neutral-900 px-2 py-.75 rounded-xl">10.0.100.5</code
+            class="bg-neutral-900 px-2 py-.5 rounded-xl">10.0.100.5</code
         >
         You can use FTA Buddy as your primary field monitor by enabling the SignalR
         option, or use the FTA Buddy extension with the regular FMS field monitor
         and scraping from the tab.
     </p>
-    <form class="grid gap-3 text-left" on:submit={createEvent}>
-        <div>
-            <Label for="event-code">Event Code</Label>
-            <Input
-                id="event-code"
-                bind:value={eventCode}
-                placeholder="2024mitry"
-                on:keyup={checkEventCode}
-                class="mt-1"
-                color={eventCodeError ? "red" : "base"}
-            />
-            <Helper class="text-sm mt-1" color={eventCodeError ? "red" : undefined}>{eventCodeHelperText}</Helper>
+    <div class="grid md:grid-cols-2 border-t border-neutral-500 pt-5 gap-4">
+        <div class="col-span-2 border-b border-neutral-500 pb-5">
+            <div>
+                <p>Use this information to connect your app.</p>
+                <h2 class="text-lg">Event Code: <code class="bg-neutral-900 px-2 py-.75 rounded-xl">{$eventStore.code}</code></h2>
+                <h2 class="text-lg">Event Pin: <code class="bg-neutral-900 px-2 py-.75 rounded-xl">{$eventStore.pin}</code></h2>
+                <p class="text-sm text-gray-600">Event Token (for API use): <code class="bg-neutral-900 px-2 py-.75 rounded-lg">{$authStore.eventToken}</code></p>
+            </div>
         </div>
-        <div>
-            <Label for="event-pin" disabled={loading}>Event Pin</Label>
-            <Input
-                id="event-pin"
-                bind:value={eventPin}
-                disabled={loading}
-                class="mt-1"
-            />
+        <div class="flex flex-col gap-4">
+            <h2 class="text-xl font-bold">Use FTA Buddy as your primary field monitor</h2>
+
+            <span class="inline-flex gap-2 font-bold mx-auto">
+                {#if signalREnabled}
+                    <Indicator color="green" class="my-auto" />
+                    <span class="text-green-500">SignalR Enabled</span>
+                {:else}
+                    <Indicator color="red" class="my-auto" />
+                    <span class="text-red-500">SignalR Not Enabled</span>
+                    <button
+                        class="text-blue-400 hover:underline"
+                        on:click={() => window.postMessage({ source: 'page', type: "enableSignalR" }, "*")}
+                        >Enable</button
+                    >
+                {/if}
+            </span>
+                {#if !fmsDetected}
+                    <p class="font-bold text-red-500">Please ensure that FMS is detected.</p>
+                {:else if !extensionDetected}
+                    <p class="font-bold text-red-500">Please install the FTA Buddy extension.</p>
+                {:else if extensionVersion < "1.8"}
+                    <p class="font-bold text-red-500">Please update the FTA Buddy extension to the latest version.</p>
+                {:else if !extensionEnabled}
+                    <p class="font-bold text-red-500">Please enable the FTA Buddy extension.</p>
+                {:else if !signalREnabled}
+                    <p class="font-bold text-red-500">Please enable SignalR to use FTA Buddy as your primary field monitor.</p>
+                {:else if extensionEventCode !== $eventStore.code}
+                    <p class="font-bold text-red-500">Please use the same event code as the extension.</p>
+                {/if}
         </div>
-        <Button type="submit" bind:disabled={blockSubmit}>Create Event</Button>
-    </form>
+        <div class="flex flex-col gap-4">
+            <h2 class="text-xl font-bold">Use the FTA Buddy extension with the regular FMS field monitor</h2>
+
+            {#if !fmsDetected}
+                <p class="font-bold text-red-500">Please ensure that FMS is detected.</p>
+            {:else if !extensionDetected}
+                <p class="font-bold text-red-500">Please install the FTA Buddy extension.</p>
+            {:else if !extensionEnabled}
+                <p class="font-bold text-red-500">Please enable the FTA Buddy extension.</p>
+            {:else if extensionEventCode !== $eventStore.code}
+                <p class="font-bold text-red-500">Please use the same event code as the extension.</p>
+            {/if}
+        </div>
+        <Button on:click={() => navigate('/app')}>Go to FTA Buddy</Button>
+        <Button href="http://10.0.100.5/FieldMonitor">Go to Field Monitor</Button>
+    </div>
 </div>

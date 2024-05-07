@@ -14,6 +14,7 @@ export interface MonitorFrame {
     red2: TeamInfo;
     red3: TeamInfo;
     statusChanges: StatusChanges;
+    lastCycleTime?: string;
 }
 
 export interface TeamInfo {

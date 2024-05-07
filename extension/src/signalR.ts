@@ -193,20 +193,38 @@ export class SignalR {
             this.frame[team].versionmm = data.p3.length > 0 ? 1 : 0;
         });
 
+        // Any settings changed in FMS
+        /**
+         * Any settings changed in FMS
+         * VideoSwitchOption
+         * BackgroundVideoMessage (texted entered in match control page)
+         * AutoTime, TeleopTime, TimeoutTime (match time changed in control page)
+         * CurrentWizardStep
+         * 
+         */
         this.infrastructureConnection.on('systemconfigvaluechanged', (data) => {
             console.log('systemconfigvaluechanged: ', data);
         });
 
+        // Constant countdown timer 14-0 for auto then 135-0 for teleop
+        // Also countdown for breaks during playoffs in seconds
         this.infrastructureConnection.on('matchtimerchanged', (data) => {
             console.log('matchtimerchanged: ', data);
         });
 
+        // 20 seconds left
         this.infrastructureConnection.on('matchtimerwarning1', (data) => {
             console.log('matchtimerwarning1: ', data);
         });
 
+        // 90 seconds left
         this.infrastructureConnection.on('matchtimerwarning2', (data) => {
             console.log('matchtimerwarning2: ', data);
+        });
+
+        // 60 seconds left (intended for timeouts but also played during matches lol)
+        this.infrastructureConnection.on('timeoutwarning1', (data) => {
+            console.log('timeoutwarning1: ', data);
         });
 
         this.infrastructureConnection.on('plc_status_changed', (data) => {
@@ -221,8 +239,8 @@ export class SignalR {
             console.log('plc_astop_status_changed: ', data);
         });
 
-        this.infrastructureConnection.on('plc_estop_status_changed', (data) => {
-            console.log('plc_estop_status_changed: ', data);
+        this.infrastructureConnection.on('plc_estop_status_requestupdate', (data) => {
+            console.log('plc_estop_status_requestupdate: ', data);
         });
 
         this.infrastructureConnection.on('plc_estop_status_changed', (data) => {
@@ -233,6 +251,10 @@ export class SignalR {
             console.log('plc_connection_status_requestupdate: ', data);
         });
 
+        this.infrastructureConnection.on('plc_match_status_changed', (data) => {
+            console.log('plc_match_status_changed: ', data);
+        });
+
         this.infrastructureConnection.on('matchstatusinfochanged', (data) => {
             console.log('matchstatusinfochanged: ', data);
         });
@@ -241,6 +263,8 @@ export class SignalR {
             console.log('matchstatuschanged: ', data);
         });
 
+        // BackupPerformed_Incremental when score committed
+        // BackupPerformed_Full
         this.infrastructureConnection.on('backupprogress', (data) => {
             console.log('backupprogress: ', data);
         });

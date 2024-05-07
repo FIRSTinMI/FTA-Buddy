@@ -1,6 +1,6 @@
 console.log('Loaded injector');
 const manifestData = chrome.runtime.getManifest();
-chrome.storage.local.get(['url', 'cloud', 'event', 'changed', 'enabled'], item => {
+chrome.storage.local.get(['url', 'cloud', 'event', 'changed', 'enabled', 'signalR'], item => {
     console.log(item);
     if (!item.enabled) {
         console.log('Not enabled');
@@ -8,9 +8,13 @@ chrome.storage.local.get(['url', 'cloud', 'event', 'changed', 'enabled'], item =
     } else if (item.changed + (1000 * 60 * 60 * 24 * 4) < new Date().getTime()) {
         console.log('Expired');
         return;
+    } else if (item.signalR) {
+        console.log('Using signalR so I won\'t inject');
+        return;
     }
+
     const script = document.createElement('script');
-    script.src = chrome.runtime.getURL('js/injected.js');
+    script.src = chrome.runtime.getURL('injected.js');
     script.dataset.host = item.url;
     script.dataset.cloud = item.cloud;
     script.dataset.event = item.event;

@@ -4,6 +4,34 @@ export const DEFAULT_MONITOR: MonitorFrame = {
     type: 'monitorUpdate',
     field: 0,
     match: 0,
+    version: '0.0.0',
+    frameTime: 0,
+    statusChanges: {
+        blue1: {
+            lastChange: new Date(),
+            improved: true,
+        },
+        blue2: {
+            lastChange: new Date(),
+            improved: true,
+        },
+        blue3: {
+            lastChange: new Date(),
+            improved: true,
+        },
+        red1: {
+            lastChange: new Date(),
+            improved: true,
+        },
+        red2: {
+            lastChange: new Date(),
+            improved: true,
+        },
+        red3: {
+            lastChange: new Date(),
+            improved: true,
+        }
+    },
     time: 'unk',
     blue1: {
         number: 9999,

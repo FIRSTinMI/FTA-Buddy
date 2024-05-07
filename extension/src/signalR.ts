@@ -1,10 +1,12 @@
 import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
-import { BYPASS, CODE, ESTOP, GREEN, GREEN_X, MATCH_ABORTED, MATCH_NOT_READY, MATCH_OVER, MATCH_READY, MATCH_RUNNING_AUTO, MATCH_RUNNING_TELEOP, MATCH_TRANSITIONING, MOVE_STATION, NO_CODE, PRESTART_COMPLETED, PRESTART_INITIATED, READY_FOR_POST_RESULT, READY_TO_PRESTART, RED, ROBOT, SignalREnums, UNKNOWN, WRONG_MATCH, type MonitorFrame, type SignalRTeamInfo } from '../../../shared/types';
-import { DEFAULT_MONITOR } from '../../../shared/constants';
+import { ASTOP, BYPASS, CODE, DSState, ESTOP, GREEN, GREEN_X, MATCH_ABORTED, MATCH_NOT_READY, MATCH_OVER, MATCH_READY, MATCH_RUNNING_AUTO, MATCH_RUNNING_TELEOP, MATCH_TRANSITIONING, MOVE_STATION, NO_CODE, PRESTART_COMPLETED, PRESTART_INITIATED, READY_FOR_POST_RESULT, READY_TO_PRESTART, RED, ROBOT, SignalREnums, UNKNOWN, WRONG_MATCH, type MonitorFrame, type SignalRTeamInfo } from '@shared/types';
+import { DEFAULT_MONITOR } from '@shared/constants';
 
 export class SignalR {
     // SignalR Hub Connection
     public connection: HubConnection | null = null;
+
+    public infrastructureConnection: HubConnection | null = null;
 
     public frame: MonitorFrame = DEFAULT_MONITOR;
 
@@ -12,9 +14,13 @@ export class SignalR {
 
     private callback: (frame: MonitorFrame) => void;
 
-    constructor(ip: string, callback: (frame: MonitorFrame) => void) {
+    private version: string;
+
+    constructor(ip: string, version: string, callback: (frame: MonitorFrame) => void) {
         this.ip = ip;
         this.callback = callback;
+        this.version = version;
+        this.frame.version = version;
     }
 
     public async start() {
@@ -41,9 +47,30 @@ export class SignalR {
             })
             .build();
 
+        this.infrastructureConnection = new HubConnectionBuilder()
+            .withUrl(`http://${this.ip}/infrastructureHub`)
+            .withServerTimeout(30000) // 30 seconds, per FMS Audience Display
+            .withKeepAliveInterval(15000) // 15 seconds per FMS Audience Display
+            .configureLogging({
+                log: (logLevel, message) => {
+                    [console.debug, console.debug, console.log, console.warn, console.error][logLevel](`[SignalR ${logLevel}] ${message}`);
+                },
+            })
+            // .withHubProtocol(new MessagePackHubProtocol())
+            .withAutomaticReconnect({
+                nextRetryDelayInMilliseconds(retryContext) {
+                    console.warn('Retrying SignalR connection...');
+                    return Math.min(
+                        2_000 * retryContext.previousRetryCount,
+                        120_000
+                    );
+                },
+            })
+            .build();
+
         // Register listener for the "MatchStatusInfoChanged" event (match starts, ends, changes modes, etc)
         this.connection.on(
-            'MatchStatusInfoChanged',
+            'matchstatusinfochanged',
             async (data) => {
                 switch (data.p1) {
                     case 0:
@@ -115,46 +142,42 @@ export class SignalR {
         // Register listener for the "TeamInfoChanged" event (team connects, disconnects, etc)
         this.connection.on('fieldmonitordatachanged', async (data: SignalRTeamInfo[]) => {
             for (let i = 0; i < data.length; i++) {
-                const team: ROBOT = (((data[i].p1 === SignalREnums.AllianceType.Red) ? 'red' : 'blue' ) + data[i].p2) as ROBOT;
-
-                let noise = data[i].pj;
-                let signal = data[i].pi;
+                const team: ROBOT = (((data[i].Alliance === "Red") ? 'red' : 'blue' ) + SignalREnums.StationType[data[i].Station]) as ROBOT;
 
                 this.frame[team] = {
-                    number: data[i].p3,
+                    number: data[i].TeamNumber,
                     ds: dsState(data[i]),
-                    radio: (data[i].p7) ? GREEN : RED,
-                    rio: (data[i].p8) ? GREEN : RED,
-                    code: (data[i].p5) ? CODE : NO_CODE,
-                    bwu: data[i].pcc,
-                    battery: data[i].pe,
-                    ping: data[i].pg,
-                    packets: data[i].ph,
-                    MAC: data[i].pm,
-                    RX: data[i].pt,
-                    RXMCS: data[i].pu,
-                    TX: data[i].pn,
-                    TXMCS: data[i].po,
-                    SNR: data[i].pk,
-                    noise: (noise) ? parseInt(noise.replace('dBm', '')) : null,
-                    signal: (signal) ? parseInt(signal.replace('dBm', '')) : null,
-                    versionmm: 0
+                    radio: (data[i].RadioLink) ? GREEN : RED,
+                    rio: (data[i].RIOLink) ? GREEN : RED,
+                    code: (data[i].LinkActive) ? CODE : NO_CODE,
+                    bwu: data[i].DataRateTotal,
+                    battery: data[i].Battery,
+                    ping: data[i].AverageTripTime,
+                    packets: data[i].LostPackets,
+                    MAC: data[i].MACAddress,
+                    RX: data[i].RxRate,
+                    RXMCS: data[i].RxMCS,
+                    TX: data[i].TxRate,
+                    TXMCS: data[i].TxMCS,
+                    SNR: data[i].SNR,
+                    noise: data[i].Noise,
+                    signal: data[i].Signal,
+                    versionmm: this.frame[team].versionmm
                 }
             }
 
-            console.log(this.frame);
-
+            this.frame.frameTime = Date.now();
             this.callback(this.frame);
         });
 
         // Register listener for the "ScheduleAheadBehindChanged" event (how far ahead or behind the schedule is)
-        this.connection.on('scheduleAheadBehindChanged', (data) => {
+        this.connection.on('scheduleaheadbehindchanged', (data) => {
             this.frame.time = data;
         });
 
         // Register listener for the "RobotVersionDataChanged" event (robot version information)
         // No idea if this works, the field monitor's implementation made no sense
-        this.connection.on('robotVersionDataChanged', (data) => {
+        this.connection.on('robotversiondatachanged', (data) => {
             console.log(data);
 
             /*
@@ -170,6 +193,74 @@ export class SignalR {
             this.frame[team].versionmm = data.p3.length > 0 ? 1 : 0;
         });
 
+        this.infrastructureConnection.on('systemconfigvaluechanged', (data) => {
+            console.log('systemconfigvaluechanged: ', data);
+        });
+
+        this.infrastructureConnection.on('matchtimerchanged', (data) => {
+            console.log('matchtimerchanged: ', data);
+        });
+
+        this.infrastructureConnection.on('matchtimerwarning1', (data) => {
+            console.log('matchtimerwarning1: ', data);
+        });
+
+        this.infrastructureConnection.on('matchtimerwarning2', (data) => {
+            console.log('matchtimerwarning2: ', data);
+        });
+
+        this.infrastructureConnection.on('plc_status_changed', (data) => {
+            console.log('plc_status_changed: ', data);
+        });
+
+        this.infrastructureConnection.on('plc_astop_status_requestupdate', (data) => {
+            console.log('plc_astop_status_requestupdate: ', data);
+        });
+
+        this.infrastructureConnection.on('plc_astop_status_changed', (data) => {
+            console.log('plc_astop_status_changed: ', data);
+        });
+
+        this.infrastructureConnection.on('plc_estop_status_changed', (data) => {
+            console.log('plc_estop_status_changed: ', data);
+        });
+
+        this.infrastructureConnection.on('plc_estop_status_changed', (data) => {
+            console.log('plc_estop_status_changed: ', data);
+        });
+
+        this.infrastructureConnection.on('plc_connection_status_requestupdate', (data) => {
+            console.log('plc_connection_status_requestupdate: ', data);
+        });
+
+        this.infrastructureConnection.on('matchstatusinfochanged', (data) => {
+            console.log('matchstatusinfochanged: ', data);
+        });
+
+        this.infrastructureConnection.on('matchstatuschanged', (data) => {
+            console.log('matchstatuschanged: ', data);
+        });
+
+        this.infrastructureConnection.on('backupprogress', (data) => {
+            console.log('backupprogress: ', data);
+        });
+
+        this.infrastructureConnection.on('audienceshowmatchresult', (data) => {
+            console.log('audienceshowmatchresult: ', data);
+        });
+
+        this.infrastructureConnection.on('matchstatuschanged', (data) => {
+            console.log('matchstatuschanged: ', data);
+        });
+
+        this.infrastructureConnection.on('lastcycletimecalculated', (data) => {
+            console.log('lastcycletimecalculated: ', data);
+        });
+
+        this.infrastructureConnection.on('scheduleaheadbehindchanged', (data) => {
+            console.log('scheduleaheadbehindchanged: ', data);
+        });
+
         // Register connected/disconnected events
         this.connection.onreconnecting(() => {
             console.log('SignalR Connection Lost, Reconnecting');
@@ -180,16 +271,17 @@ export class SignalR {
         });
 
         // Start connection to SignalR Hub
-        return this.connection.start()
+        return Promise.all([this.infrastructureConnection.start(), this.connection.start()]);
     }
 
     // Fetch the event name
     public async fetchEventName(): Promise<string | null> {
-        return this.invokeExpectResponse<Event[]>('GetEvents', 'Events').then((events: Event[]) => {
+        return this.invokeExpectResponse<Event[]>('GetEvent', 'Events').then((events: Event[]) => {
             console.log(events);
             return this.getCurrentEvent(events)
         }).then((e) => {
             console.log(e);
+            // @ts-ignore
             return e ? e.name : null;
         }).catch((e) => {
             console.log(
@@ -209,6 +301,7 @@ export class SignalR {
         if (events.length > 0) {
             const now = new Date();
             const currentEvent = events.find(
+                // @ts-ignore
                 (e) => now >= new Date(e.start) && now <= new Date(e.end)
             );
             if (currentEvent) {
@@ -229,18 +322,18 @@ export class SignalR {
     */
     private invokeExpectResponse<t>(eventName: string, eventResponse: string, ...args: any[]): Promise<t> {
         return new Promise<t>((resolve, reject) => {
-            if (this.connection == null) {
+            if (this.infrastructureConnection == null) {
                 reject();
                 return;
             }
 
             const listener = (response: t) => {
-                this.connection?.off(eventResponse, listener);
+                this.infrastructureConnection?.off(eventResponse, listener);
                 resolve(response);
             }
-            this.connection.on(eventResponse, listener);
+            this.infrastructureConnection.on(eventResponse, listener);
 
-            this.connection.invoke(eventName, ...args).catch((err) => {
+            this.infrastructureConnection.invoke(eventName, ...args).catch((err) => {
                 console.error(`Failed to invoke '${eventName}'`, err);
                 reject(err);
             });
@@ -248,13 +341,14 @@ export class SignalR {
     }
 }
 
-function dsState(data: any) {
-    if (data.pb) return BYPASS;
-    if (data.pc) return ESTOP;
-    if (data.p3) {
-        if (data.pf === SignalREnums.StationStatusType.Good) return GREEN;
-        if (data.pf === SignalREnums.StationStatusType.WrongStation) return MOVE_STATION;
-        if (data.pf === SignalREnums.StationStatusType.WrongMatch) return WRONG_MATCH;
+function dsState(data: SignalRTeamInfo): DSState {
+    if (data.IsBypassed) return BYPASS;
+    if (data.IsEStopPressed) return ESTOP;
+    if (data.IsAStopPressed) return ASTOP;
+    if (data.Connection) {
+        if (data.StationStatus === SignalREnums.StationStatusType.Good) return GREEN;
+        if (data.StationStatus === SignalREnums.StationStatusType.WrongStation) return MOVE_STATION;
+        if (data.StationStatus === SignalREnums.StationStatusType.WrongMatch) return WRONG_MATCH;
         return GREEN_X;
     }
     

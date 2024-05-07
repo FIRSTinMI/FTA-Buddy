@@ -1,6 +1,7 @@
 import WebSocket from "ws";
 
 export interface MonitorFrame {
+    type: 'monitorUpdate' | 'message';
     field: FieldState;
     match: number;
     time: string;
@@ -95,54 +96,104 @@ export const MATCH_OVER = 9;
 export const READY_FOR_POST_RESULT = 10;
 export const MATCH_NOT_READY = 11;
 
-export interface SignalRTeamInfo {
-    p1: SignalREnums.AllianceType;
-    p2: SignalREnums.StationType; // Station
-    p3: number; // Team Number
-    p4: boolean; // Connection
-    p5: boolean; // Link active
-    p6: boolean; // DS Link active
-    p7: boolean; // Radio Link
-    p8: boolean; // RIO Link
-    p9: boolean; // is enabled
-    pa: boolean; // is auto
-    pb: boolean; // is bypassed
-    pc: boolean; // estop pressed
-    pd: boolean; // is estopped (reported back as estopped?)
-    pe: number; // battery
-    pf: SignalREnums.StationStatusType; // monitor status?
-    pg: number; // ping
-    ph: number; // dropped packets
-    pi: string | null; // signal
-    pj: string | null; // noise
-    pk: number; // SNR
-    pl: number; // Inactivity?
-    pm: string | null; // MAC
-    pn: number | null; // TxRate
-    po: number | null; // TxMCS
-    pp: number | null; // TxMCSBandwidth
-    pq: boolean | null; // TxVHT
-    pr: number | null; // TxVHTNSS
-    ps: number; // TxPackets
-    pt: number | null; // RxRate
-    pu: number | null; // RxMCS
-    pv: number | null; // RxMCSBandwidth
-    pw: boolean | null; // RxVHT
-    px: number | null; // RxVHTNSS
-    py: number; // RxPackets
-    pz: number; // DataRateTotal
-    paa: number; // DataRateToRobot
-    pbb: number; // DataRateFromRobot
-    pcc: number; // BWU
-    pdd: SignalREnums.WPAKeyStatusType; // WPAKeyStatus
-    pee: boolean; // DS is official
-    pff: number; // Station status 
-    pgg: boolean; // brownout
-    phh: string; // EStopSource
-    pii: boolean; // isAStop pressed
-    pjj: boolean; // isAStopped
-    pjk: string; // MoveToStation
+// export interface SignalRTeamInfo {
+//     p1: SignalREnums.AllianceType;
+//     p2: SignalREnums.StationType; // Station
+//     p3: number; // Team Number
+//     p4: boolean; // Connection
+//     p5: boolean; // Link active
+//     p6: boolean; // DS Link active
+//     p7: boolean; // Radio Link
+//     p8: boolean; // RIO Link
+//     p9: boolean; // is enabled
+//     pa: boolean; // is auto
+//     pb: boolean; // is bypassed
+//     pc: boolean; // estop pressed
+//     pd: boolean; // is estopped (reported back as estopped?)
+//     pe: number; // battery
+//     pf: SignalREnums.StationStatusType; // monitor status?
+//     pg: number; // ping
+//     ph: number; // dropped packets
+//     pi: string | null; // signal
+//     pj: string | null; // noise
+//     pk: number; // SNR
+//     pl: number; // Inactivity?
+//     pm: string | null; // MAC
+//     pn: number | null; // TxRate
+//     po: number | null; // TxMCS
+//     pp: number | null; // TxMCSBandwidth
+//     pq: boolean | null; // TxVHT
+//     pr: number | null; // TxVHTNSS
+//     ps: number; // TxPackets
+//     pt: number | null; // RxRate
+//     pu: number | null; // RxMCS
+//     pv: number | null; // RxMCSBandwidth
+//     pw: boolean | null; // RxVHT
+//     px: number | null; // RxVHTNSS
+//     py: number; // RxPackets
+//     pz: number; // DataRateTotal
+//     paa: number; // DataRateToRobot
+//     pbb: number; // DataRateFromRobot
+//     pcc: number; // BWU
+//     pdd: SignalREnums.WPAKeyStatusType; // WPAKeyStatus
+//     pee: boolean; // DS is official
+//     pff: number; // Station status 
+//     pgg: boolean; // brownout
+//     phh: string; // EStopSource
+//     pii: boolean; // isAStop pressed
+//     pjj: boolean; // isAStopped
+//     pjk: string; // MoveToStation
+// }
+
+export interface SignalRTeamInfo { 
+    Alliance: "Red" | "Blue";
+    Station: SignalREnums.StationType;
+    TeamNumber: number;
+    Connection: boolean; 
+    LinkActive: boolean;
+    DSLinkActive: boolean;
+    RadioLink: boolean;
+    RIOLink: boolean;
+    IsEnabled: boolean;
+    IsAuto: boolean;
+    IsBypassed: boolean;
+    IsEStopPressed: boolean;
+    IsEStopped: boolean;
+    Battery: number;
+    MonitorStatus: SignalREnums.MonitorStatusType; 
+    AverageTripTime: number;
+    LostPackets: number;
+    Signal: number;
+    Noise: number;
+    SNR: number;
+    Inactivity: number;
+    MACAddress: string | null, 
+    TxRate: number;
+    TxMCS: number;
+    TxMCSBandWidth: number;
+    TxVHT: number | null, 
+    TxVHTNSS: boolean | null, 
+    TxPackets: number;
+    RxRate: number;
+    RxMCS: number;
+    RxMCSBandWidth: number;
+    RxVHT: number | null, 
+    RxVHTNSS: boolean | null,
+    RxPackets: number;
+    DataRateTotal: number;
+    DataRateToRobot: number;
+    DataRateFromRobot: number;
+    BWUtilization: SignalREnums.BWUtilizationType, 
+    WPAKeyStatus: SignalREnums.WPAKeyStatusType, 
+    DriverStationIsOfficial: boolean;
+    StationStatus: SignalREnums.StationStatusType, 
+    Brownout: boolean;
+    EStopSource: string, 
+    IsAStopPressed: boolean;
+    IsAStopped: boolean;
+    MoveToStation: string | null;
 }
+
 export namespace SignalREnums {
     export enum TournamentLevel {
         None = 0,

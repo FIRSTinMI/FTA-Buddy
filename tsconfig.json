@@ -1,7 +1,8 @@
 {
     "include": [
         "./src/**/*.ts",
-        "./shared/**/*.ts"
+        "./shared/**/*.ts",
+        "./extension/**/*.ts",
     ],
     "compilerOptions": {
         "target": "es2016",

@@ -4,10 +4,26 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db/db";
 import { events, users } from "../db/schema";
-import { adminProcedure, protectedProcedure, router } from "../trpc";
+import { adminProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
 import { generateToken } from "./user";
 
 export const eventRouter = router({
+    checkCode: publicProcedure.input(z.object({
+        code: z.string()
+    })).query(async ({ input }) => {
+        input.code = input.code.trim().toLowerCase();
+        const event = await db.query.events.findFirst({ where: eq(events.code, input.code.trim().toLowerCase()) });
+
+        if (event) return { error: true, message: 'Event already exists' };
+
+        const eventData = await (await fetch(`https://www.thebluealliance.com/api/v3/event/${input.code}/simple`, {headers: {
+            'X-TBA-Auth-Key': process.env.TBA_API_KEY ?? ''
+        }})).json();
+
+        if ("Error" in eventData) return { error: true, message: eventData.Error };
+
+        return { error: false, message: 'Event found', eventData };
+    }),
     join: protectedProcedure.input(z.object({
         code: z.string(),
         pin: z.string()
@@ -35,7 +51,7 @@ export const eventRouter = router({
         return event;
     }),
 
-    create: protectedProcedure.input(z.object({
+    create: publicProcedure.input(z.object({
         code: z.string().startsWith('202').min(6),
         pin: z.string().min(4)
     })).query(async ({ input }) => {

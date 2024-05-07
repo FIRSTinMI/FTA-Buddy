@@ -2,9 +2,14 @@
     "manifest_version": 3,
     "name": "FTA Buddy",
     "description": "Enable the field monitor and notes sync for FTA Buddy app",
-    "version": "1.7",
+    "version": "1.8",
     "permissions": [
-        "storage"
+        "storage",
+        "scripting"
+    ],
+    "host_permissions" : [
+        "http://192.168.1.220/fieldMonitorHub/*",
+        "http://10.0.100.5/fieldMonitorHub/*"
     ],
     "content_scripts": [
         {
@@ -12,22 +17,32 @@
             "matches": [
                 "http://10.0.100.5/FieldMonitor",
                 "http://10.0.100.5/FieldMonitor/",
-                "http://localhost/FieldMonitor/",
+                "http://filips-laptop.local/FieldMonitor",
                 "https://ftabuddy.com/FieldMonitor/"
             ],
             "js": [
-                "js/injector.js"
+                "injector.js"
+            ]
+        },
+        {
+            "run_at": "document_end",
+            "matches": [
+                "https://ftabuddy.com/*",
+                "http://localhost:5173/*"
+            ],
+            "js": [
+                "app.js"
             ]
         }
     ],
     "web_accessible_resources": [
         {
             "resources": [
-                "js/injected.js"
+                "injected.js"
             ],
             "matches": [
                 "http://10.0.100.5/*",
-                "http://localhost/*",
+                "http://filips-laptop.local/*",
                 "https://ftabuddy.com/*"
             ]
         }
@@ -39,5 +54,8 @@
     "action": {
         "default_popup": "menu.html",
         "default_icon": "img/logo.png"
+    },
+    "background": {
+       "service_worker": "background.js"
     }
 }

@@ -14,7 +14,7 @@ import { DEFAULT_MONITOR } from '../shared/constants';
 import { detectStatusChange } from './stateChange';
 const { app, getWss, applyTo } = expressWs(express());
 
-const port = 3001;
+const port = process.env.PORT || 3002;
 
 const appRouter = router({
     user: userRouter,

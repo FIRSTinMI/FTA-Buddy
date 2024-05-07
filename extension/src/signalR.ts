@@ -72,32 +72,32 @@ export class SignalR {
         this.connection.on(
             'matchstatusinfochanged',
             async (data) => {
-                switch (data.p1) {
+                switch (data.MatchState) {
                     case 0:
                     case 1:
                         break;
-                    case 2: // WaitingForPrestart or WaitingForPrestartTO
-                    case 3:
+                    case 'WaitingForPrestart':
+                    case 'WaitingForPrestartTO':
                         this.frame.field = READY_TO_PRESTART;
                         break;
-                    case 4: // Prestarting or Prestarting TO
-                    case 5:
+                    case 'Prestarting':
+                    case 'PrestartingTO':
                         this.frame.field = PRESTART_INITIATED;
                         break;
                     case
-                        6: // WaitingForSetAudience, WaitingForSetAudienceTO, WaitingForMatchPreview or WaitingForMatchPreviewTO
-                    case 7:
-                    case 18:
-                    case 19:
+                        'WaitingForSetAudience':
+                    case 'WaitingForSetAudienceTO':
+                    case 'WaitingForMatchPreview':
+                    case 'WaitingForMatchPreviewTO':
                         this.frame.field = PRESTART_COMPLETED;
                         break;
-                    case 8: // WaitingForMatchReady
+                    case 'WaitingForMatchReady':
                         this.frame.field = MATCH_NOT_READY;
                         break;
-                    case 9: // WaitingForMatchStart,
+                    case 'WaitingForMatchStart':
                         this.frame.field = MATCH_READY;
                         break;
-                    case 10: // GameSpecific,
+                    case 'GameSpecific':
                         // What?
                         // $(".matchState").removeClass("matchStateRed");
                         // $(".matchState").addClass("matchStateGreen");
@@ -105,37 +105,31 @@ export class SignalR {
                         // $("#matchStateBottom").text("FROM DS");
                         this.frame.field = UNKNOWN;
                         break;
-                    case 11: // MatchAuto,
+                    case 'MatchAuto':
                         this.frame.field = MATCH_RUNNING_AUTO
                         break;
-                    case 12: // MatchTransition,
+                    case 'MatchTransition':
                         this.frame.field = MATCH_TRANSITIONING;
                         break;
-                    case 13: // MatchTeleop,
+                    case 'MatchTeleop':
                         this.frame.field = MATCH_RUNNING_TELEOP;
                         break;
-                    case 14: // WaitingForCommit,
+                    case 'WaitingForCommit':
                         this.frame.field = MATCH_OVER;
                         break;
-                    case 15: // WaitingForPostResults,
+                    case 'WaitingForPostResults':
                         this.frame.field = READY_FOR_POST_RESULT;
                         break;
-                    case 16: // TournamentLevelComplete,
+                    case 'TournamentLevelComplete':
                         this.frame.field = UNKNOWN;
                         break;
-                    case 17: // MatchCancelled
+                    case 'MatchCancelled':
                         this.frame.field = MATCH_ABORTED;
                         // womp womp
                         break;
                 }
 
-                try {
-                    const response = await fetch(`http://${this.ip}/FieldMonitor/MatchNumberAndPlay`);
-                    const json = await response.json();
-                    this.frame.match = json[0];
-                } catch (err) {
-                    console.error("Error while trying to get match number", err);
-                }
+                this.frame.match = data.MatchNumber;
             }
         );
 
@@ -209,22 +203,22 @@ export class SignalR {
         // Constant countdown timer 14-0 for auto then 135-0 for teleop
         // Also countdown for breaks during playoffs in seconds
         this.infrastructureConnection.on('matchtimerchanged', (data) => {
-            console.log('matchtimerchanged: ', data);
+            //console.log('matchtimerchanged: ', data);
         });
 
         // 20 seconds left
         this.infrastructureConnection.on('matchtimerwarning1', (data) => {
-            console.log('matchtimerwarning1: ', data);
+            //console.log('matchtimerwarning1: ', data);
         });
 
         // 90 seconds left
         this.infrastructureConnection.on('matchtimerwarning2', (data) => {
-            console.log('matchtimerwarning2: ', data);
+            //console.log('matchtimerwarning2: ', data);
         });
 
         // 60 seconds left (intended for timeouts but also played during matches lol)
         this.infrastructureConnection.on('timeoutwarning1', (data) => {
-            console.log('timeoutwarning1: ', data);
+            //console.log('timeoutwarning1: ', data);
         });
 
         this.infrastructureConnection.on('plc_status_changed', (data) => {
@@ -232,7 +226,7 @@ export class SignalR {
         });
 
         this.infrastructureConnection.on('plc_astop_status_requestupdate', (data) => {
-            console.log('plc_astop_status_requestupdate: ', data);
+            //console.log('plc_astop_status_requestupdate: ', data);
         });
 
         this.infrastructureConnection.on('plc_astop_status_changed', (data) => {
@@ -240,7 +234,7 @@ export class SignalR {
         });
 
         this.infrastructureConnection.on('plc_estop_status_requestupdate', (data) => {
-            console.log('plc_estop_status_requestupdate: ', data);
+            //console.log('plc_estop_status_requestupdate: ', data);
         });
 
         this.infrastructureConnection.on('plc_estop_status_changed', (data) => {
@@ -248,7 +242,7 @@ export class SignalR {
         });
 
         this.infrastructureConnection.on('plc_connection_status_requestupdate', (data) => {
-            console.log('plc_connection_status_requestupdate: ', data);
+            //console.log('plc_connection_status_requestupdate: ', data);
         });
 
         this.infrastructureConnection.on('plc_match_status_changed', (data) => {
@@ -266,15 +260,15 @@ export class SignalR {
         // BackupPerformed_Incremental when score committed
         // BackupPerformed_Full
         this.infrastructureConnection.on('backupprogress', (data) => {
-            console.log('backupprogress: ', data);
+            //console.log('backupprogress: ', data);
         });
 
         this.infrastructureConnection.on('audienceshowmatchresult', (data) => {
-            console.log('audienceshowmatchresult: ', data);
+            //console.log('audienceshowmatchresult: ', data);
         });
 
         this.infrastructureConnection.on('matchstatuschanged', (data) => {
-            console.log('matchstatuschanged: ', data);
+            //console.log('matchstatuschanged: ', data);
         });
 
         this.infrastructureConnection.on('lastcycletimecalculated', (data) => {
@@ -291,6 +285,15 @@ export class SignalR {
         });
 
         this.connection.onclose(() => {
+            console.log('SignalR FMS Connection Closed!');
+        });
+
+        // Register connected/disconnected events
+        this.infrastructureConnection.onreconnecting(() => {
+            console.log('SignalR Connection Lost, Reconnecting');
+        });
+
+        this.infrastructureConnection.onclose(() => {
             console.log('SignalR FMS Connection Closed!');
         });
 

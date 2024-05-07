@@ -22,22 +22,48 @@
     import { eventStore } from "./stores/event";
     import { MatchState, MonitorFrameHandler, type MonitorEvent } from "./util/monitorFrameHandler";
     import { AudioQueuer } from "./util/audioAlerts";
+    import Host from "./pages/Host.svelte";
+
+    // Checking authentication
 
     let auth = get(authStore);
+    const publicPaths = ["/app/login", "/app/google-signup", "/app/host"]
 
-    if ((!auth.token || !auth.eventToken) && window.location.pathname !== "/app/login") {
+    if ((!auth.token || !auth.eventToken) && !publicPaths.includes(window.location.pathname)) {
         navigate("/app/login");
     }
+
+    authStore.subscribe((value) => {
+        if ((!value.token || !value.eventToken) && !publicPaths.includes(window.location.pathname)) {
+            navigate("/app/login");
+        }
+
+        if (auth.eventToken !== value.eventToken) {
+            auth = value;
+            // If the event has changed we want to reconnect with the new event token
+            openWebSocket();
+        } else {
+            auth = value;
+        }
+    });
+
+    // Load settings
 
     let settings = get(settingsStore);
     settingsStore.subscribe((value) => {
         settings = value;
     });
 
+
+    // Settings modal
+
     let settingsOpen = false;
     function openSettings() {
         settingsOpen = true;
     }
+
+
+    // Version/changelog modal
 
     const version = Object.keys(VERSIONS).sort().pop() || "0";
     let changelogOpen = false;
@@ -54,12 +80,20 @@
         changelogOpen = true;
     }
 
+
+    // Welcome modal
+
     let welcomeOpen = false;
     function openWelcome() {
         welcomeOpen = true;
     }
 
+
+    // Update checking
+
     update(settings.version, version, openWelcome, openChangelog);
+
+    // Toast manager
 
     let showToast = false;
     let toastTitle = "";
@@ -72,8 +106,11 @@
         showToast = true;
         setTimeout(() => {
             showToast = false;
-        }, 10000);
+        }, 5000);
     }
+
+
+    // App install prompt
 
     let installPrompt: Event | null = null;
 
@@ -86,6 +123,9 @@
         installPrompt = null;
     });
 
+
+    // Debugging stuff for websocket
+
     let lastFrameTime: Date;
     let frameCount = 0;
     let lastMessageTime: Date;
@@ -94,6 +134,9 @@
 
     let ws: WebSocket;
     let monitorFrame: MonitorFrame;
+
+
+    // Local vibration and audio alert definitions
 
     const VIBRATION_PATTERNS = {
         ds: [500, 200, 500],
@@ -113,8 +156,15 @@
         blue3: { a: false, e: false }
     }
 
+
+    // Initialize frame handler and audio queue
+
     const frameHandler = new MonitorFrameHandler();
     const audioQueuer = new AudioQueuer();
+
+
+    // Register event listeners for various frame events
+    // Maybe we want to move this somewhere else?
 
     frameHandler.addEventListener('match-ready', (evt) => {
         console.log('Match ready');
@@ -166,6 +216,9 @@
         console.log('Match started');
     });
 
+
+    // Update notification count
+
     let notifications = get(messagesStore).unread || 0;
     messagesStore.subscribe((value) => {
         notifications = value.unread;
@@ -197,6 +250,9 @@
     eventStore.subscribe((value) => {
         event = value;
     });
+
+
+    // Websocket connection
 
     function openWebSocket() {
         if (ws) ws.close();
@@ -253,13 +309,18 @@
         ws.onclose = function (evt) {
             if (!evt.wasClean) {
                 console.log(evt);
-                console.log("Webscocket disconnected from reconnecting in 5 sec");
+                console.log("Webscocket disconnected reconnecting in 5 sec");
                 timeoutID = setTimeout(() => openWebSocket(), 5e3);
             } else {
                 console.log("Disconnected cleanly");
             }
         };
     }
+
+
+    // Monitor how long the page has been inactive (in background) so we can automatically reconnect
+    // if the page has been inactive for too long the webscocket will die but not immediately so then you
+    // have to wait like 10 seconds for it to start working again, this resolves that issue
 
     let inactiveStartTime = new Date().getTime();
 
@@ -278,6 +339,9 @@
         }
     });
 
+
+    // Stuff for the side menu
+
     let transitionParams = {
         x: -320,
         duration: 100,
@@ -287,28 +351,18 @@
     function openMenu() {
         hideMenu = false;
     }
-    authStore.subscribe((value) => {
-        if ((!value.token || !value.eventToken) && window.location.pathname !== "/app/login") {
-            navigate("/app/login");
-        }
-
-        if (auth.eventToken !== value.eventToken) {
-            auth = value;
-            openWebSocket();
-        } else {
-            auth = value;
-        }
-    });
 
     onMount(() => {
         openWebSocket();
     });
 
-    let fullscreen = (window.outerWidth > 1900) ? !(!screenTop && !screenY) : false;
+
+    // Check if we're in fullscreen
+    let fullscreen = (window.outerWidth > 1900) ? window.innerHeight === 1080 : false;
 
     setInterval(() => {
         if (window.outerWidth > 1900)
-            fullscreen = !(!screenTop && !screenY);
+            fullscreen = window.innerHeight === 1080;
     }, 200);
 </script>
 
@@ -517,6 +571,9 @@
             </div>
             <Route path="/login">
                 <Login {toast} />
+            </Route>
+            <Route path="/host">
+                <Host {toast} />
             </Route>
             <Route path="/google-signup">
                 <CompleteGoogleSignup {toast} />

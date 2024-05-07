@@ -1,6 +1,3 @@
-<svelte:head>
-<script src="https://accounts.google.com/gsi/client" async></script>
-</svelte:head>
 <script lang="ts">
     import {
         Button,
@@ -28,6 +25,10 @@
 
     let loading = false;
     let view: null | "login" | "create" | "googleCreate" = null;
+
+    let desktop =
+        navigator.userAgent.includes("Windows") ||
+        navigator.userAgent.includes("Macintosh");
 
     async function createUser(evt: Event) {
         evt.preventDefault();
@@ -164,7 +165,7 @@
             eventStore.set({
                 code: event.code,
                 pin: res.pin,
-                teams: res.teams,
+                teams: res.teams as ({ name: string; number: string }[]),
             });
             eventCode = event.code;
             eventPin = res.pin;
@@ -202,7 +203,9 @@
     window.googleLogin = async (googleUser: any) => {
         console.log(googleUser);
         try {
-            const res = await trpc.user.googleLogin.query({ token: googleUser.credential });
+            const res = await trpc.user.googleLogin.query({
+                token: googleUser.credential,
+            });
             authStore.set({
                 token: res.token,
                 eventToken: "",
@@ -212,7 +215,7 @@
                     role: res.role,
                     id: res.id,
                 },
-                googleToken: googleUser.credential
+                googleToken: googleUser.credential,
             });
             toast("Success", "Logged in successfully", "green-500");
         } catch (err: any) {
@@ -221,7 +224,7 @@
                     token: "",
                     eventToken: "",
                     user: undefined,
-                    googleToken: googleUser.credential
+                    googleToken: googleUser.credential,
                 });
                 navigate("/app/google-signup");
             } else {
@@ -229,8 +232,12 @@
                 console.error(err);
             }
         }
-    }
+    };
 </script>
+
+<svelte:head>
+    <script src="https://accounts.google.com/gsi/client" async></script>
+</svelte:head>
 
 {#if loading}
     <div class="fixed w-full h-full z-50 justify-center translate-y-1/2">
@@ -239,7 +246,7 @@
 {/if}
 
 <div
-    class="container mx-auto md:max-w-3xl flex flex-col justify-center p-4 h-full space-y-4"
+    class="container mx-auto md:max-w-4xl flex flex-col justify-center p-4 h-full space-y-4"
 >
     <h1 class="text-3xl">Welcome to FTA Buddy</h1>
     {#if !auth || !auth.token}
@@ -351,32 +358,51 @@
 
             <!-- Login Prompt -->
         {:else}
-            <div class="w-fit mx-auto">
-                <div id="g_id_onload"
-                    data-client_id="211223782093-ahalvkbdfdnjnv29svdvu3phsg40hlqi.apps.googleusercontent.com"
-                    data-context="signin"
-                    data-ux_mode="popup"
-                    data-callback="googleLogin"
-                    data-auto_prompt="false">
+        <div class="grid grid-cols-2 gap-4">
+            {#if desktop}
+                <div class="flex h-full">
+                    <div class="my-auto w-full">
+                        <h2 class="text-xl">Run FTA Buddy from this computer</h2>
+                        <Button on:click={() => navigate("/app/host")} class="w-full mt-4"
+                            >Host</Button
+                        >
+                        <p class="text-gray-700 mt-2">Requires this computer to be on the field network</p>
+                    </div>
                 </div>
+            {/if}
+                <div class="flex flex-col gap-4">
+                    <h2 class="text-xl">Or login to use FTA Buddy</h2>
+                    <div class="w-fit mx-auto">
+                        <div
+                            id="g_id_onload"
+                            data-client_id="211223782093-ahalvkbdfdnjnv29svdvu3phsg40hlqi.apps.googleusercontent.com"
+                            data-context="signin"
+                            data-ux_mode="popup"
+                            data-callback="googleLogin"
+                            data-auto_prompt="false"
+                        ></div>
 
-                <div class="g_id_signin"
-                    data-type="standard"
-                    data-shape="pill"
-                    data-theme="filled_blue"
-                    data-text="continue_with"
-                    data-size="large"
-                    data-logo_alignment="left"
-                    style="color-scheme: light">
+                        <div
+                            class="g_id_signin"
+                            data-type="standard"
+                            data-shape="pill"
+                            data-theme="filled_blue"
+                            data-text="continue_with"
+                            data-size="large"
+                            data-logo_alignment="left"
+                            style="color-scheme: light"
+                        ></div>
+                    </div>
+                    <div class="border-t border-neutral-500"></div>
+                    <Button on:click={() => (view = "login")} bind:disabled={loading}
+                        >Login</Button
+                    >
+
+                    <Button on:click={() => (view = "create")} bind:disabled={loading}
+                        >Create Account</Button
+                    >
                 </div>
             </div>
-            <div class="border-t border-neutral-500"></div>
-            <Button on:click={() => (view = "create")} bind:disabled={loading}
-                >Create Account</Button
-            >
-            <Button on:click={() => (view = "login")} bind:disabled={loading}
-                >Login</Button
-            >
         {/if}
 
         <!-- Logged In -->

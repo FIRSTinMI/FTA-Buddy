@@ -11,10 +11,10 @@ import { eq } from 'drizzle-orm';
 import { events } from './db/schema';
 import { readFileSync, readdirSync } from 'fs';
 import { DEFAULT_MONITOR } from '../shared/constants';
-import { StatusChange, detectStatusChange } from './stateChange';
+import { detectStatusChange } from './stateChange';
 const { app, getWss, applyTo } = expressWs(express());
 
-const port = process.env.PORT || 3001;
+const port = 3001;
 
 const appRouter = router({
     user: userRouter,

@@ -4,3 +4,4 @@ node_modules
 *.rsls
 dist/*
 .env
+FieldMonitor.ts

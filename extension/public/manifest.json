@@ -8,7 +8,8 @@
         "scripting"
     ],
     "host_permissions" : [
-        "http://10.0.100.5/fieldMonitorHub/*"
+        "http://10.0.100.5/*",
+        "http://192.168.1.220/*"
     ],
     "content_scripts": [
         {

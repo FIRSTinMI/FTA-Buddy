@@ -71,15 +71,16 @@ const appExtensionData = chrome.runtime.getManifest();
                 signalR,
                 fms: await pingFMS()
             });
+        } else if (evt.data.type === "getEventCode") {
+            window.postMessage(await getEventCode());
         }
     });
 })();
 
 async function pingFMS() {
-    return new Promise((resolve) => {
-        chrome.runtime.sendMessage({ type: "ping" }, (response) => {
-            console.log(response);
-            resolve(response.fms);
-        });
-    });
+    return await chrome.runtime.sendMessage({ type: "ping" });
+}
+
+async function getEventCode() {
+    return await chrome.runtime.sendMessage({ type: "getEventCode" });
 }

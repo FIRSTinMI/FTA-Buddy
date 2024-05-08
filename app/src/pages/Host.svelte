@@ -28,6 +28,12 @@
             extensionEnabled = event.data.enabled;
             signalREnabled = event.data.signalR;
             fmsDetected = event.data.fms;
+
+            // If fms is detect lets try to auto fill the event code
+            if (fmsDetected) window.postMessage({ source: "page", type: "getEventCode" }, "*");
+        } else if (event.data.type === "eventCode") {
+            eventCode = event.data.code;
+            checkEventCode();
         }
     });
 
@@ -36,14 +42,11 @@
         await new Promise((resolve) => setTimeout(resolve, 3000));
         if (!extensionDetected || !extensionEnabled || !signalREnabled || !fmsDetected) {
             checkConnection();
-        } else {
-            // If everything is connected and good, still check every 10 seconds
-            setTimeout(checkConnection, 10000);
         }
     }
 
     onMount(() => {
-        setTimeout(checkConnection, 200);
+        setTimeout(checkConnection, 500);
     });
 
     let eventCode = "";

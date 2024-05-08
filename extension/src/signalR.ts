@@ -283,10 +283,6 @@ export class SignalR {
             //console.log('audienceshowmatchresult: ', data);
         });
 
-        this.infrastructureConnection.on('matchstatuschanged', (data) => {
-            //console.log('matchstatuschanged: ', data);
-        });
-
         this.infrastructureConnection.on('lastcycletimecalculated', (data) => {
             console.log('lastcycletimecalculated: ', data);
             this.lastCycleTime = data;

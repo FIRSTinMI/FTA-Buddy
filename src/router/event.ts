@@ -28,7 +28,9 @@ export const eventRouter = router({
         code: z.string(),
         pin: z.string()
     })).query(async ({ input, ctx }) => {
-        const event = await db.query.events.findFirst({ where: eq(events.code, input.code.trim().toLowerCase()) });
+        input.code = input.code.trim().toLowerCase();
+
+        const event = await db.query.events.findFirst({ where: eq(events.code, input.code) });
 
         if (!event) throw new TRPCError({ code: 'NOT_FOUND', message: 'Event not found' });
 
@@ -44,7 +46,9 @@ export const eventRouter = router({
     get: adminProcedure.input(z.object({
         code: z.string()
     })).query(async ({ input }) => {
-        const event = await db.query.events.findFirst({ where: eq(events.code, input.code.trim().toLowerCase()) });
+        input.code = input.code.trim().toLowerCase();
+
+        const event = await db.query.events.findFirst({ where: eq(events.code, input.code) });
 
         if (!event) throw new TRPCError({ code: 'NOT_FOUND', message: 'Event not found' });
 
@@ -55,6 +59,7 @@ export const eventRouter = router({
         code: z.string().startsWith('202').min(6),
         pin: z.string().min(4)
     })).query(async ({ input }) => {
+        input.code = input.code.trim().toLowerCase();
         const token = generateToken();
         const teams: ({number: string, name: string})[] = [];
 

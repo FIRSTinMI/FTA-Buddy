@@ -1,0 +1,215 @@
+  protected abstract string API_PREFIX { get; }
+
+    protected static class RemoteDataServiceImp<T>
+    {
+      public static T get(RemoteDataService dataService, string methodNameParam)
+      {
+        T obj = default (T);
+        try
+        {
+          string str = dataService.API_PREFIX + "/get/" + methodNameParam;
+          HttpHeaderValueCollection<MediaTypeWithQualityHeaderValue> accept = dataService.proxy.DefaultRequestHeaders.Accept;
+          HttpResponseMessage result = dataService.proxy.GetAsync(str).Result;
+          result.EnsureSuccessStatusCode();
+          return JsonConvert.DeserializeObject<T>(result.Content.ReadAsStringAsync().Result);
+        }
+        catch (Exception ex)
+        {
+          LoggerExtensions.LogError(dataService.logger, ex, "Error Get " + methodNameParam, Array.Empty<object>());
+          throw;
+        }
+      }
+      public static T get(
+        RemoteDataService dataService,
+        string methodNameParam,
+        string methodParamsParam)
+      {
+        T obj = default (T);
+        try
+        {
+          DefaultInterpolatedStringHandler interpolatedStringHandler = new DefaultInterpolatedStringHandler(6, 3);
+          interpolatedStringHandler.AppendFormatted(dataService.API_PREFIX);
+          interpolatedStringHandler.AppendLiteral("/get/");
+          interpolatedStringHandler.AppendFormatted(methodNameParam);
+          interpolatedStringHandler.AppendLiteral("/");
+          interpolatedStringHandler.AppendFormatted(methodParamsParam);
+          string stringAndClear = interpolatedStringHandler.ToStringAndClear();
+          HttpHeaderValueCollection<MediaTypeWithQualityHeaderValue> accept = dataService.proxy.DefaultRequestHeaders.Accept;
+          HttpResponseMessage result = dataService.proxy.GetAsync(stringAndClear).Result;
+          result.EnsureSuccessStatusCode();
+          return JsonConvert.DeserializeObject<T>(result.Content.ReadAsStringAsync().Result);
+        }
+        catch (Exception ex)
+        {
+          LoggerExtensions.LogError(dataService.logger, ex, "Error Get " + methodNameParam + " " + methodParamsParam, Array.Empty<object>());
+          throw;
+        }
+      }
+
+      public static T get_api(
+        RemoteDataService dataService,
+        out DateTime? lastModified,
+        int season,
+        string eventCode,
+        string uriParams)
+      {
+        lastModified = new DateTime?();
+        T obj = default (T);
+        string str = dataService.API_PREFIX + "/" + season.ToString() + "/" + (!string.IsNullOrEmpty(eventCode) ? eventCode + "/" : (string) null) + uriParams;
+        RemoteDataService.AddRequestHeaders(dataService);
+        HttpResponseMessage result = dataService.proxy.GetAsync(str).Result;
+        T api = JsonConvert.DeserializeObject<T>(result.Content.ReadAsStringAsync().Result);
+        try
+        {
+          lastModified = new DateTime?(DateTime.Parse(result.Headers.GetValues("If-Modified-Since").Single<string>()));
+        }
+        catch
+        {
+        }
+        return api;
+      }
+
+      namespace FMS.DataService
+{
+  public class FieldMonitorRemoteDataService : 
+    EventBaseRemoteDataService,
+    IFieldMonitorDataService,
+    IEventBaseDataService
+  {
+    protected override string API_PREFIX => "api/v1.0/fieldmonitor";
+
+    public FieldMonitorRemoteDataService(
+      IHttpClientFactory httpClientParam,
+      ILogger<FieldMonitorRemoteDataService> loggerParam)
+      : base(httpClientParam, (ILogger<EventBaseRemoteDataService>) loggerParam)
+    {
+    }
+
+    public FieldServerWebMatchViewItem GetResultsByFMSMatchId(Guid matchIdParam)
+    {
+      DefaultInterpolatedStringHandler interpolatedStringHandler = new DefaultInterpolatedStringHandler(0, 1);
+      interpolatedStringHandler.AppendFormatted<Guid>(matchIdParam);
+      string stringAndClear = interpolatedStringHandler.ToStringAndClear();
+      return RemoteDataService.RemoteDataServiceImp<FieldServerWebMatchViewItem>.get((RemoteDataService) this, ((MemberInfo) MethodBase.GetCurrentMethod()).Name, stringAndClear);
+    }
+
+    public FieldServerWebMatchViewItem[] GetResultsByTeamNumber(int teamNumberParam)
+    {
+      DefaultInterpolatedStringHandler interpolatedStringHandler = new DefaultInterpolatedStringHandler(0, 1);
+      interpolatedStringHandler.AppendFormatted<int>(teamNumberParam);
+      string stringAndClear = interpolatedStringHandler.ToStringAndClear();
+      return RemoteDataService.RemoteDataServiceImp<FieldServerWebMatchViewItem[]>.get((RemoteDataService) this, ((MemberInfo) MethodBase.GetCurrentMethod()).Name, stringAndClear);
+    }
+
+    public FieldServerWebMatchViewItem[] GetResults(TournamentLevel levelParam)
+    {
+      DefaultInterpolatedStringHandler interpolatedStringHandler = new DefaultInterpolatedStringHandler(0, 1);
+      interpolatedStringHandler.AppendFormatted<TournamentLevel>(levelParam);
+      string stringAndClear = interpolatedStringHandler.ToStringAndClear();
+      return RemoteDataService.RemoteDataServiceImp<FieldServerWebMatchViewItem[]>.get((RemoteDataService) this, ((MemberInfo) MethodBase.GetCurrentMethod()).Name, stringAndClear);
+    }
+
+    public FieldServerWebMatchShowLogViewItem[] GetLog(
+      Guid matchIdParam,
+      AllianceType allianceParam,
+      StationType stationParam)
+    {
+      DefaultInterpolatedStringHandler interpolatedStringHandler = new DefaultInterpolatedStringHandler(2, 3);
+      interpolatedStringHandler.AppendFormatted<Guid>(matchIdParam);
+      interpolatedStringHandler.AppendLiteral("/");
+      interpolatedStringHandler.AppendFormatted<AllianceType>(allianceParam);
+      interpolatedStringHandler.AppendLiteral("/");
+      interpolatedStringHandler.AppendFormatted<StationType>(stationParam);
+      string stringAndClear = interpolatedStringHandler.ToStringAndClear();
+      return RemoteDataService.RemoteDataServiceImp<FieldServerWebMatchShowLogViewItem[]>.get((RemoteDataService) this, ((MemberInfo) MethodBase.GetCurrentMethod()).Name, stringAndClear);
+    }
+
+    public List<PitPlayoffMatchup> GetPlayoffMatchups(
+      PlayoffSizeTypes playoffSizeParam,
+      PlayoffLevel sublevelParam)
+    {
+      DefaultInterpolatedStringHandler interpolatedStringHandler = new DefaultInterpolatedStringHandler(1, 2);
+      interpolatedStringHandler.AppendFormatted<PlayoffSizeTypes>(playoffSizeParam);
+      interpolatedStringHandler.AppendLiteral("/");
+      interpolatedStringHandler.AppendFormatted<PlayoffLevel>(sublevelParam);
+      string stringAndClear = interpolatedStringHandler.ToStringAndClear();
+      return RemoteDataService.RemoteDataServiceImp<List<PitPlayoffMatchup>>.get((RemoteDataService) this, ((MemberInfo) MethodBase.GetCurrentMethod()).Name, stringAndClear);
+    }
+  }
+}
+
+
+
+
+
+
+
+
+#nullable disable
+namespace FMS.Common.Base.Enums
+{
+  public enum FrcInternalPage
+  {
+    Avatar,
+    Awards,
+    CentralSettings,
+    DataAdmin,
+    OffSeasonEvent,
+    RestrictedParticipants,
+    DistrictRankings,
+    EmailAdmin,
+    EventList,
+    EventReporting,
+    Event,
+    Event_People,
+    Event_Awards,
+    Event_PublicMessaging,
+    Event_Reports,
+    Event_SyncDataAudit,
+    Event_Notes,
+    Event_Codes,
+    Event_Results,
+    Event_MatchLogs,
+    EventsApiAccounts,
+    Home,
+    Live,
+    ITDBSync,
+    MatchStationLog,
+    MatchGraph,
+    Provisioning,
+    Resources,
+    ResourceAssignments,
+    RobotVersions,
+    RolePermissions,
+    SlackAdmin,
+    Statistics,
+    EventSchedule,
+    TruckTracking,
+  }
+}
+
+
+namespace FMS.Base.Enums
+{
+  [Flags]
+  public enum PLC_MATCH_STATUS_Type
+  {
+    None = 0,
+    RefReady = 1,
+    ScoreReady = 2,
+    FieldCleanup = 4,
+    ArenaClear = 8,
+    RefDone = 16, // 0x00000010
+    RefUnderReview = 32, // 0x00000020
+    BlueFouls = 64, // 0x00000040
+    BlueFoulsTech = 128, // 0x00000080
+    RedFouls = 256, // 0x00000100
+    RedFoulsTech = 512, // 0x00000200
+    Blue1CardNew = 1024, // 0x00000400
+    Blue2CardNew = 2048, // 0x00000800
+    Blue3CardNew = 4096, // 0x00001000
+    Red1CardNew = 8192, // 0x00002000
+    Red2CardNew = 16384, // 0x00004000
+    Red3CardNew = 32768, // 0x00008000
+  }
+}

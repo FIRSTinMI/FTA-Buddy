@@ -78,7 +78,7 @@ function connectToWS(cloud: boolean, url: string | undefined, eventCode: string)
     }
     ws.onclose = () => {
         console.log('Disconnected from server, reconnecting in 5 seconds.');
-        setTimeout(connectToWS, 5000);
+        setTimeout(() => connectToWS(cloud, url, eventCode), 5000);
     }
     ws.onerror = (err) => {
         console.error(err);

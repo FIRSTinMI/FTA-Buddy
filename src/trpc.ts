@@ -7,7 +7,7 @@ import { CreateWSSContextFn } from '@trpc/server/adapters/ws';
 
 export const createContext = ({ req, res }: trpcExpress.CreateExpressContextOptions) => ({
     token: req.headers.authorization?.split(' ')[1],
-    eventToken: req.headers['Event-Token']?.toString(),
+    eventToken: (req.headers['Event-Token'] || req.headers['event-token'])?.toString()
 });
 
 type Context = Awaited<ReturnType<typeof createContext>>;
@@ -18,8 +18,7 @@ export const publicProcedure = t.procedure;
 
 export const protectedProcedure = t.procedure.use(async (opts) => {
     const { ctx } = opts;
-    console.log(ctx);
-    if (!ctx.token) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Unauthorized' });
+    if (!ctx.token) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Missing Authorization Header' });
 
     const user = await db.query.users.findFirst({ where: eq(users.token, ctx.token) });
     if (!user) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Unauthorized' });
@@ -34,7 +33,8 @@ export const protectedProcedure = t.procedure.use(async (opts) => {
 
 export const eventProcedure = t.procedure.use(async (opts) => {
     const { ctx } = opts;
-    if (!ctx.eventToken) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Unauthorized' });
+    console.log(ctx.headers);
+    if (!ctx.eventToken) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Missing Event Token Header' });
 
     const event = await db.query.events.findFirst({ where: eq(events.token, ctx.eventToken) });
     if (!event) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Unauthorized' });

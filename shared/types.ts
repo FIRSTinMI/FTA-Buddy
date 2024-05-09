@@ -97,58 +97,9 @@ export const MATCH_OVER = 9;
 export const READY_FOR_POST_RESULT = 10;
 export const MATCH_NOT_READY = 11;
 
-// export interface SignalRTeamInfo {
-//     p1: SignalREnums.AllianceType;
-//     p2: SignalREnums.StationType; // Station
-//     p3: number; // Team Number
-//     p4: boolean; // Connection
-//     p5: boolean; // Link active
-//     p6: boolean; // DS Link active
-//     p7: boolean; // Radio Link
-//     p8: boolean; // RIO Link
-//     p9: boolean; // is enabled
-//     pa: boolean; // is auto
-//     pb: boolean; // is bypassed
-//     pc: boolean; // estop pressed
-//     pd: boolean; // is estopped (reported back as estopped?)
-//     pe: number; // battery
-//     pf: SignalREnums.StationStatusType; // monitor status?
-//     pg: number; // ping
-//     ph: number; // dropped packets
-//     pi: string | null; // signal
-//     pj: string | null; // noise
-//     pk: number; // SNR
-//     pl: number; // Inactivity?
-//     pm: string | null; // MAC
-//     pn: number | null; // TxRate
-//     po: number | null; // TxMCS
-//     pp: number | null; // TxMCSBandwidth
-//     pq: boolean | null; // TxVHT
-//     pr: number | null; // TxVHTNSS
-//     ps: number; // TxPackets
-//     pt: number | null; // RxRate
-//     pu: number | null; // RxMCS
-//     pv: number | null; // RxMCSBandwidth
-//     pw: boolean | null; // RxVHT
-//     px: number | null; // RxVHTNSS
-//     py: number; // RxPackets
-//     pz: number; // DataRateTotal
-//     paa: number; // DataRateToRobot
-//     pbb: number; // DataRateFromRobot
-//     pcc: number; // BWU
-//     pdd: SignalREnums.WPAKeyStatusType; // WPAKeyStatus
-//     pee: boolean; // DS is official
-//     pff: number; // Station status 
-//     pgg: boolean; // brownout
-//     phh: string; // EStopSource
-//     pii: boolean; // isAStop pressed
-//     pjj: boolean; // isAStopped
-//     pjk: string; // MoveToStation
-// }
-
-export interface SignalRTeamInfo { 
+export interface SignalRMonitorFrame { 
     Alliance: "Red" | "Blue";
-    Station: SignalREnums.StationType;
+    Station: FMSEnums.StationType;
     TeamNumber: number;
     Connection: boolean; 
     LinkActive: boolean;
@@ -161,7 +112,7 @@ export interface SignalRTeamInfo {
     IsEStopPressed: boolean;
     IsEStopped: boolean;
     Battery: number;
-    MonitorStatus: SignalREnums.MonitorStatusType; 
+    MonitorStatus: FMSEnums.MonitorStatusType; 
     AverageTripTime: number;
     LostPackets: number;
     Signal: number;
@@ -184,10 +135,10 @@ export interface SignalRTeamInfo {
     DataRateTotal: number;
     DataRateToRobot: number;
     DataRateFromRobot: number;
-    BWUtilization: SignalREnums.BWUtilizationType, 
-    WPAKeyStatus: SignalREnums.WPAKeyStatusType, 
+    BWUtilization: FMSEnums.BWUtilizationType, 
+    WPAKeyStatus: FMSEnums.WPAKeyStatusType, 
     DriverStationIsOfficial: boolean;
-    StationStatus: SignalREnums.StationStatusType, 
+    StationStatus: FMSEnums.StationStatusType, 
     Brownout: boolean;
     EStopSource: string, 
     IsAStopPressed: boolean;
@@ -195,8 +146,53 @@ export interface SignalRTeamInfo {
     MoveToStation: string | null;
 }
 
-export namespace SignalREnums {
-    export enum TournamentLevel {
+export interface FMSLogFrame {
+    timeStamp: string,
+    matchTimeBase: number,
+    matchTime: number,
+    auto: boolean,
+    dsLinkActive: boolean,
+    enabled: boolean,
+    aStopPressed: boolean,
+    eStopPressed: boolean,
+    linkActive: boolean,
+    radioLink: boolean,
+    rioLink: boolean,
+    averageTripTime: number,
+    lostPackets: number,
+    sentPackets: number,
+    battery: number,
+    brownout: boolean,
+    signal: number | null,
+    noise: number | null,
+    snr: number | null,
+    txRate: number | null,
+    txMCS: number | null,
+    rxRate: number | null,
+    rxMCS: number | null,
+    dataRateTotal: number
+}
+
+export interface FMSMatch {
+    actualStartTime: string,
+    dayNumber: number,
+    description: string, // "Test Match"
+    fmsEventId: string,
+    fmsMatchId: string,
+    matchNumber: number,
+    playNumber: number,
+    startTime: string,
+    teamNumberBlue1: number,
+    teamNumberBlue2: number,
+    teamNumberBlue3: number,
+    teamNumberRed1: number,
+    teamNumberRed2: number,
+    teamNumberRed3: number,
+    tournamentLevel: "None" | "Practice" | "Qualification" | "Playoff"
+}
+
+export namespace FMSEnums {
+    export enum Level {
         None = 0,
         Practice = 1,
         Qualification = 2,

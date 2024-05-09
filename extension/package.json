@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "@microsoft/signalr": "^8.0.0",
+    "trpc": "^0.11.3",
     "tsconfig-paths-webpack-plugin": "^4.1.0"
   },
   "devDependencies": {

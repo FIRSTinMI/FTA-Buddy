@@ -12,16 +12,19 @@ import { events } from './db/schema';
 import { readFileSync, readdirSync } from 'fs';
 import { DEFAULT_MONITOR } from '../shared/constants';
 import { detectStatusChange } from './stateChange';
+import { matchRouter } from './router/match';
+import { StatusChanges } from '../shared/types';
 const { app, getWss, applyTo } = expressWs(express());
 
 const port = process.env.PORT || 3002;
 
 const appRouter = router({
     user: userRouter,
-    event: eventRouter
+    event: eventRouter,
+    match: matchRouter
 });
 
-const eventList: { [key: string]: { socketServer?: any, socketClients: any[], monitor: any, teams: any[], token: string, statusChanges: StatusChange } } = {};
+const eventList: { [key: string]: { socketServer?: any, socketClients: any[], monitor: any, teams: any[], token: string, statusChanges: StatusChanges } } = {};
 
 export type AppRouter = typeof appRouter;
 

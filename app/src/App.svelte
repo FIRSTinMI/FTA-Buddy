@@ -24,6 +24,9 @@
     import { AudioQueuer } from "./util/audioAlerts";
     import Host from "./pages/Host.svelte";
     import PostEventCreation from "./pages/PostEventCreation.svelte";
+    import MatchLog from "./pages/MatchLog.svelte";
+    import StationLog from "./pages/StationLog.svelte";
+    import MatchLogsList from "./pages/MatchLogsList.svelte";
 
     // Checking authentication
 
@@ -447,7 +450,7 @@
                         }}
                     >
                         <svelte:fragment slot="icon">
-                            <Icon icon="mdi:file-document-outline" class="w-8 h-8" />
+                            <Icon icon="mdi:file-document" class="w-8 h-8" />
                         </svelte:fragment>
                     </SidebarItem>
                     <SidebarItem
@@ -468,6 +471,17 @@
                                 >
                             </Indicator>
                         {/if}
+                    </SidebarItem>
+                    <SidebarItem
+                        label="Match Logs"
+                        on:click={() => {
+                            hideMenu = true;
+                            navigate("/app/logs");
+                        }}
+                    >
+                        <svelte:fragment slot="icon">
+                            <Icon icon="mdi:archive" class="w-8 h-8" />
+                        </svelte:fragment>
                     </SidebarItem>
                 </SidebarGroup>
             {/if}
@@ -574,6 +588,11 @@
                     <Messages bind:this={messagesChild} team={undefined} />
                 </Route>
                 <Route path="/messages/:team" component={Messages} />
+                <Route path="/logs">
+                    <MatchLogsList {toast} />
+                </Route>
+                <Route path="/logs/:matchid" component={MatchLog} />
+                <Route path="/logs/:matchid/:station" component={StationLog} />
             </div>
             <Route path="/login">
                 <Login {toast} />

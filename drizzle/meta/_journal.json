@@ -29,6 +29,13 @@
       "when": 1712016944755,
       "tag": "0003_common_shockwave",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1715199974970,
+      "tag": "0004_first_hex",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,4 @@
-import { boolean, jsonb, pgEnum, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core"
+import { boolean, integer, jsonb, pgEnum, pgTable, serial, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core"
 
 export const roleEnum = pgEnum('role', ['ADMIN', 'FTA', 'FTAA', 'CSA', 'RI']);
 
@@ -41,3 +41,47 @@ export const messages = pgTable('messages', {
 });
 
 export const Message = typeof messages.$inferInsert;
+
+export const levelEnum = pgEnum('level', ['None', 'Practice', 'Qualification', 'Playoff']);
+
+export const matchLogs = pgTable('match_logs', {
+    id: uuid('id').primaryKey(),
+    event: varchar('event').notNull(),
+    event_id: uuid('event_id').notNull(),
+    match_number: integer('match_number').notNull(),
+    play_number: integer('play_number').notNull(),
+    level: levelEnum('level').notNull(),
+    start_time: timestamp('start_time').notNull(),
+    blue1: integer('blue1'),
+    blue2: integer('blue2'),
+    blue3: integer('blue3'),
+    red1: integer('red1'),
+    red2: integer('red2'),
+    red3: integer('red3'),
+    blue1_log: jsonb('blue1_log').notNull().default('[]'),
+    blue2_log: jsonb('blue2_log').notNull().default('[]'),
+    blue3_log: jsonb('blue3_log').notNull().default('[]'),
+    red1_log: jsonb('red1_log').notNull().default('[]'),
+    red2_log: jsonb('red2_log').notNull().default('[]'),
+    red3_log: jsonb('red3_log').notNull().default('[]')
+});
+
+export const MatchLog = typeof matchLogs.$inferInsert;
+
+export const cycleLogs = pgTable('cycleLogs', { 
+    id: uuid('id').primaryKey(),
+    event: varchar('event').notNull(),
+    event_id: uuid('event_id').notNull(),
+    match_number: integer('match_number').notNull(),
+    play_number: integer('play_number').notNull(),
+    level: levelEnum('level').notNull(),
+    start_time: timestamp('start_time').notNull(),
+    calculated_cycle_time: varchar('calculated_cycle_time'),
+    ref_done_time: timestamp('ref_done_time'),
+    green_light_time: timestamp('green_light_time'),
+    commit_time: timestamp('commit_time')
+});
+
+export const CycleLog = typeof cycleLogs.$inferInsert;
+
+

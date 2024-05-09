@@ -1,6 +1,7 @@
 import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
-import { ASTOP, BYPASS, CODE, DSState, ESTOP, GREEN, GREEN_X, MATCH_ABORTED, MATCH_NOT_READY, MATCH_OVER, MATCH_READY, MATCH_RUNNING_AUTO, MATCH_RUNNING_TELEOP, MATCH_TRANSITIONING, MOVE_STATION, NO_CODE, PRESTART_COMPLETED, PRESTART_INITIATED, READY_FOR_POST_RESULT, READY_TO_PRESTART, RED, ROBOT, SignalREnums, UNKNOWN, WRONG_MATCH, type MonitorFrame, type SignalRTeamInfo } from '@shared/types';
+import { ASTOP, BYPASS, CODE, DSState, ESTOP, GREEN, GREEN_X, MATCH_ABORTED, MATCH_NOT_READY, MATCH_OVER, MATCH_READY, MATCH_RUNNING_AUTO, MATCH_RUNNING_TELEOP, MATCH_TRANSITIONING, MOVE_STATION, NO_CODE, PRESTART_COMPLETED, PRESTART_INITIATED, READY_FOR_POST_RESULT, READY_TO_PRESTART, RED, ROBOT, FMSEnums, UNKNOWN, WRONG_MATCH, type MonitorFrame, type SignalRMonitorFrame } from '@shared/types';
 import { DEFAULT_MONITOR } from '@shared/constants';
+import { uploadMatchLogs } from './trpc';
 
 export class SignalR {
     // SignalR Hub Connection
@@ -135,12 +136,14 @@ export class SignalR {
                         break;
                     case 'WaitingForPostResults':
                         this.frame.field = READY_FOR_POST_RESULT;
+                        void uploadMatchLogs();
                         break;
                     case 'TournamentLevelComplete':
                         this.frame.field = UNKNOWN;
                         break;
                     case 'MatchCancelled':
                         this.frame.field = MATCH_ABORTED;
+                        void uploadMatchLogs();
                         // womp womp
                         break;
                 }
@@ -150,9 +153,9 @@ export class SignalR {
         );
 
         // Register listener for the "TeamInfoChanged" event (team connects, disconnects, etc)
-        this.connection.on('fieldmonitordatachanged', async (data: SignalRTeamInfo[]) => {
+        this.connection.on('fieldmonitordatachanged', async (data: SignalRMonitorFrame[]) => {
             for (let i = 0; i < data.length; i++) {
-                const team: ROBOT = (((data[i].Alliance === "Red") ? 'red' : 'blue') + SignalREnums.StationType[data[i].Station]) as ROBOT;
+                const team: ROBOT = (((data[i].Alliance === "Red") ? 'red' : 'blue') + FMSEnums.StationType[data[i].Station]) as ROBOT;
 
                 this.frame[team] = {
                     number: data[i].TeamNumber,
@@ -198,7 +201,7 @@ export class SignalR {
             }
             */
 
-            const team: ROBOT = (((data.p1 === SignalREnums.AllianceType.Red) ? 'red' : 'blue') + data.p2) as ROBOT;
+            const team: ROBOT = (((data.p1 === FMSEnums.AllianceType.Red) ? 'red' : 'blue') + data.p2) as ROBOT;
 
             this.frame[team].versionmm = data.p3.length > 0 ? 1 : 0;
         });
@@ -345,14 +348,14 @@ export class SignalR {
     }
 }
 
-function dsState(data: SignalRTeamInfo): DSState {
+function dsState(data: SignalRMonitorFrame): DSState {
     if (data.IsBypassed) return BYPASS;
     if (data.IsEStopPressed) return ESTOP;
     if (data.IsAStopPressed) return ASTOP;
     if (data.Connection) {
-        if (data.StationStatus === SignalREnums.StationStatusType.Good) return GREEN;
-        if (data.StationStatus === SignalREnums.StationStatusType.WrongStation) return MOVE_STATION;
-        if (data.StationStatus === SignalREnums.StationStatusType.WrongMatch) return WRONG_MATCH;
+        if (data.StationStatus === FMSEnums.StationStatusType.Good) return GREEN;
+        if (data.StationStatus === FMSEnums.StationStatusType.WrongStation) return MOVE_STATION;
+        if (data.StationStatus === FMSEnums.StationStatusType.WrongMatch) return WRONG_MATCH;
         return GREEN_X;
     }
 

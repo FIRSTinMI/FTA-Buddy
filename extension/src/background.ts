@@ -1,7 +1,7 @@
 import { SignalR } from "./signalR";
-
+import { getEventCode } from "./fmsapi";
 const manifestData = chrome.runtime.getManifest();
-const FMS = '192.168.1.220'
+export const FMS = '192.168.1.220'
 let signalRConnection = new SignalR(FMS, manifestData.version, sendFrame);
 let ws: WebSocket;
 
@@ -9,8 +9,9 @@ async function start() {
     let url, cloud, changed, enabled, signalR, eventCode;
 
     await new Promise((resolve) => {
-        chrome.storage.local.get(['url', 'cloud', 'event', 'changed', 'enabled', 'signalR'], item => {
+        chrome.storage.local.get(['url', 'cloud', 'event', 'changed', 'enabled', 'signalR', 'id'], item => {
             console.log(item);
+            if (!item.id) chrome.storage.local.set({ id: crypto.randomUUID() });
             url = item.url;
             cloud = item.cloud;
             eventCode = item.event;
@@ -61,10 +62,10 @@ async function start() {
         signalRConnection.start();
     }
 
-    if (!cloud || !eventCode) return;
-
     console.log(cloud, url, eventCode);
-    connectToWS(cloud, url, eventCode);
+
+    if (!eventCode) return;
+    connectToWS(cloud ?? true, url, eventCode);
 }
 
 function connectToWS(cloud: boolean, url: string | undefined, eventCode: string) {
@@ -96,12 +97,6 @@ async function pingFMS() {
     } catch (e) {
         return false;
     }
-}
-
-async function getEventCode() {
-    const eventCode = await (await fetch(`http://${FMS}/api/v1.0/systembase/get/get_CurrentlyActiveEventCode`)).text();
-    const year = new Date().getFullYear(); // Just assume it's the current year, no point to ping the API just for that
-    return year.toString() + eventCode.substring(1, eventCode.length-1); // Substring to remove quotes around the string
 }
 
 function sendFrame(data: any) {

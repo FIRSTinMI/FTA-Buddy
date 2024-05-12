@@ -12,6 +12,7 @@
     import { trpc } from "../main";
     import { navigate } from "svelte-routing";
     import type { FMSLogFrame, ROBOT } from "../../../shared/types";
+    import LogGraph from "../components/LogGraph.svelte";
 
     export let matchid: string;
     export let station: ROBOT;
@@ -35,15 +36,21 @@
             window.history.back();
         }
     }
+
+    let view: "graph" | "table" = "graph";
 </script>
 
-<div class="container mx-auto p-0 py-2 md:p-2 w-full flex flex-col gap-2 md:gap-4">
-    <Button on:click={back} class="w-fit mx-1.5">Back</Button>
+<div class="container mx-auto p-0 py-2 md:p-2 lg:max-w-7xl w-full flex flex-col gap-2 md:gap-4">
+    <div class="flex">
+        <Button on:click={back} class="w-fit mx-1.5">Back</Button>
+    </div>
     {#await match}
         <Spinner />
     {:then match}
         <h1 class="text-xl">{match?.level === 'None' ? 'Test' : match?.level} Match {match?.match_number}/{match?.play_number}</h1>
         <h2 class="text-lg">{(station.startsWith('blue') ? 'Blue ' : 'Red ') + station.charAt(station.length - 1)} Team {team}</h2>
+
+        <LogGraph {log} />
         <Table class="log-table">
             <TableHead>
                 <TableHeadCell class="px-6 py-4">Time</TableHeadCell>
@@ -99,14 +106,9 @@
                                         <TableBodyCell
                                             >A</TableBodyCell
                                         >
-                                    {:else if frame.teleop}
-                                        <TableBodyCell
-                                            >T</TableBodyCell
-                                        >
                                     {:else}
                                         <TableBodyCell
-                                            class="bg-blue-500"
-                                            >E</TableBodyCell
+                                            >T</TableBodyCell
                                         >
                                     {/if}
                                 {/if}

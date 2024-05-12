@@ -2,6 +2,7 @@
     import {
         Button,
         Label,
+        Modal,
         MultiSelect,
         Spinner,
         Table,
@@ -16,20 +17,18 @@
     import { navigate } from "svelte-routing";
     import type { FMSLogFrame, ROBOT } from "../../../shared/types";
     import LogGraph from "../components/LogGraph.svelte";
+    import QrCode from "svelte-qrcode";
 
     export let matchid: string;
-    export let station: ROBOT;
+    export let station: ROBOT | string;
 
     let log: FMSLogFrame[];
     let team: number;
 
-    const match = trpc.match.getMatch.query({ id: matchid });
-
+    const match = trpc.match.getStationMatch.query({ id: matchid, station: station });
     match.then((m) => {
-        // I don't want to talk about it
-        log =
-            (m?.[(station + "_log") as keyof typeof m] as FMSLogFrame[]) ?? [];
-        team = m?.[station] ?? 0;
+        log = m.log;
+        team = m.team;
     });
 
     function back() {
@@ -72,13 +71,42 @@
         "averageTripTime",
         "dataRateTotal",
     ];
+
+    let shareid: string;
+    let shareOpen = false;
+
+    async function share() {
+        if (["blue1", "blue2", "blue3", "red1", "red2", "red3"].includes(station)) {
+            let response = await trpc.match.publishMatch.query({ id: matchid, station: station, team: team });
+            shareid = response.id;
+            shareOpen = true;
+        } else {
+            shareid = station;
+            shareOpen = true;
+        }
+    }
 </script>
+
+<Modal bind:open={shareOpen} dismissable outsideclose>
+    <h1 slot="header" class="text-xl">Share Log</h1>
+    <div class="flex flex-col gap-2">
+        <p>
+            Log published for 72 hours.
+            Share this log only with team #{team} or other volunteers.
+        </p>
+        <div class="max-w-48 mx-auto">
+            <QrCode value="https://ftabuddy.com/app/logs/{matchid}/{shareid}" padding=5 />
+        </div>
+        <Button on:click={() => (shareOpen = false)} class="mt-2">Close</Button>
+    </div>
+</Modal>
 
 <div
     class="container mx-auto p-2 lg:max-w-7xl w-full flex flex-col gap-2 md:gap-4"
 >
     <div class="flex">
         <Button on:click={back} class="w-fit mx-1.5">Back</Button>
+        <Button on:click={share} class="w-fit mx-1.5">Share Log</Button>
     </div>
     {#await match}
         <Spinner />

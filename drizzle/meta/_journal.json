@@ -36,6 +36,41 @@
       "when": 1715199974970,
       "tag": "0004_first_hex",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1715547070051,
+      "tag": "0005_busy_hellfire_club",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1715547314736,
+      "tag": "0006_dark_zarek",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1715547835511,
+      "tag": "0007_harsh_puma",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1715547910266,
+      "tag": "0008_flawless_ricochet",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1715547925523,
+      "tag": "0009_red_ironclad",
+      "breakpoints": true
     }
   ]
 }

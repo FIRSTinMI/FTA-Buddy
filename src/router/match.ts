@@ -2,9 +2,11 @@ import 'dotenv/config';
 import { z } from "zod";
 import { eventProcedure, publicProcedure, router } from "../trpc";
 import { db } from '../db/db';
-import { matchLogs } from '../db/schema';
+import { logPublishing, matchLogs } from '../db/schema';
 import { and, asc, eq } from 'drizzle-orm';
 import { inferRouterOutputs } from '@trpc/server';
+import { randomUUID } from 'crypto';
+import { FMSLogFrame, ROBOT } from '../../shared/types';
 
 export type MatchRouterOutputs = inferRouterOutputs<typeof matchRouter>;
 
@@ -80,12 +82,106 @@ export const matchRouter = router({
     getMatch: eventProcedure.input(z.object({
         id: z.string().uuid()
     })).query(async ({ input, ctx }) => {
-        return await db.query.matchLogs.findFirst({
+        const match = await db.query.matchLogs.findFirst({
             where: and(
                 eq(matchLogs.id, input.id),
                 eq(matchLogs.event, ctx.event.code) // Technically not required but like security ig?
             )
         });
+
+        if (!match) throw new Error('Match not found');
+
+        return match;
+    }),
+
+    getStationMatch: eventProcedure.input(z.object({
+        id: z.string().uuid(),
+        station: z.string()
+    })).query(async ({ input, ctx }) => {
+        const match = await db.query.matchLogs.findFirst({
+            where: and(
+                eq(matchLogs.id, input.id),
+                eq(matchLogs.event, ctx.event.code) // Technically not required but like security ig?
+            )
+        });
+
+        if (!match) throw new Error('Match not found');
+
+        let station: ROBOT;
+
+        // If there is an input for station but it's not actually a station, it might be a share id
+        if (input.station && !['blue1', 'blue2', 'blue3', 'red1', 'red2', 'red3'].includes(input.station)) {
+            const share = await db.query.logPublishing.findFirst({
+                where: and(
+                    eq(logPublishing.id, input.station),
+                    eq(logPublishing.match_id, input.id),
+                    eq(logPublishing.event, ctx.event.code)
+                )
+            });
+
+            if (!share) throw new Error('Share not found');
+
+            station = share.station as ROBOT;
+        } else {
+            station = input.station as ROBOT;
+        }
+
+        return {
+            id: match.id,
+            event: match.event,
+            event_id: match.event_id,
+            match_number: match.match_number,
+            play_number: match.play_number,
+            level: match.level,
+            start_time: match.start_time,
+            team: match[station] ?? 0,
+            log: match[`${station}_log`] as FMSLogFrame[]
+        };
+    }),
+
+    publishMatch: eventProcedure.input(z.object({
+        id: z.string().uuid(),
+        station: z.enum(['blue1', 'blue2', 'blue3', 'red1', 'red2', 'red3']),
+        team: z.number()
+    })).query(async ({ input, ctx }) => {
+        const existingShare = await db.query.logPublishing.findFirst({
+            where: and(
+                eq(logPublishing.match_id, input.id),
+                eq(logPublishing.station, input.station),
+                eq(logPublishing.team, input.team),
+                eq(logPublishing.event, ctx.event.code)
+            )
+        });
+
+        if (existingShare) return { id: existingShare.id };
+
+        const match = await db.query.matchLogs.findFirst({
+            where: and(
+                eq(matchLogs.id, input.id),
+                eq(matchLogs.event, ctx.event.code)
+            )
+        });
+
+        if (!match) throw new Error('Match not found');
+
+        const id = randomUUID();
+
+        await db.insert(logPublishing).values({
+            id: id,
+            team: input.team,
+            match_id: input.id,
+            station: input.station,
+            event: ctx.event.code,
+            event_id: match.event_id,
+            match_number: match.match_number,
+            play_number: match.play_number,
+            level: match.level,
+            start_time: match.start_time,
+            publish_time: new Date(),
+            expire_time: new Date(new Date().getTime() + 1000 * 60 * 60 * 72) // 72 hours
+        }).execute();
+
+        return { id };
     }),
 
     putCycleInfo: publicProcedure.input(z.object({

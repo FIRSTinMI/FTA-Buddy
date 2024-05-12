@@ -43,65 +43,77 @@
         bind:inputValue={searchTerm}
         divClass="relative overflow-x-auto rounded-lg bg-neutral-700"
     >
-        <TableHead>
-            <TableHeadCell>Match</TableHeadCell>
-            <TableHeadCell>Play</TableHeadCell>
-            <TableHeadCell>Time</TableHeadCell>
-            <TableHeadCell>Blue 1</TableHeadCell>
-            <TableHeadCell>Blue 2</TableHeadCell>
-            <TableHeadCell>Blue 3</TableHeadCell>
-            <TableHeadCell>Red 1</TableHeadCell>
-            <TableHeadCell>Red 2</TableHeadCell>
-            <TableHeadCell>Red 3</TableHeadCell>
+        <TableHead class="text-center">
+            <TableHeadCell class="hidden md:table-cell">Match</TableHeadCell>
+            <TableHeadCell class="hidden md:table-cell">Play</TableHeadCell>
+            <TableHeadCell class="md:hidden">M/P</TableHeadCell>
+            <TableHeadCell class="hidden md:table-cell">Time</TableHeadCell>
+            <TableHeadCell class="hidden md:table-cell">Blue 1</TableHeadCell>
+            <TableHeadCell class="hidden md:table-cell">Blue 2</TableHeadCell>
+            <TableHeadCell class="hidden md:table-cell">Blue 3</TableHeadCell>
+            <TableHeadCell class="hidden md:table-cell">Red 1</TableHeadCell>
+            <TableHeadCell class="hidden md:table-cell">Red 2</TableHeadCell>
+            <TableHeadCell class="hidden md:table-cell">Red 3</TableHeadCell>
+            <TableHeadCell class="px-1 md:hidden">B1</TableHeadCell>
+            <TableHeadCell class="px-1 md:hidden">B2</TableHeadCell>
+            <TableHeadCell class="px-1 md:hidden">B3</TableHeadCell>
+            <TableHeadCell class="px-1 md:hidden">R1</TableHeadCell>
+            <TableHeadCell class="px-1 md:hidden">R2</TableHeadCell>
+            <TableHeadCell class="px-1 md:hidden">R3</TableHeadCell>
             <TableHeadCell>Logs</TableHeadCell>
         </TableHead>
         <TableBody>
             {#each filteredMatches as match}
                 <TableBodyRow class="text-center cursor-pointer">
                     <TableBodyCell
-                        class="bg-neutral-700"
+                        class="bg-neutral-700 hidden md:table-cell"
                         on:click={() => navigate(`/app/logs/${match.id}`)}
                         >{match.match_number}</TableBodyCell
                     >
                     <TableBodyCell
-                        class="bg-neutral-700"
+                        class="bg-neutral-700 hidden md:table-cell"
                         on:click={() => navigate(`/app/logs/${match.id}`)}
                         >{match.play_number}</TableBodyCell
                     >
                     <TableBodyCell
-                        class="bg-neutral-700"
+                        class="bg-neutral-700 md:hidden"
+                        on:click={() => navigate(`/app/logs/${match.id}`)}
+                        >{match.match_number}/{match.play_number}</TableBodyCell
+                    >
+                    <TableBodyCell
+                        class="bg-neutral-700 hidden md:table-cell"
                         on:click={() => navigate(`/app/logs/${match.id}`)}
                         >{formatTime(new Date(match.start_time))}</TableBodyCell
                     >
                     <TableBodyCell
-                        class="bg-blue-500 hover:bg-opacity-50 hover:underline"
+                        class="px-1 bg-blue-500 hover:bg-opacity-50 hover:underline"
                         on:click={() => navigate(`/app/logs/${match.id}/blue1`)}
-                        >{match.blue1 ?? "Test 1"}</TableBodyCell
+                        >{match.blue1 ?? "None"}</TableBodyCell
                     >
                     <TableBodyCell
-                        class="bg-blue-500 hover:bg-opacity-50 hover:underline"
+                        class="px-1 bg-blue-500 hover:bg-opacity-50 hover:underline"
                         on:click={() => navigate(`/app/logs/${match.id}/blue2`)}
-                        >{match.blue2 ?? "Test 2"}</TableBodyCell
+                        >{match.blue2 ?? "None"}</TableBodyCell
                     >
                     <TableBodyCell
-                        class="bg-blue-500 hover:bg-opacity-50 hover:underline"
+                        class="px-1 bg-blue-500 hover:bg-opacity-50 hover:underline"
                         on:click={() => navigate(`/app/logs/${match.id}/blue3`)}
-                        >{match.blue3 ?? "Test 3"}</TableBodyCell
+                        >{match.blue3 ?? "None"}</TableBodyCell
                     >
                     <TableBodyCell
-                        class="bg-red-500 hover:bg-opacity-50 hover:underline"
+                        class="px-1 bg-red-500 hover:bg-opacity-50 hover:underline"
                         on:click={() => navigate(`/app/logs/${match.id}/red1`)}
-                        >{match.red1 ?? "Test 1"}</TableBodyCell
+                        >{match.red1 ?? "None"}</TableBodyCell
                     >
                     <TableBodyCell
-                        class="bg-red-500 hover:bg-opacity-50 hover:underline"
+                        class="px-1 bg-red-500 hover:bg-opacity-50 hover:underline"
                         on:click={() => navigate(`/app/logs/${match.id}/red2`)}
-                        >{match.red2 ?? "Test 2"}</TableBodyCell
+                        >{match.red2 ?? "None"}</TableBodyCell
                     >
                     <TableBodyCell
-                        class="bg-red-500 hover:bg-opacity-50 hover:underline"
+                        class="px-1 bg-red-500 hover:bg-opacity-50 hover:underline"
                         on:click={() => navigate(`/app/logs/${match.id}/red3`)}
-                        >{match.red3 ?? "Test 3"}</TableBodyCell
+                        >{match.red3 ?? "None"}</TableBodyCell
                     >
                     <TableBodyCell
                         class="bg-neutral-700 hover:bg-opacity-50 hover:underline"

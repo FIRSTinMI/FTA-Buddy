@@ -135,6 +135,44 @@ export const matchRouter = router({
             level: match.level,
             start_time: match.start_time,
             team: match[station] ?? 0,
+            station: station,
+            log: match[`${station}_log`] as FMSLogFrame[]
+        };
+    }),
+
+    getPublicMatch: publicProcedure.input(z.object({
+            id: z.string().uuid(),
+            sharecode: z.string()
+    })).query(async ({ input, ctx }) => {
+        const share = await db.query.logPublishing.findFirst({
+            where: and(
+                eq(logPublishing.id, input.sharecode),
+                eq(logPublishing.match_id, input.id)
+            )
+        });
+
+        if (!share) throw new Error('Share not found');
+
+        let station = share.station as ROBOT;
+
+        const match = await db.query.matchLogs.findFirst({
+            where: and(
+                eq(matchLogs.id, input.id)
+            )
+        });
+
+        if (!match) throw new Error('Match not found');
+
+        return {
+            id: match.id,
+            event: match.event,
+            event_id: match.event_id,
+            match_number: match.match_number,
+            play_number: match.play_number,
+            level: match.level,
+            start_time: match.start_time,
+            team: match[station] ?? 0,
+            station: station,
             log: match[`${station}_log`] as FMSLogFrame[]
         };
     }),

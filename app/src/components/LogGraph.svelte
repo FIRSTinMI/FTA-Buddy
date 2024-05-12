@@ -75,7 +75,7 @@
                             pointRadius: 0,
                         },
                         {
-                            label: 'BWU',
+                            label: 'Bandwidth',
                             data: log.map((frame) => frame.dataRateTotal),
                             borderColor: 'rgb(75, 192, 192)',
                             backgroundColor: 'rgb(75, 192, 192)',
@@ -216,7 +216,7 @@
                             position: 'right',
                             title: {
                                 display: true,
-                                text: 'BWU (Mbps)',
+                                text: 'Bandwidth (Mbps)',
                             },
                             suggestedMax: 4.5,
                             suggestedMin: 0,

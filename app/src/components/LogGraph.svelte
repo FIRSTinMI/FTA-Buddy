@@ -7,13 +7,53 @@
 
     let graph: HTMLCanvasElement;
     let ctx: CanvasRenderingContext2D | null;
+    let CHART: Chart;
 
     Chart.register(...registerables);
+
+    const savedScaleState: {[k: string]: boolean} = {
+        y: true,
+        y1: true,
+        y2: true,
+        y3: false,
+        y4: false,
+        y5: false
+    }
+
+    function resizeChart() {
+        if (CHART?.options.scales) {
+            for (let scaleName of Object.keys(CHART.options.scales)) {
+                const scale = CHART.options.scales[scaleName];
+                if (scale) {
+                    if (scaleName === 'y') {
+                        if (window.innerWidth < 768) {
+                            if (savedScaleState[scaleName]) savedScaleState[scaleName] = scale.title.display as boolean;
+                            scale.title.display = false;
+                            CHART.options.aspectRatio = 1.2;
+                        } else {
+                            scale.title.display = savedScaleState[scaleName];
+                            CHART.options.aspectRatio = 1.8;
+                        }
+                    } else {
+                        if (window.innerWidth < 768) {
+                            if (savedScaleState[scaleName]) savedScaleState[scaleName] = scale.display as boolean;
+                            scale.display = false;
+                        } else {
+                            scale.display = savedScaleState[scaleName];
+                        }
+                    }
+                }
+            }
+            CHART.update();
+        }
+    }
+
+    window.addEventListener('resize', resizeChart);
 
     onMount(() => {
         ctx = graph.getContext('2d');
         if (ctx) {
-            const CHART = new Chart(ctx, {
+            CHART = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: log.map((frame) => frame.matchTime),
@@ -114,6 +154,7 @@
                 },
                 options: {
                     responsive: true,
+                    aspectRatio: 1,
                     interaction: {
                         mode: 'index',
                         intersect: false,
@@ -122,6 +163,7 @@
                         legend: {
                             display: true,
                             onClick: (event, legendItem) => {
+                                // @ts-ignore
                                 let y_axis_id = CHART.data.datasets[legendItem.datasetIndex as number].yAxisID;
                                 if (CHART.options.scales && y_axis_id) {
                                     let scaleAxis = CHART.options.scales[y_axis_id];
@@ -227,7 +269,8 @@
                 },
             });
         }
-    })
+        resizeChart();
+    });
 </script>
 
 <div>

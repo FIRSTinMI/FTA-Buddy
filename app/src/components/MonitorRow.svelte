@@ -146,7 +146,7 @@
                 : 0})"
         >
             <div class="h-full text-center top-0 px-0.5 aspect-square">
-                <Graph data={parsedData} min={0} max={14} time={20} />
+                <Graph data={parsedData} min={6} max={14} time={20} />
             </div>
             <div
                 class="absolute w-full bottom-0 p-2 monitor-battery {fullscreen

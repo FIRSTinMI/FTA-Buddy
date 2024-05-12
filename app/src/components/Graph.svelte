@@ -4,7 +4,7 @@
     // props
     export let data: { time: number; data: number }[];
 
-    export let min = 0;
+    export let min = 6;
     export let max = 14;
     export let time = 20;
 

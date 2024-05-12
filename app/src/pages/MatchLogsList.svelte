@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Tabs } from "flowbite-svelte";
+    import { Spinner, Tabs } from "flowbite-svelte";
     import { trpc } from "../main";
     import MatchListTab from "../components/MatchListTab.svelte";
     import type { MatchRouterOutputs } from "../../../src/router/match";
@@ -64,7 +64,7 @@
     contentClass="mt-4"
     >
         {#await matches}
-            <div>Loading...</div>
+            <Spinner class="relative mx-auto mt-10" size=12 />
         {:then matches}
             <MatchListTab matches={testMatches} open={testOpen} label="Test" />
             <MatchListTab matches={practiceMatches} open={practiceOpen} label="Practice" />

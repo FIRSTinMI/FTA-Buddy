@@ -33,19 +33,23 @@
     let auth = get(authStore);
     const publicPaths = ["/app", "/app/", "/app/login", "/app/google-signup", "/app/host", "/app/event-created"]
 
-    if (!auth.token) {
-        console.log(auth.eventToken, (window.location.pathname == "/app/" || window.location.pathname == "/app"))
-        if (!auth.eventToken && (window.location.pathname == "/app/" || window.location.pathname == "/app")) {
-            navigate("/app/login");
-        } else if (!publicPaths.includes(window.location.pathname)) {
-            navigate("/app/login");
+    function redirectForAuth(a: typeof auth) {
+        if (!a.token) {
+            console.log(window.location.pathname.startsWith('/app/logs/') && window.location.pathname.split("/")[3].length == 36)
+            if (window.location.pathname.startsWith('/app/logs/') && window.location.pathname.split("/")[3].length == 36) {
+                // Public match logs
+            } else if (!a.eventToken && (window.location.pathname == "/app/" || window.location.pathname == "/app")) {
+                navigate("/app/login");
+            } else if (!publicPaths.includes(window.location.pathname)) {
+                navigate("/app/login");
+            }
         }
     }
 
+    redirectForAuth(auth);
+
     authStore.subscribe((value) => {
-        if ((!value.token || !value.eventToken) && !publicPaths.includes(window.location.pathname)) {
-            navigate("/app/login");
-        }
+        redirectForAuth(value);
 
         if (auth.eventToken !== value.eventToken) {
             auth = value;

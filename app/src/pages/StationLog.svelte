@@ -18,17 +18,28 @@
     import type { FMSLogFrame, ROBOT } from "../../../shared/types";
     import LogGraph from "../components/LogGraph.svelte";
     import QrCode from "svelte-qrcode";
+    import { authStore } from "../stores/auth";
+    import { formatTimeNoAgo } from "../util/formatTime";
 
     export let matchid: string;
     export let station: ROBOT | string;
+    let actualStation: ROBOT;
 
     let log: FMSLogFrame[];
     let team: number;
 
-    const match = trpc.match.getStationMatch.query({ id: matchid, station: station });
+    let match;
+
+    if ($authStore.eventToken) {
+        match = trpc.match.getStationMatch.query({ id: matchid, station: station });
+    } else {
+        match = trpc.match.getPublicMatch.query({ id: matchid, sharecode: station });
+    }
+
     match.then((m) => {
         log = m.log;
         team = m.team;
+        actualStation = m.station;
     });
 
     function back() {
@@ -77,7 +88,7 @@
 
     async function share() {
         if (["blue1", "blue2", "blue3", "red1", "red2", "red3"].includes(station)) {
-            let response = await trpc.match.publishMatch.query({ id: matchid, station: station, team: team });
+            let response = await trpc.match.publishMatch.query({ id: matchid, station: station as ROBOT, team: team });
             shareid = response.id;
             shareOpen = true;
         } else {
@@ -104,20 +115,26 @@
 <div
     class="container mx-auto p-2 lg:max-w-7xl w-full flex flex-col gap-2 md:gap-4"
 >
-    <div class="flex">
-        <Button on:click={back} class="w-fit mx-1.5">Back</Button>
-        <Button on:click={share} class="w-fit mx-1.5">Share Log</Button>
-    </div>
+    {#if $authStore.eventToken}
+        <div class="flex">
+            <Button on:click={back} class="w-fit mx-1.5">Back</Button>
+            <Button on:click={share} class="w-fit mx-1.5">Share Log</Button>
+        </div>
+    {/if}
     {#await match}
-        <Spinner />
+        <Spinner class="relative mx-auto mt-10" size=12 />
     {:then match}
-        <h1 class="text-xl">
-            {match?.level === "None" ? "Test" : match?.level} Match {match?.match_number}/{match?.play_number}
-        </h1>
-        <h2 class="text-lg">
-            {(station.startsWith("blue") ? "Blue " : "Red ") +
-                station.charAt(station.length - 1)} Team {team}
-        </h2>
+        <div>
+            <h1 class="text-xl">
+                {match?.event.toUpperCase()} {match?.level === "None" ? "Test" : match?.level} Match {match?.match_number}/{match?.play_number}
+            </h1>
+            <p>{formatTimeNoAgo(new Date(match?.start_time))}</p>
+            <h2 class="text-lg">
+                {(actualStation.startsWith("blue") ? "Blue " : "Red ") +
+                    actualStation.charAt(actualStation.length - 1)} - Team #{team}
+            </h2>
+            <p class="md:hidden text-gray-600 text-sm">View on desktop for more detail</p>
+        </div>
 
         <LogGraph {log} />
 

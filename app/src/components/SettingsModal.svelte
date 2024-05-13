@@ -46,6 +46,7 @@
                 {/if}
             </div>
             <Toggle bind:checked={settings.fimSpecifics} on:change={updateSettings}>FIM Specific Info</Toggle>
+            <Toggle bind:checked={settings.inspectionAlerts} on:change={updateSettings}>🔍 Inspection Icon</Toggle>
             <div class="grid gap-2 md:col-span-2">
                 {#if installPrompt}
                     <Button

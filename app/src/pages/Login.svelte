@@ -5,6 +5,7 @@
     import { eventStore } from "../stores/event";
     import { navigate } from "svelte-routing";
     import Spinner from "../components/Spinner.svelte";
+    import type { TeamList } from "../../../shared/types";
 
     export let toast: (title: string, text: string, color?: string) => void;
 
@@ -132,7 +133,7 @@
             eventStore.set({
                 code: event.code,
                 pin: res.pin,
-                teams: res.teams as { name: string; number: string }[],
+                teams: res.teams as TeamList,
             });
             eventCode = event.code;
             eventPin = res.pin;

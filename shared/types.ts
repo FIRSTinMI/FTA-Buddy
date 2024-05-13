@@ -97,11 +97,11 @@ export const MATCH_OVER = 9;
 export const READY_FOR_POST_RESULT = 10;
 export const MATCH_NOT_READY = 11;
 
-export interface SignalRMonitorFrame { 
+export interface SignalRMonitorFrame {
     Alliance: "Red" | "Blue";
     Station: FMSEnums.StationType;
     TeamNumber: number;
-    Connection: boolean; 
+    Connection: boolean;
     LinkActive: boolean;
     DSLinkActive: boolean;
     RadioLink: boolean;
@@ -112,35 +112,35 @@ export interface SignalRMonitorFrame {
     IsEStopPressed: boolean;
     IsEStopped: boolean;
     Battery: number;
-    MonitorStatus: FMSEnums.MonitorStatusType; 
+    MonitorStatus: FMSEnums.MonitorStatusType;
     AverageTripTime: number;
     LostPackets: number;
     Signal: number;
     Noise: number;
     SNR: number;
     Inactivity: number;
-    MACAddress: string | null, 
+    MACAddress: string | null,
     TxRate: number;
     TxMCS: number;
     TxMCSBandWidth: number;
-    TxVHT: number | null, 
-    TxVHTNSS: boolean | null, 
+    TxVHT: number | null,
+    TxVHTNSS: boolean | null,
     TxPackets: number;
     RxRate: number;
     RxMCS: number;
     RxMCSBandWidth: number;
-    RxVHT: number | null, 
+    RxVHT: number | null,
     RxVHTNSS: boolean | null,
     RxPackets: number;
     DataRateTotal: number;
     DataRateToRobot: number;
     DataRateFromRobot: number;
-    BWUtilization: FMSEnums.BWUtilizationType, 
-    WPAKeyStatus: FMSEnums.WPAKeyStatusType, 
+    BWUtilization: FMSEnums.BWUtilizationType,
+    WPAKeyStatus: FMSEnums.WPAKeyStatusType,
     DriverStationIsOfficial: boolean;
-    StationStatus: FMSEnums.StationStatusType, 
+    StationStatus: FMSEnums.StationStatusType,
     Brownout: boolean;
-    EStopSource: string, 
+    EStopSource: string,
     IsAStopPressed: boolean;
     IsAStopped: boolean;
     MoveToStation: string | null;
@@ -242,3 +242,7 @@ export namespace FMSEnums {
         Unknown
     }
 }
+
+export interface TeamChecklist { present: boolean, weighed: boolean, inspected: boolean, radioProgrammed: boolean, connectionTested: boolean }
+export type EventChecklist = { [key: string]: TeamChecklist }
+export type TeamList = ({ number: string, name: string, inspected: boolean })[]

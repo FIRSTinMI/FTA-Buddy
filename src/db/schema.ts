@@ -22,6 +22,8 @@ export const events = pgTable('events', {
     teams: jsonb('teams').notNull().default('[]'),
     created_at: timestamp('created_at').notNull().defaultNow(),
     token: varchar('token').notNull().default('').unique(),
+    checklist: jsonb('checklist').notNull().default('[]'),
+    users: jsonb('users').notNull().default('[]'),
 });
 
 export const Event = typeof events.$inferInsert;

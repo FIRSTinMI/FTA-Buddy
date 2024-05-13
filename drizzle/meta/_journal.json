@@ -71,6 +71,13 @@
       "when": 1715547925523,
       "tag": "0009_red_ironclad",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1715563694748,
+      "tag": "0010_neat_siren",
+      "breakpoints": true
     }
   ]
 }

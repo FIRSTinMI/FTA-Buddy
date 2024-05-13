@@ -1,7 +1,5 @@
 <script lang="ts">
     import {
-        Table,
-        TableBody,
         TableBodyCell,
         TableBodyRow,
     } from "flowbite-svelte";
@@ -26,6 +24,7 @@
     import Graph from "./Graph.svelte";
     import type { MonitorFrameHandler } from "../util/monitorFrameHandler";
     import { processSignalStrengthForGraph } from "../util/signalStrengthProcessor";
+    import { eventStore } from "../stores/event";
 
     export let station: Station;
     export let monitorFrame: MonitorFrame;
@@ -87,19 +86,24 @@
             on:click={() => navigate("/notes/" + team.number)}
         >
             <p>{team.number}</p>
-            {#if ![MATCH_OVER, MATCH_ABORTED, READY_FOR_POST_RESULT, READY_TO_PRESTART].includes(monitorFrame.field)}
-                {#if team.ds === RED && statusChange.lastChange.getTime() + 30e3 < Date.now()}
-                    <p>👀</p>
-                {:else if team.ds === GREEN_X && statusChange.lastChange.getTime() + 30e3 < Date.now()}
-                    <p>👀</p>
-                {:else if team.radio === RED && statusChange.lastChange.getTime() + 180e3 < Date.now()}
-                    <p>👀</p>
-                {:else if team.rio === RED && statusChange.lastChange.getTime() + 45e3 < Date.now()}
-                    <p>👀</p>
-                {:else if team.code === NO_CODE && statusChange.lastChange.getTime() + 30e3 < Date.now()}
-                    <p>👀</p>
+            <p style="letter-spacing: -8px;">
+                {#if ![MATCH_OVER, MATCH_ABORTED, READY_FOR_POST_RESULT, READY_TO_PRESTART].includes(monitorFrame.field)}
+                    {#if team.ds === RED && statusChange.lastChange.getTime() + 30e3 < Date.now()}
+                        👀
+                    {:else if team.ds === GREEN_X && statusChange.lastChange.getTime() + 30e3 < Date.now()}
+                        👀
+                    {:else if team.radio === RED && statusChange.lastChange.getTime() + 180e3 < Date.now()}
+                        👀
+                    {:else if team.rio === RED && statusChange.lastChange.getTime() + 45e3 < Date.now()}
+                        👀
+                    {:else if team.code === NO_CODE && statusChange.lastChange.getTime() + 30e3 < Date.now()}
+                        👀
+                    {/if}
                 {/if}
-            {/if}
+                {#if !$eventStore.teams[team.number]?.inspected}
+                    🔍
+                {/if}
+            </p>
         </TableBodyCell>
         <TableBodyCell
             class="{DS_Colors[

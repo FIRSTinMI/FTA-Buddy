@@ -3,7 +3,7 @@ import { writable } from 'svelte/store';
 export interface Event {
     code: string;
     pin: string;
-    teams: ({ number: string, name: string })[];
+    teams: ({ number: string, name: string, inspected: boolean })[];
 }
 
 let initialEvent = localStorage.getItem('event');

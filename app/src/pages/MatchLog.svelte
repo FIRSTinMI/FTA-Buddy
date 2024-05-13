@@ -1,7 +1,8 @@
 <script lang="ts">
-    import { Button, Spinner } from "flowbite-svelte";
+    import { Button } from "flowbite-svelte";
 import { trpc } from "../main";
     import { navigate } from "svelte-routing";
+    import Spinner from "../components/Spinner.svelte";
 
     export let matchid: string;
 

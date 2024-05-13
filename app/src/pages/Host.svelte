@@ -1,17 +1,11 @@
 <script lang="ts">
-    import {
-        Button,
-        Helper,
-        Indicator,
-        Input,
-        Label,
-    } from "flowbite-svelte";
+    import { Button, Helper, Indicator, Input, Label } from "flowbite-svelte";
     import { onMount } from "svelte";
     import { authStore } from "../stores/auth";
     import { eventStore } from "../stores/event";
     import { trpc } from "../main";
     import { navigate } from "svelte-routing";
-    import { check } from "drizzle-orm/pg-core";
+    import Spinner from "../components/Spinner.svelte";
 
     export let toast: (title: string, text: string, color?: string) => void;
 
@@ -23,6 +17,7 @@
 
     window.addEventListener("message", (event) => {
         if (event.data.type === "pong") {
+            waitingForFirstConnectionTest = false;
             extensionDetected = true;
             extensionVersion = "v" + event.data.version;
             extensionEnabled = event.data.enabled;
@@ -41,12 +36,21 @@
         window.postMessage({ source: "page", type: "ping" }, "*");
         await new Promise((resolve) => setTimeout(resolve, 3000));
         if (!extensionDetected || !extensionEnabled || !signalREnabled || !fmsDetected) {
+            waitingForFirstConnectionTest = false;
             checkConnection();
         }
     }
 
+    let waitingForFirstConnectionTest = true;
+
     onMount(() => {
-        setTimeout(checkConnection, 500);
+        window.postMessage({ source: "page", type: "ping" }, "*");
+        setTimeout(() => {
+            if (!extensionDetected) window.postMessage({ source: "page", type: "ping" }, "*");
+        }, 500);
+        setTimeout(() => {
+            checkConnection();
+        }, 1000);
     });
 
     let eventCode = "";
@@ -81,7 +85,7 @@
 
             await new Promise((resolve) => setTimeout(resolve, 500));
 
-            navigate('/app/event-created');
+            navigate("/app/event-created");
         } catch (err: any) {
             toast("Error Creating Event", err.message);
             console.error(err);
@@ -117,44 +121,30 @@
         }
     }
 
-    $: blockSubmit = !(
-        eventCode.length > 6 &&
-        eventPin.length >= 4 &&
-        !loading &&
-        fmsDetected &&
-        extensionDetected &&
-        extensionEnabled &&
-        !eventCodeError
-    );
+    $: blockSubmit = !(eventCode.length > 6 && eventPin.length >= 4 && !loading && fmsDetected && extensionDetected && extensionEnabled && !eventCodeError);
 </script>
 
-<div
-    class="container mx-auto md:max-w-4xl flex flex-col justify-center p-4 h-full space-y-4"
->
+{#if waitingForFirstConnectionTest}
+    <Spinner />
+{/if}
+
+<div class="container mx-auto md:max-w-4xl flex flex-col justify-center p-4 h-full space-y-4 {waitingForFirstConnectionTest ? 'blur' : ''}">
     <h1 class="text-3xl font-bold">Host a FTA Buddy Instance</h1>
     <span class="inline-flex gap-2 font-bold mx-auto">
         {#if extensionDetected}
             {#if extensionEnabled}
                 <Indicator color="green" class="my-auto" />
-                <span class="text-green text-green-500"
-                    >Extension Enabled ({extensionVersion})</span
-                >
+                <span class="text-green text-green-500">Extension Enabled ({extensionVersion})</span>
             {:else}
                 <Indicator color="yellow" class="my-auto" />
                 <span class="text-yellow-300">Extension Not Enabled</span>
-                <button
-                    class="text-blue-400 hover:underline"
-                    on:click={() => window.postMessage({ source: "page", type: "enable" }, "*")}
-                    >Enable</button
-                >
+                <button class="text-blue-400 hover:underline" on:click={() => window.postMessage({ source: "page", type: "enable" }, "*")}>Enable</button>
             {/if}
         {:else}
             <Indicator color="red" class="my-auto" />
             <span class="text-red-500">Extension Not Detected</span>
-            <a
-                href="https://chromewebstore.google.com/detail/fta-buddy/kddnhihfpfnehnnhbkfajdldlgigohjc"
-                class="text-blue-400 hover:underline"
-                target="_blank">Install</a
+            <a href="https://chromewebstore.google.com/detail/fta-buddy/kddnhihfpfnehnnhbkfajdldlgigohjc" class="text-blue-400 hover:underline" target="_blank"
+                >Install</a
             >
         {/if}
     </span>
@@ -167,13 +157,9 @@
         {/if}
     </span>
     <p class="text-lg">
-        In order to work, FTA Buddy needs a host to send data to it from FMS.
-        The extension must be installed and be able to communicate with FMS at <code
-            class="bg-neutral-900 px-2 py-.75 rounded-xl">10.0.100.5</code
-        >
-        You can use FTA Buddy as your primary field monitor by enabling the SignalR
-        option, or use the FTA Buddy extension with the regular FMS field monitor
-        and scraping from the tab.
+        FTA Buddy needs a host to send data to it from FMS. The extension must be installed and be able to communicate with FMS at
+        <code class="bg-neutral-900 px-2 py-.75 rounded-xl">10.0.100.5</code>
+        You can use FTA Buddy as your primary field monitor by enabling the SignalR option, or use the FTA Buddy extension with the regular FMS field monitor.
     </p>
     <form class="grid gap-3 text-left" on:submit={createEvent}>
         <div>
@@ -190,12 +176,7 @@
         </div>
         <div>
             <Label for="event-pin" disabled={loading}>Event Pin</Label>
-            <Input
-                id="event-pin"
-                bind:value={eventPin}
-                disabled={loading}
-                class="mt-1"
-            />
+            <Input id="event-pin" bind:value={eventPin} disabled={loading} class="mt-1" />
         </div>
         <Button type="submit" bind:disabled={blockSubmit}>Create Event</Button>
     </form>

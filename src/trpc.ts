@@ -33,7 +33,6 @@ export const protectedProcedure = t.procedure.use(async (opts) => {
 
 export const eventProcedure = t.procedure.use(async (opts) => {
     const { ctx } = opts;
-    console.log(ctx.headers);
     if (!ctx.eventToken) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Missing Event Token Header' });
 
     const event = await db.query.events.findFirst({ where: eq(events.token, ctx.eventToken) });

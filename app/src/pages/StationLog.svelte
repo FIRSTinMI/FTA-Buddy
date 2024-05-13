@@ -4,7 +4,6 @@
         Label,
         Modal,
         MultiSelect,
-        Spinner,
         Table,
         TableBody,
         TableBodyCell,
@@ -20,6 +19,7 @@
     import QrCode from "svelte-qrcode";
     import { authStore } from "../stores/auth";
     import { formatTimeNoAgo } from "../util/formatTime";
+    import Spinner from "../components/Spinner.svelte";
 
     export let matchid: string;
     export let station: ROBOT | string;
@@ -122,7 +122,7 @@
         </div>
     {/if}
     {#await match}
-        <Spinner class="relative mx-auto mt-10" size=12 />
+        <Spinner size=12 />
     {:then match}
         <div>
             <h1 class="text-xl">

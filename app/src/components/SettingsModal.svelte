@@ -1,8 +1,8 @@
 <script lang="ts">
-    import { Button, Modal, Spinner, Toggle } from "flowbite-svelte";
+    import { Button, Modal, Toggle } from "flowbite-svelte";
     import { get } from "svelte/store";
     import { settingsStore } from "../stores/settings";
-    import { check } from "drizzle-orm/mysql-core";
+    import Spinner from "./Spinner.svelte";
 
     export let settingsOpen = false;
 
@@ -22,9 +22,7 @@
 </script>
 
 {#if loading}
-    <div class="fixed w-full h-full z-50 justify-center translate-y-1/2">
-        <Spinner color="white" class="my-auto" />
-    </div>
+    <Spinner />
 {/if}
 
 <Modal bind:open={settingsOpen} size="lg" outsideclose dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">

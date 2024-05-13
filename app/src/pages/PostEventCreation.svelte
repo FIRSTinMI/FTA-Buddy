@@ -87,13 +87,9 @@
         {/if}
     </span>
     <p class="text-lg">
-        In order to work, FTA Buddy needs a host to send data to it from FMS.
-        The extension must be installed and be able to communicate with FMS at <code
-            class="bg-neutral-900 px-2 py-.5 rounded-xl">10.0.100.5</code
-        >
-        You can use FTA Buddy as your primary field monitor by enabling the SignalR
-        option, or use the FTA Buddy extension with the regular FMS field monitor
-        and scraping from the tab.
+        FTA Buddy needs a host to send data to it from FMS. The extension must be installed and be able to communicate with FMS at
+        <code class="bg-neutral-900 px-2 py-.75 rounded-xl">10.0.100.5</code>
+        You can use FTA Buddy as your primary field monitor by enabling the SignalR option, or use the FTA Buddy extension with the regular FMS field monitor.
     </p>
     <div class="grid md:grid-cols-2 border-t border-neutral-500 pt-5 gap-4">
         <div class="col-span-2 border-b border-neutral-500 pb-5">

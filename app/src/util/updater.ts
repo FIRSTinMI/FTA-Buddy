@@ -13,6 +13,8 @@ export const VERSIONS: { [key: string]: Version } = {
         <ul>
         <li>New event creation flow</li>
         <li>Added match logs</li>
+        <li>Synced radio/inspection checklist</li>
+        <li>🔍 when an uninspected team is in a match</li>
         <li>Direct SignalR connection</li>
         <li>Use FTA Buddy as your primary monitor</li>
         <li>Automatic extension configuration</li>

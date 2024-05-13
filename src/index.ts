@@ -12,8 +12,9 @@ import { events } from './db/schema';
 import { readFileSync, readdirSync } from 'fs';
 import { DEFAULT_MONITOR } from '../shared/constants';
 import { detectStatusChange } from './stateChange';
-import { matchRouter } from './router/match';
+import { matchRouter } from './router/logs';
 import { StatusChanges } from '../shared/types';
+import { checklistRouter } from './router/checklist';
 const { app, getWss, applyTo } = expressWs(express());
 
 const port = process.env.PORT || 3002;
@@ -21,10 +22,11 @@ const port = process.env.PORT || 3002;
 const appRouter = router({
     user: userRouter,
     event: eventRouter,
-    match: matchRouter
+    match: matchRouter,
+    checklist: checklistRouter
 });
 
-const eventList: { [key: string]: { socketServer?: any, socketClients: any[], monitor: any, teams: any[], token: string, statusChanges: StatusChanges } } = {};
+export const eventList: { [key: string]: { socketServer?: any, socketClients: any[], monitor: any, teams: any[], token: string, statusChanges: StatusChanges } } = {};
 
 export type AppRouter = typeof appRouter;
 

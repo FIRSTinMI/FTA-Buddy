@@ -4,7 +4,7 @@
     import { onMount } from "svelte";
     import { Link, Route, Router, navigate } from "svelte-routing";
     import { get } from "svelte/store";
-    import { type MonitorFrame, type StatusChanges, ROBOT, ESTOP, ASTOP, BYPASS } from "../../shared/types";
+    import { type MonitorFrame, type StatusChanges, ROBOT, ESTOP, ASTOP, BYPASS, type EventChecklist } from "../../shared/types";
     import SettingsModal from "./components/SettingsModal.svelte";
     import WelcomeModal from "./components/WelcomeModal.svelte";
     import Flashcard from "./pages/Flashcards.svelte";
@@ -16,7 +16,7 @@
     import { messagesStore } from "./stores/messages";
     import { settingsStore } from "./stores/settings";
     import { VERSIONS, update } from "./util/updater";
-    import { server } from "./main";
+    import { server, trpc } from "./main";
     import { sineIn } from "svelte/easing";
     import CompleteGoogleSignup from "./pages/CompleteGoogleSignup.svelte";
     import { eventStore } from "./stores/event";
@@ -27,6 +27,7 @@
     import MatchLog from "./pages/MatchLog.svelte";
     import StationLog from "./pages/StationLog.svelte";
     import MatchLogsList from "./pages/MatchLogsList.svelte";
+    import Checklist from "./pages/Checklist.svelte";
 
     // Checking authentication
 
@@ -313,6 +314,8 @@
                     lastMessageTime = new Date();
                     messageCount++;
                     if (messagesChild) messagesChild.newMessage(data);
+                } else if (data.type === "checklist") {
+                    checklist = data.checklist;
                 }
             } catch (e) {
                 console.error(e);
@@ -377,6 +380,29 @@
         if (window.outerWidth > 1900)
             fullscreen = window.innerHeight === 1080;
     }, 200);
+
+    function updateInspectionList(c: EventChecklist) {
+        try {
+            if (event.teams) {
+                for (let teams of event.teams) {
+                    teams.inspected = c[teams.number].inspected && c[teams.number].weighed;
+                }
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    if (auth.eventToken) {
+        trpc.checklist.get.query().then((c) => {
+            checklist = c;
+            updateInspectionList(checklist);
+        });
+    }
+
+    $: updateInspectionList(checklist);
+
+    let checklist: EventChecklist;
 </script>
 
 {#if showToast}
@@ -485,6 +511,17 @@
                     >
                         <svelte:fragment slot="icon">
                             <Icon icon="mdi:archive" class="w-8 h-8" />
+                        </svelte:fragment>
+                    </SidebarItem>
+                    <SidebarItem
+                        label="Checklist"
+                        on:click={() => {
+                            hideMenu = true;
+                            navigate("/app/checklist");
+                        }}
+                    >
+                        <svelte:fragment slot="icon">
+                            <Icon icon="mdi:clipboard-outline" class="w-8 h-8" />
                         </svelte:fragment>
                     </SidebarItem>
                 </SidebarGroup>
@@ -597,6 +634,9 @@
                 </Route>
                 <Route path="/logs/:matchid" component={MatchLog} />
                 <Route path="/logs/:matchid/:station" component={StationLog} />
+                <Route path="/checklist">
+                    <Checklist bind:checklist />
+                </Route>
             </div>
             <Route path="/login">
                 <Login {toast} />

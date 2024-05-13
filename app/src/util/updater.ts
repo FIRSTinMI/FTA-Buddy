@@ -6,6 +6,23 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+    '2.5.0': {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.5.0</h1>
+        <p class="my-2 font-bold">Yay! Big update</p>
+        <ul>
+        <li>New event creation flow</li>
+        <li>Added match logs</li>
+        <li>Direct SignalR connection</li>
+        <li>Use FTA Buddy as your primary monitor</li>
+        <li>Automatic extension configuration</li>
+        <li>New vivid hosting radio in references</li>
+        <li>Maybe IOS will let you install this as an app now lol</li>
+        <li>FIM specific packing instructions</li>
+        <li>Share button in match log will generate QR code to share that station's log with the team</li>
+        </ul>`,
+        update: () => { }
+    },
     '2.4.5': {
         changelog: `
         <h1 class="text-lg font-bold">v2.4.5</h1>

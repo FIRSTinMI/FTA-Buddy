@@ -1,8 +1,9 @@
 <script lang="ts">
-    import { Spinner, Label, Input, Select, Button } from "flowbite-svelte";
+    import { Label, Input, Select, Button } from "flowbite-svelte";
     import { get } from "svelte/store";
     import { trpc } from "../main";
     import { authStore } from "../stores/auth";
+    import Spinner from "../components/Spinner.svelte";
     
     export let toast: (title: string, text: string, color?: string) => void;
 
@@ -53,9 +54,7 @@
 </script>
 
 {#if loading}
-    <div class="fixed w-full h-full z-50 justify-center translate-y-1/2">
-        <Spinner color="white" class="my-auto" />
-    </div>
+    <Spinner />
 {/if}
 
 <div

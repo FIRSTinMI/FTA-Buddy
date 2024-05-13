@@ -22,6 +22,7 @@ const appExtensionData = chrome.runtime.getManifest();
         if (evt.data.source !== 'page') return;
 
         if (evt.data.type === "ping") {
+            const fms = await pingFMS();
             window.postMessage({
                 source: 'ext',
                 version: appExtensionData.version,
@@ -30,7 +31,7 @@ const appExtensionData = chrome.runtime.getManifest();
                 eventCode,
                 enabled,
                 signalR,
-                fms: await pingFMS()
+                fms: fms.fms
             });
         } else if (evt.data.type === "enable") {
             enabled = true;

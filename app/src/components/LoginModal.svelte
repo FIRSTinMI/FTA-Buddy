@@ -1,7 +1,8 @@
 <script lang="ts">
-    import { Button, Input, Modal, Spinner } from "flowbite-svelte";
+    import { Button, Input, Modal } from "flowbite-svelte";
     import { get } from "svelte/store";
     import { userStore } from "../stores/user";
+    import Spinner from "./Spinner.svelte";
 
     export let loginOpen = false;
     let user = get(userStore);
@@ -89,7 +90,7 @@
 
 {#if loading}
     <div class="fixed w-full h-full z-50 justify-center translate-y-1/2">
-        <Spinner color="white" class="my-auto" />
+        <Spinner />
     </div>
 {/if}
 

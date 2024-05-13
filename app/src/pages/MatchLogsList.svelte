@@ -1,8 +1,9 @@
 <script lang="ts">
-    import { Spinner, Tabs } from "flowbite-svelte";
+    import { Tabs } from "flowbite-svelte";
     import { trpc } from "../main";
     import MatchListTab from "../components/MatchListTab.svelte";
     import type { MatchRouterOutputs } from "../../../src/router/match";
+    import Spinner from "../components/Spinner.svelte";
 
     export let toast: (title: string, text: string, color?: string) => void;
 
@@ -64,7 +65,7 @@
     contentClass="mt-4"
     >
         {#await matches}
-            <Spinner class="relative mx-auto mt-10" size=12 />
+            <Spinner />
         {:then matches}
             <MatchListTab matches={testMatches} open={testOpen} label="Test" />
             <MatchListTab matches={practiceMatches} open={practiceOpen} label="Practice" />

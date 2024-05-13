@@ -1,3 +1,6 @@
+import { get } from "svelte/store";
+import { authStore } from "../stores/auth";
+import { eventStore } from "../stores/event";
 import { settingsStore } from "../stores/settings";
 
 interface Version {
@@ -23,7 +26,10 @@ export const VERSIONS: { [key: string]: Version } = {
         <li>FIM specific packing instructions</li>
         <li>Share button in match log will generate QR code to share that station's log with the team</li>
         </ul>`,
-        update: () => { }
+        update: () => {
+            eventStore.set({ code: "", pin: "", teams: [] });
+            authStore.set({ ...get(authStore), eventToken: "" });
+        }
     },
     '2.4.5': {
         changelog: `

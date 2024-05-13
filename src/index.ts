@@ -15,6 +15,7 @@ import { detectStatusChange } from './stateChange';
 import { matchRouter } from './router/logs';
 import { StatusChanges } from '../shared/types';
 import { checklistRouter } from './router/checklist';
+import { processFrameForTeamData } from './frameProcessing';
 const { app, getWss, applyTo } = expressWs(express());
 
 const port = process.env.PORT || 3002;
@@ -75,6 +76,7 @@ app.ws('/ws/', (ws, req) => {
                 } else {
                     const frame = JSON.parse(msg);
                     eventList[eventCode].statusChanges = detectStatusChange(eventList[eventCode].statusChanges, frame, eventList[eventCode].monitor);
+                    processFrameForTeamData(eventCode, frame, eventList[eventCode].statusChanges);
                     for (let socketClient of eventList[eventCode].socketClients) {
                         if (socketClient)
                             socketClient.send(JSON.stringify({

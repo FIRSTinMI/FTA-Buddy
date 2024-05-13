@@ -35,8 +35,18 @@
     }
     $: updateTotals(checklist);
 
-    async function updateChecklist(team: string, key: "present" | "weighed" | "inspected" | "radioProgrammed" | "connectionTested", value: boolean) {
-        trpc.checklist.update.query({ team: team, key, value });
+    async function updateChecklist(team: string, key: "present" | "inspected" | "radioProgrammed" | "connectionTested", value: boolean) {
+        const updated = [{ team: team, key, value }];
+
+        if (["inspected", "radioProgrammed", "connectionTested"].includes(key) && value) {
+            updated.push({ team: team, key: "present", value: true });
+        }
+
+        if (key === "connectionTested" && value) {
+            updated.push({ team: team, key: "radioProgrammed", value: true });
+        }
+
+        void trpc.checklist.update.query(updated);
     }
 </script>
 
@@ -44,12 +54,10 @@
     {#await checklist}
         <Spinner />
     {:then checklist}
-        <div class="flex w-full justify-start">
+        <div class="flex w-full justify-center">
             <div class="grid gap-2 w-fit grid-cols-2">
                 <div class="text-right">Present</div>
                 <div class="text-left">{present}/{total}{#if present === total} 🎉{/if}</div>
-                <div class="text-right">Weighed</div>
-                <div class="text-left">{weighed}/{total}{#if weighed === total} 🎉{/if}</div>
                 <div class="text-right">Inspected</div>
                 <div class="text-left">{inspected}/{total}{#if inspected === total} 🎉{/if}</div>
                 <div class="text-right">Radio Programmed</div>
@@ -60,12 +68,11 @@
         </div>
         <Table class="text-center">
             <TableHead>
-                <TableHeadCell>Team</TableHeadCell>
-                <TableHeadCell>Present</TableHeadCell>
-                <TableHeadCell>Weighed</TableHeadCell>
-                <TableHeadCell>Inspected</TableHeadCell>
-                <TableHeadCell>Radio Programmed</TableHeadCell>
-                <TableHeadCell>Connection</TableHeadCell>
+                <TableHeadCell class="p-1 md:p-2">Team</TableHeadCell>
+                <TableHeadCell class="p-1 md:p-2">Present</TableHeadCell>
+                <TableHeadCell class="p-1 md:p-2">Inspected</TableHeadCell>
+                <TableHeadCell class="p-1 md:p-2">Radio</TableHeadCell>
+                <TableHeadCell class="p-1 md:p-2">Connection</TableHeadCell>
             </TableHead>
             <TableBody>
                 {#each Object.entries(checklist) as [team, items]}
@@ -76,13 +83,6 @@
                                 class="justify-center"
                                 bind:checked={items.present}
                                 on:change={() => updateChecklist(team, "present", items.present)}
-                            /></TableBodyCell
-                        >
-                        <TableBodyCell
-                            ><Checkbox
-                                class="justify-center"
-                                bind:checked={items.weighed}
-                                on:change={() => updateChecklist(team, "weighed", items.weighed)}
                             /></TableBodyCell
                         >
                         <TableBodyCell

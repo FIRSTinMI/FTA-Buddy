@@ -11,13 +11,15 @@ export const checklistRouter = router({
         return ctx.event.checklist as EventChecklist;
     }),
 
-    update: eventProcedure.input(z.object({
+    update: eventProcedure.input(z.array(z.object({
         team: z.string(),
         key: z.enum(['present', 'weighed', 'inspected', 'radioProgrammed', 'connectionTested']),
         value: z.boolean()
-    })).query(async ({ input, ctx }) => {
+    }))).query(async ({ input, ctx }) => {
         const checklist = ctx.event.checklist as EventChecklist;
-        checklist[input.team][input.key] = input.value;
+        for (const i of input) {
+            checklist[i.team][i.key] = i.value;
+        }
 
         await db.update(events).set({ checklist }).where(eq(events.code, ctx.event.code));
 

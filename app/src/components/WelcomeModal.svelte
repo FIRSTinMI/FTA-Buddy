@@ -94,7 +94,7 @@
         {:else if step === 4}
             <h2 class="font-bold">Documentation</h2>
             <p>
-                More information about the app and the API can be found on the <a href="https://docs.ftabuddy.com/" target="_blank">docs site</a>.
+                More information about the app and the API can be found on the <a href="https://docs.ftabuddy.com/" target="_blank" class="underline text-blue-500">docs</a> site.
             </p>
             <h2 class="font-bold">Setup</h2>
             <p>
@@ -102,7 +102,7 @@
             </p>
             <h2 class="font-bold">Feedback</h2>
             <p>
-                If you have any feedback or feature requests, please let me know on the <a href="https://github.com/Filip-Kin/FTA-Buddy/issues">GitHub</a> page.
+                If you have any feedback or feature requests, please let me know on the <a href="https://github.com/Filip-Kin/FTA-Buddy/issues" class="underline text-blue-500">GitHub</a> page.
             </p>
             <Button color="primary" class="w-full" on:click={openChangelog}>Changelog</Button>
             <Button color="primary" class="w-full" on:click={closeModal}>Close</Button>

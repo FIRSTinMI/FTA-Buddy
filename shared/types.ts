@@ -1,7 +1,6 @@
-import WebSocket from "ws";
+import { EventEmitter } from "events";
 
 export interface MonitorFrame {
-    type: 'monitorUpdate' | 'message';
     field: FieldState;
     match: number;
     time: string;
@@ -13,16 +12,27 @@ export interface MonitorFrame {
     red1: TeamInfo;
     red2: TeamInfo;
     red3: TeamInfo;
-    statusChanges: StatusChanges;
-    lastCycleTime?: string;
+    lastCycleTime: string;
+}
+
+type PartialBy<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>> & Partial<Pick<T, K>>;
+
+export interface PartialMonitorFrame extends Omit<MonitorFrame, 'blue1' | 'blue2' | 'blue3' | 'red1' | 'red2' | 'red3'> {
+    blue1: PartialBy<TeamInfo, 'lastChange' | 'improved'>;
+    blue2: PartialBy<TeamInfo, 'lastChange' | 'improved'>;
+    blue3: PartialBy<TeamInfo, 'lastChange' | 'improved'>;
+    red1: PartialBy<TeamInfo, 'lastChange' | 'improved'>;
+    red2: PartialBy<TeamInfo, 'lastChange' | 'improved'>;
+    red3: PartialBy<TeamInfo, 'lastChange' | 'improved'>;
 }
 
 export interface TeamInfo {
     number: number;
     ds: DSState;
-    radio: RadioState;
-    rio: RioState;
-    code: CodeState;
+    radio: boolean;
+    rio: boolean;
+    code: boolean;
+    enabled: EnableState;
     bwu: number;
     battery: number;
     ping: number;
@@ -35,25 +45,9 @@ export interface TeamInfo {
     SNR: number | null;
     noise: number | null;
     signal: number | null;
-    versionmm: 0 | 1;
-}
-
-export interface Event {
-    teams: number[];
-    monitor: MonitorFrame;
-    ip?: string;
-    socketClients: WebSocket[];
-    socketServer?: WebSocket;
-}
-
-export interface Message {
-    id: number;
-    profile: number;
-    event: string;
-    team: number;
-    message: string;
-    created: Date;
-    username: string;
+    versionmm: boolean;
+    lastChange: Date | null;
+    improved: boolean;
 }
 
 export enum ROBOT {
@@ -65,37 +59,79 @@ export enum ROBOT {
     red3 = 'red3'
 }
 
-export type StatusChanges = { [key in ROBOT]: { lastChange: Date, improved: boolean } };
+export enum FieldState {
+    UNKNOWN,
+    MATCH_RUNNING_TELEOP,
+    MATCH_TRANSITIONING,
+    MATCH_RUNNING_AUTO,
+    MATCH_READY,
+    PRESTART_COMPLETED,
+    PRESTART_INITIATED,
+    READY_TO_PRESTART,
+    MATCH_ABORTED,
+    MATCH_OVER,
+    READY_FOR_POST_RESULT,
+    MATCH_NOT_READY
+}
 
-export type Station = ROBOT;
-export type FieldState = typeof UNKNOWN | typeof MATCH_RUNNING_TELEOP | typeof MATCH_TRANSITIONING | typeof MATCH_RUNNING_AUTO | typeof MATCH_READY | typeof PRESTART_COMPLETED | typeof PRESTART_INITIATED | typeof READY_TO_PRESTART | typeof MATCH_ABORTED | typeof MATCH_OVER | typeof READY_FOR_POST_RESULT | typeof MATCH_NOT_READY;
-export type DSState = typeof RED | typeof GREEN | typeof GREEN_X | typeof MOVE_STATION | typeof WRONG_MATCH | typeof BYPASS | typeof ESTOP | typeof ASTOP;
-export type CodeState = typeof NO_CODE | typeof CODE;
-export type RadioState = typeof RED | typeof GREEN;
-export type RioState = typeof RED | typeof GREEN | typeof GREEN_X;
+export enum MatchState {
+    RUNNING,
+    OVER,
+    PRESTART
+}
 
-export const RED = 0;
-export const GREEN = 1;
-export const GREEN_X = 2;
-export const MOVE_STATION = 3;
-export const WRONG_MATCH = 4;
-export const BYPASS = 5;
-export const ESTOP = 6;
-export const ASTOP = 7;
-export const NO_CODE = 0;
-export const CODE = 1;
-export const UNKNOWN = 0;
-export const MATCH_RUNNING_TELEOP = 1;
-export const MATCH_TRANSITIONING = 2;
-export const MATCH_RUNNING_AUTO = 3;
-export const MATCH_READY = 4;
-export const PRESTART_COMPLETED = 5;
-export const PRESTART_INITIATED = 6;
-export const READY_TO_PRESTART = 7;
-export const MATCH_ABORTED = 8;
-export const MATCH_OVER = 9;
-export const READY_FOR_POST_RESULT = 10;
-export const MATCH_NOT_READY = 11;
+export const MatchStateMap: { [key in FieldState]: MatchState } = {
+    [FieldState.MATCH_RUNNING_TELEOP]: MatchState.RUNNING,
+    [FieldState.MATCH_TRANSITIONING]: MatchState.RUNNING,
+    [FieldState.MATCH_RUNNING_AUTO]: MatchState.RUNNING,
+    [FieldState.MATCH_READY]: MatchState.RUNNING,
+    [FieldState.PRESTART_COMPLETED]: MatchState.PRESTART,
+    [FieldState.PRESTART_INITIATED]: MatchState.PRESTART,
+    [FieldState.READY_TO_PRESTART]: MatchState.PRESTART,
+    [FieldState.MATCH_ABORTED]: MatchState.OVER,
+    [FieldState.MATCH_OVER]: MatchState.OVER,
+    [FieldState.READY_FOR_POST_RESULT]: MatchState.OVER,
+    [FieldState.MATCH_NOT_READY]: MatchState.PRESTART,
+    [FieldState.UNKNOWN]: MatchState.PRESTART
+};
+
+
+export enum DSState {
+    RED,
+    GREEN,
+    GREEN_X,
+    MOVE_STATION,
+    WAITING,
+    BYPASS,
+    ESTOP,
+    ASTOP
+}
+
+export enum EnableState {
+    RED,
+    RED_A,
+    RED_T,
+    GREEN_A,
+    GREEN_T,
+    ESTOP,
+    ASTOP
+}
+
+export type MonitoredRobotParts = Omit<keyof TeamInfo, 'number' | 'bwu' | 'battery' | 'ping' | 'packets' | 'MAC' | 'RX' | 'RXMCS' | 'TX' | 'TXMCS' | 'SNR' | 'noise' | 'signal' | 'versionmm'>;
+
+export enum StateChangeType {
+    FallingEdge,
+    RisingEdge,
+}
+
+export interface StateChange {
+    station: ROBOT,
+    robot: TeamInfo,
+    key: MonitoredRobotParts,
+    oldValue: boolean | DSState | EnableState,
+    newValue: boolean | DSState | EnableState;
+    type: StateChangeType;
+}
 
 export interface SignalRMonitorFrame {
     Alliance: "Red" | "Blue";
@@ -246,3 +282,23 @@ export namespace FMSEnums {
 export interface TeamChecklist { present: boolean, weighed: boolean, inspected: boolean, radioProgrammed: boolean, connectionTested: boolean }
 export type EventChecklist = { [key: string]: TeamChecklist }
 export type TeamList = ({ number: string, name: string, inspected: boolean })[]
+
+export interface ServerEvent {
+    code: string,
+    token: string,
+    fieldMonitorEmitter: EventEmitter,
+    robotStateChangeEmitter: EventEmitter,
+    fieldStatusEmitter: EventEmitter,
+    checklistEmitter: EventEmitter,
+    ticketEmitter: EventEmitter,
+    teams: TeamList,
+    checklist: EventChecklist,
+    users: string[],
+    monitorFrame: MonitorFrame,
+    history: MonitorFrame[],
+    lastPrestartDone: Date | null,
+    lastMatchStart: Date | null,
+    lastMatchEnd: Date | null,
+    lastMatchRefDone: Date | null,
+    lastMatchScoresPosted: Date | null;
+}

@@ -1,44 +1,18 @@
-import { MonitorFrame } from "./types";
+import { EnableState, MonitorFrame } from "./types";
 
 export const DEFAULT_MONITOR: MonitorFrame = {
-    type: 'monitorUpdate',
     field: 0,
     match: 0,
     version: '0.0.0',
     frameTime: 0,
-    statusChanges: {
-        blue1: {
-            lastChange: new Date(),
-            improved: true,
-        },
-        blue2: {
-            lastChange: new Date(),
-            improved: true,
-        },
-        blue3: {
-            lastChange: new Date(),
-            improved: true,
-        },
-        red1: {
-            lastChange: new Date(),
-            improved: true,
-        },
-        red2: {
-            lastChange: new Date(),
-            improved: true,
-        },
-        red3: {
-            lastChange: new Date(),
-            improved: true,
-        }
-    },
     time: 'unk',
+    lastCycleTime: 'unk',
     blue1: {
         number: 9999,
         ds: 0,
-        radio: 0,
-        rio: 0,
-        code: 0,
+        radio: false,
+        rio: false,
+        code: false,
         bwu: 0,
         battery: 0,
         ping: 0,
@@ -51,14 +25,15 @@ export const DEFAULT_MONITOR: MonitorFrame = {
         SNR: 0,
         noise: 0,
         signal: 0,
-        versionmm: 0,
+        versionmm: false,
+        enabled: EnableState.RED
     },
     blue2: {
         number: 9998,
         ds: 2,
-        radio: 0,
-        rio: 0,
-        code: 0,
+        radio: false,
+        rio: false,
+        code: false,
         bwu: 0,
         battery: 0,
         ping: 0,
@@ -71,14 +46,15 @@ export const DEFAULT_MONITOR: MonitorFrame = {
         SNR: 0,
         noise: 0,
         signal: 0,
-        versionmm: 0,
+        versionmm: false,
+        enabled: EnableState.RED
     },
     blue3: {
         number: 9997,
         ds: 4,
-        radio: 0,
-        rio: 0,
-        code: 0,
+        radio: false,
+        rio: false,
+        code: false,
         bwu: 0,
         battery: 0,
         ping: 0,
@@ -91,14 +67,15 @@ export const DEFAULT_MONITOR: MonitorFrame = {
         SNR: 0,
         noise: 0,
         signal: 0,
-        versionmm: 0,
+        versionmm: false,
+        enabled: EnableState.RED
     },
     red1: {
         number: 9996,
         ds: 1,
-        radio: 1,
-        rio: 0,
-        code: 0,
+        radio: true,
+        rio: false,
+        code: false,
         bwu: 0,
         battery: 0,
         ping: 0,
@@ -111,14 +88,15 @@ export const DEFAULT_MONITOR: MonitorFrame = {
         SNR: 0,
         noise: 0,
         signal: 0,
-        versionmm: 0,
+        versionmm: false,
+        enabled: EnableState.RED
     },
     red2: {
         number: 9995,
         ds: 1,
-        radio: 1,
-        rio: 1,
-        code: 0,
+        radio: true,
+        rio: true,
+        code: false,
         bwu: 0,
         battery: 0,
         ping: 0,
@@ -131,14 +109,15 @@ export const DEFAULT_MONITOR: MonitorFrame = {
         SNR: 0,
         noise: 0,
         signal: 0,
-        versionmm: 0,
+        versionmm: false,
+        enabled: EnableState.RED
     },
     red3: {
         number: 9994,
         ds: 1,
-        radio: 1,
-        rio: 1,
-        code: 1,
+        radio: true,
+        rio: true,
+        code: true,
         bwu: 0.5,
         battery: 12.5,
         ping: 10,
@@ -151,6 +130,7 @@ export const DEFAULT_MONITOR: MonitorFrame = {
         SNR: 0,
         noise: 0,
         signal: 0,
-        versionmm: 0,
+        versionmm: false,
+        enabled: EnableState.RED
     }
 };

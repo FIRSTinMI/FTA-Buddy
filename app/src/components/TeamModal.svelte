@@ -1,23 +1,12 @@
 <script lang="ts">
     import { Button, Modal, Table, TableBody, TableHead, TableHeadCell } from "flowbite-svelte";
     import {
-        RED,
+    DSState,
+    MatchState,
+    MatchStateMap,
+    ROBOT,
         type MonitorFrame,
         type TeamInfo,
-        GREEN_X,
-        MOVE_STATION,
-        WRONG_MATCH,
-        BYPASS,
-        ESTOP,
-        type Station,
-        PRESTART_COMPLETED,
-        MATCH_NOT_READY,
-        READY_TO_PRESTART,
-        MATCH_ABORTED,
-        MATCH_OVER,
-        PRESTART_INITIATED,
-        ASTOP,
-        type StatusChanges,
     } from "../../../shared/types";
     import MonitorRow from "./MonitorRow.svelte";
     import { navigate } from "svelte-routing";
@@ -25,25 +14,22 @@
     import type { MonitorFrameHandler } from "../util/monitorFrameHandler";
 
     export let modalOpen: boolean;
-    export let modalStation: Station;
+    export let modalStation: ROBOT;
     export let monitorFrame: MonitorFrame;
-    export let batteryData: { [key: string]: number[] };
-    export let statusChanges: StatusChanges;
     export let frameHandler: MonitorFrameHandler;
 
     let modalTeam: TeamInfo | undefined;
     let battery: number[] = [];
     $: {
         modalTeam = monitorFrame[modalStation];
-        timeSinceChange = formatTimeShort(statusChanges[modalStation].lastChange);
-        battery = batteryData[modalStation];
+        timeSinceChange = modalTeam.lastChange ? formatTimeShort(modalTeam.lastChange) : "";
     }
 
-    let timeSinceChange = formatTimeShort(statusChanges[modalStation].lastChange);
+    let timeSinceChange = modalTeam?.lastChange ? formatTimeShort(modalTeam.lastChange) : "";
 
     setInterval(() => {
         if (modalOpen) {
-            timeSinceChange = formatTimeShort(statusChanges[modalStation].lastChange);
+            timeSinceChange = modalTeam?.lastChange ? formatTimeShort(modalTeam.lastChange) : "";
         }
     }, 1000);
 </script>
@@ -60,14 +46,14 @@
                 <TableHeadCell>Net</TableHeadCell>
             </TableHead>
             <TableBody>
-                <MonitorRow station={modalStation} bind:monitorFrame detailView={() => {}} bind:battery statusChange={statusChanges[modalStation]} {frameHandler} />
+                <MonitorRow station={modalStation} {monitorFrame} detailView={() => {}} {frameHandler} />
             </TableBody>
         </Table>
     </div>
     {#if modalTeam}
         <div class="flex flex-col w-full items-center space-y-4 -mt-4">
             <p>
-                {#if modalTeam.ds === RED}
+                {#if modalTeam.ds === DSState.RED}
                     <p class="font-bold">Ethernet not plugged in</p>
                     <p>Unplugged {timeSinceChange}</p>
                     <ol class="text-left list-decimal space-y-2">
@@ -76,9 +62,9 @@
                         <li>Try a dongle</li>
                         <li>Try replacing the ethernet cable</li>
                     </ol>
-                {:else if modalTeam.ds === GREEN_X}
+                {:else if modalTeam.ds === DSState.GREEN_X}
                     <p class="font-bold">Ethernet plugged in but no communication with DS</p>
-                    {#if statusChanges[modalStation].improved}
+                    {#if modalTeam.improved}
                         <p>Plugged in {timeSinceChange}</p>
                     {:else}
                         <p>Lost FMS {timeSinceChange}</p>
@@ -99,9 +85,9 @@
                         </li>
                         <li>If none of the above works, try the spare DS laptop. Advise the team to come during lunch or at the end of the day to do a connection test.</li>
                     </ol>
-                {:else if modalTeam.ds === MOVE_STATION}
+                {:else if modalTeam.ds === DSState.MOVE_STATION}
                     <p class="font-bold">Team is in wrong station</p>
-                    {#if statusChanges[modalStation].improved}
+                    {#if modalTeam.improved}
                         <p>Plugged in {timeSinceChange}</p>
                     {:else}
                         <p>{timeSinceChange}</p>
@@ -109,17 +95,17 @@
                     <br />
                     Their DS will tell them which station to move to.<br />
                     If this is during playoffs, double check with the HR and Scorekeeper before instructing teams to move.
-                {:else if modalTeam.ds === WRONG_MATCH}
+                {:else if modalTeam.ds === DSState.WAITING}
                     <p class="font-bold">Team is in wrong match</p>
-                    {#if statusChanges[modalStation].improved}
+                    {#if modalTeam.improved}
                         <p>Plugged in {timeSinceChange}</p>
                     {:else}
                         <p>{timeSinceChange}</p>
                     {/if}
                     <ol class="text-left list-decimal space-y-2">
-                        {#if [READY_TO_PRESTART, PRESTART_INITIATED, MATCH_OVER, MATCH_ABORTED].includes(monitorFrame.field)}
+                        {#if MatchStateMap[monitorFrame.field] === MatchState.OVER}
                             <li>DS is connected but the field hasn't been prestarted yet.</li>
-                        {:else if [PRESTART_COMPLETED, MATCH_NOT_READY].includes(monitorFrame.field)}
+                        {:else if MatchStateMap[monitorFrame.field] === MatchState.PRESTART}
                             <li>Double check the schedule</li>
                             <li>If they're on the schedule, check if the team number in their DS is set correctly.</li>
                         {/if}
@@ -128,25 +114,25 @@
                             still run as normal. If the match hasn't started yet, re-prestart.
                         </li>
                     </ol>
-                {:else if modalTeam.ds === BYPASS}
+                {:else if modalTeam.ds === DSState.BYPASS}
                     <p class="font-bold">Team is bypassed</p>
                     <p>{timeSinceChange}</p>
-                {:else if modalTeam.ds === ESTOP}
+                {:else if modalTeam.ds === DSState.ESTOP}
                     <p class="font-bold">Team is E-stopped</p>
                     <p>{timeSinceChange}</p>
                     <ol class="text-left list-decimal space-y-2">
                         <li>To clear an E-stop the roborio must be physically restarted and the DS software restarted.</li>
                         <li>If the robot was E-stopped by the HR, you should let the team know why.</li>
                     </ol>
-                {:else if modalTeam.ds === ASTOP}
+                {:else if modalTeam.ds === DSState.ASTOP}
                     <p class="font-bold">Team is A-stopped</p>
                     <p>{timeSinceChange}</p>
                     <ol class="text-left list-decimal space-y-2">
                         <li>The A-stop will clear once teleop starts, remember to reset the button after the match.</li>
                     </ol>
-                {:else if modalTeam.radio === RED}
+                {:else if !modalTeam.radio}
                     <p class="font-bold">Radio not connected to field</p>
-                    {#if statusChanges[modalStation].improved}
+                    {#if modalTeam.improved}
                         <p>DS Connected {timeSinceChange}</p>
                     {:else}
                         <p>Lost Radio {timeSinceChange}</p>
@@ -160,9 +146,9 @@
                         <li>Make sure the WIFI light (opposite of the power light) is green, if it is amber or off the radio needs to be programmed.</li>
                         <li>If you notice all the lights are solid for a while, the radio may have gotten stuck. Reboot the radio.</li>
                     </ol>
-                {:else if modalTeam.rio === RED}
+                {:else if !modalTeam.rio}
                     <p class="font-bold">Radio connected but no communication with RIO</p>
-                    {#if statusChanges[modalStation].improved}
+                    {#if modalTeam.improved}
                         <p>Radio Connected {timeSinceChange}</p>
                     {:else}
                         <p>Lost RIO {timeSinceChange}</p>
@@ -191,9 +177,9 @@
                             If the issue persists, replace the RIO.
                         </li>
                     </ol>
-                {:else if modalTeam.code === RED}
+                {:else if !modalTeam.code}
                     <p class="font-bold">Radio and RIO connected, but code not running</p>
-                    {#if statusChanges[modalStation].improved}
+                    {#if modalTeam.improved}
                         <p>RIO Connected {timeSinceChange}</p>
                     {:else}
                         <p>Lost Code {timeSinceChange}</p>

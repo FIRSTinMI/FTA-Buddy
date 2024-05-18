@@ -1,10 +1,4 @@
-import { ROBOT, type MonitorFrame, type TeamInfo, CODE, GREEN, GREEN_X, PRESTART_COMPLETED, PRESTART_INITIATED, RED, MATCH_TRANSITIONING, MATCH_RUNNING_AUTO, MATCH_RUNNING_TELEOP, MATCH_ABORTED, MATCH_OVER, READY_FOR_POST_RESULT, READY_TO_PRESTART, BYPASS, WRONG_MATCH, MOVE_STATION, NO_CODE, MATCH_READY } from "../../../shared/types";
-
-export enum MatchState {
-    RUNNING,
-    OVER,
-    PRESTART
-}
+import { DSState, FieldState, MatchState, MatchStateMap, ROBOT, StateChangeType, type MonitorFrame, type StateChange, type TeamInfo } from "../../../shared/types";
 
 export interface MonitorEvent extends CustomEvent {
     detail: {
@@ -30,88 +24,112 @@ export class MonitorFrameHandler extends EventTarget {
         this.frames = [];
     }
 
-    public feed(frame: MonitorFrame) {
-        for (let key in ROBOT) {
-            const robot = key as ROBOT;
-            let change = frame.statusChanges[robot];
-            frame.statusChanges[robot] = {
-                lastChange: new Date(change.lastChange),
-                improved: change.improved,
-            };
-        }
+    public setHistory(history: MonitorFrame[]) {
+        this.frames = history;
+    }
 
+    public feed(frame: MonitorFrame) {
         this.frames.push(frame);
         if (this.frames.length > 50) this.frames.shift();
         this.process();
+
+        this.dispatchEvent(new CustomEvent('frame', {
+            detail: {
+                frame,
+                match: MatchStateMap[frame.field]
+            }
+        }));
     }
 
+    // Fires events when field state changes
+    public fieldStatusChange(field: FieldState) {
+        if (field === FieldState.PRESTART_COMPLETED) {
+            this.dispatchEvent(new CustomEvent('prestart', { detail: { frame: this.getFrame(), match: MatchState.PRESTART } }));
+        } else if (field === FieldState.MATCH_OVER) {
+            this.dispatchEvent(new CustomEvent('match-over', { detail: { frame: this.getFrame(), match: MatchState.OVER } }));
+        } else if (field === FieldState.MATCH_RUNNING_TELEOP || field === FieldState.MATCH_RUNNING_AUTO) {
+            this.dispatchEvent(new CustomEvent('match-start', { detail: { frame: this.getFrame(), match: MatchState.RUNNING } }));
+        } else if (field === FieldState.MATCH_READY) {
+            this.dispatchEvent(new CustomEvent('match-ready', { detail: { frame: this.getFrame(), match: MatchState.RUNNING } }));
+        }
+    }
+
+    // Fires events when robot status changes
+    public robotStatusChange(change: StateChange) {
+        const robot = change.station;
+        const frame = this.getFrame();
+        if (!frame) return;
+        const match = MatchStateMap[frame.field];
+
+        if (change.key === 'ds') {
+            this.dispatchEvent(new CustomEvent(
+                (change.type === StateChangeType.RisingEdge) ? 'ds-connect' : 'ds-drop',
+                {
+                    detail: { robot, frame, match }
+                }));
+        } else if (change.key === 'radio') {
+            this.dispatchEvent(new CustomEvent(
+                (change.type === StateChangeType.RisingEdge) ? 'radio-connect' : 'radio-drop',
+                {
+                    detail: { robot, frame, match }
+                }));
+        } else if (change.key === 'rio') {
+            this.dispatchEvent(new CustomEvent(
+                (change.type === StateChangeType.RisingEdge) ? 'rio-connect' : 'rio-drop',
+                {
+                    detail: { robot, frame, match }
+                }));
+        } else if (change.key === 'code') {
+            this.dispatchEvent(new CustomEvent(
+                (change.type === StateChangeType.RisingEdge) ? 'code-connect' : 'code-drop',
+                {
+                    detail: { robot, frame, match }
+                }));
+        }
+    }
+
+    // Fires events when a robot is taking longer than usual to connect
     public process() {
         const currentFrame = this.getFrame();
         const previousFrame = this.getPreviousFrame();
 
         if (!currentFrame || !previousFrame) return;
 
-        const currentMatchState = ([MATCH_RUNNING_TELEOP, MATCH_RUNNING_AUTO, MATCH_TRANSITIONING].includes(currentFrame.field)) ? MatchState.RUNNING : ([MATCH_OVER, MATCH_ABORTED, READY_FOR_POST_RESULT, READY_TO_PRESTART].includes(currentFrame.field)) ? MatchState.OVER : MatchState.PRESTART;
-        const previousMatchState = ([MATCH_RUNNING_TELEOP, MATCH_RUNNING_AUTO, MATCH_TRANSITIONING].includes(previousFrame.field)) ? MatchState.RUNNING : ([MATCH_OVER, MATCH_ABORTED, READY_FOR_POST_RESULT, READY_TO_PRESTART].includes(previousFrame.field)) ? MatchState.OVER : MatchState.PRESTART;
-
-        if (currentFrame.field === PRESTART_COMPLETED && previousFrame.field === PRESTART_INITIATED) {
-            this.dispatchEvent(new CustomEvent('prestart', { detail: { frame: currentFrame, match: currentMatchState } }));
-        } else if (currentMatchState === MatchState.OVER && previousMatchState !== MatchState.OVER) {
-            this.dispatchEvent(new CustomEvent('match-over', { detail: { frame: currentFrame, match: currentMatchState } }));
-        } else if (currentMatchState === MatchState.RUNNING && previousMatchState !== MatchState.RUNNING) {
-            this.dispatchEvent(new CustomEvent('match-start', { detail: { frame: currentFrame, match: currentMatchState } }));
-        }
-
-        if (currentFrame.field === MATCH_READY && previousFrame.field !== MATCH_READY) {
-            this.dispatchEvent(new CustomEvent('match-ready', { detail: { frame: currentFrame, match: currentMatchState } }));
-        }
+        const currentMatchState = ([FieldState.MATCH_RUNNING_TELEOP, FieldState.MATCH_RUNNING_AUTO, FieldState.MATCH_TRANSITIONING].includes(currentFrame.field)) ? MatchState.RUNNING : ([FieldState.MATCH_OVER, FieldState.MATCH_ABORTED, FieldState.READY_FOR_POST_RESULT, FieldState.READY_TO_PRESTART].includes(currentFrame.field)) ? MatchState.OVER : MatchState.PRESTART;
+        const previousMatchState = ([FieldState.MATCH_RUNNING_TELEOP, FieldState.MATCH_RUNNING_AUTO, FieldState.MATCH_TRANSITIONING].includes(previousFrame.field)) ? MatchState.RUNNING : ([FieldState.MATCH_OVER, FieldState.MATCH_ABORTED, FieldState.READY_FOR_POST_RESULT, FieldState.READY_TO_PRESTART].includes(previousFrame.field)) ? MatchState.OVER : MatchState.PRESTART;
 
         for (let _robot in ROBOT) {
             const robot = _robot as ROBOT;
             const currentRobot = (currentFrame[robot as keyof MonitorFrame] as TeamInfo);
             const previousRobot = (previousFrame[robot as keyof MonitorFrame] as TeamInfo);
 
-            // Run events when something changes
-            if (previousRobot.ds !== currentRobot.ds) {
-                // DS states are numbered 0: red, 1: green, 2: green x, 3: move station, 4: wrong match, 5: bypass, 6: estop, 7: astop
-                const improved = (currentRobot.ds === RED) ? false : (previousRobot.ds === RED) ? true : currentRobot.ds < previousRobot.ds;
-                this.dispatchEvent(new CustomEvent((improved) ? 'ds-connect' : 'ds-drop', { detail: { robot, frame: currentFrame, match: currentMatchState } }));
-            } else if (previousRobot.radio !== currentRobot.radio) {
-                const improved = (currentRobot.radio === GREEN);
-                this.dispatchEvent(new CustomEvent((improved) ? 'radio-connect' : 'radio-drop', { detail: { robot, frame: currentFrame, match: currentMatchState } }));
-            } else if (previousRobot.rio !== currentRobot.rio) {
-                const improved = (currentRobot.rio === GREEN || currentRobot.rio === GREEN_X);
-                this.dispatchEvent(new CustomEvent((improved) ? 'rio-connect' : 'rio-drop', { detail: { robot, frame: currentFrame, match: currentMatchState } }));
-            } else if (previousRobot.code !== currentRobot.code) {
-                const improved = (currentRobot.code === CODE);
-                this.dispatchEvent(new CustomEvent((improved) ? 'code-connect' : 'code-drop', { detail: { robot, frame: currentFrame, match: currentMatchState } }));
-            }
-
             // Reset alerts played if prestart happened
             if (currentMatchState === MatchState.PRESTART && previousMatchState !== MatchState.PRESTART) {
                 this.alertsPlayed[robot] = { ds: false, radio: false, rio: false, code: false };
             }
 
-            if (currentRobot.ds === RED) {
-                if (this.alertsPlayed[robot].ds || currentFrame.statusChanges[robot].lastChange.getTime() + 45e3 > new Date().getTime()) continue;
-                this.alertsPlayed[robot].ds = true;
-                this.dispatchEvent(new CustomEvent('ds-alert', { detail: { robot, frame: currentFrame, match: currentMatchState } }));
-            } else if (currentRobot.ds === GREEN_X) {
-                if (this.alertsPlayed[robot].ds || currentFrame.statusChanges[robot].lastChange.getTime() + 30e3 > new Date().getTime()) continue;
-                this.alertsPlayed[robot].ds = true;
-                this.dispatchEvent(new CustomEvent('ds-alert', { detail: { robot, frame: currentFrame, match: currentMatchState } }));
-            } else if (currentRobot.radio === RED) {
-                if (this.alertsPlayed[robot].radio || currentFrame.statusChanges[robot].lastChange.getTime() + 240e3 > new Date().getTime()) continue;
-                this.alertsPlayed[robot].radio = true;
-                this.dispatchEvent(new CustomEvent('radio-alert', { detail: { robot, frame: currentFrame, match: currentMatchState } }));
-            } else if (currentRobot.rio === RED) {
-                if (this.alertsPlayed[robot].rio || currentFrame.statusChanges[robot].lastChange.getTime() + 45e3 > new Date().getTime()) continue;
-                this.alertsPlayed[robot].rio = true;
-                this.dispatchEvent(new CustomEvent('rio-alert', { detail: { robot, frame: currentFrame, match: currentMatchState } }));
-            } else if (currentRobot.code === NO_CODE) {
-                if (this.alertsPlayed[robot].code || currentFrame.statusChanges[robot].lastChange.getTime() + 30e3 > new Date().getTime()) continue;
-                this.alertsPlayed[robot].code = true;
-                this.dispatchEvent(new CustomEvent('code-alert', { detail: { robot, frame: currentFrame, match: currentMatchState } }));
+            if (currentRobot.lastChange) {
+                if (currentRobot.ds === DSState.RED) {
+                    if (this.alertsPlayed[robot].ds || currentRobot.lastChange.getTime() + 45e3 > new Date().getTime()) continue;
+                    this.alertsPlayed[robot].ds = true;
+                    this.dispatchEvent(new CustomEvent('ds-alert', { detail: { robot, frame: currentFrame, match: currentMatchState } }));
+                } else if (currentRobot.ds === DSState.GREEN_X) {
+                    if (this.alertsPlayed[robot].ds || currentRobot.lastChange.getTime() + 30e3 > new Date().getTime()) continue;
+                    this.alertsPlayed[robot].ds = true;
+                    this.dispatchEvent(new CustomEvent('ds-alert', { detail: { robot, frame: currentFrame, match: currentMatchState } }));
+                } else if (!currentRobot.radio) {
+                    if (this.alertsPlayed[robot].radio || currentRobot.lastChange.getTime() + 240e3 > new Date().getTime()) continue;
+                    this.alertsPlayed[robot].radio = true;
+                    this.dispatchEvent(new CustomEvent('radio-alert', { detail: { robot, frame: currentFrame, match: currentMatchState } }));
+                } else if (!currentRobot.rio) {
+                    if (this.alertsPlayed[robot].rio || currentRobot.lastChange.getTime() + 45e3 > new Date().getTime()) continue;
+                    this.alertsPlayed[robot].rio = true;
+                    this.dispatchEvent(new CustomEvent('rio-alert', { detail: { robot, frame: currentFrame, match: currentMatchState } }));
+                } else if (!currentRobot.code) {
+                    if (this.alertsPlayed[robot].code || currentRobot.lastChange.getTime() + 30e3 > new Date().getTime()) continue;
+                    this.alertsPlayed[robot].code = true;
+                    this.dispatchEvent(new CustomEvent('code-alert', { detail: { robot, frame: currentFrame, match: currentMatchState } }));
+                }
             }
         }
     }
@@ -136,9 +154,5 @@ export class MonitorFrameHandler extends EventTarget {
 
     public getHistory(robot: ROBOT, type: keyof TeamInfo, length: number = 50) {
         return this.frames.map((frame) => frame[robot]?.[type]).slice(-length);
-    }
-
-    public getStatusChanges() {
-        return this.getFrame()?.statusChanges;
     }
 }

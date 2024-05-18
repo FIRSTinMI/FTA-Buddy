@@ -4,7 +4,7 @@ import { eventProcedure, router } from "../trpc";
 import { db } from "../db/db";
 import { events } from "../db/schema";
 import { eq } from "drizzle-orm";
-import { eventList } from "..";
+import { getEvent } from "../util/get-event";
 
 export const checklistRouter = router({
     get: eventProcedure.query(async ({ input, ctx }) => {
@@ -23,9 +23,7 @@ export const checklistRouter = router({
 
         await db.update(events).set({ checklist }).where(eq(events.code, ctx.event.code));
 
-        eventList[ctx.event.code].socketClients.forEach(client => {
-            client.send(JSON.stringify({ type: 'checklist', checklist }));
-        });
+        (await getEvent(ctx.event.token)).checklistEmitter.emit('update', checklist);
 
         return checklist;
     })

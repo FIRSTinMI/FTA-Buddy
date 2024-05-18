@@ -1,26 +1,41 @@
 import "./app.pcss";
 import App from "./App.svelte";
-import { createTRPCClient, httpBatchLink } from '@trpc/client';
+import { createTRPCClient, createWSClient, httpBatchLink, splitLink, wsLink } from '@trpc/client';
 import type { AppRouter } from '../../src/index';
 import { authStore } from "./stores/auth";
 import { get } from "svelte/store";
 import { settingsStore } from "./stores/settings";
+import SuperJSON from "superjson";
 
 let token = get(authStore).token;
 let eventToken = get(authStore).eventToken;
 
 export let server = (get(settingsStore).forceCloud) ? 'https://ftabuddy.com' : window.location.origin;
 
+const wsClient = createWSClient({
+    url: `ws://localhost:3002`,
+});
+
 export let trpc = createTRPCClient<AppRouter>({
     links: [
-        httpBatchLink({
-            url: server + '/trpc',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Event-Token': eventToken
-            }
-        }),
-    ],
+        splitLink({
+            condition(op) {
+                return op.type === "subscription";
+            },
+            true: wsLink({
+                client: wsClient,
+                transformer: SuperJSON
+            }),
+            false: httpBatchLink({
+                url: server + '/trpc',
+                transformer: SuperJSON,
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Event-Token': eventToken
+                }
+            }),
+        })
+    ]
 });
 
 authStore.subscribe((value) => {
@@ -28,14 +43,24 @@ authStore.subscribe((value) => {
     eventToken = value.eventToken;
     trpc = createTRPCClient<AppRouter>({
         links: [
-            httpBatchLink({
-                url: server + '/trpc',
-                headers: {
-                    'Authorization': `Bearer ${get(authStore).token}`,
-                    'Event-Token': eventToken
-                }
-            }),
-        ],
+            splitLink({
+                condition(op) {
+                    return op.type === "subscription";
+                },
+                true: wsLink({
+                    client: wsClient,
+                    transformer: SuperJSON
+                }),
+                false: httpBatchLink({
+                    url: server + '/trpc',
+                    transformer: SuperJSON,
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Event-Token': eventToken
+                    }
+                }),
+            })
+        ]
     });
 });
 

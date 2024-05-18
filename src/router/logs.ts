@@ -153,6 +153,11 @@ export const matchRouter = router({
 
         if (!share) throw new Error('Share not found');
 
+        if (new Date() > share.expire_time) {
+            await db.delete(logPublishing).where(eq(logPublishing.id, input.sharecode)).execute();
+            throw new Error('Share expired');
+        }
+
         let station = share.station as ROBOT;
 
         const match = await db.query.matchLogs.findFirst({

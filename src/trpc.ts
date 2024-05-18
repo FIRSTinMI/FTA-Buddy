@@ -1,17 +1,20 @@
 import { TRPCError, initTRPC } from '@trpc/server';
-import * as trpcExpress from '@trpc/server/adapters/express';
 import { db } from './db/db';
 import { eq } from 'drizzle-orm';
 import { events, users } from './db/schema';
-import { CreateWSSContextFn } from '@trpc/server/adapters/ws';
+import { CreateWSSContextFnOptions } from '@trpc/server/adapters/ws';
+import { CreateHTTPContextOptions } from '@trpc/server/adapters/standalone';
+import SuperJSON from 'superjson';
 
-export const createContext = ({ req, res }: trpcExpress.CreateExpressContextOptions) => ({
-    token: req.headers.authorization?.split(' ')[1],
-    eventToken: (req.headers['Event-Token'] || req.headers['event-token'])?.toString()
+export const createContext = (opts: CreateHTTPContextOptions | CreateWSSContextFnOptions) => ({
+    token: opts.req.headers.authorization?.split(' ')[1],
+    eventToken: (opts.req.headers['Event-Token'] || opts.req.headers['event-token'])?.toString()
 });
 
 type Context = Awaited<ReturnType<typeof createContext>>;
-const t = initTRPC.context<Context>().create();
+const t = initTRPC.context<Context>().create({
+    transformer: SuperJSON
+});
 
 export const router = t.router;
 export const publicProcedure = t.procedure;

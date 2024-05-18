@@ -3,7 +3,7 @@ import { DSState, EnableState, FieldState, MonitorFrame, StateChange } from "../
 import { eventProcedure, publicProcedure, router } from "../trpc";
 import { getEvent } from "../util/get-event";
 import { observable } from "@trpc/server/observable";
-import { detectStatusChange, processFrameForTeamData } from "../util/frameProcessing";
+import { detectStatusChange, processFrameForTeamData, processTeamWarnings } from "../util/frameProcessing";
 
 export interface Post {
     type: 'test';
@@ -39,6 +39,8 @@ export const fieldMonitorRouter = router({
         eventCode: z.string().optional(),
         field: z.nativeEnum(FieldState),
         match: z.number(),
+        play: z.number(),
+        level: z.enum(['None', 'Practice', 'Qualification', 'Playoff']),
         time: z.string(),
         version: z.string(),
         frameTime: z.number(),
@@ -58,9 +60,9 @@ export const fieldMonitorRouter = router({
 
         const processed = detectStatusChange(input, event.monitorFrame);
 
-        if (event.monitorFrame.field !== processed.currentFrame.field) {
-            event.fieldStatusEmitter.emit('change', processed.currentFrame.field);
+        processed.currentFrame = await processTeamWarnings(event.code, processed.currentFrame);
 
+        if (event.monitorFrame.field !== processed.currentFrame.field) {
             if (processed.currentFrame.field === FieldState.PRESTART_COMPLETED) {
                 event.lastPrestartDone = new Date();
             } else if (processed.currentFrame.field === FieldState.MATCH_RUNNING_AUTO) {
@@ -70,7 +72,11 @@ export const fieldMonitorRouter = router({
             } else if (event.monitorFrame.field === FieldState.READY_FOR_POST_RESULT) {
                 event.lastMatchScoresPosted = new Date();
             }
+
+            event.fieldStatusEmitter.emit('change', processed.currentFrame.field);
         }
+
+
 
         event.monitorFrame = processed.currentFrame;
 

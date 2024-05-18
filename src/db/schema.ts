@@ -73,18 +73,18 @@ export const MatchLog = typeof matchLogs.$inferInsert;
 export const cycleLogs = pgTable('cycle_logs', { 
     id: uuid('id').primaryKey(),
     event: varchar('event').notNull(),
-    event_id: uuid('event_id').notNull(),
     match_number: integer('match_number').notNull(),
     play_number: integer('play_number').notNull(),
     level: levelEnum('level').notNull(),
-    start_time: timestamp('start_time').notNull(),
+    prestart_time: timestamp('prestart_time'),
+    start_time: timestamp('start_time'),
     calculated_cycle_time: varchar('calculated_cycle_time'),
     ref_done_time: timestamp('ref_done_time'),
-    green_light_time: timestamp('green_light_time'),
-    commit_time: timestamp('commit_time')
+    scores_posted_time: timestamp('scores_posted_time'),
+    end_time: timestamp('end_time')
 });
 
-export const CycleLog = typeof cycleLogs.$inferInsert;
+export const CycleLog = typeof cycleLogs.$inferSelect;
 
 export const logPublishing = pgTable('log_publishing', {
     id: uuid('id').primaryKey(),
@@ -99,6 +99,28 @@ export const logPublishing = pgTable('log_publishing', {
     start_time: timestamp('start_time').notNull(),
     publish_time: timestamp('publish_time').defaultNow(),
     expire_time: timestamp('expire_time').notNull()
+});
+
+export const teamCycleLogs = pgTable('team_cycle_logs', {
+    id: uuid('id').primaryKey(),
+    event: varchar('event').notNull(),
+    match_number: integer('match_number').notNull(),
+    play_number: integer('play_number').notNull(),
+    level: levelEnum('level').notNull(),
+    team: integer('team').notNull(),
+    prestart: timestamp('prestart'),
+    first_ds: timestamp('first_ds'),
+    last_ds: timestamp('last_ds'),
+    time_ds: integer('time_ds'),
+    first_radio: timestamp('first_radio'),
+    last_radio: timestamp('last_radio'),
+    time_radio: integer('time_radio'),
+    first_rio: timestamp('first_rio'),
+    last_rio: timestamp('last_rio'),
+    time_rio: integer('time_rio'),
+    first_code: timestamp('first_code'),
+    last_code: timestamp('last_code'),
+    time_code: integer('time_code'),
 });
 
 export default { events, users, messages, matchLogs, cycleLogs, logPublishing };

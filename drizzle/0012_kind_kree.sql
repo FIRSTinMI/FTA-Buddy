@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS "team_cycle_logs" (
+	"id" uuid PRIMARY KEY NOT NULL,
+	"event" varchar NOT NULL,
+	"event_id" uuid NOT NULL,
+	"match_number" integer NOT NULL,
+	"play_number" integer NOT NULL,
+	"level" "level" NOT NULL,
+	"team" integer NOT NULL,
+	"prestart" timestamp,
+	"first_ds" timestamp,
+	"last_ds" timestamp,
+	"time_ds" integer,
+	"first_radio" timestamp,
+	"last_radio" timestamp,
+	"time_radio" integer,
+	"first_rio" timestamp,
+	"last_rio" timestamp,
+	"time_rio" integer,
+	"first_code" timestamp,
+	"last_code" timestamp,
+	"time_code" integer
+);

@@ -10,7 +10,7 @@ let url: string = '';
 let eventToken: string = '';
 
 let wsClient = createWSClient({
-    url: `ws://localhost:3002`,
+    url: url.replace('http', 'ws') + '/ws',
 });
 
 export async function updateValues() {
@@ -21,6 +21,10 @@ export async function updateValues() {
             eventCode = item.event;
             url = item.url;
             eventToken = item.eventToken;
+
+            wsClient = createWSClient({
+                url: url.replace('http', 'ws') + '/ws',
+            });
 
             trpc = createTRPCConnection();
 

@@ -8,6 +8,7 @@
     MatchState,
     MatchStateMap,
     ROBOT,
+        TeamWarnings,
         type MonitorFrame,
         type TeamInfo
     } from "../../../shared/types";
@@ -15,7 +16,6 @@
     import Graph from "./Graph.svelte";
     import type { MonitorFrameHandler } from "../util/monitorFrameHandler";
     import { processSignalStrengthForGraph } from "../util/signalStrengthProcessor";
-    import { eventStore } from "../stores/event";
 
     export let station: ROBOT;
     export let monitorFrame: MonitorFrame;
@@ -90,8 +90,14 @@
                         👀
                     {/if}
                 {/if}
-                {#if !$eventStore.teams[team.number]?.inspected}
+                {#if team.warnings.includes(TeamWarnings.NOT_INSPECTED)}
                     🔍
+                {/if}
+                {#if team.warnings.includes(TeamWarnings.RADIO_NOT_FLASHED)}
+                    🛜
+                {/if}
+                {#if team.warnings.includes(TeamWarnings.SLOW)}
+                    🕑
                 {/if}
             </p>
         </TableBodyCell>

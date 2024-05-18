@@ -7,7 +7,7 @@
     import type { MonitorEvent, MonitorFrameHandler } from "../util/monitorFrameHandler";
 
     export let frameHandler: MonitorFrameHandler;
-    let monitorFrame: MonitorFrame | null = null;
+    let monitorFrame: MonitorFrame | undefined = frameHandler.getFrame();
     
     frameHandler.addEventListener("frame", (evt) => {
         monitorFrame = (evt as MonitorEvent).detail.frame;

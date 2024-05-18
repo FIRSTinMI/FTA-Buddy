@@ -1,10 +1,10 @@
 const appExtensionData = chrome.runtime.getManifest();
 
 (async () => {
-    let url: string, cloud: boolean, changed: number, enabled: boolean, signalR: boolean, eventCode: string;
+    let url: string, cloud: boolean, changed: number, enabled: boolean, signalR: boolean, eventCode: string, eventToken: string;
 
     await new Promise((resolve) => {
-        chrome.storage.local.get(['url', 'cloud', 'event', 'changed', 'enabled', 'signalR'], item => {
+        chrome.storage.local.get(['url', 'cloud', 'event', 'changed', 'enabled', 'signalR', 'eventToken'], item => {
             console.log(item);
             url = item.url;
             cloud = item.cloud;
@@ -12,6 +12,7 @@ const appExtensionData = chrome.runtime.getManifest();
             changed = item.changed;
             enabled = item.enabled;
             signalR = item.signalR;
+            eventToken = item.eventToken;
             resolve(void 0);
         });
     });
@@ -48,7 +49,8 @@ const appExtensionData = chrome.runtime.getManifest();
             });
         } else if (evt.data.type === "eventCode") {
             eventCode = evt.data.code;
-            chrome.storage.local.set({ event: eventCode });
+            eventToken = evt.data.token;
+            chrome.storage.local.set({ event: eventCode, eventToken });
             window.postMessage({
                 source: 'ext',
                 version: appExtensionData.version,

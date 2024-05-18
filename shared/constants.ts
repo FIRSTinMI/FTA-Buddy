@@ -3,6 +3,8 @@ import { EnableState, MonitorFrame } from "./types";
 export const DEFAULT_MONITOR: MonitorFrame = {
     field: 0,
     match: 0,
+    play: 0,
+    level: 'None',
     version: '0.0.0',
     frameTime: 0,
     time: 'unk',
@@ -26,7 +28,10 @@ export const DEFAULT_MONITOR: MonitorFrame = {
         noise: 0,
         signal: 0,
         versionmm: false,
-        enabled: EnableState.RED
+        enabled: EnableState.RED,
+        lastChange: null,
+        improved: false,
+        warnings: []
     },
     blue2: {
         number: 9998,
@@ -47,7 +52,10 @@ export const DEFAULT_MONITOR: MonitorFrame = {
         noise: 0,
         signal: 0,
         versionmm: false,
-        enabled: EnableState.RED
+        enabled: EnableState.RED,
+        lastChange: null,
+        improved: false,
+        warnings: []
     },
     blue3: {
         number: 9997,
@@ -68,7 +76,10 @@ export const DEFAULT_MONITOR: MonitorFrame = {
         noise: 0,
         signal: 0,
         versionmm: false,
-        enabled: EnableState.RED
+        enabled: EnableState.RED,
+        lastChange: null,
+        improved: false,
+        warnings: []
     },
     red1: {
         number: 9996,
@@ -89,7 +100,10 @@ export const DEFAULT_MONITOR: MonitorFrame = {
         noise: 0,
         signal: 0,
         versionmm: false,
-        enabled: EnableState.RED
+        enabled: EnableState.RED,
+        lastChange: null,
+        improved: false,
+        warnings: []
     },
     red2: {
         number: 9995,
@@ -110,7 +124,10 @@ export const DEFAULT_MONITOR: MonitorFrame = {
         noise: 0,
         signal: 0,
         versionmm: false,
-        enabled: EnableState.RED
+        enabled: EnableState.RED,
+        lastChange: null,
+        improved: false,
+        warnings: []
     },
     red3: {
         number: 9994,
@@ -131,6 +148,9 @@ export const DEFAULT_MONITOR: MonitorFrame = {
         noise: 0,
         signal: 0,
         versionmm: false,
-        enabled: EnableState.RED
+        enabled: EnableState.RED,
+        lastChange: null,
+        improved: false,
+        warnings: []
     }
 };

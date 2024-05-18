@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { EventChecklist } from "../../shared/types";
-import { eventProcedure, router } from "../trpc";
+import { eventProcedure, publicProcedure, router } from "../trpc";
 import { db } from "../db/db";
 import { events } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { getEvent } from "../util/get-event";
+import { observable } from "@trpc/server/observable";
 
 export const checklistRouter = router({
     get: eventProcedure.query(async ({ input, ctx }) => {
@@ -23,8 +24,28 @@ export const checklistRouter = router({
 
         await db.update(events).set({ checklist }).where(eq(events.code, ctx.event.code));
 
-        (await getEvent(ctx.event.token)).checklistEmitter.emit('update', checklist);
+        const event = await getEvent(ctx.event.token);
+        event.checklist = checklist;
+        event.checklistEmitter.emit('update', checklist);
 
         return checklist;
+    }),
+
+    subscription: publicProcedure.input(z.object({
+        eventToken: z.string()
+    })).subscription(async ({ input }) => {
+        const event = await getEvent(input.eventToken);
+
+        return observable<EventChecklist>((emitter) => {
+            const listener = (checklist: EventChecklist) => {
+                emitter.next(checklist);
+            };
+
+            event.checklistEmitter.on('update', listener);
+
+            return () => {
+                event.checklistEmitter.off('update', listener);
+            };
+        });
     })
 });

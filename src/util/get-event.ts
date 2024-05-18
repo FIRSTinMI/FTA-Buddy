@@ -58,6 +58,7 @@ export async function getEvent(eventToken: string, eventCode?: string) {
             fieldStatusEmitter: new EventEmitter(),
             checklistEmitter: new EventEmitter(),
             ticketEmitter: new EventEmitter(),
+            cycleEmitter: new EventEmitter(),
             lastPrestartDone: null,
             lastMatchEnd: null
         };

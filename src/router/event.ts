@@ -95,8 +95,6 @@ export const eventRouter = router({
 
         if (teamsData) {
             for (let team of teamsData) {
-                if (input.teams?.includes(team)) input.teams = input.teams?.splice(input.teams.indexOf(team), 1) ?? [];
-
                 teams.push({ number: team.team_number, name: team.nickname, inspected: false });
                 checklist[team.team_number] = {
                     present: false,
@@ -108,14 +106,16 @@ export const eventRouter = router({
             }
         }
 
+        const promises = [];
+
         for (let team of input.teams ?? []) {
-            const teamData = await fetch(`https://www.thebluealliance.com/api/v3/team/frc${team}/simple`, {
+            if (teams.find(t => t.number === team.toString())) continue;
+
+            const teamData = fetch(`https://www.thebluealliance.com/api/v3/team/frc${team}/simple`, {
                 headers: {
                     'X-TBA-Auth-Key': process.env.TBA_API_KEY ?? ''
                 }
-            }).then(res => res.json());
-
-            if (teamData) {
+            }).then(res => res.json()).then((teamData) => {
                 teams.push({ number: teamData.team_number, name: teamData.nickname, inspected: false });
                 checklist[teamData.team_number] = {
                     present: false,
@@ -124,8 +124,12 @@ export const eventRouter = router({
                     radioProgrammed: false,
                     connectionTested: false
                 };
-            }
+            });
+
+            promises.push(teamData);
         }
+
+        await Promise.all(promises);
 
         await db.insert(events).values({
             code: input.code,

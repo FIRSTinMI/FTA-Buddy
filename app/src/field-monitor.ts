@@ -40,6 +40,8 @@ export async function subscribeToFieldMonitor() {
     fieldStateSubscription?.unsubscribe();
     robotStateSubscription?.unsubscribe();
 
+    if (!get(authStore).eventToken) return;
+
     frameHandler.setHistory(await trpc.field.history.query());
 
     subscription = trpc.field.robots.subscribe({

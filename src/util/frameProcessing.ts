@@ -1,8 +1,9 @@
 import { eq } from "drizzle-orm";
-import { DSState, FieldState, MonitorFrame, PartialMonitorFrame, ROBOT, StateChange, StateChangeType, TeamInfo } from "../../shared/types";
+import { DSState, FieldState, MatchState, MatchStateMap, MonitorFrame, PartialMonitorFrame, ROBOT, StateChange, StateChangeType, TeamInfo, TeamWarnings } from "../../shared/types";
 import { db } from "../db/db";
-import { events } from "../db/schema";
+import { events, teamCycleLogs } from "../db/schema";
 import { getEvent } from "./get-event";
+import { getTeamCycle } from "./team-cycles";
 
 export function detectStatusChange(currentFrame: PartialMonitorFrame, previousFrame: MonitorFrame | null) {
     const changes: StateChange[] = [];
@@ -10,6 +11,9 @@ export function detectStatusChange(currentFrame: PartialMonitorFrame, previousFr
     for (let _robot in ROBOT) {
         const robot = _robot as ROBOT;
         const currentRobot = (currentFrame[robot as keyof MonitorFrame] as TeamInfo);
+
+        currentRobot.warnings = [];
+
         if (previousFrame) {
             const previousRobot = (previousFrame[robot as keyof MonitorFrame] as TeamInfo);
 
@@ -67,4 +71,54 @@ export async function processFrameForTeamData(eventCode: string, frame: MonitorF
     }
 
     return false;
+}
+
+export async function processTeamWarnings(eventCode: string, frame: MonitorFrame) {
+    const event = await getEvent('', eventCode);
+
+    for (let station in ROBOT) {
+        let team = frame[station as keyof MonitorFrame] as TeamInfo;
+        if (!event.checklist[team.number]) continue;
+        if (!event.checklist[team.number].inspected) {
+            team.warnings.push(TeamWarnings.NOT_INSPECTED);
+        }
+        if (!event.checklist[team.number].radioProgrammed) {
+            team.warnings.push(TeamWarnings.RADIO_NOT_FLASHED);
+        }
+    }
+
+    return frame;
+}
+
+export async function processTeamCycles(eventCode: string, frame: MonitorFrame, changes: StateChange[]) {
+    const event = await getEvent('', eventCode);
+
+    // Only process in prestart
+    if (MatchStateMap[frame.field] !== MatchState.PRESTART) return frame;
+
+    for (let change of changes) {
+        const cycle = await getTeamCycle(eventCode, change.robot.number, frame.match, frame.play, frame.level);
+
+        if (!cycle.prestart) cycle.prestart = event.lastPrestartDone || new Date();
+
+        if (change.type === StateChangeType.RisingEdge && change.key === 'ds' && change.robot.ds === DSState.GREEN) {
+            if (!cycle.first_ds) cycle.first_ds = change.robot.lastChange || new Date();
+            cycle.last_ds = change.robot.lastChange || new Date();
+            cycle.time_ds = cycle.last_ds.getTime() - cycle.prestart.getTime();
+        } else if (change.type === StateChangeType.RisingEdge && change.key === 'radio') {
+            if (!cycle.first_radio) cycle.first_radio = change.robot.lastChange || new Date();
+            cycle.last_radio = change.robot.lastChange || new Date();
+            cycle.time_radio = cycle.last_radio.getTime() - cycle.prestart.getTime();
+        } else if (change.type === StateChangeType.RisingEdge && change.key === 'rio') {
+            if (!cycle.first_rio) cycle.first_rio = change.robot.lastChange || new Date();
+            cycle.last_rio = change.robot.lastChange || new Date();
+            cycle.time_rio = cycle.last_rio.getTime() - cycle.prestart.getTime();
+        } else if (change.type === StateChangeType.RisingEdge && change.key === 'code') {
+            if (!cycle.first_code) cycle.first_code = change.robot.lastChange || new Date();
+            cycle.last_code = change.robot.lastChange || new Date();
+            cycle.time_code = cycle.last_code.getTime() - cycle.prestart.getTime();
+        }
+
+        await db.update(teamCycleLogs).set(cycle).where(eq(teamCycleLogs.id, cycle.id));
+    }
 }

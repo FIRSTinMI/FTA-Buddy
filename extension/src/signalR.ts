@@ -1,5 +1,5 @@
 import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
-import { DSState, EnableState, FMSEnums, FieldState, ROBOT, type MonitorFrame, type SignalRMonitorFrame } from '@shared/types';
+import { DSState, EnableState, FMSEnums, FieldState, PartialMonitorFrame, ROBOT, type SignalRMonitorFrame } from '@shared/types';
 import { DEFAULT_MONITOR } from '@shared/constants';
 import { uploadMatchLogs } from './trpc';
 
@@ -9,16 +9,19 @@ export class SignalR {
 
     public infrastructureConnection: HubConnection | null = null;
 
-    public frame: MonitorFrame = DEFAULT_MONITOR;
+    public frame: PartialMonitorFrame = DEFAULT_MONITOR;
 
     private ip: string;
 
-    private callback: (frame: MonitorFrame) => void;
+    private callback: (frame: PartialMonitorFrame) => void;
 
-    constructor(ip: string, version: string, callback: (frame: MonitorFrame) => void) {
+    private cycleTimeCallback: (type: 'lastCycleTime' | 'prestart' | 'start' | 'end' | 'refsDone' | 'scoresPosted', time: string) => void;
+
+    constructor(ip: string, version: string, callback: (frame: PartialMonitorFrame) => void, cycleTimeCallback: (type: 'lastCycleTime' | 'prestart' | 'start' | 'end' | 'refsDone' | 'scoresPosted', time: string) => void) {
         this.ip = ip;
         this.callback = callback;
         this.frame.version = version;
+        this.cycleTimeCallback = cycleTimeCallback;
     }
 
     public async start() {
@@ -262,14 +265,31 @@ export class SignalR {
 
         this.infrastructureConnection.on('plc_match_status_changed', (data) => {
             console.log('plc_match_status_changed: ', data);
+            if (data.RefDone) {
+                this.cycleTimeCallback('refsDone', '');
+            }
         });
 
         this.infrastructureConnection.on('matchstatusinfochanged', (data) => {
             console.log('matchstatusinfochanged: ', data);
+            if (data.MatchState === 'WaitingForMatchPreview') {
+                this.frame.match = data.MatchNumber;
+                this.frame.play = data.PlayNumber;
+                this.frame.level = data.Level;
+
+                this.cycleTimeCallback('prestart', '');
+            } else if (data.MatchState === 'MatchAuto') {
+                this.cycleTimeCallback('start', '');
+            } else if (data.MatchState === 'WaitingForCommit') {
+                this.cycleTimeCallback('end', '');
+            } else if (data.MatchState === 'WaitingForPostResults') {
+                this.cycleTimeCallback('scoresPosted', '');
+            }
         });
 
         this.infrastructureConnection.on('matchstatuschanged', (data) => {
             console.log('matchstatuschanged: ', data);
+
         });
 
         // BackupPerformed_Incremental when score committed
@@ -285,6 +305,7 @@ export class SignalR {
         this.infrastructureConnection.on('lastcycletimecalculated', (data) => {
             console.log('lastcycletimecalculated: ', data);
             this.frame.lastCycleTime = data;
+            this.cycleTimeCallback('lastCycleTime', data);
         });
 
         this.infrastructureConnection.on('scheduleaheadbehindchanged', (data) => {

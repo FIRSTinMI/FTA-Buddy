@@ -1,4 +1,4 @@
-import { DSState, EnableState, FieldState, MonitorFrame, TeamInfo } from "@shared/types";
+import { DSState, EnableState, FieldState, PartialMonitorFrame, PartialTeamInfo, TournamentLevel } from "@shared/types";
 import { trpc } from "./trpc";
 
 console.log('Injection loaded');
@@ -8,6 +8,10 @@ let cloud = document.getElementById('fta-buddy')?.dataset.cloud;
 let eventCode = document.getElementById('fta-buddy')?.dataset.event;
 let version = document.getElementById('fta-buddy')?.dataset.version;
 
+let lastState = FieldState.UNKNOWN;
+let play = 0;
+let level: TournamentLevel = 'None';
+
 function read(station: string) {
     const radioStats = document.getElementById(station + 'BWU')?.title;
 
@@ -15,7 +19,7 @@ function read(station: string) {
     const rioElm = document.getElementById(station + 'robot');
     const enabledElm = document.getElementById(station + 'enabled');
 
-    const obj: TeamInfo = {
+    const obj: PartialTeamInfo = {
         number: parseInt(document.getElementById(station + 'Number')?.innerText || '0'),
         ds: identifyStatusDS(station),
         radio: radioElm?.classList.contains('fieldMonitor-greenCircle') ?? false,
@@ -86,13 +90,22 @@ function identifyFieldStatus(elm: HTMLElement) {
     if (elm.innerText === 'READY FOR POST-RESULT') return FieldState.READY_FOR_POST_RESULT;
 }
 
+const LevelMap: { [key: number]: TournamentLevel; } = {
+    0: 'None',
+    1: 'Practice',
+    2: 'Qualification',
+    3: 'Playoff'
+}
+
 async function sendUpdate() {
     let elm = document.getElementById('matchStateTop');
-    let data: MonitorFrame = {
+    let data: PartialMonitorFrame = {
         frameTime: (new Date()).getTime(),
         version: version ?? '0.0.0',
         field: (elm && identifyFieldStatus(elm)) ?? FieldState.UNKNOWN,
         match: parseInt(document.getElementById('MatchNumber')?.innerText.substring(3) ?? '0'),
+        play,
+        level,
         time: document.getElementById('aheadbehind')?.innerText ?? 'Unk',
         blue1: read('blue1'),
         blue2: read('blue2'),
@@ -102,6 +115,17 @@ async function sendUpdate() {
         red3: read('red3'),
         lastCycleTime: 'unknown'
     };
+
+    if (data.field !== lastState && data.field === FieldState.PRESTART_COMPLETED) {
+        const matchNumberData = await fetch('http://10.0.100.5/FieldMonitor/MatchNumberAndPlay').then(res => res.json());
+        data.match = matchNumberData[0];
+        play = matchNumberData[1];
+        level = LevelMap[matchNumberData[2]];
+        data.play = play;
+        data.level = level;
+    }
+
+    lastState = data.field;
 
     await trpc.field.post.mutate({
         eventCode,

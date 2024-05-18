@@ -3,6 +3,8 @@ import { EventEmitter } from "events";
 export interface MonitorFrame {
     field: FieldState;
     match: number;
+    play: number;
+    level: TournamentLevel;
     time: string;
     version: string;
     frameTime: number;
@@ -18,13 +20,15 @@ export interface MonitorFrame {
 type PartialBy<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>> & Partial<Pick<T, K>>;
 
 export interface PartialMonitorFrame extends Omit<MonitorFrame, 'blue1' | 'blue2' | 'blue3' | 'red1' | 'red2' | 'red3'> {
-    blue1: PartialBy<TeamInfo, 'lastChange' | 'improved'>;
-    blue2: PartialBy<TeamInfo, 'lastChange' | 'improved'>;
-    blue3: PartialBy<TeamInfo, 'lastChange' | 'improved'>;
-    red1: PartialBy<TeamInfo, 'lastChange' | 'improved'>;
-    red2: PartialBy<TeamInfo, 'lastChange' | 'improved'>;
-    red3: PartialBy<TeamInfo, 'lastChange' | 'improved'>;
+    blue1: PartialTeamInfo;
+    blue2: PartialTeamInfo;
+    blue3: PartialTeamInfo;
+    red1: PartialTeamInfo;
+    red2: PartialTeamInfo;
+    red3: PartialTeamInfo;
 }
+
+export type PartialTeamInfo = PartialBy<TeamInfo, 'lastChange' | 'improved' | 'warnings'>
 
 export interface TeamInfo {
     number: number;
@@ -48,6 +52,13 @@ export interface TeamInfo {
     versionmm: boolean;
     lastChange: Date | null;
     improved: boolean;
+    warnings: TeamWarnings[];
+}
+
+export enum TeamWarnings {
+    NOT_INSPECTED,
+    RADIO_NOT_FLASHED,
+    SLOW
 }
 
 export enum ROBOT {
@@ -224,8 +235,10 @@ export interface FMSMatch {
     teamNumberRed1: number,
     teamNumberRed2: number,
     teamNumberRed3: number,
-    tournamentLevel: "None" | "Practice" | "Qualification" | "Playoff"
+    tournamentLevel: TournamentLevel;
 }
+
+export type TournamentLevel = "None" | "Practice" | "Qualification" | "Playoff";
 
 export namespace FMSEnums {
     export enum Level {
@@ -279,6 +292,13 @@ export namespace FMSEnums {
     }
 }
 
+export const FMSLevelMap: { [key in FMSEnums.Level]: "None" | "Practice" | "Qualification" | "Playoff" } = {
+    [FMSEnums.Level.None]: "None",
+    [FMSEnums.Level.Practice]: "Practice",
+    [FMSEnums.Level.Qualification]: "Qualification",
+    [FMSEnums.Level.Playoff]: "Playoff"
+}
+
 export interface TeamChecklist { present: boolean, weighed: boolean, inspected: boolean, radioProgrammed: boolean, connectionTested: boolean }
 export type EventChecklist = { [key: string]: TeamChecklist }
 export type TeamList = ({ number: string, name: string, inspected: boolean })[]
@@ -291,6 +311,7 @@ export interface ServerEvent {
     fieldStatusEmitter: EventEmitter,
     checklistEmitter: EventEmitter,
     ticketEmitter: EventEmitter,
+    cycleEmitter: EventEmitter,
     teams: TeamList,
     checklist: EventChecklist,
     users: string[],
@@ -301,4 +322,15 @@ export interface ServerEvent {
     lastMatchEnd: Date | null,
     lastMatchRefDone: Date | null,
     lastMatchScoresPosted: Date | null;
+}
+
+export interface CycleData {
+    eventCode: string,
+    matchNumber: number,
+    prestartTime: Date | null,
+    startTime: Date | null,
+    endTime: Date | null,
+    refEndTime: Date | null,
+    scoresPostedTime: Date | null,
+    previousCycleTime: string | null;
 }

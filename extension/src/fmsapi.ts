@@ -1,5 +1,5 @@
 import { FMS } from "./background";
-import { FMSEnums, FMSLogFrame, FMSMatch, ROBOT } from "@shared/types";
+import { FMSEnums, FMSLogFrame, FMSMatch, ROBOT, TournamentLevel } from "@shared/types";
 
 export async function getEventCode() {
     const eventCode = await (await fetch(`http://${FMS}/api/v1.0/systembase/get/get_CurrentlyActiveEventCode`)).text();
@@ -22,7 +22,7 @@ export async function getLog(matchId: string, alliance: "Red" | "Blue", station:
 export async function getCurrentMatch() {
     const response = await (await fetch(`http://${FMS}/api/v1.0/audience/get/GetCurrentMatchAndPlayNumber`)).json();
     return {
-        level: response.item1 as FMSEnums.Level,
+        level: response.item1 as TournamentLevel,
         matchNumber: response.item2,
         playNumber: response.item3
     }
@@ -45,11 +45,18 @@ export async function getAllLogsForMatch(matchId: string) {
 }
 
 export async function getTeamNumbers() {
-    return await (await fetch(`http://${FMS}/api/v1.0/event/get/GetAllTeamNumbers`)).json();
+    return await (await fetch(`http://${FMS}/api/v1.0/match/get/GetAllTeamNumbers`)).json();
 }
 
-export async function getMatch(matchNumber: number, playNumber: number, level: FMSEnums.Level) {
-    const matches = await getMatches(level);
+const levelMap = {
+    "None": 0,
+    "Practice": 1,
+    "Qualification": 2,
+    "Playoff": 3
+};
+
+export async function getMatch(matchNumber: number, playNumber: number, level: TournamentLevel) {
+    const matches = await getMatches(levelMap[level]);
     console.log(matches);
     for (let match of matches) {
         console.log(match.matchNumber, matchNumber, match.playNumber, playNumber);

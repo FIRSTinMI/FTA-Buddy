@@ -1,9 +1,9 @@
 import { SignalR } from "./signalR";
-import { getEventCode } from "./fmsapi";
+import { getCurrentMatch, getEventCode, getTeamNumbers } from "./fmsapi";
 import { trpc, updateValues } from "./trpc";
 const manifestData = chrome.runtime.getManifest();
 export const FMS = '192.168.1.220'
-let signalRConnection = new SignalR(FMS, manifestData.version, sendFrame);
+let signalRConnection = new SignalR(FMS, manifestData.version, sendFrame, sendCycletime);
 
 let eventCode: string;
 let eventToken: string;
@@ -40,11 +40,14 @@ async function start() {
             });
         } else if (msg.type === "getEventCode") {
             getEventCode().then((code) => {
-                sendResponse({
-                    source: 'ext',
-                    version: manifestData.version,
-                    type: "eventCode",
-                    code
+                getTeamNumbers().then((teams) => {
+                    sendResponse({
+                        source: 'ext',
+                        version: manifestData.version,
+                        type: "eventCode",
+                        code,
+                        teams
+                    });
                 });
             });
         }
@@ -89,6 +92,11 @@ async function pingFMS() {
 
 async function sendFrame(data: any) {
     await trpc.field.post.mutate((eventToken) ? { eventToken, ...data } : { eventCode, ...data });
+}
+
+async function sendCycletime(type: 'lastCycleTime' | 'prestart' | 'start' | 'end' | 'refsDone' | 'scoresPosted', data: string) {
+    const { matchNumber, playNumber, level } = await getCurrentMatch();
+    await trpc.cycles.postCycleTime.mutate({ eventToken, type, lastCycleTime: data, matchNumber, playNumber, level });
 }
 
 chrome.storage.local.onChanged.addListener((changes) => {

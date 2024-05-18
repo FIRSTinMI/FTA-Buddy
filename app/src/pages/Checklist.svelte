@@ -3,11 +3,14 @@
     import Spinner from "../components/Spinner.svelte";
     import { trpc } from "../main";
     import type { EventChecklist } from "../../../shared/types";
+    import { onDestroy, onMount } from "svelte";
+    import { authStore } from "../stores/auth";
 
-    export let checklist: EventChecklist;
-    trpc.checklist.get.query().then((c) => {
+    let checklist: EventChecklist = {};
+    let checklistPromise = trpc.checklist.get.query();
+
+    checklistPromise.then((c: EventChecklist) => {
         checklist = c;
-        updateTotals(c);
     });
 
     let present = 0;
@@ -33,7 +36,9 @@
             total++;
         }
     }
+
     $: updateTotals(checklist);
+    
 
     async function updateChecklist(team: string, key: "present" | "inspected" | "radioProgrammed" | "connectionTested", value: boolean) {
         const updated = [{ team: team, key, value }];
@@ -48,12 +53,31 @@
 
         void trpc.checklist.update.query(updated);
     }
+
+    let subscription: ReturnType<typeof trpc.checklist.subscription.subscribe>;
+    
+    onMount(() => {
+        subscription?.unsubscribe();
+
+        subscription = trpc.checklist.subscription.subscribe({
+            eventToken: $authStore.eventToken
+        }, {
+            onData: (c: EventChecklist) => {
+                checklist = c;
+                updateTotals(checklist);
+            }
+        });
+    });
+
+    onDestroy(() => {
+        subscription?.unsubscribe();
+    });
 </script>
 
 <div class="container w-fit flex flex-col p-4 h-full mx-auto h-fit gap-2">
-    {#await checklist}
+    {#await checklistPromise}
         <Spinner />
-    {:then checklist}
+    {:then c}
         <div class="flex w-full justify-center">
             <div class="grid gap-2 w-fit grid-cols-2">
                 <div class="text-right">Present</div>

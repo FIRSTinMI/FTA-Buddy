@@ -14,6 +14,7 @@
     let signalREnabled = false;
     let extensionVersion = "unknown version";
     let fmsDetected = false;
+    let teams: number[] = [];
 
     window.addEventListener("message", (event) => {
         if (event.data.type === "pong") {
@@ -28,6 +29,7 @@
             if (fmsDetected) window.postMessage({ source: "page", type: "getEventCode" }, "*");
         } else if (event.data.type === "eventCode") {
             eventCode = event.data.code;
+            teams = event.data.teams;
             checkEventCode();
         }
     });
@@ -68,6 +70,7 @@
             const res = await trpc.event.create.query({
                 code: eventCode,
                 pin: eventPin,
+                teams
             });
 
             toast("Success", "Event created successfully", "green-500");
@@ -81,7 +84,7 @@
                 teams: res.teams,
             });
 
-            window.postMessage({ source: "page", type: "eventCode", code: eventCode }, "*");
+            window.postMessage({ source: "page", type: "eventCode", code: eventCode, token: res.token }, "*");
 
             await new Promise((resolve) => setTimeout(resolve, 500));
 

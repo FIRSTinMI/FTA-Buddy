@@ -3,7 +3,6 @@
     import { Button, CloseButton, Drawer, Indicator, Modal, Sidebar, SidebarGroup, SidebarItem, SidebarWrapper, Toast } from "flowbite-svelte";
     import { Link, Route, Router, navigate } from "svelte-routing";
     import { get } from "svelte/store";
-    import { type EventChecklist } from "../../shared/types";
     import { frameHandler, subscribeToFieldMonitor } from "./field-monitor";
     import SettingsModal from "./components/SettingsModal.svelte";
     import WelcomeModal from "./components/WelcomeModal.svelte";
@@ -16,7 +15,6 @@
     import { messagesStore } from "./stores/messages";
     import { settingsStore } from "./stores/settings";
     import { VERSIONS, update } from "./util/updater";
-    import { trpc } from "./main";
     import { sineIn } from "svelte/easing";
     import CompleteGoogleSignup from "./pages/CompleteGoogleSignup.svelte";
     import { eventStore } from "./stores/event";
@@ -177,30 +175,6 @@
         if (window.outerWidth > 1900)
             fullscreen = window.innerHeight === 1080;
     }, 200);
-
-    function updateInspectionList(c: EventChecklist) {
-        try {
-            if (!c) return;
-            if (event.teams) {
-                for (let teams of event.teams) {
-                    teams.inspected = c[teams.number].inspected;
-                }
-            }
-        } catch (e) {
-            console.error(e);
-        }
-    }
-
-    if (auth.eventToken) {
-        trpc.checklist.get.query().then((c) => {
-            checklist = c;
-            updateInspectionList(checklist);
-        });
-    }
-
-    $: updateInspectionList(checklist);
-
-    let checklist: EventChecklist;
 </script>
 
 {#if showToast}
@@ -413,9 +387,7 @@
                 </Route>
                 <Route path="/logs/:matchid" component={MatchLog} />
                 <Route path="/logs/:matchid/:station" component={StationLog} />
-                <Route path="/checklist">
-                    <Checklist bind:checklist />
-                </Route>
+                <Route path="/checklist" component={Checklist} />
             </div>
             <Route path="/login">
                 <Login {toast} />

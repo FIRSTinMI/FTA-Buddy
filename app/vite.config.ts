@@ -14,11 +14,11 @@ export default defineConfig({
     server: {
         proxy: {
             '/trpc': {
-                target: 'http://localhost:3000',
+                target: 'http://localhost:3001',
                 changeOrigin: true,
             },
             '/ws': {
-                target: 'http://localhost:3002',
+                target: 'http://localhost:3003',
                 changeOrigin: true,
                 ws: true
             }

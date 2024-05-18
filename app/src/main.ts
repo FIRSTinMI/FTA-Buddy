@@ -13,7 +13,7 @@ let eventToken = get(authStore).eventToken;
 export let server = (get(settingsStore).forceCloud) ? 'https://ftabuddy.com' : window.location.origin;
 
 const wsClient = createWSClient({
-    url: `ws://localhost:3002`,
+    url: server.replace('http', 'ws') + '/ws',
 });
 
 export let trpc = createTRPCClient<AppRouter>({

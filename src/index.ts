@@ -3,7 +3,6 @@ import { applyWSSHandler } from '@trpc/server/adapters/ws';
 import cors from 'cors';
 import 'dotenv/config';
 import express from 'express';
-import proxy from 'express-http-proxy';
 import { readFileSync, readdirSync } from 'fs';
 import ws from 'ws';
 import { ServerEvent, TournamentLevel } from '../shared/types';
@@ -18,8 +17,11 @@ import { cycleRouter } from './router/cycles';
 import { getTeamAverageCycle } from './util/team-cycles';
 import { and, eq } from 'drizzle-orm';
 import { cycleLogs } from './db/schema';
+import { createProxyServer } from 'http-proxy';
+import proxy from 'express-http-proxy';
+import { createServer } from 'http';
 
-const port = parseInt(process.env.PORT || '3000');
+const port = parseInt(process.env.PORT || '3001');
 
 export const events: { [key: string]: ServerEvent; } = {};
 export const eventCodes: { [key: string]: string; } = {};
@@ -61,10 +63,17 @@ console.log('✅ WebSocket Server listening on ws://localhost:' + (port + 2));
 
 const app = express();
 
+const server = createServer(app)
+
+const wsProxy = createProxyServer({ target: 'http://localhost:' + (port + 2), ws: true });
+
+server.on('upgrade', function (req, socket, head) {
+    wsProxy.ws(req, socket, head);
+});
+
 app.use(cors())
 
 app.use('/trpc', proxy('http://localhost:' + (port + 1) + '/trpc'));
-app.use('/ws', proxy('http://localhost:' + (port + 2)));
 
 app.get('/serviceworker.js', async (req, res) => {
     let assets = readdirSync('./app/dist/assets');
@@ -83,11 +92,6 @@ if (process.env.NODE_ENV === 'dev') {
     app.use('/FieldMonitor', express.static('app/dist/FieldMonitor'));
 }
 
-app.get('/', (req, res) => {
-    res.redirect('/app/');
-});
-
-
 // Public api
 
 app.get('/cycles/:eventCode/:level/:match/:play', async (req, res) => {
@@ -104,11 +108,11 @@ app.get('/team-average-cycle/:team/:eventCode?', async (req, res) => {
     res.json(await getTeamAverageCycle(parseInt(req.params.team), req.params.eventCode?.toLowerCase()));
 });
 
-connect().then(async () => {
-    app.listen(port, () => {
-        console.log(`Server listening on port ${port}`);
-    });
+app.get('/', (req, res) => {
+    res.redirect('/app/');
 });
+
+connect().then(() => server.listen(port));
 
 process.on('SIGTERM', () => {
     console.log('SIGTERM');

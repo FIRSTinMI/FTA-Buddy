@@ -1,15 +1,19 @@
 import { SignalR } from "./signalR";
 import { getEventCode } from "./fmsapi";
+import { trpc, updateValues } from "./trpc";
 const manifestData = chrome.runtime.getManifest();
 export const FMS = '192.168.1.220'
 let signalRConnection = new SignalR(FMS, manifestData.version, sendFrame);
-let ws: WebSocket;
+
+let eventCode: string;
+let eventToken: string;
+let url: string;
 
 async function start() {
-    let url, cloud, changed, enabled, signalR, eventCode;
+    let cloud, changed, enabled, signalR;
 
     await new Promise((resolve) => {
-        chrome.storage.local.get(['url', 'cloud', 'event', 'changed', 'enabled', 'signalR', 'id'], item => {
+        chrome.storage.local.get(['url', 'cloud', 'event', 'changed', 'enabled', 'signalR', 'id', 'eventToken'], item => {
             console.log(item);
             if (!item.id) chrome.storage.local.set({ id: crypto.randomUUID() });
             url = item.url;
@@ -18,6 +22,7 @@ async function start() {
             changed = item.changed;
             enabled = item.enabled;
             signalR = item.signalR;
+            eventToken = item.eventToken;
             resolve(void 0);
         });
     });
@@ -62,28 +67,11 @@ async function start() {
         signalRConnection.start();
     }
 
-    console.log(cloud, url, eventCode);
+    console.log(cloud, url, eventCode, eventToken);
 
-    if (!eventCode) return;
-    connectToWS(cloud ?? true, url, eventCode);
-}
+    if (!(eventCode || eventToken)) return;
 
-function connectToWS(cloud: boolean, url: string | undefined, eventCode: string) {
-    if (ws) ws.close();
-
-    console.log('Trying to connect to ' + ((cloud) ? 'cloud' : url));
-    ws = new WebSocket((cloud) ? `wss://ftabuddy.com/ws/` : url ?? 'ws://localhost:8080');
-    ws.onopen = () => {
-        ws.send(`server-${eventCode}`);
-        console.log('Connected to server');
-    }
-    ws.onclose = () => {
-        console.log('Disconnected from server, reconnecting in 5 seconds.');
-        setTimeout(() => connectToWS(cloud, url, eventCode), 5000);
-    }
-    ws.onerror = (err) => {
-        console.error(err);
-    }
+    updateValues();
 }
 
 async function pingFMS() {
@@ -99,8 +87,8 @@ async function pingFMS() {
     }
 }
 
-function sendFrame(data: any) {
-    if (ws.readyState === 1) ws.send(JSON.stringify(data));
+async function sendFrame(data: any) {
+    await trpc.field.post.mutate((eventToken) ? { eventToken, ...data } : { eventCode, ...data });
 }
 
 chrome.storage.local.onChanged.addListener((changes) => {

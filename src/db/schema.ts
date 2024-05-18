@@ -100,3 +100,5 @@ export const logPublishing = pgTable('log_publishing', {
     publish_time: timestamp('publish_time').defaultNow(),
     expire_time: timestamp('expire_time').notNull()
 });
+
+export default { events, users, messages, matchLogs, cycleLogs, logPublishing };

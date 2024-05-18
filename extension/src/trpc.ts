@@ -1,51 +1,60 @@
-import { createTRPCClient, httpBatchLink } from '@trpc/client';
+import { createTRPCClient, createWSClient, httpBatchLink, splitLink, wsLink } from '@trpc/client';
 import type { AppRouter } from '../../src/index';
 import { getAllLogsForMatch, getCurrentMatch, getMatch } from './fmsapi';
+import SuperJSON from 'superjson';
 
-let cloud = true;
-let id = '';
-let eventCode = '';
+let cloud: boolean = true;
+let id: string = '';
+let eventCode: string = '';
+let url: string = '';
+let eventToken: string = '';
 
-async function updateValues() {
+let wsClient = createWSClient({
+    url: `ws://localhost:3002`,
+});
+
+export async function updateValues() {
     return new Promise<void>((resolve) => {
-        chrome.storage.local.get(['cloud', 'id', 'event'], item => {
+        chrome.storage.local.get(['url', 'cloud', 'event', 'id', 'eventToken'], item => {
             cloud = item.cloud;
             id = item.id;
             eventCode = item.event;
+            url = item.url;
+            eventToken = item.eventToken;
 
-            trpc = createTRPCClient<AppRouter>({
-                links: [
-                    httpBatchLink({
-                        url: (cloud) ? `https://ftabuddy.com` : 'http://localhost:3002' + '/trpc',
-                        headers: {
-                            'Authorization': `Bearer ${id}`,
-                            'Event-Token': 'undefined'
-                        }
-                    }),
-                ],
-            });
+            trpc = createTRPCConnection();
 
             resolve();
         });
     });
 }
 
-updateValues();
+function createTRPCConnection() {
+    return createTRPCClient<AppRouter>({
+        links: [
+            splitLink({
+                condition(op) {
+                    return op.type === 'subscription' || op.path === 'field.post';
+                },
+                true: wsLink({
+                    client: wsClient,
+                    transformer: SuperJSON
+                }),
+                false: httpBatchLink({
+                    url: url + '/trpc',
+                    transformer: SuperJSON,
+                    headers: {
+                        'Event-Token': eventToken ?? '',
+                    }
+                }),
+            })
+        ],
+    });
+}
 
-export let trpc = createTRPCClient<AppRouter>({
-    links: [
-        httpBatchLink({
-            url: 'https://ftabuddy.com/trpc',
-            headers: {
-                'Authorization': `Bearer ${id}`,
-                'Event-Token': 'undefined'
-            }
-        }),
-    ],
-});
+export let trpc = createTRPCConnection();
 
 export async function uploadMatchLogs() {
-    await updateValues();
     const matchNumber = await getCurrentMatch();
     const match = await getMatch(matchNumber.matchNumber, matchNumber.playNumber, matchNumber.level);
     const logs = await getAllLogsForMatch(match.fmsMatchId);

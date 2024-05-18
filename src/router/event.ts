@@ -17,6 +17,7 @@ export const eventRouter = router({
 
         if (event) return { error: true, message: 'Event already exists' };
 
+        // Get event title
         const eventData = await (await fetch(`https://www.thebluealliance.com/api/v3/event/${input.code}/simple`, {
             headers: {
                 'X-TBA-Auth-Key': process.env.TBA_API_KEY ?? ''
@@ -74,7 +75,8 @@ export const eventRouter = router({
 
     create: publicProcedure.input(z.object({
         code: z.string().startsWith('202').min(6),
-        pin: z.string().min(4)
+        pin: z.string().min(4),
+        teams: z.array(z.number()).optional()
     })).query(async ({ input }) => {
         input.code = input.code.trim().toLowerCase();
         const token = generateToken();
@@ -93,8 +95,29 @@ export const eventRouter = router({
 
         if (teamsData) {
             for (let team of teamsData) {
+                if (input.teams?.includes(team)) input.teams = input.teams?.splice(input.teams.indexOf(team), 1) ?? [];
+
                 teams.push({ number: team.team_number, name: team.nickname, inspected: false });
                 checklist[team.team_number] = {
+                    present: false,
+                    weighed: false,
+                    inspected: false,
+                    radioProgrammed: false,
+                    connectionTested: false
+                };
+            }
+        }
+
+        for (let team of input.teams ?? []) {
+            const teamData = await fetch(`https://www.thebluealliance.com/api/v3/team/frc${team}/simple`, {
+                headers: {
+                    'X-TBA-Auth-Key': process.env.TBA_API_KEY ?? ''
+                }
+            }).then(res => res.json());
+
+            if (teamData) {
+                teams.push({ number: teamData.team_number, name: teamData.nickname, inspected: false });
+                checklist[teamData.team_number] = {
                     present: false,
                     weighed: false,
                     inspected: false,

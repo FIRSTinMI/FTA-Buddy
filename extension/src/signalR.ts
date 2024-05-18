@@ -1,5 +1,5 @@
 import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
-import { ASTOP, BYPASS, CODE, DSState, ESTOP, GREEN, GREEN_X, MATCH_ABORTED, MATCH_NOT_READY, MATCH_OVER, MATCH_READY, MATCH_RUNNING_AUTO, MATCH_RUNNING_TELEOP, MATCH_TRANSITIONING, MOVE_STATION, NO_CODE, PRESTART_COMPLETED, PRESTART_INITIATED, READY_FOR_POST_RESULT, READY_TO_PRESTART, RED, ROBOT, FMSEnums, UNKNOWN, WRONG_MATCH, type MonitorFrame, type SignalRMonitorFrame } from '@shared/types';
+import { DSState, EnableState, FMSEnums, FieldState, ROBOT, type MonitorFrame, type SignalRMonitorFrame } from '@shared/types';
 import { DEFAULT_MONITOR } from '@shared/constants';
 import { uploadMatchLogs } from './trpc';
 
@@ -15,14 +15,9 @@ export class SignalR {
 
     private callback: (frame: MonitorFrame) => void;
 
-    private lastCycleTime: string = 'unknown';
-    private lastTime: string = 'unknown';
-    private version: string;
-
     constructor(ip: string, version: string, callback: (frame: MonitorFrame) => void) {
         this.ip = ip;
         this.callback = callback;
-        this.version = version;
         this.frame.version = version;
     }
 
@@ -95,24 +90,24 @@ export class SignalR {
                         break;
                     case 'WaitingForPrestart':
                     case 'WaitingForPrestartTO':
-                        this.frame.field = READY_TO_PRESTART;
+                        this.frame.field = FieldState.READY_TO_PRESTART;
                         break;
                     case 'Prestarting':
                     case 'PrestartingTO':
-                        this.frame.field = PRESTART_INITIATED;
+                        this.frame.field = FieldState.PRESTART_INITIATED;
                         break;
                     case
                         'WaitingForSetAudience':
                     case 'WaitingForSetAudienceTO':
                     case 'WaitingForMatchPreview':
                     case 'WaitingForMatchPreviewTO':
-                        this.frame.field = PRESTART_COMPLETED;
+                        this.frame.field = FieldState.PRESTART_COMPLETED;
                         break;
                     case 'WaitingForMatchReady':
-                        this.frame.field = MATCH_NOT_READY;
+                        this.frame.field = FieldState.MATCH_NOT_READY;
                         break;
                     case 'WaitingForMatchStart':
-                        this.frame.field = MATCH_READY;
+                        this.frame.field = FieldState.MATCH_READY;
                         break;
                     case 'GameSpecific':
                         // What?
@@ -120,29 +115,29 @@ export class SignalR {
                         // $(".matchState").addClass("matchStateGreen");
                         // $("#matchStateTop").text("CLEARING GAME DATA");
                         // $("#matchStateBottom").text("FROM DS");
-                        this.frame.field = UNKNOWN;
+                        this.frame.field = FieldState.UNKNOWN;
                         break;
                     case 'MatchAuto':
-                        this.frame.field = MATCH_RUNNING_AUTO
+                        this.frame.field = FieldState.MATCH_RUNNING_AUTO
                         break;
                     case 'MatchTransition':
-                        this.frame.field = MATCH_TRANSITIONING;
+                        this.frame.field = FieldState.MATCH_TRANSITIONING;
                         break;
                     case 'MatchTeleop':
-                        this.frame.field = MATCH_RUNNING_TELEOP;
+                        this.frame.field = FieldState.MATCH_RUNNING_TELEOP;
                         break;
                     case 'WaitingForCommit':
-                        this.frame.field = MATCH_OVER;
+                        this.frame.field = FieldState.MATCH_OVER;
                         break;
                     case 'WaitingForPostResults':
-                        this.frame.field = READY_FOR_POST_RESULT;
+                        this.frame.field = FieldState.READY_FOR_POST_RESULT;
                         void uploadMatchLogs();
                         break;
                     case 'TournamentLevelComplete':
-                        this.frame.field = UNKNOWN;
+                        this.frame.field = FieldState.UNKNOWN;
                         break;
                     case 'MatchCancelled':
-                        this.frame.field = MATCH_ABORTED;
+                        this.frame.field = FieldState.MATCH_ABORTED;
                         void uploadMatchLogs();
                         // womp womp
                         break;
@@ -159,10 +154,10 @@ export class SignalR {
 
                 this.frame[team] = {
                     number: data[i].TeamNumber,
-                    ds: dsState(data[i]),
-                    radio: (data[i].RadioLink) ? GREEN : RED,
-                    rio: (data[i].RIOLink) ? GREEN : RED,
-                    code: (data[i].LinkActive) ? CODE : NO_CODE,
+                    ds: this.dsState(data[i]),
+                    radio: data[i].RadioLink,
+                    rio: data[i].RIOLink,
+                    code: data[i].LinkActive,
                     bwu: data[i].DataRateTotal,
                     battery: data[i].Battery,
                     ping: data[i].AverageTripTime,
@@ -175,7 +170,8 @@ export class SignalR {
                     SNR: data[i].SNR,
                     noise: data[i].Noise,
                     signal: data[i].Signal,
-                    versionmm: this.frame[team].versionmm
+                    versionmm: this.frame[team].versionmm,
+                    enabled: this.enableState(data[i])
                 }
             }
 
@@ -203,7 +199,7 @@ export class SignalR {
 
             const team: ROBOT = (((data.p1 === FMSEnums.AllianceType.Red) ? 'red' : 'blue') + data.p2) as ROBOT;
 
-            this.frame[team].versionmm = data.p3.length > 0 ? 1 : 0;
+            this.frame[team].versionmm = data.p3.length > 0;
         });
 
         // Any settings changed in FMS
@@ -288,13 +284,11 @@ export class SignalR {
 
         this.infrastructureConnection.on('lastcycletimecalculated', (data) => {
             console.log('lastcycletimecalculated: ', data);
-            this.lastCycleTime = data;
             this.frame.lastCycleTime = data;
         });
 
         this.infrastructureConnection.on('scheduleaheadbehindchanged', (data) => {
             console.log('scheduleaheadbehindchanged: ', data);
-            this.lastTime = data;
             this.frame.time = data;
         });
 
@@ -346,18 +340,29 @@ export class SignalR {
             });
         });
     }
-}
 
-function dsState(data: SignalRMonitorFrame): DSState {
-    if (data.IsBypassed) return BYPASS;
-    if (data.IsEStopPressed) return ESTOP;
-    if (data.IsAStopPressed) return ASTOP;
-    if (data.Connection) {
-        if (data.StationStatus === FMSEnums.StationStatusType.Good) return GREEN;
-        if (data.StationStatus === FMSEnums.StationStatusType.WrongStation) return MOVE_STATION;
-        if (data.StationStatus === FMSEnums.StationStatusType.WrongMatch) return WRONG_MATCH;
-        return GREEN_X;
+    private dsState(data: SignalRMonitorFrame): DSState {
+        if (data.IsBypassed) return DSState.BYPASS;
+        if (data.IsEStopPressed) return DSState.ESTOP;
+        if (data.IsAStopPressed) return DSState.ASTOP;
+        if (data.Connection) {
+            if (data.StationStatus === FMSEnums.StationStatusType.Good) return DSState.GREEN;
+            if (data.StationStatus === FMSEnums.StationStatusType.WrongStation) return DSState.MOVE_STATION;
+            if (data.StationStatus === FMSEnums.StationStatusType.WrongMatch) return DSState.WAITING;
+            return DSState.GREEN_X;
+        }
+
+        return DSState.RED;
     }
 
-    return RED;
+    private enableState(data: SignalRMonitorFrame): EnableState {
+        if (data.IsEStopped) return EnableState.ESTOP;
+        if (data.IsAStopPressed) return EnableState.ASTOP;
+        if (data.IsEnabled) {
+            if (data.IsAuto) return EnableState.GREEN_A;
+            return EnableState.GREEN_T;
+        }
+        return EnableState.RED;
+    }
 }
+

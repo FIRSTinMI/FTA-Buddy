@@ -4,21 +4,12 @@
         TableBodyRow,
     } from "flowbite-svelte";
     import {
-        BYPASS,
-        ESTOP,
-        GREEN_X,
-        MOVE_STATION,
-        WRONG_MATCH,
+    DSState,
+    MatchState,
+    MatchStateMap,
+    ROBOT,
         type MonitorFrame,
-        type TeamInfo,
-        type Station,
-        ASTOP,
-        NO_CODE,
-        RED,
-        MATCH_OVER,
-        MATCH_ABORTED,
-        READY_FOR_POST_RESULT,
-        READY_TO_PRESTART,
+        type TeamInfo
     } from "../../../shared/types";
     import { navigate } from "svelte-routing";
     import Graph from "./Graph.svelte";
@@ -26,15 +17,15 @@
     import { processSignalStrengthForGraph } from "../util/signalStrengthProcessor";
     import { eventStore } from "../stores/event";
 
-    export let station: Station;
+    export let station: ROBOT;
     export let monitorFrame: MonitorFrame;
     export let fullscreen = false;
-    export let statusChange: { lastChange: Date; improved: boolean };
     export let frameHandler: MonitorFrameHandler;
     let team: TeamInfo;
+
     $: {
         team = monitorFrame[station];
-        parsedData = battery.map((d, i) => ({ time: i, data: d }));
+        parsedData = frameHandler.getHistory(station, 'battery', 20).map((d, i) => ({ time: i, data: d as number }));
         signalData = processSignalStrengthForGraph(frameHandler
         .getHistory(station, "signal", 20) as number[]);
     }
@@ -64,8 +55,7 @@
         2: "bg-green-500",
     };
 
-    export let battery: number[];
-    let parsedData = battery.map((d, i) => ({ time: i, data: d }));
+    let parsedData = frameHandler.getHistory(station, 'battery', 20).map((d, i) => ({ time: i, data: d as number }));
     let signalData = processSignalStrengthForGraph(frameHandler
         .getHistory(station, "signal", 20) as number[]);
 </script>
@@ -87,16 +77,16 @@
         >
             <p>{team.number}</p>
             <p style="letter-spacing: -8px;">
-                {#if ![MATCH_OVER, MATCH_ABORTED, READY_FOR_POST_RESULT, READY_TO_PRESTART].includes(monitorFrame.field)}
-                    {#if team.ds === RED && statusChange.lastChange.getTime() + 30e3 < Date.now()}
+                {#if MatchStateMap[monitorFrame.field] === MatchState.PRESTART && team.lastChange}
+                    {#if team.ds === DSState.RED && team.lastChange.getTime() + 30e3 < Date.now()}
                         👀
-                    {:else if team.ds === GREEN_X && statusChange.lastChange.getTime() + 30e3 < Date.now()}
+                    {:else if team.ds === DSState.GREEN_X && team.lastChange.getTime() + 30e3 < Date.now()}
                         👀
-                    {:else if team.radio === RED && statusChange.lastChange.getTime() + 180e3 < Date.now()}
+                    {:else if !team.radio && team.lastChange.getTime() + 180e3 < Date.now()}
                         👀
-                    {:else if team.rio === RED && statusChange.lastChange.getTime() + 45e3 < Date.now()}
+                    {:else if !team.rio && team.lastChange.getTime() + 45e3 < Date.now()}
                         👀
-                    {:else if team.code === NO_CODE && statusChange.lastChange.getTime() + 30e3 < Date.now()}
+                    {:else if !team.code && team.lastChange.getTime() + 30e3 < Date.now()}
                         👀
                     {/if}
                 {/if}
@@ -115,28 +105,28 @@
                 : ''}"
             on:click={detailView}
         >
-            {#if team.ds === GREEN_X}
+            {#if team.ds === DSState.GREEN_X}
                 X
-            {:else if team.ds === MOVE_STATION}
+            {:else if team.ds === DSState.MOVE_STATION}
                 M
-            {:else if team.ds === WRONG_MATCH}
+            {:else if team.ds === DSState.WAITING}
                 W
-            {:else if team.ds === BYPASS}
+            {:else if team.ds === DSState.BYPASS}
                 B
-            {:else if team.ds === ESTOP}
+            {:else if team.ds === DSState.ESTOP}
                 E
-            {:else if team.ds === ASTOP}
+            {:else if team.ds === DSState.ASTOP}
                 A
             {/if}
         </TableBodyCell>
         <TableBodyCell
-            class="{DS_Colors[team.radio]} {fullscreen
+            class="{team.radio ? "bg-green-500" : "bg-red-600"} {fullscreen
                 ? 'ring-inset ring-4 ring-gray-800'
                 : 'border-x'} border-gray-800 "
             on:click={detailView}
         ></TableBodyCell>
         <TableBodyCell
-            class="{RIO_Colors[(team.rio > 0 ? 1 : 0) + team.code]} {fullscreen
+            class="{RIO_Colors[(team.rio ? 1 : 0) + (team.code ? 1 : 0)]} {fullscreen
                 ? 'ring-inset ring-4 ring-gray-800'
                 : 'border-x'} border-gray-800"
             on:click={detailView}

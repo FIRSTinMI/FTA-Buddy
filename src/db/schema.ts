@@ -39,7 +39,8 @@ export const messages = pgTable('messages', {
     is_ticket: boolean('is_ticket').notNull().default(false),
     is_open: boolean('is_open').notNull().default(true),
     assigned_to: jsonb('assigned_to').notNull().default('[]'),
-    closed_at: timestamp('closed_at')
+    closed_at: timestamp('closed_at'),
+    match_id: uuid('match_id').references(() => matchLogs.id),
 });
 
 export const Message = typeof messages.$inferInsert;

@@ -1,10 +1,12 @@
 <script lang="ts">
-    import Icon from "@iconify/svelte";
-    import { Alert, Button, Label, Select, Textarea, ToolbarButton } from "flowbite-svelte";
+    import { Button, Card, Label, Select } from "flowbite-svelte";
+    import { onMount } from "svelte";
     import { get } from "svelte/store";
+    import { default as MessageComponent } from "../components/Message.svelte";
+    import { trpc } from "../main";
     import { eventStore, type Event } from "../stores/event";
-    import { messagesStore, type Message, type Ticket } from "../stores/messages";
-    import MessageComponent from "../components/Message.svelte";
+    import { messagesStore, type Message } from "../stores/messages";
+    import { formatTimeShort } from "../util/formatTime";
 
     export const newMessage = (message: any) => {
         console.log(message);
@@ -20,7 +22,17 @@
 
     let scrollBox: HTMLDivElement;
     let messages: Message[] = [];
-    let tickets: Ticket[] = [];
+    let tickets: Awaited<ReturnType<typeof trpc.messages.getTickets.query>> = [];
+    let ticketsPromise: Promise<any> | undefined;
+
+    async function getTickets() {
+        ticketsPromise = trpc.messages.getTickets.query({});
+        tickets = await ticketsPromise;
+    }
+
+    onMount(() => {
+        getTickets();
+    });
 
     function selectTeam(evt: Event) {
         if (!team) return;
@@ -28,7 +40,7 @@
     }
 </script>
 
-<div class="container mx-auto px-2 pt-2 h-full flex flex-col gap-2">
+<div class="container max-w-6xl mx-auto px-2 pt-2 h-full flex flex-col gap-2">
     <div class="grid grid-cols-2 gap-2">
         {#if view == "tickets"}
             <Button>Tickets</Button>
@@ -61,7 +73,7 @@
         </form>
     {:else}
         <div>
-            <Button class="w-full">Create New Ticket</Button>
+            <Button class="w-full" href="/app/ticket">Create New Ticket</Button>
         </div>
     {/if}
 
@@ -75,15 +87,38 @@
                         <MessageComponent {message} {team} />
                     {/each}
                 {/if}
-            {:else if !tickets || tickets.length < 1}
-                <div class="text-center">No tickets</div>
-            {:else}
-                {#each tickets as ticket}
-                    <div class="flex justify-between">
-                        <div>{ticket.team}</div>
-                        <div>{ticket.message}</div>
-                    </div>
-                {/each}
+            {:else if view == "tickets"}
+                {#if !tickets || tickets.length < 1}
+                    <div class="text-center">No tickets</div>
+                {:else}
+                    {#each tickets as ticket}
+                        <Card href="/app/ticket/{ticket.id}" padding="none" size="none" class="w-full">
+                            <div class="flex flex-col sm:flex-row sm:divide-x divide-gray-500 pt-2 sm:pt-0 sm:gap-4 px-4">
+                                <div class="flex flex-col sm:my-auto">
+                                    <p>#{ticket.id} - 
+                                        {#if ticket.is_open}
+                                            <span class="text-green-500 font-bold">Open</span>
+                                            <span class="sm:hidden">{formatTimeShort(ticket.created_at)}</span>
+                                        {:else}
+                                            <span class="font-bold">Closed</span>
+                                            <span class="sm:hidden">{formatTimeShort(ticket.closed_at ?? ticket.created_at)}</span>
+                                        {/if}
+                                    </p>
+                                    <p class="sm:text-lg">Team: {ticket.team} - {ticket.teamName}</p>
+                                    <p class="hidden sm:block">{formatTimeShort((!ticket.is_open && ticket.closed_at) ? ticket.closed_at : ticket.created_at)}</p>
+                                </div>
+                                <div class="flex flex-col p-2 grow text-left">
+                                    {#if ticket.message.length > 255}
+                                        <p class="font-bold">{ticket.message.slice(0, 255)}...</p>
+                                    {:else}
+                                        <p class="font-bold">{ticket.message}</p>
+                                    {/if}
+                                    <MessageComponent message={ticket.messages[0] ?? ticket} team={ticket.team} class="w-full self-start text-left" />
+                                </div>
+                            </div>
+                        </Card>
+                    {/each}
+                {/if}
             {/if}
         </div>
     </div>

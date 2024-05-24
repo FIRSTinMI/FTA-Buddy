@@ -25,6 +25,8 @@
     import MatchLogsList from "./pages/MatchLogsList.svelte";
     import Checklist from "./pages/Checklist.svelte";
     import { onMount } from "svelte";
+    import CreateTicket from "./pages/CreateTicket.svelte";
+    import ViewTicket from "./pages/ViewTicket.svelte";
 
     // Checking authentication
 
@@ -124,6 +126,8 @@
             showToast = false;
         }, 5000);
     }
+
+    (window as any).toast = toast;
 
 
     // App install prompt
@@ -382,6 +386,8 @@
                     <Messages bind:this={messagesChild} team={undefined} />
                 </Route>
                 <Route path="/messages/:team" component={Messages} />
+                <Route path="/ticket" component={CreateTicket} />
+                <Route path="/ticket/:id" component={ViewTicket} />
                 <Route path="/logs">
                     <MatchLogsList {toast} />
                 </Route>

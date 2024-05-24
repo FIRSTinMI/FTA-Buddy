@@ -334,3 +334,21 @@ export interface CycleData {
     scoresPostedTime: Date | null,
     previousCycleTime: string | null;
 }
+
+export interface TicketMessage {
+    id: number,
+    message: string,
+    user_id: number,
+    team: string,
+    event_code: string,
+    thread_id: number,
+    is_ticket: boolean,
+    is_open: boolean,
+    match_id: string | null,
+    created_at: Date,
+    user?: {
+        id: number,
+        username: string,
+        role: "ADMIN" | "FTAA" | "FTA" | "CSA" | "RI";
+    };
+}

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { eventProcedure, publicProcedure, router } from "../trpc";
 import { db } from '../db/db';
 import { logPublishing, matchLogs } from '../db/schema';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, or } from 'drizzle-orm';
 import { inferRouterOutputs } from '@trpc/server';
 import { randomUUID } from 'crypto';
 import { FMSLogFrame, ROBOT } from '../../shared/types';
@@ -55,6 +55,27 @@ export const matchRouter = router({
             red2_log: input.logs.red2,
             red3_log: input.logs.red3
         }).execute();
+    }),
+
+    getMatchNumbers: eventProcedure.input(z.object({
+        team: z.number()
+    })).query(async ({ ctx, input }) => {
+        return await db.select({
+            id: matchLogs.id,
+            match_number: matchLogs.match_number,
+            play_number: matchLogs.play_number,
+            level: matchLogs.level,
+        }).from(matchLogs).where(and(
+            eq(matchLogs.event, ctx.event.code),
+            or(
+                eq(matchLogs.blue1, input.team),
+                eq(matchLogs.blue2, input.team),
+                eq(matchLogs.blue3, input.team),
+                eq(matchLogs.red1, input.team),
+                eq(matchLogs.red2, input.team),
+                eq(matchLogs.red3, input.team)
+            )
+        ));
     }),
 
     getMatches: eventProcedure.input(z.object({

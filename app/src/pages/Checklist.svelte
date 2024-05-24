@@ -5,9 +5,21 @@
     import type { EventChecklist } from "../../../shared/types";
     import { onDestroy, onMount } from "svelte";
     import { authStore } from "../stores/auth";
+    import { eventStore } from "../stores/event";
+    import { get } from "svelte/store";
 
     let checklist: EventChecklist = {};
     let checklistPromise = trpc.checklist.get.query();
+    const teamNames: { [key: string]: string } = {};
+
+    for (let team of get(eventStore).teams) {
+        let name = team.name;
+        if (name.length > 20) {
+            name = name.slice(0, 20) + "...";
+        }
+
+        teamNames[team.number] = name;
+    }
 
     checklistPromise.then((c: EventChecklist) => {
         checklist = c;
@@ -93,6 +105,7 @@
         <Table class="text-center">
             <TableHead>
                 <TableHeadCell class="p-1 md:p-2">Team</TableHeadCell>
+                <TableHeadCell class="p-1 md:p-2">Name</TableHeadCell>
                 <TableHeadCell class="p-1 md:p-2">Present</TableHeadCell>
                 <TableHeadCell class="p-1 md:p-2">Inspected</TableHeadCell>
                 <TableHeadCell class="p-1 md:p-2">Radio</TableHeadCell>
@@ -102,6 +115,7 @@
                 {#each Object.entries(checklist) as [team, items]}
                     <TableBodyRow>
                         <TableBodyCell>{team}</TableBodyCell>
+                        <TableBodyCell>{teamNames[team]}</TableBodyCell>
                         <TableBodyCell
                             ><Checkbox
                                 class="justify-center"

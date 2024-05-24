@@ -4,7 +4,7 @@ import { db } from "../db/db";
 import { events, matchLogs, messages, users } from "../db/schema";
 import { desc, eq, inArray, or, and } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
-import { TeamList, TicketMessage } from "../../shared/types";
+import { Profile, TeamList, Ticket, TicketMessage } from "../../shared/types";
 
 export const messagesRouter = router({
     getTickets: eventProcedure.input(z.object({
@@ -40,21 +40,28 @@ export const messagesRouter = router({
             });
         }
 
-        let returnTickets = [];
+        let processedTickets: Ticket[] = [];
 
         for (let ticket of tickets) {
             let ticketMessages = msgsWithProfiles.filter(msg => msg.thread_id === ticket.id);
+            const assigned_to: Profile[] = [];
 
-            returnTickets.push({
+            for (let user of (ticket.assigned_to as number[])) {
+                const profile = profiles.find(p => p.id === user);
+                if (profile) assigned_to.push(profile);
+            }
+
+            processedTickets.push({
                 ...ticket,
+                team: parseInt(ticket.team),
                 user: profiles.find(p => p.id === ticket.user_id),
-                assigned_to: (ticket.assigned_to as number[]).map(id => profiles.find(p => p.id === id)),
+                assigned_to,
                 teamName: (ctx.event.teams as TeamList).find(t => t.number == ticket.team)?.name,
                 messages: ticketMessages
             });
         }
 
-        return returnTickets;
+        return processedTickets;
     }),
 
     createTicket: protectedProcedure.input(z.object({
@@ -115,16 +122,27 @@ export const messagesRouter = router({
             role: users.role,
         }).from(users).where(or(...profileFilters));
 
+        const msgsWithProfiles: TicketMessage[] = [];
+
+        for (let msg of msgs) {
+            msgsWithProfiles.push({
+                ...msg,
+                user: profiles.find(p => p.id === msg.user_id)
+            });
+        }
+
         return {
             id: ticket.id,
-            team: ticket.team,
+            team: parseInt(ticket.team),
             created_at: ticket.created_at,
             user_id: ticket.user_id,
             event_code: ticket.event_code,
             is_open: ticket.is_open,
             assigned_to: (ticket.assigned_to as number[]).map(id => profiles.find(p => p.id === id)),
             closed_at: ticket.closed_at,
+            is_ticket: ticket.is_ticket,
             match_id: ticket.match_id,
+            message: ticket.message,
             match: ticket.match_id ? (await db.select({
                 id: matchLogs.id,
                 match_number: matchLogs.match_number,
@@ -139,8 +157,8 @@ export const messagesRouter = router({
                     red3: matchLogs.red3,
                 }
             }).from(matchLogs).where(eq(matchLogs.id, ticket.match_id)))[0] : null,
-            messages: msgs
-        };
+            messages: msgsWithProfiles
+        } as Ticket;
     }),
 
     updateTicketStatus: protectedProcedure.input(z.object({

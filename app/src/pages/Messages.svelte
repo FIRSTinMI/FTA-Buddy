@@ -7,6 +7,7 @@
     import { eventStore, type Event } from "../stores/event";
     import { messagesStore, type Message } from "../stores/messages";
     import { formatTimeShort } from "../util/formatTime";
+    import TicketCard from "../components/TicketCard.svelte";
 
     export const newMessage = (message: any) => {
         console.log(message);
@@ -92,46 +93,10 @@
                     <div class="text-center">No tickets</div>
                 {:else}
                     {#each tickets as ticket}
-                        <Card href="/app/ticket/{ticket.id}" padding="none" size="none" class="w-full">
-                            <div class="flex flex-col sm:flex-row sm:divide-x divide-gray-500 pt-2 sm:pt-0 sm:gap-4 px-4">
-                                <div class="flex flex-col sm:my-auto">
-                                    <p>#{ticket.id} - 
-                                        {#if ticket.is_open}
-                                            <span class="text-green-500 font-bold">Open</span>
-                                            <span class="sm:hidden">{formatTimeShort(ticket.created_at)}</span>
-                                        {:else}
-                                            <span class="font-bold">Closed</span>
-                                            <span class="sm:hidden">{formatTimeShort(ticket.closed_at ?? ticket.created_at)}</span>
-                                        {/if}
-                                    </p>
-                                    <p class="sm:text-lg">Team: {ticket.team} - {ticket.teamName}</p>
-                                    <p class="hidden sm:block">{formatTimeShort((!ticket.is_open && ticket.closed_at) ? ticket.closed_at : ticket.created_at)}</p>
-                                </div>
-                                <div class="flex flex-col p-2 grow text-left">
-                                    {#if ticket.message.length > 255}
-                                        <p class="font-bold">{ticket.message.slice(0, 255)}...</p>
-                                    {:else}
-                                        <p class="font-bold">{ticket.message}</p>
-                                    {/if}
-                                    <MessageComponent message={ticket.messages[0] ?? ticket} team={ticket.team} class="w-full self-start text-left" />
-                                </div>
-                            </div>
-                        </Card>
+                        <TicketCard {ticket} />
                     {/each}
                 {/if}
             {/if}
         </div>
     </div>
-    <!-- <form on:submit={sendMessage}>
-        <label for="chat" class="sr-only">Your message</label>
-        <Alert color="dark" class="px-0 py-2">
-            <svelte:fragment slot="icon">
-                <Textarea id="chat" class="ml-3" rows="1" placeholder="Your message..." on:keydown={sendKey} />
-                <ToolbarButton type="submit" color="blue" class="rounded-full text-primary-600 dark:text-primary-500">
-                    <Icon icon="mdi:send" class="w-6 h-8" />
-                    <span class="sr-only">Send message</span>
-                </ToolbarButton>
-            </svelte:fragment>
-        </Alert>
-    </form> -->
 </div>

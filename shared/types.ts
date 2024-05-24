@@ -335,6 +335,43 @@ export interface CycleData {
     previousCycleTime: string | null;
 }
 
+export interface Profile {
+    id: number,
+    username: string,
+    role: "ADMIN" | "FTAA" | "FTA" | "CSA" | "RI";
+}
+
+export interface Ticket {
+    id: number,
+    team: number,
+    teamName?: string,
+    user_id: number,
+    user?: Profile,
+    assigned_to: Profile[],
+    event_code: string,
+    is_ticket: boolean,
+    is_open: boolean,
+    matchId?: string,
+    message: string,
+    created_at: Date,
+    closed_at?: Date | null,
+    messages: TicketMessage[];
+    match?: {
+        id: string,
+        match_number: number,
+        play_number: number,
+        level: TournamentLevel,
+        stations: {
+            blue1: number,
+            blue2: number,
+            blue3: number,
+            red1: number,
+            red2: number,
+            red3: number;
+        };
+    };
+}
+
 export interface TicketMessage {
     id: number,
     message: string,
@@ -346,9 +383,5 @@ export interface TicketMessage {
     is_open: boolean,
     match_id: string | null,
     created_at: Date,
-    user?: {
-        id: number,
-        username: string,
-        role: "ADMIN" | "FTAA" | "FTA" | "CSA" | "RI";
-    };
+    user?: Profile;
 }

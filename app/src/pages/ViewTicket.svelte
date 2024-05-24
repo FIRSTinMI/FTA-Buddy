@@ -6,9 +6,11 @@
     import { toast } from "../util/toast";
     import { eventStore } from "../stores/event";
     import { ROBOT } from "../../../shared/types";
-    import { Button } from "flowbite-svelte";
+    import { Alert, Button, Textarea, ToolbarButton } from "flowbite-svelte";
     import { navigate } from "svelte-routing";
     import { authStore } from "../stores/auth";
+    import Icon from "@iconify/svelte";
+    import Message from "../components/Message.svelte";
 
     export let id: string;
 
@@ -27,7 +29,7 @@
         ticket = res;
         time = formatTime(ticket?.created_at);
         if (ticket.match) {
-            switch(parseInt(ticket.team)) {
+            switch(ticket.team) {
                 case ticket.match.stations.red1:
                     station = ROBOT.red1;
                     break;
@@ -95,9 +97,20 @@
             window.history.back();
         }
     }
+
+    function sendKey(event: KeyboardEvent) {
+        if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            sendMessage(new Event("submit"));
+        }
+    }
+
+    function sendMessage(evt: Event) {
+        evt.preventDefault();
+    }
 </script>
 
-<div class="container mx-auto px-2 pt-2 h-full flex flex-col gap-2">
+<div class="container mx-auto px-2 pt-2 h-full flex flex-col gap-2 max-w-5xl">
     <Button on:click={back} class="w-fit">Back</Button>
     {#await promise}
         <Spinner />
@@ -141,6 +154,23 @@
                     <Button size="sm" on:click={() => viewLog()}>View Log</Button>
                 {/if}
             </div>
+            <div class="grow overflow-y-auto flex flex-col">
+                {#each ticket.messages as message}
+                    <Message message={message} team={ticket.team} />
+                {/each}
+            </div>
+            <form on:submit={sendMessage}>
+                <label for="chat" class="sr-only">Your message</label>
+                <Alert color="dark" class="px-0 py-2">
+                    <svelte:fragment slot="icon">
+                        <Textarea id="chat" class="ml-3" rows="1" placeholder="Your message..." on:keydown={sendKey} />
+                        <ToolbarButton type="submit" color="blue" class="rounded-full text-primary-600 dark:text-primary-500">
+                            <Icon icon="mdi:send" class="w-6 h-8" />
+                            <span class="sr-only">Send message</span>
+                        </ToolbarButton>
+                    </svelte:fragment>
+                </Alert>
+            </form>
         {/if}
     {/await}
 </div>

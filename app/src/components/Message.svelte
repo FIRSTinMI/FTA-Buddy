@@ -7,7 +7,7 @@
     import { twMerge } from "tailwind-merge";
 
     export let message: TicketMessage;
-    export let team: string;
+    export let team: number;
     let auth = get(authStore);
     let user = auth.user;
     let event = get(eventStore).code;
@@ -43,12 +43,7 @@
 
 <div class={twMerge("rounded-xl py-2 px-4 my-3 w-fit", classToApply, $$props.class)}>
     <span class="text-sm">
-        {#if team == "feed"}
-            <span class="font-bold text-lg">{message.team == null ? "" : message.team}</span>
-            <span class="font-bold">{message.user?.username}</span> - {message.event_code}
-        {:else}
-            <span class="font-bold">{message.user?.username}</span> - {message.event_code}
-        {/if}
+        <span class="font-bold">{message.user?.username}</span> - {message.event_code}
         {formattedTime}
     </span>
     <p>{message.message}</p>

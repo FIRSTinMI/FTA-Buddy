@@ -20,6 +20,7 @@ import { cycleLogs } from './db/schema';
 import { createProxyServer } from 'http-proxy';
 import proxy from 'express-http-proxy';
 import { createServer } from 'http';
+import { messagesRouter } from './router/messages';
 
 const port = parseInt(process.env.PORT || '3001');
 
@@ -33,7 +34,8 @@ const appRouter = router({
     match: matchRouter,
     checklist: checklistRouter,
     field: fieldMonitorRouter,
-    cycles: cycleRouter
+    cycles: cycleRouter,
+    messages: messagesRouter
 });
 
 export type AppRouter = typeof appRouter;

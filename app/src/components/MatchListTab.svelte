@@ -8,9 +8,9 @@
         TableHeadCell,
         TableSearch,
     } from "flowbite-svelte";
-    import type { MatchRouterOutputs } from "../../../src/router/match";
     import { formatTime } from "../util/formatTime";
     import { navigate } from "svelte-routing";
+    import type { MatchRouterOutputs } from "../../../src/router/logs";
 
     export let matches: MatchRouterOutputs["getMatches"] = [];
     export let label: string = "Matches";

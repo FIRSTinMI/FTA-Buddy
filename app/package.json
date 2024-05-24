@@ -38,6 +38,7 @@
         "express": "^4.18.3",
         "superjson": "^2.2.1",
         "svelte-material-icons": "^3.0.5",
-        "svelte-qrcode": "^1.0.0"
+        "svelte-qrcode": "^1.0.0",
+        "tailwind-merge": "^2.3.0"
     }
 }

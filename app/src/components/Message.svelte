@@ -2,10 +2,11 @@
     import { get } from "svelte/store";
     import { formatTime } from "../util/formatTime";
     import { eventStore } from "../stores/event";
-    import type { Message } from "../stores/messages";
     import { authStore } from "../stores/auth";
+    import type { TicketMessage } from "../../../shared/types";
+    import { twMerge } from "tailwind-merge";
 
-    export let message: Message;
+    export let message: TicketMessage;
     export let team: string;
     let auth = get(authStore);
     let user = auth.user;
@@ -40,13 +41,13 @@
     }, 1000);
 </script>
 
-<div class="rounded-xl py-2 px-4 my-3 w-fit {classToApply}">
+<div class={twMerge("rounded-xl py-2 px-4 my-3 w-fit", classToApply, $$props.class)}>
     <span class="text-sm">
         {#if team == "feed"}
             <span class="font-bold text-lg">{message.team == null ? "" : message.team}</span>
-            <span class="font-bold">{message.username}</span> - {message.event_code}
+            <span class="font-bold">{message.user?.username}</span> - {message.event_code}
         {:else}
-            <span class="font-bold">{message.username}</span> - {message.event_code}
+            <span class="font-bold">{message.user?.username}</span> - {message.event_code}
         {/if}
         {formattedTime}
     </span>

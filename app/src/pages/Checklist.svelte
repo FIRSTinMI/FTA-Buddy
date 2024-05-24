@@ -105,7 +105,7 @@
         <Table class="text-center">
             <TableHead>
                 <TableHeadCell class="p-1 md:p-2">Team</TableHeadCell>
-                <TableHeadCell class="p-1 md:p-2">Name</TableHeadCell>
+                <TableHeadCell class="hidden sm:table-cell p-1 md:p-2">Name</TableHeadCell>
                 <TableHeadCell class="p-1 md:p-2">Present</TableHeadCell>
                 <TableHeadCell class="p-1 md:p-2">Inspected</TableHeadCell>
                 <TableHeadCell class="p-1 md:p-2">Radio</TableHeadCell>
@@ -115,7 +115,7 @@
                 {#each Object.entries(checklist) as [team, items]}
                     <TableBodyRow>
                         <TableBodyCell>{team}</TableBodyCell>
-                        <TableBodyCell>{teamNames[team]}</TableBodyCell>
+                        <TableBodyCell class="hidden sm:table-cell">{teamNames[team]}</TableBodyCell>
                         <TableBodyCell
                             ><Checkbox
                                 class="justify-center"

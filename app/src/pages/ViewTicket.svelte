@@ -1,0 +1,146 @@
+<script lang="ts">
+    import { get } from "svelte/store";
+    import Spinner from "../components/Spinner.svelte";
+    import { trpc } from "../main";
+    import { formatTime } from "../util/formatTime";
+    import { toast } from "../util/toast";
+    import { eventStore } from "../stores/event";
+    import { ROBOT } from "../../../shared/types";
+    import { Button } from "flowbite-svelte";
+    import { navigate } from "svelte-routing";
+    import { authStore } from "../stores/auth";
+
+    export let id: string;
+
+    let promise = trpc.messages.getTicket.query({ id: parseInt(id) });
+    let ticket: Awaited<ReturnType<typeof trpc.messages.getTicket.query>> | undefined = undefined;
+    let time: string = "";
+    let station: ROBOT | undefined = undefined;
+    let user = get(authStore).user;
+    let assignedToUser = false;
+
+    $: if (ticket && user) {
+        assignedToUser = ticket.assigned_to.map(u => u?.id).includes(user.id);
+    }
+
+    promise.then((res) => {
+        ticket = res;
+        time = formatTime(ticket?.created_at);
+        if (ticket.match) {
+            switch(parseInt(ticket.team)) {
+                case ticket.match.stations.red1:
+                    station = ROBOT.red1;
+                    break;
+                case ticket.match.stations.red2:
+                    station = ROBOT.red2;
+                    break;
+                case ticket.match.stations.red3:
+                    station = ROBOT.red3;
+                    break;
+                case ticket.match.stations.blue1:
+                    station = ROBOT.blue1;
+                    break;
+                case ticket.match.stations.blue2:
+                    station = ROBOT.blue2;
+                    break;
+                case ticket.match.stations.blue3:
+                    station = ROBOT.blue3;
+                    break;
+            }
+        }
+    }).catch((err) => {
+        console.error(err);
+        toast("An error occurred while fetching the ticket", err.message);
+    });
+    
+    setInterval(() => {
+        if (!ticket) return;
+        time = formatTime(ticket?.created_at);
+    }, 5000);
+
+    async function closeOpenTicket() {
+        if (!ticket) return;
+        try {
+            const update = await trpc.messages.updateTicketStatus.query({ id: ticket.id, status: !ticket.is_open });
+            ticket.is_open = update.is_open;
+        } catch (err: any) {
+            toast("An error occurred while updating the ticket", err.message);
+            console.error(err);
+            return;
+        }
+    }
+
+    async function assignSelf() {
+        if (!ticket) return;
+        try {
+            const update = await trpc.messages.assignTicket.query({ id: ticket.id, user: user?.id ?? 0, assign: !assignedToUser });
+            ticket.assigned_to = update;
+        } catch (err: any) {
+            toast("An error occurred while updating the ticket", err.message);
+            console.error(err);
+            return;
+        }
+    }
+
+    function viewLog() {
+        if (!ticket || !ticket.match || !station) return;
+        navigate(`/app/logs/${ticket.match.id}/${station}`);
+    }
+
+    
+    function back() {
+        if (window.history.state === null) {
+            navigate("/app/messages")
+        } else {
+            window.history.back();
+        }
+    }
+</script>
+
+<div class="container mx-auto px-2 pt-2 h-full flex flex-col gap-2">
+    <Button on:click={back} class="w-fit">Back</Button>
+    {#await promise}
+        <Spinner />
+    {:then}
+        {#if ticket === undefined}
+            <p class="text-red-500">Ticket not found</p>
+        {:else}
+            <h1 class="text-2xl font-bold">Ticket #{id} - 
+                {#if ticket.is_open}
+                    <span class="text-green-500 font-bold">Open</span>
+                {:else}
+                    <span class="font-bold">Closed</span>
+                {/if}
+            </h1>
+            <div class="text-left">
+                <p class="text-lg">Team: {ticket.team} - {get(eventStore).teams.find((t) => t.number == ticket?.team)?.name}</p>
+                <p class="text-lg">Created: {time}</p>
+                <p class="text-lg">Assigned To: 
+                    {#if ticket.assigned_to && ticket.assigned_to.length > 0}
+                        {ticket.assigned_to.map(p => p?.username).join(", ")}
+                    {:else}
+                        Unassigned
+                    {/if}
+                </p>
+                {#if ticket.match}
+                    <p class="text-lg">
+                        Match: {ticket.match.level.replace('None', 'Test')} 
+                        {ticket.match.match_number}/{ticket.match.play_number} 
+                        {station}
+                    </p>
+                {/if}
+            </div>
+            <div class="flex gap-2">
+                <Button size="sm" on:click={() => closeOpenTicket()}>{ticket.is_open ? "Close Ticket":"Reopen Ticket"}</Button>
+                {#if user}
+                    <Button size="sm" on:click={() => assignSelf()}>
+                        {assignedToUser ? "Unassign":"👀 Claim Ticket"}
+                    </Button>
+                {/if}
+                {#if ticket.match}
+                    <Button size="sm" on:click={() => viewLog()}>View Log</Button>
+                {/if}
+            </div>
+        {/if}
+    {/await}
+</div>

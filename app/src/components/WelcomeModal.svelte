@@ -1,25 +1,47 @@
 <script lang="ts">
     import Icon from "@iconify/svelte";
     import { Button, Indicator, Modal } from "flowbite-svelte";
-    import Reference from "../pages/Reference.svelte";
+    import { gestureEvents } from "../util/gestureDetection";
+    import { onMount } from "svelte";
 
     export let welcomeOpen = false;
     export let installPrompt: Event | null;
     export let closeModal: () => void;
     export let openChangelog: () => void;
 
+    onMount(() => {
+        step = 0;
+        gestureEvents.addEventListener("swipeLeft", () => {
+            if (step < 5) step++
+        });
+        gestureEvents.addEventListener("swipeRight", () => {
+            if (step > 0) step--
+        });
+    });
+
     let step = 0;
 </script>
 
-<Modal bind:open={welcomeOpen} dismissable outsideclose size="lg">
+<Modal bind:open={welcomeOpen} dismissable outsideclose size="lg" style="height: calc(100vh - 8rem)">
     <div slot="header">
         <h1 class="text-xl">Welcome to FTA Buddy</h1>
     </div>
-    <div class="flex flex-col justify-left text-left gap-1 min-h-96">
+    <div class="flex flex-col justify-left text-left gap-1">
         {#if step === 0}
             <p>
-                FTA Buddy has some new features to help you during competitions. <br />
-                Click through these screens to learn about them.
+                FTA Buddy is a mobile optimized field monitor that has feature creeped into alot more. <br />
+            </p>
+            <ul class="list-disc ml-10">
+                <li>References</li>
+                <li>Match Log Viewer</li>
+                <li>CSA Tickets</li>
+                <li>Radio/Inspection Checklist</li>
+                <li>Cycle Time Tracking</li>
+                <li>Etc.</li>
+            </ul>
+            <p>
+                This guide will explain how to use the app, and what everything means. <br />
+                You can return to this guide by clicking the help button in the menu.
             </p>
             {#if installPrompt}
                 <h2 class="font-bold">Install this App</h2>
@@ -45,12 +67,17 @@
                 Click on the status to see more details including: how long since the last status change and troubleshooting suggestions. <br />
             </p>
             <div>
-                <img src="/app/tutorial/monitor.png" alt="Monitor" class="max-h-48 w-fit mx-auto" />
+                <img src="/app/tutorial/monitor.png" alt="Monitor" class="sm:max-w-xl w-fit mx-auto" />
             </div>
             <h2 class="font-bold">Emojis</h2>
+            <ul>
+                <li><span class="text-2xl">👀</span>Something is taking longer than expected to connect.</li>
+                <li><span class="text-2xl">🕑</span>This team frequently takes a long time to get connected.</li>
+                <li><span class="text-2xl">🔍</span>Team has not passed inspection.</li>
+                <li><span class="text-2xl">🛜</span>Team has not flashed radio.</li>
+            </ul>
             <p>
-                A 👀 emoji will appear for a team when something is taking longer than expected to connect. <br />
-                A 🕑 emoji will appear when a team that frequently takes a long time to connect is on the field. <br />
+                The inspection and radio warnings are dependent on using the inspection and radio checklist features.
             </p>
             <h2 class="font-bold">RIO Status</h2>
             <p>
@@ -60,7 +87,7 @@
             </p>
             <h2 class="font-bold">Cycle Times</h2>
             <div>
-                <img src="/app/tutorial/cycles.png" alt="Cycle Times" class="max-h-48 w-fit mx-auto" />
+                <img src="/app/tutorial/cycles.png" alt="Cycle Times" class="sm:max-w-xl w-fit mx-auto" />
             </div>
             <p>
                 Cycle time information is displayed at the bottom of the monitor screen. <br />
@@ -68,34 +95,50 @@
                 The T: time is the time since the last match started, or your current cycle time.
             </p>
         {:else if step === 2}
-            <h2 class="font-bold">Navigation</h2>
-            <div>
-                <img src="/app/tutorial/navigation.png" alt="Navigation" class="max-h-56 w-fit mx-auto" />
-            </div>
-            <p>
-                Use the navigation bar at the bottom or the sidebar to switch between pages. <br />
-            </p>
-            <ul class="space-y-2">
-                <li><strong>Flashcards</strong>: Show a message on your screen to communicate through DS glass</li>
-                <li><strong>References</strong>: Status light codes, useful commands, field manual links/QR codes</li>
-                <li><strong>Messages</strong>: Team notes and CSA tickets</li>
-                <li><strong>Match Logs</strong>: Logs from FMS that can be viewed and shared with teams</li>
-            </ul>
+        <h2 class="font-bold">Radio/Inspection Checklist</h2>
+        <p>
+            The button to access the checklist is in the hamburger menu
+        </p>
+        <p>
+            The checklist is synced between all devices connected to the same event. So you can have someone checking off teams as they get their radio programmed, and someone else in the pits will know who to remind to get it done.
+        </p>
+        <p>
+            The checklist will also automatically track when a robot connects to the field successfully.
+        </p>
+        <div>
+            <img src="/app/tutorial/checklist.png" alt="Checklist" class="sm:max-w-xl w-fit mx-auto" />
+        </div>
         {:else if step === 3}
             <h2 class="font-bold">Match Logs</h2>
-            <div>
-                <img src="/app/tutorial/logs.png" alt="Navigation" class="max-h-72 w-fit mx-auto" />
-            </div>
             <p>
-                Click the share button to generate a temporary public link to that specific log. <br />
-                Click on the graph legend to toggle the visibility of the data. <br />
-                Use the select box to select which columns to display in the table.
+                Click the share button to generate a temporary public link to that specific log.
             </p>
+            <p>
+                The ledgend can toggle the visibility of data on the graph. <br />
+                There is a select box to choose which columns to display in the table.
+            </p>
+            <div>
+                <img src="/app/tutorial/logs.png" alt="Navigation" class="sm:max-w-xl w-fit mx-auto" />
+            </div>
         {:else if step === 4}
-            <h2 class="font-bold">Documentation</h2>
+            <h2 class="font-bold">CSA Tickets</h2>
+            <p>
+                You can attach a specific match to a ticket when creating it, and then the log for that match will be linked in the ticket.
+            </p>
+            <p>
+                When you're going to help a team, you can click the assign button to assign the ticket to yourself.
+            </p>
+            <p>
+                The homepage for the tickets will show all the tickets in order of most recently updated.
+            </p>
+            <div>
+                <img src="/app/tutorial/ticket.png" alt="Tickets" class="sm:max-w-xl w-fit mx-auto" />
+            </div>
+        {:else if step === 5}
+            <!-- <h2 class="font-bold">Documentation</h2>
             <p>
                 More information about the app and the API can be found on the <a href="https://docs.ftabuddy.com/" target="_blank" class="underline text-blue-500">docs</a> site.
-            </p>
+            </p> -->
             <h2 class="font-bold">Setup</h2>
             <p>
                 To setup the app for your event, visit FTABuddy.com on a computer connected to the field network, and follow the instructions for hosting.
@@ -115,6 +158,7 @@
         <Indicator color={step >= 2 ? "gray" : "dark"} class="my-auto" />
         <Indicator color={step >= 3 ? "gray" : "dark"} class="my-auto" />
         <Indicator color={step >= 4 ? "gray" : "dark"} class="my-auto" />
-        <Button color="dark" class="p-1" on:click={() => step++} disabled={step >= 4}><Icon icon="mdi:arrow-right" class="w-6 h-6" /></Button>
+        <Indicator color={step >= 5 ? "gray" : "dark"} class="my-auto" />
+        <Button color="dark" class="p-1" on:click={() => step++} disabled={step >= 5}><Icon icon="mdi:arrow-right" class="w-6 h-6" /></Button>
     </div>
 </Modal>

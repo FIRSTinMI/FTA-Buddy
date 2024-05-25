@@ -7,17 +7,15 @@
         "storage",
         "scripting"
     ],
-    "host_permissions" : [
-        "http://10.0.100.5/*",
-        "http://192.168.1.220/*"
+    "host_permissions": [
+        "http://10.0.100.5/*"
     ],
     "content_scripts": [
         {
             "run_at": "document_end",
             "matches": [
                 "http://10.0.100.5/FieldMonitor",
-                "http://10.0.100.5/FieldMonitor/",
-                "https://ftabuddy.com/FieldMonitor/"
+                "http://10.0.100.5/FieldMonitor/"
             ],
             "js": [
                 "injector.js"
@@ -26,8 +24,7 @@
         {
             "run_at": "document_end",
             "matches": [
-                "https://ftabuddy.com/*",
-                "http://localhost:5173/*"
+                "https://ftabuddy.com/*"
             ],
             "js": [
                 "app.js"
@@ -41,7 +38,6 @@
             ],
             "matches": [
                 "http://10.0.100.5/*",
-                "http://localhost:5173/*",
                 "https://ftabuddy.com/*"
             ]
         }
@@ -55,6 +51,6 @@
         "default_icon": "img/logo.png"
     },
     "background": {
-       "service_worker": "background.js"
+        "service_worker": "background.js"
     }
 }

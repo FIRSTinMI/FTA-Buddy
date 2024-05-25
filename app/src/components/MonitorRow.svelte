@@ -76,7 +76,7 @@
             on:click={() => navigate("/notes/" + team.number)}
         >
             <p>{team.number}</p>
-            <p style="letter-spacing: -8px;">
+            <p style="{window.innerWidth > 1000 && "letter-spacing: -8px;"}">
                 {#if MatchStateMap[monitorFrame.field] === MatchState.PRESTART && team.lastChange}
                     {#if team.ds === DSState.RED && team.lastChange.getTime() + 30e3 < Date.now()}
                         👀

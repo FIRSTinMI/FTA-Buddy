@@ -9,8 +9,11 @@ let eventCode: string = '';
 let url: string = '';
 let eventToken: string = '';
 
+let linkURL = (cloud ? 'wss://ftabuddy.com/ws' : url.replace('http', 'ws') + '/ws');
+console.log(linkURL);
+
 let wsClient = createWSClient({
-    url: url.replace('http', 'ws') + '/ws',
+    url: linkURL,
 });
 
 export async function updateValues() {
@@ -22,8 +25,11 @@ export async function updateValues() {
             url = item.url;
             eventToken = item.eventToken;
 
+            linkURL = (cloud ? 'wss://ftabuddy.com/ws' : url.replace('http', 'ws') + '/ws');
+            console.log(linkURL);
+
             wsClient = createWSClient({
-                url: url.replace('http', 'ws') + '/ws',
+                url: linkURL,
             });
 
             trpc = createTRPCConnection();
@@ -45,7 +51,7 @@ function createTRPCConnection() {
                     transformer: SuperJSON
                 }),
                 false: httpBatchLink({
-                    url: url + '/trpc',
+                    url: (cloud ? 'wss://ftabuddy.com/trpc' : url + '/trpc'),
                     transformer: SuperJSON,
                     headers: {
                         'Event-Token': eventToken ?? '',

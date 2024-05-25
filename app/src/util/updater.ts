@@ -173,7 +173,7 @@ export const VERSIONS: { [key: string]: Version } = {
     }
 }
 
-export function update(currentVersion: string, newVersion: string, openWelcome: () => void, openChangelog: (arg0: string) => void) {
+export function update(currentVersion: string, newVersion: string, openWelcome: () => void, openChangelog: (arg0: string) => void, dontShowDialogs: boolean = false) {
     let changelog = "";
     console.log(currentVersion, newVersion);
     if (currentVersion == "0" && window.location.pathname === "/app/login") {
@@ -182,7 +182,7 @@ export function update(currentVersion: string, newVersion: string, openWelcome: 
             s.version = newVersion;
             return s;
         });
-        openWelcome();
+        if (!dontShowDialogs) openWelcome();
     } else if (currentVersion !== newVersion) {
         let updatesToDo = [];
 
@@ -193,7 +193,7 @@ export function update(currentVersion: string, newVersion: string, openWelcome: 
             }
         }
 
-        openChangelog(changelog);
+        if (!dontShowDialogs) openChangelog(changelog);
 
         console.log("Queued updates: " + updatesToDo.join(", "));
 

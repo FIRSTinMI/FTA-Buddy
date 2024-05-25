@@ -217,7 +217,13 @@ export const matchRouter = router({
             )
         });
 
-        if (existingShare) return { id: existingShare.id };
+        if (existingShare) {
+            if (existingShare.expire_time < new Date()) {
+                return { id: existingShare.id };
+            } else {
+                await db.delete(logPublishing).where(eq(logPublishing.id, existingShare.id)).execute();
+            }
+        };
 
         const match = await db.query.matchLogs.findFirst({
             where: and(

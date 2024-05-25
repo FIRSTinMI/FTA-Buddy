@@ -30,6 +30,7 @@ export const Event = typeof events.$inferInsert;
 
 export const messages = pgTable('messages', {
     id: serial('id').primaryKey(),
+    summary: varchar('summary'),
     message: varchar('message').notNull(),
     created_at: timestamp('created_at').notNull().defaultNow(),
     user_id: serial('user_id').references(() => users.id).notNull(),

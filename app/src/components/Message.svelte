@@ -3,10 +3,10 @@
     import { formatTime } from "../util/formatTime";
     import { eventStore } from "../stores/event";
     import { authStore } from "../stores/auth";
-    import type { TicketMessage } from "../../../shared/types";
+    import type { Message, TicketMessage } from "../../../shared/types";
     import { twMerge } from "tailwind-merge";
 
-    export let message: TicketMessage;
+    export let message: Message | TicketMessage;
     export let team: number;
     let auth = get(authStore);
     let user = auth.user;
@@ -38,10 +38,10 @@
     let formattedTime = formatTime(message.created_at);
     setInterval(() => {
         formattedTime = formatTime(message.created_at);
-    }, 1000);
+    }, (formattedTime.includes("second") ? 1000 : 60000));
 </script>
 
-<div class={twMerge("rounded-xl py-2 px-4 my-3 w-fit", classToApply, $$props.class)}>
+<div class={twMerge("rounded-xl py-2 px-4 w-fit", classToApply, $$props.class)}>
     <span class="text-sm">
         <span class="font-bold">{message.user?.username}</span> - {message.event_code}
         {formattedTime}

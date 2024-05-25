@@ -345,11 +345,12 @@ export interface Ticket {
     id: number,
     team: number,
     teamName?: string,
+    summary: string,
     user_id: number,
     user?: Profile,
     assigned_to: Profile[],
     event_code: string,
-    is_ticket: boolean,
+    is_ticket: true,
     is_open: boolean,
     matchId?: string,
     message: string,
@@ -372,14 +373,17 @@ export interface Ticket {
     };
 }
 
-export interface TicketMessage {
+export interface TicketMessage extends Message {
+}
+
+export interface Message {
     id: number,
     message: string,
     user_id: number,
     team: string,
     event_code: string,
     thread_id: number,
-    is_ticket: boolean,
+    is_ticket: false,
     is_open: boolean,
     match_id: string | null,
     created_at: Date,

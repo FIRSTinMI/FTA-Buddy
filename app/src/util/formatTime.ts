@@ -77,7 +77,9 @@ export function formatTimeShortNoAgo(time: Date, compare: Date = new Date()) {
         const minutes = Math.floor((diff / 60e3) - (hours * 60));
         return `${hours}h${minutes}m`;
     } else {
-        return `${time.toLocaleTimeString()}`;
+        const days = Math.floor(diff / (24 * 60 * 60e3));
+        const hours = Math.floor((diff / 3600e3) - (days * 24));
+        return `${days}d${hours}h`;
     }
 }
 

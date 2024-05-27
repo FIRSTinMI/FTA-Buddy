@@ -5,6 +5,9 @@
     import TeamModal from "../components/TeamModal.svelte";
     import { formatTimeShortNoAgo } from "../util/formatTime";
     import type { MonitorEvent, MonitorFrameHandler } from "../util/monitorFrameHandler";
+    import { onMount } from "svelte";
+    import { trpc } from "../main";
+    import { cycleTimeToMS } from "./../../../shared/cycleTimeToMS";
 
     export let frameHandler: MonitorFrameHandler;
     let monitorFrame: MonitorFrame | undefined = frameHandler.getFrame();
@@ -13,13 +16,64 @@
         monitorFrame = (evt as MonitorEvent).detail.frame;
     });
 
-    let lastMatchStartTime = new Date();
+    let lastCycleTime = "";
+    let lastCycleTimeMS = 0;
     let matchStartTime = new Date();
+    let bestCycleTimeMS = 0;
+    let currentCycleIsBest = false;
+    let averageCycleTimeMS = 7*60*1000; // Default to 7 minutes
+    let currentCycleTimeRedness = 0;
+    let currentCycleTime = "";
+
+    onMount(async () => {
+        const lastPrestart = await trpc.cycles.getLastPrestart.query();
+        if (lastPrestart) matchStartTime = lastPrestart;
+        console.log(matchStartTime);
+
+        const bestCycleTimeRes = await trpc.cycles.getBestCycleTime.query();
+        if (bestCycleTimeRes && bestCycleTimeRes.calculated_cycle_time) {
+            bestCycleTimeMS = cycleTimeToMS(bestCycleTimeRes.calculated_cycle_time);
+        }
+        console.log(bestCycleTimeMS);
+
+        const lastCycleTimeRes = await trpc.cycles.getLastCycleTime.query();
+        if (lastCycleTimeRes) {
+            console.log(lastCycleTimeRes);
+            lastCycleTimeMS = cycleTimeToMS(lastCycleTimeRes);
+            lastCycleTime = formatTimeShortNoAgo(new Date(new Date().getTime() - lastCycleTimeMS));
+
+            if (lastCycleTimeMS < bestCycleTimeMS) {
+                bestCycleTimeMS = lastCycleTimeMS;
+                currentCycleIsBest = true;
+            }
+        }
+        console.log(lastCycleTimeMS);
+
+        averageCycleTimeMS = await trpc.cycles.getAverageCycleTime.query() ?? 7*60*1000;
+        console.log(averageCycleTimeMS);
+    });
 
     frameHandler.addEventListener("match-start", (evt) => {
-        lastMatchStartTime = matchStartTime;
+        currentCycleIsBest = false;
+        lastCycleTime = formatTimeShortNoAgo(matchStartTime);
+        lastCycleTimeMS = new Date().getTime() - matchStartTime.getTime();
+        if (lastCycleTimeMS < bestCycleTimeMS) {
+            bestCycleTimeMS = lastCycleTimeMS;
+            currentCycleIsBest = true;
+        }
         matchStartTime = new Date();
     });
+
+    setInterval(() => {
+        const currentTime = new Date().getTime() - matchStartTime.getTime();
+        if (currentTime < averageCycleTimeMS) {
+            currentCycleTimeRedness = 0;
+        } else {
+            currentCycleTimeRedness = Math.min(1, (currentTime - averageCycleTimeMS) / (averageCycleTimeMS));
+        }
+
+        currentCycleTime = formatTimeShortNoAgo(matchStartTime);
+    }, 1000);
 
     const FieldStates = {
         0: "Unknown",
@@ -93,9 +147,14 @@
             </TableBody>
         </Table>
         <div class="flex w-full mt-1">
-            <div class="w-48 text-left {fullscreen ? "text-4xl" : "md:text-2xl"}">C: {formatTimeShortNoAgo(lastMatchStartTime, matchStartTime)}</div>
+            <div class="w-48 text-left {fullscreen ? "text-4xl" : "md:text-2xl"} {currentCycleIsBest && "text-green-500"}">C: {lastCycleTime}</div>
             <div class="grow {fullscreen ? "text-4xl" : "md:text-2xl"}"></div>
-            <div class="w-48 text-right {fullscreen ? "text-4xl" : "md:text-2xl"}">T: {formatTimeShortNoAgo(matchStartTime)}</div>
+            <div 
+                class="w-48 text-right {fullscreen ? "text-4xl" : "md:text-2xl"}"
+                style="color: rgba({75*currentCycleTimeRedness + 180}, {180*(1 - currentCycleTimeRedness)}, {180*(1 - currentCycleTimeRedness)}, 1)"
+                >
+                T: {currentCycleTime}
+            </div>
         </div>
     {/key}
     {#if !monitorFrame}

@@ -33,12 +33,12 @@ The cloud server also enables the notes functionality. The notes are also persis
 - Cycle time tracking
 - ***A way better*** event log viewer, give your CSAs access to the data that can help them help you help teams! 
 - Synced team checklist to help track radio programming 
-
-**Coming soon:**
+- Ticket and note system that's synchronized between events
 - Current cycle will become more red as you approach 2x your average cycle time
 - Last cycle time will be green if it's your best that event
+
+**Coming soon:**
 - Tracking connection time per team, and display 🕜 emoji when there's a team that takes 1 std deviation longer than the average team to connect 
-- Ticket and note system that's synchronized between events
 - Pipe audio alerts directly into event radios
 
 ## Getting Started

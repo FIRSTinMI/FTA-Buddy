@@ -5,7 +5,7 @@ import 'dotenv/config';
 import express from 'express';
 import { readFileSync, readdirSync } from 'fs';
 import ws from 'ws';
-import { ServerEvent, TournamentLevel } from '../shared/types';
+import { FMSLogFrame, ROBOT, ServerEvent, TournamentLevel } from '../shared/types';
 import { connect, db } from './db/db';
 import { checklistRouter } from './router/checklist';
 import { eventRouter } from './router/event';
@@ -16,11 +16,12 @@ import { createContext, router } from './trpc';
 import { cycleRouter } from './router/cycles';
 import { getTeamAverageCycle } from './util/team-cycles';
 import { and, eq } from 'drizzle-orm';
-import { cycleLogs } from './db/schema';
+import { cycleLogs, logPublishing, matchLogs } from './db/schema';
 import { createProxyServer } from 'http-proxy';
 import proxy from 'express-http-proxy';
 import { createServer } from 'http';
 import { messagesRouter } from './router/messages';
+import { json2csv } from 'json-2-csv';
 
 const port = parseInt(process.env.PORT || '3001');
 
@@ -108,6 +109,34 @@ app.get('/cycles/:eventCode', async (req, res) => {
 
 app.get('/team-average-cycle/:team/:eventCode?', async (req, res) => {
     res.json(await getTeamAverageCycle(parseInt(req.params.team), req.params.eventCode?.toLowerCase()));
+});
+
+app.get('/logs/:shareCode', async (req, res) => {
+    const share = await db.query.logPublishing.findFirst({ where: eq(logPublishing.id, req.params.shareCode) });
+    if (!share) return res.status(404).send('Share code not found');
+    const log = await db.query.matchLogs.findFirst({ where: eq(matchLogs.id, share.match_id) });
+    if (!log) return res.status(500).send('Log not found');
+
+    const station = share.station as ROBOT;
+
+    const returnObj = {
+        team: share.team,
+        matchID: share.match_id,
+        event: share.event,
+        level: share.level,
+        matchNumber: share.match_number,
+        playNumber: share.play_number,
+        station: share.station,
+        expires: share.expire_time.toISOString(),
+        matchStartTime: log.start_time.toISOString(),
+        log: log[`${station}_log`] as FMSLogFrame[]
+    };
+
+    if (req.headers['Accept'] === 'application/json') {
+        res.json(returnObj);
+    } else {
+        res.send(json2csv(returnObj.log));
+    }
 });
 
 app.get('/', (req, res) => {

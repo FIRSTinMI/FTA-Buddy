@@ -1,13 +1,14 @@
 import { z } from "zod";
-import { publicProcedure, router } from "../trpc";
+import { eventProcedure, publicProcedure, router } from "../trpc";
 import { getEvent } from "../util/get-event";
 import { observable } from "@trpc/server/observable";
 import { CycleData } from "../../shared/types";
 import { db } from "../db/db";
 import { cycleLogs } from "../db/schema";
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq, isNotNull, desc } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { getTeamAverageCycle } from "../util/team-cycles";
+import { cycleTimeToMS } from "../../shared/cycleTimeToMS";
 
 export const cycleRouter = router({
     postCycleTime: publicProcedure.input(z.object({
@@ -117,5 +118,71 @@ export const cycleRouter = router({
             teamNumber: z.number()
         })).query(async ({ input }) => {
             return getTeamAverageCycle(input.teamNumber, input.eventCode);
+        }),
+
+    getLastPrestart: eventProcedure.query(async ({ ctx }) => {
+        const event = await getEvent(ctx.eventToken ?? '');
+        if (event.lastPrestartDone) {
+            return event.lastPrestartDone;
+        } else {
+            const lastPrestartFromDB = await db.select().from(cycleLogs).where(and(
+                eq(cycleLogs.event, event.code),
+                isNotNull(cycleLogs.prestart_time)
+            )).orderBy(desc(cycleLogs.prestart_time))
+                .limit(1).execute();
+            if (lastPrestartFromDB.length === 0) {
+                return null;
+            }
+            return lastPrestartFromDB[0].prestart_time;
+        }
+    }),
+
+    getLastCycleTime: eventProcedure.query(async ({ ctx }) => {
+        const event = await getEvent(ctx.eventToken ?? '');
+        if (event.monitorFrame.lastCycleTime == "unk") {
+            const lastRecordedCycleTime = await db.select().from(cycleLogs)
+                .where(and(
+                    eq(cycleLogs.event, event.code),
+                    isNotNull(cycleLogs.calculated_cycle_time)
+                )).orderBy(desc(cycleLogs.start_time))
+                .limit(1).execute();
+
+            if (lastRecordedCycleTime.length === 0) {
+                return null;
+            }
+            return lastRecordedCycleTime[0].calculated_cycle_time;
+        };
+        return event.monitorFrame.lastCycleTime;
+    }),
+
+    getBestCycleTime: eventProcedure.query(async ({ ctx }) => {
+        const bestCycle = await db.select().from(cycleLogs)
+            .where(eq(cycleLogs.event, ctx.event.code))
+            .orderBy(asc(cycleLogs.calculated_cycle_time))
+            .limit(1).execute();
+
+        if (bestCycle.length === 0) {
+            return null;
+        }
+
+        return bestCycle[0];
+    }),
+
+    getAverageCycleTime: eventProcedure.query(async ({ ctx }) => {
+        const cycles = await db.query.cycleLogs.findMany({ where: eq(cycleLogs.event, ctx.event.code) });
+
+        if (cycles.length === 0) {
+            return null;
+        }
+
+        const total = cycles.reduce((acc, cycle) => {
+            if (!cycle.calculated_cycle_time) {
+                return acc;
+            }
+
+            return acc + cycleTimeToMS(cycle.calculated_cycle_time);
+        }, 0);
+
+        return total / cycles.length;
     })
 });

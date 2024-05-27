@@ -20,6 +20,7 @@
     import { authStore } from "../stores/auth";
     import { formatTimeNoAgo } from "../util/formatTime";
     import Spinner from "../components/Spinner.svelte";
+    import { json2csv } from "json-2-csv";
 
     export let matchid: string;
     export let station: ROBOT | string;
@@ -28,15 +29,17 @@
     let log: FMSLogFrame[];
     let team: number;
 
-    let match;
+    let match: Awaited<ReturnType<typeof trpc.match.getStationMatch.query>>;
+    let matchPromise: Promise<any>;
 
     if ($authStore.eventToken) {
-        match = trpc.match.getStationMatch.query({ id: matchid, station: station });
+        matchPromise = trpc.match.getStationMatch.query({ id: matchid, station: station });
     } else {
-        match = trpc.match.getPublicMatch.query({ id: matchid, sharecode: station });
+        matchPromise = trpc.match.getPublicMatch.query({ id: matchid, sharecode: station });
     }
 
-    match.then((m) => {
+    matchPromise.then((m) => {
+        match = m;
         log = m.log;
         team = m.team;
         actualStation = m.station;
@@ -96,6 +99,15 @@
             shareOpen = true;
         }
     }
+
+    async function exportLog() {
+        const body = json2csv(log, {});
+        const url = URL.createObjectURL(new Blob([body], { type: "text/csv" }));
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${match.event.toUpperCase()}-${match.level === "None" ? "Test" : match.level}-${match.match_number}-${match.play_number}-${team}.csv`;
+        a.click();
+    }
 </script>
 
 <Modal bind:open={shareOpen} dismissable outsideclose>
@@ -115,20 +127,21 @@
 <div
     class="container mx-auto p-2 lg:max-w-7xl w-full flex flex-col gap-2 md:gap-4"
 >
-    {#if $authStore.eventToken}
-        <div class="flex">
+    <div class="flex">
+        {#if $authStore.eventToken}
             <Button on:click={back} class="w-fit mx-1.5">Back</Button>
             <Button on:click={share} class="w-fit mx-1.5">Share Log</Button>
-        </div>
-    {/if}
-    {#await match}
+        {/if}
+        <Button on:click={exportLog} class="w-fit mx-1.5">Export CSV</Button>
+    </div>
+    {#await matchPromise}
         <Spinner size=12 />
-    {:then match}
+    {:then}
         <div>
             <h1 class="text-xl">
-                {match?.event.toUpperCase()} {match?.level === "None" ? "Test" : match?.level} Match {match?.match_number}/{match?.play_number}
+                {match.event.toUpperCase()} {match.level === "None" ? "Test" : match.level} Match {match.match_number}/{match.play_number}
             </h1>
-            <p>{formatTimeNoAgo(new Date(match?.start_time))}</p>
+            <p>{formatTimeNoAgo(new Date(match.start_time))}</p>
             <h2 class="text-lg">
                 {(actualStation.startsWith("blue") ? "Blue " : "Red ") +
                     actualStation.charAt(actualStation.length - 1)} - Team #{team}

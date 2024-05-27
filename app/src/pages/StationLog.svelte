@@ -105,7 +105,7 @@
         const url = URL.createObjectURL(new Blob([body], { type: "text/csv" }));
         const a = document.createElement("a");
         a.href = url;
-        a.download = `${match.event.toUpperCase()}-${match.level === "None" ? "Test" : match.level}-${match.match_number}-${match.play_number}-${team}.csv`;
+        a.download = `${match.event.toUpperCase()}-${match.level === "None" ? "Test" : match.level}-${match.match_number}-${team}.csv`;
         a.click();
     }
 </script>

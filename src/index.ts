@@ -22,6 +22,13 @@ import proxy from 'express-http-proxy';
 import { createServer } from 'http';
 import { messagesRouter } from './router/messages';
 import { json2csv } from 'json-2-csv';
+import { Marked } from 'marked';
+import { join } from 'path';
+import sanitizeHtml from 'sanitize-html';
+import { markedHighlight } from 'marked-highlight';
+import hljs from 'highlight.js';
+import json from 'highlight.js/lib/languages/json';
+import { gfmHeadingId } from 'marked-gfm-heading-id';
 
 const port = parseInt(process.env.PORT || '3001');
 
@@ -97,21 +104,24 @@ if (process.env.NODE_ENV === 'dev') {
 
 // Public api
 
-app.get('/cycles/:eventCode/:level/:match/:play', async (req, res) => {
-    if (!['None', 'Practice', 'Qualification', 'Playoff'].includes(req.params.level)) return res.status(400).send('Invalid level');
+app.get('/api/cycles/:eventCode/:level/:match/:play', async (req, res) => {
+    if (!['none', 'practice', 'qualification', 'playoff'].includes(req.params.level.toLowerCase())) return res.status(400).send('Invalid level');
 
-    res.json(await db.query.cycleLogs.findFirst({ where: and(eq(cycleLogs.event, req.params.eventCode.toLowerCase()), eq(cycleLogs.match_number, parseInt(req.params.match)), eq(cycleLogs.play_number, parseInt(req.params.play)), eq(cycleLogs.level, req.params.level as TournamentLevel)) }));
+    let level = req.params.level.toLowerCase() as TournamentLevel;
+    level = level.substring(0, 1).toUpperCase() + level.substring(1);
+
+    res.json(await db.query.cycleLogs.findFirst({ where: and(eq(cycleLogs.event, req.params.eventCode.toLowerCase()), eq(cycleLogs.match_number, parseInt(req.params.match)), eq(cycleLogs.play_number, parseInt(req.params.play)), eq(cycleLogs.level, level as TournamentLevel)) }));
 });
 
-app.get('/cycles/:eventCode', async (req, res) => {
+app.get('/api/cycles/:eventCode', async (req, res) => {
     res.json(await db.query.cycleLogs.findMany({ where: eq(cycleLogs.event, req.params.eventCode.toLowerCase()) }));
 });
 
-app.get('/team-average-cycle/:team/:eventCode?', async (req, res) => {
+app.get('/api/team-average-cycle/:team/:eventCode?', async (req, res) => {
     res.json(await getTeamAverageCycle(parseInt(req.params.team), req.params.eventCode?.toLowerCase()));
 });
 
-app.get('/logs/:shareCode', async (req, res) => {
+app.get('/api/logs/:shareCode', async (req, res) => {
     const share = await db.query.logPublishing.findFirst({ where: eq(logPublishing.id, req.params.shareCode) });
     if (!share) return res.status(404).send('Share code not found');
     const log = await db.query.matchLogs.findFirst({ where: eq(matchLogs.id, share.match_id) });
@@ -132,11 +142,74 @@ app.get('/logs/:shareCode', async (req, res) => {
         log: log[`${station}_log`] as FMSLogFrame[]
     };
 
-    if (req.headers['Accept'] === 'application/json') {
+    if (req.query.format === 'json') {
         res.json(returnObj);
     } else {
+        res.setHeader('Content-Disposition', `attachment; filename=${log.event.toUpperCase()}-${log.level === "None" ? "Test" : log.level}-${log.match_number}-${share.team}.csv`);
+        res.setHeader('Content-Type', 'text/csv');
         res.send(json2csv(returnObj.log));
     }
+});
+
+hljs.registerLanguage('json', json);
+
+const marked = new Marked(
+    markedHighlight({
+        langPrefix: 'hljs language-',
+        highlight(code, lang, info) {
+            console.log(lang);
+            const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+            console.log(language);
+            const result = hljs.highlight(code, { language }).value;
+            console.log(result);
+            return result;
+        }
+    })
+);
+
+marked.use({
+    gfm: true,
+});
+
+marked.use(gfmHeadingId());
+
+app.get('/docs/*', async (req, res) => {
+    let path = req.path;
+    if (path.endsWith('/')) path += 'index';
+    path = join(__dirname, '../', path + '.md');
+    const data = readFileSync(path, 'utf8');
+    const html = sanitizeHtml(await marked.parse(data), {
+        allowedAttributes: {
+            'span': ['id', 'class'],
+            'a': ['href', 'name', 'target'],
+            'h1': ['id'],
+            'h2': ['id'],
+            'h3': ['id'],
+            'h4': ['id'],
+            'h5': ['id'],
+        }
+    });
+    res.send(`
+    <html>
+        <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <link rel="stylesheet" href="/docs.css">
+            <link rel="stylesheet" href="/hljs.css">
+        </head>
+        <body class="markdown-body" style="margin: 1rem;">
+            <div style="margin: 0 auto; max-width: 1024px;">
+                ${html}
+            </div>
+        </body>
+    </html>
+    `);
+});
+
+app.get('/docs.css', (req, res) => {
+    res.sendFile(join(__dirname, '../node_modules/github-markdown-css/github-markdown.css'));
+});
+app.get('/hljs.css', (req, res) => {
+    res.sendFile(join(__dirname, '../node_modules/highlight.js/styles/atom-one-dark.css'));
 });
 
 app.get('/', (req, res) => {

@@ -135,10 +135,10 @@
                 <img src="/app/tutorial/ticket.png" alt="Tickets" class="sm:max-w-xl w-fit mx-auto" />
             </div>
         {:else if step === 5}
-            <!-- <h2 class="font-bold">Documentation</h2>
+            <h2 class="font-bold">Documentation</h2>
             <p>
-                More information about the app and the API can be found on the <a href="https://docs.ftabuddy.com/" target="_blank" class="underline text-blue-500">docs</a> site.
-            </p> -->
+                More information about the app and the API can be found on the <a href="https://ftabuddy.com/docs/" target="_blank" class="underline text-blue-500">docs</a> site.
+            </p>
             <h2 class="font-bold">Setup</h2>
             <p>
                 To setup the app for your event, visit FTABuddy.com on a computer connected to the field network, and follow the instructions for hosting.

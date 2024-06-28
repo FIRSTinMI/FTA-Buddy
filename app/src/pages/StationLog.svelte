@@ -156,8 +156,8 @@
             <MultiSelect items={columns} bind:value={selectedColumns} size="sm" class="mt-2" />
         </Label>
 
-        <Table class="log-table">
-            <TableHead>
+        <Table class="log-table" divClass="relative overflow-auto max-h-logscreen">
+            <TableHead class="sticky top-0">
                 <TableHeadCell class="px-6 py-4">Time</TableHeadCell>
                 {#each selectedColumns as col}
                     <TableHeadCell class="px-6 py-4"

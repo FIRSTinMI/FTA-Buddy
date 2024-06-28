@@ -1,5 +1,5 @@
 import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
-import { DSState, EnableState, FMSEnums, FieldState, PartialMonitorFrame, ROBOT, type SignalRMonitorFrame } from '@shared/types';
+import { DSState, EnableState, FMSEnums, FieldState, MatchState, PartialMonitorFrame, ROBOT, type SignalRMonitorFrame } from '@shared/types';
 import { DEFAULT_MONITOR } from '@shared/constants';
 import { uploadMatchLogs } from './trpc';
 
@@ -8,6 +8,8 @@ export class SignalR {
     public connection: HubConnection | null = null;
 
     public infrastructureConnection: HubConnection | null = null;
+
+    public gameSpecificConnection: HubConnection | null = null;
 
     public frame: PartialMonitorFrame = DEFAULT_MONITOR;
 
@@ -27,6 +29,7 @@ export class SignalR {
     public async start() {
         console.log('Starting SignalR');
         // Build a connection to the SignalR Hub
+        console.log(`http://${this.ip}/fieldMonitorHub`);
         this.connection = new HubConnectionBuilder()
             .withUrl(`http://${this.ip}/fieldMonitorHub`)
             .withServerTimeout(30000) // 30 seconds, per FMS Audience Display
@@ -57,6 +60,34 @@ export class SignalR {
 
         this.infrastructureConnection = new HubConnectionBuilder()
             .withUrl(`http://${this.ip}/infrastructureHub`)
+            .withServerTimeout(30000) // 30 seconds, per FMS Audience Display
+            .withKeepAliveInterval(15000) // 15 seconds per FMS Audience Display
+            .configureLogging({
+                log: (logLevel, message) => {
+                    // Prevent showing errors in the extension for things that are expected to fail sometimes
+                    if (
+                        message.startsWith('Failed to complete negotiation') ||
+                        message.startsWith('Failed to start the connection') ||
+                        message.startsWith('Error from HTTP request')
+                    ) return console.log(`[SignalR ${logLevel}] ${message}`);
+
+                    [console.debug, console.debug, console.log, console.warn, console.error][logLevel](`[SignalR ${logLevel}] ${message}`);
+                },
+            })
+            // .withHubProtocol(new MessagePackHubProtocol())
+            .withAutomaticReconnect({
+                nextRetryDelayInMilliseconds(retryContext) {
+                    console.log('Retrying SignalR connection...');
+                    return Math.min(
+                        2_000 * retryContext.previousRetryCount,
+                        120_000
+                    );
+                },
+            })
+            .build();
+
+        this.gameSpecificConnection = new HubConnectionBuilder()
+            .withUrl(`http://${this.ip}/gameSpecificHub`)
             .withServerTimeout(30000) // 30 seconds, per FMS Audience Display
             .withKeepAliveInterval(15000) // 15 seconds per FMS Audience Display
             .configureLogging({
@@ -173,7 +204,7 @@ export class SignalR {
                     SNR: data[i].SNR,
                     noise: data[i].Noise,
                     signal: data[i].Signal,
-                    versionmm: this.frame[team].versionmm,
+                    versionmm: this.frame[team].versionmm ?? false,
                     enabled: this.enableState(data[i])
                 }
             }
@@ -200,9 +231,10 @@ export class SignalR {
             }
             */
 
-            const team: ROBOT = (((data.p1 === FMSEnums.AllianceType.Red) ? 'red' : 'blue') + data.p2) as ROBOT;
+            //const team: ROBOT = (((data.p1 === FMSEnums.AllianceType.Red) ? 'red' : 'blue') + data.p2) as ROBOT;
 
-            this.frame[team].versionmm = data.p3.length > 0;
+            // if (data.p3) this.frame[team].versionmm = data.p3.length > 0;
+            // else this.frame[team].versionmm = false;
         });
 
         // Any settings changed in FMS
@@ -287,6 +319,14 @@ export class SignalR {
             }
         });
 
+        this.infrastructureConnection.on('fieldnetworkstatus', (data) => {
+            //console.log('fieldnetworkstatus: ', data);
+        });
+
+        this.infrastructureConnection.on('plc_io_status_changed', (data) => {
+            //console.log('plc_io_status_changed: ', data);
+        });
+
         this.infrastructureConnection.on('matchstatuschanged', (data) => {
             console.log('matchstatuschanged: ', data);
 
@@ -331,8 +371,22 @@ export class SignalR {
             console.log('SignalR FMS Connection Closed!');
         });
 
+        this.gameSpecificConnection.on('BlueScoreChanged', (data) => {
+            //console.log('BlueScoreChanged: ', data)
+        });
+        this.gameSpecificConnection.on('RedScoreChanged', (data) => {
+            //console.log('RedScoreChanged: ', data)
+        });
+        this.gameSpecificConnection.on('BlueScoringElementsChanged', (data) => {
+            //console.log('BlueScoringElementsChanged: ', data)
+        });
+        this.gameSpecificConnection.on('RedScoringElementsChanged', (data) => {
+            //console.log('RedScoringElementsChanged: ', data)
+        });
+        this.gameSpecificConnection.on('fieldtestelements_changed', (data) => console.log('fieldtestelements_changed: ', data));
+
         // Start connection to SignalR Hub
-        return Promise.all([this.infrastructureConnection.start(), this.connection.start()]).catch(console.log);
+        return Promise.all([this.infrastructureConnection.start(), this.connection.start(), this.gameSpecificConnection.start()]).catch(console.log);
     }
 
     /**
@@ -364,12 +418,13 @@ export class SignalR {
 
     private dsState(data: SignalRMonitorFrame): DSState {
         if (data.IsBypassed) return DSState.BYPASS;
-        if (data.IsEStopPressed) return DSState.ESTOP;
-        if (data.IsAStopPressed) return DSState.ASTOP;
+        if (data.IsEStopped) return DSState.ESTOP;
+        if (data.IsAStopped && this.frame.field == FieldState.MATCH_RUNNING_AUTO) return DSState.ASTOP;
         if (data.Connection) {
-            if (data.StationStatus === FMSEnums.StationStatusType.Good) return DSState.GREEN;
-            if (data.StationStatus === FMSEnums.StationStatusType.WrongStation) return DSState.MOVE_STATION;
-            if (data.StationStatus === FMSEnums.StationStatusType.WrongMatch) return DSState.WAITING;
+            console.log(data.StationStatus);
+            if (data.DSLinkActive) return DSState.GREEN;
+            if (data.StationStatus === 'WrongStation') return DSState.MOVE_STATION;
+            if (data.StationStatus === 'Waiting') return DSState.WAITING;
             return DSState.GREEN_X;
         }
 

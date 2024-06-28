@@ -1,3 +1,4 @@
+import { cycleTimeToMS } from "../../../shared/cycleTimeToMS";
 import { DSState, FieldState, MatchState, MatchStateMap, ROBOT, StateChangeType, type MonitorFrame, type StateChange, type TeamInfo } from "../../../shared/types";
 
 export interface MonitorEvent extends CustomEvent {
@@ -154,5 +155,16 @@ export class MonitorFrameHandler extends EventTarget {
 
     public getHistory(robot: ROBOT, type: keyof TeamInfo, length: number = 50) {
         return this.frames.map((frame) => frame[robot]?.[type]).slice(-length);
+    }
+
+    public getLastCycleTime() {
+        const thisFrame = this.getFrame();
+        const lastCycleTime = thisFrame?.lastCycleTime;
+        console.log(lastCycleTime);
+        if (lastCycleTime) {
+            return cycleTimeToMS(lastCycleTime);
+        } else {
+            return undefined;
+        }
     }
 }

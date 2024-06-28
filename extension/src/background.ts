@@ -2,8 +2,9 @@ import { SignalR } from "./signalR";
 import { getCurrentMatch, getEventCode, getTeamNumbers } from "./fmsapi";
 import { trpc, updateValues } from "./trpc";
 const manifestData = chrome.runtime.getManifest();
-export const FMS = '192.168.1.220'
-let signalRConnection = new SignalR(FMS, manifestData.version, sendFrame, sendCycletime);
+export const FMS = '10.0.100.5';
+console.log(FMS);
+export let signalRConnection = new SignalR(FMS, manifestData.version, sendFrame, sendCycletime);
 
 let eventCode: string;
 let eventToken: string;

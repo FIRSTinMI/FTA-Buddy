@@ -3,7 +3,7 @@
     import { Table, TableBody, TableHead, TableHeadCell } from "flowbite-svelte";
     import MonitorRow from "../components/MonitorRow.svelte";
     import TeamModal from "../components/TeamModal.svelte";
-    import { formatTimeShortNoAgo } from "../util/formatTime";
+    import { formatTimeShortNoAgo, formatTimeShortNoAgoSeconds } from "../util/formatTime";
     import type { MonitorEvent, MonitorFrameHandler } from "../util/monitorFrameHandler";
     import { onMount } from "svelte";
     import { trpc } from "../main";
@@ -53,10 +53,16 @@
         console.log(averageCycleTimeMS);
     });
 
-    frameHandler.addEventListener("match-start", (evt) => {
+    frameHandler.addEventListener("match-start", async (evt) => {
         currentCycleIsBest = false;
-        lastCycleTime = formatTimeShortNoAgo(matchStartTime);
-        lastCycleTimeMS = new Date().getTime() - matchStartTime.getTime();
+        const calculatedCycleTime = frameHandler.getLastCycleTime();
+        // Doesn't always update quick enough
+        if (!calculatedCycleTime || calculatedCycleTime === lastCycleTimeMS) {
+            lastCycleTime = formatTimeShortNoAgo(matchStartTime);
+            lastCycleTimeMS = new Date().getTime() - matchStartTime.getTime();
+        } else {
+            lastCycleTime = formatTimeShortNoAgoSeconds(calculatedCycleTime);
+        }
         if (lastCycleTimeMS < bestCycleTimeMS) {
             bestCycleTimeMS = lastCycleTimeMS;
             currentCycleIsBest = true;
@@ -66,10 +72,11 @@
 
     setInterval(() => {
         const currentTime = new Date().getTime() - matchStartTime.getTime();
+        console.log(averageCycleTimeMS);
         if (currentTime < averageCycleTimeMS) {
             currentCycleTimeRedness = 0;
         } else {
-            currentCycleTimeRedness = Math.min(1, (currentTime - averageCycleTimeMS) / (averageCycleTimeMS));
+            currentCycleTimeRedness = Math.min(1, (currentTime - averageCycleTimeMS) / 120);
         }
 
         currentCycleTime = formatTimeShortNoAgo(matchStartTime);

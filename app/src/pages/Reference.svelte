@@ -6,12 +6,12 @@
 
 <div class="container mx-auto p-2 pr-3 w-full">
     <Accordion flush class="text-left">
-        <AccordionItem>
+        <AccordionItem class="text-black dark:text-white">
             <span slot="header">Robot Radio Lights</span>
 
             <img src="/app/vh103.png" width="325px" alt="Radio with LEDs labeled" />
 
-            <table cellpadding="5" cellspacing="0" class="led-table">
+            <table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
                 <tr>
                     <td>
                         <table class="section-table">
@@ -79,10 +79,10 @@
                 </tr>
             </table>
         </AccordionItem>
-        <AccordionItem>
+        <AccordionItem class="text-black dark:text-white">
             <span slot="header">RoboRIO Lights</span>
 
-            <table cellpadding="5" cellspacing="0" class="led-table">
+            <table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
                 <tr>
                     <td>
                         <table class="section-table">
@@ -194,10 +194,10 @@
                 </tr>
             </table>
         </AccordionItem>
-        <AccordionItem>
+        <AccordionItem class="text-black dark:text-white">
             <span slot="header">REV Motor Controller Lights</span>
 
-            <table cellpadding="5" cellspacing="0" class="led-table">
+            <table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
                 <tr>
                     <td>
                         <table class="section-table">
@@ -346,10 +346,10 @@
             </table>
         </AccordionItem>
 
-        <AccordionItem>
+        <AccordionItem class="text-black dark:text-white">
             <span slot="header">CTRE Motor Controller Lights</span>
 
-            <table cellpadding="5" cellspacing="0" class="led-table">
+            <table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
                 <tr>
                     <td>
                         <table class="section-table">
@@ -402,10 +402,10 @@
             </table>
         </AccordionItem>
 
-        <AccordionItem>
+        <AccordionItem class="text-black dark:text-white">
             <span slot="header">CANivore Lights</span>
 
-            <table cellpadding="5" cellspacing="0" class="led-table">
+            <table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
                 <tr>
                     <td>
                         <table class="section-table">
@@ -512,12 +512,12 @@
             </table>
         </AccordionItem>
 
-        <AccordionItem>
+        <AccordionItem class="text-black dark:text-white">
             <span slot="header">Keyboard Shortcuts</span>
 
             <h3>Driver Station</h3>
 
-            <table cellpadding="5" cellspacing="0" class="led-table">
+            <table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
                 <tr>
                     <td>
                         <table class="section-table">
@@ -546,11 +546,11 @@
             </table>
         </AccordionItem>
 
-        <AccordionItem>
+        <AccordionItem class="text-black dark:text-white">
             <span slot="header">Team IP Addresses</span>
             <h3>IP Address Subnets</h3>
 
-            <table cellpadding="5" cellspacing="0" class="led-table">
+            <table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
                 <tr>
                     <td>
                         <table class="section-table">
@@ -581,7 +581,7 @@
 
             <h3>IP Addresses</h3>
 
-            <table cellpadding="5" cellspacing="0" class="led-table">
+            <table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
                 <tr>
                     <td>
                         <table class="section-table">
@@ -619,10 +619,10 @@
             </table>
         </AccordionItem>
 
-        <AccordionItem>
+        <AccordionItem class="text-black dark:text-white">
             <span slot="header">Helpful Commands</span>
 
-            <table cellpadding="5" cellspacing="0" class="led-table">
+            <table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
                 <tr>
                     <td>
                         <table class="section-table">
@@ -659,10 +659,10 @@
                 </tr>
             </table>
         </AccordionItem>
-        <AccordionItem>
+        <AccordionItem class="text-black dark:text-white">
             <span slot="header">Field Manual QR Codes</span>
             <Accordion flush>
-                <AccordionItem>
+                <AccordionItem class="text-black dark:text-white">
                     <span slot="header">Pack Case 23/24 Amp and Truss</span>
                     {#if $settingsStore.fimSpecifics}
                         <a href="/app/pdf/FIM_Case_23_24.pdf"><QrCode value="https://ftabuddy.com/app/pdf/FIM_Case_23_24.pdf" padding={5}></QrCode></a>
@@ -670,7 +670,7 @@
                         <a href="https://roadcase.frc.tools/23"><QrCode value="https://roadcase.frc.tools/23" padding={5} /></a>
                     {/if}
                 </AccordionItem>
-                <AccordionItem>
+                <AccordionItem class="text-black dark:text-white">
                     <span slot="header">Pack Case 31 Speaker</span>
                     {#if $settingsStore.fimSpecifics}
                         <a href="/app/pdf/FIM_Case_31.pdf"><QrCode value="https://ftabuddy.com/app/pdf/FIM_Case_31.pdf" padding={5}></QrCode></a>
@@ -678,7 +678,7 @@
                         <a href="https://roadcase.frc.tools/31"><QrCode value="https://roadcase.frc.tools/31" padding={5} /></a>
                     {/if}
                 </AccordionItem>
-                <AccordionItem>
+                <AccordionItem class="text-black dark:text-white">
                     <span slot="header">Pack Case 32 {#if $settingsStore.fimSpecifics}Stage Walls{:else}Practice Field{/if}</span>
                     {#if $settingsStore.fimSpecifics}
                         <a href="/app/pdf/FIM_Case_32.pdf"><QrCode value="https://ftabuddy.com/app/pdf/FIM_Case_32.pdf" padding={5}></QrCode></a>
@@ -686,19 +686,19 @@
                         <a href="https://roadcase.frc.tools/32"><QrCode value="https://roadcase.frc.tools/32" padding={5} /></a>
                     {/if}
                 </AccordionItem>
-                <AccordionItem>
+                <AccordionItem class="text-black dark:text-white">
                     <span slot="header">Build Stage</span>
                     <a href="https://usfirst.box.com/s/we7ufqu61k303jnjfmm6o8wg3jp2lkso"><QrCode value="https://usfirst.box.com/s/we7ufqu61k303jnjfmm6o8wg3jp2lkso" padding={5} /></a>
                 </AccordionItem>
-                <AccordionItem>
+                <AccordionItem class="text-black dark:text-white">
                     <span slot="header">Build Speaker</span>
                     <a href="https://usfirst.box.com/s/dybf27uuqtskqpkljy37jkezgludm3f0"><QrCode value="https://usfirst.box.com/s/dybf27uuqtskqpkljy37jkezgludm3f0" padding={5} /></a>
                 </AccordionItem>
-                <AccordionItem>
+                <AccordionItem class="text-black dark:text-white">
                     <span slot="header">Build Amp</span>
                     <a href="https://usfirst.box.com/s/3oilb7ji2ehr1sd7fg2tb31snwxs64kw"><QrCode value="https://usfirst.box.com/s/3oilb7ji2ehr1sd7fg2tb31snwxs64kw" padding={5} /></a>
                 </AccordionItem>
-                <AccordionItem>
+                <AccordionItem class="text-black dark:text-white">
                     <span slot="header">Build Source</span>
                     <a href="https://usfirst.box.com/s/ah6oy40oqy07wfi3dldjfecx7hteoeg1"><QrCode value="https://usfirst.box.com/s/ah6oy40oqy07wfi3dldjfecx7hteoeg1" padding={5} /></a>
                 </AccordionItem>

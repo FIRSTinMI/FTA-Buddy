@@ -1,6 +1,6 @@
 <script lang="ts">
     import Icon from "@iconify/svelte";
-    import { Button, CloseButton, Drawer, Indicator, Modal, Sidebar, SidebarGroup, SidebarItem, SidebarWrapper, Toast } from "flowbite-svelte";
+    import { Button, CloseButton, DarkMode, Drawer, Indicator, Modal, Sidebar, SidebarGroup, SidebarItem, SidebarWrapper, Toast } from "flowbite-svelte";
     import { Link, Route, Router, navigate } from "svelte-routing";
     import { get } from "svelte/store";
     import { frameHandler, subscribeToFieldMonitor } from "./field-monitor";
@@ -71,6 +71,16 @@
     settingsStore.subscribe((value) => {
         settings = value;
     });
+
+    function updateTheme(darkMode: boolean) {
+        if (darkMode) {
+            document.documentElement.classList.add("dark");
+        } else {
+            document.documentElement.classList.remove("dark");
+        }
+    }
+
+    $: updateTheme(settings.darkMode);
 
 
     // Settings modal
@@ -183,9 +193,9 @@
 
 {#if showToast}
     <div class="fixed bottom-0 left-0 p-4">
-        <Toast bind:open={showToast} class="dark:bg-{toastColor}" divClass="w-lg p-4 text-gray-500 bg-white shadow dark:text-gray-400 dark:bg-gray-800 gap-3">
-            <h3 class="text-lg font-bold text-white text-left">{toastTitle}</h3>
-            <p class="text-white text-left">{toastText}</p>
+        <Toast bind:open={showToast} class="dark:bg-{toastColor}" divClass="w-lg p-4 text-black dark:text-gray-500 bg-white shadow dark:text-gray-400 dark:bg-gray-800 gap-3">
+            <h3 class="text-lg font-bold text-left">{toastTitle}</h3>
+            <p class="text-left">{toastText}</p>
         </Toast>
     </div>
 {/if}
@@ -206,7 +216,7 @@
     <div slot="header">
         <h1 class="text-2xl font-bold">Changelog</h1>
     </div>
-    <div bind:innerHTML={changelog} contenteditable class="text-left" />
+    <div bind:innerHTML={changelog} contenteditable class="text-left text-black dark:text-white" />
     <div slot="footer">
         <Button color="primary">Close</Button>
     </div>
@@ -217,10 +227,10 @@
     bind:installPrompt
 />
 
-<Drawer transitionType="fly" {transitionParams} bind:hidden={hideMenu} id="sidebar">
+<Drawer transitionType="fly" {transitionParams} bind:hidden={hideMenu} id="sidebar" class="bg-neutral-200">
     <div class="flex items-center">
-        <h5 id="drawer-navigation-label-3" class="text-base font-semibold text-gray-500 uppercase dark:text-gray-400">Menu</h5>
-        <CloseButton on:click={() => (hideMenu = true)} class="mb-4 dark:text-white" />
+        <h5 id="drawer-navigation-label-3" class="text-base font-semibold text-black uppercase dark:text-gray-400">Menu</h5>
+        <CloseButton on:click={() => (hideMenu = true)} class="mb-4 text-black dark:text-white" />
     </div>
     <Sidebar>
         <SidebarWrapper divClass="overflow-y-auto py-4 px-3 rounded dark:bg-gray-800">
@@ -364,10 +374,10 @@
 </Drawer>
 
 <main>
-    <div class="bg-neutral-800 w-screen h-screen flex flex-col">
+    <div class="bg-white dark:bg-neutral-800 w-screen h-screen flex flex-col">
         {#if !fullscreen}
-        <div class="bg-primary-500 flex w-full justify-between px-2">
-            <Button class="!py-0 !px-0" color="none" on:click={openMenu}>
+        <div class="bg-primary-700 dark:bg-primary-500 flex w-full justify-between px-2">
+            <Button class="!py-0 !px-0 text-white" color="none" on:click={openMenu}>
                 <Icon icon="mdi:menu" class="w-8 h-10" />
             </Button>
             <div class="flex-grow">
@@ -409,7 +419,7 @@
             </Route>
 
             {#if auth.token && auth.eventToken && !fullscreen}
-                <div class="flex justify-around py-2 bg-neutral-700">
+                <div class="flex justify-around py-2 bg-neutral-900 dark:bg-neutral-700 text-white">
                     <Link to="/app/">
                         <Button class="!p-2" color="none">
                             <Icon icon="mdi:television" class="w-8 h-8" />

@@ -26,13 +26,13 @@
 {/if}
 
 <Modal bind:open={settingsOpen} size="lg" outsideclose dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
-    <div slot="header"><h1 class="text-2xl">Settings</h1></div>
+    <div slot="header"><h1 class="text-2xl text-black dark:text-white">Settings</h1></div>
     <form class="justify-start text-left">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
             <div class="grid grid-cols-subgrid gap-2">
                 <Toggle bind:checked={settings.vibrations} on:change={updateSettings}>Vibrations</Toggle>
                 <Toggle bind:checked={settings.notifications} on:change={updateSettings} disabled>Notifications</Toggle>
-                <Toggle bind:checked={settings.darkMode} on:change={updateSettings} disabled>Dark Mode</Toggle>
+                <Toggle bind:checked={settings.darkMode} on:change={updateSettings}>Dark Mode</Toggle>
             </div>
             <div class="grid grid-cols-subgrid gap-2">
                 <Toggle bind:checked={settings.soundAlerts} on:change={updateSettings}>Sound Alerts</Toggle>
@@ -62,7 +62,7 @@
             </div>
         </div>
     </form>
-    <div class="border-t border-neutral-500 pt-2 mt-0 flex flex-col">
+    <div class="border-t border-neutral-500 pt-2 mt-0 flex flex-col text-black dark:text-white">
         <h1 class="text-lg">About</h1>
         <p>Author: Filip Kin</p>
         <p>Version: {settings.version}</p>

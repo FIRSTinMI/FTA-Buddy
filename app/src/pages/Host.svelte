@@ -28,7 +28,9 @@
             // If fms is detect lets try to auto fill the event code
             if (fmsDetected) window.postMessage({ source: "page", type: "getEventCode" }, "*");
         } else if (event.data.type === "eventCode") {
-            eventCode = event.data.code;
+            if (eventCode.length < 1) {
+                eventCode = event.data.code;
+            }
             teams = event.data.teams;
             checkEventCode();
         }
@@ -161,7 +163,7 @@
     </span>
     <p class="text-lg">
         FTA Buddy needs a host to send data to it from FMS. The extension must be installed and be able to communicate with FMS at
-        <code class="bg-neutral-900 px-2 py-.75 rounded-xl">10.0.100.5</code>
+        <code class="bg-neutral-200 dark:bg-neutral-900 px-2 py-.75 rounded-lg">10.0.100.5</code>
         You can use FTA Buddy as your primary field monitor by enabling the SignalR option, or use the FTA Buddy extension with the regular FMS field monitor.
     </p>
     <form class="grid gap-3 text-left" on:submit={createEvent}>

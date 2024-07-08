@@ -3,6 +3,7 @@
     import { Button, Indicator, Modal } from "flowbite-svelte";
     import { gestureEvents } from "../util/gestureDetection";
     import { onMount } from "svelte";
+	import { settingsStore } from "../stores/settings";
 
     export let welcomeOpen = false;
     export let installPrompt: Event | null;
@@ -24,9 +25,9 @@
 
 <Modal bind:open={welcomeOpen} dismissable outsideclose size="lg" style="height: calc(100vh - 8rem)">
     <div slot="header">
-        <h1 class="text-xl">Welcome to FTA Buddy</h1>
+        <h1 class="text-xl text-black dark:text-white">Welcome to FTA Buddy</h1>
     </div>
-    <div class="flex flex-col justify-left text-left gap-1">
+    <div class="flex flex-col justify-left text-left gap-1 text-black dark:text-white">
         {#if step === 0}
             <p>
                 FTA Buddy is a mobile optimized field monitor that has feature creeped into alot more. <br />
@@ -153,12 +154,12 @@
     </div>
     <div class="flex justify-center gap-2 w-full" slot="footer">
         <Button color="dark" class="p-1" on:click={() => step--} disabled={step <= 0}><Icon icon="mdi:arrow-left" class="w-6 h-6" /></Button>
-        <Indicator color={step >= 0 ? "gray" : "dark"} class="my-auto" />
-        <Indicator color={step >= 1 ? "gray" : "dark"} class="my-auto" />
-        <Indicator color={step >= 2 ? "gray" : "dark"} class="my-auto" />
-        <Indicator color={step >= 3 ? "gray" : "dark"} class="my-auto" />
-        <Indicator color={step >= 4 ? "gray" : "dark"} class="my-auto" />
-        <Indicator color={step >= 5 ? "gray" : "dark"} class="my-auto" />
+        <Indicator color={step >= 0 ? "purple" : ($settingsStore.darkMode ? "dark" : "gray")} class="my-auto" />
+        <Indicator color={step >= 1 ? "purple" : ($settingsStore.darkMode ? "dark" : "gray")} class="my-auto" />
+        <Indicator color={step >= 2 ? "purple" : ($settingsStore.darkMode ? "dark" : "gray")} class="my-auto" />
+        <Indicator color={step >= 3 ? "purple" : ($settingsStore.darkMode ? "dark" : "gray")} class="my-auto" />
+        <Indicator color={step >= 4 ? "purple" : ($settingsStore.darkMode ? "dark" : "gray")} class="my-auto" />
+        <Indicator color={step >= 5 ? "purple" : ($settingsStore.darkMode ? "dark" : "gray")} class="my-auto" />
         <Button color="dark" class="p-1" on:click={() => step++} disabled={step >= 5}><Icon icon="mdi:arrow-right" class="w-6 h-6" /></Button>
     </div>
 </Modal>

@@ -220,6 +220,31 @@ export interface FMSLogFrame {
     dataRateTotal: number
 }
 
+export interface MatchLog {
+    blue1: number;
+    blue2: number;
+    blue3: number;
+    red1: number;
+    red2: number;
+    red3: number;
+    level: string;
+    match_number: number;
+    play_number: number;
+    start_time: Date;
+    log: {
+        matchTime: number;
+        matchTimeBase: number;
+        timeStamp: Date;
+        auto: boolean;
+        blue1: FMSLogFrame | null;
+        blue2: FMSLogFrame | null;
+        blue3: FMSLogFrame | null;
+        red1: FMSLogFrame | null;
+        red2: FMSLogFrame | null;
+        red3: FMSLogFrame | null;
+    }[];
+}
+
 export interface FMSMatch {
     actualStartTime: string,
     dayNumber: number,

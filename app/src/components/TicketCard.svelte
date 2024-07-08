@@ -13,12 +13,12 @@
     }, (time.includes("s ") ? 1000 : 60000));
 
 </script>
-<Card href="/app/ticket/{ticket.id}" padding="none" size="none" class="w-full">
+<Card href="/app/ticket/{ticket.id}" padding="none" size="none" class="w-full text-black dark:text-white dark:bg-neutral-800">
     <div class="flex flex-col sm:flex-row sm:divide-x divide-gray-500 pt-2 sm:pt-0 sm:gap-4 px-4">
         <div class="flex flex-col sm:my-auto">
             <p>#{ticket.id} - 
                 {#if ticket.is_open}
-                    <span class="text-green-500 font-bold">Open</span>
+                    <span class="text-green-500 dark:text-green-500 font-bold">Open</span>
                 {:else}
                     <span class="font-bold">Closed</span>
                 {/if}

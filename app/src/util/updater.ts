@@ -9,6 +9,17 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+    '2.5.1': {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.5.1</h1>
+        <ul>
+        <li>Light theme for you heathens</li>
+        <li>Fixed problem with FMS event code not matching TBA</li>
+        <li>Match Logs (non team-specific)</li>
+        </ul>
+        `,
+        update: () => { }
+    },
     '2.5.0': {
         changelog: `
         <h1 class="text-lg font-bold">v2.5.0</h1>

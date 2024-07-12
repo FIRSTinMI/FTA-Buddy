@@ -21,7 +21,12 @@
     let loading = false;
     let view: null | "login" | "create" | "googleCreate" = null;
 
-    let desktop = navigator.userAgent.includes("Windows") || navigator.userAgent.includes("Macintosh") || navigator.userAgent.includes("Linux");
+    let desktop = (
+        navigator.userAgent.includes("Windows") || 
+        navigator.userAgent.includes("Macintosh") || 
+        navigator.userAgent.includes("Linux")
+    ) && 
+        !navigator.userAgent.includes("Android");
 
     async function createUser(evt: Event) {
         evt.preventDefault();
@@ -344,9 +349,8 @@
             <div class="flex flex-col border-t border-neutral-500 pt-10 space-y-4">
                 <Label for="event-selector">Admin Event Selector</Label>
                 <Select id="event-selector" bind:value={event.code} items={eventList} placeholder="Select Event" on:change={adminSelectEvent} />
-                <div class="pt-10 border-t border-neutral-500">
-                    <Button href="/" on:click={() => navigate("/")}>Go to App</Button>
-                </div>
+                <Button href="/" on:click={() => navigate("/")}>Go to App</Button>
+                <Button outline on:click={() => navigate("/app/event-created")}>See Event Pin</Button>
             </div>
 
             <!-- Currently have an event selected -->
@@ -357,6 +361,7 @@
                 <Button outline on:click={() => (eventStore.set({ code: "", pin: "", teams: [] }), authStore.set({ ...auth, eventToken: "" }))}
                     >Leave Event</Button
                 >
+                <Button outline on:click={() => navigate("/app/event-created")}>See Event Pin</Button>
             </div>
 
             <!-- No event selected -->

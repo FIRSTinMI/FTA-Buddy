@@ -4,6 +4,7 @@
     import { trpc } from "../main";
     import { authStore } from "../stores/auth";
     import Spinner from "../components/Spinner.svelte";
+	import { navigate } from "svelte-routing";
     
     export let toast: (title: string, text: string, color?: string) => void;
 
@@ -37,6 +38,7 @@
             });
 
             toast("Success", "Account created successfully", "green-500");
+            navigate("/app/login");
         } catch (err: any) {
             console.error(err);
             if (err.message.startsWith("[")) {

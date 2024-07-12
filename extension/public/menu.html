@@ -63,13 +63,10 @@
     </head>
 
     <body style="width: 300px">
-        <h1>FTA Helper</h1>
-        <ol style="padding-left: 16px">
-            <li>Create event in app at <a href="https://ftabuddy.com/app/">ftabuddy.com</a></li>
-            <li>Then enter event code below</li>
-            <li>Click enable</li>
-            <li>Refresh Field Monitor tab after changing</li>
-        </ol>
+        <h1>FTA Buddy</h1>
+        <p>
+            To use this extension, use the web app <a href="https://ftabuddy.com/app/">ftabuddy.com</a>
+        </p>
         <div style="margin-bottom: 10px; display: flex; gap: 4px;">
             Enabled
             <label class="switch">
@@ -94,6 +91,10 @@
         <div id="event-container">
             <label for="event">Event Code</label>
             <input id="event" type="text">
+        </div>
+        <div>
+            <label for="eventToken">Event Token</label>
+            <input id="eventToken" type="text">
         </div>
         <div id="url-container" style="display: none;">
             <label for="url">Server Host</label>

@@ -135,24 +135,29 @@
 
 <div class="container mx-auto md:max-w-4xl flex flex-col justify-center p-4 h-full space-y-4 {waitingForFirstConnectionTest ? 'blur' : ''}">
     <h1 class="text-3xl font-bold">Host a FTA Buddy Instance</h1>
-    <span class="inline-flex gap-2 font-bold mx-auto">
-        {#if extensionDetected}
-            {#if extensionEnabled}
-                <Indicator color="green" class="my-auto" />
-                <span class="text-green text-green-500">Extension Enabled ({extensionVersion})</span>
+    <div>
+        <div class="inline-flex gap-2 font-bold mx-auto">
+            {#if extensionDetected}
+                {#if extensionEnabled}
+                    <Indicator color="green" class="my-auto" />
+                    <span class="text-green text-green-500">Extension Enabled ({extensionVersion})</span>
+                {:else}
+                    <Indicator color="yellow" class="my-auto" />
+                    <span class="text-yellow-300">Extension Not Enabled</span>
+                    <button class="text-blue-400 hover:underline" on:click={() => window.postMessage({ source: "page", type: "enable" }, "*")}>Enable</button>
+                {/if}
             {:else}
-                <Indicator color="yellow" class="my-auto" />
-                <span class="text-yellow-300">Extension Not Enabled</span>
-                <button class="text-blue-400 hover:underline" on:click={() => window.postMessage({ source: "page", type: "enable" }, "*")}>Enable</button>
+                <Indicator color="red" class="my-auto" />
+                <span class="text-red-500">Extension Not Detected</span>
+                <a href="https://chromewebstore.google.com/detail/fta-buddy/kddnhihfpfnehnnhbkfajdldlgigohjc" class="text-blue-400 hover:underline" target="_blank"
+                    >Install</a
+                >
             {/if}
-        {:else}
-            <Indicator color="red" class="my-auto" />
-            <span class="text-red-500">Extension Not Detected</span>
-            <a href="https://chromewebstore.google.com/detail/fta-buddy/kddnhihfpfnehnnhbkfajdldlgigohjc" class="text-blue-400 hover:underline" target="_blank"
-                >Install</a
-            >
+        </div>
+        {#if !extensionDetected}
+            <div class="text-sm text-gray-500">You may have to refresh the page after installing the extension</div>
         {/if}
-    </span>
+    </div>
     <span class="inline-flex gap-2 font-bold mx-auto">
         <Indicator color={fmsDetected ? "green" : "red"} class="my-auto" />
         {#if fmsDetected}

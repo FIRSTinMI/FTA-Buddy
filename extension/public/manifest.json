@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "FTA Buddy",
     "description": "Enable the field monitor and notes sync for FTA Buddy app",
-    "version": "1.8",
+    "version": "1.9",
     "permissions": [
         "storage",
         "scripting"
@@ -24,7 +24,8 @@
         {
             "run_at": "document_end",
             "matches": [
-                "https://ftabuddy.com/*"
+                "https://ftabuddy.com/*",
+                "http://localhost:5173/*"
             ],
             "js": [
                 "app.js"

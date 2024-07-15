@@ -1,12 +1,60 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { Chart, registerables } from "chart.js";
-	import type { MatchLog } from "../../../shared/types";
+	import type { FMSLogFrame, MatchLog } from "../../../shared/types";
 	import { Button } from "flowbite-svelte";
 
     export let data: MatchLog;
     export let log: MatchLog['log'];
-    export let stat: keyof MatchLog['log'][0]['blue1'];
+    export let stat: keyof FMSLogFrame;
+    export let graphConfig: Record<keyof FMSLogFrame, {
+        label: string,
+        min: number,
+        max: number,
+        type?: 'logarithmic' | 'linear',
+    }> = {
+        'battery': {
+            label: 'Voltage',
+            min: 6,
+            max: 14,
+        },
+        'averageTripTime': {
+            label: 'Average Trip Time (ms)',
+            min: 0,
+            max: 10,
+        },
+        'dataRateTotal': {
+            label: 'Bandwidth (MB/s)',
+            min: 0,
+            max: 4.5,
+        },
+        'lostPackets': {
+            label: 'Lost Packets',
+            min: 1,
+            max: 10000,
+            type: 'logarithmic',
+        },
+        'signal': {
+            label: 'Signal (dBm)',
+            min: -100,
+            max: -30,
+        },
+        'noise': {
+            label: 'Noise (dBm)',
+            min: -100,
+            max: -80, // Negative log scale not supported in chart.js :(
+        },
+        'txMCS': {
+            label: 'TX MCS',
+            min: 9,
+            max: 20,
+        },
+        'rxMCS': {
+            label: 'RX MCS',
+            min: 9,
+            max: 20,
+        },
+    };
     export function hideAll() {
         if (CHART?.data.datasets) {
             for (let dataset of CHART.data.datasets) {
@@ -68,8 +116,8 @@
                         {
                             label: `Blue 1 - ${data.blue1}`,
                             data: log.map((frame) => (frame.blue1 ? frame.blue1[stat] : null)),
-                            borderColor: 'rgb(255, 99, 132)',
-                            backgroundColor: 'rgb(255, 99, 132)',
+                            borderColor: '#2bb1cf',
+                            backgroundColor: '#2bb1cf',
                             borderWidth: 1.5,
                             yAxisID: 'y',
                             pointRadius: 0,
@@ -77,8 +125,8 @@
                         {
                             label: `Blue 2 - ${data.blue2}`,
                             data: log.map((frame) => (frame.blue2 ? frame.blue2[stat] : null)),
-                            borderColor: 'rgb(54, 162, 235)',
-                            backgroundColor: 'rgb(54, 162, 235)',
+                            borderColor: '#008aff',
+                            backgroundColor: '#008aff',
                             borderWidth: 1.5,
                             yAxisID: 'y',
                             pointRadius: 0,
@@ -86,8 +134,8 @@
                         {
                             label: `Blue 3 - ${data.blue3}`,
                             data: log.map((frame) => (frame.blue3 ? frame.blue3[stat] : null)),
-                            borderColor: 'rgb(75, 192, 192)',
-                            backgroundColor: 'rgb(75, 192, 192)',
+                            borderColor: '#780aff',
+                            backgroundColor: '#780aff',
                             borderWidth: 1.5,
                             yAxisID: 'y',
                             pointRadius: 0,
@@ -95,8 +143,8 @@
                         {
                             label: `Red 1 - ${data.red1}`,
                             data: log.map((frame) => (frame.red1 ? frame.red1[stat] : null)),
-                            borderColor: 'rgb(153, 102, 255)',
-                            backgroundColor: 'rgb(153, 102, 255)',
+                            borderColor: '#cf0048',
+                            backgroundColor: '#cf0048',
                             borderWidth: 1.5,
                             yAxisID: 'y',
                             pointRadius: 0
@@ -104,8 +152,8 @@
                         {
                             label: `Red 2 - ${data.red2}`,
                             data: log.map((frame) => (frame.red2 ? frame.red2[stat] : null)),
-                            borderColor: 'rgb(255, 159, 64)',
-                            backgroundColor: 'rgb(255, 159, 64)',
+                            borderColor: '#fc7425',
+                            backgroundColor: '#fc7425',
                             borderWidth: 1.5,
                             yAxisID: 'y',
                             pointRadius: 0
@@ -113,8 +161,8 @@
                         {
                             label: `Red 3 - ${data.red3}`,
                             data: log.map((frame) => (frame.red3 ? frame.red3[stat] : null)),
-                            borderColor: 'rgb(255, 99, 132)',
-                            backgroundColor: 'rgb(255, 99, 132)',
+                            borderColor: '#ffd000',
+                            backgroundColor: '#ffd000',
                             borderWidth: 1.5,
                             yAxisID: 'y',
                             pointRadius: 0
@@ -181,14 +229,14 @@
                     },
                     scales: {
                         y: {
-                            type: 'linear',
+                            type: graphConfig[stat].type || 'linear',
                             display: true,
                             position: 'left',
-                            suggestedMax: 14,
-                            suggestedMin: 6,
+                            suggestedMax: graphConfig[stat].max,
+                            suggestedMin: graphConfig[stat].min,
                             title: {
                                 display: true,
-                                text: 'Voltage',
+                                text: graphConfig[stat].label,
                             },
                         },
                         y5: {

@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { Button } from "flowbite-svelte";
-import { trpc } from "../main";
+    import { Button, TabItem, Tabs } from "flowbite-svelte";
+    import { trpc } from "../main";
     import { navigate } from "svelte-routing";
     import Spinner from "../components/Spinner.svelte";
 	import { ROBOT, type FMSLogFrame, type MatchLog } from "../../../shared/types";
@@ -80,6 +80,39 @@ import { trpc } from "../main";
     }
 
     let graph: MatchGraph;
+
+    function tabClick(stat: keyof FMSLogFrame) {
+        window.history.replaceState(null, "", `/app/logs/${matchid}#${stat.toLowerCase()}`);
+    }
+
+    let batteryOpen = false;
+    let averageTripTimeOpen = false;
+    let dataRateTotalOpen = false;
+    let lostPacketsOpen = false;
+    let signalOpen = false;
+    let noiseOpen = false;
+    let txMCSOpen = false;
+    let rxMCSOpen = false;
+
+    if (window.location.hash === "#battery") {
+        batteryOpen = true;
+    } else if (window.location.hash === "#averageTripTime") {
+        averageTripTimeOpen = true;
+    } else if (window.location.hash === "#dataRateTotal") {
+        dataRateTotalOpen = true;
+    } else if (window.location.hash === "#lostPackets") {
+        lostPacketsOpen = true;
+    } else if (window.location.hash === "#signal") {
+        signalOpen = true;
+    } else if (window.location.hash === "#noise") {
+        noiseOpen = true;
+    } else if (window.location.hash === "#txMCS") {
+        txMCSOpen = true;
+    } else if (window.location.hash === "#rxMCS") {
+        rxMCSOpen = true;
+    } else {
+        averageTripTimeOpen = true;
+    }
 </script>
 
 <div class="container mx-auto p-2 w-full flex flex-col gap-4">
@@ -96,11 +129,55 @@ import { trpc } from "../main";
             <p>{formatTimeNoAgo(new Date(match.start_time))}</p>
             <p class="md:hidden text-gray-600 text-sm">View on desktop for more detail</p>
         </div>
+        {#if data}
+            <Tabs
+            tabStyle="none"
+            defaultClass="flex"
+            activeClasses="p-4 w-full flex-grow text-primary-500 border-b-2 border-primary-500"
+            inactiveClasses="p-4 w-full text-gray-500 dark:text-gray-400 hover:text-gray-700 focus:ring-4 focus:ring-primary-300 focus:outline-none dark:hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            contentClass="mt-4"
+            >
+                <TabItem open={averageTripTimeOpen} class="w-full" on:click={() => tabClick('averageTripTime')}>
+                    <span slot="title">Ping</span>
 
-        <MatchGraph {data} log={data.log} stat="battery"/>
+                    <MatchGraph {data} log={data.log} stat="averageTripTime"/>
+                </TabItem>
+                <TabItem open={batteryOpen} class="w-full" on:click={() => tabClick('battery')}>
+                    <span slot="title">Battery</span>
 
-        <pre class="text-left"><code>
-            {JSON.stringify(data, null, 4)}
-        </code></pre>
+                    <MatchGraph {data} log={data.log} stat="battery"/>
+                </TabItem>
+                <TabItem open={dataRateTotalOpen} class="w-full" on:click={() => tabClick('dataRateTotal')}>
+                    <span slot="title">BWU</span>
+
+                    <MatchGraph {data} log={data.log} stat="dataRateTotal"/>
+                </TabItem>
+                <TabItem open={lostPacketsOpen} class="w-full" on:click={() => tabClick('lostPackets')}>
+                    <span slot="title">Lost Packets</span>
+
+                    <MatchGraph {data} log={data.log} stat="lostPackets"/>
+                </TabItem>
+                <TabItem open={signalOpen} class="w-full" on:click={() => tabClick('signal')}>
+                    <span slot="title">Signal</span>
+
+                    <MatchGraph {data} log={data.log} stat="signal"/>
+                </TabItem>
+                <TabItem open={noiseOpen} class="w-full" on:click={() => tabClick('noise')}>
+                    <span slot="title">Noise</span>
+
+                    <MatchGraph {data} log={data.log} stat="noise"/>
+                </TabItem>
+                <TabItem open={txMCSOpen} class="w-full" on:click={() => tabClick('txMCS')}>
+                    <span slot="title">TX MCS</span>
+
+                    <MatchGraph {data} log={data.log} stat="txMCS"/>
+                </TabItem>
+                <TabItem open={rxMCSOpen} class="w-full" on:click={() => tabClick('rxMCS')}>
+                    <span slot="title">RX MCS</span>
+
+                    <MatchGraph {data} log={data.log} stat="rxMCS"/>
+                </TabItem>
+            </Tabs>
+        {/if}
     {/await}
 </div>

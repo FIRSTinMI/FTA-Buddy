@@ -49,7 +49,7 @@ export async function getEvent(eventToken: string, eventCode?: string) {
             checklist: event.checklist as EventChecklist,
             users: [],
             monitorFrame: DEFAULT_MONITOR,
-            history: [],
+            history: [DEFAULT_MONITOR],
             lastMatchStart: null,
             lastMatchRefDone: null,
             lastMatchScoresPosted: null,

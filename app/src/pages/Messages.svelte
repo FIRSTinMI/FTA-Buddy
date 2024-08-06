@@ -9,6 +9,7 @@
     import Icon from "@iconify/svelte";
     import { authStore } from "../stores/auth";
     import { toast } from "../util/toast";
+	import { startBackgroundSubscription, stopBackgroundSubscription } from "../util/notifications";
 
     export const newMessage = (message: any) => {
         console.log(message);
@@ -77,11 +78,13 @@
     onMount(() => {
         getTickets();
         foregroundSubscribe();
+        stopBackgroundSubscription();
     });
 
     onDestroy(() => {
         if (foregroundSubscription) foregroundSubscription.unsubscribe();
         if (teamSubscription) teamSubscription.unsubscribe();
+        startBackgroundSubscription();
     });
 
     function selectTeam() {
@@ -112,6 +115,10 @@
             team,
             eventToken: get(authStore).eventToken,
         });
+
+        message = "";
+
+        getMessages(team);
     }
 </script>
 

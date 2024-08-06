@@ -27,6 +27,7 @@
     import { onMount } from "svelte";
     import CreateTicket from "./pages/CreateTicket.svelte";
     import ViewTicket from "./pages/ViewTicket.svelte";
+	import { startBackgroundSubscription } from "./util/notifications";
 
     // Checking authentication
 
@@ -155,6 +156,7 @@
 
 
     // Update notification count
+    startBackgroundSubscription();
 
     let notifications = get(messagesStore).unread || 0;
     messagesStore.subscribe((value) => {

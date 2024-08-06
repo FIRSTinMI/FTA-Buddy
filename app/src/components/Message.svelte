@@ -38,7 +38,7 @@
     let formattedTime = formatTime(message.created_at);
     setInterval(() => {
         formattedTime = formatTime(message.created_at);
-    }, (formattedTime.includes("second") ? 1000 : 60000));
+    }, ((formattedTime.includes("second") || formattedTime.toLowerCase().includes("now")) ? 1000 : 60000));
 </script>
 
 <div class={twMerge("rounded-xl py-2 px-4 w-fit", classToApply, $$props.class)}>

@@ -5,6 +5,7 @@ import { DSState, MatchState, ROBOT, type MonitorFrame } from "../../shared/type
 import { AudioQueuer } from "./util/audioAlerts";
 import { MonitorFrameHandler, type MonitorEvent } from "./util/monitorFrameHandler";
 import { settingsStore } from "./stores/settings";
+import { robotNotification } from "./util/notifications";
 
 // Initialize frame handler and audio queue
 export const frameHandler = new MonitorFrameHandler();
@@ -84,6 +85,7 @@ for (let type of ['radio', 'rio', 'code']) {
         if (evt.detail.match === MatchState.RUNNING && evt.detail.frame[evt.detail.robot].ds !== DSState.BYPASS) {
             if (settings.vibrations) navigator.vibrate(VIBRATION_PATTERNS[type as 'radio' | 'rio' | 'code']);
             if (settings.soundAlerts) audioQueuer.addRobotClip(evt.detail.robot, type as 'radio' | 'rio' | 'code');
+            if (settings.robotNotifications) robotNotification(type, evt.detail);
         }
     });
 }
@@ -101,6 +103,7 @@ frameHandler.addEventListener(`ds-drop`, (e) => {
         } else {
             if (settings.vibrations) navigator.vibrate(VIBRATION_PATTERNS.ds);
             if (settings.soundAlerts) audioQueuer.addRobotClip(evt.detail.robot, 'ds');
+            if (settings.robotNotifications) robotNotification('DS', evt.detail);
         }
     }
 });

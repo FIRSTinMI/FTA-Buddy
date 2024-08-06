@@ -20,6 +20,8 @@
         });
     });
 
+    let notificationsGranted = Notification.permission === "granted";
+
     let step = 0;
 </script>
 
@@ -44,6 +46,7 @@
                 This guide will explain how to use the app, and what everything means. <br />
                 You can return to this guide by clicking the help button in the menu.
             </p>
+            <h1 class="font-bolt mt-2 text-xl">Setup</h1>
             {#if installPrompt}
                 <h2 class="font-bold">Install this App</h2>
                 <p>Recommened for the best experience.</p>
@@ -60,6 +63,26 @@
                 <h2 class="font-bold">Install this App</h2>
                 <p>Recommened for the best experience.</p>
                 <p>On iOS you can do this by clicking the share button and then "Add to Home Screen".</p>
+            {:else}
+                <p>App installed ✅</p>
+            {/if}
+            {#if !notificationsGranted}
+                <h2 class="font-bold">Enable Notifications</h2>
+                <p>Enable to get notifications for new ticket/notes, and/or when a robot loses connection during a match.</p>
+                <Button
+                color="primary"
+                class="w-fit"
+                size="sm"
+                on:click={() => {
+                    Notification.requestPermission().then((result) => {
+                        if (result === "granted") {
+                            $settingsStore.notifications = true;
+                            notificationsGranted = true;
+                        }
+                    });
+                }}>Grant Notification Permissions</Button>
+            {:else}
+                <p>Notifications enabled ✅</p>
             {/if}
         {:else if step === 1}
             <h2 class="font-bold">Monitor</h2>

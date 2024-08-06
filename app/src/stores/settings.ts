@@ -12,6 +12,7 @@ export interface Settings {
     notifications: boolean;
     darkMode: boolean;
     inspectionAlerts: boolean;
+    robotNotifications: boolean;
 }
 
 let initialSettings = localStorage.getItem('settings');
@@ -25,9 +26,10 @@ const defaultSettings: Settings = {
     fieldGreen: true,
     susRobots: false,
     fimSpecifics: true,
-    notifications: true,
+    notifications: false,
     darkMode: true,
-    inspectionAlerts: true
+    inspectionAlerts: true,
+    robotNotifications: false,
 };
 
 if (!initialSettings) {

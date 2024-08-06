@@ -12,6 +12,7 @@
     import Graph from "./Graph.svelte";
     import type { MonitorFrameHandler } from "../util/monitorFrameHandler";
     import { processSignalStrengthForGraph } from "../util/signalStrengthProcessor";
+	import { settingsStore } from "../stores/settings";
 
     export let station: ROBOT;
     export let monitorFrame: MonitorFrame;
@@ -76,7 +77,7 @@
                 👀
             {/if}
         {/if}
-        {#if team.warnings.includes(TeamWarnings.NOT_INSPECTED)}
+        {#if team.warnings.includes(TeamWarnings.NOT_INSPECTED) && $settingsStore.inspectionAlerts}
             🔍
         {/if}
         {#if team.warnings.includes(TeamWarnings.RADIO_NOT_FLASHED)}

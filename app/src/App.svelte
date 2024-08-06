@@ -161,8 +161,6 @@
         notifications = value.unread;
     });
 
-    let timeoutID: NodeJS.Timeout;
-
     let messagesChild: Messages;
 
     let event = get(eventStore);

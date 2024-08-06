@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Button, Modal, Table, TableBody, TableHead, TableHeadCell } from "flowbite-svelte";
+    import { Button, Modal } from "flowbite-svelte";
     import {
     DSState,
     MatchState,
@@ -36,19 +36,18 @@
 
 <Modal bind:open={modalOpen} size="lg" outsideclose id="team-modal" dismissable={false}>
     <div slot="header" class="md:w-full -m-2">
-        <Table class="w-full md:w-fit mx-auto">
-            <TableHead class="dark:bg-neutral-500 dark:text-white text-center">
-                <TableHeadCell class="w-20">Team</TableHeadCell>
-                <TableHeadCell class="w-20">DS</TableHeadCell>
-                <TableHeadCell class="w-10 lg:w-20">Radio</TableHeadCell>
-                <TableHeadCell class="w-10 lg:w-20">Rio</TableHeadCell>
-                <TableHeadCell class="w-15 lg:w-20">Bat</TableHeadCell>
-                <TableHeadCell>Net</TableHeadCell>
-            </TableHead>
-            <TableBody>
-                <MonitorRow station={modalStation} {monitorFrame} detailView={() => {}} {frameHandler} />
-            </TableBody>
-        </Table>
+        <div class="grid grid-cols-fieldmonitor lg:grid-cols-fieldmonitor-large gap-0.5 md:gap-1 lg:gap-2 mx-auto justify-center">
+            <p>Team</p>
+            <p>DS</p>
+            <p>Radio</p>
+            <p>Rio</p>
+            <p>Battery</p>
+            <p class="hidden lg:flex">Ping (ms)</p>
+            <p class="hidden lg:flex">BWU (mbps)</p>
+            <p class="hidden lg:flex">Signal (dBm)</p>
+            <p class="lg:hidden">Net</p>
+            <MonitorRow station={modalStation} {monitorFrame} detailView={() => {}} {frameHandler} />
+        </div>
     </div>
     {#if modalTeam}
         <div class="flex flex-col w-full items-center space-y-4 -mt-4">

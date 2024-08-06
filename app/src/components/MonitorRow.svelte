@@ -1,9 +1,5 @@
 <script lang="ts">
     import {
-        TableBodyCell,
-        TableBodyRow,
-    } from "flowbite-svelte";
-    import {
     DSState,
     MatchState,
     MatchStateMap,
@@ -40,19 +36,19 @@
 
     const DS_Colors: { [key: number]: string } = {
         0: "bg-red-600",
-        1: "bg-green-500",
-        2: "bg-green-500",
-        3: "bg-yellow-500",
-        4: "bg-yellow-500",
+        1: "bg-green-500 rounded-full",
+        2: "bg-green-500 rounded-full",
+        3: "bg-yellow-400 rounded-full",
+        4: "bg-yellow-400 rounded-full",
         5: "bg-red-700",
         6: "bg-neutral-900",
         7: "bg-neutral-900",
     };
 
-    const RIO_Colors: { [key: number]: string } = {
+    const Status_Colors: { [key: number]: string } = {
         0: "bg-red-600",
-        1: "bg-yellow-500",
-        2: "bg-green-500",
+        1: "bg-green-500 rounded-full",
+        2: "bg-green-500 rounded-full",
     };
 
     let parsedData = frameHandler.getHistory(station, 'battery', 20).map((d, i) => ({ time: i, data: d as number }));
@@ -61,131 +57,100 @@
 </script>
 
 {#key team}
-    <TableBodyRow
-        class="{fullscreen
-            ? 'h-16'
-            : 'h-20 lg:h-24'} border-y border-gray-800 cursor-pointer"
-        id="{station}-row"
-    >
-        <TableBodyCell
-            class="text-center {getKey(team)?.startsWith('blue')
-                ? 'bg-blue-600'
-                : 'bg-red-600'} font-mono monitor-team {fullscreen
-                ? 'monitor-fullscreen'
-                : ''}"
-            on:click={() => navigate("/notes/" + team.number)}
-        >
-            <p>{team.number}</p>
-            <p style="{window.innerWidth > 1000 && "letter-spacing: -8px;"}">
-                {#if MatchStateMap[monitorFrame.field] === MatchState.PRESTART && team.lastChange}
-                    {#if team.ds === DSState.RED && team.lastChange.getTime() + 30e3 < Date.now()}
-                        👀
-                    {:else if team.ds === DSState.GREEN_X && team.lastChange.getTime() + 30e3 < Date.now()}
-                        👀
-                    {:else if !team.radio && team.lastChange.getTime() + 180e3 < Date.now()}
-                        👀
-                    {:else if !team.rio && team.lastChange.getTime() + 45e3 < Date.now()}
-                        👀
-                    {:else if !team.code && team.lastChange.getTime() + 30e3 < Date.now()}
-                        👀
-                    {/if}
-                {/if}
-                {#if team.warnings.includes(TeamWarnings.NOT_INSPECTED)}
-                    🔍
-                {/if}
-                {#if team.warnings.includes(TeamWarnings.RADIO_NOT_FLASHED)}
-                    🛜
-                {/if}
-                {#if team.warnings.includes(TeamWarnings.SLOW)}
-                    🕑
-                {/if}
-            </p>
-        </TableBodyCell>
-        <TableBodyCell
-            class="{DS_Colors[
-                team.ds
-            ]} text-4xl text-black text-center {fullscreen
-                ? 'ring-inset ring-4 ring-gray-800'
-                : ''} border-x-2 border-gray-800 font-mono monitor-ds {fullscreen
-                ? 'monitor-fullscreen'
-                : ''}"
-            on:click={detailView}
-        >
-            {#if team.ds === DSState.GREEN_X}
-                X
-            {:else if team.ds === DSState.MOVE_STATION}
-                M
-            {:else if team.ds === DSState.WAITING}
-                W
-            {:else if team.ds === DSState.BYPASS}
-                B
-            {:else if team.ds === DSState.ESTOP}
-                E
-            {:else if team.ds === DSState.ASTOP}
-                A
+<button
+    class="fieldmonitor-square-height md:aspect-square flex flex-col px-1 items-center justify-center text-lg sm:text-2xl lg:text-4xl {fullscreen && "lg:text-6xl"} font-mono {getKey(team)?.startsWith('blue') ? 'bg-blue-600' : 'bg-red-600'}"
+    on:click={() => navigate("/notes/" + team.number)}
+>
+    <p>{team.number}</p>
+    <p style="{window.innerWidth > 1000 && "letter-spacing: -8px;"}">
+        {#if MatchStateMap[monitorFrame.field] === MatchState.PRESTART && team.lastChange}
+            {#if team.ds === DSState.RED && team.lastChange.getTime() + 30e3 < Date.now()}
+                👀
+            {:else if team.ds === DSState.GREEN_X && team.lastChange.getTime() + 30e3 < Date.now()}
+                👀
+            {:else if !team.radio && team.lastChange.getTime() + 180e3 < Date.now()}
+                👀
+            {:else if !team.rio && team.lastChange.getTime() + 45e3 < Date.now()}
+                👀
+            {:else if !team.code && team.lastChange.getTime() + 30e3 < Date.now()}
+                👀
             {/if}
-        </TableBodyCell>
-        <TableBodyCell
-            class="{team.radio ? "bg-green-500" : "bg-red-600"} {fullscreen
-                ? 'ring-inset ring-4 ring-gray-800'
-                : 'border-x'} border-gray-800 "
-            on:click={detailView}
-        ></TableBodyCell>
-        <TableBodyCell
-            class="{RIO_Colors[(team.rio ? 1 : 0) + (team.code ? 1 : 0)]} {fullscreen
-                ? 'ring-inset ring-4 ring-gray-800'
-                : 'border-x'} border-gray-800"
-            on:click={detailView}
-        ></TableBodyCell>
-        <TableBodyCell
-            class="p-0 relative aspect-square"
-            on:click={detailView}
-            style="background-color: rgba(255,0,0,{team.battery < 11 &&
-            team.battery > 0
-                ? (-1.5 * team.battery ** 2 - 6.6 * team.battery + 255) / 255
-                : 0})"
-        >
-            <div class="h-full text-center top-0 px-0.5 aspect-square">
-                <Graph data={parsedData} min={0} max={8} time={20} />
-            </div>
-            <div
-                class="absolute w-full bottom-0 p-2 monitor-battery {fullscreen
-                    ? 'monitor-fullscreen'
-                    : ''}"
-            >
-                {team.battery?.toFixed(1)}v
-            </div>
-        </TableBodyCell>
-        {#if fullscreen}
-            <TableBodyCell
-                on:click={detailView}
-                class="monitor-ping monitor-fullscreen"
-                >{team.ping} ms</TableBodyCell
-            >
-            <TableBodyCell
-                on:click={detailView}
-                class="monitor-bwu monitor-fullscreen"
-                >{team.bwu.toFixed(2)} mbps</TableBodyCell
-            >
-            <TableBodyCell
-                class="p-0 relative aspect-square"
-                on:click={detailView}
-            >
-                <div class="h-full text-center top-0 px-0.5 aspect-square">
-                    <Graph data={signalData} min={-140} max={100} time={20} />
-                </div>
-                <div
-                    class="absolute w-full bottom-0 p-2 monitor-signal monitor-fullscreen"
-                >
-                    {team.signal ? team.signal : 0} dBm
-                </div>
-            </TableBodyCell>
-        {:else}
-            <TableBodyCell on:click={detailView} class="monitor-net">
-                {team.ping} ms<br />
-                {team.bwu.toFixed(2)} mbps<br />
-                {team.signal ? team.signal : 0} dBm
-            </TableBodyCell>
         {/if}
-    </TableBodyRow>
+        {#if team.warnings.includes(TeamWarnings.NOT_INSPECTED)}
+            🔍
+        {/if}
+        {#if team.warnings.includes(TeamWarnings.RADIO_NOT_FLASHED)}
+            🛜
+        {/if}
+        {#if team.warnings.includes(TeamWarnings.SLOW)}
+            🕑
+        {/if}
+    </p>
+</button>
+<button
+    class="{DS_Colors[
+        team.ds
+    ]} fieldmonitor-square-height md:aspect-square flex items-center justify-center font-mono text-4xl lg:text-8xl text-black"
+    on:click={detailView}
+>
+    {#if team.ds === DSState.GREEN_X}
+        X
+    {:else if team.ds === DSState.MOVE_STATION}
+        M
+    {:else if team.ds === DSState.WAITING}
+        W
+    {:else if team.ds === DSState.BYPASS}
+        B
+    {:else if team.ds === DSState.ESTOP}
+        E
+    {:else if team.ds === DSState.ASTOP}
+        A
+    {/if}
+</button>
+<button
+    class="{Status_Colors[team.radio ? 1 : 0]} fieldmonitor-square-height md:aspect-square flex"
+    on:click={detailView}
+></button>
+<button
+    class="{Status_Colors[(team.rio ? 1 : 0)]} fieldmonitor-square-height md:aspect-square flex items-center justify-center font-mono text-4xl lg:text-8xl text-black"
+    on:click={detailView}
+>
+    {#if team.rio && !team.code}
+        X
+    {/if}
+</button>
+<button
+    class="fieldmonitor-square-height p-0 relative aspect-square max-w-8 lg:max-w-32"
+    on:click={detailView}
+    style="background-color: rgba(255,0,0,{team.battery < 11 &&
+    team.battery > 0
+        ? (-1.5 * team.battery ** 2 - 6.6 * team.battery + 255) / 255
+        : 0})"
+>
+    <div class="h-full text-center top-0 px-0.5 aspect-square">
+        <Graph data={parsedData} min={0} max={8} time={20} />
+    </div>
+    <div
+        class="absolute w-full bottom-0 p-2 monitor-battery text-md sm:text-xl lg:text-4xl {fullscreen && "lg:text-5xl"}"
+    >
+        {team.battery?.toFixed(1)}v
+    </div>
+</button>
+<button on:click={() => detailView} class="fieldmonitor-square-height hidden lg:flex items-end pb-2 justify-center text-md sm:text-xl lg:text-4xl {fullscreen && "lg:text-5xl"}">{team.ping}</button>
+<button on:click={() => detailView} class="fieldmonitor-square-height hidden lg:flex items-end pb-2 justify-center text-md sm:text-xl lg:text-4xl {fullscreen && "lg:text-5xl"}">
+    {team.bwu.toFixed(2)}
+</button>
+<button class="fieldmonitor-square-height hidden lg:flex p-0 relative aspect-square" on:click={() => detailView}>
+    <div class="text-center top-0 px-0.5 aspect-square">
+        <Graph data={signalData} min={-140} max={100} time={20} />
+    </div>
+    <div class="absolute w-full bottom-0 p-2 monitor-signal text-md sm:text-lg lg:text-4xl {fullscreen && "lg:text-5xl"}">
+        {team.signal ? team.signal : 0}
+    </div>
+</button>
+<button on:click={() => detailView} class="fieldmonitor-square-height lg:hidden flex flex-col items-end justify-center">
+    <div>{team.ping} ms</div>
+    <div>{team.bwu.toFixed(2)}</div>
+    <div>{team.signal ? team.signal : 0} dBm</div>
+</button>
 {/key}

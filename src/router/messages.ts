@@ -107,7 +107,7 @@ export const messagesRouter = router({
             match_id: input.matchID ?? null,
         }).returning();
 
-        event.ticketEmitter.emit('create', insert[0]);
+        event.ticketEmitter.emit('create', { ...insert[0], user: { username: ctx.user.username, id: ctx.user.id, role: ctx.user.role } });
 
         return insert[0];
     }),
@@ -292,7 +292,7 @@ export const messagesRouter = router({
             is_open: false,
         }).returning();
 
-        event.ticketEmitter.emit('ticketReply', insert[0]);
+        event.ticketEmitter.emit('ticketReply', { ...insert[0], user: { username: ctx.user.username, id: ctx.user.id, role: ctx.user.role } });
 
         return insert[0];
     }),

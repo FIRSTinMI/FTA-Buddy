@@ -11,6 +11,8 @@
     import { authStore } from "../stores/auth";
     import Icon from "@iconify/svelte";
     import Message from "../components/Message.svelte";
+	import { onDestroy, onMount, tick } from "svelte";
+	import { startBackgroundSubscription, stopBackgroundSubscription } from "../util/notifications";
 
     export let id: string;
 
@@ -21,11 +23,13 @@
     let user = get(authStore).user;
     let assignedToUser = false;
 
+    let subscription: ReturnType<typeof trpc.messages.ticketSubscription.subscribe> | undefined;
+
     $: if (ticket && user) {
         assignedToUser = ticket.assigned_to.map(u => u?.id).includes(user.id);
     }
 
-    promise.then((res) => {
+    promise.then(async (res) => {
         res.messages = res.messages.reverse();
         ticket = res;
         time = formatTime(ticket?.created_at);
@@ -51,6 +55,9 @@
                     break;
             }
         }
+
+        await tick();
+        scrollToBottom();
     }).catch((err) => {
         console.error(err);
         toast("An error occurred while fetching the ticket", err.message);
@@ -115,13 +122,78 @@
             toast("Error Sending Message", "Message cannot be empty");
         };
 
+        if (!ticket || !user) return;
+
         await trpc.messages.addMessage.query({
             message: message.trim(),
-            team: ticket?.team ?? 0,
-            ticketId: ticket?.id ?? 0,
+            team: ticket.team,
+            ticketId: ticket.id,
             eventToken: get(authStore).eventToken,
         });
+
+        console.log({
+            id: 0,
+            message: message.trim(),
+            team: ticket.team.toString(),
+            user: user,
+            user_id: user.id,
+            event_code: get(eventStore).code,
+            created_at: new Date(),
+        });
+
+        ticket.messages.push({
+            id: 0,
+            message: message.trim(),
+            team: ticket.team.toString(),
+            user: user,
+            user_id: user.id,
+            event_code: get(eventStore).code,
+            created_at: new Date(),
+        });
+
+        message = "";
+
+        ticket = {...ticket};
+        await tick();
+        scrollToBottom();
     }
+
+    function scrollToBottom() {
+        const chat = document.getElementById("chat");
+        if (chat) {
+            chat.scrollTo(0, chat.scrollHeight);
+        }
+    }
+
+    onMount(() => {
+        stopBackgroundSubscription();
+        if (subscription) subscription.unsubscribe();
+        if (ticket) {
+            subscription = trpc.messages.ticketSubscription.subscribe({ id: ticket.id, eventToken: $authStore.eventToken }, {
+                onData: (data) => {
+                    console.log(data);
+                    if (!ticket) return;
+                    if (data.data.is_ticket) {
+                        if (data.data.id !== ticket.id) return;
+                    } else {
+                        if (data.data.thread_id !== ticket.id) return;
+                    }
+
+                    if (data.type === "status") {
+                        ticket.is_open = data.data.is_open;
+                    } else if (data.type === "assign" && data.data.is_ticket) {
+                        ticket.assigned_to = data.data.assigned_to;
+                    } else if (data.type === "ticketReply" && !data.data.is_ticket) {
+                        ticket.messages.push(data.data);
+                    }
+                },
+            });
+        }
+    });
+
+    onDestroy(() => {
+        startBackgroundSubscription();
+    });
 </script>
 
 <div class="container mx-auto px-2 pt-2 h-full flex flex-col gap-2 max-w-5xl">
@@ -168,7 +240,7 @@
                     <Button size="sm" on:click={() => viewLog()}>View Log</Button>
                 {/if}
             </div>
-            <div class="flex flex-col overflow-y-auto h-full">
+            <div class="flex flex-col overflow-y-auto h-full" id="chat">
                 <div class="flex flex-col grow gap-2 justify-end">
                     {#if ticket.messages.length < 1}
                         <div class="text-center">No messages</div>

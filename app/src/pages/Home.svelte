@@ -51,6 +51,8 @@
 
         averageCycleTimeMS = await trpc.cycles.getAverageCycleTime.query() ?? 7*60*1000;
         console.log(averageCycleTimeMS);
+
+        monitorFrame = frameHandler.getFrame();
     });
 
     frameHandler.addEventListener("match-start", async (evt) => {

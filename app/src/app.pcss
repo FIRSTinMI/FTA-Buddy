@@ -51,32 +51,6 @@ body {
 }
 
 @media only screen and (max-width: 600px) {
-  Table .px-6 {
-    padding-left: .8rem;
-    padding-right: .8rem;
-  }
-
-  Table .py-4 {
-    padding-top: .5rem;
-    padding-bottom: .5rem;
-  }
-
-  Table .h-20 {
-    height: 4rem !important;
-  }
-
-  Table .w-20 {
-    width: 4rem !important;
-  }
-
-  Table .w-12 {
-    width: 2rem !important;
-  }
-
-  Table .w-10 {
-    width: 1.5rem !important;
-  }
-
   Table.log-table .px-6 {
     padding-left: .3rem;
     padding-right: .3rem;
@@ -90,42 +64,6 @@ body {
 }
 
 @media only screen and (min-width: 600px) and (max-width: 800px) {
-  Table .px-6 {
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
-
-  Table .py-4 {
-    padding-top: .5rem;
-    padding-bottom: .5rem;
-  }
-
-  Table .h-20 {
-    height: 5rem !important;
-  }
-
-  Table .w-20 {
-    width: 5rem !important;
-  }
-
-  Table .w-12 {
-    width: 2.5rem !important;
-  }
-
-  Table .w-10 {
-    width: 2rem !important;
-  }
-
-  .monitor {
-      font-size: 1.4rem !important;
-      line-height: 1.6rem !important;
-  }
-
-  .monitor-net {
-      font-size: 1rem !important;
-      line-height: 1.2rem !important;
-  }
-
   Table.log-table .px-6 {
     padding-left: .5rem;
     padding-right: .5rem;
@@ -139,26 +77,6 @@ body {
 }
 
 @media only screen and (min-width: 800px) {
-  Table .px-6 {
-    padding-left: .8rem;
-    padding-right: .8rem;
-  }
-
-  Table .py-4 {
-    padding-top: .5rem;
-    padding-bottom: .5rem;
-  }
-
-    .monitor {
-        font-size: 1.8rem !important;
-        line-height: 2rem !important;
-    }
-
-    .monitor-net {
-        font-size: 1.4rem !important;
-        line-height: 1.6rem !important;
-    }
-
     Table.log-table .px-6 {
       padding-left: .6rem;
       padding-right: .6rem;
@@ -171,29 +89,50 @@ body {
     }
 }
 
-@media only screen and (min-width: 1800px) {
-    .monitor-team.monitor-fullscreen {
-        font-size: 3rem !important;
-        line-height: 3.2rem !important;
+@media screen and (max-width: 1024px) {
+    .grid-cols-fieldmonitor {
+        grid-template-columns: auto 1fr 1fr 1fr calc((100vh - 104px) / 6) auto;
+        padding: 0 0.25rem;
     }
-    .monitor-ds.monitor-fullscreen {
-        font-size: 5rem !important;
-        line-height: 5.2rem !important;
-    }
-    .monitor-battery.monitor-fullscreen
-    .monitor-signal.monitor-fullscreen {
-        font-size: 2.6rem !important;
-        line-height: 2.8rem !important;
-    }
-    .monitor-ping.monitor-fullscreen,
-    .monitor-bwu.monitor-fullscreen {
-        font-size: 2.8rem !important;
-        line-height: 2.8rem !important;
+    .fieldmonitor-square-height {
+        height: calc((100vh - 216px) / 6);
     }
 }
 
-.w-38 {
-    width: 9rem;
+@media screen and (min-width: 768px) and (max-width: 1024px) {
+    .grid-cols-fieldmonitor {
+        grid-template-columns: minmax(auto, 1fr) 1fr 1fr 1fr auto minmax(auto, 1fr);
+        width: fit-content;
+    }
+    .fieldmonitor-square-height {
+        height: calc((100vh - 236px) / 6);
+    }
+}
+
+@media screen and (min-width: 1024px) {
+    .grid-cols-fieldmonitor {
+        grid-template-columns: minmax(auto, 1fr) 1fr 1fr 1fr auto minmax(auto, 1fr) minmax(auto, 1fr) auto;
+        width: fit-content;
+    }
+    .fieldmonitor-square-height {
+        height: calc((100vh - 264px) / 6);
+    }
+}
+
+.fullscreen .fieldmonitor-square-height {
+    height: calc((100vh - 200px) / 6);
+}
+
+html:not(.dark) .fieldmonitor-square-height.bg-green-500 {
+    background-color: rgb(49 196 141) !important;
+}
+
+html:not(.dark) .fieldmonitor-square-height.bg-red-600 {
+    background-color: rgb(250 52 52) !important;
+}
+
+html:not(.dark) .fieldmonitor-square-height.bg-blue-600 {
+    background-color: rgb(63 131 248) !important;
 }
 
 .overlay {

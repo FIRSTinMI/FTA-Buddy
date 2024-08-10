@@ -357,7 +357,8 @@ export interface CycleData {
     endTime: Date | null,
     refEndTime: Date | null,
     scoresPostedTime: Date | null,
-    previousCycleTime: string | null;
+    lastCycleTime: string | null;
+    averageCycleTime: number | null;
 }
 
 export interface Profile {

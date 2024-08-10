@@ -70,7 +70,7 @@ export const cycleRouter = router({
         const event = await getEvent(input.eventToken);
 
         return observable<CycleData>((emitter) => {
-            const listener = () => {
+            const listener = async () => {
                 emitter.next({
                     eventCode: event.code,
                     startTime: event.lastMatchStart,
@@ -79,7 +79,8 @@ export const cycleRouter = router({
                     prestartTime: event.lastPrestartDone,
                     endTime: event.lastMatchEnd,
                     matchNumber: event.monitorFrame.match,
-                    previousCycleTime: event.monitorFrame.lastCycleTime
+                    lastCycleTime: event.monitorFrame.lastCycleTime,
+                    averageCycleTime: await getAverageCycleTime(event.code)
                 });
             };
 
@@ -169,20 +170,24 @@ export const cycleRouter = router({
     }),
 
     getAverageCycleTime: eventProcedure.query(async ({ ctx }) => {
-        const cycles = await db.query.cycleLogs.findMany({ where: eq(cycleLogs.event, ctx.event.code) });
-
-        if (cycles.length === 0) {
-            return null;
-        }
-
-        const total = cycles.reduce((acc, cycle) => {
-            if (!cycle.calculated_cycle_time) {
-                return acc;
-            }
-
-            return acc + cycleTimeToMS(cycle.calculated_cycle_time);
-        }, 0);
-
-        return total / cycles.length;
+        return await getAverageCycleTime(ctx.event.code);
     })
 });
+
+async function getAverageCycleTime(eventCode: string) {
+    const cycles = await db.query.cycleLogs.findMany({ where: eq(cycleLogs.event, eventCode) });
+
+    if (cycles.length === 0) {
+        return null;
+    }
+
+    const total = cycles.reduce((acc, cycle) => {
+        if (!cycle.calculated_cycle_time) {
+            return acc;
+        }
+
+        return acc + cycleTimeToMS(cycle.calculated_cycle_time);
+    }, 0);
+
+    return total / cycles.length;
+}

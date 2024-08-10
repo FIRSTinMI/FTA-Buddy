@@ -5,12 +5,14 @@
     import TeamModal from "../components/TeamModal.svelte";
     import { formatTimeShortNoAgo, formatTimeShortNoAgoSeconds } from "../util/formatTime";
     import type { MonitorEvent, MonitorFrameHandler } from "../util/monitorFrameHandler";
-    import { onMount } from "svelte";
+    import { onDestroy, onMount } from "svelte";
     import { trpc } from "../main";
     import { cycleTimeToMS } from "./../../../shared/cycleTimeToMS";
+	import { authStore } from "../stores/auth";
 
     export let frameHandler: MonitorFrameHandler;
     let monitorFrame: MonitorFrame | undefined = frameHandler.getFrame();
+    let cycleSubscription: ReturnType<typeof trpc.cycles.subscription.subscribe>;
     
     frameHandler.addEventListener("frame", (evt) => {
         monitorFrame = (evt as MonitorEvent).detail.frame;
@@ -24,8 +26,19 @@
     let averageCycleTimeMS = 7*60*1000; // Default to 7 minutes
     let currentCycleTimeRedness = 0;
     let currentCycleTime = "";
+    let calculatedCycleTime: number | undefined | null = 0;
 
     onMount(async () => {
+        if (cycleSubscription) cycleSubscription.unsubscribe();
+        cycleSubscription = trpc.cycles.subscription.subscribe({
+                eventToken: $authStore.eventToken, 
+            }, {
+            onData: (data) => {
+                averageCycleTimeMS = data.averageCycleTime ?? 7*60*1000;
+                calculatedCycleTime = data.lastCycleTime ? cycleTimeToMS(data.lastCycleTime) : 0;
+            }
+        });
+
         const lastPrestart = await trpc.cycles.getLastPrestart.query();
         if (lastPrestart) matchStartTime = lastPrestart;
         console.log(matchStartTime);
@@ -55,9 +68,13 @@
         monitorFrame = frameHandler.getFrame();
     });
 
+    onDestroy(() => {
+        if (cycleSubscription) cycleSubscription.unsubscribe();
+    });
+
     frameHandler.addEventListener("match-start", async (evt) => {
         currentCycleIsBest = false;
-        const calculatedCycleTime = frameHandler.getLastCycleTime();
+        calculatedCycleTime = calculatedCycleTime || frameHandler.getLastCycleTime();
         // Doesn't always update quick enough
         if (!calculatedCycleTime || calculatedCycleTime === lastCycleTimeMS) {
             lastCycleTime = formatTimeShortNoAgo(matchStartTime);

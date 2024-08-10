@@ -48,7 +48,7 @@ export class MonitorFrameHandler extends EventTarget {
             this.dispatchEvent(new CustomEvent('prestart', { detail: { frame: this.getFrame(), match: MatchState.PRESTART } }));
         } else if (field === FieldState.MATCH_OVER) {
             this.dispatchEvent(new CustomEvent('match-over', { detail: { frame: this.getFrame(), match: MatchState.OVER } }));
-        } else if (field === FieldState.MATCH_RUNNING_TELEOP || field === FieldState.MATCH_RUNNING_AUTO) {
+        } else if (field === FieldState.MATCH_RUNNING_AUTO) {
             this.dispatchEvent(new CustomEvent('match-start', { detail: { frame: this.getFrame(), match: MatchState.RUNNING } }));
         } else if (field === FieldState.MATCH_READY) {
             this.dispatchEvent(new CustomEvent('match-ready', { detail: { frame: this.getFrame(), match: MatchState.RUNNING } }));

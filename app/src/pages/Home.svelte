@@ -70,6 +70,8 @@
             currentCycleIsBest = true;
         }
         matchStartTime = new Date();
+
+        averageCycleTimeMS = await trpc.cycles.getAverageCycleTime.query() ?? 7*60*1000;
     });
 
     setInterval(() => {

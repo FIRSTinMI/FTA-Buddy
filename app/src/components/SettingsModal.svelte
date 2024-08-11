@@ -54,8 +54,9 @@
                 <Toggle bind:checked={settings.fieldGreen} on:change={updateSettings}>Field Green</Toggle>
                 <Toggle bind:checked={settings.susRobots} on:change={updateSettings}>👀 Alerts</Toggle>
             </div>
-            <div class="grid grid-cols-subgrid gap-2 row-span-3">
+            <div class="grid grid-cols-subgrid gap-2 row-span-4">
                 <p class="text-gray-700 dark:text-gray-400">Other</p>
+                <Toggle bind:checked={settings.roundGreen} on:change={updateSettings}>Round Green Indicators</Toggle>
                 <Toggle bind:checked={settings.inspectionAlerts} on:change={updateSettings}>🔍 Missing inspection icon on field monitor</Toggle>
                 <Toggle bind:checked={settings.fimSpecifics} on:change={updateSettings}>FIM Specific Field Manuals</Toggle>
             </div>  

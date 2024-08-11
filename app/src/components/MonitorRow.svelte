@@ -37,19 +37,19 @@
 
     const DS_Colors: { [key: number]: string } = {
         0: "bg-red-600",
-        1: "bg-green-500 rounded-full",
-        2: "bg-green-500 rounded-full",
-        3: "bg-yellow-400 rounded-full",
-        4: "bg-yellow-400 rounded-full",
-        5: "bg-red-700",
-        6: "bg-neutral-900",
-        7: "bg-neutral-900",
+        1: "bg-green-500" + ($settingsStore.roundGreen ? " rounded-full" : ""),
+        2: "bg-green-500" + ($settingsStore.roundGreen ? " rounded-full" : ""),
+        3: "bg-yellow-400" + ($settingsStore.roundGreen ? " rounded-full" : ""),
+        4: "bg-yellow-400" + ($settingsStore.roundGreen ? " rounded-full" : ""),
+        5: "bg-red-800",
+        6: "bg-red-800",
+        7: "bg-red-800",
     };
 
     const Status_Colors: { [key: number]: string } = {
         0: "bg-red-600",
-        1: "bg-green-500 rounded-full",
-        2: "bg-green-500 rounded-full",
+        1: "bg-green-500" + ($settingsStore.roundGreen ? " rounded-full" : ""),
+        2: "bg-green-500" + ($settingsStore.roundGreen ? " rounded-full" : ""),
     };
 
     let parsedData = frameHandler.getHistory(station, 'battery', 20).map((d, i) => ({ time: i, data: d as number }));

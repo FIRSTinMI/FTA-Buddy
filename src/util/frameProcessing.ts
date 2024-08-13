@@ -3,7 +3,8 @@ import { DSState, FieldState, MatchState, MatchStateMap, MonitorFrame, PartialMo
 import { db } from "../db/db";
 import { events, teamCycleLogs } from "../db/schema";
 import { getEvent } from "./get-event";
-import { getTeamCycle } from "./team-cycles";
+import { randomUUID } from "crypto";
+import { TeamCycleLog } from "../db/schema";
 
 export function detectStatusChange(currentFrame: PartialMonitorFrame, previousFrame: MonitorFrame | null) {
     const changes: StateChange[] = [];
@@ -94,31 +95,68 @@ export async function processTeamCycles(eventCode: string, frame: MonitorFrame, 
     const event = await getEvent('', eventCode);
 
     // Only process in prestart
-    if (MatchStateMap[frame.field] !== MatchState.PRESTART) return frame;
+    if (MatchStateMap[frame.field] === MatchState.RUNNING && event.teamCycleTracking.prestart) {
+        const insert = [];
 
-    for (let change of changes) {
-        const cycle = await getTeamCycle(eventCode, change.robot.number, frame.match, frame.play, frame.level);
-
-        if (!cycle.prestart) cycle.prestart = event.lastPrestartDone || new Date();
-
-        if (change.type === StateChangeType.RisingEdge && change.key === 'ds' && change.robot.ds === DSState.GREEN) {
-            if (!cycle.first_ds) cycle.first_ds = change.robot.lastChange || new Date();
-            cycle.last_ds = change.robot.lastChange || new Date();
-            cycle.time_ds = cycle.last_ds.getTime() - cycle.prestart.getTime();
-        } else if (change.type === StateChangeType.RisingEdge && change.key === 'radio') {
-            if (!cycle.first_radio) cycle.first_radio = change.robot.lastChange || new Date();
-            cycle.last_radio = change.robot.lastChange || new Date();
-            cycle.time_radio = cycle.last_radio.getTime() - cycle.prestart.getTime();
-        } else if (change.type === StateChangeType.RisingEdge && change.key === 'rio') {
-            if (!cycle.first_rio) cycle.first_rio = change.robot.lastChange || new Date();
-            cycle.last_rio = change.robot.lastChange || new Date();
-            cycle.time_rio = cycle.last_rio.getTime() - cycle.prestart.getTime();
-        } else if (change.type === StateChangeType.RisingEdge && change.key === 'code') {
-            if (!cycle.first_code) cycle.first_code = change.robot.lastChange || new Date();
-            cycle.last_code = change.robot.lastChange || new Date();
-            cycle.time_code = cycle.last_code.getTime() - cycle.prestart.getTime();
+        for (let team in ROBOT) {
+            const teamCycle = event.teamCycleTracking[team as ROBOT];
+            if (!teamCycle) continue;
+            insert.push({
+                id: randomUUID(),
+                event: eventCode,
+                match_number: frame.match,
+                play_number: frame.play,
+                level: frame.level,
+                team: teamCycle.team,
+                prestart: event.teamCycleTracking.prestart,
+                first_ds: teamCycle.firstDS,
+                last_ds: teamCycle.lastDS,
+                time_ds: teamCycle.timeDS,
+                first_radio: teamCycle.firstRadio,
+                last_radio: teamCycle.lastRadio,
+                time_radio: teamCycle.timeRadio,
+                first_rio: teamCycle.firstRio,
+                last_rio: teamCycle.lastRio,
+                time_rio: teamCycle.timeRio,
+                first_code: teamCycle.firstCode,
+                last_code: teamCycle.lastCode,
+                time_code: teamCycle.timeCode
+            });
         }
 
-        await db.update(teamCycleLogs).set(cycle).where(eq(teamCycleLogs.id, cycle.id));
+        await db.insert(teamCycleLogs).values(insert);
+        event.teamCycleTracking = {};
+    }
+
+    if (MatchStateMap[frame.field] !== MatchState.PRESTART) return;
+
+    if (!event.teamCycleTracking.prestart) event.teamCycleTracking.prestart = event.lastPrestartDone || new Date();
+
+    for (let change of changes) {
+        let cycle = event.teamCycleTracking[change.station];
+
+        if (!cycle) {
+            cycle = {
+                team: change.robot.number
+            };
+        }
+
+        if (change.type === StateChangeType.RisingEdge && change.key === 'ds' && change.robot.ds === DSState.GREEN) {
+            if (!cycle.firstDS) cycle.firstDS = change.robot.lastChange || new Date();
+            cycle.lastDS = change.robot.lastChange || new Date();
+            cycle.timeDS = cycle.lastDS.getTime() - event.teamCycleTracking.prestart.getTime();
+        } else if (change.type === StateChangeType.RisingEdge && change.key === 'radio') {
+            if (!cycle.firstRadio) cycle.firstRadio = change.robot.lastChange || new Date();
+            cycle.lastRadio = change.robot.lastChange || new Date();
+            cycle.timeRadio = cycle.lastRadio.getTime() - event.teamCycleTracking.prestart.getTime();
+        } else if (change.type === StateChangeType.RisingEdge && change.key === 'rio') {
+            if (!cycle.firstRio) cycle.firstRio = change.robot.lastChange || new Date();
+            cycle.lastRio = change.robot.lastChange || new Date();
+            cycle.timeRio = cycle.lastRio.getTime() - event.teamCycleTracking.prestart.getTime();
+        } else if (change.type === StateChangeType.RisingEdge && change.key === 'code') {
+            if (!cycle.firstCode) cycle.firstCode = change.robot.lastChange || new Date();
+            cycle.lastCode = change.robot.lastChange || new Date();
+            cycle.timeCode = cycle.lastCode.getTime() - event.teamCycleTracking.prestart.getTime();
+        }
     }
 }

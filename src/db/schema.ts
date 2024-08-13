@@ -126,4 +126,6 @@ export const teamCycleLogs = pgTable('team_cycle_logs', {
     time_code: integer('time_code'),
 });
 
+export const TeamCycleLog = typeof teamCycleLogs.$inferInsert;
+
 export default { events, users, messages, matchLogs, cycleLogs, logPublishing };

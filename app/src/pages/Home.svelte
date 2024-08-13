@@ -188,7 +188,7 @@
 <div class="grid grid-cols-fieldmonitor lg:grid-cols-fieldmonitor-large gap-0.5 md:gap-1 lg:gap-2 mx-auto justify-center {fullscreen && "fullscreen"}">
     {#key monitorFrame}
         {#if monitorFrame}
-            <div class="col-span-6 lg:col-span-8 flex text-lg md:text-2xl font-semibold {fullscreen && "lg:text-6xl"}">
+            <div class="col-span-6 lg:col-span-9 flex text-lg md:text-2xl font-semibold {fullscreen && "lg:text-6xl"}">
                 <div class="px-2">M: {monitorFrame.match}</div>
                 <div class="flex-1 px-2 text-center">{FieldStates[monitorFrame.field]}</div>
                 <div class="px-2">{monitorFrame.time}</div>
@@ -201,12 +201,13 @@
             <p class="hidden lg:flex">Ping (ms)</p>
             <p class="hidden lg:flex">BWU (mbps)</p>
             <p class="hidden lg:flex">Signal (dBm)</p>
+            <p class="hidden lg:flex">Last Change</p>
             <p class="lg:hidden">Net</p>
             {#each stations as station}
                 <MonitorRow {station} {monitorFrame} {detailView} {fullscreen} {frameHandler} />
             {/each}
         {/if}
-        <div class="col-span-6 lg:col-span-8 flex text-lg md:text-2xl font-semibold {fullscreen && "lg:text-4xl"}">
+        <div class="col-span-6 lg:col-span-9 flex text-lg md:text-2xl font-semibold {fullscreen && "lg:text-4xl"}">
             <div class="text-left {fullscreen ? "text-4xl" : "md:text-2xl"} {currentCycleIsBest && "text-green-500"}">
                 C: {lastCycleTime} (A: {formatTimeShortNoAgoSeconds(averageCycleTimeMS)})
             </div>

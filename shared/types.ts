@@ -342,6 +342,7 @@ export interface ServerEvent {
     users: string[],
     monitorFrame: MonitorFrame,
     history: MonitorFrame[],
+    scheduleDetails: ScheduleDetails,
     lastPrestartDone: Date | null,
     lastMatchStart: Date | null,
     lastMatchEnd: Date | null,
@@ -414,4 +415,22 @@ export interface Message {
     match_id: string | null,
     created_at: Date,
     user?: Profile;
+}
+
+export type ScheduleBreakdown = {
+    date: Date,
+    start: number,
+    end: number,
+    endTime: Date | null,
+    lunch: number | null,
+    lunchTime: Date | null,
+    cycleTimes: {
+        match: number,
+        minutes: number;
+    }[];
+}[];
+
+export interface ScheduleDetails {
+    days: ScheduleBreakdown,
+    lastPlayed: number;
 }

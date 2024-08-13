@@ -1,5 +1,5 @@
 import { FMS } from "./background";
-import { FMSEnums, FMSLogFrame, FMSMatch, ROBOT, TournamentLevel } from "@shared/types";
+import { FMSEnums, FMSLogFrame, FMSMatch, ROBOT, ScheduleBreakdown, TournamentLevel } from "@shared/types";
 
 export async function getEventCode() {
     const eventCode = await (await fetch(`http://${FMS}/api/v1.0/systembase/get/get_CurrentlyActiveEventCode`)).text();
@@ -65,4 +65,97 @@ export async function getMatch(matchNumber: number, playNumber: number, level: T
         }
     }
     throw new Error('Match not found');
+}
+
+export async function getScheduleBreakdown() {
+    const schedule = (await fetch(`http://${FMS}/api/v1.0/match/get/GetCurrentSchedule`)
+        .then(res => res.json()))
+        .filter((match: any) => match.tournamentLevel === 'Qualification');
+
+    const days: ScheduleBreakdown = [];
+
+    let lastPlayed = 0;
+    let day = -1;
+
+    for (let i = 0; i < schedule.length; i++) {
+        const match = schedule[i];
+        const previousMatch = (i > 0) && schedule[i - 1];
+        const nextMatch = (i + 1 < schedule.length) && schedule[i + 1];
+        const startTime = new Date(match.startTime);
+        let today = (day in days) && days[day];
+        let previousDay = (day - 1 in days) && days[day - 1];
+        let todayIsNew = (!today || today.date.getDate() !== startTime.getDate());
+
+        const cycleTime = Math.abs(Math.round(
+            (previousMatch && !todayIsNew)
+                ? (startTime.getTime() - new Date(previousMatch.startTime).getTime())
+                : ((nextMatch)
+                    ? (startTime.getTime() - new Date(nextMatch.startTime).getTime())
+                    : 8 * 60 * 1000)
+        ) / 1000 / 60);
+
+
+        if (!today || today.date.getDate() !== startTime.getDate()) {
+            day++;
+            days[day] = {
+                date: startTime,
+                start: match.matchNumber,
+                end: match.matchNumber,
+                endTime: null,
+                lunch: null,
+                lunchTime: null,
+                cycleTimes: [
+                    {
+                        match: match.matchNumber,
+                        minutes: cycleTime
+                    }
+                ]
+            };
+
+            today = days[day];
+            previousDay = (day - 1 in days) && days[day - 1];
+
+            // Set the previous day's end match
+            if (previousDay) {
+                previousDay.end = previousMatch.matchNumber;
+                previousDay.endTime = new Date(previousMatch.startTime);
+            }
+        }
+
+        // Assuming any break larger than 30 minutes is lunch
+        if (cycleTime > 30) {
+            today.lunch = previousMatch.matchNumber;
+            today.lunchTime = new Date(previousMatch.startTime);
+
+            // Check if there's a cycle time change after lunch
+            if (nextMatch) {
+                const postLunchCycleTime = Math.abs(Math.round(
+                    (new Date(match.startTime).getTime() - new Date(nextMatch.startTime).getTime())
+                ) / 1000 / 60);
+
+                if (postLunchCycleTime !== today.cycleTimes[today.cycleTimes.length - 1].minutes) {
+                    today.cycleTimes.push({
+                        match: match.matchNumber,
+                        minutes: postLunchCycleTime
+                    });
+                }
+            }
+
+        } else if (cycleTime !== today.cycleTimes[today.cycleTimes.length - 1].minutes) {
+            // Add a cycle time change if applicable
+            today.cycleTimes.push({
+                match: match.matchNumber,
+                minutes: cycleTime
+            });
+        }
+
+        if (!nextMatch) {
+            today.end = match.matchNumber;
+            today.endTime = new Date(match.startTime);
+        }
+
+        if (match.matchStatus === 'Played') lastPlayed = match.matchNumber;
+    }
+
+    return { days, lastPlayed };
 }

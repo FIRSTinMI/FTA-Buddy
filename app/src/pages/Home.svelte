@@ -1,9 +1,9 @@
 <script lang="ts">
-    import { ROBOT, type MonitorFrame } from "./../../../shared/types";
+    import { ROBOT, type MonitorFrame, type ScheduleDetails } from "./../../../shared/types";
     import { Table, TableBody, TableHead, TableHeadCell } from "flowbite-svelte";
     import MonitorRow from "../components/MonitorRow.svelte";
     import TeamModal from "../components/TeamModal.svelte";
-    import { formatTimeShortNoAgo, formatTimeShortNoAgoSeconds } from "../util/formatTime";
+    import { formatTime, formatTimeNoAgo, formatTimeShortNoAgo, formatTimeShortNoAgoSeconds } from "../util/formatTime";
     import type { MonitorEvent, MonitorFrameHandler } from "../util/monitorFrameHandler";
     import { onDestroy, onMount } from "svelte";
     import { trpc } from "../main";
@@ -23,10 +23,13 @@
     let matchStartTime = new Date();
     let bestCycleTimeMS = 0;
     let currentCycleIsBest = false;
-    let averageCycleTimeMS = 7*60*1000; // Default to 7 minutes
+    let averageCycleTimeMS = 8*60*1000; // Default to 7 minutes
     let currentCycleTimeRedness = 0;
     let currentCycleTime = "";
     let calculatedCycleTime: number | undefined | null = 0;
+    
+    let scheduleDetails: ScheduleDetails | undefined;
+    let scheduleText = "";
 
     onMount(async () => {
         if (cycleSubscription) cycleSubscription.unsubscribe();
@@ -62,10 +65,13 @@
         }
         console.log(lastCycleTimeMS);
 
-        averageCycleTimeMS = await trpc.cycles.getAverageCycleTime.query() ?? 7*60*1000;
+        averageCycleTimeMS = await trpc.cycles.getAverageCycleTime.query() ?? 8*60*1000;
         console.log(averageCycleTimeMS);
 
         monitorFrame = frameHandler.getFrame();
+
+        scheduleDetails = await trpc.cycles.getScheduleDetails.query();
+        updateScheduleText(monitorFrame?.match ?? scheduleDetails?.lastPlayed ?? 0);
     });
 
     onDestroy(() => {
@@ -88,7 +94,9 @@
         }
         matchStartTime = new Date();
 
-        averageCycleTimeMS = await trpc.cycles.getAverageCycleTime.query() ?? 7*60*1000;
+        averageCycleTimeMS = await trpc.cycles.getAverageCycleTime.query() ?? 8*60*1000;
+
+        updateScheduleText(monitorFrame?.match ?? scheduleDetails?.lastPlayed ?? 0);
     });
 
     setInterval(() => {
@@ -97,7 +105,7 @@
         if (currentTime < averageCycleTimeMS) {
             currentCycleTimeRedness = 0;
         } else {
-            currentCycleTimeRedness = Math.min(1, (currentTime - averageCycleTimeMS) / 120);
+            currentCycleTimeRedness = Math.min(1, (currentTime - averageCycleTimeMS) / 1000 / 120);
         }
 
         currentCycleTime = formatTimeShortNoAgo(matchStartTime);
@@ -131,6 +139,46 @@
     const stations: ROBOT[] = Object.values(ROBOT);
 
     export let fullscreen = false;
+
+    let currentScheduleDay = 0;
+
+    function updateScheduleText(currentMatch: number) {
+        if (!scheduleDetails) return;
+
+        for (let i = 0; i < scheduleDetails.days.length; i++) {
+            const day = scheduleDetails.days[i];
+            if (currentMatch <= day.end) {
+                currentScheduleDay = i;
+                break;
+            }
+        }
+        
+        let lunchMatch = scheduleDetails.days[currentScheduleDay].lunch;
+        let goalMatch = 0;
+
+        if (lunchMatch && currentMatch <= lunchMatch) {
+            scheduleText = "Lunch M:" + lunchMatch + " @";
+            goalMatch = lunchMatch;
+        } else if (currentMatch <= scheduleDetails.days[currentScheduleDay].end) {
+            scheduleText = "Playing through M:" + scheduleDetails.days[currentScheduleDay].end + " @";
+            goalMatch = scheduleDetails.days[currentScheduleDay].end;
+        } else {
+            return;
+        }
+
+        let endTime = new Date(new Date().getTime() + (goalMatch - currentMatch) * averageCycleTimeMS);
+
+        let fallbackEndOfDay = new Date();
+        fallbackEndOfDay.setHours(19, 0, 0, 0);
+
+        let endTimeFormatted = endTime.toLocaleTimeString().split(':').slice(0, 2).join(':');
+        console.log(endTime, scheduleDetails.days[currentScheduleDay].endTime ?? fallbackEndOfDay);
+        let end = formatTimeShortNoAgo(endTime, new Date(scheduleDetails.days[currentScheduleDay].endTime ?? fallbackEndOfDay));
+        let aheadBehind = endTime.getTime() <= new Date(scheduleDetails.days[currentScheduleDay].endTime ?? fallbackEndOfDay).getTime();
+
+        scheduleText += `${endTimeFormatted} (${end} ${aheadBehind ? "Early" : "Late"})`;
+        console.log(scheduleText);
+    }
 </script>
 
 {#if monitorFrame}
@@ -159,10 +207,14 @@
             {/each}
         {/if}
         <div class="col-span-6 lg:col-span-8 flex text-lg md:text-2xl font-semibold {fullscreen && "lg:text-4xl"}">
-            <div class="w-48 text-left {fullscreen ? "text-4xl" : "md:text-2xl"} {currentCycleIsBest && "text-green-500"}">C: {lastCycleTime}</div>
-            <div class="grow {fullscreen ? "text-4xl" : "md:text-2xl"}"></div>
+            <div class="text-left {fullscreen ? "text-4xl" : "md:text-2xl"} {currentCycleIsBest && "text-green-500"}">
+                C: {lastCycleTime} (A: {formatTimeShortNoAgoSeconds(averageCycleTimeMS)})
+            </div>
+            <div class="grow {fullscreen ? "text-4xl" : "md:text-2xl"}">
+                <span class="hidden sm:inline">{scheduleText}</span>
+            </div>
             <div 
-                class="w-48 text-right {fullscreen ? "text-4xl" : "md:text-2xl"}"
+                class="text-right {fullscreen ? "text-4xl" : "md:text-2xl"}"
                 style="color: rgba({75*currentCycleTimeRedness + 180}, {180*(1 - currentCycleTimeRedness)}, {180*(1 - currentCycleTimeRedness)}, 1)"
                 >
                 T: {currentCycleTime}

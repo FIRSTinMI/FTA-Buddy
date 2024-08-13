@@ -19,11 +19,14 @@ export class SignalR {
 
     private cycleTimeCallback: (type: 'lastCycleTime' | 'prestart' | 'start' | 'end' | 'refsDone' | 'scoresPosted', time: string) => void;
 
-    constructor(ip: string, version: string, callback: (frame: PartialMonitorFrame) => void, cycleTimeCallback: (type: 'lastCycleTime' | 'prestart' | 'start' | 'end' | 'refsDone' | 'scoresPosted', time: string) => void) {
+    private sendScheduleCallback: () => void;
+
+    constructor(ip: string, version: string, callback: (frame: PartialMonitorFrame) => void, cycleTimeCallback: (type: 'lastCycleTime' | 'prestart' | 'start' | 'end' | 'refsDone' | 'scoresPosted', time: string) => void, sendScheduleCallback: () => void) {
         this.ip = ip;
         this.callback = callback;
         this.frame.version = version;
         this.cycleTimeCallback = cycleTimeCallback;
+        this.sendScheduleCallback = sendScheduleCallback;
     }
 
     public async start() {
@@ -248,6 +251,11 @@ export class SignalR {
          */
         this.infrastructureConnection.on('systemconfigvaluechanged', (data) => {
             console.log('systemconfigvaluechanged: ', data);
+        });
+
+        this.infrastructureConnection.on('activetournamentlevelchanged', (data) => {
+            console.log('activetournamentlevelchanged: ', data);
+            this.sendScheduleCallback();
         });
 
         // Constant countdown timer 14-0 for auto then 135-0 for teleop

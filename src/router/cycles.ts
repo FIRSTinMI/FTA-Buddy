@@ -4,7 +4,7 @@ import { getEvent } from "../util/get-event";
 import { observable } from "@trpc/server/observable";
 import { CycleData } from "../../shared/types";
 import { db } from "../db/db";
-import { cycleLogs } from "../db/schema";
+import { cycleLogs, events } from "../db/schema";
 import { and, asc, eq, isNotNull, desc } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { getTeamAverageCycle } from "../util/team-cycles";
@@ -171,23 +171,77 @@ export const cycleRouter = router({
 
     getAverageCycleTime: eventProcedure.query(async ({ ctx }) => {
         return await getAverageCycleTime(ctx.event.code);
+    }),
+
+    postScheduleDetails: eventProcedure.input(z.object({
+        eventToken: z.string(),
+        days: z.array(z.object({
+            start: z.number(),
+            end: z.number(),
+            endTime: z.date().nullable(),
+            lunch: z.number().nullable(),
+            lunchTime: z.date().nullable(),
+            date: z.date(),
+            cycleTimes: z.array(z.object({
+                match: z.number(),
+                minutes: z.number()
+            }))
+        })),
+        lastPlayed: z.number()
+    })).mutation(async ({ input }) => {
+        const event = await getEvent(input.eventToken);
+
+        await db.update(events).set({ scheduleDetails: { days: input.days, lastPlayed: input.lastPlayed } }).where(eq(events.code, event.code)).execute();
+
+        event.scheduleDetails = { days: input.days, lastPlayed: input.lastPlayed };
+
+        event.cycleEmitter.emit('update');
+    }),
+
+    getScheduleDetails: eventProcedure.query(async ({ ctx }) => {
+        const event = await getEvent(ctx.eventToken ?? '');
+
+        return event.scheduleDetails;
     })
 });
 
 async function getAverageCycleTime(eventCode: string) {
     const cycles = await db.query.cycleLogs.findMany({ where: eq(cycleLogs.event, eventCode) });
 
-    if (cycles.length === 0) {
-        return null;
+    // Extract the cycle times in milliseconds
+    const cycleTimes = cycles
+        .filter(cycle => cycle.calculated_cycle_time !== null)
+        .map(cycle => cycleTimeToMS(cycle.calculated_cycle_time ?? '0:00'));
+
+    console.log({ cycleTimes });
+
+    if (cycleTimes.length < 3) {
+        return 8 * 60 * 1000;
     }
 
-    const total = cycles.reduce((acc, cycle) => {
-        if (!cycle.calculated_cycle_time) {
-            return acc;
-        }
+    // Sort the cycle times
+    cycleTimes.sort((a, b) => (a ?? 0) - (b ?? 0));
 
-        return acc + cycleTimeToMS(cycle.calculated_cycle_time);
-    }, 0);
+    // Calculate Q1 (25th percentile) and Q3 (75th percentile)
+    const q1 = cycleTimes[Math.floor((cycleTimes.length / 4))] ?? (5 * 60 * 1000);
+    const q3 = cycleTimes[Math.floor((cycleTimes.length * 3) / 4)] ?? (12 * 60 * 1000);
+    const iqr = q3 - q1;
 
-    return total / cycles.length;
+    // Define the bounds for outliers
+    const lowerBound = q1 - 1.5 * iqr;
+    const upperBound = q3 + 1.5 * iqr;
+
+    // Filter out the outliers
+    const filteredTimes = cycleTimes.filter(time => (time ? (time >= lowerBound && time <= upperBound) : false));
+
+    console.log({ filteredTimes });
+
+    if (filteredTimes.length < 3) {
+        return 8 * 60 * 1000;
+    }
+
+    // Calculate the average of the filtered cycle times
+    const total = filteredTimes.reduce((acc, time) => (acc ?? 0) + (time ?? 0), 0);
+
+    return (total ?? 0) / filteredTimes.length;
 }

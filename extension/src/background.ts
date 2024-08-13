@@ -1,10 +1,11 @@
 import { SignalR } from "./signalR";
-import { getCurrentMatch, getEventCode, getTeamNumbers } from "./fmsapi";
+import { getCurrentMatch, getEventCode, getScheduleBreakdown, getTeamNumbers } from "./fmsapi";
 import { trpc, updateValues } from "./trpc";
+
 const manifestData = chrome.runtime.getManifest();
 export const FMS = '10.0.100.5';
 console.log(FMS);
-export let signalRConnection = new SignalR(FMS, manifestData.version, sendFrame, sendCycletime);
+export let signalRConnection = new SignalR(FMS, manifestData.version, sendFrame, sendCycletime, sendScheduleDetails);
 
 let eventCode: string;
 let eventToken: string;
@@ -76,6 +77,7 @@ async function start() {
     if (!(eventCode || eventToken)) return;
 
     updateValues();
+    sendScheduleDetails();
 }
 
 async function pingFMS() {
@@ -98,6 +100,13 @@ async function sendFrame(data: any) {
 async function sendCycletime(type: 'lastCycleTime' | 'prestart' | 'start' | 'end' | 'refsDone' | 'scoresPosted', data: string) {
     const { matchNumber, playNumber, level } = await getCurrentMatch();
     await trpc.cycles.postCycleTime.mutate({ eventToken, type, lastCycleTime: data, matchNumber, playNumber, level });
+}
+
+async function sendScheduleDetails() {
+    const schedule = await getScheduleBreakdown();
+    console.log(schedule);
+    if (schedule.days.length === 0) return;
+    await trpc.cycles.postScheduleDetails.mutate({ eventToken, ...schedule });
 }
 
 chrome.storage.local.onChanged.addListener((changes) => {

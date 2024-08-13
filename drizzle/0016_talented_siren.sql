@@ -1,0 +1,1 @@
+ALTER TABLE "events" ADD COLUMN "scheduleDetails" jsonb DEFAULT '{}' NOT NULL;

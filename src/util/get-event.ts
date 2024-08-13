@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { EventEmitter } from "events";
 import { eventCodes, events } from "..";
 import { DEFAULT_MONITOR } from "../../shared/constants";
-import { TeamList, EventChecklist } from "../../shared/types";
+import { TeamList, EventChecklist, ScheduleDetails } from "../../shared/types";
 import { db } from "../db/db";
 import schema from "../db/schema";
 
@@ -59,6 +59,7 @@ export async function getEvent(eventToken: string, eventCode?: string) {
             checklistEmitter: new EventEmitter(),
             ticketEmitter: new EventEmitter(),
             cycleEmitter: new EventEmitter(),
+            scheduleDetails: event.scheduleDetails as ScheduleDetails,
             lastPrestartDone: null,
             lastMatchEnd: null
         };

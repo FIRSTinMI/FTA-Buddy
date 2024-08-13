@@ -1,4 +1,4 @@
-import { EnableState, MonitorFrame } from "./types";
+import { EnableState, MonitorFrame, TeamCycleTracking } from "./types";
 
 export const DEFAULT_MONITOR: MonitorFrame = {
     field: 0,

@@ -61,7 +61,8 @@ export async function getEvent(eventToken: string, eventCode?: string) {
             cycleEmitter: new EventEmitter(),
             scheduleDetails: event.scheduleDetails as ScheduleDetails,
             lastPrestartDone: null,
-            lastMatchEnd: null
+            lastMatchEnd: null,
+            teamCycleTracking: {}
         };
     }
 

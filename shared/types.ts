@@ -348,6 +348,31 @@ export interface ServerEvent {
     lastMatchEnd: Date | null,
     lastMatchRefDone: Date | null,
     lastMatchScoresPosted: Date | null;
+    teamCycleTracking: {
+        prestart?: Date,
+        blue1?: TeamCycleTracking,
+        blue2?: TeamCycleTracking,
+        blue3?: TeamCycleTracking,
+        red1?: TeamCycleTracking,
+        red2?: TeamCycleTracking,
+        red3?: TeamCycleTracking;
+    };
+}
+
+export interface TeamCycleTracking {
+    team: number,
+    firstDS?: Date,
+    lastDS?: Date,
+    timeDS?: number,
+    firstRadio?: Date,
+    lastRadio?: Date,
+    timeRadio?: number,
+    firstRio?: Date,
+    lastRio?: Date,
+    timeRio?: number,
+    firstCode?: Date,
+    lastCode?: Date,
+    timeCode?: number;
 }
 
 export interface CycleData {

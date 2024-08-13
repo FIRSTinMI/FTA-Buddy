@@ -3,7 +3,7 @@ import { DSState, EnableState, FieldState, MonitorFrame, StateChange } from "../
 import { eventProcedure, publicProcedure, router } from "../trpc";
 import { getEvent } from "../util/get-event";
 import { observable } from "@trpc/server/observable";
-import { detectStatusChange, processFrameForTeamData, processTeamWarnings } from "../util/frameProcessing";
+import { detectStatusChange, processFrameForTeamData, processTeamCycles, processTeamWarnings } from "../util/frameProcessing";
 
 export interface Post {
     type: 'test';
@@ -93,6 +93,8 @@ export const fieldMonitorRouter = router({
         if (checklist) {
             event.checklistEmitter.emit('update', checklist);
         }
+
+        processTeamCycles(event.code, processed.currentFrame, processed.changes);
 
         return;
     }),

@@ -139,6 +139,11 @@ export class SignalR {
                     case 'WaitingForMatchPreview':
                     case 'WaitingForMatchPreviewTO':
                         this.frame.field = FieldState.PRESTART_COMPLETED;
+                        this.frame.match = data.MatchNumber;
+                        this.frame.play = data.PlayNumber;
+                        this.frame.level = data.Level;
+
+                        this.cycleTimeCallback('prestart', '');
                         break;
                     case 'WaitingForMatchReady':
                         this.frame.field = FieldState.MATCH_NOT_READY;
@@ -156,6 +161,7 @@ export class SignalR {
                         break;
                     case 'MatchAuto':
                         this.frame.field = FieldState.MATCH_RUNNING_AUTO
+                        this.cycleTimeCallback('start', '');
                         break;
                     case 'MatchTransition':
                         this.frame.field = FieldState.MATCH_TRANSITIONING;
@@ -165,9 +171,11 @@ export class SignalR {
                         break;
                     case 'WaitingForCommit':
                         this.frame.field = FieldState.MATCH_OVER;
+                        this.cycleTimeCallback('end', '');
                         break;
                     case 'WaitingForPostResults':
                         this.frame.field = FieldState.READY_FOR_POST_RESULT;
+                        this.cycleTimeCallback('scoresPosted', '');
                         void uploadMatchLogs();
                         break;
                     case 'TournamentLevelComplete':
@@ -312,20 +320,7 @@ export class SignalR {
 
         this.infrastructureConnection.on('matchstatusinfochanged', (data) => {
             console.log('matchstatusinfochanged: ', data);
-            if (data.MatchState === 'WaitingForMatchPreview') {
-                this.frame.match = data.MatchNumber;
-                this.frame.play = data.PlayNumber;
-                this.frame.level = data.Level;
-
-                this.cycleTimeCallback('prestart', '');
-            } else if (data.MatchState === 'MatchAuto') {
-                this.cycleTimeCallback('start', '');
-            } else if (data.MatchState === 'WaitingForCommit') {
-                this.cycleTimeCallback('end', '');
-            } else if (data.MatchState === 'WaitingForPostResults') {
-                this.cycleTimeCallback('scoresPosted', '');
-            }
-        });
+        }); 
 
         this.infrastructureConnection.on('fieldnetworkstatus', (data) => {
             //console.log('fieldnetworkstatus: ', data);

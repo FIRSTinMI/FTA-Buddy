@@ -13,6 +13,7 @@
     import type { MonitorFrameHandler } from "../util/monitorFrameHandler";
     import { processSignalStrengthForGraph } from "../util/signalStrengthProcessor";
 	import { settingsStore } from "../stores/settings";
+	import { formatTimeShortNoAgo } from "../util/formatTime";
 
     export let station: ROBOT;
     export let monitorFrame: MonitorFrame;
@@ -148,6 +149,9 @@
     <div class="absolute w-full bottom-0 p-2 monitor-signal text-md sm:text-lg lg:text-4xl {fullscreen && "lg:text-5xl"} tabular-nums">
         {team.signal ? team.signal : 0}
     </div>
+</button>
+<button on:click={() => detailView} class="fieldmonitor-square-height hidden lg:flex items-end pb-2 justify-center text-md sm:text-xl lg:text-4xl {fullscreen && "lg:text-5xl"} tabular-nums">
+    {team.lastChange ? formatTimeShortNoAgo(team.lastChange) : ""}
 </button>
 <button on:click={() => detailView} class="fieldmonitor-square-height lg:hidden flex flex-col items-end justify-center tabular-nums">
     <div>{team.ping} ms</div>

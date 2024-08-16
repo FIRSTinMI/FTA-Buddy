@@ -3,6 +3,7 @@
     import { get } from "svelte/store";
     import { settingsStore } from "../stores/settings";
     import Spinner from "./Spinner.svelte";
+	import { toast } from "../util/toast";
 
     export let settingsOpen = false;
 
@@ -21,14 +22,19 @@
     }
 
     function requestNotificationPermissions() {
-        if (Notification.permission !== "granted") {
-            Notification.requestPermission().then((permission) => {
-                if (permission === "granted") {
-                    updateSettings();
-                }
-            });
-        } else {
-            updateSettings();
+        try {
+            if (Notification.permission !== "granted") {
+                Notification.requestPermission().then((permission) => {
+                    if (permission === "granted") {
+                        updateSettings();
+                    }
+                });
+            } else {
+                updateSettings();
+            }
+        } catch (e) {
+            console.error(e);
+            toast("Error", "Error requesting notification permissions");
         }
     }
 </script>

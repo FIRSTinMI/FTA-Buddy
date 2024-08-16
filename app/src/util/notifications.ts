@@ -14,7 +14,6 @@ export function createNotification(options?: NotificationOptions) {
     if (!("Notification" in window)) {
         throw new Error("This browser does not support desktop notifications");
     }
-
     if (Notification.permission !== "granted") {
         throw new Error("You need to grant permission to show notifications");
     }

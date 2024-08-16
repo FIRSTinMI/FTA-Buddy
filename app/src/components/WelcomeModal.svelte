@@ -21,7 +21,7 @@
         });
     });
 
-    let notificationsGranted = Notification?.permission === "granted";
+    let notificationsGranted = ("Notification" in window && Notification.permission === "granted");
 
     let step = 0;
 </script>

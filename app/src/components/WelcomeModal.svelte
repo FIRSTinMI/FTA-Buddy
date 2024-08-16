@@ -4,6 +4,7 @@
     import { gestureEvents } from "../util/gestureDetection";
     import { onMount } from "svelte";
 	import { settingsStore } from "../stores/settings";
+	import { toast } from "../util/toast";
 
     export let welcomeOpen = false;
     export let installPrompt: Event | null;
@@ -20,7 +21,7 @@
         });
     });
 
-    let notificationsGranted = Notification.permission === "granted";
+    let notificationsGranted = Notification?.permission === "granted";
 
     let step = 0;
 </script>
@@ -74,12 +75,17 @@
                 class="w-fit"
                 size="sm"
                 on:click={() => {
-                    Notification.requestPermission().then((result) => {
-                        if (result === "granted") {
-                            $settingsStore.notifications = true;
-                            notificationsGranted = true;
-                        }
-                    });
+                    try {
+                        Notification.requestPermission().then((result) => {
+                            if (result === "granted") {
+                                $settingsStore.notifications = true;
+                                notificationsGranted = true;
+                            }
+                        });
+                    } catch (e) {
+                        console.error(e);
+                        toast("Error", "Error requesting notification permissions");
+                    }
                 }}>Grant Notification Permissions</Button>
             {:else}
                 <p>Notifications enabled ✅</p>

@@ -151,7 +151,7 @@
     </div>
 </button>
 <button on:click={() => detailView} class="fieldmonitor-square-height hidden lg:flex items-end pb-2 justify-center text-md sm:text-xl lg:text-4xl {fullscreen && "lg:text-5xl"} tabular-nums">
-    {team.lastChange ? formatTimeShortNoAgo(team.lastChange) : ""}
+    {(!team.code && team.lastChange) ? formatTimeShortNoAgo(team.lastChange) : ""}
 </button>
 <button on:click={() => detailView} class="fieldmonitor-square-height lg:hidden flex flex-col items-end justify-center tabular-nums">
     <div>{team.ping} ms</div>

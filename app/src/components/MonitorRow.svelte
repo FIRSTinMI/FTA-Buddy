@@ -60,7 +60,7 @@
 
 {#key team}
 <button
-    class="fieldmonitor-square-height md:aspect-square flex flex-col px-1 items-center justify-center text-lg sm:text-2xl lg:text-4xl {fullscreen && "lg:text-6xl"} font-mono tabular-nums {getKey(team)?.startsWith('blue') ? 'bg-blue-600' : 'bg-red-600'}"
+    class="w-full fieldmonitor-square-height md:aspect-square flex flex-col px-1 items-center justify-center text-lg sm:text-2xl lg:text-4xl {fullscreen && "lg:text-6xl"} font-mono tabular-nums {getKey(team)?.startsWith('blue') ? 'bg-blue-600' : 'bg-red-600'}"
     on:click={() => navigate("/notes/" + team.number)}
 >
     <p>{team.number}</p>

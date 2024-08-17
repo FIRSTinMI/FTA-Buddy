@@ -38,9 +38,9 @@ export function detectStatusChange(currentFrame: PartialMonitorFrame, previousFr
                 currentRobot.lastChange = new Date();
                 currentRobot.improved = currentRobot.code;
                 changes.push({ station: robot, robot: currentRobot, type: currentRobot.improved ? StateChangeType.RisingEdge : StateChangeType.FallingEdge, key: 'code', oldValue: previousRobot.code, newValue: currentRobot.code });
-            } else if (!(currentRobot.lastChange || previousRobot.lastChange)) {
-                currentRobot.lastChange = null;
-                currentRobot.improved = false;
+            } else {
+                currentRobot.lastChange = previousRobot.lastChange;
+                currentRobot.improved = previousRobot.improved;
             }
         } else {
             currentRobot.lastChange = null;

@@ -119,6 +119,15 @@ export function formatTimeShortNoAgoSecondsOnly(time: Date, compare: Date = new 
     return Math.floor(diff / 1e3);
 }
 
+export function formatTimeShortNoAgoMinutesOnly(time: Date, compare: Date = new Date()) {
+    if (typeof time === 'string') time = new Date(time);
+    let diff = compare.getTime() - time.getTime();
+
+    diff = Math.abs(diff);
+
+    return Math.round(diff / 60e3);
+}
+
 export function formatTimeShortNoAgoSeconds(diff: number) {
     const past = diff > 0;
     diff = Math.abs(diff);

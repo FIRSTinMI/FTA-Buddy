@@ -61,6 +61,13 @@ const audioClips: AudioClips = {
     }
 }
 
+const musicClips: HTMLAudioElement[] = [
+    new Audio('/app/music/0.mp3'),
+    new Audio('/app/music/1.mp3'),
+    new Audio('/app/music/2.mp3'),
+    new Audio('/app/music/3.mp3'),
+]
+
 interface AudioClips {
     robot: { [key in ROBOT]: { ds: HTMLAudioElement, radio: HTMLAudioElement, rio: HTMLAudioElement, code: HTMLAudioElement, astop: HTMLAudioElement, estop: HTMLAudioElement } },
     green: HTMLAudioElement[],
@@ -70,6 +77,7 @@ interface AudioClips {
 export class AudioQueuer {
     private queue: { audio: HTMLAudioElement, robot: ROBOT | undefined, clip: 'ds' | 'radio' | 'rio' | 'code' | 'astop' | 'estop' }[] = [];
     private playing: boolean = false;
+    private music: HTMLAudioElement | undefined;
 
     constructor() {
     }
@@ -134,5 +142,28 @@ export class AudioQueuer {
         this.playing = true;
         audio.audio.addEventListener('ended', () => this.playNext());
         audio.audio.play();
+    }
+
+    public playMusic() {
+        console.log('Playing music');
+
+        if (this.music) {
+            this.music.pause();
+            this.music.removeEventListener('ended', () => this.playMusic());
+            this.music = undefined;
+        }
+
+        this.music = musicClips[Math.floor(Math.random() * musicClips.length)];
+        this.music.addEventListener('ended', () => this.playMusic());
+        this.music.volume = 0.4;
+        this.music.play();
+    }
+
+    public stopMusic() {
+        if (this.music) {
+            this.music.pause();
+            this.music.removeEventListener('ended', () => this.playMusic());
+            this.music = undefined;
+        }
     }
 }

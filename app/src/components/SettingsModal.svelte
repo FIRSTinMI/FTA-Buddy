@@ -4,6 +4,7 @@
     import { settingsStore } from "../stores/settings";
     import Spinner from "./Spinner.svelte";
 	import { toast } from "../util/toast";
+	import { audioQueuer } from "../field-monitor";
 
     export let settingsOpen = false;
 
@@ -54,11 +55,12 @@
                 <Toggle bind:checked={settings.robotNotifications} on:change={requestNotificationPermissions}>Robot Connection Notifications</Toggle>
                 <Toggle bind:checked={settings.darkMode} on:change={updateSettings}>Dark Mode</Toggle>
             </div>
-            <div class="grid grid-cols-subgrid gap-2 row-span-4">
+            <div class="grid grid-cols-subgrid gap-2 row-span-5">
                 <p class="text-gray-700 dark:text-gray-400">Audio Alerts</p>
                 <Toggle bind:checked={settings.soundAlerts} on:change={updateSettings}>Robot Connection</Toggle>
                 <Toggle bind:checked={settings.fieldGreen} on:change={updateSettings}>Field Green</Toggle>
                 <Toggle bind:checked={settings.susRobots} on:change={updateSettings}>👀 Alerts</Toggle>
+                <Toggle bind:checked={settings.music} on:change={updateSettings}>Music</Toggle>
             </div>
             <div class="grid grid-cols-subgrid gap-2 row-span-4">
                 <p class="text-gray-700 dark:text-gray-400">Other</p>

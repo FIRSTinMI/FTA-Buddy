@@ -17,6 +17,7 @@ export const VERSIONS: { [key: string]: Version } = {
         <li>Ticket notifications</li>
         <li>Redesigned the monitor page</li>
         <li>Added more cycle time and schedule data</li>
+        <li>Music during field reset</li>
         </ul>`,
         update: () => { }
     },

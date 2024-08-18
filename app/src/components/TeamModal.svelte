@@ -46,6 +46,7 @@
             <p class="hidden lg:flex">BWU (mbps)</p>
             <p class="hidden lg:flex">Signal (dBm)</p>
             <p class="lg:hidden">Net</p>
+            <p class="hidden lg:flex">Last Change</p>
             <MonitorRow station={modalStation} {monitorFrame} detailView={() => {}} {frameHandler} />
         </div>
     </div>

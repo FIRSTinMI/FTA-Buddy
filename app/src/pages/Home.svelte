@@ -144,6 +144,11 @@
     function updateScheduleText(currentMatch: number) {
         if (!scheduleDetails || !scheduleDetails.days) return;
 
+        if (monitorFrame?.level !== "Qualification") {
+            scheduleText = "";
+            return;
+        }
+
         for (let i = 0; i < scheduleDetails.days.length; i++) {
             const day = scheduleDetails.days[i];
             if (currentMatch <= day.end) {

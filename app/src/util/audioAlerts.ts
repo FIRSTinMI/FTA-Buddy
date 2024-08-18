@@ -67,7 +67,10 @@ const musicClips: MusicClips = {
     jazz: [
         new Audio('/app/music/jazz1.mp3'),
         new Audio('/app/music/jazz2.mp3'),
-        new Audio('/app/music/jazz3.mp3')
+        new Audio('/app/music/jazz3.mp3'),
+        new Audio('/app/music/jazz4.mp3'),
+        new Audio('/app/music/jazz5.mp3'),
+        new Audio('/app/music/jazz6.mp3')
     ]
 }
 
@@ -151,7 +154,7 @@ export class AudioQueuer {
         audio.audio.play();
     }
 
-    public playMusic() {
+    public playMusic(lastSong: number = -1) {
         console.log('Playing music');
 
         if (this.music) {
@@ -161,9 +164,11 @@ export class AudioQueuer {
         }
 
         const musicClipsGenre = musicClips[get(settingsStore).musicType];
+        let newSong = Math.floor(Math.random() * musicClipsGenre.length);
+        while (newSong === lastSong) newSong = Math.floor(Math.random() * musicClipsGenre.length);
 
-        this.music = musicClipsGenre[Math.floor(Math.random() * musicClipsGenre.length)];
-        this.music.addEventListener('ended', () => this.playMusic());
+        this.music = musicClipsGenre[newSong];
+        this.music.addEventListener('ended', () => this.playMusic(newSong));
         this.music.volume = get(settingsStore).musicVolume;
         this.music.play();
     }

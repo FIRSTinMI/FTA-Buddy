@@ -21,6 +21,8 @@ settingsStore.subscribe((val) => {
                 audioQueuer.playMusic();
             }
         }, 3e3);
+    } else {
+        audioQueuer.stopMusic();
     }
 });
 

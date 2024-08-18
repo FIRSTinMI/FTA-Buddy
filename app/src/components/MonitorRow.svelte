@@ -94,6 +94,7 @@
         team.ds
     ]} fieldmonitor-square-height md:aspect-square flex items-center justify-center font-mono text-4xl lg:text-8xl text-black"
     on:click={detailView}
+    id="{getKey(team)}-ds"
 >
     {#if team.ds === DSState.GREEN_X}
         X
@@ -112,10 +113,12 @@
 <button
     class="{Status_Colors[team.radio ? 1 : 0]} fieldmonitor-square-height md:aspect-square flex"
     on:click={detailView}
+    id="{getKey(team)}-radio"
 ></button>
 <button
     class="{Status_Colors[(team.rio ? 1 : 0)]} fieldmonitor-square-height md:aspect-square flex items-center justify-center font-mono text-4xl lg:text-8xl text-black"
     on:click={detailView}
+    id="{getKey(team)}-rio"
 >
     {#if team.rio && !team.code}
         X
@@ -128,6 +131,7 @@
     team.battery > 0
         ? (-1.5 * team.battery ** 2 - 6.6 * team.battery + 255) / 255
         : 0})"
+    id="{getKey(team)}-battery"
 >
     <div class="h-full text-center top-0 px-0.5 aspect-square">
         <Graph data={parsedData} min={0} max={8} time={20} />
@@ -138,11 +142,11 @@
         {team.battery?.toFixed(1)}v
     </div>
 </button>
-<button on:click={() => detailView} class="fieldmonitor-square-height hidden lg:flex items-end pb-2 justify-center text-md sm:text-xl lg:text-4xl {fullscreen && "lg:text-5xl"} tabular-nums">{team.ping}</button>
-<button on:click={() => detailView} class="fieldmonitor-square-height hidden lg:flex items-end pb-2 justify-center text-md sm:text-xl lg:text-4xl {fullscreen && "lg:text-5xl"} tabular-nums">
+<button on:click={() => detailView} class="fieldmonitor-square-height hidden lg:flex items-end pb-2 justify-center text-md sm:text-xl lg:text-4xl {fullscreen && "lg:text-5xl"} tabular-nums" id="{getKey(team)}-ping">{team.ping}</button>
+<button on:click={() => detailView} class="fieldmonitor-square-height hidden lg:flex items-end pb-2 justify-center text-md sm:text-xl lg:text-4xl {fullscreen && "lg:text-5xl"} tabular-nums" id="{getKey(team)}-bwu">
     {team.bwu.toFixed(2)}
 </button>
-<button class="fieldmonitor-square-height hidden lg:flex p-0 relative aspect-square" on:click={() => detailView}>
+<button class="fieldmonitor-square-height hidden lg:flex p-0 relative aspect-square" on:click={() => detailView} id="{getKey(team)}-signal">
     <div class="text-center top-0 px-0.5 aspect-square">
         <Graph data={signalData} min={-140} max={100} time={20} />
     </div>
@@ -150,10 +154,10 @@
         {team.signal ? team.signal : 0}
     </div>
 </button>
-<button on:click={() => detailView} class="fieldmonitor-square-height hidden lg:flex items-end pb-2 justify-center text-md sm:text-xl lg:text-4xl {fullscreen && "lg:text-5xl"} tabular-nums">
+<button on:click={() => detailView} class="fieldmonitor-square-height hidden lg:flex items-end pb-2 justify-center text-md sm:text-xl lg:text-4xl {fullscreen && "lg:text-5xl"} tabular-nums" id="{getKey(team)}-time">
     {(!team.code && team.lastChange) ? formatTimeShortNoAgoSecondsOnly(team.lastChange) : ""}
 </button>
-<button on:click={() => detailView} class="fieldmonitor-square-height lg:hidden flex flex-col items-end justify-center tabular-nums">
+<button on:click={() => detailView} class="fieldmonitor-square-height lg:hidden flex flex-col items-end justify-center tabular-nums" id="{getKey(team)}-net">
     <div>{team.ping} ms</div>
     <div>{team.bwu.toFixed(2)}</div>
     <div>{team.signal ? team.signal : 0} dBm</div>

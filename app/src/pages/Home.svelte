@@ -130,7 +130,7 @@
 
     function detailView(evt: Event) {
         let target = evt.target as HTMLElement;
-        let station = target.parentElement?.id.replace("-row", "");
+        let station = target.id.split("-")[0] as ROBOT;
         modalStation = (station as ROBOT) || ROBOT.blue1;
         modalOpen = true;
     }

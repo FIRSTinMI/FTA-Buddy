@@ -1,7 +1,7 @@
 import { get } from "svelte/store";
 import { trpc } from "./main";
 import { authStore } from "./stores/auth";
-import { DSState, MatchState, ROBOT, type MonitorFrame } from "../../shared/types";
+import { DSState, FieldState, MatchState, MatchStateMap, ROBOT, type MonitorFrame } from "../../shared/types";
 import { AudioQueuer } from "./util/audioAlerts";
 import { MonitorFrameHandler, type MonitorEvent } from "./util/monitorFrameHandler";
 import { settingsStore } from "./stores/settings";
@@ -12,7 +12,9 @@ export const frameHandler = new MonitorFrameHandler();
 export const audioQueuer = new AudioQueuer();
 
 let settings = get(settingsStore);
-settingsStore.subscribe((val) => settings = val);
+settingsStore.subscribe((val) => {
+    settings = val;
+});
 
 // Local vibration and audio alert definitions
 const VIBRATION_PATTERNS = {
@@ -76,6 +78,7 @@ export async function subscribeToFieldMonitor() {
 frameHandler.addEventListener('match-ready', (evt) => {
     console.log('Match ready');
     if (settings.fieldGreen) audioQueuer.addGreenClip();
+    audioQueuer.stopMusic();
 });
 
 for (let type of ['radio', 'rio', 'code']) {
@@ -119,6 +122,7 @@ frameHandler.addEventListener('match-over', (evt) => {
         }
         stops[robot as ROBOT] = { a: false, e: false };
     }
+    if (settings.music) audioQueuer.playMusic();
 });
 
 frameHandler.addEventListener('match-start', (evt) => {

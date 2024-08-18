@@ -14,6 +14,7 @@ export interface Settings {
     inspectionAlerts: boolean;
     robotNotifications: boolean;
     roundGreen: boolean;
+    music: boolean;
 }
 
 let initialSettings = localStorage.getItem('settings');
@@ -31,7 +32,8 @@ const defaultSettings: Settings = {
     darkMode: true,
     inspectionAlerts: true,
     robotNotifications: false,
-    roundGreen: true
+    roundGreen: true,
+    music: false
 };
 
 if (!initialSettings) {

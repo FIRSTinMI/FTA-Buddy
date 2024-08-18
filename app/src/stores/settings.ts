@@ -15,6 +15,8 @@ export interface Settings {
     robotNotifications: boolean;
     roundGreen: boolean;
     music: boolean;
+    musicVolume: number;
+    musicType: 'jazz';
 }
 
 let initialSettings = localStorage.getItem('settings');
@@ -33,7 +35,9 @@ const defaultSettings: Settings = {
     inspectionAlerts: true,
     robotNotifications: false,
     roundGreen: true,
-    music: false
+    music: false,
+    musicVolume: 0.4,
+    musicType: 'jazz'
 };
 
 if (!initialSettings) {

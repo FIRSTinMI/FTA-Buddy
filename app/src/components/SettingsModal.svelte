@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Button, Modal, Toggle } from "flowbite-svelte";
+    import { Button, Input, Modal, Select, Toggle } from "flowbite-svelte";
     import { get } from "svelte/store";
     import { settingsStore } from "../stores/settings";
     import Spinner from "./Spinner.svelte";
@@ -61,6 +61,10 @@
                 <Toggle bind:checked={settings.fieldGreen} on:change={updateSettings}>Field Green</Toggle>
                 <Toggle bind:checked={settings.susRobots} on:change={updateSettings}>👀 Alerts</Toggle>
                 <Toggle bind:checked={settings.music} on:change={updateSettings}>Music</Toggle>
+                <Input bind:value={settings.musicVolume} type="number" min="0" max="1" on:change={updateSettings} />
+                <Select bind:value={settings.musicType} on:change={updateSettings}>
+                    <option value="jazz">Jazz</option>
+                </Select>
             </div>
             <div class="grid grid-cols-subgrid gap-2 row-span-4">
                 <p class="text-gray-700 dark:text-gray-400">Other</p>

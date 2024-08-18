@@ -1,4 +1,6 @@
+import { get } from "svelte/store";
 import type { ROBOT } from "../../../shared/types";
+import { settingsStore } from "../stores/settings";
 
 const audioClips: AudioClips = {
     robot: {
@@ -61,17 +63,22 @@ const audioClips: AudioClips = {
     }
 }
 
-const musicClips: HTMLAudioElement[] = [
-    new Audio('/app/music/0.mp3'),
-    new Audio('/app/music/1.mp3'),
-    new Audio('/app/music/2.mp3'),
-    new Audio('/app/music/3.mp3'),
-]
+const musicClips: MusicClips = {
+    jazz: [
+        new Audio('/app/music/jazz1.mp3'),
+        new Audio('/app/music/jazz2.mp3'),
+        new Audio('/app/music/jazz3.mp3')
+    ]
+}
 
 interface AudioClips {
     robot: { [key in ROBOT]: { ds: HTMLAudioElement, radio: HTMLAudioElement, rio: HTMLAudioElement, code: HTMLAudioElement, astop: HTMLAudioElement, estop: HTMLAudioElement } },
     green: HTMLAudioElement[],
     other: { [key: string]: HTMLAudioElement }
+}
+
+interface MusicClips {
+    jazz: HTMLAudioElement[];
 }
 
 export class AudioQueuer {
@@ -153,9 +160,11 @@ export class AudioQueuer {
             this.music = undefined;
         }
 
-        this.music = musicClips[Math.floor(Math.random() * musicClips.length)];
+        const musicClipsGenre = musicClips[get(settingsStore).musicType];
+
+        this.music = musicClipsGenre[Math.floor(Math.random() * musicClipsGenre.length)];
         this.music.addEventListener('ended', () => this.playMusic());
-        this.music.volume = 0.4;
+        this.music.volume = get(settingsStore).musicVolume;
         this.music.play();
     }
 
@@ -165,5 +174,9 @@ export class AudioQueuer {
             this.music.removeEventListener('ended', () => this.playMusic());
             this.music = undefined;
         }
+    }
+
+    public setMusicVolume(volume: number) {
+        if (this.music) this.music.volume = volume;
     }
 }

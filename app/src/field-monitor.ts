@@ -14,6 +14,14 @@ export const audioQueuer = new AudioQueuer();
 let settings = get(settingsStore);
 settingsStore.subscribe((val) => {
     settings = val;
+    if (settings.music) {
+        audioQueuer.setMusicVolume(settings.musicVolume);
+        setTimeout(() => {
+            if (MatchStateMap[frameHandler.getFrame()?.field ?? FieldState.PRESTART_COMPLETED] !== MatchState.RUNNING) {
+                audioQueuer.playMusic();
+            }
+        }, 3e3);
+    }
 });
 
 // Local vibration and audio alert definitions

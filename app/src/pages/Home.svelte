@@ -1,9 +1,8 @@
 <script lang="ts">
     import { ROBOT, type MonitorFrame, type ScheduleDetails } from "./../../../shared/types";
-    import { Table, TableBody, TableHead, TableHeadCell } from "flowbite-svelte";
     import MonitorRow from "../components/MonitorRow.svelte";
     import TeamModal from "../components/TeamModal.svelte";
-    import { formatTime, formatTimeNoAgo, formatTimeShortNoAgo, formatTimeShortNoAgoSeconds } from "../util/formatTime";
+    import { formatTimeShortNoAgo, formatTimeShortNoAgoMinutesOnly, formatTimeShortNoAgoSeconds } from "../util/formatTime";
     import type { MonitorEvent, MonitorFrameHandler } from "../util/monitorFrameHandler";
     import { onDestroy, onMount } from "svelte";
     import { trpc } from "../main";
@@ -173,10 +172,10 @@
 
         let endTimeFormatted = endTime.toLocaleTimeString().split(':').slice(0, 2).join(':');
         console.log(endTime, scheduleDetails.days[currentScheduleDay].endTime ?? fallbackEndOfDay);
-        let end = formatTimeShortNoAgo(endTime, new Date(scheduleDetails.days[currentScheduleDay].endTime ?? fallbackEndOfDay));
+        let end = formatTimeShortNoAgoMinutesOnly(endTime, new Date(scheduleDetails.days[currentScheduleDay].endTime ?? fallbackEndOfDay));
         let aheadBehind = endTime.getTime() <= new Date(scheduleDetails.days[currentScheduleDay].endTime ?? fallbackEndOfDay).getTime();
 
-        scheduleText += `${endTimeFormatted} (${end} ${aheadBehind ? "Early" : "Late"})`;
+        scheduleText += `${endTimeFormatted} (${end}m ${aheadBehind ? "Early" : "Late"})`;
         console.log(scheduleText);
     }
 </script>
@@ -207,7 +206,7 @@
                 <MonitorRow {station} {monitorFrame} {detailView} {fullscreen} {frameHandler} />
             {/each}
         {/if}
-        <div class="col-span-6 lg:col-span-9 flex text-lg md:text-2xl font-semibold {fullscreen && "lg:text-4xl"}">
+        <div class="col-span-6 lg:col-span-9 flex text-lg md:text-2xl font-semibold tabular-nums {fullscreen && "lg:text-4xl"}">
             <div class="text-left {fullscreen ? "text-4xl" : "md:text-2xl"} {currentCycleIsBest && "text-green-500"}">
                 C: {lastCycleTime} (A: {formatTimeShortNoAgoSeconds(averageCycleTimeMS)})
             </div>

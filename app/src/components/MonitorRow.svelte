@@ -13,7 +13,7 @@
     import type { MonitorFrameHandler } from "../util/monitorFrameHandler";
     import { processSignalStrengthForGraph } from "../util/signalStrengthProcessor";
 	import { settingsStore } from "../stores/settings";
-	import { formatTimeShortNoAgo, formatTimeShortNoAgoSeconds, formatTimeShortNoAgoSecondsOnly } from "../util/formatTime";
+	import { formatTimeShortNoAgoSecondsOnly } from "../util/formatTime";
 
     export let station: ROBOT;
     export let monitorFrame: MonitorFrame;

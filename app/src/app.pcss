@@ -28,11 +28,15 @@ body {
 }
 
 .toggle span {
-  background-color: #424242 !important;
+  background-color: #888888 !important;
+}
+
+.dark .toggle span {
+  background-color: #535353 !important;
 }
 
 .toggle input:checked + span {
-  background-color: #bb86fc !important;
+  background-color: #ac71f4 !important;
 }
 
 @media only screen and (max-width: 600px) {
@@ -138,6 +142,26 @@ div[aria-modal="true"] {
 
 .max-h-logscreen {
     max-height: calc(100vh - 14rem);
+}
+
+.range {
+    apperance: none;
+    --webkit-apperance: none;
+    accent-color: #d4b6fc !important;
+}
+
+.range::--webkit-slider-runnable-track {
+    apperance: none;
+    --webkit-apperance: none;
+    accent-color: #d4b6fc !important;
+}
+
+.range::-webkit-slider-thumb {
+    background: #ac71f4 !important;
+}
+
+.range:disabled::-webkit-slider-thumb {
+    background: #999999 !important;
 }
 
 @tailwind components;

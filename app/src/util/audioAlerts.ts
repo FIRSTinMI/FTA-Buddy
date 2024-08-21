@@ -154,21 +154,25 @@ export class AudioQueuer {
         audio.audio.play();
     }
 
-    public playMusic(lastSong: number = -1) {
+    public playMusic(musicOrder: number[] = []) {
         console.log('Playing music');
 
         if (this.music) {
             this.music.pause();
-            this.music.removeEventListener('ended', () => this.playMusic());
+            this.music.removeEventListener('ended', () => this.playMusic(musicOrder));
             this.music = undefined;
         }
 
         const musicClipsGenre = musicClips[get(settingsStore).musicType];
-        let newSong = Math.floor(Math.random() * musicClipsGenre.length);
-        while (newSong === lastSong) newSong = Math.floor(Math.random() * musicClipsGenre.length);
+
+        // If we somehow ran out of track selections then just start playing random music
+        if (musicOrder.length < 1) musicOrder = [Math.floor(Math.random() * 16)];
+        let newSong = musicOrder[0];
+        // The music order supports up to 16 tracks, so if we have fewer than that in this genre
+        while (newSong >= musicClipsGenre.length) newSong -= musicClipsGenre.length;
 
         this.music = musicClipsGenre[newSong];
-        this.music.addEventListener('ended', () => this.playMusic(newSong));
+        this.music.addEventListener('ended', () => this.playMusic(musicOrder.slice(1)));
         this.music.volume = get(settingsStore).musicVolume;
         this.music.play();
     }
@@ -176,12 +180,12 @@ export class AudioQueuer {
     public stopMusic() {
         if (this.music) {
             this.music.pause();
-            this.music.removeEventListener('ended', () => this.playMusic());
+            this.music.removeEventListener('ended', () => this.playMusic([]));
             this.music = undefined;
         }
     }
 
     public setMusicVolume(volume: number) {
-        if (this.music) this.music.volume = volume;
+        if (this.music) this.music.volume = (volume / 100);
     }
 }

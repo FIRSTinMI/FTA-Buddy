@@ -4,9 +4,10 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db/db";
 import { events, users } from "../db/schema";
-import { adminProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
+import { adminProcedure, eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
 import { generateToken } from "./user";
-import { EventChecklist, TeamList } from '../../shared/types';
+import { EventChecklist, TeamList, TournamentLevel } from '../../shared/types';
+import { createHash } from 'crypto';
 
 export const eventRouter = router({
     checkCode: publicProcedure.input(z.object({
@@ -144,5 +145,17 @@ export const eventRouter = router({
 
     getAll: adminProcedure.query(async () => {
         return (await db.query.events.findMany()).sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
+    }),
+
+    getMusicOrder: eventProcedure.input(z.object({
+        match: z.number(),
+        level: z.enum(["None", "Practice", "Qualification", "Playoff"])
+    })).query(async ({ ctx, input }) => {
+        let level: TournamentLevel | string = input.level;
+        if (level === "None" || level === "Practice") level = (Math.random() * 10).toFixed(0);
+
+        const hash = await createHash('md5').update(ctx.event.code + level + input.match).digest();
+        const musicOrder = hash.toString('hex').split('');
+        return musicOrder.map(s => parseInt(s, 16));
     })
 });

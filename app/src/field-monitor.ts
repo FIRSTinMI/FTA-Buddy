@@ -14,11 +14,16 @@ export const audioQueuer = new AudioQueuer();
 let settings = get(settingsStore);
 settingsStore.subscribe((val) => {
     settings = val;
-    if (settings.music) {
+    if (settings.musicType !== 'none') {
         audioQueuer.setMusicVolume(settings.musicVolume);
-        setTimeout(() => {
+        setTimeout(async () => {
             if (MatchStateMap[frameHandler.getFrame()?.field ?? FieldState.PRESTART_COMPLETED] !== MatchState.RUNNING) {
-                audioQueuer.playMusic();
+                const frame = frameHandler.getFrame();
+                const musicOrder = await trpc.event.getMusicOrder.query({
+                    level: frame?.level ?? "None",
+                    match: frame?.match ?? 1
+                });
+                audioQueuer.playMusic(musicOrder);
             }
         }, 3e3);
     } else {
@@ -121,7 +126,8 @@ frameHandler.addEventListener(`ds-drop`, (e) => {
     }
 });
 
-frameHandler.addEventListener('match-over', (evt) => {
+frameHandler.addEventListener('match-over', async (e) => {
+    const evt = e as MonitorEvent;
     console.log('Match over');
     for (let robot in stops) {
         if (stops[robot as ROBOT].a) {
@@ -132,7 +138,13 @@ frameHandler.addEventListener('match-over', (evt) => {
         }
         stops[robot as ROBOT] = { a: false, e: false };
     }
-    if (settings.music) audioQueuer.playMusic();
+
+    const musicOrder = await trpc.event.getMusicOrder.query({
+        level: evt.detail.frame.level,
+        match: evt.detail.frame.match
+    });
+
+    if (settings.musicType !== 'none') audioQueuer.playMusic(musicOrder);
 });
 
 frameHandler.addEventListener('match-start', (evt) => {

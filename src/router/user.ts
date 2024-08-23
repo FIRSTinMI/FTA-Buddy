@@ -2,7 +2,7 @@ import { z } from "zod";
 import { db } from "../db/db";
 import { router, publicProcedure } from "../trpc";
 import { compare, hash } from "bcrypt";
-import { users } from "../db/schema";
+import schema, { events, users } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { OAuth2Client } from "google-auth-library";
@@ -153,6 +153,39 @@ export const userRouter = router({
         }
     }),
 
+    checkAuth: publicProcedure.input(z.object({
+        token: z.string().optional(),
+        eventToken: z.string().optional()
+    })).query(async ({ input }) => {
+        if (!input.token && !input.eventToken) throw new Error('No token provided');
+
+        const returnObj: {
+            user?: Omit<typeof users.$inferSelect, 'password' | 'token' | 'events' | 'created_at' | 'last_seen'>,
+            event?: typeof events.$inferSelect;
+        } = {};
+
+        if (input.token) {
+            returnObj.user = (await db.select({
+                username: users.username,
+                email: users.email,
+                role: users.role,
+                id: users.id
+            })
+                .from(users)
+                .where(eq(users.token, input.token))
+                .execute())[0];
+
+            if (returnObj.user) {
+                await db.update(users).set({ last_seen: new Date() }).where(eq(users.token, input.token));
+            }
+        }
+
+        if (input.eventToken) {
+            returnObj.event = await db.query.events.findFirst({ where: eq(events.token, input.eventToken) });
+        }
+
+        return returnObj;
+    })
 });
 
 export function generateToken() {

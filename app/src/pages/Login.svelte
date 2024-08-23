@@ -6,6 +6,7 @@
     import { navigate } from "svelte-routing";
     import Spinner from "../components/Spinner.svelte";
     import type { TeamList } from "../../../shared/types";
+	import { onMount } from "svelte";
 
     export let toast: (title: string, text: string, color?: string) => void;
 
@@ -27,6 +28,21 @@
         navigator.userAgent.includes("Linux")
     ) && 
         !navigator.userAgent.includes("Android");
+
+    onMount(async () => {
+        const checkAuth = await trpc.user.checkAuth.query({
+            token: auth.token,
+            eventToken: auth.eventToken
+        });
+
+        if (checkAuth.user) {
+            auth.user = checkAuth.user
+        }
+
+        if (auth.eventToken && !checkAuth.event) {
+
+        }
+    })
 
     async function createUser(evt: Event) {
         evt.preventDefault();

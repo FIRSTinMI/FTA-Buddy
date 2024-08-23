@@ -2,7 +2,7 @@
     import { Tabs } from "flowbite-svelte";
     import { trpc } from "../main";
     import MatchListTab from "../components/MatchListTab.svelte";
-    import type { MatchRouterOutputs } from "../../../src/router/match";
+    import type { MatchRouterOutputs } from "../../../src/router/logs";
     import Spinner from "../components/Spinner.svelte";
 
     export let toast: (title: string, text: string, color?: string) => void;

@@ -94,7 +94,7 @@ export async function processTeamWarnings(eventCode: string, frame: MonitorFrame
 export async function processTeamCycles(eventCode: string, frame: MonitorFrame, changes: StateChange[]) {
     const event = await getEvent('', eventCode);
 
-    // Only process in prestart
+    // If the match is running and there is data, commit it and reset the tracking object
     if (MatchStateMap[frame.field] === MatchState.RUNNING && event.teamCycleTracking.prestart) {
         const insert = [];
 
@@ -124,22 +124,29 @@ export async function processTeamCycles(eventCode: string, frame: MonitorFrame, 
             });
         }
 
+        console.log(insert);
+
         await db.insert(teamCycleLogs).values(insert);
         event.teamCycleTracking = {};
     }
 
+    // Only process in prestart
     if (MatchStateMap[frame.field] !== MatchState.PRESTART) return;
 
+    // If new match, set the prestart time
     if (!event.teamCycleTracking.prestart) event.teamCycleTracking.prestart = event.lastPrestartDone || new Date();
 
     for (let change of changes) {
         let cycle = event.teamCycleTracking[change.station];
 
         if (!cycle) {
-            cycle = {
+            event.teamCycleTracking[change.station] = {
                 team: change.robot.number
             };
+            cycle = event.teamCycleTracking[change.station];
         }
+
+        if (!cycle) throw new Error('You should never see this error, but if you do look at the processTeamCycles function in util/frameProcessing');
 
         if (change.type === StateChangeType.RisingEdge && change.key === 'ds' && change.robot.ds === DSState.GREEN) {
             if (!cycle.firstDS) cycle.firstDS = change.robot.lastChange || new Date();

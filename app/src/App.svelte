@@ -24,10 +24,12 @@
     import StationLog from "./pages/StationLog.svelte";
     import MatchLogsList from "./pages/MatchLogsList.svelte";
     import Checklist from "./pages/Checklist.svelte";
-    import { onMount } from "svelte";
+    import { onDestroy, onMount } from "svelte";
     import CreateTicket from "./pages/CreateTicket.svelte";
     import ViewTicket from "./pages/ViewTicket.svelte";
 	import { startBackgroundSubscription } from "./util/notifications";
+	import { trpc } from "./main";
+	import UpdateToast from "./components/UpdateToast.svelte";
 
     // Checking authentication
 
@@ -141,6 +143,27 @@
     (window as any).toast = toast;
 
 
+    // Auto update
+
+    let showUpdateToast = false;
+    let updateNewVersion = "";
+    let appSubscription: ReturnType<typeof trpc.app.version.subscribe> | undefined;
+    onMount(() => {
+        appSubscription = trpc.app.version.subscribe(undefined, {
+            onData: (data) => {
+                console.log(data, settings.version);
+                if (data !== settings.version) {
+                    console.log("New version available");
+                    updateNewVersion = data;
+                    showUpdateToast = true;
+                }
+            }
+        });
+    });
+    onDestroy(() => {
+        appSubscription?.unsubscribe();
+    });
+
     // App install prompt
 
     let installPrompt: Event | null = null;
@@ -199,6 +222,8 @@
         </Toast>
     </div>
 {/if}
+
+<UpdateToast show={showUpdateToast} newVersion={updateNewVersion} />
 
 <WelcomeModal
     bind:welcomeOpen

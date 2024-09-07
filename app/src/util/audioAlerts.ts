@@ -65,13 +65,25 @@ const audioClips: AudioClips = {
 
 const musicClips: MusicClips = {
     jazz: [
+        new Audio('/app/music/jazz0.mp3'),
         new Audio('/app/music/jazz1.mp3'),
         new Audio('/app/music/jazz2.mp3'),
         new Audio('/app/music/jazz3.mp3'),
         new Audio('/app/music/jazz4.mp3'),
         new Audio('/app/music/jazz5.mp3'),
         new Audio('/app/music/jazz6.mp3')
-    ]
+    ],
+    lofi: [
+        new Audio('/app/music/lofi0.mp3'),
+        new Audio('/app/music/lofi1.mp3'),
+        new Audio('/app/music/lofi2.mp3'),
+        new Audio('/app/music/lofi3.mp3'),
+        new Audio('/app/music/lofi4.mp3'),
+        new Audio('/app/music/lofi5.mp3'),
+        new Audio('/app/music/lofi6.mp3'),
+        new Audio('/app/music/lofi7.mp3'),
+        new Audio('/app/music/lofi8.mp3')
+    ],
 }
 
 interface AudioClips {
@@ -82,6 +94,7 @@ interface AudioClips {
 
 interface MusicClips {
     jazz: HTMLAudioElement[];
+    lofi: HTMLAudioElement[];
 }
 
 export class AudioQueuer {
@@ -163,7 +176,11 @@ export class AudioQueuer {
             this.music = undefined;
         }
 
-        const musicClipsGenre = musicClips[get(settingsStore).musicType];
+        const settings = get(settingsStore);
+
+        if (settings.musicType === 'none') return;
+
+        const musicClipsGenre = musicClips[settings.musicType];
 
         // If we somehow ran out of track selections then just start playing random music
         if (musicOrder.length < 1) musicOrder = [Math.floor(Math.random() * 16)];
@@ -173,7 +190,7 @@ export class AudioQueuer {
 
         this.music = musicClipsGenre[newSong];
         this.music.addEventListener('ended', () => this.playMusic(musicOrder.slice(1)));
-        this.music.volume = get(settingsStore).musicVolume;
+        this.music.volume = settings.musicVolume / 100;
         this.music.play();
     }
 

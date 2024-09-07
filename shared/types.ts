@@ -339,7 +339,7 @@ export interface ServerEvent {
     cycleEmitter: EventEmitter,
     teams: TeamList,
     checklist: EventChecklist,
-    users: string[],
+    users: number[],
     monitorFrame: MonitorFrame,
     history: MonitorFrame[],
     scheduleDetails: ScheduleDetails,

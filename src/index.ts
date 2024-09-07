@@ -3,6 +3,7 @@ import { applyWSSHandler } from '@trpc/server/adapters/ws';
 import cors from 'cors';
 import 'dotenv/config';
 import express from 'express';
+const pjson = require('../package.json');
 import { readFileSync, readdirSync } from 'fs';
 import ws from 'ws';
 import { FMSLogFrame, ROBOT, ServerEvent, TournamentLevel } from '../shared/types';
@@ -12,7 +13,7 @@ import { eventRouter } from './router/event';
 import { fieldMonitorRouter } from './router/field-monitor';
 import { matchRouter } from './router/logs';
 import { userRouter } from './router/user';
-import { createContext, router } from './trpc';
+import { createContext, publicProcedure, router } from './trpc';
 import { cycleRouter } from './router/cycles';
 import { getTeamAverageCycle } from './util/team-cycles';
 import { and, eq } from 'drizzle-orm';
@@ -29,11 +30,15 @@ import { markedHighlight } from 'marked-highlight';
 import hljs from 'highlight.js';
 import json from 'highlight.js/lib/languages/json';
 import { gfmHeadingId } from 'marked-gfm-heading-id';
+import { observable } from '@trpc/server/observable';
+import { initializePushNotifications } from './util/push-notifiactions';
 
 const port = parseInt(process.env.PORT || '3001');
 
 export const events: { [key: string]: ServerEvent; } = {};
 export const eventCodes: { [key: string]: string; } = {};
+
+initializePushNotifications();
 
 // TRPC Server
 const appRouter = router({
@@ -43,7 +48,19 @@ const appRouter = router({
     checklist: checklistRouter,
     field: fieldMonitorRouter,
     cycles: cycleRouter,
-    messages: messagesRouter
+    messages: messagesRouter,
+    app: router({
+        version: publicProcedure.subscription(async () => {
+            return observable<string>((emitter) => {
+                const interval = setInterval(() => {
+                    emitter.next(pjson.version ?? 'dev');
+                }, 60000);
+
+                emitter.next(pjson.version ?? 'dev');
+                return () => clearInterval(interval);
+            });
+        })
+    })
 });
 
 export type AppRouter = typeof appRouter;

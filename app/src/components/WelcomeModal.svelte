@@ -5,6 +5,7 @@
     import { onMount } from "svelte";
 	import { settingsStore } from "../stores/settings";
 	import { toast } from "../util/toast";
+	import { subscribeToPush } from "../util/notifications";
 
     export let welcomeOpen = false;
     export let installPrompt: Event | null;
@@ -80,6 +81,7 @@
                             if (result === "granted") {
                                 $settingsStore.notifications = true;
                                 notificationsGranted = true;
+                                subscribeToPush();
                             }
                         });
                     } catch (e) {

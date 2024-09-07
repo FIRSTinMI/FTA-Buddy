@@ -10,8 +10,9 @@
     } from "../../../shared/types";
     import MonitorRow from "./MonitorRow.svelte";
     import { navigate } from "svelte-routing";
-    import { formatTimeShort } from "../util/formatTime";
+    import { formatTimeShort, formatTimeShortNoAgoSeconds } from "../util/formatTime";
     import type { MonitorFrameHandler } from "../util/monitorFrameHandler";
+	import { trpc } from '../main';
 
     export let modalOpen: boolean;
     export let modalStation: ROBOT;
@@ -19,10 +20,11 @@
     export let frameHandler: MonitorFrameHandler;
 
     let modalTeam: TeamInfo | undefined;
-    let battery: number[] = [];
+    let averages: Awaited<ReturnType<typeof trpc.cycles.getTeamAverageCycle.query>> | undefined;
     $: {
         modalTeam = monitorFrame[modalStation];
         timeSinceChange = modalTeam.lastChange ? formatTimeShort(modalTeam.lastChange) : "";
+        (async (team: number) => { averages = await trpc.cycles.getTeamAverageCycle.query({ teamNumber: team })})(modalTeam?.number);
     }
 
     let timeSinceChange = modalTeam?.lastChange ? formatTimeShort(modalTeam.lastChange) : "";
@@ -209,6 +211,17 @@
                     {/if}
                 {/if}
             </p>
+            <div class="grid grid-cols-2">
+                <h4 class="col-span-2">Average Times</h4>
+                <p>DS</p>
+                <p>{formatTimeShortNoAgoSeconds(averages?.ds ?? 0)}</p>
+                <p>Radio</p>
+                <p>{formatTimeShortNoAgoSeconds(averages?.radio ?? 0)}</p>
+                <p>Rio</p>
+                <p>{formatTimeShortNoAgoSeconds(averages?.rio ?? 0)}</p>
+                <p>Code</p>
+                <p>{formatTimeShortNoAgoSeconds(averages?.code ?? 0)}</p>
+            </div>
         </div>
     {/if}
     <div slot="footer">

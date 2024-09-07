@@ -206,7 +206,7 @@ export const cycleRouter = router({
 });
 
 async function getAverageCycleTime(eventCode: string) {
-    const cycles = await db.query.cycleLogs.findMany({ where: eq(cycleLogs.event, eventCode) });
+    const cycles = await db.query.cycleLogs.findMany({ where: eq(cycleLogs.event, eventCode), limit: 15, orderBy: desc(cycleLogs.start_time) });
 
     // Extract the cycle times in milliseconds
     const cycleTimes = cycles

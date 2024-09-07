@@ -9,6 +9,22 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+    '2.5.3': {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.5.3</h1>
+        <ul>
+        <li>Added Lofi music genere</li>
+        <li>Music is syncronized, so everyone with the same genere selection hears the same track</li>
+        <li>WIP on push notifications</li>
+        </ul>`,
+        update: () => {
+            settingsStore.update(s => {
+                s.robotNotifications = false;
+                s.notifications = false;
+                return s;
+            });
+        }
+    },
     '2.5.2': {
         changelog: `
         <h1 class="text-lg font-bold">v2.5.2</h1>
@@ -18,6 +34,7 @@ export const VERSIONS: { [key: string]: Version } = {
         <li>Redesigned the monitor page</li>
         <li>Added more cycle time and schedule data</li>
         <li>Music during field reset</li>
+        <li>Automatic update prompts</li>
         </ul>`,
         update: () => { }
     },

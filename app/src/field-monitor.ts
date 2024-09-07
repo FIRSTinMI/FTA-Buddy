@@ -13,19 +13,22 @@ export const audioQueuer = new AudioQueuer();
 
 let settings = get(settingsStore);
 settingsStore.subscribe((val) => {
+    const oldSettings = settings;
     settings = val;
     if (settings.musicType !== 'none') {
         audioQueuer.setMusicVolume(settings.musicVolume);
-        setTimeout(async () => {
-            if (MatchStateMap[frameHandler.getFrame()?.field ?? FieldState.PRESTART_COMPLETED] !== MatchState.RUNNING) {
-                const frame = frameHandler.getFrame();
-                const musicOrder = await trpc.event.getMusicOrder.query({
-                    level: frame?.level ?? "None",
-                    match: frame?.match ?? 1
-                });
-                audioQueuer.playMusic(musicOrder);
-            }
-        }, 3e3);
+        if (oldSettings.musicType !== settings.musicType) {
+            setTimeout(async () => {
+                if (MatchStateMap[frameHandler.getFrame()?.field ?? FieldState.PRESTART_COMPLETED] !== MatchState.RUNNING) {
+                    const frame = frameHandler.getFrame();
+                    const musicOrder = await trpc.event.getMusicOrder.query({
+                        level: frame?.level ?? "None",
+                        match: frame?.match ?? 1
+                    });
+                    audioQueuer.playMusic(musicOrder);
+                }
+            }, 3e3);
+        }
     } else {
         audioQueuer.stopMusic();
     }

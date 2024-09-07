@@ -4,6 +4,7 @@
 	import { settingsStore } from "../stores/settings";
 	import Spinner from "./Spinner.svelte";
 	import { toast } from "../util/toast";
+	import { subscribeToPush } from "../util/notifications";
 
 	export let settingsOpen = false;
 
@@ -21,22 +22,39 @@
 		window.location.reload();
 	}
 
-	function requestNotificationPermissions() {
+	async function requestNotificationPermissions() {
 		try {
 			if (Notification.permission !== "granted") {
-				Notification.requestPermission().then((permission) => {
+				Notification.requestPermission().then(async (permission) => {
 					if (permission === "granted") {
 						updateSettings();
+                        await subscribeToPush();
 					}
 				});
 			} else {
 				updateSettings();
+                await subscribeToPush();
 			}
 		} catch (e) {
 			console.error(e);
 			toast("Error", "Error requesting notification permissions");
 		}
 	}
+
+    let rangeSlider: HTMLInputElement | undefined;
+    $: ((open: boolean) => {
+        if (!open || rangeSlider) return;
+        setTimeout(() => {
+            rangeSlider = document.querySelector('.range') as HTMLInputElement;
+            console.log('range slider', rangeSlider);
+            if (rangeSlider) {
+                rangeSlider.addEventListener('mousemove', (evt) => {
+                    if (!rangeSlider) return;
+                    updateSettings();
+                });
+            }
+        }, 100);
+    })(settingsOpen);
 </script>
 
 {#if loading}
@@ -64,6 +82,7 @@
 				<Select bind:value={settings.musicType} on:change={updateSettings}>
                     <option value="none">None</option>
 					<option value="jazz">Jazz</option>
+                    <option value="lofi">Lofi</option>
 				</Select>
 				<Label>Volume</Label>
 				<div class="flex">

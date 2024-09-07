@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { ROBOT, type MonitorFrame, type ScheduleDetails } from "./../../../shared/types";
+    import { FieldState, MatchState, MatchStateMap, ROBOT, type MonitorFrame, type ScheduleDetails } from "./../../../shared/types";
     import MonitorRow from "../components/MonitorRow.svelte";
     import TeamModal from "../components/TeamModal.svelte";
     import { formatTimeShortNoAgo, formatTimeShortNoAgoMinutesOnly, formatTimeShortNoAgoSeconds } from "../util/formatTime";
@@ -8,6 +8,7 @@
     import { trpc } from "../main";
     import { cycleTimeToMS } from "./../../../shared/cycleTimeToMS";
 	import { authStore } from "../stores/auth";
+	import { audioQueuer } from "../field-monitor";
 
     export let frameHandler: MonitorFrameHandler;
     let monitorFrame: MonitorFrame | undefined = frameHandler.getFrame();
@@ -43,17 +44,14 @@
 
         const lastPrestart = await trpc.cycles.getLastPrestart.query();
         if (lastPrestart) matchStartTime = lastPrestart;
-        console.log(matchStartTime);
 
         const bestCycleTimeRes = await trpc.cycles.getBestCycleTime.query();
         if (bestCycleTimeRes && bestCycleTimeRes.calculated_cycle_time) {
             bestCycleTimeMS = cycleTimeToMS(bestCycleTimeRes.calculated_cycle_time);
         }
-        console.log(bestCycleTimeMS);
 
         const lastCycleTimeRes = await trpc.cycles.getLastCycleTime.query();
         if (lastCycleTimeRes) {
-            console.log(lastCycleTimeRes);
             lastCycleTimeMS = cycleTimeToMS(lastCycleTimeRes);
             lastCycleTime = formatTimeShortNoAgo(new Date(new Date().getTime() - lastCycleTimeMS));
 
@@ -62,15 +60,32 @@
                 currentCycleIsBest = true;
             }
         }
-        console.log(lastCycleTimeMS);
 
         averageCycleTimeMS = await trpc.cycles.getAverageCycleTime.query() ?? 8*60*1000;
-        console.log(averageCycleTimeMS);
 
         monitorFrame = frameHandler.getFrame();
 
         scheduleDetails = await trpc.cycles.getScheduleDetails.query();
         updateScheduleText(monitorFrame?.match ?? scheduleDetails?.lastPlayed ?? 0);
+        console.log({
+            matchStartTime,
+            bestCycleTimeMS,
+            lastCycleTimeMS,
+            averageCycleTimeMS,
+            calculatedCycleTime,
+            scheduleDetails
+        })
+
+        setTimeout(async () => {
+            if (MatchStateMap[frameHandler.getFrame()?.field ?? FieldState.PRESTART_COMPLETED] !== MatchState.RUNNING) {
+                const frame = frameHandler.getFrame();
+                const musicOrder = await trpc.event.getMusicOrder.query({
+                    level: frame?.level ?? "None",
+                    match: frame?.match ?? 1
+                });
+                audioQueuer.playMusic(musicOrder);
+            }
+        }, 3e3)
     });
 
     onDestroy(() => {
@@ -100,7 +115,6 @@
 
     setInterval(() => {
         const currentTime = new Date().getTime() - matchStartTime.getTime();
-        console.log(averageCycleTimeMS);
         if (currentTime < averageCycleTimeMS) {
             currentCycleTimeRedness = 0;
         } else {
@@ -163,25 +177,36 @@
         if (lunchMatch && currentMatch <= lunchMatch) {
             scheduleText = "Lunch M:" + lunchMatch + " @";
             goalMatch = lunchMatch;
+
+            let endTime = new Date(new Date().getTime() + (goalMatch - currentMatch) * averageCycleTimeMS);
+            let fallbackEndOfDay = new Date();
+            fallbackEndOfDay.setHours(19, 0, 0, 0);
+
+            let endTimeFormatted = endTime.toLocaleTimeString().split(':').slice(0, 2).join(':');
+            let end = formatTimeShortNoAgoMinutesOnly(endTime, new Date(scheduleDetails.days[currentScheduleDay].lunchTime ?? fallbackEndOfDay));
+            
+            console.log({endTime, end, fallbackEndOfDay, currentMatch, goalMatch, averageCycleTimeMS, currentMatchTime: new Date().getTime()});
+            let aheadBehind = endTime.getTime() <= new Date(scheduleDetails.days[currentScheduleDay].lunchTime ?? fallbackEndOfDay).getTime();
+
+            scheduleText += `${endTimeFormatted} (${end}m ${aheadBehind ? "Early" : "Late"})`;
         } else if (currentMatch <= scheduleDetails.days[currentScheduleDay].end) {
             scheduleText = "Playing through M:" + scheduleDetails.days[currentScheduleDay].end + " @";
             goalMatch = scheduleDetails.days[currentScheduleDay].end;
+
+            let endTime = new Date(new Date().getTime() + (goalMatch - currentMatch) * averageCycleTimeMS);
+            let fallbackEndOfDay = new Date();
+            fallbackEndOfDay.setHours(19, 0, 0, 0);
+
+            let endTimeFormatted = endTime.toLocaleTimeString().split(':').slice(0, 2).join(':');
+            let end = formatTimeShortNoAgoMinutesOnly(endTime, new Date(scheduleDetails.days[currentScheduleDay].endTime ?? fallbackEndOfDay));
+            
+            console.log({endTime, end, fallbackEndOfDay, currentMatch, goalMatch, averageCycleTimeMS, currentMatchTime: new Date().getTime()});
+            let aheadBehind = endTime.getTime() <= new Date(scheduleDetails.days[currentScheduleDay].endTime ?? fallbackEndOfDay).getTime();
+
+            scheduleText += `${endTimeFormatted} (${end}m ${aheadBehind ? "Early" : "Late"})`;
         } else {
             return;
         }
-
-        let endTime = new Date(new Date().getTime() + (goalMatch - currentMatch) * averageCycleTimeMS);
-
-        let fallbackEndOfDay = new Date();
-        fallbackEndOfDay.setHours(19, 0, 0, 0);
-
-        let endTimeFormatted = endTime.toLocaleTimeString().split(':').slice(0, 2).join(':');
-        console.log(endTime, scheduleDetails.days[currentScheduleDay].endTime ?? fallbackEndOfDay);
-        let end = formatTimeShortNoAgoMinutesOnly(endTime, new Date(scheduleDetails.days[currentScheduleDay].endTime ?? fallbackEndOfDay));
-        let aheadBehind = endTime.getTime() <= new Date(scheduleDetails.days[currentScheduleDay].endTime ?? fallbackEndOfDay).getTime();
-
-        scheduleText += `${endTimeFormatted} (${end}m ${aheadBehind ? "Early" : "Late"})`;
-        console.log(scheduleText);
     }
 </script>
 

@@ -176,14 +176,14 @@ export class SignalR {
                     case 'WaitingForPostResults':
                         this.frame.field = FieldState.READY_FOR_POST_RESULT;
                         this.cycleTimeCallback('scoresPosted', '');
-                        void uploadMatchLogs();
+                        await uploadMatchLogs();
                         break;
                     case 'TournamentLevelComplete':
                         this.frame.field = FieldState.UNKNOWN;
                         break;
                     case 'MatchCancelled':
                         this.frame.field = FieldState.MATCH_ABORTED;
-                        void uploadMatchLogs();
+                        await uploadMatchLogs();
                         // womp womp
                         break;
                 }

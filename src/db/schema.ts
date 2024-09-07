@@ -128,4 +128,12 @@ export const teamCycleLogs = pgTable('team_cycle_logs', {
 
 export const TeamCycleLog = typeof teamCycleLogs.$inferInsert;
 
+export const pushSubscriptions = pgTable('push_subscriptions', {
+    id: serial('id').primaryKey(),
+    user_id: serial('user_id').references(() => users.id).notNull(),
+    endpoint: text('endpoint').notNull(),
+    expirationTime: timestamp('expirationTime'),
+    keys: jsonb('keys').notNull()
+});
+
 export default { events, users, messages, matchLogs, cycleLogs, logPublishing };

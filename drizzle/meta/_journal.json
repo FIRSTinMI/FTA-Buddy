@@ -120,6 +120,20 @@
       "when": 1723527856356,
       "tag": "0016_talented_siren",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "5",
+      "when": 1724521585439,
+      "tag": "0017_loose_the_fury",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "5",
+      "when": 1724522960257,
+      "tag": "0018_chubby_fantastic_four",
+      "breakpoints": true
     }
   ]
 }

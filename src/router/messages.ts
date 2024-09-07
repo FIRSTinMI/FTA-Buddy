@@ -1,12 +1,13 @@
 import { z } from "zod";
 import { eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
 import { db } from "../db/db";
-import { matchLogs, messages, users } from "../db/schema";
+import { matchLogs, messages, pushSubscriptions, users } from "../db/schema";
 import { desc, eq, inArray, or, and } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { Message, Profile, TeamList, Ticket, TicketMessage } from "../../shared/types";
 import { getEvent } from "../util/get-event";
 import { observable } from "@trpc/server/observable";
+import { sendNotification } from "../util/push-notifiactions";
 
 export interface TicketPost {
     type: "create" | "message" | "ticketReply" | "assign" | "status";
@@ -108,6 +109,12 @@ export const messagesRouter = router({
         }).returning();
 
         event.ticketEmitter.emit('create', { ...insert[0], user: { username: ctx.user.username, id: ctx.user.id, role: ctx.user.role } });
+
+        sendNotification(event.users, {
+            title: `New Ticket: ${input.team} ${input.summary}`,
+            body: input.message,
+            icon: "https://ftabuddy.com/app/assignment.png",
+        })
 
         return insert[0];
     }),
@@ -505,4 +512,23 @@ export const messagesRouter = router({
             };
         });
     }),
+
+    registerPush: protectedProcedure.input(z.object({
+        endpoint: z.string(),
+        expirationTime: z.date(),
+        keys: z.object({
+            p256dh: z.string(),
+            auth: z.string()
+        })
+    })).query(async ({ input, ctx }) => {
+        db.insert(pushSubscriptions).values({
+            endpoint: input.endpoint,
+            expirationTime: input.expirationTime,
+            keys: input.keys,
+            user_id: ctx.user.id
+        }).execute();
+
+        return true;
+    }),
+
 });

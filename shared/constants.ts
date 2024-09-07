@@ -154,3 +154,17 @@ export const DEFAULT_MONITOR: MonitorFrame = {
         warnings: []
     }
 };
+export const MCS_LOOKUP_TABLE: { [k: number]: number; } = {
+    68.8: 0,
+    137.6: 1,
+    206.5: 2,
+    275.3: 3,
+    412.9: 4,
+    550.6: 5,
+    619.4: 6,
+    688.2: 7,
+    825.9: 8,
+    917.6: 9,
+    1032.4: 10,
+    1147.1: 11
+};

@@ -63,7 +63,7 @@
             updated.push({ team: team, key: "radioProgrammed", value: true });
         }
 
-        void trpc.checklist.update.query(updated);
+        await trpc.checklist.update.query(updated);
     }
 
     let subscription: ReturnType<typeof trpc.checklist.subscription.subscribe>;

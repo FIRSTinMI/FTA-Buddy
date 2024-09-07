@@ -21,6 +21,7 @@
     import { formatTimeNoAgo } from "../util/formatTime";
     import Spinner from "../components/Spinner.svelte";
     import { json2csv } from "json-2-csv";
+	import { MCS_LOOKUP_TABLE } from "../../../shared/constants";
 
     export let matchid: string;
     export let station: ROBOT | string;
@@ -41,6 +42,10 @@
     matchPromise.then((m) => {
         match = m;
         log = m.log;
+        for (let frame of log) {
+            if (!frame.txMCS && frame.txRate) frame.txMCS = MCS_LOOKUP_TABLE[frame.txRate];
+            if (!frame.rxMCS && frame.rxRate) frame.rxMCS = MCS_LOOKUP_TABLE[frame.rxRate];
+        }
         team = m.team;
         actualStation = m.station;
     });
@@ -201,15 +206,15 @@
                                             : 0})"
                                         >{frame.battery.toFixed(2)}</TableBodyCell
                                     >
-                                {:else if ["averageTripTime", "lostPackets", "sentPackets", "signal", "noise"].includes(col)}
+                                {:else if ["averageTripTime", "lostPackets", "sentPackets", "signal", "noise", "txMCS", "rxMCS"].includes(col)}
                                         <TableBodyCell
-                                        >{frame.averageTripTime.toFixed(
+                                        >{frame[col].toFixed(
                                             0,
                                         )}</TableBodyCell
                                     >
-                                {:else if ["dataRateTotal", "txRate", "txMCS", "rxRate", "rxMCS"].includes(col)}
+                                {:else if ["dataRateTotal", "txRate", "rxRate"].includes(col)}
                                     <TableBodyCell
-                                    >{frame.dataRateTotal.toFixed(
+                                    >{frame[col].toFixed(
                                         2,
                                     )}</TableBodyCell>
                                 {:else}

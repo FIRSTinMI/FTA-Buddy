@@ -50,8 +50,8 @@ export const eventRouter = router({
 
         const eventList = ctx.user.events as string[];
 
-        void db.update(users).set({ events: [...eventList, event.code] }).where(eq(users.id, ctx.user.id));
-        void db.update(events).set({ users: [...(event.users as number[]), ctx.user.id] }).where(eq(events.code, event.code));
+        await db.update(users).set({ events: [...eventList, event.code] }).where(eq(users.id, ctx.user.id));
+        await db.update(events).set({ users: [...(event.users as number[]), ctx.user.id] }).where(eq(events.code, event.code));
 
         return event;
     }),

@@ -35,28 +35,28 @@ export const cycleRouter = router({
 
         if (input.type === 'lastCycleTime' && input.lastCycleTime) {
             event.monitorFrame.lastCycleTime = input.lastCycleTime;
-            void db.update(cycleLogs).set({ calculated_cycle_time: input.lastCycleTime }).where(eq(cycleLogs.id, cycle.id)).execute();
+            await db.update(cycleLogs).set({ calculated_cycle_time: input.lastCycleTime }).where(eq(cycleLogs.id, cycle.id)).execute();
         } else {
             switch (input.type) {
                 case 'prestart':
                     event.lastPrestartDone = new Date();
-                    void db.update(cycleLogs).set({ prestart_time: event.lastPrestartDone }).where(eq(cycleLogs.id, cycle.id)).execute();
+                    await db.update(cycleLogs).set({ prestart_time: event.lastPrestartDone }).where(eq(cycleLogs.id, cycle.id)).execute();
                     break;
                 case 'start':
                     event.lastMatchStart = new Date();
-                    void db.update(cycleLogs).set({ start_time: event.lastMatchStart }).where(eq(cycleLogs.id, cycle.id)).execute();
+                    await db.update(cycleLogs).set({ start_time: event.lastMatchStart }).where(eq(cycleLogs.id, cycle.id)).execute();
                     break;
                 case 'end':
                     event.lastMatchEnd = new Date();
-                    void db.update(cycleLogs).set({ end_time: event.lastMatchEnd }).where(eq(cycleLogs.id, cycle.id)).execute();
+                    await db.update(cycleLogs).set({ end_time: event.lastMatchEnd }).where(eq(cycleLogs.id, cycle.id)).execute();
                     break;
                 case 'refsDone':
                     event.lastMatchRefDone = new Date();
-                    void db.update(cycleLogs).set({ ref_done_time: event.lastMatchRefDone }).where(eq(cycleLogs.id, cycle.id)).execute();
+                    await db.update(cycleLogs).set({ ref_done_time: event.lastMatchRefDone }).where(eq(cycleLogs.id, cycle.id)).execute();
                     break;
                 case 'scoresPosted':
                     event.lastMatchScoresPosted = new Date();
-                    void db.update(cycleLogs).set({ scores_posted_time: event.lastMatchScoresPosted }).where(eq(cycleLogs.id, cycle.id)).execute();
+                    await db.update(cycleLogs).set({ scores_posted_time: event.lastMatchScoresPosted }).where(eq(cycleLogs.id, cycle.id)).execute();
                     break;
             };
         }
@@ -213,8 +213,6 @@ async function getAverageCycleTime(eventCode: string) {
         .filter(cycle => cycle.calculated_cycle_time !== null)
         .map(cycle => cycleTimeToMS(cycle.calculated_cycle_time ?? '0:00'));
 
-    console.log({ cycleTimes });
-
     if (cycleTimes.length < 3) {
         return 8 * 60 * 1000;
     }
@@ -233,8 +231,6 @@ async function getAverageCycleTime(eventCode: string) {
 
     // Filter out the outliers
     const filteredTimes = cycleTimes.filter(time => (time ? (time >= lowerBound && time <= upperBound) : false));
-
-    console.log({ filteredTimes });
 
     if (filteredTimes.length < 3) {
         return 8 * 60 * 1000;

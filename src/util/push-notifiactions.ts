@@ -1,4 +1,4 @@
-import webpush, { SendResult } from 'web-push';
+//import webpush, { SendResult } from 'web-push';
 import 'dotenv/config';
 import { db } from '../db/db';
 import { inArray } from 'drizzle-orm';
@@ -8,11 +8,11 @@ const publicVapidKey = process.env.VAPID_PUBLIC_KEY || '';
 const privateVapidKey = process.env.VAPID_PRIVATE_KEY || '';
 
 export function initializePushNotifications() {
-    webpush.setVapidDetails(
-        'mailto:me@filipkin.com',
-        publicVapidKey,
-        privateVapidKey,
-    );
+    // webpush.setVapidDetails(
+    //     'mailto:me@filipkin.com',
+    //     publicVapidKey,
+    //     privateVapidKey,
+    // );
 };
 
 export interface NotificationData {
@@ -25,11 +25,11 @@ export async function sendNotification(users: number[], data: NotificationData) 
     const subscriptions = await db.query.pushSubscriptions.findMany({ where: inArray(pushSubscriptions.user_id, users) });
 
 
-    const notifications: Promise<SendResult>[] = [];
-    for (let subscription of subscriptions) {
-        // @ts-ignore
-        notifications.push(webpush.sendNotification(subscription, JSON.stringify(data)));
-    }
+    // const notifications: Promise<SendResult>[] = [];
+    // for (let subscription of subscriptions) {
+    //     // @ts-ignore
+    //     notifications.push(webpush.sendNotification(subscription, JSON.stringify(data)));
+    // }
 
-    await Promise.all(notifications);
+    // await Promise.all(notifications);
 }

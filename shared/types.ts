@@ -95,7 +95,7 @@ export const MatchStateMap: { [key in FieldState]: MatchState } = {
     [FieldState.MATCH_RUNNING_TELEOP]: MatchState.RUNNING,
     [FieldState.MATCH_TRANSITIONING]: MatchState.RUNNING,
     [FieldState.MATCH_RUNNING_AUTO]: MatchState.RUNNING,
-    [FieldState.MATCH_READY]: MatchState.RUNNING,
+    [FieldState.MATCH_READY]: MatchState.PRESTART,
     [FieldState.PRESTART_COMPLETED]: MatchState.PRESTART,
     [FieldState.PRESTART_INITIATED]: MatchState.PRESTART,
     [FieldState.READY_TO_PRESTART]: MatchState.PRESTART,

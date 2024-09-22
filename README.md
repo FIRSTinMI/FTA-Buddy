@@ -16,6 +16,16 @@ It has since evolved to have a more mobile friendly field monitor, custom flashc
 The field monitor uses a Chrome extension installed on a computer on the field network to scrape data. The extension sends the data to a locally run server that broadcasts it to the app through a websocket. It also sends that data to the cloud server, that way you can give volunteers a portable field monitor without having them on the field network. Plus, having fewer SignalR connections is always a good thing.
 The cloud server also enables the notes functionality. The notes are also persistent between events, so if you have a team with a weird problem you can leave a note and the FTA at their next event can benefit!
 
+## Getting Started
+
+- Install the extension from the [Chrome webstore](https://chrome.google.com/webstore/detail/fta-buddy/kddnhihfpfnehnnhbkfajdldlgigohjc)
+- Go to [ftabuddy.com](https://ftabuddy.com/) on a computer connected to the field network.
+- Click Host *and optionally login first*.
+- Enter the event code (e.g. 2024miket) and a passcode of your choosing, and click create event
+- Visit [ftabuddy.com](https://ftabuddy.com/) on your phone, add/install the web app to your home screen for the best experience
+- Login or create an account for yourself, then connect to the event with the same code and pin!
+
+
 ### Full Feature List
 - Dark theme 
 - Mobile optimized 
@@ -39,16 +49,6 @@ The cloud server also enables the notes functionality. The notes are also persis
 
 **Coming soon:**
 - Tracking connection time per team, and display 🕜 emoji when there's a team that takes 1 std deviation longer than the average team to connect 
-- Pipe audio alerts directly into event radios
-
-## Getting Started
-
-- Install the extension from the [Chrome webstore](https://chrome.google.com/webstore/detail/fta-buddy/kddnhihfpfnehnnhbkfajdldlgigohjc)
-- Go to [ftabuddy.com](https://ftabuddy.com/) on a computer connected to the field network.
-- Click Host *and optionally login first*.
-- Enter the event code (e.g. 2024miket) and a passcode of your choosing, and click create event
-- Visit [ftabuddy.com](https://ftabuddy.com/) on your phone, add/install the web app to your home screen for the best experience
-- Login or create an account for yourself, then connect to the event with the same code and pin!
 
 ## License
 

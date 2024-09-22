@@ -206,7 +206,7 @@ export const cycleRouter = router({
 });
 
 async function getAverageCycleTime(eventCode: string) {
-    const cycles = await db.query.cycleLogs.findMany({ where: eq(cycleLogs.event, eventCode) });
+    const cycles = await db.query.cycleLogs.findMany({ where: eq(cycleLogs.event, eventCode), limit: 15, orderBy: desc(cycleLogs.start_time) });
 
     // Extract the cycle times in milliseconds
     const cycleTimes = cycles
@@ -230,7 +230,7 @@ async function getAverageCycleTime(eventCode: string) {
     const upperBound = q3 + 1.5 * iqr;
 
     // Filter out the outliers
-    const filteredTimes = cycleTimes.filter(time => (time ? (time >= lowerBound && time <= upperBound) : false));
+    const filteredTimes = cycleTimes.filter(time => (time ? (time >= lowerBound && time <= upperBound) : false)).slice(0, 6);
 
     if (filteredTimes.length < 3) {
         return 8 * 60 * 1000;

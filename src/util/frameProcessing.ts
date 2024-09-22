@@ -130,6 +130,9 @@ export async function processTeamCycles(eventCode: string, frame: MonitorFrame, 
         event.teamCycleTracking = {};
     }
 
+    // Make sure to clear the cycle tracking if we re-prestart
+    if (frame.field === FieldState.PRESTART_INITIATED) event.teamCycleTracking = {};
+
     // Only process in prestart
     if (MatchStateMap[frame.field] !== MatchState.PRESTART) return;
 
@@ -148,22 +151,26 @@ export async function processTeamCycles(eventCode: string, frame: MonitorFrame, 
 
         if (!cycle) throw new Error('You should never see this error, but if you do look at the processTeamCycles function in util/frameProcessing');
 
-        if (change.type === StateChangeType.RisingEdge && change.key === 'ds' && change.robot.ds === DSState.GREEN) {
-            if (!cycle.firstDS) cycle.firstDS = change.robot.lastChange || new Date();
-            cycle.lastDS = change.robot.lastChange || new Date();
-            cycle.timeDS = cycle.lastDS.getTime() - event.teamCycleTracking.prestart.getTime();
-        } else if (change.type === StateChangeType.RisingEdge && change.key === 'radio') {
-            if (!cycle.firstRadio) cycle.firstRadio = change.robot.lastChange || new Date();
-            cycle.lastRadio = change.robot.lastChange || new Date();
-            cycle.timeRadio = cycle.lastRadio.getTime() - event.teamCycleTracking.prestart.getTime();
-        } else if (change.type === StateChangeType.RisingEdge && change.key === 'rio') {
-            if (!cycle.firstRio) cycle.firstRio = change.robot.lastChange || new Date();
-            cycle.lastRio = change.robot.lastChange || new Date();
-            cycle.timeRio = cycle.lastRio.getTime() - event.teamCycleTracking.prestart.getTime();
-        } else if (change.type === StateChangeType.RisingEdge && change.key === 'code') {
-            if (!cycle.firstCode) cycle.firstCode = change.robot.lastChange || new Date();
-            cycle.lastCode = change.robot.lastChange || new Date();
-            cycle.timeCode = cycle.lastCode.getTime() - event.teamCycleTracking.prestart.getTime();
+        if (change.type !== StateChangeType.RisingEdge || change.robot.ds !== DSState.GREEN) return;
+
+        switch (change.key) {
+            case 'code':
+                if (!cycle.firstCode) cycle.firstCode = change.robot.lastChange || new Date();
+                cycle.lastCode = change.robot.lastChange || new Date();
+                cycle.timeCode = cycle.lastCode.getTime() - event.teamCycleTracking.prestart.getTime();
+            case 'rio':
+                if (!cycle.firstRio) cycle.firstRio = change.robot.lastChange || new Date();
+                cycle.lastRio = change.robot.lastChange || new Date();
+                cycle.timeRio = cycle.lastRio.getTime() - event.teamCycleTracking.prestart.getTime();
+            case 'radio':
+                if (!cycle.firstRadio) cycle.firstRadio = change.robot.lastChange || new Date();
+                cycle.lastRadio = change.robot.lastChange || new Date();
+                cycle.timeRadio = cycle.lastRadio.getTime() - event.teamCycleTracking.prestart.getTime();
+                break;
+            case 'ds':
+                if (!cycle.firstDS) cycle.firstDS = change.robot.lastChange || new Date();
+                cycle.lastDS = change.robot.lastChange || new Date();
+                cycle.timeDS = cycle.lastDS.getTime() - event.teamCycleTracking.prestart.getTime();
         }
     }
 }

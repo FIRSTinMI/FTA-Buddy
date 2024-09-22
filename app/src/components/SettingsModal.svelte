@@ -5,6 +5,7 @@
 	import Spinner from "./Spinner.svelte";
 	import { toast } from "../util/toast";
 	import { subscribeToPush } from "../util/notifications";
+	import { audioQueuer } from "../field-monitor";
 
 	export let settingsOpen = false;
 
@@ -28,12 +29,12 @@
 				Notification.requestPermission().then(async (permission) => {
 					if (permission === "granted") {
 						updateSettings();
-                        await subscribeToPush();
+						await subscribeToPush();
 					}
 				});
 			} else {
 				updateSettings();
-                await subscribeToPush();
+				await subscribeToPush();
 			}
 		} catch (e) {
 			console.error(e);
@@ -41,20 +42,38 @@
 		}
 	}
 
-    let rangeSlider: HTMLInputElement | undefined;
-    $: ((open: boolean) => {
-        if (!open || rangeSlider) return;
-        setTimeout(() => {
-            rangeSlider = document.querySelector('.range') as HTMLInputElement;
-            console.log('range slider', rangeSlider);
-            if (rangeSlider) {
-                rangeSlider.addEventListener('mousemove', (evt) => {
-                    if (!rangeSlider) return;
-                    updateSettings();
-                });
-            }
-        }, 100);
-    })(settingsOpen);
+	let rangeSlider: HTMLInputElement | undefined;
+	$: ((open: boolean) => {
+		if (!open || rangeSlider) return;
+		setTimeout(() => {
+			rangeSlider = document.querySelector(".range") as HTMLInputElement;
+			console.log("range slider", rangeSlider);
+			if (rangeSlider) {
+				rangeSlider.addEventListener("mousemove", (evt) => {
+					if (!rangeSlider) return;
+					updateSettings();
+				});
+			}
+		}, 100);
+	})(settingsOpen);
+
+	let testingMusic = false;
+	let musicTestTimeout: NodeJS.Timeout | undefined;
+	function testMusic() {
+		testingMusic = true;
+		audioQueuer.playMusic([0]);
+		clearTimeout(musicTestTimeout);
+		musicTestTimeout = setTimeout(() => {
+			testingMusic = false;
+			audioQueuer.stopMusic();
+		}, 10e3);
+	}
+
+	function stopMusic() {
+		testingMusic = false;
+		audioQueuer.stopMusic();
+		clearTimeout(musicTestTimeout);
+	}
 </script>
 
 {#if loading}
@@ -69,20 +88,22 @@
 				<p class="text-gray-700 dark:text-gray-400">General</p>
 				<Toggle class="toggle" bind:checked={settings.vibrations} on:change={updateSettings}>Vibrations</Toggle>
 				<Toggle class="toggle" bind:checked={settings.notifications} on:change={requestNotificationPermissions}>Ticket Notifications</Toggle>
-				<Toggle class="toggle" bind:checked={settings.robotNotifications} on:change={requestNotificationPermissions}>Robot Connection Notifications</Toggle>
+				<Toggle class="toggle" bind:checked={settings.robotNotifications} on:change={requestNotificationPermissions}
+					>Robot Connection Notifications</Toggle
+				>
 				<Toggle class="toggle" bind:checked={settings.fimSpecifics} on:change={updateSettings}>FIM Specific Field Manuals</Toggle>
 			</div>
 			<div class="grid grid-cols-subgrid gap-2 row-span-3">
 				<p class="text-gray-700 dark:text-gray-400">Audio Alerts</p>
 				<Toggle class="toggle" bind:checked={settings.soundAlerts} on:change={updateSettings}>Robot Connection</Toggle>
 				<Toggle class="toggle" bind:checked={settings.fieldGreen} on:change={updateSettings}>Field Green</Toggle>
-            </div>
-            <div class="grid grid-cols-subgrid gap-2 row-span-5">
+			</div>
+			<div class="grid grid-cols-subgrid gap-2 row-span-6">
 				<p class="text-gray-700 dark:text-gray-400">Music</p>
 				<Select bind:value={settings.musicType} on:change={updateSettings}>
-                    <option value="none">None</option>
+					<option value="none">None</option>
 					<option value="jazz">Jazz</option>
-                    <option value="lofi">Lofi</option>
+					<option value="lofi">Lofi</option>
 				</Select>
 				<Label>Volume</Label>
 				<div class="flex">
@@ -93,17 +114,19 @@
 						on:change={updateSettings}
 						step="1"
 						class="range mt-2 bg-gray-400"
-						disabled={settings.musicType === 'none'}
+						disabled={settings.musicType === "none"}
 					/>
 					<div class="w-12 text-right text-gray-700 dark:text-gray-400">{settings.musicVolume}%</div>
 				</div>
+				<Button on:click={() => (testingMusic ? stopMusic : testMusic)()} size="xs" color={testingMusic ? "dark" : "primary"}
+					>{testingMusic ? "Stop" : "Test"} Music</Button
+				>
 			</div>
 			<div class="grid grid-cols-subgrid gap-2 row-span-4">
 				<p class="text-gray-700 dark:text-gray-400">Appearance</p>
-                <Toggle class="toggle" bind:checked={settings.darkMode} on:change={updateSettings}>Dark Theme</Toggle>
+				<Toggle class="toggle" bind:checked={settings.darkMode} on:change={updateSettings}>Dark Theme</Toggle>
 				<Toggle class="toggle" bind:checked={settings.roundGreen} on:change={updateSettings}>Round Green Indicators</Toggle>
 				<Toggle class="toggle" bind:checked={settings.inspectionAlerts} on:change={updateSettings}>🔍 Missing inspection icon on field monitor</Toggle>
-				
 			</div>
 			<div class="grid grid-cols-subgrid gap-2 row-span-3">
 				<p class="text-gray-700 dark:text-gray-400">Developer</p>

@@ -136,7 +136,7 @@
     id="{getKey(team)}-battery"
 >
     <div class="h-full text-center top-0 px-0.5 aspect-square">
-        <Graph data={parsedData} min={0} max={8} time={20} />
+        <Graph data={parsedData} min={6} max={14} time={20} />
     </div>
     <div
         class="absolute w-full bottom-0 p-2 monitor-battery text-md sm:text-xl lg:text-4xl {fullscreen && "lg:text-5xl"} tabular-nums"
@@ -147,10 +147,14 @@
 <button
     class="fieldmonitor-square-height hidden lg:flex p-0 relative aspect-square max-w-8 lg:max-w-32"
     on:click={detailView}
+    style="background-color: rgba(255,0,0,{team.ping >= 0 &&
+    team.ping < 100
+        ? (0.00005 * team.ping ** 2)
+        : (team.ping < 255 ? 0.5 : 0)})"
     id="{getKey(team)}-ping"
 >
     <div class="h-full text-center top-0 px-0.5 aspect-square">
-        <Graph data={parsedPingData} min={0} max={75} time={20} />
+        <Graph data={parsedPingData} min={0} max={25} time={20} />
     </div>
     <div
         class="absolute w-full bottom-0 p-2 monitor-battery text-md sm:text-xl lg:text-4xl {fullscreen && "lg:text-5xl"} tabular-nums"

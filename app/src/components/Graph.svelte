@@ -9,14 +9,14 @@
     export let time = 20;
 
     // scales
-    const xScale = scaleLinear().domain([0, time]).range([5, 95]);
+    const xScale = scaleLinear().domain([0, time]).range([0, 90]);
 
-    const yScale = scaleLinear().domain([min, max]).range([5, 75]);
+    const yScale = scaleLinear().domain([min, max]).range([0, 100]);
 
     // the path generator
     const pathLine = line()
         .x((d) => xScale(d.time))
-        .y((d) => yScale(14 - d.data))
+        .y((d) => yScale((max + min) - d.data))
         .curve(curveBasis);
 </script>
 

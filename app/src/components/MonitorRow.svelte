@@ -24,6 +24,7 @@
     $: {
         team = monitorFrame[station];
         parsedData = frameHandler.getHistory(station, 'battery', 20).map((d, i) => ({ time: i, data: d as number }));
+        parsedPingData = frameHandler.getHistory(station, 'ping', 20).map((d, i) => ({ time: i, data: d as number }));
         signalData = processSignalStrengthForGraph(frameHandler
         .getHistory(station, "signal", 20) as number[]);
     }
@@ -54,6 +55,7 @@
     };
 
     let parsedData = frameHandler.getHistory(station, 'battery', 20).map((d, i) => ({ time: i, data: d as number }));
+    let parsedPingData = frameHandler.getHistory(station, 'ping', 20).map((d, i) => ({ time: i, data: d as number }));
     let signalData = processSignalStrengthForGraph(frameHandler
         .getHistory(station, "signal", 20) as number[]);
 </script>
@@ -142,7 +144,20 @@
         {team.battery?.toFixed(1)}v
     </div>
 </button>
-<button on:click={() => detailView} class="fieldmonitor-square-height hidden lg:flex items-end pb-2 justify-center text-md sm:text-xl lg:text-4xl {fullscreen && "lg:text-5xl"} tabular-nums" id="{getKey(team)}-ping">{team.ping}</button>
+<button
+    class="fieldmonitor-square-height hidden lg:flex p-0 relative aspect-square max-w-8 lg:max-w-32"
+    on:click={detailView}
+    id="{getKey(team)}-ping"
+>
+    <div class="h-full text-center top-0 px-0.5 aspect-square">
+        <Graph data={parsedPingData} min={0} max={75} time={20} />
+    </div>
+    <div
+        class="absolute w-full bottom-0 p-2 monitor-battery text-md sm:text-xl lg:text-4xl {fullscreen && "lg:text-5xl"} tabular-nums"
+    >
+        {team.ping}ms
+    </div>
+</button>
 <button on:click={() => detailView} class="fieldmonitor-square-height hidden lg:flex items-end pb-2 justify-center text-md sm:text-xl lg:text-4xl {fullscreen && "lg:text-5xl"} tabular-nums" id="{getKey(team)}-bwu">
     {team.bwu.toFixed(2)}
 </button>

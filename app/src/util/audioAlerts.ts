@@ -65,24 +65,24 @@ const audioClips: AudioClips = {
 
 const musicClips: MusicClips = {
     jazz: [
-        new Audio('/app/music/jazz0.mp3'),
-        new Audio('/app/music/jazz1.mp3'),
-        new Audio('/app/music/jazz2.mp3'),
-        new Audio('/app/music/jazz3.mp3'),
-        new Audio('/app/music/jazz4.mp3'),
-        new Audio('/app/music/jazz5.mp3'),
-        new Audio('/app/music/jazz6.mp3')
+        new Audio('/app/music/jazz0.ogg'),
+        new Audio('/app/music/jazz1.ogg'),
+        new Audio('/app/music/jazz2.ogg'),
+        new Audio('/app/music/jazz3.ogg'),
+        new Audio('/app/music/jazz4.ogg'),
+        new Audio('/app/music/jazz5.ogg'),
+        new Audio('/app/music/jazz6.ogg')
     ],
     lofi: [
-        new Audio('/app/music/lofi0.mp3'),
-        new Audio('/app/music/lofi1.mp3'),
-        new Audio('/app/music/lofi2.mp3'),
-        new Audio('/app/music/lofi3.mp3'),
-        new Audio('/app/music/lofi4.mp3'),
-        new Audio('/app/music/lofi5.mp3'),
-        new Audio('/app/music/lofi6.mp3'),
-        new Audio('/app/music/lofi7.mp3'),
-        new Audio('/app/music/lofi8.mp3')
+        new Audio('/app/music/lofi0.ogg'),
+        new Audio('/app/music/lofi1.ogg'),
+        new Audio('/app/music/lofi2.ogg'),
+        new Audio('/app/music/lofi3.ogg'),
+        new Audio('/app/music/lofi4.ogg'),
+        new Audio('/app/music/lofi5.ogg'),
+        new Audio('/app/music/lofi6.ogg'),
+        new Audio('/app/music/lofi7.ogg'),
+        new Audio('/app/music/lofi8.ogg')
     ],
 }
 

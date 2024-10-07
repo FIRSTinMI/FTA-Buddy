@@ -1,10 +1,9 @@
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { DSState, FieldState, MatchState, MatchStateMap, MonitorFrame, PartialMonitorFrame, ROBOT, StateChange, StateChangeType, TeamInfo, TeamWarnings } from "../../shared/types";
 import { db } from "../db/db";
-import { events, teamCycleLogs } from "../db/schema";
+import { events, matchLogs, messages, teamCycleLogs } from "../db/schema";
 import { getEvent } from "./get-event";
 import { randomUUID } from "crypto";
-import { TeamCycleLog } from "../db/schema";
 
 export function detectStatusChange(currentFrame: PartialMonitorFrame, previousFrame: MonitorFrame | null) {
     const changes: StateChange[] = [];
@@ -74,7 +73,7 @@ export async function processFrameForTeamData(eventCode: string, frame: MonitorF
     return false;
 }
 
-export async function processTeamWarnings(eventCode: string, frame: MonitorFrame) {
+export async function processTeamWarnings(eventCode: string, frame: MonitorFrame, previousFrame: MonitorFrame) {
     const event = await getEvent('', eventCode);
 
     for (let station in ROBOT) {
@@ -85,6 +84,50 @@ export async function processTeamWarnings(eventCode: string, frame: MonitorFrame
         }
         if (!event.checklist[team.number].radioProgrammed) {
             team.warnings.push(TeamWarnings.RADIO_NOT_FLASHED);
+        }
+
+        // The ticket warning is expensive on database transactions so only run it one time when prestart completes
+        if (frame.field === FieldState.PRESTART_COMPLETED && previousFrame.field === FieldState.PRESTART_INITIATED) {
+            const teamTickets = await db.select()
+                .from(messages)
+                .where(and(
+                    eq(messages.team, team.number.toString()),
+                    eq(messages.event_code, event.code),
+                    eq(messages.is_ticket, true)
+                )).orderBy(messages.closed_at);
+
+            const openTicket = teamTickets.find(ticket => ticket.is_open);
+            if (openTicket) {
+                team.warnings.push(TeamWarnings.OPEN_TICKET);
+            } else {
+                // Find what their last match was
+                const previousMatch = await db.select()
+                    .from(teamCycleLogs)
+                    .where(and(
+                        eq(teamCycleLogs.team, team.number),
+                        eq(teamCycleLogs.event, event.code)
+                    ))
+                    .orderBy(teamCycleLogs.prestart)
+                    .limit(1);
+
+                const recentlyClosedTickets = teamTickets.filter(ticket => !ticket.is_open);
+                const previousMatchStart = previousMatch[0].prestart;
+
+                for (let ticket of recentlyClosedTickets) {
+                    // If ticket is closed and there either is no previous match or the previous match start time was before the ticket closed time
+                    if (ticket.closed_at && (!previousMatchStart || ticket.closed_at > previousMatchStart)) {
+                        team.warnings.push(TeamWarnings.RECENT_TICKET);
+                        continue;
+                    }
+                }
+            }
+
+            // Then copy the warnings from the previous frame until the match ends
+        } else if (!(frame.field === FieldState.MATCH_OVER || frame.field === FieldState.MATCH_ABORTED)) {
+            const previousFrameWarnings = previousFrame[station as keyof MonitorFrame] as TeamInfo;
+
+            if (previousFrameWarnings.warnings.includes(TeamWarnings.OPEN_TICKET)) team.warnings.push(TeamWarnings.OPEN_TICKET);
+            if (previousFrameWarnings.warnings.includes(TeamWarnings.RECENT_TICKET)) team.warnings.push(TeamWarnings.RECENT_TICKET);
         }
     }
 

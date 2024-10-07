@@ -58,7 +58,9 @@ export interface TeamInfo {
 export enum TeamWarnings {
     NOT_INSPECTED,
     RADIO_NOT_FLASHED,
-    SLOW
+    SLOW,
+    OPEN_TICKET,
+    RECENT_TICKET
 }
 
 export enum ROBOT {

@@ -14,6 +14,7 @@ export const VERSIONS: { [key: string]: Version } = {
         <h1 class="text-lg font-bold">v2.5.5</h1>
         <ul>
         <li>Fix the graphs</li>
+        <li>Add a open ticket warning emoji</li>
         </ul>`,
         update: () => { }
     },

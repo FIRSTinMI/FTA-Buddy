@@ -3,7 +3,7 @@ import { DSState, EnableState, FieldState, MonitorFrame, StateChange } from "../
 import { eventProcedure, publicProcedure, router } from "../trpc";
 import { getEvent } from "../util/get-event";
 import { observable } from "@trpc/server/observable";
-import { detectStatusChange, processFrameForTeamData, processTeamCycles, processTeamWarnings } from "../util/frameProcessing";
+import { detectStatusChange, processFrameForTeamData, processTeamCycles, processTeamWarnings } from "../util/frame-processing";
 
 export interface Post {
     type: 'test';

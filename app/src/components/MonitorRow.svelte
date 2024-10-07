@@ -171,13 +171,17 @@
 <button on:click={() => detailView} class="fieldmonitor-square-height hidden lg:flex items-end pb-2 justify-center text-md sm:text-xl lg:text-4xl {fullscreen && "lg:text-5xl"} tabular-nums" id="{getKey(team)}-bwu">
     {team.bwu.toFixed(2)}
 </button>
-<button class="fieldmonitor-square-height hidden lg:flex p-0 relative aspect-square" on:click={() => detailView} id="{getKey(team)}-signal">
-    <div class="text-center top-0 px-0.5 aspect-square">
-        <Graph data={signalData} min={-140} max={100} time={20} />
-    </div>
-    <div class="absolute w-full bottom-0 p-2 monitor-signal text-md sm:text-lg lg:text-4xl {fullscreen && "lg:text-5xl"} tabular-nums">
-        {team.signal ? team.signal : 0}
-    </div>
+<button class="fieldmonitor-square-height hidden lg:flex md:aspect-square flex-col items-center justify-end" on:click={() => detailView} id="{getKey(team)}-signal">
+    {team.signal ?? ""}
+    {#if (team.signal ?? -100) > -60}
+        <Icon icon="mdi:signal-cellular-3" class="size-12 lg:size-20" />
+    {:else if (team.signal ?? -100) > -70}
+        <Icon icon="mdi:signal-cellular-2" class="size-12 lg:size-20" />
+    {:else if (team.signal ?? -100) > -80}
+        <Icon icon="mdi:signal-cellular-1" class="size-12 lg:size-20" />
+    {:else}
+        <Icon icon="mdi:signal-cellular-outline" class="size-12 lg:size-20" />
+    {/if}
 </button>
 <button on:click={() => detailView} class="fieldmonitor-square-height hidden lg:flex items-end pb-2 justify-center text-md sm:text-xl lg:text-4xl {fullscreen && "lg:text-5xl"} tabular-nums" id="{getKey(team)}-time">
     {(!team.code && team.lastChange) ? formatTimeShortNoAgoSecondsOnly(team.lastChange) : ""}

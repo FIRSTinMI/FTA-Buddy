@@ -15,6 +15,7 @@ export const VERSIONS: { [key: string]: Version } = {
         <ul>
         <li>Fix the graphs</li>
         <li>Add a open ticket warning emoji</li>
+        <li>New signal display</li>
         </ul>`,
         update: () => { }
     },

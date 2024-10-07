@@ -107,6 +107,7 @@
                 <li><span class="text-2xl">🕑</span>This team frequently takes a long time to get connected.</li>
                 <li><span class="text-2xl">🔍</span>Team has not passed inspection.</li>
                 <li><span class="text-2xl">🛜</span>Team has not flashed radio.</li>
+                <li><span class="text-2xl">📝</span>Open or recently closed ticket</li>
             </ul>
             <p>
                 The inspection and radio warnings are dependent on using the inspection and radio checklist features.

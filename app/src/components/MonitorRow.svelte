@@ -14,6 +14,7 @@
     import { processSignalStrengthForGraph } from "../util/signalStrengthProcessor";
 	import { settingsStore } from "../stores/settings";
 	import { formatTimeShortNoAgoSecondsOnly } from "../util/formatTime";
+	import Icon from "@iconify/svelte";
 
     export let station: ROBOT;
     export let monitorFrame: MonitorFrame;
@@ -66,28 +67,33 @@
     on:click={() => navigate("/notes/" + team.number)}
 >
     <p>{team.number}</p>
-    <p style="{window.innerWidth > 1000 && "letter-spacing: -8px;"}">
+    <p class="text-sm lg:text-3xl flex">
         {#if MatchStateMap[monitorFrame.field] === MatchState.PRESTART && team.lastChange}
             {#if team.ds === DSState.RED && team.lastChange.getTime() + 30e3 < Date.now()}
-                👀
+                <span>👀</span>
             {:else if team.ds === DSState.GREEN_X && team.lastChange.getTime() + 30e3 < Date.now()}
-                👀
+                <span>👀</span>
             {:else if !team.radio && team.lastChange.getTime() + 180e3 < Date.now()}
-                👀
+                <span>👀</span>
             {:else if !team.rio && team.lastChange.getTime() + 45e3 < Date.now()}
-                👀
+                <span>👀</span>
             {:else if !team.code && team.lastChange.getTime() + 30e3 < Date.now()}
-                👀
+                <span>👀</span>
             {/if}
         {/if}
         {#if team.warnings.includes(TeamWarnings.NOT_INSPECTED) && $settingsStore.inspectionAlerts}
-            🔍
+            <span>🔍</span>
         {/if}
         {#if team.warnings.includes(TeamWarnings.RADIO_NOT_FLASHED)}
-            🛜
+            <span>🛜</span>
         {/if}
         {#if team.warnings.includes(TeamWarnings.SLOW)}
-            🕑
+            <span>🕑</span>
+        {/if}
+        {#if team.warnings.includes(TeamWarnings.OPEN_TICKET)}
+            <span>📝</span>
+        {:else if team.warnings.includes(TeamWarnings.RECENT_TICKET)}
+            <span>📝</span>
         {/if}
     </p>
 </button>

@@ -10,6 +10,8 @@
     import { authStore } from "../stores/auth";
     import { toast } from "../util/toast";
 	import { startBackgroundSubscription, stopBackgroundSubscription } from "../util/notifications";
+	import NotesPolicy from "../components/NotesPolicy.svelte";
+	import { settingsStore } from "../stores/settings";
 
     export const newMessage = (message: any) => {
         console.log(message);
@@ -103,24 +105,35 @@
     let message: string = "";
 
     async function sendMessage(evt: SubmitEvent) {
-        evt.preventDefault();
         if (!team) return;
 
         if (message.trim().length < 1) {
             toast("Error Sending Message", "Message cannot be empty");
         };
 
-        await trpc.messages.addMessage.query({
-            message: message.trim(),
-            team,
-            eventToken: get(authStore).eventToken,
-        });
+        try {
+            if (!$settingsStore.acknowledgedNotesPolicy) {
+                notesPolicyElm.confirmPolicy();
+            }
+
+            await trpc.messages.addMessage.query({
+                message: message.trim(),
+                team,
+                eventToken: get(authStore).eventToken,
+            });
+        } catch (err: any) {
+            toast("Error Sending Message", err.message);
+        }
 
         message = "";
 
         getMessages(team);
     }
+    
+    let notesPolicyElm: NotesPolicy;
 </script>
+
+<NotesPolicy bind:this={notesPolicyElm} />
 
 <div class="container max-w-6xl mx-auto px-2 pt-2 h-full flex flex-col gap-2">
     <div class="grid grid-cols-2 gap-2">
@@ -185,7 +198,7 @@
         </div>
     </div>
     {#if view == "team" && team}
-        <form on:submit={sendMessage}>
+        <form on:submit|preventDefault={sendMessage}>
             <label for="chat" class="sr-only">Your message</label>
             <Alert color="dark" class="px-0 py-2">
                 <svelte:fragment slot="icon">

@@ -14,7 +14,6 @@
     let loading = false;
 
     async function createGoogleUser(evt: Event) {
-        evt.preventDefault();
         loading = true;
         const googleToken = get(authStore).googleToken;
 
@@ -66,7 +65,7 @@
     <h2 class="text-xl">Finish Creating Account</h2>
     <form
         class="flex flex-col space-y-2 mt-2 text-left"
-        on:submit={createGoogleUser}
+        on:submit|preventDefault={createGoogleUser}
     >
         <div>
             <Label for="username">Username</Label>

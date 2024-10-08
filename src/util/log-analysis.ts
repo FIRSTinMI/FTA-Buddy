@@ -158,6 +158,10 @@ export async function logAnalysisLoop() {
             const teamNumber: number = log[station];
             //@ts-ignore
             const logData = log[`${station}_log`] as FMSLogFrame[];
+
+            // Skip bypassed teams in test match
+            if (log.level === "None" && logData.length < 1) continue;
+
             const analyzedLog = analyzeLog(logData);
             await db.insert(analyzedLogs).values({
                 id: crypto.randomUUID(),

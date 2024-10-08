@@ -9,15 +9,23 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+    '2.5.6': {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.5.6</h1>
+        <ul>
+        <li>Radio will show green if a signal is detected, even if DS is still not connected</li>
+        <li>Add a open ticket warning emoji</li>
+        <li>New radio signal display</li>
+        <li>Finally fixed the link to a team's notes from the monitor</li>
+        <li>Event Dashboard</li>
+        </ul>`,
+        update: () => { }
+    },
     '2.5.5': {
         changelog: `
         <h1 class="text-lg font-bold">v2.5.5</h1>
         <ul>
-        <li>Radio will show green if a signal is detected, even if DS is still not connected</li>
         <li>Fix the graphs on the monitor</li>
-        <li>Add a open ticket warning emoji</li>
-        <li>New radio signal display</li>
-        <li>Finally fixed the link to a team's notes from the monitor</li>
         </ul>`,
         update: () => { }
     },

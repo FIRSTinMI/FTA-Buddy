@@ -30,6 +30,7 @@
 	import { startBackgroundSubscription } from "./util/notifications";
 	import { trpc } from "./main";
 	import UpdateToast from "./components/UpdateToast.svelte";
+	import EventDashboard from "./pages/EventDashboard.svelte";
 
     // Checking authentication
 
@@ -364,6 +365,18 @@
                     </svelte:fragment>
                 </SidebarItem>
                 <SidebarItem
+                    label="Event Dashboard"
+                    class="text-sm"
+                    on:click={() => {
+                        hideMenu = true;
+                        navigate("/app/dashboard");
+                    }}
+                >
+                    <svelte:fragment slot="icon">
+                        <Icon icon="mdi:television-guide" class="w-8 h-8" />
+                    </svelte:fragment>
+                </SidebarItem>
+                <SidebarItem
                     label="Fullscreen"
                     class="hidden md:flex text-sm"
                     on:click={(evt) => {
@@ -429,6 +442,7 @@
                 <Route path="/logs/:matchid" component={MatchLog} />
                 <Route path="/logs/:matchid/:station" component={StationLog} />
                 <Route path="/checklist" component={Checklist} />
+                <Route path="/dashboard" component={EventDashboard} />
             </div>
             <Route path="/login">
                 <Login {toast} />

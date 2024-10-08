@@ -5,7 +5,7 @@
   "scripts": {
     "start": "npx tsx ./src/index.ts",
     "dev": "concurrently \"set NODE_ENV=dev && nodemon ./\" \"cd app && npm run dev\" --kill-others --success first",
-    "build": "tsc; cd app; npm ci -D; npm run build",
+    "build": "tsc; cd app; bun i -D; npm run build",
     "generate-migration": "drizzle-kit generate:pg",
     "migrate": "ts-node src/db/migrate"
   },

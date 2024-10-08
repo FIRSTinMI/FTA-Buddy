@@ -5,7 +5,7 @@ import { analyzedLogs, logPublishing, matchLogs } from '../db/schema';
 import { and, asc, count, eq, or } from 'drizzle-orm';
 import { inferRouterOutputs } from '@trpc/server';
 import { randomUUID } from 'crypto';
-import { FMSLogFrame, ROBOT } from '../../shared/types';
+import { FMSLogFrame, ROBOT, DisconnectionEvent } from '../../shared/types';
 
 export type MatchRouterOutputs = inferRouterOutputs<typeof matchRouter>;
 
@@ -173,7 +173,7 @@ export const matchRouter = router({
             team: match[station] ?? 0,
             station: station,
             log: match[`${station}_log`] as FMSLogFrame[],
-            analysis: analysis?.events,
+            analysis: (analysis?.events ?? []) as DisconnectionEvent[],
             bypassed: analysis?.bypassed ?? false
         };
     }),

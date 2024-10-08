@@ -1,5 +1,6 @@
 <script lang="ts">
     import {
+        Alert,
         Button,
         Label,
         Modal,
@@ -18,10 +19,11 @@
     import LogGraph from "../components/LogGraph.svelte";
     import QrCode from "svelte-qrcode";
     import { authStore } from "../stores/auth";
-    import { formatTimeNoAgo } from "../../../shared/formatTime";
+    import { formatTimeNoAgo, formatTimeShortNoAgoSeconds } from "../../../shared/formatTime";
     import Spinner from "../components/Spinner.svelte";
     import { json2csv } from "json-2-csv";
 	import { MCS_LOOKUP_TABLE } from "../../../shared/constants";
+	import e from "cors";
 
     export let matchid: string;
     export let station: ROBOT | string;
@@ -113,6 +115,17 @@
         a.download = `${match.event.toUpperCase()}-${match.level === "None" ? "Test" : match.level}-${match.match_number}-${team}.csv`;
         a.click();
     }
+
+    const analysisEventColors: { [key: string]: "gray" | "red" | "yellow" | "green" | "indigo" | "purple" | "pink" | "blue" | "light" | "dark" | "default" | "dropdown" | "navbar" | "navbarUl" | "form" | "primary" | "orange" | "none" | undefined } = {
+        "RIO disconnect": "red",
+        "Radio disconnect": "red",
+        "DS disconnect": "red",
+        "Large spike in ping": "red",
+        "High BWU": "default",
+        "Sustained high ping": "yellow",
+        "Low signal": "yellow",
+        "Brownout": "dark"
+    }
 </script>
 
 <Modal bind:open={shareOpen} dismissable outsideclose>
@@ -155,6 +168,15 @@
         </div>
 
         <LogGraph {log} />
+
+        <div class="flex flex-col">
+            {#each match.analysis as logEvent}
+                <Alert class="text-left" color={analysisEventColors[logEvent.issue]} border>
+                    <span class="font-medium">{logEvent.issue}</span>
+                    Started at {logEvent.startTime}s lasting {formatTimeShortNoAgoSeconds(logEvent.duration * 1000)}
+                </Alert>
+            {/each}
+        </div>  
 
         <Label class="text-left">
             Select Columns

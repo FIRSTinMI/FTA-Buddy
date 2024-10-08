@@ -7,8 +7,9 @@ export function analyzeLog(log: FMSLogFrame[]): DisconnectionEvent[] {
     const events: DisconnectionEvent[] = [];
 
     // Disconnection tracking variables
-    let radioDisconnectStart: number | null = null;
+    let codeDisconnectStart: number | null = null;
     let rioDisconnectStart: number | null = null;
+    let radioDisconnectStart: number | null = null;
     let dsDisconnectStart: number | null = null;
 
     // New tracking variables for additional conditions
@@ -39,17 +40,17 @@ export function analyzeLog(log: FMSLogFrame[]): DisconnectionEvent[] {
         dataRateWindow.push(frame.dataRateTotal);
         const dataRateAvg = dataRateWindow.reduce((a, b) => a + b, 0) / dataRateWindow.length;
 
-        // Check for radio disconnection
-        if (!frame.radioLink && frame.dsLinkActive && radioDisconnectStart === null) {
-            radioDisconnectStart = currentTime;
-        } else if (frame.radioLink && radioDisconnectStart !== null) {
+        // Check for code disconnection
+        if (!frame.linkActive && frame.rioLink && frame.radioLink && frame.dsLinkActive && codeDisconnectStart === null) {
+            codeDisconnectStart = currentTime;
+        } else if (frame.linkActive && codeDisconnectStart !== null) {
             events.push({
-                issue: "Radio disconnect",
-                startTime: radioDisconnectStart,
+                issue: "Code disconnect",
+                startTime: codeDisconnectStart,
                 endTime: currentTime,
-                duration: radioDisconnectStart - currentTime,  // Reversed
+                duration: codeDisconnectStart - currentTime,  // Reversed
             });
-            radioDisconnectStart = null;
+            codeDisconnectStart = null;
         }
 
         // Check for rio disconnection (dependent on radio)
@@ -63,6 +64,19 @@ export function analyzeLog(log: FMSLogFrame[]): DisconnectionEvent[] {
                 duration: rioDisconnectStart - currentTime,  // Reversed
             });
             rioDisconnectStart = null;
+        }
+
+        // Check for radio disconnection
+        if (!frame.radioLink && frame.dsLinkActive && radioDisconnectStart === null) {
+            radioDisconnectStart = currentTime;
+        } else if (frame.radioLink && radioDisconnectStart !== null) {
+            events.push({
+                issue: "Radio disconnect",
+                startTime: radioDisconnectStart,
+                endTime: currentTime,
+                duration: radioDisconnectStart - currentTime,  // Reversed
+            });
+            radioDisconnectStart = null;
         }
 
         // Check for driver station disconnection
@@ -79,7 +93,7 @@ export function analyzeLog(log: FMSLogFrame[]): DisconnectionEvent[] {
         }
 
         // Battery Voltage - Brownout condition, ignore if RIO or radio is disconnected
-        if (frame.battery < 7 && brownoutStart === null && frame.rioLink && frame.radioLink) {
+        if (frame.battery < 7 && brownoutStart === null && frame.linkActive && frame.rioLink && frame.radioLink && frame.dsLinkActive) {
             brownoutStart = currentTime;
         } else if (frame.battery >= 7 && brownoutStart !== null) {
             events.push({
@@ -149,10 +163,10 @@ export function analyzeLog(log: FMSLogFrame[]): DisconnectionEvent[] {
         const currentEvent = events[i];
         const nextEvent = events[i + 1];
 
-        // Check if the two events are of the same type and less than 3 seconds apart
+        // Check if the two events are of the same type and less than 5 seconds apart
         if (
             currentEvent.issue === nextEvent.issue &&
-            currentEvent.endTime - nextEvent.startTime <= 3
+            currentEvent.endTime - nextEvent.startTime <= 5
         ) {
             // Merge the events by updating the endTime and duration of the current event
             currentEvent.endTime = nextEvent.endTime;

@@ -117,6 +117,7 @@
     }
 
     const analysisEventColors: { [key: string]: "gray" | "red" | "yellow" | "green" | "indigo" | "purple" | "pink" | "blue" | "light" | "dark" | "default" | "dropdown" | "navbar" | "navbarUl" | "form" | "primary" | "orange" | "none" | undefined } = {
+        "Code disconnect": "yellow",
         "RIO disconnect": "red",
         "Radio disconnect": "red",
         "DS disconnect": "red",
@@ -169,7 +170,7 @@
 
         <LogGraph {log} />
 
-        <div class="flex flex-col">
+        <div class="flex flex-col gap-2">
             {#each match.analysis as logEvent}
                 <Alert class="text-left" color={analysisEventColors[logEvent.issue]} border>
                     <span class="font-medium">{logEvent.issue}</span>

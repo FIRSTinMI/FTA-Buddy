@@ -31,6 +31,7 @@ import json from 'highlight.js/lib/languages/json';
 import { gfmHeadingId } from 'marked-gfm-heading-id';
 import { observable } from '@trpc/server/observable';
 import { initializePushNotifications } from './util/push-notifiactions';
+import { logAnalysisLoop } from './util/log-analysis';
 
 const port = parseInt(process.env.PORT || '3001');
 
@@ -234,7 +235,19 @@ app.get('/', (req, res) => {
     res.redirect('/app/');
 });
 
-connect().then(() => server.listen(port));
+
+connect().then(() => {
+    // Log analysis loop
+    new Promise(async () => {
+        while (true) {
+            await logAnalysisLoop();
+            await new Promise((resolve) => setTimeout(resolve, 20e3));
+        }
+    });
+
+    server.listen(port);
+});
+
 
 process.on('SIGTERM', () => {
     console.log('SIGTERM');

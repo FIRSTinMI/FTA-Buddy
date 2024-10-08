@@ -461,3 +461,10 @@ export interface ScheduleDetails {
     days: ScheduleBreakdown,
     lastPlayed: number;
 }
+
+export interface DisconnectionEvent {
+    issue: string;
+    startTime: number;
+    endTime: number;
+    duration: number;
+}

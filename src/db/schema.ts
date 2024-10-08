@@ -68,10 +68,23 @@ export const matchLogs = pgTable('match_logs', {
     blue3_log: jsonb('blue3_log').notNull().default('[]'),
     red1_log: jsonb('red1_log').notNull().default('[]'),
     red2_log: jsonb('red2_log').notNull().default('[]'),
-    red3_log: jsonb('red3_log').notNull().default('[]')
+    red3_log: jsonb('red3_log').notNull().default('[]'),
+    analyzed: boolean('analyzed').notNull().default(false),
 });
 
 export const MatchLog = typeof matchLogs.$inferInsert;
+
+export const analyzedLogs = pgTable('analyzed_logs', {
+    id: uuid('id').primaryKey(),
+    event: varchar('event').notNull(),
+    match_number: integer('match_number').notNull(),
+    play_number: integer('play_number').notNull(),
+    level: levelEnum('level').notNull(),
+    team: integer('team').notNull(),
+    alliance: varchar('alliance').notNull(),
+    events: jsonb('events').notNull().default('[]'),
+    bypassed: boolean('bypassed').notNull().default(false),
+});
 
 export const cycleLogs = pgTable('cycle_logs', { 
     id: uuid('id').primaryKey(),

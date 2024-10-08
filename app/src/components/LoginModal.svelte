@@ -16,7 +16,6 @@
     let loading = false;
 
     async function createUser(evt: Event) {
-        evt.preventDefault();
         if (password !== verifyPassword) {
             toastText = "Passwords do not match";
             return;
@@ -49,7 +48,6 @@
     }
 
     async function login(evt: Event) {
-        evt.preventDefault();
         loading = true;
         try {
             const response = await fetch("https://ftabuddy.com/login", {
@@ -106,7 +104,7 @@
             {#if createAccount}
                 <h2 class="text-xl">Create Account</h2>
                 <Button on:click={switchLoginCreate} size="xs">Or Login</Button>
-                <form class="flex flex-col space-y-2 mt-2" on:submit={createUser}>
+                <form class="flex flex-col space-y-2 mt-2" on:submit|preventDefault={createUser}>
                     <Input bind:value={username} placeholder="Username" bind:disabled={loading} />
                     <Input bind:value={password} type="password" placeholder="Password" bind:disabled={loading} />
                     <Input
@@ -121,7 +119,7 @@
             {:else}
                 <h2 class="text-xl">Login</h2>
                 <Button on:click={switchLoginCreate} size="xs">Or Create Account</Button>
-                <form class="flex flex-col space-y-2 mt-2" on:submit={login}>
+                <form class="flex flex-col space-y-2 mt-2" on:submit|preventDefault={login}>
                     <Input bind:value={username} placeholder="Username" bind:disabled={loading} />
                     <Input bind:value={password} type="password" placeholder="Password" bind:disabled={loading} />
                     <Button type="submit" bind:disabled={loading}>Login</Button>

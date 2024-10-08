@@ -6,6 +6,8 @@
     import { authStore } from "../stores/auth";
     import { toast } from "../util/toast";
     import { navigate } from "svelte-routing";
+	import NotesPolicy from "../components/NotesPolicy.svelte";
+	import { settingsStore } from "../stores/settings";
 
     export let team: number | undefined;
 
@@ -34,11 +36,13 @@
     }
 
     async function createTicket(evt: Event) {
-        evt.preventDefault();
-
         if (team === undefined || content.length === 0) return;
 
         try {
+            if (!$settingsStore.acknowledgedNotesPolicy) {
+                await notesPolicyElm.confirmPolicy();
+            }
+            
             const res = await trpc.messages.createTicket.query({ team: team, summary: ticketSummary, message: content, matchID: match, eventToken: get(authStore).eventToken });
             toast("Ticket created successfully", "success", "green-500");
             navigate("/app/ticket/" + res.id);
@@ -56,11 +60,15 @@
             window.history.back();
         }
     }
+
+    let notesPolicyElm: NotesPolicy;
 </script>
+
+<NotesPolicy bind:this={notesPolicyElm} />
 
 <div class="container mx-auto px-2 pt-2 h-full flex flex-col gap-2">
     <Button on:click={back} class="w-fit">Back</Button>
-    <form class="text-left flex flex-col gap-4" on:submit={createTicket}>
+    <form class="text-left flex flex-col gap-4" on:submit|preventDefault={createTicket}>
         <Label class="w-full text-left">
             Select Team
             <Select class="mt-2" items={teamOptions} bind:value={team} on:change={() => getMatchesForTeam(team)} />

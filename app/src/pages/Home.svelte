@@ -40,7 +40,7 @@
         monitorFrame = frameHandler.getFrame();
 
         loading = false;
-        
+            
         if (cycleSubscription) cycleSubscription.unsubscribe();
         cycleSubscription = trpc.cycles.subscription.subscribe({
                 eventToken: $authStore.eventToken, 

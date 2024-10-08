@@ -13,6 +13,8 @@
     import Message from "../components/Message.svelte";
 	import { onDestroy, onMount, tick } from "svelte";
 	import { startBackgroundSubscription, stopBackgroundSubscription } from "../util/notifications";
+	import { settingsStore } from "../stores/settings";
+	import NotesPolicy from "../components/NotesPolicy.svelte";
 
     export let id: string;
 
@@ -116,44 +118,51 @@
     let message: string = "";
 
     async function sendMessage(evt: SubmitEvent) {
-        evt.preventDefault();
-        
         if (message.trim().length < 1) {
             toast("Error Sending Message", "Message cannot be empty");
         };
 
         if (!ticket || !user) return;
 
-        await trpc.messages.addMessage.query({
-            message: message.trim(),
-            team: ticket.team,
-            ticketId: ticket.id,
-            eventToken: get(authStore).eventToken,
-        });
+        try {
+            if (!$settingsStore.acknowledgedNotesPolicy) {
+                await notesPolicyElm.confirmPolicy();
+            }
 
-        console.log({
-            id: 0,
-            message: message.trim(),
-            team: ticket.team.toString(),
-            user: user,
-            user_id: user.id,
-            event_code: get(eventStore).code,
-            created_at: new Date(),
-        });
+            await trpc.messages.addMessage.query({
+                message: message.trim(),
+                team: ticket.team,
+                ticketId: ticket.id,
+                eventToken: get(authStore).eventToken,
+            });
 
-        ticket.messages.push({
-            id: 0,
-            message: message.trim(),
-            team: ticket.team.toString(),
-            user: user,
-            user_id: user.id,
-            event_code: get(eventStore).code,
-            created_at: new Date(),
-        });
+            console.log({
+                id: 0,
+                message: message.trim(),
+                team: ticket.team.toString(),
+                user: user,
+                user_id: user.id,
+                event_code: get(eventStore).code,
+                created_at: new Date(),
+            });
 
-        message = "";
+            ticket.messages.push({
+                id: 0,
+                message: message.trim(),
+                team: ticket.team.toString(),
+                user: user,
+                user_id: user.id,
+                event_code: get(eventStore).code,
+                created_at: new Date(),
+            });
 
-        ticket = {...ticket};
+            message = "";
+
+            ticket = {...ticket};
+        } catch(err: any) {
+            toast("An error occurred while sending message", err.message);
+        }
+
         await tick();
         scrollToBottom();
     }
@@ -194,7 +203,10 @@
     onDestroy(() => {
         startBackgroundSubscription();
     });
+    let notesPolicyElm: NotesPolicy;
 </script>
+
+<NotesPolicy bind:this={notesPolicyElm} />
 
 <div class="container mx-auto px-2 pt-2 h-full flex flex-col gap-2 max-w-5xl">
     <Button on:click={back} class="w-fit">Back</Button>
@@ -250,7 +262,7 @@
                     {/each}
                 </div>
             </div>
-            <form on:submit={sendMessage}>
+            <form on:submit|preventDefault={sendMessage}>
                 <label for="chat" class="sr-only">Your message</label>
                 <Alert color="dark" class="px-0 py-2">
                     <svelte:fragment slot="icon">

@@ -31,7 +31,6 @@
     }
 
     function addNewFlashcard(evt: Event) {
-        evt.preventDefault();
         flashcards = [...flashcards, newFlashcard];
         flashcardsStore.set(flashcards);
         newFlashcard = "";
@@ -54,7 +53,7 @@
     </div>
     {#if addRemoveState}
         <p class="text-center mt-2">Click on a flashcard to remove it</p>
-        <form on:submit={addNewFlashcard} class="flex w-full space-x-2 items-end mb-2">
+        <form on:submit|preventDefault={addNewFlashcard} class="flex w-full space-x-2 items-end mb-2">
             <Label class="grow">
                 New Flashcard Text
                 <Input bind:value={newFlashcard} />

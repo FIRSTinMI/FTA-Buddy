@@ -64,8 +64,6 @@
     let loading = false;
 
     async function createEvent(evt: Event) {
-        evt.preventDefault();
-
         loading = true;
 
         try {
@@ -171,7 +169,7 @@
         <code class="bg-neutral-200 dark:bg-neutral-900 px-2 py-.75 rounded-lg">10.0.100.5</code>
         You can use FTA Buddy as your primary field monitor by enabling the SignalR option, or use the FTA Buddy extension with the regular FMS field monitor.
     </p>
-    <form class="grid gap-3 text-left" on:submit={createEvent}>
+    <form class="grid gap-3 text-left" on:submit|preventDefault={createEvent}>
         <div>
             <Label for="event-code">Event Code</Label>
             <Input

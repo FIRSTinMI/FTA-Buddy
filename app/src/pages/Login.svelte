@@ -45,7 +45,6 @@
     })
 
     async function createUser(evt: Event) {
-        evt.preventDefault();
         loading = true;
 
         if (password !== verifyPassword) {
@@ -89,7 +88,6 @@
     }
 
     async function login(evt: Event) {
-        evt.preventDefault();
         loading = true;
 
         try {
@@ -165,7 +163,6 @@
     }
 
     async function joinEvent(evt: Event) {
-        evt.preventDefault();
         loading = true;
 
         try {
@@ -239,7 +236,7 @@
         <!-- Create Account -->
         {#if view === "create"}
             <h2 class="text-xl">Create Account</h2>
-            <form class="flex flex-col space-y-2 mt-2 text-left" on:submit={createUser}>
+            <form class="flex flex-col space-y-2 mt-2 text-left" on:submit|preventDefault={createUser}>
                 <div>
                     <Label for="username">Username</Label>
                     <Input id="username" bind:value={username} placeholder="John" bind:disabled={loading} />
@@ -280,7 +277,7 @@
             <!-- Login -->
         {:else if view === "login"}
             <h2 class="text-xl">Login</h2>
-            <form class="flex flex-col space-y-2 mt-2 text-left" on:submit={login}>
+            <form class="flex flex-col space-y-2 mt-2 text-left" on:submit|preventDefault={login}>
                 <div>
                     <Label for="email">Email</Label>
                     <Input id="email" bind:value={email} placeholder="me@example.com" bind:disabled={loading} type="email" />
@@ -385,7 +382,7 @@
             <div class="flex flex-col border-t border-neutral-500 pt-4">
                 <h3 class="text-lg">Join Event</h3>
                 {#if !desktop}<p class="text-gray-600 text-sm">To create a new event, open ftabuddy.com on a computer connected to the field network.</p>{/if}
-                <form class="flex flex-col gap-2 text-left mt-2" on:submit={joinEvent}>
+                <form class="flex flex-col gap-2 text-left mt-2" on:submit|preventDefault={joinEvent}>
                     <div>
                         <Label for="event-code">Event Code</Label>
                         <Input id="event-code" bind:value={eventCode} placeholder="2024mitry" />

@@ -2,7 +2,7 @@
     import { get } from "svelte/store";
     import Spinner from "../components/Spinner.svelte";
     import { trpc } from "../main";
-    import { formatTime } from "../util/formatTime";
+    import { formatTime } from "../../../shared/formatTime";
     import { toast } from "../util/toast";
     import { eventStore } from "../stores/event";
     import { ROBOT } from "../../../shared/types";

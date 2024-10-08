@@ -18,7 +18,7 @@
     import LogGraph from "../components/LogGraph.svelte";
     import QrCode from "svelte-qrcode";
     import { authStore } from "../stores/auth";
-    import { formatTimeNoAgo } from "../util/formatTime";
+    import { formatTimeNoAgo } from "../../../shared/formatTime";
     import Spinner from "../components/Spinner.svelte";
     import { json2csv } from "json-2-csv";
 	import { MCS_LOOKUP_TABLE } from "../../../shared/constants";

@@ -5,7 +5,7 @@
 	import type { ScheduleDetails } from "../../../shared/types";
 	import { onDestroy, onMount } from "svelte";
 	import { cycleTimeToMS } from "../../../shared/cycleTimeToMS";
-	import { formatTimeShortNoAgo, formatTimeShortNoAgoMinutesOnly, formatTimeShortNoAgoSeconds } from "../util/formatTime";
+	import { formatTimeShortNoAgo, formatTimeShortNoAgoMinutesOnly, formatTimeShortNoAgoSeconds } from "../../../shared/formatTime";
 	import { updateScheduleText } from "../util/schedule-detail-formatter";
 	import Spinner from "./Spinner.svelte";
 

@@ -8,7 +8,7 @@
         TableHeadCell,
         TableSearch,
     } from "flowbite-svelte";
-    import { formatTime } from "../util/formatTime";
+    import { formatTime } from "../../../shared/formatTime";
     import { navigate } from "svelte-routing";
     import type { MatchRouterOutputs } from "../../../src/router/logs";
 

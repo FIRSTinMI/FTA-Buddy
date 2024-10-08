@@ -5,7 +5,7 @@
     import Spinner from "../components/Spinner.svelte";
 	import { ROBOT, type FMSLogFrame, type MatchLog } from "../../../shared/types";
 	import MatchGraph from "../components/MatchGraph.svelte";
-	import { formatTimeNoAgo } from "../util/formatTime";
+	import { formatTimeNoAgo } from "../../../shared/formatTime";
 
     export let matchid: string;
 

@@ -1,5 +1,5 @@
 import type { ScheduleDetails } from "../../../shared/types";
-import { formatTimeShortNoAgoMinutesOnly } from "./formatTime";
+import { formatTimeShortNoAgoMinutesOnly } from "../../../shared/formatTime";
 
 let currentScheduleDay = 0;
 

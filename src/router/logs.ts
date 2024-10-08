@@ -2,7 +2,7 @@ import { z } from "zod";
 import { eventProcedure, publicProcedure, router } from "../trpc";
 import { db } from '../db/db';
 import { logPublishing, matchLogs } from '../db/schema';
-import { and, asc, eq, or } from 'drizzle-orm';
+import { and, asc, count, eq, or } from 'drizzle-orm';
 import { inferRouterOutputs } from '@trpc/server';
 import { randomUUID } from 'crypto';
 import { FMSLogFrame, ROBOT } from '../../shared/types';
@@ -265,5 +265,9 @@ export const matchRouter = router({
     putCycleInfo: publicProcedure.input(z.object({
         matchId: z.string().uuid(),
     })).query(async ({ input }) => {
+    }),
+
+    getNumberOfMatches: publicProcedure.query(async ({ ctx }) => {
+        return (await db.select({ count: count() }).from(matchLogs))[0].count;
     })
 });

@@ -6,6 +6,7 @@
 	import { settingsStore } from "../stores/settings";
 	import { toast } from "../util/toast";
 	import { subscribeToPush } from "../util/notifications";
+	import { trpc } from "../main";
 
     export let welcomeOpen = false;
     export let installPrompt: Event | null;
@@ -25,73 +26,78 @@
     let notificationsGranted = ("Notification" in window && Notification.permission === "granted");
 
     let step = 0;
+
+    let matchCount = trpc.match.getNumberOfMatches.query();
 </script>
 
 <Modal bind:open={welcomeOpen} dismissable outsideclose size="lg" style="height: calc(100vh - 8rem)">
     <div slot="header">
         <h1 class="text-xl text-black dark:text-white">Welcome to FTA Buddy</h1>
     </div>
-    <div class="flex flex-col justify-left text-left gap-1 text-black dark:text-white">
+    <div class="flex flex-col justify-left text-left gap-1 text-black dark:text-white h-full">
         {#if step === 0}
-            <p>
-                FTA Buddy is a mobile optimized field monitor that has feature creeped into alot more. <br />
-            </p>
-            <ul class="list-disc ml-10">
-                <li>References</li>
-                <li>Match Log Viewer</li>
-                <li>CSA Tickets</li>
-                <li>Radio/Inspection Checklist</li>
-                <li>Cycle Time Tracking</li>
-                <li>Etc.</li>
-            </ul>
-            <p>
-                This guide will explain how to use the app, and what everything means. <br />
-                You can return to this guide by clicking the help button in the menu.
-            </p>
-            <h1 class="font-bolt mt-2 text-xl">Setup</h1>
-            {#if installPrompt}
-                <h2 class="font-bold">Install this App</h2>
-                <p>Recommened for the best experience.</p>
-                <Button
+            <div class="grow">
+                <p>
+                    FTA Buddy is a mobile optimized field monitor that has feature creeped into alot more. <br />
+                </p>
+                <ul class="list-disc ml-10">
+                    <li>References</li>
+                    <li>Match Log Viewer</li>
+                    <li>CSA Tickets</li>
+                    <li>Radio/Inspection Checklist</li>
+                    <li>Cycle Time Tracking</li>
+                    <li>Etc.</li>
+                </ul>
+                <p>
+                    This guide will explain how to use the app, and what everything means. <br />
+                    You can return to this guide by clicking the help button in the menu.
+                </p>
+                <h1 class="font-bolt mt-2 text-xl">Setup</h1>
+                {#if installPrompt}
+                    <h2 class="font-bold">Install this App</h2>
+                    <p>Recommened for the best experience.</p>
+                    <Button
+                        color="primary"
+                        class="w-fit"
+                        size="sm"
+                        on:click={() => {
+                            // @ts-ignore
+                            if (installPrompt) installPrompt.prompt();
+                        }}>Install</Button
+                    >
+                {:else if navigator.userAgent.includes("iPhone")}
+                    <h2 class="font-bold">Install this App</h2>
+                    <p>Recommened for the best experience.</p>
+                    <p>On iOS you can do this by clicking the share button and then "Add to Home Screen".</p>
+                {:else}
+                    <p>App installed ✅</p>
+                {/if}
+                {#if !notificationsGranted}
+                    <h2 class="font-bold">Enable Notifications</h2>
+                    <p>Enable to get notifications for new ticket/notes, and/or when a robot loses connection during a match.</p>
+                    <Button
                     color="primary"
                     class="w-fit"
                     size="sm"
                     on:click={() => {
-                        // @ts-ignore
-                        if (installPrompt) installPrompt.prompt();
-                    }}>Install</Button
-                >
-            {:else if navigator.userAgent.includes("iPhone")}
-                <h2 class="font-bold">Install this App</h2>
-                <p>Recommened for the best experience.</p>
-                <p>On iOS you can do this by clicking the share button and then "Add to Home Screen".</p>
-            {:else}
-                <p>App installed ✅</p>
-            {/if}
-            {#if !notificationsGranted}
-                <h2 class="font-bold">Enable Notifications</h2>
-                <p>Enable to get notifications for new ticket/notes, and/or when a robot loses connection during a match.</p>
-                <Button
-                color="primary"
-                class="w-fit"
-                size="sm"
-                on:click={() => {
-                    try {
-                        Notification.requestPermission().then((result) => {
-                            if (result === "granted") {
-                                $settingsStore.notifications = true;
-                                notificationsGranted = true;
-                                subscribeToPush();
-                            }
-                        });
-                    } catch (e) {
-                        console.error(e);
-                        toast("Error", "Error requesting notification permissions");
-                    }
-                }}>Grant Notification Permissions</Button>
-            {:else}
-                <p>Notifications enabled ✅</p>
-            {/if}
+                        try {
+                            Notification.requestPermission().then((result) => {
+                                if (result === "granted") {
+                                    $settingsStore.notifications = true;
+                                    notificationsGranted = true;
+                                    subscribeToPush();
+                                }
+                            });
+                        } catch (e) {
+                            console.error(e);
+                            toast("Error", "Error requesting notification permissions");
+                        }
+                    }}>Grant Notification Permissions</Button>
+                {:else}
+                    <p>Notifications enabled ✅</p>
+                {/if}
+            </div>
+            {#await matchCount then numberOfMatches}<span class="font-bold">{numberOfMatches} matches have been played with FTA Buddy active!</span>{/await}
         {:else if step === 1}
             <h2 class="font-bold">Monitor</h2>
             <p>

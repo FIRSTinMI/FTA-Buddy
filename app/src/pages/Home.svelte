@@ -9,12 +9,14 @@
     import { cycleTimeToMS } from "./../../../shared/cycleTimeToMS";
 	import { authStore } from "../stores/auth";
 	import { audioQueuer } from "../field-monitor";
+	import Spinner from "../components/Spinner.svelte";
 
     export let frameHandler: MonitorFrameHandler;
     let monitorFrame: MonitorFrame | undefined = frameHandler.getFrame();
     let cycleSubscription: ReturnType<typeof trpc.cycles.subscription.subscribe>;
     
     frameHandler.addEventListener("frame", (evt) => {
+        loading = false;
         monitorFrame = (evt as MonitorEvent).detail.frame;
     });
 
@@ -32,6 +34,13 @@
     let scheduleText = "";
 
     onMount(async () => {
+        const lastPrestart = await trpc.cycles.getLastPrestart.query();
+        if (lastPrestart) matchStartTime = lastPrestart;
+
+        monitorFrame = frameHandler.getFrame();
+
+        loading = false;
+        
         if (cycleSubscription) cycleSubscription.unsubscribe();
         cycleSubscription = trpc.cycles.subscription.subscribe({
                 eventToken: $authStore.eventToken, 
@@ -41,9 +50,6 @@
                 calculatedCycleTime = data.lastCycleTime ? cycleTimeToMS(data.lastCycleTime) : 0;
             }
         });
-
-        const lastPrestart = await trpc.cycles.getLastPrestart.query();
-        if (lastPrestart) matchStartTime = lastPrestart;
 
         const bestCycleTimeRes = await trpc.cycles.getBestCycleTime.query();
         if (bestCycleTimeRes && bestCycleTimeRes.calculated_cycle_time) {
@@ -62,8 +68,6 @@
         }
 
         averageCycleTimeMS = await trpc.cycles.getAverageCycleTime.query() ?? 8*60*1000;
-
-        monitorFrame = frameHandler.getFrame();
 
         scheduleDetails = await trpc.cycles.getScheduleDetails.query();
         updateScheduleText(monitorFrame?.match ?? scheduleDetails?.lastPlayed ?? 0);
@@ -208,13 +212,19 @@
             return;
         }
     }
+
+    let loading = true;
 </script>
 
 {#if monitorFrame}
     <TeamModal bind:modalOpen {modalStation} {monitorFrame} {frameHandler} />
 {/if}
 
-<div class="grid grid-cols-fieldmonitor lg:grid-cols-fieldmonitor-large gap-0.5 md:gap-1 lg:gap-2 mx-auto justify-center {fullscreen && "fullscreen"}">
+<div class="fixed inset-0" class:hidden={!loading}>
+    <Spinner />
+</div>
+
+<div class="grid grid-cols-fieldmonitor lg:grid-cols-fieldmonitor-large gap-0.5 md:gap-1 lg:gap-2 mx-auto justify-center {fullscreen && "fullscreen"}" class:hidden={loading}>
     {#key monitorFrame}
         {#if monitorFrame}
             <div class="col-span-6 lg:col-span-9 flex text-lg md:text-2xl font-semibold {fullscreen && "lg:text-6xl"}">

@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import { z } from "zod";
 import { eventProcedure, publicProcedure, router } from "../trpc";
 import { db } from '../db/db';

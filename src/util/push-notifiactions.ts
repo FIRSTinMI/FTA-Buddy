@@ -1,5 +1,4 @@
 import webpush, { SendResult } from 'web-push';
-import 'dotenv/config';
 import { db } from '../db/db';
 import { inArray } from 'drizzle-orm';
 import { pushSubscriptions } from '../db/schema';

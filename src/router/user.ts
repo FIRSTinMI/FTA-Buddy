@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { db } from "../db/db";
 import { router, publicProcedure } from "../trpc";
-import { compare, hash } from "bcrypt";
 import schema, { events, users } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -20,7 +19,7 @@ export const userRouter = router({
 
         if (!user) throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
 
-        if (await compare(input.password, user.password)) {
+        if (await Bun.password.verify(input.password, user.password, 'bcrypt')) {
             db.update(users).set({ last_seen: new Date() }).where(eq(users.id, user.id));
             if (user.token === '') {
                 let token = generateToken();
@@ -42,8 +41,8 @@ export const userRouter = router({
 
         if (!user) throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
 
-        if (await compare(input.oldPassword, user.password)) {
-            const hashedPassword = await hash(input.newPassword, 12);
+        if (await Bun.password.verify(input.oldPassword, user.password, 'bcrypt')) {
+            const hashedPassword = await Bun.password.hash(input.newPassword, { algorithm: 'bcrypt', cost: 12 });
             await db.update(users).set({ password: hashedPassword }).where(eq(users.id, user.id));
             return true;
         } else {
@@ -62,7 +61,7 @@ export const userRouter = router({
         if (input.username.length < 3) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Username must be at least 3 characters long' });
         if (input.password.length < 8) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Password must be at least 8 characters long' });
 
-        const hashedPassword = await hash(input.password, 12);
+        const hashedPassword = await Bun.password.hash(input.password, { algorithm: 'bcrypt', cost: 12 });
         const token = generateToken();
         await db.insert(users).values({
             email: input.email,

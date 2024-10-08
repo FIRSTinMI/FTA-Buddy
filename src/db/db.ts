@@ -1,7 +1,6 @@
 import { NodePgDatabase, drizzle } from "drizzle-orm/node-postgres";
 import { Client } from "pg";
 import * as schema from "./schema";
-import 'dotenv/config';
 
 export let db: NodePgDatabase<typeof schema>;
 const client = new Client({

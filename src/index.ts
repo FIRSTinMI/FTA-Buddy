@@ -119,6 +119,8 @@ if (process.env.NODE_ENV === 'dev') {
     app.use('/FieldMonitor', express.static('app/dist/FieldMonitor'));
 }
 
+app.use('/report', express.static('reports'));
+
 // Public api
 
 app.get('/api/cycles/:eventCode/:level/:match/:play', async (req, res) => {

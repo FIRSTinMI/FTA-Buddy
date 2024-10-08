@@ -2,7 +2,7 @@
     import { FieldState, MatchState, MatchStateMap, ROBOT, type MonitorFrame, type ScheduleDetails } from "./../../../shared/types";
     import MonitorRow from "../components/MonitorRow.svelte";
     import TeamModal from "../components/TeamModal.svelte";
-    import { formatTimeShortNoAgo, formatTimeShortNoAgoMinutesOnly, formatTimeShortNoAgoSeconds } from "../util/formatTime";
+    import { formatTimeShortNoAgo, formatTimeShortNoAgoMinutesOnly, formatTimeShortNoAgoSeconds } from "../../../shared/formatTime";
     import type { MonitorEvent, MonitorFrameHandler } from "../util/monitorFrameHandler";
     import { onDestroy, onMount } from "svelte";
     import { trpc } from "../main";

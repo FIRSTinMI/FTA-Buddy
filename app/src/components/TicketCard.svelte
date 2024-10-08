@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Card } from "flowbite-svelte";
     import type { Ticket } from "../../../shared/types";
-    import { formatTimeShort } from "../util/formatTime";
+    import { formatTimeShort } from "../../../shared/formatTime";
     import { default as MessageComponent } from "./Message.svelte";
 
     export let ticket: Ticket;

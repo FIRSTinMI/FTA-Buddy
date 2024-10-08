@@ -10,7 +10,7 @@
     } from "../../../shared/types";
     import MonitorRow from "./MonitorRow.svelte";
     import { navigate } from "svelte-routing";
-    import { formatTimeShort, formatTimeShortNoAgoSeconds } from "../util/formatTime";
+    import { formatTimeShort, formatTimeShortNoAgoSeconds } from "../../../shared/formatTime";
     import type { MonitorFrameHandler } from "../util/monitorFrameHandler";
 	import { trpc } from '../main';
 

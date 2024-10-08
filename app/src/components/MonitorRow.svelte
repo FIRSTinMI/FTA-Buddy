@@ -13,7 +13,7 @@
     import type { MonitorFrameHandler } from "../util/monitorFrameHandler";
     import { processSignalStrengthForGraph } from "../util/signalStrengthProcessor";
 	import { settingsStore } from "../stores/settings";
-	import { formatTimeShortNoAgoSecondsOnly } from "../util/formatTime";
+	import { formatTimeShortNoAgoSecondsOnly } from "../../../shared/formatTime";
 	import Icon from "@iconify/svelte";
 
     export let station: ROBOT;

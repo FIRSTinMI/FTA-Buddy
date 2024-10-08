@@ -1,6 +1,6 @@
 <script lang="ts">
     import { get } from "svelte/store";
-    import { formatTime } from "../util/formatTime";
+    import { formatTime } from "../../../shared/formatTime";
     import { eventStore } from "../stores/event";
     import { authStore } from "../stores/auth";
     import type { Message, TicketMessage } from "../../../shared/types";

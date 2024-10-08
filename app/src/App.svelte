@@ -31,6 +31,7 @@
 	import { trpc } from "./main";
 	import UpdateToast from "./components/UpdateToast.svelte";
 	import EventDashboard from "./pages/EventDashboard.svelte";
+	import EventReport from "./pages/EventReport.svelte";
 
     // Checking authentication
 
@@ -336,6 +337,17 @@
                             <Icon icon="mdi:clipboard-outline" class="w-8 h-8" />
                         </svelte:fragment>
                     </SidebarItem>
+                    <SidebarItem
+                        label="Event Report"
+                        on:click={() => {
+                            hideMenu = true;
+                            navigate("/app/event-report");
+                        }}
+                    >
+                        <svelte:fragment slot="icon">
+                            <Icon icon="mdi:file-document-outline" class="w-8 h-8" />
+                        </svelte:fragment>
+                    </SidebarItem>
                 </SidebarGroup>
             {/if}
             <SidebarGroup class="border-t-2 mt-2 pt-2 border-neutral-400">
@@ -443,6 +455,7 @@
                 <Route path="/logs/:matchid/:station" component={StationLog} />
                 <Route path="/checklist" component={Checklist} />
                 <Route path="/dashboard" component={EventDashboard} />
+                <Route path="/event-report" component={EventReport} />
             </div>
             <Route path="/login">
                 <Login {toast} />

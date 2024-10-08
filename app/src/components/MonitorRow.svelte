@@ -173,11 +173,11 @@
 </button>
 <button class="fieldmonitor-square-height hidden lg:flex md:aspect-square flex-col items-center justify-end" on:click={() => detailView} id="{getKey(team)}-signal">
     {team.signal ?? ""}
-    {#if (team.signal ?? -100) > -60}
+    {#if (team.signal ?? -100) > -60 && team.signal !== 0}
         <Icon icon="mdi:signal-cellular-3" class="size-12 lg:size-20" />
-    {:else if (team.signal ?? -100) > -70}
+    {:else if (team.signal ?? -100) > -70 && team.signal !== 0}
         <Icon icon="mdi:signal-cellular-2" class="size-12 lg:size-20" />
-    {:else if (team.signal ?? -100) > -80}
+    {:else if (team.signal ?? -100) > -80 && team.signal !== 0}
         <Icon icon="mdi:signal-cellular-1" class="size-12 lg:size-20" />
     {:else}
         <Icon icon="mdi:signal-cellular-outline" class="size-12 lg:size-20" />

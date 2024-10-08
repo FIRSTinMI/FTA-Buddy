@@ -3,7 +3,7 @@ import { DSState, EnableState, FieldState, MonitorFrame, StateChange } from "../
 import { eventProcedure, publicProcedure, router } from "../trpc";
 import { getEvent } from "../util/get-event";
 import { observable } from "@trpc/server/observable";
-import { detectStatusChange, processFrameForTeamData, processTeamCycles, processTeamWarnings } from "../util/frame-processing";
+import { detectRadioNoDs, detectStatusChange, processFrameForTeamData, processTeamCycles, processTeamWarnings } from "../util/frame-processing";
 
 export interface Post {
     type: 'test';
@@ -58,9 +58,14 @@ export const fieldMonitorRouter = router({
 
         const event = await getEvent(input.eventToken || '', input.eventCode);
 
-        const processed = detectStatusChange(input, event.monitorFrame);
+        // Detect radio even if no DS
+        const detectedRadio = detectRadioNoDs(input, event.history);
 
-        processed.currentFrame = await processTeamWarnings(event.code, processed.currentFrame);
+        // Detects raising and falling edges
+        const processed = detectStatusChange(detectedRadio, event.monitorFrame);
+
+        // Add emoji warnings
+        processed.currentFrame = await processTeamWarnings(event.code, processed.currentFrame, event.monitorFrame);
 
         if (event.monitorFrame.field !== processed.currentFrame.field) {
             if (processed.currentFrame.field === FieldState.PRESTART_COMPLETED) {

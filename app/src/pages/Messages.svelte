@@ -81,6 +81,11 @@
         getTickets();
         foregroundSubscribe();
         stopBackgroundSubscription();
+        if (window.location.hash.startsWith("#notes-")) {
+            view = "team";
+            team = parseInt(window.location.hash.slice(7));
+            selectTeam();
+        }
     });
 
     onDestroy(() => {

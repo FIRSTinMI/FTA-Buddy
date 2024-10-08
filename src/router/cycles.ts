@@ -65,9 +65,17 @@ export const cycleRouter = router({
     }),
 
     subscription: publicProcedure.input(z.object({
-        eventToken: z.string()
+        eventToken: z.string().optional(),
+        eventCode: z.string().optional()
     })).subscription(async ({ input }) => {
-        const event = await getEvent(input.eventToken);
+        let event;
+        if (!input.eventToken && input.eventCode) {
+            event = await getEvent('', input.eventCode);
+        } else if (input.eventToken) {
+            event = await getEvent(input.eventToken);
+        } else {
+            throw new Error('Must provide either eventToken or eventCode');
+        }
 
         return observable<CycleData>((emitter) => {
             const listener = async () => {
@@ -172,6 +180,62 @@ export const cycleRouter = router({
     getAverageCycleTime: eventProcedure.query(async ({ ctx }) => {
         return await getAverageCycleTime(ctx.event.code);
     }),
+
+    getCycleData: publicProcedure
+        .input(z.object({
+            eventCode: z.string()
+        }))
+        .query(async ({ input }) => {
+            const event = await getEvent('', input.eventCode);
+
+            const [bestCycle, lastRecordedCycleTime, lastPrestartFromDB] = await Promise.all([
+                db.select().from(cycleLogs)
+                    .where(eq(cycleLogs.event, event.code))
+                    .orderBy(asc(cycleLogs.calculated_cycle_time))
+                    .limit(1).execute(),
+
+                db.select().from(cycleLogs)
+                    .where(and(
+                        eq(cycleLogs.event, event.code),
+                        isNotNull(cycleLogs.calculated_cycle_time)
+                    )).orderBy(desc(cycleLogs.start_time))
+                    .limit(1).execute(),
+
+                db.select().from(cycleLogs).where(and(
+                    eq(cycleLogs.event, event.code),
+                    isNotNull(cycleLogs.prestart_time)
+                )).orderBy(desc(cycleLogs.prestart_time))
+                    .limit(1).execute()
+            ]);
+
+            let bestCycleTime: string | null = bestCycle.length > 0 ? bestCycle[0].calculated_cycle_time : null;
+
+            let lastCycleTime: string | null = event.monitorFrame.lastCycleTime;
+            if (lastCycleTime == "unk" && lastRecordedCycleTime.length !== 0) {
+                lastCycleTime = lastRecordedCycleTime[0].calculated_cycle_time;
+            }
+
+            let lastPrestartDone: Date | null = event.lastPrestartDone;
+            if (!lastPrestartDone && lastPrestartFromDB.length !== 0) {
+                lastPrestartDone = lastPrestartFromDB[0].prestart_time;
+            }
+
+            return {
+                startTime: event.lastMatchStart,
+                refEndTime: event.lastMatchRefDone,
+                scoresPostedTime: event.lastMatchScoresPosted,
+                prestartTime: lastPrestartDone,
+                endTime: event.lastMatchEnd,
+                matchNumber: event.monitorFrame.match,
+                lastCycleTime,
+                averageCycleTime: await getAverageCycleTime(event.code),
+                bestCycleTime,
+                scheduleDetails: event.scheduleDetails,
+                match: event.monitorFrame.match,
+                level: event.monitorFrame.level,
+                aheadBehind: event.monitorFrame.time
+            };
+        }),
 
     postScheduleDetails: eventProcedure.input(z.object({
         eventToken: z.string(),

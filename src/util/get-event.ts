@@ -35,7 +35,11 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 
     if (!eventInMemory) {
         if (!event) {
-            event = await db.query.events.findFirst({ where: eq(schema.events.token, eventToken) });
+            if (!eventToken) {
+                event = await db.query.events.findFirst({ where: eq(schema.events.code, eventCode) });
+            } else {
+                event = await db.query.events.findFirst({ where: eq(schema.events.token, eventToken) });
+            }
         }
 
         if (!event) {

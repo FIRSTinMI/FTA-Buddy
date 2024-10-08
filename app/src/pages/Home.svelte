@@ -10,6 +10,7 @@
 	import { authStore } from "../stores/auth";
 	import { audioQueuer } from "../field-monitor";
 	import Spinner from "../components/Spinner.svelte";
+	import { updateScheduleText } from "../util/schedule-detail-formatter";
 
     export let frameHandler: MonitorFrameHandler;
     let monitorFrame: MonitorFrame | undefined = frameHandler.getFrame();
@@ -70,7 +71,8 @@
         averageCycleTimeMS = await trpc.cycles.getAverageCycleTime.query() ?? 8*60*1000;
 
         scheduleDetails = await trpc.cycles.getScheduleDetails.query();
-        updateScheduleText(monitorFrame?.match ?? scheduleDetails?.lastPlayed ?? 0);
+        scheduleText = updateScheduleText(monitorFrame?.match ?? scheduleDetails?.lastPlayed ?? 0, scheduleDetails, monitorFrame?.level ?? "", averageCycleTimeMS);
+   
         console.log({
             matchStartTime,
             bestCycleTimeMS,
@@ -114,7 +116,7 @@
 
         averageCycleTimeMS = await trpc.cycles.getAverageCycleTime.query() ?? 8*60*1000;
 
-        updateScheduleText(monitorFrame?.match ?? scheduleDetails?.lastPlayed ?? 0);
+        scheduleText = updateScheduleText(monitorFrame?.match ?? scheduleDetails?.lastPlayed ?? 0, scheduleDetails, monitorFrame?.level ?? "", averageCycleTimeMS);
     });
 
     setInterval(() => {
@@ -156,62 +158,6 @@
     const stations: ROBOT[] = Object.values(ROBOT);
 
     export let fullscreen = false;
-
-    let currentScheduleDay = 0;
-
-    function updateScheduleText(currentMatch: number) {
-        if (!scheduleDetails || !scheduleDetails.days) return;
-
-        if (monitorFrame?.level !== "Qualification") {
-            scheduleText = "";
-            return;
-        }
-
-        for (let i = 0; i < scheduleDetails.days.length; i++) {
-            const day = scheduleDetails.days[i];
-            if (currentMatch <= day.end) {
-                currentScheduleDay = i;
-                break;
-            }
-        }
-        
-        let lunchMatch = scheduleDetails.days[currentScheduleDay].lunch;
-        let goalMatch = 0;
-
-        if (lunchMatch && currentMatch <= lunchMatch) {
-            scheduleText = "Lunch M:" + lunchMatch + " @";
-            goalMatch = lunchMatch;
-
-            let endTime = new Date(new Date().getTime() + (goalMatch - currentMatch) * averageCycleTimeMS);
-            let fallbackEndOfDay = new Date();
-            fallbackEndOfDay.setHours(19, 0, 0, 0);
-
-            let endTimeFormatted = endTime.toLocaleTimeString().split(':').slice(0, 2).join(':');
-            let end = formatTimeShortNoAgoMinutesOnly(endTime, new Date(scheduleDetails.days[currentScheduleDay].lunchTime ?? fallbackEndOfDay));
-            
-            console.log({endTime, end, fallbackEndOfDay, currentMatch, goalMatch, averageCycleTimeMS, currentMatchTime: new Date().getTime()});
-            let aheadBehind = endTime.getTime() <= new Date(scheduleDetails.days[currentScheduleDay].lunchTime ?? fallbackEndOfDay).getTime();
-
-            scheduleText += `${endTimeFormatted} (${end}m ${aheadBehind ? "Early" : "Late"})`;
-        } else if (currentMatch <= scheduleDetails.days[currentScheduleDay].end) {
-            scheduleText = "Playing through M:" + scheduleDetails.days[currentScheduleDay].end + " @";
-            goalMatch = scheduleDetails.days[currentScheduleDay].end;
-
-            let endTime = new Date(new Date().getTime() + (goalMatch - currentMatch) * averageCycleTimeMS);
-            let fallbackEndOfDay = new Date();
-            fallbackEndOfDay.setHours(19, 0, 0, 0);
-
-            let endTimeFormatted = endTime.toLocaleTimeString().split(':').slice(0, 2).join(':');
-            let end = formatTimeShortNoAgoMinutesOnly(endTime, new Date(scheduleDetails.days[currentScheduleDay].endTime ?? fallbackEndOfDay));
-            
-            console.log({endTime, end, fallbackEndOfDay, currentMatch, goalMatch, averageCycleTimeMS, currentMatchTime: new Date().getTime()});
-            let aheadBehind = endTime.getTime() <= new Date(scheduleDetails.days[currentScheduleDay].endTime ?? fallbackEndOfDay).getTime();
-
-            scheduleText += `${endTimeFormatted} (${end}m ${aheadBehind ? "Early" : "Late"})`;
-        } else {
-            return;
-        }
-    }
 
     let loading = true;
 </script>

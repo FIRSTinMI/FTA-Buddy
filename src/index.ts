@@ -237,13 +237,15 @@ app.get('/', (req, res) => {
 
 
 connect().then(() => {
-    // Log analysis loop
-    new Promise(async () => {
-        while (true) {
-            await logAnalysisLoop();
-            await new Promise((resolve) => setTimeout(resolve, 20e3));
-        }
-    });
+    if (process.env.NODE_ENV !== 'dev') {
+        // Log analysis loop
+        new Promise(async () => {
+            while (true) {
+                await logAnalysisLoop();
+                await new Promise((resolve) => setTimeout(resolve, 20e3));
+            }
+        });
+    }
 
     server.listen(port);
 });

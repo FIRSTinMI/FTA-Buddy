@@ -1,7 +1,6 @@
 import { createHTTPServer } from '@trpc/server/adapters/standalone';
 import { applyWSSHandler } from '@trpc/server/adapters/ws';
 import cors from 'cors';
-import 'dotenv/config';
 import express from 'express';
 const pjson = require('../package.json');
 import { readFileSync, readdirSync } from 'fs';

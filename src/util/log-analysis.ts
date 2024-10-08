@@ -104,10 +104,10 @@ export function analyzeLog(log: FMSLogFrame[]): DisconnectionEvent[] {
             highTripTimeStart = null;
         }
 
-        // Sustained high trip time (>20ms for more than 30 seconds using 3-frame rolling average)
-        if (tripTimeAvg > 20 && sustainedHighTripTimeStart === null) {
+        // Sustained high trip time (>10ms for more than 30 seconds using 3-frame rolling average)
+        if (tripTimeAvg > 10 && sustainedHighTripTimeStart === null) {
             sustainedHighTripTimeStart = currentTime;
-        } else if (tripTimeAvg <= 20 && sustainedHighTripTimeStart !== null) {
+        } else if (tripTimeAvg <= 10 && sustainedHighTripTimeStart !== null) {
             events.push({
                 issue: "Sustained high ping",
                 startTime: sustainedHighTripTimeStart,

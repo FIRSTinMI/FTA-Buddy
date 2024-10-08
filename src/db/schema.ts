@@ -76,6 +76,7 @@ export const MatchLog = typeof matchLogs.$inferInsert;
 
 export const analyzedLogs = pgTable('analyzed_logs', {
     id: uuid('id').primaryKey(),
+    match_id: uuid('match_id').references(() => matchLogs.id).notNull(),
     event: varchar('event').notNull(),
     match_number: integer('match_number').notNull(),
     play_number: integer('play_number').notNull(),

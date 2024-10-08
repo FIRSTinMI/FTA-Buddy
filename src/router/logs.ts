@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { eventProcedure, publicProcedure, router } from "../trpc";
 import { db } from '../db/db';
-import { logPublishing, matchLogs } from '../db/schema';
+import { analyzedLogs, logPublishing, matchLogs } from '../db/schema';
 import { and, asc, count, eq, or } from 'drizzle-orm';
 import { inferRouterOutputs } from '@trpc/server';
 import { randomUUID } from 'crypto';
@@ -155,6 +155,13 @@ export const matchRouter = router({
             station = input.station as ROBOT;
         }
 
+        const analysis = await db.query.analyzedLogs.findFirst({
+            where: and(
+                eq(analyzedLogs.match_id, input.id),
+                eq(analyzedLogs.team, match[station] ?? 0)
+            )
+        });
+
         return {
             id: match.id,
             event: match.event,
@@ -165,7 +172,9 @@ export const matchRouter = router({
             start_time: match.start_time,
             team: match[station] ?? 0,
             station: station,
-            log: match[`${station}_log`] as FMSLogFrame[]
+            log: match[`${station}_log`] as FMSLogFrame[],
+            analysis: analysis?.events,
+            bypassed: analysis?.bypassed ?? false
         };
     }),
 
@@ -197,6 +206,13 @@ export const matchRouter = router({
 
         if (!match) throw new Error('Match not found');
 
+        const analysis = await db.query.analyzedLogs.findFirst({
+            where: and(
+                eq(analyzedLogs.match_id, input.id),
+                eq(analyzedLogs.team, match[station] ?? 0)
+            )
+        });
+
         return {
             id: match.id,
             event: match.event,
@@ -207,7 +223,9 @@ export const matchRouter = router({
             start_time: match.start_time,
             team: match[station] ?? 0,
             station: station,
-            log: match[`${station}_log`] as FMSLogFrame[]
+            log: match[`${station}_log`] as FMSLogFrame[],
+            analysis: analysis?.events,
+            bypassed: analysis?.bypassed ?? false
         };
     }),
 

@@ -218,6 +218,7 @@ export async function logAnalysisLoop() {
             const analyzedLog = analyzeLog(logData);
             await db.insert(analyzedLogs).values({
                 id: crypto.randomUUID(),
+                match_id: log.id,
                 event: log.event,
                 match_number: log.match_number,
                 play_number: log.play_number,

@@ -12,6 +12,7 @@
 	import { startBackgroundSubscription, stopBackgroundSubscription } from "../util/notifications";
 	import NotesPolicy from "../components/NotesPolicy.svelte";
 	import { settingsStore } from "../stores/settings";
+	import Spinner from "../components/Spinner.svelte";
 
     export const newMessage = (message: any) => {
         console.log(message);
@@ -180,25 +181,33 @@
     <div class="flex flex-col overflow-y-auto h-full">
         <div class="flex flex-col grow gap-2">
             {#if view == "team" && team}
-                {#if !messages || messages.length < 1}
-                    <div class="text-center">No messages</div>
-                {:else}
-                    {#each messages as message}
-                        {#if message.is_ticket}
-                            <TicketCard ticket={message} />
-                        {:else}
-                            <MessageComponent {message} team={parseInt(message.team)} />
-                        {/if}
-                    {/each}
-                {/if}
+                {#await messagesPromise}
+                    <Spinner />
+                {:then}
+                    {#if !messages || messages.length < 1}
+                        <div class="text-center">No messages</div>
+                    {:else}
+                        {#each messages as message}
+                            {#if message.is_ticket}
+                                <TicketCard ticket={message} />
+                            {:else}
+                                <MessageComponent {message} team={parseInt(message.team)} />
+                            {/if}
+                        {/each}
+                    {/if}
+                {/await}
             {:else if view == "tickets"}
-                {#if !tickets || tickets.length < 1}
-                    <div class="text-center">No tickets</div>
-                {:else}
-                    {#each tickets as ticket}
-                        <TicketCard {ticket} />
-                    {/each}
-                {/if}
+                {#await ticketsPromise}
+                    <Spinner />
+                {:then}
+                    {#if !tickets || tickets.length < 1}
+                        <div class="text-center">No tickets</div>
+                    {:else}
+                        {#each tickets as ticket}
+                            <TicketCard {ticket} />
+                        {/each}
+                    {/if}
+                {/await}
             {/if}
         </div>
     </div>

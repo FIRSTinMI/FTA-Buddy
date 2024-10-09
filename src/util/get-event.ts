@@ -51,7 +51,7 @@ export async function getEvent(eventToken: string, eventCode?: string) {
             token: eventToken,
             teams: event.teams as TeamList,
             checklist: event.checklist as EventChecklist,
-            users: [],
+            users: event.users as number[],
             monitorFrame: DEFAULT_MONITOR,
             history: [DEFAULT_MONITOR],
             lastMatchStart: null,

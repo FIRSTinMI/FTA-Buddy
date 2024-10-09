@@ -148,6 +148,9 @@
         }
         try {
             const res = await trpc.event.get.query({ code: event.code });
+
+            console.log(res.teams);
+
             authStore.set({ ...auth, eventToken: res.token });
             eventStore.set({
                 code: event.code,

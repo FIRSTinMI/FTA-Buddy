@@ -21,9 +21,9 @@ export const messagesRouter = router({
     })).query(async ({ ctx, input }) => {
         const event = await getEvent(ctx.event.token);
 
-        if (event.tickets) return event.tickets;
+        const tickets = event.tickets || await getTickets({ eventCode: ctx.event.code });
 
-        return (await getTickets({ eventCode: ctx.event.code })).sort((a, b) => {
+        return tickets.sort((a, b) => {
             let aTime = a.created_at.getTime();
             let bTime = b.created_at.getTime();
             if (a.messages.length > 0) aTime = a.messages[a.messages.length - 1].created_at.getTime();
@@ -328,9 +328,9 @@ export const messagesRouter = router({
             event.ticketEmitter.on('create', (msg) => listener("create", msg));
 
             return () => {
-                event.ticketEmitter.off('message', (msg) => listener("message", msg));
-                event.ticketEmitter.off('ticketReply', (msg) => listener("ticketReply", msg));
-                event.ticketEmitter.off('create', (msg) => listener("create", msg));
+                event.ticketEmitter.removeListener('message', (msg) => listener("message", msg));
+                event.ticketEmitter.removeListener('ticketReply', (msg) => listener("ticketReply", msg));
+                event.ticketEmitter.removeListener('create', (msg) => listener("create", msg));
             };
         });
     }),
@@ -354,10 +354,10 @@ export const messagesRouter = router({
             event.ticketEmitter.on('ticketReply', (msg) => listener("ticketReply", msg));
 
             return () => {
-                event.ticketEmitter.off('assign', (msg) => listener("assign", msg));
-                event.ticketEmitter.off('status', (msg) => listener("status", msg));
-                event.ticketEmitter.off('create', (msg) => listener("create", msg));
-                event.ticketEmitter.off('ticketReply', (msg) => listener("ticketReply", msg));
+                event.ticketEmitter.removeListener('assign', (msg) => listener("assign", msg));
+                event.ticketEmitter.removeListener('status', (msg) => listener("status", msg));
+                event.ticketEmitter.removeListener('create', (msg) => listener("create", msg));
+                event.ticketEmitter.removeListener('ticketReply', (msg) => listener("ticketReply", msg));
             };
         });
     }),
@@ -398,9 +398,9 @@ export const messagesRouter = router({
             event.ticketEmitter.on('ticketReply', (msg) => listener("ticketReply", msg));
 
             return () => {
-                event.ticketEmitter.off('assign', (msg) => listener("assign", msg));
-                event.ticketEmitter.off('status', (msg) => listener("status", msg));
-                event.ticketEmitter.off('ticketReply', (msg) => listener("ticketReply", msg));
+                event.ticketEmitter.removeListener('assign', (msg) => listener("assign", msg));
+                event.ticketEmitter.removeListener('status', (msg) => listener("status", msg));
+                event.ticketEmitter.removeListener('ticketReply', (msg) => listener("ticketReply", msg));
             };
         });
     }),
@@ -428,11 +428,11 @@ export const messagesRouter = router({
             event.ticketEmitter.on('message', (msg) => listener("message", msg));
 
             return () => {
-                event.ticketEmitter.off('assign', (msg) => listener("assign", msg));
-                event.ticketEmitter.off('status', (msg) => listener("status", msg));
-                event.ticketEmitter.off('ticketReply', (msg) => listener("ticketReply", msg));
-                event.ticketEmitter.off('create', (msg) => listener("create", msg));
-                event.ticketEmitter.off('message', (msg) => listener("message", msg));
+                event.ticketEmitter.removeListener('assign', (msg) => listener("assign", msg));
+                event.ticketEmitter.removeListener('status', (msg) => listener("status", msg));
+                event.ticketEmitter.removeListener('ticketReply', (msg) => listener("ticketReply", msg));
+                event.ticketEmitter.removeListener('create', (msg) => listener("create", msg));
+                event.ticketEmitter.removeListener('message', (msg) => listener("message", msg));
             };
         });
     }),

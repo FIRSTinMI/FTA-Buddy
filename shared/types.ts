@@ -397,7 +397,7 @@ export interface Profile {
 
 export interface Ticket {
     id: number,
-    team: number,
+    team: string,
     teamName?: string,
     summary: string,
     user_id: number,

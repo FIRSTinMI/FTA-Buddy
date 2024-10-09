@@ -118,7 +118,7 @@
 
         try {
             if (!$settingsStore.acknowledgedNotesPolicy) {
-                notesPolicyElm.confirmPolicy();
+                await notesPolicyElm.confirmPolicy();
             }
 
             await trpc.messages.addMessage.query({

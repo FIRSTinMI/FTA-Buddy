@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Modal, Button } from "flowbite-svelte";
+	import { settingsStore } from "../stores/settings";
 
     export let notesPolicyOpen = false;
     let resolve: () => void;
@@ -8,6 +9,7 @@
         notesPolicyOpen = true;
         return new Promise((_resolve, _reject) => {
             resolve = () => {
+                $settingsStore.acknowledgedNotesPolicy = true;
                 notesPolicyOpen = false;
                 _resolve(void 0);
             }

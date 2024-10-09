@@ -5,6 +5,7 @@ import { DEFAULT_MONITOR } from "../../shared/constants";
 import { TeamList, EventChecklist, ScheduleDetails } from "../../shared/types";
 import { db } from "../db/db";
 import schema from "../db/schema";
+import { getTickets } from "../router/messages";
 
 /**
  * Get the event object from either the event token or the event code
@@ -66,8 +67,23 @@ export async function getEvent(eventToken: string, eventCode?: string) {
             scheduleDetails: event.scheduleDetails as ScheduleDetails,
             lastPrestartDone: null,
             lastMatchEnd: null,
-            teamCycleTracking: {}
+            teamCycleTracking: {},
+            tickets: await getTickets({ eventCode }),
         };
+
+        // Keep tickets in memory so it loads faster
+        events[eventCode].ticketEmitter.on('create', async () => {
+            events[eventCode].tickets = await getTickets({ eventCode });
+        });
+        events[eventCode].ticketEmitter.on('assign', async () => {
+            events[eventCode].tickets = await getTickets({ eventCode });
+        });
+        events[eventCode].ticketEmitter.on('status', async () => {
+            events[eventCode].tickets = await getTickets({ eventCode });
+        });
+        events[eventCode].ticketEmitter.on('ticketReply', async () => {
+            events[eventCode].tickets = await getTickets({ eventCode });
+        });
     }
 
     return events[eventCode];

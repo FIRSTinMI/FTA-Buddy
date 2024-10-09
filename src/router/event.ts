@@ -194,7 +194,10 @@ export const eventRouter = router({
 
         sendNotification(event.users, {
             title: 'Test',
-            body: 'Test notification'
+            body: 'Test notification',
+            data: {
+                page: 'messages'
+            }
         });
     })
 });

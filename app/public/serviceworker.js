@@ -1,4 +1,4 @@
-let cacheName = 'ftabuddy';
+let cacheName = "ftabuddy";
 let contentToCache = [
 	"/app/assets/{{CSS_FILE}}",
 	"/app/assets/{{JS_FILE}}",
@@ -57,14 +57,54 @@ self.addEventListener("activate", (evt) => {
 	console.log("Service worker activated");
 });
 
-self.addEventListener("push", (evt) => {
+self.addEventListener("push", async (evt) => {
 	const data = evt.data.json();
-    console.log(evt);
+	console.log(evt);
 	console.log(evt.data);
 	self.registration.showNotification(data.title, {
 		body: data.body,
 		icon: data.icon,
+		actions: data.actions,
+		tag: data.tag,
+		data: data.data,
+		badge: "https://ftabuddy.com/app/icon96_outline.png",
+		icon: "https://ftabuddy.com/app/icon512_rounded.png",
 	});
+	console.log(await clients.matchAll());
+});
+
+self.addEventListener("notificationclick", (evt) => {
+	console.log(evt);
+	const rootUrl = new URL("/app/", location).href;
+	const pageToOpen = evt.notification.data?.page ?? "";
+	evt.notification.close();
+	evt.waitUntil(
+		clients.matchAll().then((matchedClients) => {
+            console.log("Clients: ", matchedClients);
+			try {
+				for (let client of matchedClients) {
+					if (client.url.indexOf(rootUrl + pageToOpen) >= 0) {
+						console.log("Found matching client");
+						return client.focus();
+					}
+				}
+
+				if (clients[0]) {
+					console.log("trying to take over existing client");
+					client[0].focus();
+					clients[0].navigate(rootUrl + pageToOpen);
+					return;
+				}
+			} catch (e) {
+				console.log(e);
+			} finally {
+				console.log("Opening new client");
+				clients.openWindow(rootUrl + pageToOpen).then(function (client) {
+					client.focus();
+				});
+			}
+		})
+	);
 });
 /*
 self.addEventListener('fetch', function(e) {

@@ -18,6 +18,10 @@ export interface NotificationData {
     title: string;
     body: string;
     icon?: string;
+    tag?: string;
+    data?: {
+        page?: string;
+    };
 }
 
 export async function sendNotification(users: number[], data: NotificationData) {

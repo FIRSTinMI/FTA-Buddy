@@ -2,7 +2,7 @@ import { z } from "zod";
 import { eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
 import { db } from "../db/db";
 import { matchLogs, messages, pushSubscriptions, users } from "../db/schema";
-import { desc, eq, inArray, or, and, aliasedTable } from "drizzle-orm";
+import { desc, eq, inArray, or, and, aliasedTable, not } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { Message, Profile, TeamList, Ticket, TicketMessage } from "../../shared/types";
 import { getEvent } from "../util/get-event";
@@ -137,10 +137,13 @@ export const messagesRouter = router({
 
         event.ticketEmitter.emit('create', { ...insert[0], user: { username: ctx.user.username, id: ctx.user.id, role: ctx.user.role } });
 
-        sendNotification(event.users, {
-            title: `New Ticket: ${input.team} ${input.summary}`,
-            body: input.message,
-            icon: "https://ftabuddy.com/app/assignment.png",
+        sendNotification(event.users.filter(u => (u !== ctx.user.id)), {
+            title: `New Ticket: Team ${input.team}`,
+            body: input.summary,
+            tag: 'Ticket Created',
+            data: {
+                page: 'ticket/' + insert[0].id,
+            }
         });
 
         return insert[0];
@@ -225,16 +228,20 @@ export const messagesRouter = router({
         })
             .from(messages)
             .where(and(
-                eq(messages.thread_id, input.id)
+                eq(messages.thread_id, input.id),
+                not(eq(messages.user_id, ctx.user.id))
             ));
 
         // Remove duplicate watchers
         const watchers = Array.from(new Set(usersWhoSentMessages.map(watcher => watcher.id)));
 
         sendNotification(watchers, {
-            title: `Ticket ${input.status ? "Reopened" : "Closed"}`,
-            body: `Ticket ${ticket.summary} has been ${input.status ? "reopened" : "closed"}`,
-            icon: "https://ftabuddy.com/app/assignment.png",
+            title: `Ticket #${ticket.id} ${input.status ? "Reopened" : "Closed"}`,
+            body: `Team ${ticket.team}`,
+            tag: 'Ticket Update',
+            data: {
+                page: 'ticket/' + ticket.id,
+            }
         });
 
         return update[0];
@@ -278,11 +285,16 @@ export const messagesRouter = router({
 
         (await getEvent("", ticket.event_code)).ticketEmitter.emit('assign', { ...update[0], assigned_to: profiles });
 
-        sendNotification(assignees, {
-            title: `Ticket Assigned: ${ticket.summary}`,
-            body: `You have been assigned to ticket ${ticket.summary}`,
-            icon: "https://ftabuddy.com/app/assignment.png",
-        });
+        if (input.user !== ctx.user.id) {
+            sendNotification(assignees, {
+                title: `Ticket #${ticket.id} Assigned to you`,
+                body: `You have been assigned to ticket #${ticket.id} for team ${ticket.team}`,
+                tag: 'Ticket Update',
+                data: {
+                    page: 'ticket/' + ticket.id,
+                }
+            });
+        }
 
         return profiles;
     }),
@@ -340,16 +352,20 @@ export const messagesRouter = router({
         })
             .from(messages)
             .where(and(
-                eq(messages.thread_id, input.id)
+                eq(messages.thread_id, input.ticketId),
+                not(eq(messages.user_id, ctx.user.id))
             ));
 
         // Remove duplicate watchers
         const watchers = Array.from(new Set(usersWhoSentMessages.map(watcher => watcher.id)));
 
         sendNotification(watchers, {
-            title: `New Reply: ${ticket.summary}`,
+            title: `Ticket #${ticket.id}`,
             body: input.message,
-            icon: "https://ftabuddy.com/app/assignment.png",
+            tag: 'Ticket Reply',
+            data: {
+                page: 'ticket/' + ticket.id,
+            }
         });
 
         return insert[0];
@@ -581,7 +597,7 @@ export const messagesRouter = router({
 
         return observable<TicketPost>((emitter) => {
             const listener = (type: "assign" | "status" | "ticketReply" | "create" | "message", msg: Ticket | TicketMessage | Message) => {
-                if (msg.team == input.team) {
+                if (msg.team == input.team.toString()) {
                     emitter.next({
                         type,
                         data: msg

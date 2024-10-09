@@ -7,7 +7,7 @@ import { TRPCError } from "@trpc/server";
 import { Message, Profile, TeamList, Ticket, TicketMessage } from "../../shared/types";
 import { getEvent } from "../util/get-event";
 import { observable } from "@trpc/server/observable";
-import { sendNotification } from "../util/push-notifiactions";
+import { sendNotification } from "../util/push-notifications";
 
 export interface TicketPost {
     type: "create" | "message" | "ticketReply" | "assign" | "status";

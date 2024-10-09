@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db/db";
 import { events, users } from "../db/schema";
@@ -7,6 +7,8 @@ import { adminProcedure, eventProcedure, protectedProcedure, publicProcedure, ro
 import { generateToken } from "./user";
 import { EventChecklist, TeamList, TournamentLevel } from '../../shared/types';
 import { createHash } from 'crypto';
+import { getEvent } from "../util/get-event";
+import { sendNotification } from "../util/push-notifications";
 
 export const eventRouter = router({
     checkCode: publicProcedure.input(z.object({
@@ -57,7 +59,7 @@ export const eventRouter = router({
 
     get: adminProcedure.input(z.object({
         code: z.string()
-    })).query(async ({ input }) => {
+    })).query(async ({ input, ctx }) => {
         input.code = input.code.trim().toLowerCase();
 
         const event = await db.query.events.findFirst({ where: eq(events.code, input.code) });
@@ -70,6 +72,11 @@ export const eventRouter = router({
             team.inspected = checklist[team.number].inspected && checklist[team.number].weighed;
         }
 
+        const eventList = ctx.user.events as string[];
+
+        await db.update(users).set({ events: [...eventList, event.code] }).where(eq(users.id, ctx.user.id));
+        await db.update(events).set({ users: [...(event.users as number[]), ctx.user.id] }).where(eq(events.code, event.code));
+
         return event;
     }),
 
@@ -77,7 +84,7 @@ export const eventRouter = router({
         code: z.string().startsWith('202').min(6),
         pin: z.string().min(4),
         teams: z.array(z.number()).optional()
-    })).query(async ({ input }) => {
+    })).query(async ({ input, ctx }) => {
         input.code = input.code.trim().toLowerCase();
         const token = generateToken();
         const teams: TeamList = [];
@@ -131,19 +138,25 @@ export const eventRouter = router({
 
         await Promise.all(promises);
 
+        const user = await db.query.users.findFirst({ where: eq(users.token, ctx.token ?? "") });
+
         await db.insert(events).values({
             code: input.code,
             pin: input.pin,
             token,
             teams,
-            checklist
+            checklist,
+            users: [user?.id]
         });
 
         return { code: input.code, token, teams };
     }),
 
-    getAll: adminProcedure.query(async () => {
-        return (await db.query.events.findMany()).sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
+    getAll: publicProcedure.query(async () => {
+        return await db.select({
+            code: events.code,
+            created_at: events.created_at
+        }).from(events).orderBy(desc(events.created_at));
     }),
 
     getMusicOrder: eventProcedure.input(z.object({
@@ -156,5 +169,16 @@ export const eventRouter = router({
         const hash = await createHash('md5').update(ctx.event.code + level + input.match).digest();
         const musicOrder = hash.toString('hex').split('');
         return musicOrder.map(s => parseInt(s, 16));
+    }),
+
+    notification: adminProcedure.input(z.object({
+        eventToken: z.string(),
+    })).query(async ({ input }) => {
+        const event = await getEvent(input.eventToken);
+
+        sendNotification(event.users, {
+            title: 'Test',
+            body: 'Test notification'
+        });
     })
 });

@@ -30,7 +30,7 @@ import hljs from 'highlight.js';
 import json from 'highlight.js/lib/languages/json';
 import { gfmHeadingId } from 'marked-gfm-heading-id';
 import { observable } from '@trpc/server/observable';
-import { initializePushNotifications } from './util/push-notifiactions';
+import { initializePushNotifications } from './util/push-notifications';
 import { logAnalysisLoop } from './util/log-analysis';
 
 const port = parseInt(process.env.PORT || '3001');

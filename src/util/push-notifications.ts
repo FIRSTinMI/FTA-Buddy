@@ -1,4 +1,4 @@
-import webpush, { SendResult } from 'web-push';
+import webpush, { PushSubscription, SendResult } from 'web-push';
 import { db } from '../db/db';
 import { inArray } from 'drizzle-orm';
 import { pushSubscriptions } from '../db/schema';
@@ -24,11 +24,20 @@ export async function sendNotification(users: number[], data: NotificationData) 
     if (users.length === 0) return;
     const subscriptions = await db.query.pushSubscriptions.findMany({ where: inArray(pushSubscriptions.user_id, users) });
 
+    console.log(subscriptions);
 
     const notifications: Promise<SendResult>[] = [];
     for (let subscription of subscriptions) {
-        // @ts-ignore
-        notifications.push(webpush.sendNotification(subscription, JSON.stringify(data)));
+        console.log('Sending notification to', subscription.user_id);
+        notifications.push(webpush.sendNotification({
+            endpoint: subscription.endpoint,
+            keys: subscription.keys as PushSubscription['keys'],
+        }, JSON.stringify(data), {
+            topic: 'test'
+        }).then(res => {
+            console.log('Notification sent', res);
+            return res;
+        }));
     }
 
     await Promise.all(notifications);

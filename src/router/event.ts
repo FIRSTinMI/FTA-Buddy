@@ -183,6 +183,8 @@ export const eventRouter = router({
     })).query(async ({ input }) => {
         const event = await getEvent(input.eventToken);
 
+        console.log('Sending notification to', event.users);
+
         sendNotification(event.users, {
             title: 'Test',
             body: 'Test notification'

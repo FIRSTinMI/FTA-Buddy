@@ -59,6 +59,8 @@ self.addEventListener("activate", (evt) => {
 
 self.addEventListener("push", (evt) => {
 	const data = evt.data.json();
+    console.log(evt);
+	console.log(evt.data);
 	self.registration.showNotification(data.title, {
 		body: data.body,
 		icon: data.icon,

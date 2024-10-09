@@ -130,13 +130,13 @@
 				<Toggle class="toggle" bind:checked={settings.roundGreen} on:change={updateSettings}>Round Green Indicators</Toggle>
 				<Toggle class="toggle" bind:checked={settings.inspectionAlerts} on:change={updateSettings}>🔍 Missing inspection icon on field monitor</Toggle>
 			</div>
-			<div class="grid grid-cols-subgrid gap-2 row-span-3">
+			<div class="grid grid-cols-subgrid gap-2 row-span-4">
 				<p class="text-gray-700 dark:text-gray-400">Developer</p>
 				<Toggle class="toggle" bind:checked={settings.developerMode} on:change={updateSettings}>Developer Mode</Toggle>
 				<Toggle class="toggle {!settings.developerMode && "hidden"}" bind:checked={settings.forceCloud} on:change={updateSettings}>Force cloud server</Toggle>
                 <Button class="{!settings.developerMode && 'hidden'}" on:click={() => {
                     trpc.event.notification.query({ eventToken: $authStore.eventToken})
-                }} size="xs" color="red">Notification Test</Button>
+                }} size="xs">Notification Test</Button>
 			</div>
 			<div class="grid gap-2 md:col-span-2">
 				{#if installPrompt}

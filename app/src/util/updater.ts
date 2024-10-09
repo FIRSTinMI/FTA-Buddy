@@ -19,6 +19,7 @@ export const VERSIONS: { [key: string]: Version } = {
         <li>Finally fixed the link to a team's notes from the monitor</li>
         <li>Event Dashboard</li>
         <li>Event Reports</li>
+        <li>Match log analysis</li>
         </ul>`,
         update: () => { }
     },

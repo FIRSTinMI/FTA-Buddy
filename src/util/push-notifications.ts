@@ -21,6 +21,7 @@ export interface NotificationData {
 }
 
 export async function sendNotification(users: number[], data: NotificationData) {
+    if (users.length === 0) return;
     const subscriptions = await db.query.pushSubscriptions.findMany({ where: inArray(pushSubscriptions.user_id, users) });
 
 

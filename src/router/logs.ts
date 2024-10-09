@@ -6,6 +6,7 @@ import { and, asc, count, eq, or } from 'drizzle-orm';
 import { inferRouterOutputs } from '@trpc/server';
 import { randomUUID } from 'crypto';
 import { FMSLogFrame, ROBOT, DisconnectionEvent } from '../../shared/types';
+import { generateReport } from "../util/report-generator";
 
 export type MatchRouterOutputs = inferRouterOutputs<typeof matchRouter>;
 
@@ -287,5 +288,24 @@ export const matchRouter = router({
 
     getNumberOfMatches: publicProcedure.query(async ({ ctx }) => {
         return (await db.select({ count: count() }).from(matchLogs))[0].count;
-    })
+    }),
+
+    generateBypassReport: eventProcedure.query(async ({ ctx }) => {
+        const bypassedTeams = await db.select().from(analyzedLogs)
+            .where(and(
+                eq(analyzedLogs.bypassed, true),
+                eq(analyzedLogs.event, ctx.event.code)
+            ));
+
+        const report = await generateReport({
+            title: 'Bypassed Teams Report',
+            description: 'A report of all bypassed teams',
+            headers: ['Level', 'Match Number', 'Play Number', 'Team'],
+            fileName: 'bypassed-teams'
+        }, bypassedTeams.map((team) => {
+            return [team.level, team.match_number, team.play_number, team.team];
+        }), ctx.event.code);
+
+        return { path: report };
+    }),
 });

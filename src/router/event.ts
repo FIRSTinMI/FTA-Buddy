@@ -66,6 +66,14 @@ export const eventRouter = router({
     })).query(async ({ input, ctx }) => {
         input.code = input.code.trim().toLowerCase();
 
+        const eventDB = (await db.select({
+            code: events.code,
+            token: events.token,
+            teams: events.teams,
+            checklist: events.checklist,
+            users: events.users
+        }).from(events).where(eq(events.code, input.code)))[0];
+
         const event = await getEvent('', input.code);
 
         if (!event) throw new TRPCError({ code: 'NOT_FOUND', message: 'Event not found' });
@@ -83,8 +91,7 @@ export const eventRouter = router({
         await db.update(users).set({ events: Array.from(new Set([...eventList, event.code])) }).where(eq(users.id, ctx.user.id));
         await db.update(events).set({ users: event.users }).where(eq(events.code, event.code));
 
-
-        return event;
+        return eventDB;
     }),
 
     create: publicProcedure.input(z.object({

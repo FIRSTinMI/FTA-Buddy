@@ -2,7 +2,7 @@ import { z } from "zod";
 import { eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
 import { db } from "../db/db";
 import { matchLogs, messages, pushSubscriptions, users } from "../db/schema";
-import { desc, eq, inArray, or, and } from "drizzle-orm";
+import { desc, eq, inArray, or, and, aliasedTable } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { Message, Profile, TeamList, Ticket, TicketMessage } from "../../shared/types";
 import { getEvent } from "../util/get-event";
@@ -19,56 +19,82 @@ export const messagesRouter = router({
         limit: z.number().default(20),
         page: z.number().default(1)
     })).query(async ({ ctx, input }) => {
-        const tickets = await db.select().from(messages)
-            .where(and(eq(messages.is_ticket, true), eq(messages.event_code, ctx.event.code)))
+        const tickets = await db.select({
+            id: messages.id,
+            user_id: messages.user_id,
+            team: messages.team,
+            is_ticket: messages.is_ticket,
+            thread_id: messages.thread_id,
+            created_at: messages.created_at,
+            summary: messages.summary,
+            assigned_to: messages.assigned_to,
+            event_code: messages.event_code,
+            match_id: messages.match_id,
+            is_open: messages.is_open,
+            message: messages.message,
+            closed_at: messages.closed_at,
+            user: {
+                id: users.id,
+                username: users.username,
+                role: users.role,
+            },
+        })
+            .from(messages)
+            .leftJoin(users, eq(messages.user_id, users.id))
+            .where(and(
+                eq(messages.is_ticket, true),
+                eq(messages.event_code, ctx.event.code)
+            ))
             .orderBy(desc(messages.created_at))
             .limit(input.limit)
             .offset((input.page - 1) * input.limit);
 
-        const msgs = await db.select().from(messages)
-            .where(and(
-                eq(messages.is_ticket, false),
-                eq(messages.event_code, ctx.event.code),
-                inArray(messages.thread_id, tickets.map(t => t.id))))
-            .orderBy(desc(messages.created_at));
+        let processedTickets: Ticket[] = tickets.map(ticket => ({
+            ...ticket,
+            summary: ticket.summary ?? "",
+            messages: [],
+            user: ticket.user ?? { id: 0, username: "Unknown", role: "FTA" },
+            assigned_to: (ticket.assigned_to as Profile[]) ?? [],
+            is_ticket: true,
+        }));
 
-        const profiles = await db.select({
-            id: users.id,
-            username: users.username,
-            role: users.role,
-        }).from(users).where(inArray(users.id, [...new Set([...tickets.map(t => t.user_id), ...msgs.map(m => m.user_id)])]));
-        // Copilot generated this beautiful oneliner and I love it
+        if (tickets.length > 0) {
+            const ticketIds = processedTickets.map(ticket => ticket.id);
+            const ticketMessages = await db.select({
+                id: messages.id,
+                user_id: messages.user_id,
+                team: messages.team,
+                is_ticket: messages.is_ticket,
+                thread_id: messages.thread_id,
+                created_at: messages.created_at,
+                summary: messages.summary,
+                assigned_to: messages.assigned_to,
+                event_code: messages.event_code,
+                match_id: messages.match_id,
+                is_open: messages.is_open,
+                message: messages.message,
+                closed_at: messages.closed_at,
+                user: {
+                    id: users.id,
+                    username: users.username,
+                    role: users.role,
+                }
+            })
+                .from(messages)
+                .leftJoin(users, eq(messages.user_id, users.id))
+                .where(inArray(messages.thread_id, ticketIds));
 
-        const msgsWithProfiles: TicketMessage[] = [];
-
-        for (let msg of msgs) {
-            msgsWithProfiles.push({
-                ...msg,
-                user: profiles.find(p => p.id === msg.user_id),
-                is_ticket: false
-            });
-        }
-
-        let processedTickets: Ticket[] = [];
-
-        for (let ticket of tickets) {
-            let ticketMessages = msgsWithProfiles.filter(msg => msg.thread_id === ticket.id);
-            const assigned_to: Profile[] = [];
-
-            for (let user of (ticket.assigned_to as number[])) {
-                const profile = profiles.find(p => p.id === user);
-                if (profile) assigned_to.push(profile);
-            }
-
-            processedTickets.push({
-                ...ticket,
-                team: parseInt(ticket.team),
-                user: profiles.find(p => p.id === ticket.user_id),
-                summary: ticket.summary ?? "",
-                assigned_to,
-                teamName: (ctx.event.teams as TeamList).find(t => t.number == ticket.team)?.name,
-                messages: ticketMessages,
-                is_ticket: true
+            processedTickets = processedTickets.map(ticket => {
+                return {
+                    ...ticket,
+                    messages: ticketMessages
+                        .filter(msg => msg.thread_id === ticket.id)
+                        .map(msg => ({
+                            ...msg,
+                            is_ticket: false,
+                            user: msg.user ?? { id: 0, username: "Unknown", role: "FTA" }
+                        })),
+                };
             });
         }
 
@@ -83,12 +109,13 @@ export const messagesRouter = router({
         return processedTickets;
     }),
 
+
     createTicket: protectedProcedure.input(z.object({
         eventToken: z.string(),
         team: z.number(),
         summary: z.string(),
         message: z.string(),
-        matchID: z.string().optional(),
+        matchID: z.string().nullable().optional(),
     })).query(async ({ ctx, input }) => {
         const event = await getEvent(input.eventToken);
 
@@ -114,7 +141,7 @@ export const messagesRouter = router({
             title: `New Ticket: ${input.team} ${input.summary}`,
             body: input.message,
             icon: "https://ftabuddy.com/app/assignment.png",
-        })
+        });
 
         return insert[0];
     }),
@@ -122,72 +149,56 @@ export const messagesRouter = router({
     getTicket: protectedProcedure.input(z.object({
         id: z.number()
     })).query(async ({ ctx, input }) => {
-        const msgs = await db.query.messages.findMany({
-            where: or(eq(messages.id, input.id), eq(messages.thread_id, input.id)),
-            orderBy: desc(messages.created_at),
-        });
+        const ticket = (await db.select({
+            id: messages.id,
+            user_id: messages.user_id,
+            team: messages.team,
+            is_ticket: messages.is_ticket,
+            thread_id: messages.thread_id,
+            created_at: messages.created_at,
+            summary: messages.summary,
+            assigned_to: messages.assigned_to,
+            event_code: messages.event_code,
+            match_id: messages.match_id,
+            is_open: messages.is_open,
+            message: messages.message,
+            closed_at: messages.closed_at,
+            user: {
+                id: users.id,
+                username: users.username,
+                role: users.role,
+            }
+        })
+            .from(messages)
+            .leftJoin(users, eq(messages.user_id, users.id))
+            .where(eq(messages.id, input.id)))[0];
 
-        const ticket = msgs.find(msg => msg.is_ticket);
+        const ticketMessages = await db.select({
+            id: messages.id,
+            user_id: messages.user_id,
+            team: messages.team,
+            is_ticket: messages.is_ticket,
+            thread_id: messages.thread_id,
+            created_at: messages.created_at,
+            summary: messages.summary,
+            assigned_to: messages.assigned_to,
+            event_code: messages.event_code,
+            match_id: messages.match_id,
+            is_open: messages.is_open,
+            message: messages.message,
+            closed_at: messages.closed_at,
+            user: {
+                id: users.id,
+                username: users.username,
+                role: users.role,
+            }
+        })
+            .from(messages)
+            .leftJoin(users, eq(messages.user_id, users.id))
+            .where(eq(messages.thread_id, input.id));
 
-        if (!ticket) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
-        }
 
-        const profileFilters = [eq(users.id, ticket.user_id)];
-
-        if ((ticket.assigned_to as number[]).length > 0) {
-            profileFilters.push(inArray(users.id, ticket.assigned_to as number[]));
-        }
-
-        if (msgs.length > 1) {
-            profileFilters.push(inArray(users.id, msgs.map(msg => msg.user_id)));
-        }
-
-        const profiles = await db.select({
-            id: users.id,
-            username: users.username,
-            role: users.role,
-        }).from(users).where(or(...profileFilters));
-
-        const msgsWithProfiles: TicketMessage[] = [];
-
-        for (let msg of msgs) {
-            msgsWithProfiles.push({
-                ...msg,
-                user: profiles.find(p => p.id === msg.user_id),
-                is_ticket: false
-            });
-        }
-
-        return {
-            id: ticket.id,
-            team: parseInt(ticket.team),
-            summary: ticket.summary,
-            created_at: ticket.created_at,
-            user_id: ticket.user_id,
-            event_code: ticket.event_code,
-            is_open: ticket.is_open,
-            assigned_to: (ticket.assigned_to as number[]).map(id => profiles.find(p => p.id === id)),
-            closed_at: ticket.closed_at,
-            is_ticket: true,
-            match_id: ticket.match_id,
-            message: ticket.message,
-            match: ticket.match_id ? (await db.select({
-                id: matchLogs.id,
-                match_number: matchLogs.match_number,
-                play_number: matchLogs.play_number,
-                level: matchLogs.level,
-                stations: {
-                    blue1: matchLogs.blue1,
-                    blue2: matchLogs.blue2,
-                    blue3: matchLogs.blue3,
-                    red1: matchLogs.red1,
-                    red2: matchLogs.red2,
-                    red3: matchLogs.red3,
-                }
-            }).from(matchLogs).where(eq(matchLogs.id, ticket.match_id)))[0] : null,
-            messages: msgsWithProfiles
-        } as Ticket;
+        return { ...ticket, messages: ticketMessages };
     }),
 
     updateTicketStatus: protectedProcedure.input(z.object({
@@ -208,6 +219,23 @@ export const messagesRouter = router({
         }).where(eq(messages.id, input.id)).returning();
 
         (await getEvent("", ticket.event_code)).ticketEmitter.emit('status', update[0]);
+
+        const usersWhoSentMessages = await db.select({
+            id: messages.user_id,
+        })
+            .from(messages)
+            .where(and(
+                eq(messages.thread_id, input.id)
+            ));
+
+        // Remove duplicate watchers
+        const watchers = Array.from(new Set(usersWhoSentMessages.map(watcher => watcher.id)));
+
+        sendNotification(watchers, {
+            title: `Ticket ${input.status ? "Reopened" : "Closed"}`,
+            body: `Ticket ${ticket.summary} has been ${input.status ? "reopened" : "closed"}`,
+            icon: "https://ftabuddy.com/app/assignment.png",
+        });
 
         return update[0];
     }),
@@ -250,12 +278,18 @@ export const messagesRouter = router({
 
         (await getEvent("", ticket.event_code)).ticketEmitter.emit('assign', { ...update[0], assigned_to: profiles });
 
+        sendNotification(assignees, {
+            title: `Ticket Assigned: ${ticket.summary}`,
+            body: `You have been assigned to ticket ${ticket.summary}`,
+            icon: "https://ftabuddy.com/app/assignment.png",
+        });
+
         return profiles;
     }),
 
     addMessage: protectedProcedure.input(z.object({
         ticketId: z.number().default(0),
-        team: z.number(),
+        team: z.number().or(z.string()),
         message: z.string(),
         eventToken: z.string()
     })).query(async ({ ctx, input }) => {
@@ -301,6 +335,23 @@ export const messagesRouter = router({
 
         event.ticketEmitter.emit('ticketReply', { ...insert[0], user: { username: ctx.user.username, id: ctx.user.id, role: ctx.user.role } });
 
+        const usersWhoSentMessages = await db.select({
+            id: messages.user_id,
+        })
+            .from(messages)
+            .where(and(
+                eq(messages.thread_id, input.id)
+            ));
+
+        // Remove duplicate watchers
+        const watchers = Array.from(new Set(usersWhoSentMessages.map(watcher => watcher.id)));
+
+        sendNotification(watchers, {
+            title: `New Reply: ${ticket.summary}`,
+            body: input.message,
+            icon: "https://ftabuddy.com/app/assignment.png",
+        });
+
         return insert[0];
     }),
 
@@ -309,7 +360,27 @@ export const messagesRouter = router({
         limit: z.number().default(40),
         page: z.number().default(1)
     })).query(async ({ ctx, input }) => {
-        const tickets = await db.select().from(messages)
+        const tickets = await db.select({
+            id: messages.id,
+            user_id: messages.user_id,
+            team: messages.team,
+            is_ticket: messages.is_ticket,
+            thread_id: messages.thread_id,
+            created_at: messages.created_at,
+            summary: messages.summary,
+            assigned_to: messages.assigned_to,
+            event_code: messages.event_code,
+            match_id: messages.match_id,
+            is_open: messages.is_open,
+            message: messages.message,
+            closed_at: messages.closed_at,
+            user: {
+                id: users.id,
+                username: users.username,
+                role: users.role,
+            },
+        }).from(messages)
+            .leftJoin(users, eq(messages.user_id, users.id))
             .where(and(
                 eq(messages.team, input.team?.toString() ?? "0"),
                 eq(messages.is_ticket, true)))
@@ -317,65 +388,86 @@ export const messagesRouter = router({
             .limit(input.limit)
             .offset((input.page - 1) * input.limit);
 
-        const ticketMsgs = await db.select().from(messages)
-            .where(and(
-                eq(messages.is_ticket, false),
-                inArray(messages.thread_id, tickets.map(t => t.id))))
-            .orderBy(desc(messages.created_at));
+        let processedTickets: Ticket[] = tickets.map(ticket => ({
+            ...ticket,
+            summary: ticket.summary ?? "",
+            messages: [],
+            user: ticket.user ?? { id: 0, username: "Unknown", role: "FTA" },
+            assigned_to: (ticket.assigned_to as Profile[]) ?? [],
+            is_ticket: true,
+        }));
 
-        const msgs = await db.select().from(messages)
+        if (tickets.length > 0) {
+            const ticketIds = processedTickets.map(ticket => ticket.id);
+            const ticketMessages = await db.select({
+                id: messages.id,
+                user_id: messages.user_id,
+                team: messages.team,
+                is_ticket: messages.is_ticket,
+                thread_id: messages.thread_id,
+                created_at: messages.created_at,
+                summary: messages.summary,
+                assigned_to: messages.assigned_to,
+                event_code: messages.event_code,
+                match_id: messages.match_id,
+                is_open: messages.is_open,
+                message: messages.message,
+                closed_at: messages.closed_at,
+                user: {
+                    id: users.id,
+                    username: users.username,
+                    role: users.role,
+                }
+            })
+                .from(messages)
+                .leftJoin(users, eq(messages.user_id, users.id))
+                .where(inArray(messages.thread_id, ticketIds));
+
+            processedTickets = processedTickets.map(ticket => {
+                return {
+                    ...ticket,
+                    messages: ticketMessages
+                        .filter(msg => msg.thread_id === ticket.id)
+                        .map(msg => ({
+                            ...msg,
+                            is_ticket: false,
+                            user: msg.user ?? { id: 0, username: "Unknown", role: "FTA" }
+                        })),
+                };
+            });
+        }
+
+        const msgs = await db.select({
+            id: messages.id,
+            user_id: messages.user_id,
+            team: messages.team,
+            is_ticket: messages.is_ticket,
+            thread_id: messages.thread_id,
+            created_at: messages.created_at,
+            summary: messages.summary,
+            assigned_to: messages.assigned_to,
+            event_code: messages.event_code,
+            match_id: messages.match_id,
+            is_open: messages.is_open,
+            message: messages.message,
+            closed_at: messages.closed_at,
+            user: {
+                id: users.id,
+                username: users.username,
+                role: users.role,
+            }
+        }).from(messages)
             .where(and(
                 eq(messages.team, input.team?.toString() ?? "0"),
                 eq(messages.thread_id, 0),
                 eq(messages.is_ticket, false)
             ))
+            .leftJoin(users, eq(messages.user_id, users.id))
             .orderBy(desc(messages.created_at))
             .limit(input.limit)
             .offset((input.page - 1) * input.limit);
 
-        const profiles = await db.select({
-            id: users.id,
-            username: users.username,
-            role: users.role,
-        }).from(users).where(inArray(users.id, [...new Set([
-            ...msgs.map(m => m.user_id),
-            ...ticketMsgs.map(m => m.user_id),
-            ...tickets.map(t => t.user_id)
-        ])]));
-
-        const msgsWithProfiles: Message[] = [];
-
-        for (let msg of msgs) {
-            msgsWithProfiles.push({
-                ...msg,
-                user: profiles.find(p => p.id === msg.user_id),
-                is_ticket: false
-            });
-        }
-
-        let processedTickets: Ticket[] = [];
-
-        for (let ticket of tickets) {
-            let ticketMessages = msgsWithProfiles.filter(msg => msg.thread_id === ticket.id);
-            const assigned_to: Profile[] = [];
-
-            for (let user of (ticket.assigned_to as number[])) {
-                const profile = profiles.find(p => p.id === user);
-                if (profile) assigned_to.push(profile);
-            }
-
-            processedTickets.push({
-                ...ticket,
-                team: parseInt(ticket.team),
-                user: profiles.find(p => p.id === ticket.user_id),
-                summary: ticket.summary ?? "",
-                assigned_to,
-                is_ticket: true,
-                messages: ticketMessages
-            });
-        }
-
-        const ticketsAndMessages = [...processedTickets, ...msgsWithProfiles].sort((a, b) => {
+        const ticketsAndMessages = [...processedTickets, ...msgs].sort((a, b) => {
             let aTime = a.created_at.getTime();
             let bTime = b.created_at.getTime();
             // if (a.is_ticket) aTime = a.messages[a.messages.length - 1].created_at.getTime();

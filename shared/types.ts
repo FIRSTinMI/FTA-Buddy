@@ -359,6 +359,7 @@ export interface ServerEvent {
         red2?: TeamCycleTracking,
         red3?: TeamCycleTracking;
     };
+    tickets: Ticket[];
 }
 
 export interface TeamCycleTracking {

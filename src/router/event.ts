@@ -37,11 +37,13 @@ export const eventRouter = router({
     })).query(async ({ input, ctx }) => {
         input.code = input.code.trim().toLowerCase();
 
-        const event = await db.query.events.findFirst({ where: eq(events.code, input.code) });
+        const eventDB = await db.query.events.findFirst({ where: eq(events.code, input.code) });
 
-        if (!event) throw new TRPCError({ code: 'NOT_FOUND', message: 'Event not found' });
+        if (!eventDB) throw new TRPCError({ code: 'NOT_FOUND', message: 'Event not found' });
 
-        if (event.pin !== input.pin) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Incorrect pin' });
+        if (eventDB.pin !== input.pin) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Incorrect pin' });
+
+        const event = await getEvent(eventDB?.token ?? '');
 
         const checklist = event.checklist as EventChecklist;
 
@@ -51,8 +53,10 @@ export const eventRouter = router({
 
         const eventList = ctx.user.events as string[];
 
-        await db.update(users).set({ events: [...eventList, event.code] }).where(eq(users.id, ctx.user.id));
-        await db.update(events).set({ users: [...(event.users as number[]), ctx.user.id] }).where(eq(events.code, event.code));
+        event.users = Array.from(new Set([...event.users, ctx.user.id]));
+
+        await db.update(users).set({ events: Array.from(new Set([...eventList, event.code])) }).where(eq(users.id, ctx.user.id));
+        await db.update(events).set({ users: event.users }).where(eq(events.code, event.code));
 
         return event;
     }),
@@ -62,7 +66,7 @@ export const eventRouter = router({
     })).query(async ({ input, ctx }) => {
         input.code = input.code.trim().toLowerCase();
 
-        const event = await db.query.events.findFirst({ where: eq(events.code, input.code) });
+        const event = await getEvent('', input.code);
 
         if (!event) throw new TRPCError({ code: 'NOT_FOUND', message: 'Event not found' });
 
@@ -74,8 +78,11 @@ export const eventRouter = router({
 
         const eventList = ctx.user.events as string[];
 
-        await db.update(users).set({ events: [...eventList, event.code] }).where(eq(users.id, ctx.user.id));
-        await db.update(events).set({ users: [...(event.users as number[]), ctx.user.id] }).where(eq(events.code, event.code));
+        event.users = Array.from(new Set([...event.users, ctx.user.id]));
+
+        await db.update(users).set({ events: Array.from(new Set([...eventList, event.code])) }).where(eq(users.id, ctx.user.id));
+        await db.update(events).set({ users: event.users }).where(eq(events.code, event.code));
+
 
         return event;
     }),

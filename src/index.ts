@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { createHTTPServer } from '@trpc/server/adapters/standalone';
 import { applyWSSHandler } from '@trpc/server/adapters/ws';
 import cors from 'cors';

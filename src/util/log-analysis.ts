@@ -2,6 +2,7 @@ import { DisconnectionEvent, FMSLogFrame, MatchLog, ROBOT } from "../../shared/t
 import { db } from "../db/db";
 import { analyzedLogs, matchLogs } from "../db/schema";
 import { asc, eq } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
 
 export function analyzeLog(log: FMSLogFrame[]): DisconnectionEvent[] {
     const events: DisconnectionEvent[] = [];
@@ -231,7 +232,7 @@ export async function logAnalysisLoop() {
 
             const analyzedLog = analyzeLog(logData);
             await db.insert(analyzedLogs).values({
-                id: crypto.randomUUID(),
+                id: randomUUID(),
                 match_id: log.id,
                 event: log.event,
                 match_number: log.match_number,

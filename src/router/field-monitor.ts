@@ -52,11 +52,15 @@ export const fieldMonitorRouter = router({
         blue2: teamInfo,
         blue3: teamInfo,
     })).mutation(async ({ input }) => {
+        console.log('Received frame', input);
+
         if (!input.eventToken && !input.eventCode) {
             throw new Error('Event token or code required');
         }
 
         const event = await getEvent(input.eventToken || '', input.eventCode);
+
+        console.log('Got event', event);
 
         // Detect radio even if no DS
         const detectedRadio = detectRadioNoDs(input, event.history);

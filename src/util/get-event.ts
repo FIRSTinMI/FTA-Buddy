@@ -17,7 +17,7 @@ let loadingEvents: { [key: string]: Promise<ServerEvent>; } = {};
  * @returns Object representing the event in memory
  */
 export async function getEvent(eventToken: string, eventCode?: string) {
-    let event;
+    let event: any;
 
     if (!eventCode) {
         eventCode = eventCodes[eventToken];
@@ -32,7 +32,7 @@ export async function getEvent(eventToken: string, eventCode?: string) {
         eventCode = event.code;
     }
 
-    eventCode = eventCode.toLowerCase();
+    eventCode = eventCode?.toLowerCase() ?? "";
 
     if (loadingEvents.hasOwnProperty(eventCode)) {
         return await loadingEvents[eventCode];

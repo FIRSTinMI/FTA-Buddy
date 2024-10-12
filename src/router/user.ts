@@ -5,6 +5,7 @@ import schema, { events, users } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { OAuth2Client } from "google-auth-library";
+import { compare, hash } from "bcrypt";
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -19,7 +20,7 @@ export const userRouter = router({
 
         if (!user) throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
 
-        if (await Bun.password.verify(input.password, user.password, 'bcrypt')) {
+        if (await compare(input.password, user.password)) {
             db.update(users).set({ last_seen: new Date() }).where(eq(users.id, user.id));
             if (user.token === '') {
                 let token = generateToken();
@@ -41,8 +42,8 @@ export const userRouter = router({
 
         if (!user) throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
 
-        if (await Bun.password.verify(input.oldPassword, user.password, 'bcrypt')) {
-            const hashedPassword = await Bun.password.hash(input.newPassword, { algorithm: 'bcrypt', cost: 12 });
+        if (await compare(input.oldPassword, user.password)) {
+            const hashedPassword = await hash(input.newPassword, 12);
             await db.update(users).set({ password: hashedPassword }).where(eq(users.id, user.id));
             return true;
         } else {
@@ -61,7 +62,7 @@ export const userRouter = router({
         if (input.username.length < 3) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Username must be at least 3 characters long' });
         if (input.password.length < 8) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Password must be at least 8 characters long' });
 
-        const hashedPassword = await Bun.password.hash(input.password, { algorithm: 'bcrypt', cost: 12 });
+        const hashedPassword = await hash(input.password, 12);
         const token = generateToken();
         await db.insert(users).values({
             email: input.email,

@@ -6,6 +6,8 @@ import { getEvent } from "./get-event";
 import { randomUUID } from "crypto";
 
 export function detectRadioNoDs(currentFrame: PartialMonitorFrame, pastFrames: MonitorFrame[]) {
+    // Only in prestart
+    if (MatchStateMap[currentFrame.field] !== MatchState.PRESTART) return currentFrame;
     for (let _robot in ROBOT) {
         const robot = _robot as ROBOT;
         const currentRobot = (currentFrame[robot as keyof PartialMonitorFrame] as TeamInfo);
@@ -13,7 +15,7 @@ export function detectRadioNoDs(currentFrame: PartialMonitorFrame, pastFrames: M
 
         if (currentSignal === 0 || currentRobot.ds === DSState.GREEN) continue;
 
-        const pastSignals = (pastFrames.map(f => (f[robot as keyof MonitorFrame] as TeamInfo).signal));
+        const pastSignals = (pastFrames.slice(-20).map(f => (f[robot as keyof MonitorFrame] as TeamInfo).signal));
 
         // If the signal hasn't changed in the last 20 frames, the radio probably disconnected
         if (pastSignals.every(signal => signal === currentSignal)) continue;

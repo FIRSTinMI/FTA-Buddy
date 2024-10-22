@@ -1,0 +1,1 @@
+ALTER TABLE "events" ADD COLUMN "archived" boolean DEFAULT false NOT NULL;

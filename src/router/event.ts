@@ -42,6 +42,7 @@ export const eventRouter = router({
         if (!eventDB) throw new TRPCError({ code: 'NOT_FOUND', message: 'Event not found' });
 
         if (eventDB.pin !== input.pin) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Incorrect pin' });
+        if (eventDB.archived) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Event has been archived' });
 
         const event = await getEvent(eventDB?.token ?? '');
 
@@ -71,8 +72,11 @@ export const eventRouter = router({
             token: events.token,
             teams: events.teams,
             checklist: events.checklist,
-            users: events.users
+            users: events.users,
+            archived: events.archived
         }).from(events).where(eq(events.code, input.code)))[0];
+
+        if (eventDB.archived) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Event has been archived' });
 
         const event = await getEvent('', input.code);
 
@@ -170,7 +174,7 @@ export const eventRouter = router({
         return await db.select({
             code: events.code,
             created_at: events.created_at
-        }).from(events).orderBy(desc(events.created_at));
+        }).from(events).where(eq(events.archived, false)).orderBy(desc(events.created_at));
     }),
 
     getMusicOrder: eventProcedure.input(z.object({

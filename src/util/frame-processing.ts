@@ -1,7 +1,7 @@
 import { eq, and } from "drizzle-orm";
 import { DSState, FieldState, MatchState, MatchStateMap, MonitorFrame, PartialMonitorFrame, ROBOT, StateChange, StateChangeType, TeamInfo, TeamWarnings } from "../../shared/types";
 import { db } from "../db/db";
-import { events, matchLogs, messages, teamCycleLogs } from "../db/schema";
+import { events, messages, teamCycleLogs } from "../db/schema";
 import { getEvent } from "./get-event";
 import { randomUUID } from "crypto";
 

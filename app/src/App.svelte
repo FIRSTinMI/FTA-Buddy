@@ -1,4 +1,5 @@
 <script lang="ts">
+	import FTCStatus from './pages/FTCStatus.svelte';
     import Icon from "@iconify/svelte";
     import { Button, CloseButton, DarkMode, Drawer, Indicator, Modal, Sidebar, SidebarGroup, SidebarItem, SidebarWrapper, Toast } from "flowbite-svelte";
     import { Link, Route, Router, navigate } from "svelte-routing";
@@ -389,6 +390,18 @@
                     </svelte:fragment>
                 </SidebarItem>
                 <SidebarItem
+                    label="FTC Event Dashboard"
+                    class="text-sm"
+                    on:click={() => {
+                        hideMenu = true;
+                        navigate("/app/ftc-status");
+                    }}
+                >
+                    <svelte:fragment slot="icon">
+                        <Icon icon="mdi:television-guide" class="w-8 h-8" />
+                    </svelte:fragment>
+                </SidebarItem>
+                <SidebarItem
                     label="Fullscreen"
                     class="hidden md:flex text-sm"
                     on:click={(evt) => {
@@ -456,6 +469,7 @@
                 <Route path="/checklist" component={Checklist} />
                 <Route path="/dashboard" component={EventDashboard} />
                 <Route path="/event-report" component={EventReport} />
+                <Route path="/ftc-status" component={FTCStatus} />
             </div>
             <Route path="/login">
                 <Login {toast} />

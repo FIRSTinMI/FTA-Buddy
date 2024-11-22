@@ -5,7 +5,7 @@ import { z } from "zod";
 import Match from "@the-orange-alliance/api/lib/esm/models/Match";
 
 const eventData: { [key: string]: FTCEvent; } = {};
-const toa = new API(process.env.TOA_KEY ?? "", "FTA Buddy");
+const toa = process.env.TOA_APP_NAME ? new API("", process.env.TOA_APP_NAME) : new API(process.env.TOA_KEY ?? "", "FTA Buddy");
 
 export interface FTCEvent {
     key: string;

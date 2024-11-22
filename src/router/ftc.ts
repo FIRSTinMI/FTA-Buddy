@@ -159,6 +159,23 @@ async function updateEventStatus(event: FTCEvent) {
     console.log("Updating event status for ", event.code);
     const matches = await FTCAPIgetMatches(event.code);
 
+    // If the schedule is empty, try to get it again
+    if (event.schedule.length === 0) {
+        event.schedule = await toa.getEventMatches(event.key);
+    }
+
+    // If there are no matches, set the event status to empty
+    if (matches.length === 0) {
+        event.matches = [];
+        event.currentMatch = null;
+        event.currentLevel = "QUALIFICATION";
+        event.completedMatches = 0;
+        event.totalMatches = 1;
+        event.averageCycleTime = 0;
+        event.aheadBehind = null;
+        return;
+    }
+
     const newMatches: FTCMatch[] = [];
 
     let lastCompletedMatch = -1;

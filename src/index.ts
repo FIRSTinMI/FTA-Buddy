@@ -33,6 +33,7 @@ import { gfmHeadingId } from 'marked-gfm-heading-id';
 import { observable } from '@trpc/server/observable';
 import { initializePushNotifications } from './util/push-notifications';
 import { logAnalysisLoop } from './util/log-analysis';
+import { ftcRouter } from './router/ftc';
 
 const port = parseInt(process.env.PORT || '3001');
 
@@ -61,7 +62,8 @@ const appRouter = router({
                 return () => clearInterval(interval);
             });
         })
-    })
+    }),
+    ftc: ftcRouter
 });
 
 export type AppRouter = typeof appRouter;
@@ -89,7 +91,7 @@ console.log('✅ WebSocket Server listening on ws://localhost:' + (port + 2));
 
 const app = express();
 
-const server = createServer(app)
+const server = createServer(app);
 
 const wsProxy = createProxyServer({ target: 'http://localhost:' + (port + 2), ws: true });
 
@@ -97,7 +99,7 @@ server.on('upgrade', function (req, socket, head) {
     wsProxy.ws(req, socket, head);
 });
 
-app.use(cors())
+app.use(cors());
 
 app.use('/trpc', proxy('http://localhost:' + (port + 1) + '/trpc'));
 

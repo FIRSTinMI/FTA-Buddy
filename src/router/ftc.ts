@@ -206,6 +206,13 @@ async function updateEventStatus(event: FTCEvent) {
     console.log("Updating event status for ", event.code);
     const matches = await FTCAPIgetMatches(event.code);
 
+    for (const match of matches) {
+        match.actualStartTime = new Date(match.actualStartTime);
+        match.postResultTime = new Date(match.postResultTime);
+        match.actualStartTime.setHours(match.actualStartTime.getHours() - match.actualStartTime.getTimezoneOffset());
+        match.postResultTime.setHours(match.postResultTime.getHours() - match.postResultTime.getTimezoneOffset());
+    }
+
     // If the schedule is empty, try to get it again
     if (event.schedule.length === 0) {
         event.schedule = await toa.getEventMatches(event.key);

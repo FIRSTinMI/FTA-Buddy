@@ -52,6 +52,8 @@ export interface FTCEvent {
     aheadBehind: number | null;
     streams: Streams[];
     timezone: string;
+    teamCount: number;
+    // matchCount: number;
 }
 
 export interface Streams {
@@ -112,8 +114,9 @@ export const ftcRouter = router({
                 const event = await toa.getEvent(key);
                 const schedule = await toa.getEventMatches(key);
                 for (const match of schedule) {
-                    match.scheduledTime = match.scheduledTime.substring(0, 22);
+                    match.scheduledTime = match.scheduledTime?.substring(0, 22);
                 }
+                const teams = await toa.getEventTeams(key);
 
                 eventData[key] = {
                     key: event.eventKey,
@@ -130,7 +133,9 @@ export const ftcRouter = router({
                     schedule,
                     aheadBehind: null,
                     streams: [],
-                    timezone: event.timeZone
+                    timezone: event.timeZone,
+                    teamCount: teams.length,
+                    // matchCount: event.matchCount
                 };
                 setInterval(() => updateEventStatus(eventData[key]), 30000);
             }
@@ -165,7 +170,51 @@ export const ftcRouter = router({
         region: z.string(),
     })).query(async ({ input }) => {
         return await getEventsThisWeek(input.region);
-    })
+    }),
+
+    getEventUpdates: publicProcedure.input(z.object({
+        events: z.array(z.string()),
+    })).query(async ({ input }) => {
+        let promises = [];
+
+        for (const key of input.events) {
+            if (!eventData[key]) {
+                console.log("Creating event tracker for ", key);
+                const event = await toa.getEvent(key);
+                const schedule = await toa.getEventMatches(key);
+                for (const match of schedule) {
+                    match.scheduledTime = match.scheduledTime?.substring(0, 22);
+                }
+                const teams = await toa.getEventTeams(key);
+
+                eventData[key] = {
+                    key: event.eventKey,
+                    code: event.firstEventCode,
+                    name: event.eventName,
+                    startDate: new Date(event.startDate),
+                    endDate: new Date(event.endDate),
+                    matches: [],
+                    currentLevel: "QUALIFICATION",
+                    currentMatch: null,
+                    averageCycleTime: 0,
+                    totalMatches: 0,
+                    completedMatches: 0,
+                    schedule,
+                    aheadBehind: null,
+                    streams: [],
+                    timezone: event.timeZone,
+                    teamCount: teams.length,
+                    // matchCount: event.matchCount
+                };
+                setInterval(() => updateEventStatus(eventData[key]), 30000);
+                promises.push(updateEventStatus(eventData[key]));
+            }
+        }
+
+        await Promise.all(promises);
+
+        return input.events.map((key) => eventData[key]);
+    }),
 });
 
 async function getEventsThisWeek(region: string) {
@@ -221,7 +270,7 @@ async function updateEventStatus(event: FTCEvent) {
     if (event.schedule.length === 0) {
         event.schedule = await toa.getEventMatches(event.key);
         for (const match of event.schedule) {
-            match.scheduledTime = match.scheduledTime.substring(0, 22);
+            match.scheduledTime = match.scheduledTime?.substring(0, 22);
         }
     }
 
@@ -305,10 +354,22 @@ async function updateEventStatus(event: FTCEvent) {
         newMatches.push(ftcMatch);
     }
 
+    let extraMatches = 0;
+
+    if (event.teamCount < 11) {
+        extraMatches = 2; // 3 matches at most
+    } else if (event.teamCount < 21) {
+        extraMatches = 6; // 7 matches at most
+    } else if (event.teamCount < 41) {
+        extraMatches = 10; // 11 matches at most
+    } else {
+        extraMatches = 14; // 15 match at most
+    }
+
     event.matches = newMatches;
     event.currentMatch = newMatches[lastCompletedMatch];
     event.currentLevel = lastCompletedMatchLevel;
-    event.totalMatches = Math.max(event.schedule.length, newMatches.length);
+    event.totalMatches = Math.max(event.schedule.length + extraMatches, newMatches.length);
     event.completedMatches = newMatches.filter((match) => match.completed).length;
     event.averageCycleTime = getAverageCycleTime(newMatches.map(match => match.cycleTime).filter(time => time !== null));
     event.aheadBehind = event.currentMatch?.scheduledStartTime ? event.currentMatch.actualStartTime.getTime() - event.currentMatch.scheduledStartTime.getTime() : null;

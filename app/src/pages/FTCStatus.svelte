@@ -17,18 +17,30 @@
 		return events;
 	}
 
-	function subscribeToEvents(events: string[]) {
-		if (subscription) subscription.unsubscribe();
-		subscription = trpc.ftc.dashboard.subscribe(
-			{ region, events },
-			{
-				onData: (data) => {
-					if (data.length > 0) loading = false;
-					console.log(data);
-					eventData = data;
-				},
-			}
-		);
+	let interval: Timer | undefined;
+
+	async function subscribeToEvents(events: string[]) {
+		if (interval) clearInterval(interval);
+		console.log(events);
+
+		eventData = await trpc.ftc.getEventUpdates.query({ events });
+		if (eventData.length > 0) loading = false;
+
+		interval = setInterval(async () => {
+			eventData = await trpc.ftc.getEventUpdates.query({ events });
+			if (eventData.length > 0) loading = false;
+		}, 30000);
+		// if (subscription) subscription.unsubscribe();
+		// subscription = trpc.ftc.dashboard.subscribe(
+		// 	{ region, events },
+		// 	{
+		// 		onData: (data) => {
+		// 			if (data.length > 0) loading = false;
+		// 			console.log(data);
+		// 			eventData = data;
+		// 		},
+		// 	}
+		// );
 	}
 
 	onMount(async () => {
@@ -73,7 +85,7 @@
 					<p class="mb-1 text-base font-medium dark:text-white">
 						{event.currentMatch?.description ?? "Unknown"}
 						{#if event.currentLevel === "QUALIFICATION"}
-							of {event.totalMatches}
+							of {event.schedule.length}
 						{/if}
 					</p>
 					<Progressbar color="red" progress={(event.completedMatches / event.totalMatches) * 100} />

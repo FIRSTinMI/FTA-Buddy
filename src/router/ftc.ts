@@ -9,6 +9,8 @@ import { authenticate } from "@google-cloud/local-auth";
 import { join } from "path";
 import { writeFileSync } from "fs";
 
+process.env.TZ = "UTC";
+
 const eventData: { [key: string]: FTCEvent; } = {};
 const toa = process.env.TOA_APP_NAME ? new API("", process.env.TOA_APP_NAME) : new API(process.env.TOA_KEY ?? "", "FTA Buddy");
 
@@ -49,6 +51,7 @@ export interface FTCEvent {
     schedule: Match[];
     aheadBehind: number | null;
     streams: Streams[];
+    timezone: string;
 }
 
 export interface Streams {
@@ -126,7 +129,8 @@ export const ftcRouter = router({
                     completedMatches: 0,
                     schedule,
                     aheadBehind: null,
-                    streams: []
+                    streams: [],
+                    timezone: event.timeZone
                 };
                 setInterval(() => updateEventStatus(eventData[key]), 30000);
             }
@@ -207,10 +211,11 @@ async function updateEventStatus(event: FTCEvent) {
     const matches = await FTCAPIgetMatches(event.code);
 
     for (const match of matches) {
+        console.log(match.actualStartTime);
         match.actualStartTime = new Date(match.actualStartTime);
+        match.actualStartTime.setHours(match.actualStartTime.getHours() - getTimezoneOffset(event.timezone));
         match.postResultTime = new Date(match.postResultTime);
-        match.actualStartTime.setHours(match.actualStartTime.getHours() - match.actualStartTime.getTimezoneOffset());
-        match.postResultTime.setHours(match.postResultTime.getHours() - match.postResultTime.getTimezoneOffset());
+        match.postResultTime.setHours(match.postResultTime.getHours() - getTimezoneOffset(event.timezone));
     }
 
     // If the schedule is empty, try to get it again
@@ -287,14 +292,19 @@ async function updateEventStatus(event: FTCEvent) {
         }
 
         const scheduledMatch = event.schedule.find((scheduledMatch) => scheduledMatch.matchKey === getTOAMatchKey(event.key, match.matchNumber, match.tournamentLevel));
+        const startTime = scheduledMatch?.scheduledTime ? new Date(scheduledMatch.scheduledTime) : null;
+
+        if (startTime) {
+            startTime.setHours(startTime.getHours() - getTimezoneOffset(event.timezone));
+        }
 
         const ftcMatch: FTCMatch = {
             ...match,
             completed: match.postResultTime !== null,
             cycleTime,
-            actualStartTime: new Date(match.actualStartTime),
-            postResultTime: new Date(match.postResultTime),
-            scheduledStartTime: scheduledMatch?.scheduledTime ? new Date(scheduledMatch.scheduledTime) : null,
+            actualStartTime: match.actualStartTime,
+            postResultTime: match.postResultTime,
+            scheduledStartTime: startTime
         };
 
         newMatches.push(ftcMatch);
@@ -303,7 +313,7 @@ async function updateEventStatus(event: FTCEvent) {
     event.matches = newMatches;
     event.currentMatch = newMatches[lastCompletedMatch];
     event.currentLevel = lastCompletedMatchLevel;
-    event.totalMatches = newMatches.length;
+    event.totalMatches = Math.max(event.schedule.length, newMatches.length);
     event.completedMatches = newMatches.filter((match) => match.completed).length;
     event.averageCycleTime = getAverageCycleTime(newMatches.map(match => match.cycleTime).filter(time => time !== null));
     event.aheadBehind = event.currentMatch?.scheduledStartTime ? new Date().getTime() - event.currentMatch.scheduledStartTime.getTime() : null;
@@ -356,3 +366,18 @@ function getAverageCycleTime(cycleTimes: number[], rollingAverage: number = 6) {
 
     return (total ?? 0) / filteredTimes.length;
 }
+
+function getTimezoneOffset(timezone: string): number {
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone,
+        timeZoneName: 'short',
+    });
+
+    const parts = formatter.formatToParts(now);
+    const timeZoneName = parts.find(part => part.type === 'timeZoneName')?.value ?? "GMT-5";
+
+    // Match and calculate offset from timezone abbreviation (e.g., GMT-5)
+    const match = timeZoneName.match(/GMT([+-]\d+)/);
+    return match ? parseInt(match[1], 10) : -5;
+};

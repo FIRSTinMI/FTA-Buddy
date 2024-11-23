@@ -62,7 +62,7 @@
 					<Progressbar color="red" progress={(event.completedMatches / event.totalMatches) * 100} />
 				</div>
 				<p>{event.aheadBehind ? formatTimeShortNoAgoSeconds(event.aheadBehind) + (event.aheadBehind < 0 ? " Ahead" : " Behind") : "Unknown"}</p>
-				<p>{event.currentMatch?.scheduledStartTime ? formatTimeShortNoAgo(event.currentMatch?.scheduledStartTime) : "Unknown"}</p>
+				<p>{event.currentMatch?.actualStartTime ? formatTimeShortNoAgo(event.currentMatch?.actualStartTime) : "Unknown"}</p>
 				<p>{formatTimeShortNoAgoSeconds(event.averageCycleTime)}</p>
 			{/if}
 		{/each}

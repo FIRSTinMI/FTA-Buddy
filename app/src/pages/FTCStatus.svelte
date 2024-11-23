@@ -34,6 +34,18 @@
 	onMount(async () => {
 		subscribeToEvents(await getEventsForRegion(region));
 	});
+
+	let eventCurrentCycleTimes = eventData.map((event) => ({
+		event: event.key,
+		time: event.currentMatch?.postResultTime ? formatTimeShortNoAgo(event.currentMatch?.postResultTime) : "Unknown",
+	}));
+
+	setInterval(async () => {
+		eventCurrentCycleTimes = eventData.map((event) => ({
+			event: event.key,
+			time: event.currentMatch?.postResultTime ? formatTimeShortNoAgo(event.currentMatch?.postResultTime) : "Unknown",
+		}));
+	}, 1000);
 </script>
 
 <div class="flex flex-col gap-2 m-2">
@@ -62,7 +74,7 @@
 					<Progressbar color="red" progress={(event.completedMatches / event.totalMatches) * 100} />
 				</div>
 				<p>{event.aheadBehind ? formatTimeShortNoAgoSeconds(event.aheadBehind) + (event.aheadBehind < 0 ? " Ahead" : " Behind") : "Unknown"}</p>
-				<p>{event.currentMatch?.postResultTime ? formatTimeShortNoAgo(event.currentMatch?.postResultTime) : "Unknown"}</p>
+				<p>{eventCurrentCycleTimes.find((c) => c.event === event.key)?.time}</p>
 				<p>{formatTimeShortNoAgoSeconds(event.averageCycleTime)}</p>
 			{/if}
 		{/each}

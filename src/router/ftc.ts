@@ -293,10 +293,6 @@ async function updateEventStatus(event: FTCEvent) {
         const scheduledMatch = event.schedule.find((scheduledMatch) => scheduledMatch.matchKey === getTOAMatchKey(event.key, match.matchNumber, match.tournamentLevel));
         const startTime = scheduledMatch?.scheduledTime ? new Date(scheduledMatch.scheduledTime) : null;
 
-        if (startTime) {
-            startTime.setHours(startTime.getHours() - getTimezoneOffset(event.timezone));
-        }
-
         const ftcMatch: FTCMatch = {
             ...match,
             completed: match.postResultTime !== null,

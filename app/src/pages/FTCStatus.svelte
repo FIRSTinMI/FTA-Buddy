@@ -70,7 +70,12 @@
 				<p class="col-span-3 md:col-span-1 font-semibold border-t border-gray-600 pt-1 mt-1 md:border-none md:mt-0 md:pt-0">{event.name}</p>
 				<p class="hidden md:block">{event.startDate.toLocaleDateString()} - {event.endDate.toLocaleDateString()}</p>
 				<div class="col-span-3 md:col-span-1">
-					<p class="mb-1 text-base font-medium dark:text-white">{event.currentMatch?.description ?? "Unknown"}</p>
+					<p class="mb-1 text-base font-medium dark:text-white">
+						{event.currentMatch?.description ?? "Unknown"}
+						{#if event.currentLevel === "QUALIFICATION"}
+							of {event.totalMatches}
+						{/if}
+					</p>
 					<Progressbar color="red" progress={(event.completedMatches / event.totalMatches) * 100} />
 				</div>
 				<p>{event.aheadBehind ? formatTimeShortNoAgoSeconds(event.aheadBehind) + (event.aheadBehind < 0 ? " Ahead" : " Behind") : "Unknown"}</p>

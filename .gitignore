@@ -6,3 +6,4 @@ dist/*
 .env
 FieldMonitor.ts
 reports/*
+oauth2.keys.json

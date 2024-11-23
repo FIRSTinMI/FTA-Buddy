@@ -3,9 +3,36 @@ import { publicProcedure, router } from "../trpc";
 import { API } from "@the-orange-alliance/api";
 import { z } from "zod";
 import Match from "@the-orange-alliance/api/lib/esm/models/Match";
+import StreamType from "@the-orange-alliance/api/lib/esm/models/types/StreamType";
+import { google } from "googleapis";
+import { authenticate } from "@google-cloud/local-auth";
+import { join } from "path";
+import { writeFileSync } from "fs";
 
 const eventData: { [key: string]: FTCEvent; } = {};
 const toa = process.env.TOA_APP_NAME ? new API("", process.env.TOA_APP_NAME) : new API(process.env.TOA_KEY ?? "", "FTA Buddy");
+
+// writeFileSync(join(__dirname, '../oauth2.keys.json'), JSON.stringify({
+//     installed: {
+//         type: "service_account",
+//         project_id: process.env.GOOGLE_PROJECT_ID,
+//         private_key_id: process.env.GOOGLE_KEY_ID,
+//         private_key: process.env.GOOGLE_KEY,
+//         client_email: process.env.GOOGLE_CLIENT_ID,
+//         client_id: process.env.GOOGLE_KEY_CLIENT,
+//         "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+//         "token_uri": "https://oauth2.googleapis.com/token",
+//         "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+//         "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/" + encodeURIComponent(process.env.GOOGLE_CLIENT_ID ?? ""),
+//         "universe_domain": "googleapis.com"
+//     }
+// }));
+
+// const auth = authenticate({
+//     keyfilePath: join(__dirname, '../oauth2.keys.json'),
+//     scopes: ['https://www.googleapis.com/auth/youtube'],
+// });
+// const yt = google.youtube('v3');
 
 export interface FTCEvent {
     key: string;
@@ -21,6 +48,22 @@ export interface FTCEvent {
     completedMatches: number;
     schedule: Match[];
     aheadBehind: number | null;
+    streams: Streams[];
+}
+
+export interface Streams {
+    live: boolean;
+    streamKey: string;
+    eventKey: string;
+    streamType: StreamType;
+    isActive: boolean;
+    streamURL: string;
+    channelName: string;
+    streamName: string;
+    startDateTime: string;
+    endDateTime: string;
+    channelURL: string;
+    fullURL: string;
 }
 
 export interface FTCMatch extends FTCAPIMatch {
@@ -65,6 +108,9 @@ export const ftcRouter = router({
                 console.log("Creating event tracker for ", key);
                 const event = await toa.getEvent(key);
                 const schedule = await toa.getEventMatches(key);
+                for (const match of schedule) {
+                    match.scheduledTime = match.scheduledTime.substring(0, 22);
+                }
 
                 eventData[key] = {
                     key: event.eventKey,
@@ -79,7 +125,8 @@ export const ftcRouter = router({
                     totalMatches: 0,
                     completedMatches: 0,
                     schedule,
-                    aheadBehind: null
+                    aheadBehind: null,
+                    streams: []
                 };
                 setInterval(() => updateEventStatus(eventData[key]), 30000);
             }
@@ -162,7 +209,46 @@ async function updateEventStatus(event: FTCEvent) {
     // If the schedule is empty, try to get it again
     if (event.schedule.length === 0) {
         event.schedule = await toa.getEventMatches(event.key);
+        for (const match of event.schedule) {
+            match.scheduledTime = match.scheduledTime.substring(0, 22);
+        }
     }
+
+    if (event.streams.length === 0) {
+        event.streams = (await toa.getEventStreams(event.key)).map((stream) => ({
+            live: false,
+            streamKey: stream.streamKey,
+            eventKey: stream.eventKey,
+            streamType: stream.streamType,
+            isActive: stream.isActive,
+            streamURL: stream.streamURL,
+            channelName: stream.channelName,
+            streamName: stream.streamName,
+            startDateTime: stream.startDateTime,
+            endDateTime: stream.endDateTime,
+            channelURL: stream.channelURL,
+            fullURL: stream.fullURL
+        }));
+    }
+
+    // try {
+    //     google.options({ auth: await auth });
+
+    //     for (const stream of event.streams) {
+    //         if (stream.streamType === StreamType.YouTube) {
+    //             const streamStatus = await yt.liveStreams.list({
+    //                 part: ['snippet', 'status'],
+    //                 id: [stream.streamURL.split("/").pop() ?? ""]
+    //             });
+    //             if (streamStatus.data.items && streamStatus.data.items.length > 0) {
+    //                 console.log(streamStatus.data.items[0].status?.healthStatus?.status);
+    //                 stream.live = streamStatus.data.items[0].status?.healthStatus?.status === "good";
+    //             }
+    //         }
+    //     }
+    // } catch (e) {
+    //     console.error('Error checking stream status: ', e);
+    // }
 
     // If there are no matches, set the event status to empty
     if (matches.length === 0) {

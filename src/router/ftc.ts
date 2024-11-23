@@ -211,7 +211,6 @@ async function updateEventStatus(event: FTCEvent) {
     const matches = await FTCAPIgetMatches(event.code);
 
     for (const match of matches) {
-        console.log(match.actualStartTime);
         match.actualStartTime = new Date(match.actualStartTime);
         match.actualStartTime.setHours(match.actualStartTime.getHours() - getTimezoneOffset(event.timezone));
         match.postResultTime = new Date(match.postResultTime);
@@ -316,7 +315,7 @@ async function updateEventStatus(event: FTCEvent) {
     event.totalMatches = Math.max(event.schedule.length, newMatches.length);
     event.completedMatches = newMatches.filter((match) => match.completed).length;
     event.averageCycleTime = getAverageCycleTime(newMatches.map(match => match.cycleTime).filter(time => time !== null));
-    event.aheadBehind = event.currentMatch?.scheduledStartTime ? new Date().getTime() - event.currentMatch.scheduledStartTime.getTime() : null;
+    event.aheadBehind = event.currentMatch?.scheduledStartTime ? event.currentMatch.actualStartTime.getTime() - event.currentMatch.scheduledStartTime.getTime() : null;
 }
 
 function getTOAMatchKey(eventKey: string, matchNumber: number, level: "QUALIFICATION" | "PLAYOFF") {

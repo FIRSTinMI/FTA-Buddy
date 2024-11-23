@@ -59,7 +59,7 @@
 				<p class="hidden md:block">{event.startDate.toLocaleDateString()} - {event.endDate.toLocaleDateString()}</p>
 				<div class="col-span-3 md:col-span-1">
 					<p class="mb-1 text-base font-medium dark:text-white">{event.currentMatch?.description ?? "Unknown"}</p>
-					<Progressbar class="bg-orange-500" progress={(event.completedMatches / event.totalMatches) * 100} />
+					<Progressbar color="red" progress={(event.completedMatches / event.totalMatches) * 100} />
 				</div>
 				<p>{event.aheadBehind ? formatTimeShortNoAgoSeconds(event.aheadBehind) + (event.aheadBehind < 0 ? " Ahead" : " Behind") : "Unknown"}</p>
 				<p>{event.currentMatch?.scheduledStartTime ? formatTimeShortNoAgo(event.currentMatch?.scheduledStartTime) : "Unknown"}</p>

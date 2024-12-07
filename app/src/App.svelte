@@ -41,11 +41,19 @@
 	const pageIsPublicLog = window.location.pathname.startsWith("/app/logs/") && window.location.pathname.split("/")[3].length == 36;
 
 	function redirectForAuth(a: typeof auth) {
-		if (!a.token) {
+		console.log(!a.token, a.eventToken, window.location.pathname);
+
+		if (a.token) {
 			if (pageIsPublicLog) {
 				// Public match logs
 			} else if (!a.eventToken && (window.location.pathname == "/app/" || window.location.pathname == "/app")) {
 				navigate("/app/login");
+			} else if (!publicPaths.includes(window.location.pathname)) {
+				navigate("/app/login");
+			}
+		} else {
+			if (pageIsPublicLog) {
+				// Public match logs
 			} else if (!publicPaths.includes(window.location.pathname)) {
 				navigate("/app/login");
 			}

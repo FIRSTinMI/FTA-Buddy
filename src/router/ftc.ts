@@ -227,21 +227,22 @@ async function getEventsThisWeek(region: string) {
     const monday = new Date(now);
     monday.setDate(now.getDate() - (currentDay === 0 ? 6 : currentDay - 1)); // If Sunday, go back 6 days; otherwise, go back to Monday
 
-    // Calculate the following Saturday
-    const saturday = new Date(monday);
-    saturday.setDate(monday.getDate() + 5);
+    // Calculate the following Sunday
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
 
     let events = await toa.getEvents({
         region_key: region,
         start_date: monday.toISOString(),
-        end_date: saturday.toISOString(),
+        end_date: sunday.toISOString(),
         includeMatchCount: true,
         between: true,
     });
 
     return events
         .filter((event) => {
-            return new Date(event.startDate) >= monday && new Date(event.endDate) <= saturday;
+            return new Date(event.startDate) >= monday && new Date(event.endDate) <= sunday;
         })
         .sort((a, b) => {
             return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();

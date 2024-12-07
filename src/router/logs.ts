@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { eventProcedure, publicProcedure, router } from "../trpc";
 import { db } from '../db/db';
-import { analyzedLogs, logPublishing, matchLogs } from '../db/schema';
+import { analyzedLogs, events, logPublishing, matchLogs } from '../db/schema';
 import { and, asc, count, eq, or } from 'drizzle-orm';
 import { inferRouterOutputs } from '@trpc/server';
 import { randomUUID } from 'crypto';
@@ -180,8 +180,8 @@ export const matchRouter = router({
     }),
 
     getPublicMatch: publicProcedure.input(z.object({
-            id: z.string().uuid(),
-            sharecode: z.string()
+        id: z.string().uuid(),
+        sharecode: z.string()
     })).query(async ({ input, ctx }) => {
         const share = await db.query.logPublishing.findFirst({
             where: and(
@@ -287,7 +287,10 @@ export const matchRouter = router({
     }),
 
     getNumberOfMatches: publicProcedure.query(async ({ ctx }) => {
-        return (await db.select({ count: count() }).from(matchLogs))[0].count;
+        return {
+            matches: (await db.select({ count: count() }).from(matchLogs))[0].count,
+            events: (await db.select({ count: count() }).from(events))[0].count
+        };
     }),
 
     generateBypassReport: eventProcedure.query(async ({ ctx }) => {

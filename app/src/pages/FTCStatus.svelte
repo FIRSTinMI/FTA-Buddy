@@ -79,7 +79,13 @@
 		<h2 class="text-lg font-semibold">Avg Cycle Time</h2>
 		{#each eventData as event}
 			{#if events.includes(event.key)}
-				<p class="col-span-3 md:col-span-1 font-semibold border-t border-gray-600 pt-1 mt-1 md:border-none md:mt-0 md:pt-0">{event.name}</p>
+				<p class="col-span-3 md:col-span-1 font-semibold border-t border-gray-600 pt-1 mt-1 md:border-none md:mt-0 md:pt-0">
+					{#if event.code.startsWith("USMICMP")}
+						MSC {event.code.slice(8)}
+					{:else}
+						{event.name}
+					{/if}
+				</p>
 				<p class="hidden md:block">{event.startDate.toLocaleDateString()} - {event.endDate.toLocaleDateString()}</p>
 				<div class="col-span-3 md:col-span-1">
 					<p class="mb-1 text-base font-medium dark:text-white">

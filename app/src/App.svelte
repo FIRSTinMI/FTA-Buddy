@@ -54,7 +54,7 @@
 		} else {
 			if (pageIsPublicLog) {
 				// Public match logs
-			} else if (!publicPaths.includes(window.location.pathname)) {
+			} else if (!publicPaths.includes(window.location.pathname) || window.location.pathname == "/app/" || window.location.pathname == "/app") {
 				navigate("/app/login");
 			}
 		}

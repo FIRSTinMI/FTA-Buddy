@@ -5,6 +5,8 @@
     "scripts": {
         "start": "npx tsx ./src/index.ts",
         "dev": "concurrently \"bun run --watch ./src/index.ts\" \"cd app && npm run dev\" --kill-others --success first",
+        "server": "bun run --watch ./src/index.ts",
+        "app": "cd app && bun run dev",
         "build": "tsc; cd app; bun i -D; npm run build",
         "generate-migration": "drizzle-kit generate:pg",
         "migrate": "ts-node src/db/migrate"

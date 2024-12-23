@@ -69,6 +69,7 @@ export const eventRouter = router({
 
         const eventDB = (await db.select({
             code: events.code,
+            pin: events.pin,
             token: events.token,
             teams: events.teams,
             checklist: events.checklist,

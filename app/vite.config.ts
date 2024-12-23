@@ -11,21 +11,4 @@ export default defineConfig({
         })
     ],
     base: "/app/",
-    server: {
-        proxy: {
-            '/trpc': {
-                target: 'http://localhost:3001',
-                changeOrigin: true,
-            },
-            '/ws': {
-                target: 'http://localhost:3003',
-                changeOrigin: true,
-                ws: true
-            },
-            '/report': {
-                target: 'http://localhost:3001',
-                changeOrigin: true
-            }
-        },
-    }
 });

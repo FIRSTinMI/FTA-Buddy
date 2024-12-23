@@ -10,10 +10,11 @@ import SuperJSON from "superjson";
 let token = get(authStore).token;
 let eventToken = get(authStore).eventToken;
 
-export let server = (get(settingsStore).forceCloud) ? 'https://ftabuddy.com' : window.location.origin;
+export let server = (get(settingsStore).forceCloud) ? 'https://ftabuddy.com' : 'http://' + window.location.hostname;
+let localServer = server !== 'https://ftabuddy.com';
 
 const wsClient = createWSClient({
-    url: server.replace('http', 'ws') + '/ws',
+    url: server.replace('http', 'ws') + (localServer ? ":3003" : "") + '/ws',
 });
 
 export let trpc = createTRPCClient<AppRouter>({
@@ -27,7 +28,7 @@ export let trpc = createTRPCClient<AppRouter>({
                 transformer: SuperJSON
             }),
             false: httpBatchLink({
-                url: server + '/trpc',
+                url: server + (localServer ? ":3001" : "") + '/trpc',
                 transformer: SuperJSON,
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -52,7 +53,7 @@ authStore.subscribe((value) => {
                     transformer: SuperJSON
                 }),
                 false: httpBatchLink({
-                    url: server + '/trpc',
+                    url: server + (localServer ? ":3001" : "") + '/trpc',
                     transformer: SuperJSON,
                     headers: {
                         'Authorization': `Bearer ${token}`,

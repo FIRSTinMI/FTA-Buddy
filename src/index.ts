@@ -68,6 +68,7 @@ const appRouter = router({
 
 export type AppRouter = typeof appRouter;
 
+// HTTP server hosting TRPC
 createHTTPServer({
     router: appRouter,
     middleware: cors(),
@@ -93,6 +94,7 @@ const app = express();
 
 const server = createServer(app);
 
+// Proxy for websocket
 const wsProxy = createProxyServer({ target: 'http://localhost:' + (port + 2), ws: true });
 
 server.on('upgrade', function (req, socket, head) {

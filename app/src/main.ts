@@ -10,7 +10,7 @@ import SuperJSON from "superjson";
 let token = get(authStore).token;
 let eventToken = get(authStore).eventToken;
 
-export let server = (get(settingsStore).forceCloud) ? 'https://ftabuddy.com' : 'http://' + window.location.hostname;
+export let server = (get(settingsStore).forceCloud) ? 'https://ftabuddy.com' : window.location.protocol + '//' + window.location.hostname;
 let localServer = server !== 'https://ftabuddy.com';
 
 const wsClient = createWSClient({

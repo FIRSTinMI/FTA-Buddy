@@ -8,7 +8,7 @@
 	import SettingsModal from "./components/SettingsModal.svelte";
 	import WelcomeModal from "./components/WelcomeModal.svelte";
 	import Flashcard from "./pages/Flashcards.svelte";
-	import Home from "./pages/Home.svelte";
+	import Monitor from "./pages/Monitor.svelte";
 	import Login from "./pages/Login.svelte";
 	import Messages from "./pages/Messages.svelte";
 	import Reference from "./pages/Reference.svelte";
@@ -38,6 +38,7 @@
     import ComponentManuals from "./pages/ComponentManuals.svelte";
     import WiringDiagrams from "./pages/WiringDiagrams.svelte";
     import SoftwareDocs from "./pages/SoftwareDocs.svelte";
+    import Home from "./pages/Home.svelte";
 
 	// Checking authentication
 
@@ -48,20 +49,20 @@
 	function redirectForAuth(a: typeof auth) {
 		console.log(!a.token, !a.eventToken, window.location.pathname, pageIsPublicLog);
 
-		if (!publicPaths.includes(window.location.pathname)){ //user trying to acces protected page
-			if (!pageIsPublicLog) { //page is not public log
-            	if (!a.token || !a.eventToken){
-					navigate("/app/login") //user is either not logged in or does not have event token
-				}
-				//user is logged in and has event token -- no redirect
-			}
-			//page is public log -- no tokens needed
-        } else if (window.location.pathname == "/app" || window.location.pathname == "/app/") { //user is accessing public path that is /app or /app/
-			if (!a.token || !a.eventToken) { 
-				navigate("/app/login") //user is missing user token or event token
-			}
-			//user has user and event token -- no redirect
-        }	
+		// if (!publicPaths.includes(window.location.pathname)){ //user trying to acces protected page
+		// 	if (!pageIsPublicLog) { //page is not public log
+        //     	if (!a.token || !a.eventToken){
+		// 			navigate("/app/login") //user is either not logged in or does not have event token
+		// 		}
+		// 		//user is logged in and has event token -- no redirect
+		// 	}
+		// 	//page is public log -- no tokens needed
+        // } else if (window.location.pathname == "/app" || window.location.pathname == "/app/") { //user is accessing public path that is /app or /app/
+		// 	if (!a.token || !a.eventToken) { 
+		// 		navigate("/app/login") //user is missing user token or event token
+		// 	}
+		// 	//user has user and event token -- no redirect
+        // }	
 	}
 
 	redirectForAuth(auth);
@@ -273,7 +274,7 @@
 						label="Monitor"
 						on:click={() => {
 							hideMenu = true;
-							navigate("/app/");
+							navigate("/app/monitor");
 						}}
 					>
 						<svelte:fragment slot="icon">
@@ -510,8 +511,9 @@
 		{/if}
 		<Router basepath="/app/">
 			<div class="overflow-y-auto flex-grow pb-2">
-				<Route path="/">
-					<Home {fullscreen} {frameHandler} />
+				<Route path="/" component={Home} />
+				<Route path="/monitor">
+					<Monitor {fullscreen} {frameHandler} />
 				</Route>
 				<Route path="/flashcards" component={Flashcard} />
 				<Route path="/references" component={Reference} />

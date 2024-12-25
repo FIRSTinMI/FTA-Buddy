@@ -1,213 +1,149 @@
-<script lang="ts">
-    import { FieldState, MatchState, MatchStateMap, ROBOT, type MonitorFrame, type ScheduleDetails } from "./../../../shared/types";
-    import MonitorRow from "../components/MonitorRow.svelte";
-    import TeamModal from "../components/TeamModal.svelte";
-    import { formatTimeShortNoAgo, formatTimeShortNoAgoMinutesOnly, formatTimeShortNoAgoSeconds } from "../../../shared/formatTime";
-    import type { MonitorEvent, MonitorFrameHandler } from "../util/monitorFrameHandler";
-    import { onDestroy, onMount } from "svelte";
+<script lang=ts>
+    import { authStore } from "../stores/auth";
+    import { eventStore } from "../stores/event";
+    import { onMount } from "svelte";
     import { trpc } from "../main";
-    import { cycleTimeToMS } from "./../../../shared/cycleTimeToMS";
-	import { authStore } from "../stores/auth";
-	import { audioQueuer } from "../field-monitor";
-	import Spinner from "../components/Spinner.svelte";
-	import { updateScheduleText } from "../util/schedule-detail-formatter";
+    import { Button, Input, Label, Select, type SelectOptionType } from "flowbite-svelte";
+    import { navigate } from "svelte-routing";
 
-    export let frameHandler: MonitorFrameHandler;
-    let monitorFrame: MonitorFrame | undefined = frameHandler.getFrame();
-    let cycleSubscription: ReturnType<typeof trpc.cycles.subscription.subscribe>;
-    
-    frameHandler.addEventListener("frame", (evt) => {
-        loading = false;
-        monitorFrame = (evt as MonitorEvent).detail.frame;
-    });
 
-    let lastCycleTime = "";
-    let lastCycleTimeMS = 0;
-    let matchStartTime = new Date();
-    let bestCycleTimeMS = 0;
-    let currentCycleIsBest = false;
-    let averageCycleTimeMS = 8*60*1000; // Default to 7 minutes
-    let currentCycleTimeRedness = 0;
-    let currentCycleTime = "";
-    let calculatedCycleTime: number | undefined | null = 0;
-    
-    let scheduleDetails: ScheduleDetails | undefined;
-    let scheduleText = "";
+    let auth = $authStore;
+    let event = $eventStore;
 
     onMount(async () => {
-        const lastPrestart = await trpc.cycles.getLastPrestart.query();
-        if (lastPrestart) matchStartTime = lastPrestart;
-
-        monitorFrame = frameHandler.getFrame();
-
-        loading = false;
-            
-        if (cycleSubscription) cycleSubscription.unsubscribe();
-        cycleSubscription = trpc.cycles.subscription.subscribe({
-                eventToken: $authStore.eventToken, 
-            }, {
-            onData: (data) => {
-                averageCycleTimeMS = data.averageCycleTime ?? 7*60*1000;
-                calculatedCycleTime = data.lastCycleTime ? cycleTimeToMS(data.lastCycleTime) : 0;
-            }
+        const checkAuth = await trpc.user.checkAuth.query({
+            token: auth.token,
+            eventToken: auth.eventToken
         });
 
-        const bestCycleTimeRes = await trpc.cycles.getBestCycleTime.query();
-        if (bestCycleTimeRes && bestCycleTimeRes.calculated_cycle_time) {
-            bestCycleTimeMS = cycleTimeToMS(bestCycleTimeRes.calculated_cycle_time);
+        if (checkAuth.user) {
+            auth.user = checkAuth.user
         }
 
-        const lastCycleTimeRes = await trpc.cycles.getLastCycleTime.query();
-        if (lastCycleTimeRes) {
-            lastCycleTimeMS = cycleTimeToMS(lastCycleTimeRes);
-            lastCycleTime = formatTimeShortNoAgo(new Date(new Date().getTime() - lastCycleTimeMS));
+        if (auth.eventToken && !checkAuth.event) {
 
-            if (lastCycleTimeMS < bestCycleTimeMS) {
-                bestCycleTimeMS = lastCycleTimeMS;
-                currentCycleIsBest = true;
-            }
         }
-
-        averageCycleTimeMS = await trpc.cycles.getAverageCycleTime.query() ?? 8*60*1000;
-
-        scheduleDetails = await trpc.cycles.getScheduleDetails.query();
-        scheduleText = updateScheduleText(monitorFrame?.match ?? scheduleDetails?.lastPlayed ?? 0, scheduleDetails, monitorFrame?.level ?? "", averageCycleTimeMS);
-   
-        console.log({
-            matchStartTime,
-            bestCycleTimeMS,
-            lastCycleTimeMS,
-            averageCycleTimeMS,
-            calculatedCycleTime,
-            scheduleDetails
-        })
-
-        setTimeout(async () => {
-            if (MatchStateMap[frameHandler.getFrame()?.field ?? FieldState.PRESTART_COMPLETED] !== MatchState.RUNNING) {
-                const frame = frameHandler.getFrame();
-                const musicOrder = await trpc.event.getMusicOrder.query({
-                    level: frame?.level ?? "None",
-                    match: frame?.match ?? 1
-                });
-                audioQueuer.playMusic(musicOrder);
-            }
-        }, 3e3)
-    });
-
-    onDestroy(() => {
-        if (cycleSubscription) cycleSubscription.unsubscribe();
-    });
-
-    frameHandler.addEventListener("match-start", async (evt) => {
-        currentCycleIsBest = false;
-        calculatedCycleTime = calculatedCycleTime || frameHandler.getLastCycleTime();
-        // Doesn't always update quick enough
-        if (!calculatedCycleTime || calculatedCycleTime === lastCycleTimeMS) {
-            lastCycleTime = formatTimeShortNoAgo(matchStartTime);
-            lastCycleTimeMS = new Date().getTime() - matchStartTime.getTime();
-        } else {
-            lastCycleTime = formatTimeShortNoAgoSeconds(calculatedCycleTime);
-        }
-        if (lastCycleTimeMS < bestCycleTimeMS) {
-            bestCycleTimeMS = lastCycleTimeMS;
-            currentCycleIsBest = true;
-        }
-        matchStartTime = new Date();
-
-        averageCycleTimeMS = await trpc.cycles.getAverageCycleTime.query() ?? 8*60*1000;
-
-        scheduleText = updateScheduleText(monitorFrame?.match ?? scheduleDetails?.lastPlayed ?? 0, scheduleDetails, monitorFrame?.level ?? "", averageCycleTimeMS);
-    });
-
-    setInterval(() => {
-        const currentTime = new Date().getTime() - matchStartTime.getTime();
-        if (currentTime < averageCycleTimeMS) {
-            currentCycleTimeRedness = 0;
-        } else {
-            currentCycleTimeRedness = Math.min(1, (currentTime - averageCycleTimeMS) / 1000 / 120);
-        }
-
-        currentCycleTime = formatTimeShortNoAgo(matchStartTime);
-    }, 1000);
-
-    const FieldStates = {
-        0: "Unknown",
-        1: "Match Running Teleop",
-        2: "Match Transistioning",
-        3: "Match Running Auto",
-        4: "Match Ready",
-        5: "Prestart Completed",
-        6: "Prestart Initiated",
-        7: "Ready to Prestart",
-        8: "Match Aborted",
-        9: "Match Over",
-        10: "Ready for Post Result",
-        11: "Match Not Ready",
-    };
-
-    let modalOpen = false;
-    let modalStation: ROBOT = ROBOT.blue1;
-
-    function detailView(evt: Event) {
-        let target = evt.target as HTMLElement;
-        let station = target.id.split("-")[0] as ROBOT;
-        modalStation = (station as ROBOT) || ROBOT.blue1;
-        modalOpen = true;
-    }
-
-    const stations: ROBOT[] = Object.values(ROBOT);
-
-    export let fullscreen = false;
-
-    let loading = true;
+    })
 </script>
 
-{#if monitorFrame}
-    <TeamModal bind:modalOpen {modalStation} {monitorFrame} {frameHandler} />
-{/if}
+<div class="container mx-auto md:max-w-4xl flex flex-col justify-center p-4 space-y-4">
+    <h1 class="text-5xl" style="font-weight:bold;">Welcome to FTA/CSA Buddy</h1>
+    {#if !auth || !auth.token}
+        <h1 class="text-3xl" style="font-weight:bold;">Please Create an Account or Log In</h1>
+        <Button on:click={() => navigate("/app/login")} class="w-full mt-4">Create Account / Log In</Button>
+    {:else if auth && auth.token}
+        <h1 class="text-3xl" style="font-weight:bold; font-style: italic;">Hello {auth.user?.username}!</h1>
+        <h1 style="font-style: italic;">Your account is currently in {auth.user?.role} mode.</h1>
+        <Button on:click={() => navigate("/app/login")} class="w-full mt-4">Log Out</Button>
 
-<div class="fixed inset-0" class:hidden={!loading}>
-    <Spinner />
-</div>
 
-<div class="grid grid-cols-fieldmonitor lg:grid-cols-fieldmonitor-large gap-0.5 md:gap-1 lg:gap-2 mx-auto justify-center {fullscreen && "fullscreen"}" class:hidden={loading}>
-    {#key monitorFrame}
-        {#if monitorFrame}
-            <div class="col-span-6 lg:col-span-9 flex text-lg md:text-2xl font-semibold {fullscreen && "lg:text-6xl"}">
-                <div class="px-2">M: {monitorFrame.match}</div>
-                <div class="flex-1 px-2 text-center">{FieldStates[monitorFrame.field]}</div>
-                <div class="px-2">{monitorFrame.time}</div>
-            </div>
-            <p>Team</p>
-            <p>DS</p>
-            <p>Radio</p>
-            <p>Rio</p>
-            <p>Battery</p>
-            <p class="hidden lg:flex">Ping (ms)</p>
-            <p class="hidden lg:flex">BWU (mbps)</p>
-            <p class="hidden lg:flex">Signal (dBm)</p>
-            <p class="hidden lg:flex">Last Change</p>
-            <p class="lg:hidden">Net</p>
-            {#each stations as station}
-                <MonitorRow {station} {monitorFrame} {detailView} {fullscreen} {frameHandler} />
-            {/each}
+        {#if auth.user?.role === "ADMIN"}
+            {#if auth.eventToken}
+                <h1 class="text-2xl" style="font-weight:bold;">You have selected the {event.code} event.</h1>
+                <h1 style="font-weight:bold;  font-style: italic;">To change this, please click the button below</h1>
+                <Button on:click={() => navigate("/app/login")} class="w-full mt-4">Change Event</Button>
+                
+                <h1 class="text-2xl" style="font-style: italic; font-weight: bold; padding-top: 10px;">ADMIN Quick Links:</h1>
+                <Button on:click={() => navigate("/app/monitor")} class="w-1/2 mt-4">Monitor</Button>
+                <Button on:click={() => navigate("/app/flashcards")} class="w-1/2 mt-4">Flashcards</Button>
+                <Button on:click={() => navigate("/app/messages")} class="w-1/2 mt-4">Tickets</Button>
+                <Button on:click={() => navigate("/app/logs")} class="w-1/2 mt-4">Match Logs</Button>
+                <Button on:click={() => navigate("/app/checklist")} class="w-1/2 mt-4">Checklist</Button>
+                <Button on:click={() => navigate("/app/event-report")} class="w-1/2 mt-4">Event Report</Button>
+                <Button on:click={() => navigate("/app/dashboard")} class="w-1/2 mt-4">Event Dashboard</Button>
+                <Button on:click={() => navigate("/app/fieldmanuals")} class="w-1/2 mt-4">Field Manuals</Button>
+                <Button on:click={() => navigate("/app/references")} class="w-1/2 mt-4">References</Button>
+                <Button on:click={() => navigate("/app/statuslights")} class="w-1/2 mt-4">Status Lights</Button>
+                <Button on:click={() => navigate("/app/componentmanuals")} class="w-1/2 mt-4">Component Manuals</Button>
+                <Button on:click={() => navigate("/app/wiringdiagrams")} class="w-1/2 mt-4">Wiring Diagrams</Button>
+                <Button on:click={() => navigate("/app/softwaredocs")} class="w-1/2 mt-4">Software Documentation</Button>
+            {:else}
+                <h1 class="text-2xl" style="font-weight:bold;">You have NOT selected an event.</h1>
+                <h1 style="font-weight:bold;  font-style: italic;">To change this, please click the button below</h1>
+                <Button on:click={() => navigate("/app/login")} class="w-full mt-4">Select Event</Button>
+            {/if}
+        {:else if auth.user?.role === "FTA"}
+            {#if auth.eventToken}
+                <h1 class="text-2xl" style="font-weight:bold;">You have selected the {event.code} event.</h1>
+                <h1 style="font-weight:bold;  font-style: italic;">To change this, please click the button below</h1>
+                <Button on:click={() => navigate("/app/login")} class="w-full mt-4">Change Event</Button>
+        
+                <h1 class="text-2xl" style="font-style: italic; font-weight: bold; padding-top: 10px;">FTA Quick Links:</h1>
+                <Button on:click={() => navigate("/app/monitor")} class="w-1/2 mt-4">Monitor</Button>
+                <Button on:click={() => navigate("/app/flashcards")} class="w-1/2 mt-4">Flashcards</Button>
+                <Button on:click={() => navigate("/app/messages")} class="w-1/2 mt-4">Tickets</Button>
+                <Button on:click={() => navigate("/app/logs")} class="w-1/2 mt-4">Match Logs</Button>
+                <Button on:click={() => navigate("/app/checklist")} class="w-1/2 mt-4">Checklist</Button>
+                <Button on:click={() => navigate("/app/event-report")} class="w-1/2 mt-4">Event Report</Button>
+                <Button on:click={() => navigate("/app/dashboard")} class="w-1/2 mt-4">Event Dashboard</Button>
+                <Button on:click={() => navigate("/app/fieldmanuals")} class="w-1/2 mt-4">Field Manuals</Button>
+                
+            {:else}
+                <h1 class="text-2xl" style="font-weight:bold;">You have NOT selected an event.</h1>
+                <h1 style="font-weight:bold;  font-style: italic;">To change this, please click the button below</h1>
+                <Button on:click={() => navigate("/app/login")} class="w-full mt-4">Select Event</Button>
+            {/if}
+        {:else if auth.user?.role === "CSA"}
+            {#if auth.eventToken}
+                <h1 class="text-2xl" style="font-weight:bold;">You have selected the {event.code} event.</h1>
+                <h1 style="font-weight:bold;  font-style: italic;">To change this, please click the button below</h1>
+                <Button on:click={() => navigate("/app/login")} class="w-full mt-4">Change Event</Button>
+
+                <h1 class="text-2xl" style="font-style: italic; font-weight: bold; padding-top: 10px;">CSA Quick Links:</h1>
+                <Button on:click={() => navigate("/app/messages")} class="w-1/2 mt-4">Tickets</Button>
+                <Button on:click={() => navigate("/app/logs")} class="w-1/2 mt-4">Match Logs</Button>
+                <Button on:click={() => navigate("/app/references")} class="w-1/2 mt-4">References</Button>
+                <Button on:click={() => navigate("/app/statuslights")} class="w-1/2 mt-4">Status Lights</Button>
+                <Button on:click={() => navigate("/app/componentmanuals")} class="w-1/2 mt-4">Component Manuals</Button>
+                <Button on:click={() => navigate("/app/wiringdiagrams")} class="w-1/2 mt-4">Wiring Diagrams</Button>
+                <Button on:click={() => navigate("/app/softwaredocs")} class="w-1/2 mt-4">Software Documentation</Button>
+            {:else}
+                <h1 class="text-2xl" style="font-weight:bold;">You have NOT selected an event.</h1>
+                <h1 style="font-weight:bold;  font-style: italic;">To change this, please click the button below</h1>
+                <Button on:click={() => navigate("/app/login")} class="w-full mt-4">Select Event</Button>
+
+                <h1 class="text-2xl" style="font-style: italic; font-weight: bold; padding-top: 10px;">CSA Quick Links:</h1>
+                <Button on:click={() => navigate("/app/references")} class="w-1/2 mt-4">References</Button>
+                <Button on:click={() => navigate("/app/statuslights")} class="w-1/2 mt-4">Status Lights</Button>
+                <Button on:click={() => navigate("/app/componentmanuals")} class="w-1/2 mt-4">Component Manuals</Button>
+                <Button on:click={() => navigate("/app/wiringdiagrams")} class="w-1/2 mt-4">Wiring Diagrams</Button>
+                <Button on:click={() => navigate("/app/softwaredocs")} class="w-1/2 mt-4">Software Documentation</Button>
+            {/if}
+        {:else if auth.user?.role === "RI"}
+            {#if auth.eventToken}
+                <h1 class="text-2xl" style="font-weight:bold;">You have selected the {event.code} event.</h1>
+                <h1 style="font-weight:bold;  font-style: italic;">To change this, please click the button below</h1>
+                <Button on:click={() => navigate("/app/login")} class="w-full mt-4">Change Event</Button>
+
+                <h1 class="text-2xl" style="font-style: italic; font-weight: bold; padding-top: 10px;">RI Quick Links:</h1>
+                <Button on:click={() => navigate("/app/messages")} class="w-1/2 mt-4">Tickets</Button>
+                <Button on:click={() => navigate("/app/logs")} class="w-1/2 mt-4">Match Logs</Button>
+                <Button on:click={() => navigate("/app/references")} class="w-1/2 mt-4">References</Button>
+                <Button on:click={() => navigate("/app/statuslights")} class="w-1/2 mt-4">Status Lights</Button>
+                <Button on:click={() => navigate("/app/componentmanuals")} class="w-1/2 mt-4">Component Manuals</Button>
+                <Button on:click={() => navigate("/app/wiringdiagrams")} class="w-1/2 mt-4">Wiring Diagrams</Button>
+                <Button on:click={() => navigate("/app/softwaredocs")} class="w-1/2 mt-4">Software Documentation</Button>
+            {:else}
+                <h1 class="text-2xl" style="font-weight:bold;">You have NOT selected an event.</h1>
+                <h1 style="font-weight:bold;  font-style: italic;">To change this, please click the button below</h1>
+                <Button on:click={() => navigate("/app/login")} class="w-full mt-4">Select Event</Button>
+
+                <h1 class="text-2xl" style="font-style: italic; font-weight: bold; padding-top: 10px;">RI Quick Links:</h1>
+                <Button on:click={() => navigate("/app/references")} class="w-1/2 mt-4">References</Button>
+                <Button on:click={() => navigate("/app/statuslights")} class="w-1/2 mt-4">Status Lights</Button>
+                <Button on:click={() => navigate("/app/componentmanuals")} class="w-1/2 mt-4">Component Manuals</Button>
+                <Button on:click={() => navigate("/app/wiringdiagrams")} class="w-1/2 mt-4">Wiring Diagrams</Button>
+                <Button on:click={() => navigate("/app/softwaredocs")} class="w-1/2 mt-4">Software Documentation</Button>
+            {/if}
+        {:else}
+            {#if auth.eventToken}
+                <h1 class="text-2xl" style="font-weight:bold;">You have selected the {event.code} event.</h1>
+                <h1 style="font-weight:bold;  font-style: italic;">To change this, please click the button below</h1>
+                <Button on:click={() => navigate("/app/login")} class="w-full mt-4">Change Event</Button>
+
+                <h1 class="text-2xl" style="font-weight:bold; padding-top: 10px;">You have not selected a User Role.</h1>
+                <h1 class="text-2xl" style="font-weight:bold;">Please do so to see Quick Links.</h1>
+            {/if}
         {/if}
-        <div class="col-span-6 lg:col-span-9 flex text-lg md:text-2xl font-semibold tabular-nums {fullscreen && "lg:text-4xl"}">
-            <div class="text-left {fullscreen ? "text-4xl" : "md:text-2xl"} {currentCycleIsBest && "text-green-500"}">
-                C: {lastCycleTime} (A: {formatTimeShortNoAgoSeconds(averageCycleTimeMS)})
-            </div>
-            <div class="grow {fullscreen ? "text-4xl" : "md:text-2xl"}">
-                <span class="hidden sm:inline">{scheduleText}</span>
-            </div>
-            <div 
-                class="text-right {fullscreen ? "text-4xl" : "md:text-2xl"}"
-                style="color: rgba({75*currentCycleTimeRedness + 180}, {180*(1 - currentCycleTimeRedness)}, {180*(1 - currentCycleTimeRedness)}, 1)"
-                >
-                T: {currentCycleTime}
-            </div>
-        </div>
-    {/key}
-    {#if !monitorFrame}
-        <p>Requires Chrome Extension to be setup on field network</p>
     {/if}
 </div>

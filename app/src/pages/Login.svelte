@@ -119,7 +119,7 @@
     }
 
     authStore.subscribe((value) => {
-        console.log(value);
+        //console.log(value);
         auth = value;
         updateEventList();
     });
@@ -149,7 +149,7 @@
         try {
             const res = await trpc.event.get.query({ code: event.code });
 
-            console.log(res.teams);
+            //console.log(res.teams);
 
             authStore.set({ ...auth, eventToken: res.token });
             eventStore.set({
@@ -234,11 +234,10 @@
 {/if}
 
 <div class="container mx-auto md:max-w-4xl flex flex-col justify-center p-4 h-full space-y-4">
-    <h1 class="text-3xl">Welcome to FTA Buddy</h1>
     {#if !auth || !auth.token}
         <!-- Create Account -->
         {#if view === "create"}
-            <h2 class="text-xl">Create Account</h2>
+            <h2 class="text-2xl" style="font-weight: bold;">Create Account</h2>
             <form class="flex flex-col space-y-2 mt-2 text-left" on:submit|preventDefault={createUser}>
                 <div>
                     <Label for="username">Username</Label>
@@ -275,11 +274,11 @@
 
                 <Button type="submit" bind:disabled={loading}>Create Account</Button>
             </form>
-            <Button on:click={() => (view = "login")} bind:disabled={loading} outline>Login</Button>
+            <Button on:click={() => (view = "login")} bind:disabled={loading} outline>Log In</Button>
 
             <!-- Login -->
         {:else if view === "login"}
-            <h2 class="text-xl">Login</h2>
+            <h2 class="text-2xl" style="font-weight: bold;">Log In</h2>
             <form class="flex flex-col space-y-2 mt-2 text-left" on:submit|preventDefault={login}>
                 <div>
                     <Label for="email">Email</Label>
@@ -290,7 +289,7 @@
                     <Label for="password">Password</Label>
                     <Input id="password" bind:value={password} type="password" bind:disabled={loading} />
                 </div>
-                <Button type="submit" bind:disabled={loading}>Login</Button>
+                <Button type="submit" bind:disabled={loading}>Log In</Button>
             </form>
             <Button on:click={() => (view = "create")} bind:disabled={loading} outline>Create Account</Button>
 
@@ -314,7 +313,7 @@
                 {/if}
                 <div class="flex flex-col gap-4 {desktop ? '' : 'col-span-2'}">
                     <h2 class="text-xl">
-                        {#if desktop}Or login{:else}Login{/if} to use FTA Buddy
+                        {#if desktop}Or log in{:else}Log in{/if} to use FTA Buddy
                     </h2>
                     <div class="w-fit mx-auto">
                         <div
@@ -338,7 +337,7 @@
                         ></div>
                     </div>
                     <div class="border-t border-neutral-500"></div>
-                    <Button on:click={() => (view = "login")} bind:disabled={loading}>Login</Button>
+                    <Button on:click={() => (view = "login")} bind:disabled={loading}>Log In</Button>
 
                     <Button on:click={() => (view = "create")} bind:disabled={loading}>Create Account</Button>
                 </div>
@@ -347,8 +346,8 @@
 
         <!-- Logged In -->
     {:else}
-        <h2 class="text-lg">Logged in as {auth.user?.username}</h2>
-        <Button on:click={logout}>Logout</Button>
+        <h2 class="text-2xl" style="font-weight: bold;">Logged in as {auth.user?.username}</h2>
+        <Button on:click={logout}>Log Out</Button>
 
         <!-- Event selector for admins -->
         {#if auth.user?.role === "ADMIN"}

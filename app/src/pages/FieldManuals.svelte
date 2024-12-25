@@ -6,6 +6,7 @@
 
 <div class="container mx-auto p-2 pr-3 w-full">
     <h1 class="text-3xl" style="font-weight: bold">Field Manuals</h1>
+    <p>To visit the links, please click or scan the QR Codes</p>
     <Accordion flush class="text-left">
         <AccordionItem class="text-black dark:text-white">
             <span slot="header">Pack Case 23/24 Amp and Truss</span>

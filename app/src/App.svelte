@@ -37,6 +37,7 @@
     import FieldManuals from "./pages/FieldManuals.svelte";
     import ComponentManuals from "./pages/ComponentManuals.svelte";
     import WiringDiagrams from "./pages/WiringDiagrams.svelte";
+    import SoftwareDocs from "./pages/SoftwareDocs.svelte";
 
 	// Checking authentication
 
@@ -317,7 +318,7 @@
 						}}
 					>
 						<svelte:fragment slot="icon">
-							<Icon icon="mdi:archive" class="w-8 h-8" />
+							<Icon icon="uil:file-graph" class="w-8 h-8" />
 						</svelte:fragment>
 					</SidebarItem>
 					<SidebarItem
@@ -375,7 +376,7 @@
 					}}
 				>
 					<svelte:fragment slot="icon">
-						<Icon icon="streamline:manual-book-solid" class="w-8 h-8" />
+						<Icon icon="tabler:soccer-field" class="w-8 h-8" />
 					</svelte:fragment>
 				</SidebarItem>
 				<SidebarItem
@@ -398,6 +399,17 @@
 				>
 					<svelte:fragment slot="icon">
 						<Icon icon="fa6-solid:chart-diagram" class="w-8 h-8" />
+					</svelte:fragment>
+				</SidebarItem>
+				<SidebarItem
+					label="Software Docs"
+					on:click={() => {
+						hideMenu = true;
+						navigate("/app/softwaredocs");
+					}}
+				>
+					<svelte:fragment slot="icon">
+						<Icon icon="ion:library" class="w-8 h-8" />
 					</svelte:fragment>
 				</SidebarItem>
 				<SidebarItem
@@ -506,6 +518,7 @@
 				<Route path="/statuslights" component={StatusLights} />
 				<Route path="/fieldmanuals" component={FieldManuals} />
 				<Route path="/componentmanuals" component={ComponentManuals} />
+				<Route path="/softwaredocs" component={SoftwareDocs} />
 				<Route path="/wiringdiagrams" component={WiringDiagrams} />
 				<Route path="/messages">
 					<Messages bind:this={messagesChild} team={undefined} />

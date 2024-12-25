@@ -33,11 +33,13 @@
 	import UpdateToast from "./components/UpdateToast.svelte";
 	import EventDashboard from "./pages/EventDashboard.svelte";
 	import EventReport from "./pages/EventReport.svelte";
+    import StatusLights from "./pages/StatusLights.svelte";
+    import FieldManuals from "./pages/FieldManuals.svelte";
 
 	// Checking authentication
 
 	let auth = get(authStore);
-	const publicPaths = ["/app", "/app/", "/app/login", "/app/google-signup", "/app/host", "/app/event-created", "/app/ftc-status"];
+	const publicPaths = ["/app", "/app/", "/app/login", "/app/google-signup", "/app/host", "/app/event-created", "/app/ftc-status", "/app/references", "/app/statuslights", "/app/fieldmanuals"];
 	const pageIsPublicLog = window.location.pathname.startsWith("/app/logs/") && window.location.pathname.split("/")[3].length == 36;
 
 	function redirectForAuth(a: typeof auth) {
@@ -287,17 +289,6 @@
 						</svelte:fragment>
 					</SidebarItem>
 					<SidebarItem
-						label="References"
-						on:click={() => {
-							hideMenu = true;
-							navigate("/app/references");
-						}}
-					>
-						<svelte:fragment slot="icon">
-							<Icon icon="mdi:file-document" class="w-8 h-8" />
-						</svelte:fragment>
-					</SidebarItem>
-					<SidebarItem
 						label="Tickets"
 						on:click={() => {
 							hideMenu = true;
@@ -353,16 +344,36 @@
 			{/if}
 			<SidebarGroup class="border-t-2 mt-2 pt-2 border-neutral-400">
 				<SidebarItem
-					label="Settings"
-					class="text-sm"
-					on:click={(evt) => {
-						evt.preventDefault();
+					label="References"
+					on:click={() => {
 						hideMenu = true;
-						openSettings();
+						navigate("/app/references");
 					}}
 				>
 					<svelte:fragment slot="icon">
-						<Icon icon="mdi:cog" class="w-8 h-8" />
+						<Icon icon="mdi:file-document" class="w-8 h-8" />
+					</svelte:fragment>
+				</SidebarItem>
+				<SidebarItem
+					label="Status Lights"
+					on:click={() => {
+						hideMenu = true;
+						navigate("/app/statuslights");
+					}}
+				>
+					<svelte:fragment slot="icon">
+						<Icon icon="entypo:light-up" class="w-8 h-8" />
+					</svelte:fragment>
+				</SidebarItem>
+				<SidebarItem
+					label="Field Manuals"
+					on:click={() => {
+						hideMenu = true;
+						navigate("/app/fieldmanuals");
+					}}
+				>
+					<svelte:fragment slot="icon">
+						<Icon icon="streamline:manual-book-solid" class="w-8 h-8" />
 					</svelte:fragment>
 				</SidebarItem>
 				<SidebarItem
@@ -419,6 +430,19 @@
 					</svelte:fragment>
 				</SidebarItem>
 				<SidebarItem
+					label="Settings"
+					class="text-sm"
+					on:click={(evt) => {
+						evt.preventDefault();
+						hideMenu = true;
+						openSettings();
+					}}
+				>
+					<svelte:fragment slot="icon">
+						<Icon icon="mdi:cog" class="w-8 h-8" />
+					</svelte:fragment>
+				</SidebarItem>
+				<SidebarItem
 					label="Help"
 					class="text-sm"
 					on:click={(evt) => {
@@ -455,6 +479,8 @@
 				</Route>
 				<Route path="/flashcards" component={Flashcard} />
 				<Route path="/references" component={Reference} />
+				<Route path="/statuslights" component={StatusLights} />
+				<Route path="/fieldmanuals" component={FieldManuals} />
 				<Route path="/messages">
 					<Messages bind:this={messagesChild} team={undefined} />
 				</Route>

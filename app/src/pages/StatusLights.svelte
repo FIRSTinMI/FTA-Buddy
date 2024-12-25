@@ -73,7 +73,7 @@
 </script>
 
 <div class="container mx-auto p-2 pr-3 w-full">
-    <h1 class="text-3xl">Status Lights</h1>
+    <h1 class="text-3xl" style="font-weight: bold">Status Lights</h1>
     <Accordion flush class="text-left">
         <AccordionItem class="text-black dark:text-white">
             <span slot="header">Robot Radio</span>

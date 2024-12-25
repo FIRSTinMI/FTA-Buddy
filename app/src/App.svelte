@@ -35,11 +35,13 @@
 	import EventReport from "./pages/EventReport.svelte";
     import StatusLights from "./pages/StatusLights.svelte";
     import FieldManuals from "./pages/FieldManuals.svelte";
+    import ComponentManuals from "./pages/ComponentManuals.svelte";
+    import WiringDiagrams from "./pages/WiringDiagrams.svelte";
 
 	// Checking authentication
 
 	let auth = get(authStore);
-	const publicPaths = ["/app", "/app/", "/app/login", "/app/google-signup", "/app/host", "/app/event-created", "/app/ftc-status", "/app/references", "/app/statuslights", "/app/fieldmanuals"];
+	const publicPaths = ["/app", "/app/", "/app/login", "/app/google-signup", "/app/host", "/app/event-created", "/app/ftc-status", "/app/references", "/app/statuslights", "/app/fieldmanuals", "/app/componentmanuals", "/app/wiringdiagrams"];
 	const pageIsPublicLog = window.location.pathname.startsWith("/app/logs/") && window.location.pathname.split("/")[3].length == 36;
 
 	function redirectForAuth(a: typeof auth) {
@@ -377,6 +379,28 @@
 					</svelte:fragment>
 				</SidebarItem>
 				<SidebarItem
+					label="Component Manuals"
+					on:click={() => {
+						hideMenu = true;
+						navigate("/app/componentmanuals");
+					}}
+				>
+					<svelte:fragment slot="icon">
+						<Icon icon="streamline:manual-book-solid" class="w-8 h-8" />
+					</svelte:fragment>
+				</SidebarItem>
+				<SidebarItem
+					label="Wiring Diagrams"
+					on:click={() => {
+						hideMenu = true;
+						navigate("/app/wiringdiagrams");
+					}}
+				>
+					<svelte:fragment slot="icon">
+						<Icon icon="fa6-solid:chart-diagram" class="w-8 h-8" />
+					</svelte:fragment>
+				</SidebarItem>
+				<SidebarItem
 					label="Change Event/Account"
 					class="text-sm"
 					on:click={() => {
@@ -481,6 +505,8 @@
 				<Route path="/references" component={Reference} />
 				<Route path="/statuslights" component={StatusLights} />
 				<Route path="/fieldmanuals" component={FieldManuals} />
+				<Route path="/componentmanuals" component={ComponentManuals} />
+				<Route path="/wiringdiagrams" component={WiringDiagrams} />
 				<Route path="/messages">
 					<Messages bind:this={messagesChild} team={undefined} />
 				</Route>

@@ -73,6 +73,7 @@
 </script>
 
 <div class="container mx-auto p-2 pr-3 w-full">
+    <h1 class="text-3xl">Status Lights</h1>
     <Accordion flush class="text-left">
         <AccordionItem class="text-black dark:text-white">
             <span slot="header">Robot Radio</span>
@@ -877,7 +878,7 @@
         </AccordionItem>
 
         <AccordionItem class="text-black dark:text-white">
-            <span slot="header">CANivore Lights</span>
+            <span slot="header">CTRE CANivore</span>
 
             <table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
                 <tr>
@@ -1003,7 +1004,7 @@
         </AccordionItem>
 
         <AccordionItem class="text-black dark:text-white">
-            <span slot="header">Pigeon 2 Lights</span>
+            <span slot="header">CTRE Pigeon 2.0 Lights</span>
 
             <table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
                 <tr>

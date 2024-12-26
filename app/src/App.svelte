@@ -1,5 +1,5 @@
 <script lang="ts">
-	import FTCStatus from "./pages/FTCStatus.svelte";
+	import FTCStatus from "./pages/ftc/FTCStatus.svelte";
 	import Icon from "@iconify/svelte";
 	import { Button, CloseButton, DarkMode, Drawer, Indicator, Modal, Sidebar, SidebarGroup, SidebarItem, SidebarWrapper, Toast } from "flowbite-svelte";
 	import { Link, Route, Router, navigate } from "svelte-routing";
@@ -9,35 +9,35 @@
 	import WelcomeModal from "./components/WelcomeModal.svelte";
 	import Flashcard from "./pages/Flashcards.svelte";
 	import Monitor from "./pages/Monitor.svelte";
-	import Login from "./pages/Login.svelte";
-	import Messages from "./pages/Messages.svelte";
-	import Reference from "./pages/Reference.svelte";
+	import Login from "./pages/management/Login.svelte";
+	import Messages from "./pages/tickets-notes/Messages.svelte";
+	import Reference from "./pages/references/Reference.svelte";
 	import { authStore } from "./stores/auth";
 	import { messagesStore } from "./stores/messages";
 	import { settingsStore } from "./stores/settings";
 	import { VERSIONS, update } from "./util/updater";
 	import { sineIn } from "svelte/easing";
-	import CompleteGoogleSignup from "./pages/CompleteGoogleSignup.svelte";
+	import CompleteGoogleSignup from "./pages/management/CompleteGoogleSignup.svelte";
 	import { eventStore } from "./stores/event";
-	import Host from "./pages/Host.svelte";
-	import PostEventCreation from "./pages/PostEventCreation.svelte";
-	import MatchLog from "./pages/MatchLog.svelte";
-	import StationLog from "./pages/StationLog.svelte";
-	import MatchLogsList from "./pages/MatchLogsList.svelte";
+	import Host from "./pages/management/Host.svelte";
+	import PostEventCreation from "./pages/management/PostEventCreation.svelte";
+	import MatchLog from "./pages/match-logs/MatchLog.svelte";
+	import StationLog from "./pages/match-logs/StationLog.svelte";
+	import MatchLogsList from "./pages/match-logs/MatchLogsList.svelte";
 	import Checklist from "./pages/Checklist.svelte";
 	import { onDestroy, onMount } from "svelte";
-	import CreateTicket from "./pages/CreateTicket.svelte";
-	import ViewTicket from "./pages/ViewTicket.svelte";
+	import CreateTicket from "./pages/tickets-notes/CreateTicket.svelte";
+	import ViewTicket from "./pages/tickets-notes/ViewTicket.svelte";
 	import { startBackgroundSubscription } from "./util/notifications";
 	import { trpc } from "./main";
 	import UpdateToast from "./components/UpdateToast.svelte";
 	import EventDashboard from "./pages/EventDashboard.svelte";
 	import EventReport from "./pages/EventReport.svelte";
-	import StatusLights from "./pages/StatusLights.svelte";
-	import FieldManuals from "./pages/FieldManuals.svelte";
-	import ComponentManuals from "./pages/ComponentManuals.svelte";
-	import WiringDiagrams from "./pages/WiringDiagrams.svelte";
-	import SoftwareDocs from "./pages/SoftwareDocs.svelte";
+	import StatusLights from "./pages/references/StatusLights.svelte";
+	import FieldManuals from "./pages/references/FieldManuals.svelte";
+	import ComponentManuals from "./pages/references/ComponentManuals.svelte";
+	import WiringDiagrams from "./pages/references/WiringDiagrams.svelte";
+	import SoftwareDocs from "./pages/references/SoftwareDocs.svelte";
 
 	// Checking authentication
 
@@ -434,19 +434,7 @@
 					</svelte:fragment>
 				</SidebarItem>
 				<SidebarItem
-					label="Field Manuals"
-					on:click={() => {
-						hideMenu = true;
-						navigate("/app/fieldmanuals");
-					}}
-					class="text-xs ml-8 p-0"
-				>
-					<svelte:fragment slot="icon">
-						<Icon icon="tabler:soccer-field" class="size-6" />
-					</svelte:fragment>
-				</SidebarItem>
-				<SidebarItem
-					label="Part Manuals"
+					label="Components Manuals"
 					on:click={() => {
 						hideMenu = true;
 						navigate("/app/componentmanuals");
@@ -479,6 +467,18 @@
 				>
 					<svelte:fragment slot="icon">
 						<Icon icon="ion:library" class="size-6" />
+					</svelte:fragment>
+				</SidebarItem>
+				<SidebarItem
+					label="Field Manuals"
+					on:click={() => {
+						hideMenu = true;
+						navigate("/app/fieldmanuals");
+					}}
+					class="text-xs ml-8 p-0"
+				>
+					<svelte:fragment slot="icon">
+						<Icon icon="tabler:soccer-field" class="size-6" />
 					</svelte:fragment>
 				</SidebarItem>
 				<SidebarItem

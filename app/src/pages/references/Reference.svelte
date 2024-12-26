@@ -10,18 +10,18 @@
 		<Button href="/app/statuslights" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
 			><Icon icon="entypo:light-up" class="size-6 md:size-8" /> Status Lights</Button
 		>
-		<Button href="/app/fieldmanuals" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
-			><Icon icon="tabler:soccer-field" class="size-6 md:size-8" /> Field Manuals</Button
+		<Button href="/app/softwaredocs" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
+			><Icon icon="ion:library" class="size-6 md:size-8" /> Software Docs</Button
 		>
-		<Button href="/app/componentmanuals" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
-			><Icon icon="streamline:manual-book-solid" class="size-6 md:size-8" /> Part Manuals</Button
+		<Button href="/app/wiringdiagrams" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
+			><Icon icon="fa6-solid:chart-diagram" class="size-6 md:size-8" /> Wiring Diagrams</Button
 		>
 		<div class="grid grid-cols-2 gap-2 col-span-3">
-			<Button href="/app/wiringdiagrams" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
-				><Icon icon="fa6-solid:chart-diagram" class="size-6 md:size-8" /> Wiring Diagrams</Button
+			<Button href="/app/componentmanuals" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
+				><Icon icon="streamline:manual-book-solid" class="size-6 md:size-8" /> Component Manuals</Button
 			>
-			<Button href="/app/softwaredocs" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
-				><Icon icon="ion:library" class="size-6 md:size-8" /> Software Docs</Button
+			<Button href="/app/fieldmanuals" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
+				><Icon icon="tabler:soccer-field" class="size-6 md:size-8" /> Field Manuals</Button
 			>
 		</div>
 	</div>

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Select, Progressbar, Spinner, Checkbox } from "flowbite-svelte";
-	import { formatTimeNoAgo, formatTimeShortNoAgo, formatTimeShortNoAgoSeconds } from "../../../shared/formatTime";
-	import { trpc } from "../main";
-	import type { FTCEvent } from "../../../src/router/ftc";
+	import { formatTimeNoAgo, formatTimeShortNoAgo, formatTimeShortNoAgoSeconds } from "../../../../shared/formatTime";
+	import { trpc } from "../../main";
+	import type { FTCEvent } from "../../../../src/router/ftc";
 	import { onMount } from "svelte";
 
 	let region = "FIM";

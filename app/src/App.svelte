@@ -1,5 +1,5 @@
 <script lang="ts">
-	import FTCStatus from "./pages/FTCStatus.svelte";
+	import FTCStatus from "./pages/ftc/FTCStatus.svelte";
 	import Icon from "@iconify/svelte";
 	import { Button, CloseButton, DarkMode, Drawer, Indicator, Modal, Sidebar, SidebarGroup, SidebarItem, SidebarWrapper, Toast } from "flowbite-svelte";
 	import { Link, Route, Router, navigate } from "svelte-routing";
@@ -8,55 +8,76 @@
 	import SettingsModal from "./components/SettingsModal.svelte";
 	import WelcomeModal from "./components/WelcomeModal.svelte";
 	import Flashcard from "./pages/Flashcards.svelte";
-	import Home from "./pages/Home.svelte";
-	import Login from "./pages/Login.svelte";
-	import Messages from "./pages/Messages.svelte";
-	import Reference from "./pages/Reference.svelte";
+	import Monitor from "./pages/Monitor.svelte";
+	import Login from "./pages/management/Login.svelte";
+	import Messages from "./pages/tickets-notes/Messages.svelte";
+	import Reference from "./pages/references/Reference.svelte";
 	import { authStore } from "./stores/auth";
 	import { messagesStore } from "./stores/messages";
 	import { settingsStore } from "./stores/settings";
 	import { VERSIONS, update } from "./util/updater";
 	import { sineIn } from "svelte/easing";
-	import CompleteGoogleSignup from "./pages/CompleteGoogleSignup.svelte";
+	import CompleteGoogleSignup from "./pages/management/CompleteGoogleSignup.svelte";
 	import { eventStore } from "./stores/event";
-	import Host from "./pages/Host.svelte";
-	import PostEventCreation from "./pages/PostEventCreation.svelte";
-	import MatchLog from "./pages/MatchLog.svelte";
-	import StationLog from "./pages/StationLog.svelte";
-	import MatchLogsList from "./pages/MatchLogsList.svelte";
+	import Host from "./pages/management/Host.svelte";
+	import PostEventCreation from "./pages/management/PostEventCreation.svelte";
+	import MatchLog from "./pages/match-logs/MatchLog.svelte";
+	import StationLog from "./pages/match-logs/StationLog.svelte";
+	import MatchLogsList from "./pages/match-logs/MatchLogsList.svelte";
 	import Checklist from "./pages/Checklist.svelte";
 	import { onDestroy, onMount } from "svelte";
-	import CreateTicket from "./pages/CreateTicket.svelte";
-	import ViewTicket from "./pages/ViewTicket.svelte";
+	import CreateTicket from "./pages/tickets-notes/CreateTicket.svelte";
+	import ViewTicket from "./pages/tickets-notes/ViewTicket.svelte";
 	import { startBackgroundSubscription } from "./util/notifications";
 	import { trpc } from "./main";
 	import UpdateToast from "./components/UpdateToast.svelte";
 	import EventDashboard from "./pages/EventDashboard.svelte";
 	import EventReport from "./pages/EventReport.svelte";
+	import StatusLights from "./pages/references/StatusLights.svelte";
+	import FieldManuals from "./pages/references/FieldManuals.svelte";
+	import ComponentManuals from "./pages/references/ComponentManuals.svelte";
+	import WiringDiagrams from "./pages/references/WiringDiagrams.svelte";
+	import SoftwareDocs from "./pages/references/SoftwareDocs.svelte";
 
 	// Checking authentication
 
 	let auth = get(authStore);
-	const publicPaths = ["/app", "/app/", "/app/login", "/app/google-signup", "/app/host", "/app/event-created", "/app/ftc-status"];
+	const publicPaths = [
+		"/app",
+		"/app/",
+		"/app/login",
+		"/app/google-signup",
+		"/app/host",
+		"/app/event-created",
+		"/app/ftc-status",
+		"/app/references",
+		"/app/statuslights",
+		"/app/fieldmanuals",
+		"/app/componentmanuals",
+		"/app/wiringdiagrams",
+	];
 	const pageIsPublicLog = window.location.pathname.startsWith("/app/logs/") && window.location.pathname.split("/")[3].length == 36;
 
 	function redirectForAuth(a: typeof auth) {
 		console.log(!a.token, !a.eventToken, window.location.pathname, pageIsPublicLog);
 
-		if (!publicPaths.includes(window.location.pathname)){ //user trying to acces protected page
-			if (!pageIsPublicLog) { //page is not public log
-            	if (!a.token || !a.eventToken){
-					navigate("/app/login") //user is either not logged in or does not have event token
+		if (!publicPaths.includes(window.location.pathname)) {
+			//user trying to acces protected page
+			if (!pageIsPublicLog) {
+				//page is not public log
+				if (!a.token || !a.eventToken) {
+					navigate("/app/login"); //user is either not logged in or does not have event token
 				}
 				//user is logged in and has event token -- no redirect
 			}
 			//page is public log -- no tokens needed
-        } else if (window.location.pathname == "/app" || window.location.pathname == "/app/") { //user is accessing public path that is /app or /app/
-			if (!a.token || !a.eventToken) { 
-				navigate("/app/login") //user is missing user token or event token
+		} else if (window.location.pathname == "/app" || window.location.pathname == "/app/") {
+			//user is accessing public path that is /app or /app/
+			if (!a.token || !a.eventToken) {
+				navigate("/app/login"); //user is missing user token or event token
 			}
 			//user has user and event token -- no redirect
-        }	
+		}
 	}
 
 	redirectForAuth(auth);
@@ -264,17 +285,31 @@
 		<SidebarWrapper divClass="overflow-y-auto py-4 px-3 rounded dark:bg-gray-800">
 			{#if auth.token && auth.eventToken}
 				<SidebarGroup>
-					<SidebarItem
-						label="Monitor"
-						on:click={() => {
-							hideMenu = true;
-							navigate("/app/");
-						}}
-					>
-						<svelte:fragment slot="icon">
-							<Icon icon="mdi:television" class="w-8 h-8" />
-						</svelte:fragment>
-					</SidebarItem>
+					{#if auth.user?.role === "FTA" || auth.user?.role === "ADMIN"}
+						<SidebarItem
+							label="Monitor"
+							on:click={() => {
+								hideMenu = true;
+								navigate("/app/");
+							}}
+						>
+							<svelte:fragment slot="icon">
+								<Icon icon="mdi:television" class="w-8 h-8" />
+							</svelte:fragment>
+						</SidebarItem>
+					{:else if auth.user?.role === "CSA" || auth.user?.role === "RI"}
+						<SidebarItem
+							label="Monitor"
+							on:click={() => {
+								hideMenu = true;
+								navigate("/app/monitor");
+							}}
+						>
+							<svelte:fragment slot="icon">
+								<Icon icon="mdi:television" class="w-8 h-8" />
+							</svelte:fragment>
+						</SidebarItem>
+					{/if}
 					<SidebarItem
 						label="Flashcards"
 						on:click={() => {
@@ -286,36 +321,47 @@
 							<Icon icon="mdi:message-alert" class="w-8 h-8" />
 						</svelte:fragment>
 					</SidebarItem>
-					<SidebarItem
-						label="References"
-						on:click={() => {
-							hideMenu = true;
-							navigate("/app/references");
-						}}
-					>
-						<svelte:fragment slot="icon">
-							<Icon icon="mdi:file-document" class="w-8 h-8" />
-						</svelte:fragment>
-					</SidebarItem>
-					<SidebarItem
-						label="Tickets"
-						on:click={() => {
-							hideMenu = true;
-							navigate("/app/messages");
-						}}
-					>
-						<svelte:fragment slot="icon">
-							<Icon icon="mdi:message-text" class="w-8 h-8" />
-						</svelte:fragment>
-						{#if notifications > 0}
-							<Indicator color="red" border size="xl" placement="top-left">
-								<span
-									class="text-white
-                                text-xs">{notifications}</span
-								>
-							</Indicator>
-						{/if}
-					</SidebarItem>
+					{#if auth.user?.role === "FTA" || auth.user?.role === "ADMIN"}
+						<SidebarItem
+							label="Tickets"
+							on:click={() => {
+								hideMenu = true;
+								navigate("/app/messages");
+							}}
+						>
+							<svelte:fragment slot="icon">
+								<Icon icon="mdi:message-text" class="w-8 h-8" />
+							</svelte:fragment>
+							{#if notifications > 0}
+								<Indicator color="red" border size="xl" placement="top-left">
+									<span
+										class="text-white
+                                	text-xs">{notifications}</span
+									>
+								</Indicator>
+							{/if}
+						</SidebarItem>
+					{:else if auth.user?.role === "CSA" || auth.user?.role === "RI"}
+						<SidebarItem
+							label="Tickets"
+							on:click={() => {
+								hideMenu = true;
+								navigate("/app/");
+							}}
+						>
+							<svelte:fragment slot="icon">
+								<Icon icon="mdi:message-text" class="w-8 h-8" />
+							</svelte:fragment>
+							{#if notifications > 0}
+								<Indicator color="red" border size="xl" placement="top-left">
+									<span
+										class="text-white
+                                	text-xs">{notifications}</span
+									>
+								</Indicator>
+							{/if}
+						</SidebarItem>
+					{/if}
 					<SidebarItem
 						label="Match Logs"
 						on:click={() => {
@@ -324,7 +370,7 @@
 						}}
 					>
 						<svelte:fragment slot="icon">
-							<Icon icon="mdi:archive" class="w-8 h-8" />
+							<Icon icon="uil:file-graph" class="w-8 h-8" />
 						</svelte:fragment>
 					</SidebarItem>
 					<SidebarItem
@@ -353,19 +399,6 @@
 			{/if}
 			<SidebarGroup class="border-t-2 mt-2 pt-2 border-neutral-400">
 				<SidebarItem
-					label="Settings"
-					class="text-sm"
-					on:click={(evt) => {
-						evt.preventDefault();
-						hideMenu = true;
-						openSettings();
-					}}
-				>
-					<svelte:fragment slot="icon">
-						<Icon icon="mdi:cog" class="w-8 h-8" />
-					</svelte:fragment>
-				</SidebarItem>
-				<SidebarItem
 					label="Change Event/Account"
 					class="text-sm"
 					on:click={() => {
@@ -375,6 +408,77 @@
 				>
 					<svelte:fragment slot="icon">
 						<Icon icon="mdi:account-switch" class="w-8 h-8" />
+					</svelte:fragment>
+				</SidebarItem>
+				<SidebarItem
+					label="References"
+					on:click={() => {
+						hideMenu = true;
+						navigate("/app/references");
+					}}
+				>
+					<svelte:fragment slot="icon">
+						<Icon icon="mdi:file-document" class="w-8 h-8" />
+					</svelte:fragment>
+				</SidebarItem>
+				<SidebarItem
+					label="Status Lights"
+					on:click={() => {
+						hideMenu = true;
+						navigate("/app/statuslights");
+					}}
+					class="text-xs ml-8 p-0"
+				>
+					<svelte:fragment slot="icon">
+						<Icon icon="entypo:light-up" class="size-6" />
+					</svelte:fragment>
+				</SidebarItem>
+				<SidebarItem
+					label="Components Manuals"
+					on:click={() => {
+						hideMenu = true;
+						navigate("/app/componentmanuals");
+					}}
+					class="text-xs ml-8 p-0"
+				>
+					<svelte:fragment slot="icon">
+						<Icon icon="streamline:manual-book-solid" class="size-6" />
+					</svelte:fragment>
+				</SidebarItem>
+				<SidebarItem
+					label="Wiring Diagrams"
+					on:click={() => {
+						hideMenu = true;
+						navigate("/app/wiringdiagrams");
+					}}
+					class="text-xs ml-8 p-0"
+				>
+					<svelte:fragment slot="icon">
+						<Icon icon="fa6-solid:chart-diagram" class="size-6" />
+					</svelte:fragment>
+				</SidebarItem>
+				<SidebarItem
+					label="Software Docs"
+					on:click={() => {
+						hideMenu = true;
+						navigate("/app/softwaredocs");
+					}}
+					class="text-xs ml-8 p-0"
+				>
+					<svelte:fragment slot="icon">
+						<Icon icon="ion:library" class="size-6" />
+					</svelte:fragment>
+				</SidebarItem>
+				<SidebarItem
+					label="Field Manuals"
+					on:click={() => {
+						hideMenu = true;
+						navigate("/app/fieldmanuals");
+					}}
+					class="text-xs ml-8 p-0"
+				>
+					<svelte:fragment slot="icon">
+						<Icon icon="tabler:soccer-field" class="size-6" />
 					</svelte:fragment>
 				</SidebarItem>
 				<SidebarItem
@@ -419,6 +523,19 @@
 					</svelte:fragment>
 				</SidebarItem>
 				<SidebarItem
+					label="Settings"
+					class="text-sm"
+					on:click={(evt) => {
+						evt.preventDefault();
+						hideMenu = true;
+						openSettings();
+					}}
+				>
+					<svelte:fragment slot="icon">
+						<Icon icon="mdi:cog" class="w-8 h-8" />
+					</svelte:fragment>
+				</SidebarItem>
+				<SidebarItem
 					label="Help"
 					class="text-sm"
 					on:click={(evt) => {
@@ -444,20 +561,44 @@
 					<Icon icon="mdi:menu" class="w-8 h-10" />
 				</Button>
 				<div class="flex-grow">
-					<h1 class="text-white text-lg">{event.code}</h1>
+					{#if auth.token && auth.eventToken}
+						<h1 class="text-white text-lg">{event.code}</h1>
+					{/if}
 				</div>
 			</div>
 		{/if}
 		<Router basepath="/app/">
 			<div class="overflow-y-auto flex-grow pb-2">
-				<Route path="/">
-					<Home {fullscreen} {frameHandler} />
-				</Route>
+				{#if auth.user?.role === "FTA" || auth.user?.role === "ADMIN"}
+					<Route path="/">
+						<Monitor {fullscreen} {frameHandler} />
+					</Route>
+					<Route path="/messages">
+						<Messages bind:this={messagesChild} team={undefined} />
+					</Route>
+				{:else if auth.user?.role === "CSA" || auth.user?.role === "RI"}
+					<Route path="/">
+						<Messages bind:this={messagesChild} team={undefined} />
+					</Route>
+					<Route path="/monitor">
+						<Monitor {fullscreen} {frameHandler} />
+					</Route>
+				{:else}
+					<Route path="/">
+						<Messages bind:this={messagesChild} team={undefined} />
+					</Route>
+					<Route path="/monitor">
+						<Monitor {fullscreen} {frameHandler} />
+					</Route>
+				{/if}
+
 				<Route path="/flashcards" component={Flashcard} />
 				<Route path="/references" component={Reference} />
-				<Route path="/messages">
-					<Messages bind:this={messagesChild} team={undefined} />
-				</Route>
+				<Route path="/statuslights" component={StatusLights} />
+				<Route path="/fieldmanuals" component={FieldManuals} />
+				<Route path="/componentmanuals" component={ComponentManuals} />
+				<Route path="/softwaredocs" component={SoftwareDocs} />
+				<Route path="/wiringdiagrams" component={WiringDiagrams} />
 				<Route path="/messages/:team" component={Messages} />
 				<Route path="/ticket" component={CreateTicket} />
 				<Route path="/ticket/:id" component={ViewTicket} />

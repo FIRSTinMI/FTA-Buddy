@@ -1,12 +1,12 @@
 <script lang="ts">
-    import { FieldState, MatchState, MatchStateMap, ROBOT, type MonitorFrame, type ScheduleDetails } from "./../../../shared/types";
+    import { FieldState, MatchState, MatchStateMap, ROBOT, type MonitorFrame, type ScheduleDetails } from "../../../shared/types";
     import MonitorRow from "../components/MonitorRow.svelte";
     import TeamModal from "../components/TeamModal.svelte";
     import { formatTimeShortNoAgo, formatTimeShortNoAgoMinutesOnly, formatTimeShortNoAgoSeconds } from "../../../shared/formatTime";
     import type { MonitorEvent, MonitorFrameHandler } from "../util/monitorFrameHandler";
     import { onDestroy, onMount } from "svelte";
     import { trpc } from "../main";
-    import { cycleTimeToMS } from "./../../../shared/cycleTimeToMS";
+    import { cycleTimeToMS } from "../../../shared/cycleTimeToMS";
 	import { authStore } from "../stores/auth";
 	import { audioQueuer } from "../field-monitor";
 	import Spinner from "../components/Spinner.svelte";

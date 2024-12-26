@@ -33,35 +33,51 @@
 	import UpdateToast from "./components/UpdateToast.svelte";
 	import EventDashboard from "./pages/EventDashboard.svelte";
 	import EventReport from "./pages/EventReport.svelte";
-    import StatusLights from "./pages/StatusLights.svelte";
-    import FieldManuals from "./pages/FieldManuals.svelte";
-    import ComponentManuals from "./pages/ComponentManuals.svelte";
-    import WiringDiagrams from "./pages/WiringDiagrams.svelte";
-    import SoftwareDocs from "./pages/SoftwareDocs.svelte";
+	import StatusLights from "./pages/StatusLights.svelte";
+	import FieldManuals from "./pages/FieldManuals.svelte";
+	import ComponentManuals from "./pages/ComponentManuals.svelte";
+	import WiringDiagrams from "./pages/WiringDiagrams.svelte";
+	import SoftwareDocs from "./pages/SoftwareDocs.svelte";
 
 	// Checking authentication
 
 	let auth = get(authStore);
-	const publicPaths = ["/app", "/app/", "/app/login", "/app/google-signup", "/app/host", "/app/event-created", "/app/ftc-status", "/app/references", "/app/statuslights", "/app/fieldmanuals", "/app/componentmanuals", "/app/wiringdiagrams"];
+	const publicPaths = [
+		"/app",
+		"/app/",
+		"/app/login",
+		"/app/google-signup",
+		"/app/host",
+		"/app/event-created",
+		"/app/ftc-status",
+		"/app/references",
+		"/app/statuslights",
+		"/app/fieldmanuals",
+		"/app/componentmanuals",
+		"/app/wiringdiagrams",
+	];
 	const pageIsPublicLog = window.location.pathname.startsWith("/app/logs/") && window.location.pathname.split("/")[3].length == 36;
 
 	function redirectForAuth(a: typeof auth) {
 		console.log(!a.token, !a.eventToken, window.location.pathname, pageIsPublicLog);
 
-		if (!publicPaths.includes(window.location.pathname)){ //user trying to acces protected page
-			if (!pageIsPublicLog) { //page is not public log
-            	if (!a.token || !a.eventToken){
-					navigate("/app/login") //user is either not logged in or does not have event token
+		if (!publicPaths.includes(window.location.pathname)) {
+			//user trying to acces protected page
+			if (!pageIsPublicLog) {
+				//page is not public log
+				if (!a.token || !a.eventToken) {
+					navigate("/app/login"); //user is either not logged in or does not have event token
 				}
 				//user is logged in and has event token -- no redirect
 			}
 			//page is public log -- no tokens needed
-        } else if (window.location.pathname == "/app" || window.location.pathname == "/app/") { //user is accessing public path that is /app or /app/
-			if (!a.token || !a.eventToken) { 
-				navigate("/app/login") //user is missing user token or event token
+		} else if (window.location.pathname == "/app" || window.location.pathname == "/app/") {
+			//user is accessing public path that is /app or /app/
+			if (!a.token || !a.eventToken) {
+				navigate("/app/login"); //user is missing user token or event token
 			}
 			//user has user and event token -- no redirect
-        }	
+		}
 	}
 
 	redirectForAuth(auth);
@@ -411,9 +427,10 @@
 						hideMenu = true;
 						navigate("/app/statuslights");
 					}}
+					class="text-xs ml-8 p-0"
 				>
 					<svelte:fragment slot="icon">
-						<Icon icon="entypo:light-up" class="w-8 h-8" />
+						<Icon icon="entypo:light-up" class="size-6" />
 					</svelte:fragment>
 				</SidebarItem>
 				<SidebarItem
@@ -422,20 +439,22 @@
 						hideMenu = true;
 						navigate("/app/fieldmanuals");
 					}}
+					class="text-xs ml-8 p-0"
 				>
 					<svelte:fragment slot="icon">
-						<Icon icon="tabler:soccer-field" class="w-8 h-8" />
+						<Icon icon="tabler:soccer-field" class="size-6" />
 					</svelte:fragment>
 				</SidebarItem>
 				<SidebarItem
-					label="Component Manuals"
+					label="Part Manuals"
 					on:click={() => {
 						hideMenu = true;
 						navigate("/app/componentmanuals");
 					}}
+					class="text-xs ml-8 p-0"
 				>
 					<svelte:fragment slot="icon">
-						<Icon icon="streamline:manual-book-solid" class="w-8 h-8" />
+						<Icon icon="streamline:manual-book-solid" class="size-6" />
 					</svelte:fragment>
 				</SidebarItem>
 				<SidebarItem
@@ -444,9 +463,10 @@
 						hideMenu = true;
 						navigate("/app/wiringdiagrams");
 					}}
+					class="text-xs ml-8 p-0"
 				>
 					<svelte:fragment slot="icon">
-						<Icon icon="fa6-solid:chart-diagram" class="w-8 h-8" />
+						<Icon icon="fa6-solid:chart-diagram" class="size-6" />
 					</svelte:fragment>
 				</SidebarItem>
 				<SidebarItem
@@ -455,9 +475,10 @@
 						hideMenu = true;
 						navigate("/app/softwaredocs");
 					}}
+					class="text-xs ml-8 p-0"
 				>
 					<svelte:fragment slot="icon">
-						<Icon icon="ion:library" class="w-8 h-8" />
+						<Icon icon="ion:library" class="size-6" />
 					</svelte:fragment>
 				</SidebarItem>
 				<SidebarItem
@@ -570,7 +591,7 @@
 						<Monitor {fullscreen} {frameHandler} />
 					</Route>
 				{/if}
-				
+
 				<Route path="/flashcards" component={Flashcard} />
 				<Route path="/references" component={Reference} />
 				<Route path="/statuslights" component={StatusLights} />

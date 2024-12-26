@@ -346,7 +346,10 @@
 
         <!-- Logged In -->
     {:else}
-        <h2 class="text-2xl" style="font-weight: bold;">Logged in as {auth.user?.username}</h2>
+        <h2 class="text-3xl" style="font-weight: bold;">Welcome to FTA Buddy!</h2>
+        <h2 class="text-xl" style="font-weight: bold;">You are logged in as {auth.user?.username}</h2>
+        <h1 class="text-xl" style="font-style: italic;">Your role is set to {auth.user?.role}.</h1>
+
         <Button on:click={logout}>Log Out</Button>
 
         <!-- Event selector for admins -->
@@ -354,12 +357,14 @@
             {#if desktop}
                 <div class="flex border-t border-neutral-500 pt-4">
                     <div class="my-auto w-full">
-                        <h2 class="text-xl">Run FTA Buddy from this computer</h2>
+                        <h2 class="text-2xl" style="font-weight: bold;">Run FTA Buddy from this computer</h2>
                         <Button on:click={() => navigate("/app/host")} class="w-full mt-4">Host</Button>
                         <p class="text-gray-700 mt-2">Requires this computer to be on the field network</p>
                     </div>
                 </div>
             {/if}
+
+            <h1 class="text-xl" style="font-weight:bold;">The Event Currently Selected Is: {event.code}</h1>
 
             <div class="flex flex-col border-t border-neutral-500 pt-10 space-y-4">
                 <Label for="event-selector">Admin Event Selector</Label>
@@ -371,7 +376,7 @@
             <!-- Currently have an event selected -->
         {:else if auth.eventToken}
             <div class="flex flex-col border-t border-neutral-500 pt-10 space-y-2">
-                <h3 class="text-lg">Event: {event.code}</h3>
+                <h1 class="text-xl" style="font-weight:bold;">The Event Currently Selected Is: {event.code}</h1>
                 <Button href="/" on:click={() => navigate("/")}>Go to App</Button>
                 <Button outline on:click={() => (eventStore.set({ code: "", pin: "", teams: [] }), authStore.set({ ...auth, eventToken: "" }))}
                     >Leave Event</Button

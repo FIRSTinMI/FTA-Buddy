@@ -1077,7 +1077,7 @@
     .led-table {
         border-collapse: collapse;
         border: 2px solid #b0bec5;
-        width: 400px;
+        width: 375px;
     }
     .section-table td {
         border: 0;

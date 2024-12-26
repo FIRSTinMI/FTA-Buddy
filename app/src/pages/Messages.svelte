@@ -25,9 +25,14 @@
     export let team: number | undefined;
     let view: "tickets" | "team" = team ? "team" : "tickets";
 
-    let messages: Awaited<ReturnType<typeof trpc.messages.getMessagesAndTickets.query>> = [];
+    let messages: Awaited<ReturnType<typeof trpc.messages.getMessagesAndTickets.query>> = [] as Awaited<
+        ReturnType<typeof trpc.messages.getMessagesAndTickets.query>
+    >;
     let messagesPromise: Promise<any> | undefined;
-    let tickets: Awaited<ReturnType<typeof trpc.messages.getTickets.query>> = [];
+    let tickets: Awaited<ReturnType<typeof trpc.messages.getTickets.query>> = [] as Awaited<
+        ReturnType<typeof trpc.messages.getTickets.query>
+    >;
+
     let ticketsPromise: Promise<any> | undefined;
 
     let foregroundSubscription: ReturnType<typeof trpc.messages.foregroundSubscription.subscribe> | undefined;

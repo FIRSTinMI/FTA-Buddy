@@ -543,7 +543,7 @@ export async function getTickets(options: { team?: string, eventCode?: string; }
     return processedTickets;
 }
 
-export async function getMessages(team: string) {
+export async function getMessages(team: string, ): Promise<Message[]>{
     const msgs = await db.select({
         id: messages.id,
         user_id: messages.user_id,

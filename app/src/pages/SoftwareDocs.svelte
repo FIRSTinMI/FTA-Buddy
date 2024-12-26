@@ -111,8 +111,12 @@
             <span slot="header" style="font-weight: bold;">Playing With Fusion</span>
             <Accordion class="text-left">
                 <AccordionItem class="text-black dark:text-white">
-                    <span slot="header">Main Documentation NEED TO EDIT</span>
-                    <a href="https://docs.reduxrobotics.com/reduxlib"><QrCode value="https://docs.reduxrobotics.com/reduxlib" padding={5} /></a>
+                    <span slot="header">Java API Documentation</span>
+                    <a href="https://www.playingwithfusion.com/frc/2022/javadoc/com/playingwithfusion/package-summary.html"><QrCode value="https://www.playingwithfusion.com/frc/2022/javadoc/com/playingwithfusion/package-summary.html" padding={5} /></a>
+                </AccordionItem>
+                <AccordionItem class="text-black dark:text-white">
+                    <span slot="header">C++ API Documentation</span>
+                    <a href="https://www.playingwithfusion.com/frc/2022/cppdoc/html/annotated.html"><QrCode value="https://www.playingwithfusion.com/frc/2022/cppdoc/html/annotated.html" padding={5} /></a>
                 </AccordionItem>
             </Accordion>
         </AccordionItem>

@@ -467,8 +467,15 @@
                                 <td class="yellow led"> </td>
                                 <td>Coast Valid Signal</td>
                             </tr>
+                        </table>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        <table class="section-table">
                             <tr>
-                                <td colspan="3" class="bold">Fault Conditions</td>
+                                <td colspan="3" class="bold">Fault Modes</td>
                             </tr>
                             <tr>
                                 <td class="magenta slow-orange led"> </td>
@@ -505,7 +512,7 @@
                                 <td colspan="3" class="bold">Identification, Updating, and Recovery</td>
                             </tr>
                             <tr>
-                                <td class="magenta fast blink-white led"> </td>
+                                <td class= "{ LEDFastToggleState === true ? 'white led' : 'magenta led' }"> </td>
                                 <td>Identify</td>
                             </tr>
                             <tr>
@@ -524,24 +531,23 @@
                                 <td class="black led"> </td>
                                 <td>Recovery Mode</td>
                             </tr>
+                        </table>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        <table class="section-table">
                             <tr>
-                                <td colspan="3" class="bold">Movement</td>
+                                <td colspan="3" class="bold">Movement Codes</td>
                             </tr>
                             <tr>
-                                <td class="green fast led"> </td>
-                                <td>Partial Forward</td>
+                                <td class="green blink led"> </td>
+                                <td>Forward Power Applied</td>
                             </tr>
                             <tr>
-                                <td class="green led"> </td>
-                                <td>Full Forward</td>
-                            </tr>
-                            <tr>
-                                <td class="red fast led"> </td>
-                                <td>Partial Reverse</td>
-                            </tr>
-                            <tr>
-                                <td class="red led"> </td>
-                                <td>Full Reverse</td>
+                                <td class="red blink led"> </td>
+                                <td>Reverse Power Applied</td>
                             </tr>
                             <tr>
                                 <td class="green blink-white led"> </td>
@@ -978,7 +984,7 @@
                                 <td>No CAN comms, Termination Enabled</td>
                             </tr>
                             <tr>
-                                <td class="red double-blink led"> </td>
+                                <td class="red double-blink-red led"> </td>
                                 <td>No CAN comms, Termination Disabled</td>
                             </tr>
                             <tr>
@@ -986,7 +992,7 @@
                                 <td>CAN 2.0b Legacy Mode, Termination Enabled</td>
                             </tr>
                             <tr>
-                                <td class="orange double-blink led"> </td>
+                                <td class="orange double-blink-orange led"> </td>
                                 <td>CAN 2.0b Legacy Mode, Termination Disabled</td>
                             </tr>
                             <tr>
@@ -994,7 +1000,7 @@
                                 <td>CAN FD Active, Termination Enabled</td>
                             </tr>
                             <tr>
-                                <td class="green double-blink led"> </td>
+                                <td class="green double-blink-green led"> </td>
                                 <td>CAN FD Active, Termination Disabled</td>
                             </tr>
                         </table>

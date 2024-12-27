@@ -41,9 +41,43 @@
 	import SoftwareDocs from "./pages/references/SoftwareDocs.svelte";
 
 	// Checking authentication
-
 	let auth = get(authStore);
 	let user = get(userStore);
+
+	// On mount check if the user's permissions have changed
+	onMount(async () => {
+		const checkAuth = await trpc.user.checkAuth.query({
+			token: auth.token,
+			eventToken: auth.eventToken,
+		});
+
+		if (checkAuth.user) {
+			auth = {
+				...auth,
+				user: checkAuth.user,
+			};
+			user = {
+				...user,
+				...checkAuth.user,
+			};
+
+			authStore.set(auth);
+			userStore.set(user);
+		} else {
+			// No user found then reset
+			authStore.set({
+				token: "",
+				eventToken: "",
+			});
+			userStore.set({
+				role: "",
+				username: "",
+				id: -1,
+				token: "",
+				admin: false,
+			});
+		}
+	});
 
 	const publicPaths = [
 		"/app",

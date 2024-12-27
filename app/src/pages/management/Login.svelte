@@ -31,20 +31,6 @@
 		(navigator.userAgent.includes("Windows") || navigator.userAgent.includes("Macintosh") || navigator.userAgent.includes("Linux")) &&
 		!navigator.userAgent.includes("Android");
 
-	onMount(async () => {
-		const checkAuth = await trpc.user.checkAuth.query({
-			token: auth.token,
-			eventToken: auth.eventToken,
-		});
-
-		if (checkAuth.user) {
-			auth.user = checkAuth.user;
-		}
-
-		if (auth.eventToken && !checkAuth.event) {
-		}
-	});
-
 	async function createUser(evt: Event) {
 		loading = true;
 
@@ -349,8 +335,7 @@
 		<h2 class="text-3xl" style="font-weight: bold;">Welcome to FTA Buddy!</h2>
 		<h2 class="text-xl" style="font-weight: bold;">You are logged in as {auth.user?.username}</h2>
 		<h1 class="text-xl" style="font-style: italic;">Your role is set to {auth.user?.role}.</h1>
-		<h1 class="text-xl" style="font-style: italic;">You {(user.admin === true) ? "ARE" : "ARE NOT"} an ADMIN user.</h1>
-		
+		<h1 class="text-xl" style="font-style: italic;">You {user.admin === true ? "ARE" : "ARE NOT"} an ADMIN user.</h1>
 
 		<Button on:click={logout}>Log Out</Button>
 

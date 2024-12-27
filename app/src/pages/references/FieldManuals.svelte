@@ -2,61 +2,109 @@
 	import { Accordion, AccordionItem } from "flowbite-svelte";
 	import QrCode from "svelte-qrcode";
 	import { settingsStore } from "../../stores/settings";
+
+	let openState = {
+		one: false,
+		two: false,
+		three: false,
+		four: false,
+		five: false,
+		six: false,
+		seven: false,
+	}
+	let loadedState = {
+		one: false,
+		two: false,
+		three: false,
+		four: false,
+		five: false,
+		six: false,
+		seven: false,
+	}
+
+	$: { if (openState.one) loadedState.one = true; }
+    $: { if (openState.two) loadedState.two = true; }
+    $: { if (openState.three) loadedState.three = true; }
+    $: { if (openState.four) loadedState.four = true; }
+    $: { if (openState.five) loadedState.five = true; }
+    $: { if (openState.six) loadedState.six = true; }
+    $: { if (openState.seven) loadedState.seven = true; }
 </script>
 
 <div class="container mx-auto p-2 pr-3 w-full">
 	<h1 class="text-3xl" style="font-weight: bold">Field Manuals</h1>
 	<p>To visit the links, please click or scan the QR Codes</p>
+
 	<Accordion flush class="text-left">
-		<AccordionItem class="text-black dark:text-white">
+		<AccordionItem class="text-black dark:text-white" bind:open={openState.one}>
 			<span slot="header">Pack Case 23/24 Amp and Truss</span>
-			{#if $settingsStore.fimSpecifics}
-				<a href="/app/pdf/FIM_Case_23_24.pdf"><QrCode value="https://ftabuddy.com/app/pdf/FIM_Case_23_24.pdf" padding={5}></QrCode></a>
-			{:else}
-				<a href="https://roadcase.frc.tools/23"><QrCode value="https://roadcase.frc.tools/23" padding={5} /></a>
+			{#if openState.one === true || loadedState.one === true}
+				{#if $settingsStore.fimSpecifics}
+					<a href="/app/pdf/FIM_Case_23_24.pdf"><QrCode value="https://ftabuddy.com/app/pdf/FIM_Case_23_24.pdf" padding={5}></QrCode></a>
+				{:else}
+					<a href="https://roadcase.frc.tools/23"><QrCode value="https://roadcase.frc.tools/23" padding={5} /></a>
+				{/if}
 			{/if}
 		</AccordionItem>
-		<AccordionItem class="text-black dark:text-white">
+
+		<AccordionItem class="text-black dark:text-white" bind:open={openState.two}>
 			<span slot="header">Pack Case 31 Speaker</span>
-			{#if $settingsStore.fimSpecifics}
-				<a href="/app/pdf/FIM_Case_31.pdf"><QrCode value="https://ftabuddy.com/app/pdf/FIM_Case_31.pdf" padding={5}></QrCode></a>
-			{:else}
-				<a href="https://roadcase.frc.tools/31"><QrCode value="https://roadcase.frc.tools/31" padding={5} /></a>
+			{#if openState.two === true || loadedState.two === true}
+				{#if $settingsStore.fimSpecifics}
+					<a href="/app/pdf/FIM_Case_31.pdf"><QrCode value="https://ftabuddy.com/app/pdf/FIM_Case_31.pdf" padding={5}></QrCode></a>
+				{:else}
+					<a href="https://roadcase.frc.tools/31"><QrCode value="https://roadcase.frc.tools/31" padding={5} /></a>
+				{/if}
 			{/if}
 		</AccordionItem>
-		<AccordionItem class="text-black dark:text-white">
+
+		<AccordionItem class="text-black dark:text-white" bind:open={openState.three}>
 			<span slot="header"
 				>Pack Case 32 {#if $settingsStore.fimSpecifics}Stage Walls{:else}Practice Field{/if}</span
 			>
-			{#if $settingsStore.fimSpecifics}
-				<a href="/app/pdf/FIM_Case_32.pdf"><QrCode value="https://ftabuddy.com/app/pdf/FIM_Case_32.pdf" padding={5}></QrCode></a>
-			{:else}
-				<a href="https://roadcase.frc.tools/32"><QrCode value="https://roadcase.frc.tools/32" padding={5} /></a>
+			{#if openState.three === true || loadedState.three === true}
+				{#if $settingsStore.fimSpecifics}
+					<a href="/app/pdf/FIM_Case_32.pdf"><QrCode value="https://ftabuddy.com/app/pdf/FIM_Case_32.pdf" padding={5}></QrCode></a>
+				{:else}
+					<a href="https://roadcase.frc.tools/32"><QrCode value="https://roadcase.frc.tools/32" padding={5} /></a>
+				{/if}
 			{/if}
 		</AccordionItem>
-		<AccordionItem class="text-black dark:text-white">
+
+		<AccordionItem class="text-black dark:text-white" bind:open={openState.four}>
 			<span slot="header">Build Stage</span>
-			<a href="https://usfirst.box.com/s/we7ufqu61k303jnjfmm6o8wg3jp2lkso"
-				><QrCode value="https://usfirst.box.com/s/we7ufqu61k303jnjfmm6o8wg3jp2lkso" padding={5} /></a
-			>
+			{#if openState.four === true || loadedState.four === true}
+				<a href="https://usfirst.box.com/s/we7ufqu61k303jnjfmm6o8wg3jp2lkso"
+					><QrCode value="https://usfirst.box.com/s/we7ufqu61k303jnjfmm6o8wg3jp2lkso" padding={5} /></a
+				>
+			{/if}
 		</AccordionItem>
-		<AccordionItem class="text-black dark:text-white">
+
+		<AccordionItem class="text-black dark:text-white" bind:open={openState.five}>
 			<span slot="header">Build Speaker</span>
-			<a href="https://usfirst.box.com/s/dybf27uuqtskqpkljy37jkezgludm3f0"
-				><QrCode value="https://usfirst.box.com/s/dybf27uuqtskqpkljy37jkezgludm3f0" padding={5} /></a
-			>
+			{#if openState.five === true || loadedState.five === true}
+				<a href="https://usfirst.box.com/s/dybf27uuqtskqpkljy37jkezgludm3f0"
+					><QrCode value="https://usfirst.box.com/s/dybf27uuqtskqpkljy37jkezgludm3f0" padding={5} /></a
+				>
+			{/if}
 		</AccordionItem>
-		<AccordionItem class="text-black dark:text-white">
+
+		<AccordionItem class="text-black dark:text-white" bind:open={openState.six}>
 			<span slot="header">Build Amp</span>
-			<a href="https://usfirst.box.com/s/3oilb7ji2ehr1sd7fg2tb31snwxs64kw"
-				><QrCode value="https://usfirst.box.com/s/3oilb7ji2ehr1sd7fg2tb31snwxs64kw" padding={5} /></a
-			>
+			{#if openState.six === true || loadedState.six === true}
+				<a href="https://usfirst.box.com/s/3oilb7ji2ehr1sd7fg2tb31snwxs64kw"
+					><QrCode value="https://usfirst.box.com/s/3oilb7ji2ehr1sd7fg2tb31snwxs64kw" padding={5} /></a
+				>
+			{/if}
 		</AccordionItem>
-		<AccordionItem class="text-black dark:text-white">
+
+		<AccordionItem class="text-black dark:text-white" bind:open={openState.seven}>
 			<span slot="header">Build Source</span>
-			<a href="https://usfirst.box.com/s/ah6oy40oqy07wfi3dldjfecx7hteoeg1"
-				><QrCode value="https://usfirst.box.com/s/ah6oy40oqy07wfi3dldjfecx7hteoeg1" padding={5} /></a
-			>
+			{#if openState.seven === true || loadedState.seven === true}
+				<a href="https://usfirst.box.com/s/ah6oy40oqy07wfi3dldjfecx7hteoeg1"
+					><QrCode value="https://usfirst.box.com/s/ah6oy40oqy07wfi3dldjfecx7hteoeg1" padding={5} /></a
+				>
+			{/if}
 		</AccordionItem>
 	</Accordion>
 </div>

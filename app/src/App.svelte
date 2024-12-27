@@ -430,7 +430,7 @@
 					class="text-xs ml-8 p-0"
 				>
 					<svelte:fragment slot="icon">
-						<Icon icon="entypo:light-up" class="size-6" />
+						<Icon icon="heroicons:sun-16-solid" class="size-6" />
 					</svelte:fragment>
 				</SidebarItem>
 				<SidebarItem

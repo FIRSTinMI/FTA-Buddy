@@ -27,10 +27,14 @@
 
 	let step = 0;
 
-	let matchCount = trpc.match.getNumberOfMatches.query();
+	let matchCount: Awaited<ReturnType<typeof trpc.match.getNumberOfMatches.query>> | undefined;
+
+	async function getMatchCount() {
+		if (!matchCount) matchCount = await trpc.match.getNumberOfMatches.query();
+	}
 </script>
 
-<Modal bind:open={welcomeOpen} dismissable outsideclose size="lg" style="height: calc(100vh - 8rem)">
+<Modal bind:open={welcomeOpen} dismissable outsideclose size="lg" style="height: calc(100vh - 8rem)" on:open={() => getMatchCount()}>
 	<div slot="header">
 		<h1 class="text-xl text-black dark:text-white">Welcome to FTA Buddy</h1>
 	</div>
@@ -98,7 +102,7 @@
 					<p>Notifications enabled ✅</p>
 				{/if}
 			</div>
-			{#await matchCount then stats}<span class="font-bold">{stats.events} events have used FTA Buddy, playing {stats.matches} matches!</span>{/await}
+			{#if matchCount}<span class="font-bold">{matchCount.events} events have used FTA Buddy, playing {matchCount.matches} matches!</span>{/if}
 		{:else if step === 1}
 			<h2 class="font-bold">Monitor</h2>
 			<p>

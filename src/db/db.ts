@@ -15,6 +15,9 @@ if (!client) throw new Error("Failed to create database connection");
 export function connect() {
     return client.connect().then(() => {
         db = drizzle(client, { schema });
-        console.log("Connected to database")
-    }).catch(console.error);
+        console.log("Connected to database");
+    }).catch((e) => {
+        console.error(e);
+        setTimeout(() => connect(), 500);
+    });
 }

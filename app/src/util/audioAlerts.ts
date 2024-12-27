@@ -135,7 +135,7 @@ export class AudioQueuer {
         }
 
         console.log('Adding clip', robot, clip);
-        this.queue.push({ audio: getClip(audioClips.robot[robot][clip]), robot, clip });
+        this.queue.push({ audio: this.getClip(audioClips.robot[robot][clip]), robot, clip });
         if (!this.playing) this.playNext();
     }
 
@@ -152,7 +152,7 @@ export class AudioQueuer {
         if (!this.playing) this.playNext();
     }
 
-    private playNext() {
+    private async playNext() {
         console.log('Playing next');
         if (this.queue.length === 0) {
             console.log('Queue empty');
@@ -166,7 +166,16 @@ export class AudioQueuer {
 
         this.playing = true;
         audio.audio.addEventListener('ended', () => this.playNext());
-        audio.audio.play();
+        await this.tryToPlay(audio.audio);
+    }
+
+    private async tryToPlay(audio: HTMLAudioElement) {
+        try {
+            await audio.play();
+        } catch (err) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            this.tryToPlay(audio);
+        }
     }
 
     public playMusic(musicOrder: number[] = []) {
@@ -190,7 +199,7 @@ export class AudioQueuer {
         // The music order supports up to 16 tracks, so if we have fewer than that in this genre
         while (newSong >= musicClipsGenre.length) newSong -= musicClipsGenre.length;
 
-        this.music = getClip(musicClipsGenre[newSong]);
+        this.music = this.getClip(musicClipsGenre[newSong]);
         this.music.addEventListener('ended', () => this.playMusic(musicOrder.slice(1)));
         this.music.volume = settings.musicVolume / 100;
         this.music.play();
@@ -211,7 +220,7 @@ export class AudioQueuer {
     private getClip(key: string): HTMLAudioElement {
         if (loadedClips[key]) return loadedClips[key];
         const name = key.split('-');
-        const clip = new Audio(`/audio/${name[0]}/${name[1]}`);
+        const clip = new Audio(`/app/${name[0]}/${name[1]}`);
         clip.load();
         loadedClips[key] = clip;
         return clip;

@@ -7,8 +7,6 @@
 	import { navigate } from "svelte-routing";
 	import Spinner from "../../components/Spinner.svelte";
 	import type { TeamList } from "../../../../shared/types";
-	import { get } from "svelte/store";
-	import { onMount } from "svelte";
 
 	export let toast: (title: string, text: string, color?: string) => void;
 
@@ -55,6 +53,7 @@
 					email,
 					role,
 					id: res.id,
+					admin: false,
 				},
 			});
 
@@ -88,6 +87,7 @@
 					email: res.email,
 					role: res.role,
 					id: res.id,
+					admin: res.admin,
 				},
 			});
 			toast("Success", "Logged in successfully", "green-500");
@@ -190,6 +190,7 @@
 					email: res.email,
 					role: res.role,
 					id: res.id,
+					admin: res.admin,
 				},
 				googleToken: googleUser.credential,
 			});

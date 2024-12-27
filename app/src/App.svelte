@@ -434,7 +434,7 @@
 					</svelte:fragment>
 				</SidebarItem>
 				<SidebarItem
-					label="Components Manuals"
+					label="Component Manuals"
 					on:click={() => {
 						hideMenu = true;
 						navigate("/app/componentmanuals");

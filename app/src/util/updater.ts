@@ -8,7 +8,7 @@ interface Version {
     update: () => void;
 }
 
-export const VERSIONS: { [key: string]: Version } = {
+export const VERSIONS: { [key: string]: Version; } = {
     '2.5.6': {
         changelog: `
         <h1 class="text-lg font-bold">v2.5.6</h1>
@@ -242,11 +242,10 @@ export const VERSIONS: { [key: string]: Version } = {
         </ul>`,
         update: () => { }
     }
-}
+};
 
 export function update(currentVersion: string, newVersion: string, openWelcome: () => void, openChangelog: (arg0: string) => void, dontShowDialogs: boolean = false) {
     let changelog = "";
-    console.log(currentVersion, newVersion);
     if (currentVersion == "0" && window.location.pathname === "/app/login") {
         currentVersion = newVersion;
         settingsStore.update(s => {

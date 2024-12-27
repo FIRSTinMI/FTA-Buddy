@@ -59,8 +59,6 @@
 	const pageIsPublicLog = window.location.pathname.startsWith("/app/logs/") && window.location.pathname.split("/")[3].length == 36;
 
 	function redirectForAuth(a: typeof auth) {
-		console.log(!a.token, !a.eventToken, window.location.pathname, pageIsPublicLog);
-
 		if (!publicPaths.includes(window.location.pathname)) {
 			//user trying to acces protected page
 			if (!pageIsPublicLog) {
@@ -177,7 +175,6 @@
 	onMount(() => {
 		appSubscription = trpc.app.version.subscribe(undefined, {
 			onData: (data) => {
-				console.log(data, settings.version);
 				if (data !== settings.version) {
 					console.log("New version available");
 					updateNewVersion = data;

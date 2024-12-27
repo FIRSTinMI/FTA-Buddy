@@ -41,6 +41,8 @@ let contentToCache = [
 	"/app/FIM_Case_23_24.pdf",
 	"/app/FIM_Case_31.pdf",
 	"/app/FIM_Case_32.pdf",
+	"/app/frc-control-system-layout-ctre.svg",
+	"/app/frc-control-system-layout-rev.svg",
 ];
 
 self.addEventListener("install", (evt) => {
@@ -80,7 +82,7 @@ self.addEventListener("notificationclick", (evt) => {
 	evt.notification.close();
 	evt.waitUntil(
 		clients.matchAll().then((matchedClients) => {
-            console.log("Clients: ", matchedClients);
+			console.log("Clients: ", matchedClients);
 			try {
 				for (let client of matchedClients) {
 					if (client.url.indexOf(rootUrl + pageToOpen) >= 0) {

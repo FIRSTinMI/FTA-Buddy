@@ -2,103 +2,105 @@ import { get } from "svelte/store";
 import type { ROBOT } from "../../../shared/types";
 import { settingsStore } from "../stores/settings";
 
+const loadedClips: { [key: string]: HTMLAudioElement; } = {};
+
 const audioClips: AudioClips = {
     robot: {
         red1: {
-            ds: new Audio('/app/audio/red1_ds.ogg'),
-            radio: new Audio('/app/audio/red1_radio.ogg'),
-            rio: new Audio('/app/audio/red1_rio.ogg'),
-            code: new Audio('/app/audio/red1_code.ogg'),
-            astop: new Audio('/app/audio/red1_astop.ogg'),
-            estop: new Audio('/app/audio/red1_estop.ogg')
+            ds: 'audio-red1_ds.ogg',
+            radio: 'audio-red1_radio.ogg',
+            rio: 'audio-red1_rio.ogg',
+            code: 'audio-red1_code.ogg',
+            astop: 'audio-red1_astop.ogg',
+            estop: 'audio-red1_estop.ogg'
         },
         red2: {
-            ds: new Audio('/app/audio/red2_ds.ogg'),
-            radio: new Audio('/app/audio/red2_radio.ogg'),
-            rio: new Audio('/app/audio/red2_rio.ogg'),
-            code: new Audio('/app/audio/red2_code.ogg'),
-            astop: new Audio('/app/audio/red2_astop.ogg'),
-            estop: new Audio('/app/audio/red2_estop.ogg')
+            ds: 'audio-red2_ds.ogg',
+            radio: 'audio-red2_radio.ogg',
+            rio: 'audio-red2_rio.ogg',
+            code: 'audio-red2_code.ogg',
+            astop: 'audio-red2_astop.ogg',
+            estop: 'audio-red2_estop.ogg'
         },
         red3: {
-            ds: new Audio('/app/audio/red3_ds.ogg'),
-            radio: new Audio('/app/audio/red3_radio.ogg'),
-            rio: new Audio('/app/audio/red3_rio.ogg'),
-            code: new Audio('/app/audio/red3_code.ogg'),
-            astop: new Audio('/app/audio/red3_astop.ogg'),
-            estop: new Audio('/app/audio/red3_estop.ogg')
+            ds: 'audio-red3_ds.ogg',
+            radio: 'audio-red3_radio.ogg',
+            rio: 'audio-red3_rio.ogg',
+            code: 'audio-red3_code.ogg',
+            astop: 'audio-red3_astop.ogg',
+            estop: 'audio-red3_estop.ogg'
         },
         blue1: {
-            ds: new Audio('/app/audio/blue1_ds.ogg'),
-            radio: new Audio('/app/audio/blue1_radio.ogg'),
-            rio: new Audio('/app/audio/blue1_rio.ogg'),
-            code: new Audio('/app/audio/blue1_code.ogg'),
-            astop: new Audio('/app/audio/blue1_astop.ogg'),
-            estop: new Audio('/app/audio/blue1_estop.ogg')
+            ds: 'audio-blue1_ds.ogg',
+            radio: 'audio-blue1_radio.ogg',
+            rio: 'audio-blue1_rio.ogg',
+            code: 'audio-blue1_code.ogg',
+            astop: 'audio-blue1_astop.ogg',
+            estop: 'audio-blue1_estop.ogg'
         },
         blue2: {
-            ds: new Audio('/app/audio/blue2_ds.ogg'),
-            radio: new Audio('/app/audio/blue2_radio.ogg'),
-            rio: new Audio('/app/audio/blue2_rio.ogg'),
-            code: new Audio('/app/audio/blue2_code.ogg'),
-            astop: new Audio('/app/audio/blue2_astop.ogg'),
-            estop: new Audio('/app/audio/blue2_estop.ogg')
+            ds: 'audio-blue2_ds.ogg',
+            radio: 'audio-blue2_radio.ogg',
+            rio: 'audio-blue2_rio.ogg',
+            code: 'audio-blue2_code.ogg',
+            astop: 'audio-blue2_astop.ogg',
+            estop: 'audio-blue2_estop.ogg'
         },
         blue3: {
-            ds: new Audio('/app/audio/blue3_ds.ogg'),
-            radio: new Audio('/app/audio/blue3_radio.ogg'),
-            rio: new Audio('/app/audio/blue3_rio.ogg'),
-            code: new Audio('/app/audio/blue3_code.ogg'),
-            astop: new Audio('/app/audio/blue3_astop.ogg'),
-            estop: new Audio('/app/audio/blue3_estop.ogg')
+            ds: 'audio-blue3_ds.ogg',
+            radio: 'audio-blue3_radio.ogg',
+            rio: 'audio-blue3_rio.ogg',
+            code: 'audio-blue3_code.ogg',
+            astop: 'audio-blue3_astop.ogg',
+            estop: 'audio-blue3_estop.ogg'
         }
     },
     green: [
-        new Audio('/app/audio/green1.ogg'),
-        new Audio('/app/audio/green2.ogg'),
-        new Audio('/app/audio/green3.ogg')
+        'audio-green1.ogg',
+        'audio-green2.ogg',
+        'audio-green3.ogg'
     ],
     other: {
-        goodJob: new Audio('/app/audio/good_job.ogg')
+        goodJob: 'audio-good_job.ogg'
     }
-}
+};
 
 const musicClips: MusicClips = {
     jazz: [
-        new Audio('/app/music/jazz0.ogg'),
-        new Audio('/app/music/jazz1.ogg'),
-        new Audio('/app/music/jazz2.ogg'),
-        new Audio('/app/music/jazz3.ogg'),
-        new Audio('/app/music/jazz4.ogg'),
-        new Audio('/app/music/jazz5.ogg'),
-        new Audio('/app/music/jazz6.ogg')
+        'music-jazz0.ogg',
+        'music-jazz1.ogg',
+        'music-jazz2.ogg',
+        'music-jazz3.ogg',
+        'music-jazz4.ogg',
+        'music-jazz5.ogg',
+        'music-jazz6.ogg'
     ],
     lofi: [
-        new Audio('/app/music/lofi0.ogg'),
-        new Audio('/app/music/lofi1.ogg'),
-        new Audio('/app/music/lofi2.ogg'),
-        new Audio('/app/music/lofi3.ogg'),
-        new Audio('/app/music/lofi4.ogg'),
-        new Audio('/app/music/lofi5.ogg'),
-        new Audio('/app/music/lofi6.ogg'),
-        new Audio('/app/music/lofi7.ogg'),
-        new Audio('/app/music/lofi8.ogg')
+        'music-lofi0.ogg',
+        'music-lofi1.ogg',
+        'music-lofi2.ogg',
+        'music-lofi3.ogg',
+        'music-lofi4.ogg',
+        'music-lofi5.ogg',
+        'music-lofi6.ogg',
+        'music-lofi7.ogg',
+        'music-lofi8.ogg'
     ],
-}
+};
 
 interface AudioClips {
-    robot: { [key in ROBOT]: { ds: HTMLAudioElement, radio: HTMLAudioElement, rio: HTMLAudioElement, code: HTMLAudioElement, astop: HTMLAudioElement, estop: HTMLAudioElement } },
-    green: HTMLAudioElement[],
-    other: { [key: string]: HTMLAudioElement }
+    robot: { [key in ROBOT]: { ds: string, radio: string, rio: string, code: string, astop: string, estop: string; } },
+    green: string[],
+    other: { [key: string]: string; };
 }
 
 interface MusicClips {
-    jazz: HTMLAudioElement[];
-    lofi: HTMLAudioElement[];
+    jazz: string[];
+    lofi: string[];
 }
 
 export class AudioQueuer {
-    private queue: { audio: HTMLAudioElement, robot: ROBOT | undefined, clip: 'ds' | 'radio' | 'rio' | 'code' | 'astop' | 'estop' }[] = [];
+    private queue: { audio: HTMLAudioElement, robot: ROBOT | undefined, clip: 'ds' | 'radio' | 'rio' | 'code' | 'astop' | 'estop'; }[] = [];
     private playing: boolean = false;
     private music: HTMLAudioElement | undefined;
 
@@ -133,27 +135,27 @@ export class AudioQueuer {
         }
 
         console.log('Adding clip', robot, clip);
-        this.queue.push({ audio: audioClips.robot[robot][clip], robot, clip });
+        this.queue.push({ audio: getClip(audioClips.robot[robot][clip]), robot, clip });
         if (!this.playing) this.playNext();
     }
 
     public addOtherClip(clip: keyof AudioClips['other']) {
         console.log('Adding clip', clip);
-        this.queue.push({ audio: audioClips.other[clip], robot: undefined, clip: 'ds' });
+        this.queue.push({ audio: this.getClip(audioClips.other[clip]), robot: undefined, clip: 'ds' });
         if (!this.playing) this.playNext();
     }
 
     public addGreenClip() {
         console.log('Adding clip Green');
         if (this.queue.some(({ audio }) => audio.src.includes('green'))) return; // Green debounce
-        this.queue.push({ audio: audioClips.green[Math.floor(Math.random() * audioClips.green.length)], robot: undefined, clip: 'ds' });
+        this.queue.push({ audio: this.getClip(audioClips.green[Math.floor(Math.random() * audioClips.green.length)]), robot: undefined, clip: 'ds' });
         if (!this.playing) this.playNext();
     }
 
     private playNext() {
         console.log('Playing next');
         if (this.queue.length === 0) {
-            console.log('Queue empty')
+            console.log('Queue empty');
             this.playing = false;
             return;
         }
@@ -161,7 +163,7 @@ export class AudioQueuer {
 
         const audio = this.queue.shift();
         if (!audio) return;
-        
+
         this.playing = true;
         audio.audio.addEventListener('ended', () => this.playNext());
         audio.audio.play();
@@ -188,7 +190,7 @@ export class AudioQueuer {
         // The music order supports up to 16 tracks, so if we have fewer than that in this genre
         while (newSong >= musicClipsGenre.length) newSong -= musicClipsGenre.length;
 
-        this.music = musicClipsGenre[newSong];
+        this.music = getClip(musicClipsGenre[newSong]);
         this.music.addEventListener('ended', () => this.playMusic(musicOrder.slice(1)));
         this.music.volume = settings.musicVolume / 100;
         this.music.play();
@@ -204,5 +206,14 @@ export class AudioQueuer {
 
     public setMusicVolume(volume: number) {
         if (this.music) this.music.volume = (volume / 100);
+    }
+
+    private getClip(key: string): HTMLAudioElement {
+        if (loadedClips[key]) return loadedClips[key];
+        const name = key.split('-');
+        const clip = new Audio(`/audio/${name[0]}/${name[1]}`);
+        clip.load();
+        loadedClips[key] = clip;
+        return clip;
     }
 }

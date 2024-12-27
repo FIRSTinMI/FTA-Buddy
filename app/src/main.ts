@@ -71,6 +71,16 @@ const app = new App({
 
 export default app;
 
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register("/serviceworker.js");
-}
+(async () => {
+    if ('serviceWorker' in navigator) {
+        try {
+            await navigator.serviceWorker.register("/serviceworker.js");
+        } catch (e) {
+            try {
+                await navigator.serviceWorker.register("/app/serviceworker.js");
+            } catch (e) {
+                console.log("Service worker registration failed");
+            }
+        }
+    }
+});

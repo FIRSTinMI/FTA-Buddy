@@ -55,12 +55,11 @@
 		"/app/fieldmanuals",
 		"/app/componentmanuals",
 		"/app/wiringdiagrams",
+		"/app/softwaredocs",
 	];
 	const pageIsPublicLog = window.location.pathname.startsWith("/app/logs/") && window.location.pathname.split("/")[3].length == 36;
 
 	function redirectForAuth(a: typeof auth) {
-		console.log(!a.token, !a.eventToken, window.location.pathname, pageIsPublicLog);
-
 		if (!publicPaths.includes(window.location.pathname)) {
 			//user trying to acces protected page
 			if (!pageIsPublicLog) {
@@ -177,7 +176,6 @@
 	onMount(() => {
 		appSubscription = trpc.app.version.subscribe(undefined, {
 			onData: (data) => {
-				console.log(data, settings.version);
 				if (data !== settings.version) {
 					console.log("New version available");
 					updateNewVersion = data;
@@ -430,11 +428,11 @@
 					class="text-xs ml-8 p-0"
 				>
 					<svelte:fragment slot="icon">
-						<Icon icon="entypo:light-up" class="size-6" />
+						<Icon icon="heroicons:sun-16-solid" class="size-6" />
 					</svelte:fragment>
 				</SidebarItem>
 				<SidebarItem
-					label="Components Manuals"
+					label="Component Manuals"
 					on:click={() => {
 						hideMenu = true;
 						navigate("/app/componentmanuals");

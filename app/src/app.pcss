@@ -3,171 +3,171 @@
 @tailwind base;
 
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  color-scheme: light dark;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+	font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+	line-height: 1.5;
+	font-weight: 400;
+	color-scheme: light dark;
+	font-synthesis: none;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+	margin: 0;
+	display: flex;
+	place-items: center;
+	min-width: 320px;
+	min-height: 100vh;
 }
 
 #app {
-  margin: 0;
-  padding: 0;
-  text-align: center;
+	margin: 0;
+	padding: 0;
+	text-align: center;
 }
 
 .toggle span {
-  background-color: #888888 !important;
+	background-color: #888888 !important;
 }
 
 .dark .toggle span {
-  background-color: #535353 !important;
+	background-color: #535353 !important;
 }
 
 .toggle input:checked + span {
-  background-color: #ac71f4 !important;
+	background-color: #ac71f4 !important;
 }
 
 @media only screen and (max-width: 600px) {
-  Table.log-table .px-6 {
-    padding-left: .3rem;
-    padding-right: .3rem;
-    font-size: .7rem;
-  }
+	Table.log-table .px-6 {
+		padding-left: 0.3rem;
+		padding-right: 0.3rem;
+		font-size: 0.7rem;
+	}
 
-  Table.log-table .py-4 {
-    padding-top: .2rem;
-    padding-bottom: .2rem;
-  }
+	Table.log-table .py-4 {
+		padding-top: 0.2rem;
+		padding-bottom: 0.2rem;
+	}
 }
 
 @media only screen and (min-width: 600px) and (max-width: 800px) {
-  Table.log-table .px-6 {
-    padding-left: .5rem;
-    padding-right: .5rem;
-    font-size: .8rem;
-  }
+	Table.log-table .px-6 {
+		padding-left: 0.5rem;
+		padding-right: 0.5rem;
+		font-size: 0.8rem;
+	}
 
-  Table.log-table .py-4 {
-    padding-top: .4rem;
-    padding-bottom: .4rem;
-  }
+	Table.log-table .py-4 {
+		padding-top: 0.4rem;
+		padding-bottom: 0.4rem;
+	}
 }
 
 @media only screen and (min-width: 800px) {
-    Table.log-table .px-6 {
-      padding-left: .6rem;
-      padding-right: .6rem;
-      font-size: 1rem;
-    }
-  
-    Table.log-table .py-4 {
-      padding-top: .6rem;
-      padding-bottom: .6rem;
-    }
+	Table.log-table .px-6 {
+		padding-left: 0.6rem;
+		padding-right: 0.6rem;
+		font-size: 1rem;
+	}
+
+	Table.log-table .py-4 {
+		padding-top: 0.6rem;
+		padding-bottom: 0.6rem;
+	}
 }
 
 @media screen and (max-width: 1024px) {
-    .grid-cols-fieldmonitor {
-        grid-template-columns: auto 1fr 1fr 1fr calc((100vh - 104px) / 6) auto;
-        padding: 0 0.25rem;
-    }
-    .fieldmonitor-square-height {
-        height: calc((100vh - 216px) / 6);
-    }
+	.grid-cols-fieldmonitor {
+		grid-template-columns: auto 1fr 1fr 1fr calc((100vh - 104px) / 6) auto;
+		padding: 0 0.25rem;
+	}
+	.fieldmonitor-square-height {
+		height: calc((100vh - 216px) / 6);
+	}
 }
 
 @media screen and (min-width: 768px) and (max-width: 1024px) {
-    .grid-cols-fieldmonitor {
-        grid-template-columns: minmax(auto, 1fr) 1fr 1fr 1fr auto minmax(auto, 1fr);
-        width: fit-content;
-    }
-    .fieldmonitor-square-height {
-        height: calc((100vh - 236px) / 6);
-    }
+	.grid-cols-fieldmonitor {
+		grid-template-columns: minmax(auto, 1fr) 1fr 1fr 1fr auto minmax(auto, 1fr);
+		width: fit-content;
+	}
+	.fieldmonitor-square-height {
+		height: calc((100vh - 236px) / 6);
+	}
 }
 
 @media screen and (min-width: 1024px) {
-    .grid-cols-fieldmonitor {
-        grid-template-columns: minmax(auto, 1fr) 1fr 1fr 1fr auto minmax(auto, 1fr) minmax(auto, 1fr) minmax(auto, 1fr) auto;
-        width: fit-content;
-    }
-    .fieldmonitor-square-height {
-        height: calc((100vh - 264px) / 6);
-    }
+	.grid-cols-fieldmonitor {
+		grid-template-columns: minmax(auto, 1fr) 1fr 1fr 1fr auto minmax(auto, 1fr) minmax(auto, 1fr) minmax(auto, 1fr) auto;
+		width: fit-content;
+	}
+	.fieldmonitor-square-height {
+		height: calc((100vh - 264px) / 6);
+	}
 }
 
 @media screen and (min-height: 1200px) {
-    .fieldmonitor-square-height {
-        height: calc((1200px - 264px) / 6);
-    }
+	.fieldmonitor-square-height {
+		height: calc((1200px - 264px) / 6);
+	}
 }
 
 .fullscreen .fieldmonitor-square-height {
-    height: calc((100vh - 200px) / 6);
+	height: calc((100vh - 200px) / 6);
 }
 
 html:not(.dark) .fieldmonitor-square-height.bg-green-500 {
-    background-color: rgb(49 196 141) !important;
+	background-color: rgb(49 196 141) !important;
 }
 
 html:not(.dark) .fieldmonitor-square-height.bg-red-600 {
-    background-color: rgb(250 52 52) !important;
+	background-color: rgb(250 52 52) !important;
 }
 
 html:not(.dark) .fieldmonitor-square-height.bg-blue-600 {
-    background-color: rgb(63 131 248) !important;
+	background-color: rgb(63 131 248) !important;
 }
 
 .overlay {
-  position: fixed;
-  height: 100vh;
-  width: 100vw;
-  z-index: 100;
-  background-color: #424242;
+	position: fixed;
+	height: 100vh;
+	width: 100vw;
+	z-index: 100;
+	background-color: #424242;
 }
 
 a[aria-current="page"] {
-  background: rgba(0, 0, 0, 0.2) !important;
+	background: rgba(0, 0, 0, 0.2) !important;
 }
 
 div[aria-modal="true"] {
-  outline: none;
+	outline: none;
 }
 
 .max-h-logscreen {
-    max-height: calc(100vh - 14rem);
+	max-height: calc(100vh - 14rem);
 }
 
 .range {
-    apperance: none;
-    --webkit-apperance: none;
-    accent-color: #d4b6fc !important;
+	apperance: none;
+	--webkit-apperance: none;
+	accent-color: #d4b6fc !important;
 }
 
-.range::--webkit-slider-runnable-track {
-    apperance: none;
-    --webkit-apperance: none;
-    accent-color: #d4b6fc !important;
+.range:state(webkit-slider-runnable-track) {
+	apperance: none;
+	--webkit-apperance: none;
+	accent-color: #d4b6fc !important;
 }
 
 .range::-webkit-slider-thumb {
-    background: #ac71f4 !important;
+	background: #ac71f4 !important;
 }
 
 .range:disabled::-webkit-slider-thumb {
-    background: #999999 !important;
+	background: #999999 !important;
 }
 
 @tailwind components;

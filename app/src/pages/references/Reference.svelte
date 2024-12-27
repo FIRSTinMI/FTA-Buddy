@@ -8,7 +8,7 @@
 
 	<div class="grid grid-cols-3 gap-2 mt-2">
 		<Button href="/app/statuslights" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
-			><Icon icon="entypo:light-up" class="size-6 md:size-8" /> Status Lights</Button
+			><Icon icon="heroicons:sun-16-solid" class="size-6 md:size-8" /> Status Lights</Button
 		>
 		<Button href="/app/softwaredocs" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
 			><Icon icon="ion:library" class="size-6 md:size-8" /> Software Docs</Button
@@ -24,6 +24,10 @@
 				><Icon icon="tabler:soccer-field" class="size-6 md:size-8" /> Field Manuals</Button
 			>
 		</div>
+	</div>
+
+	<div class="mt-2">
+		FIM AV: <a href="https://docs.fimav.us/" target="_blank" class="underline">docs.fimav.us</a>
 	</div>
 
 	<Accordion flush class="text-left">

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Button, Label, Modal, Select, Toggle, Range } from "flowbite-svelte";
-	import { get } from "svelte/store";
+	import { get, derived } from "svelte/store";
 	import { settingsStore } from "../stores/settings";
 	import Spinner from "./Spinner.svelte";
 	import { toast } from "../util/toast";
@@ -8,17 +8,30 @@
 	import { audioQueuer } from "../field-monitor";
 	import { trpc } from "../main";
 	import { authStore } from "../stores/auth";
+	import { userStore } from "../stores/user";
+	import { navigate } from "svelte-routing";
+
 
 	export let settingsOpen = false;
-
-	let settings = get(settingsStore);
+	export const userRole = derived(userStore, $userStore => $userStore.role);
 	export let installPrompt: Event | null;
 
+	let settings = get(settingsStore);
 	let loading = false;
+	let role: string;
+	$: role = $userRole;
 
 	function updateSettings() {
 		settingsStore.set(settings);
-	}
+	}	
+
+	function updateUser(event: Event) {
+    	const selectedRole = (event.target as HTMLSelectElement).value;
+    	userStore.update(user => {
+			navigate("/app/")
+      		return { ...user, role: selectedRole }; // Update the role in userStore
+    	});
+  	}
 
 	function clearStorage() {
 		localStorage.clear();
@@ -65,10 +78,10 @@
 		testingMusic = true;
 		audioQueuer.playMusic([0]);
 		clearTimeout(musicTestTimeout);
-		musicTestTimeout = setTimeout(() => {
+		musicTestTimeout = globalThis.setTimeout(() => {
 			testingMusic = false;
 			audioQueuer.stopMusic();
-		}, 10e3);
+		}, 10e3) as unknown as NodeJS.Timeout;
 	}
 
 	function stopMusic() {
@@ -96,6 +109,14 @@
 				<Toggle class="toggle" bind:checked={settings.fimSpecifics} on:change={updateSettings}>FIM Specific Field Manuals</Toggle>
 			</div>
 			<div class="grid grid-cols-subgrid gap-2 row-span-3">
+				<p class="text-gray-700 dark:text-gray-400">Change My Role</p>
+				<Select bind:value={role} on:change={updateUser}>
+					<option value="FTA">FTA</option>
+					<option value="FTAA">FTAA</option>
+					<option value="CSA">CSA</option>
+					<option value="RI">RI</option>
+				</Select>
+				<Button on:click={() => (window.location.reload())} size="xs">Reload After Changing Role</Button>
 				<p class="text-gray-700 dark:text-gray-400">Audio Alerts</p>
 				<Toggle class="toggle" bind:checked={settings.soundAlerts} on:change={updateSettings}>Robot Connection</Toggle>
 				<Toggle class="toggle" bind:checked={settings.fieldGreen} on:change={updateSettings}>Field Green</Toggle>
@@ -155,7 +176,7 @@
 	</form>
 	<div class="border-t border-neutral-500 pt-2 mt-0 flex flex-col text-black dark:text-white">
 		<h1 class="text-lg">About</h1>
-		<p>Author: Filip Kin</p>
+		<p>Authors: Filip Kin and Kelly Malone</p>
 		<p>Version: {settings.version}</p>
 		<a href="https://github.com/Filip-Kin/FTA-Buddy/" class="underline text-blue-400">GitHub</a>
 	</div>

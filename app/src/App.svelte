@@ -13,6 +13,7 @@
 	import Messages from "./pages/tickets-notes/Messages.svelte";
 	import Reference from "./pages/references/Reference.svelte";
 	import { authStore } from "./stores/auth";
+	import { userStore } from "./stores/user";
 	import { messagesStore } from "./stores/messages";
 	import { settingsStore } from "./stores/settings";
 	import { VERSIONS, update } from "./util/updater";
@@ -42,6 +43,8 @@
 	// Checking authentication
 
 	let auth = get(authStore);
+	let user = get(userStore);
+
 	const publicPaths = [
 		"/app",
 		"/app/",
@@ -283,7 +286,7 @@
 		<SidebarWrapper divClass="overflow-y-auto py-4 px-3 rounded dark:bg-gray-800">
 			{#if auth.token && auth.eventToken}
 				<SidebarGroup>
-					{#if auth.user?.role === "FTA" || auth.user?.role === "ADMIN"}
+					{#if user.role === "FTA" || user.role === "FTAA"}
 						<SidebarItem
 							label="Monitor"
 							on:click={() => {
@@ -295,7 +298,7 @@
 								<Icon icon="mdi:television" class="w-8 h-8" />
 							</svelte:fragment>
 						</SidebarItem>
-					{:else if auth.user?.role === "CSA" || auth.user?.role === "RI"}
+					{:else if user.role === "CSA" || user.role === "RI"}
 						<SidebarItem
 							label="Monitor"
 							on:click={() => {
@@ -319,7 +322,7 @@
 							<Icon icon="mdi:message-alert" class="w-8 h-8" />
 						</svelte:fragment>
 					</SidebarItem>
-					{#if auth.user?.role === "FTA" || auth.user?.role === "ADMIN"}
+					{#if user.role === "FTA" || user.role === "FTAA"}
 						<SidebarItem
 							label="Tickets"
 							on:click={() => {
@@ -339,7 +342,7 @@
 								</Indicator>
 							{/if}
 						</SidebarItem>
-					{:else if auth.user?.role === "CSA" || auth.user?.role === "RI"}
+					{:else if user.role === "CSA" || user.role === "RI"}
 						<SidebarItem
 							label="Tickets"
 							on:click={() => {
@@ -567,20 +570,22 @@
 		{/if}
 		<Router basepath="/app/">
 			<div class="overflow-y-auto flex-grow pb-2">
-				{#if auth.user?.role === "FTA" || auth.user?.role === "ADMIN"}
-					<Route path="/">
-						<Monitor {fullscreen} {frameHandler} />
-					</Route>
-					<Route path="/messages">
-						<Messages bind:this={messagesChild} team={undefined} />
-					</Route>
-				{:else if auth.user?.role === "CSA" || auth.user?.role === "RI"}
-					<Route path="/">
-						<Messages bind:this={messagesChild} team={undefined} />
-					</Route>
-					<Route path="/monitor">
-						<Monitor {fullscreen} {frameHandler} />
-					</Route>
+				{#if auth.token}
+					{#if user?.role === "FTA" || user.role === "FTAA"}
+						<Route path="/">
+							<Monitor {fullscreen} {frameHandler} />
+						</Route>
+						<Route path="/messages">
+							<Messages bind:this={messagesChild} team={undefined} />
+						</Route>
+					{:else if user.role === "CSA" || user.role === "RI"}
+						<Route path="/">
+							<Messages bind:this={messagesChild} team={undefined} />
+						</Route>
+						<Route path="/monitor">
+							<Monitor {fullscreen} {frameHandler} />
+						</Route>
+					{/if}
 				{:else}
 					<Route path="/">
 						<Messages bind:this={messagesChild} team={undefined} />

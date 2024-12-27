@@ -2,22 +2,27 @@
 	import { Button, Input, Label, Select, type SelectOptionType } from "flowbite-svelte";
 	import { trpc } from "../../main";
 	import { authStore } from "../../stores/auth";
+	import { userStore } from "../../stores/user";
 	import { eventStore } from "../../stores/event";
 	import { navigate } from "svelte-routing";
 	import Spinner from "../../components/Spinner.svelte";
 	import type { TeamList } from "../../../../shared/types";
+	import { get } from "svelte/store";
 	import { onMount } from "svelte";
 
 	export let toast: (title: string, text: string, color?: string) => void;
 
 	let auth = $authStore;
 	let event = $eventStore;
+	let user = $userStore;
+
+	console.log(user.admin);
 
 	let email = "";
 	let username = "";
 	let password = "";
 	let verifyPassword = "";
-	let role: "ADMIN" | "FTA" | "FTAA" | "CSA" = "FTA";
+	let role: "FTA" | "FTAA" | "CSA" | "RI";
 
 	let loading = false;
 	let view: null | "login" | "create" | "googleCreate" = null;
@@ -99,7 +104,6 @@
 					id: res.id,
 				},
 			});
-
 			toast("Success", "Logged in successfully", "green-500");
 		} catch (err: any) {
 			toast("Error Logging In", err.message);
@@ -134,7 +138,7 @@
 		});
 	}
 
-	if (auth.user?.role === "ADMIN") updateEventList();
+	if (user.admin === true) updateEventList();
 
 	async function adminSelectEvent() {
 		if (event.code === "none") {
@@ -345,11 +349,13 @@
 		<h2 class="text-3xl" style="font-weight: bold;">Welcome to FTA Buddy!</h2>
 		<h2 class="text-xl" style="font-weight: bold;">You are logged in as {auth.user?.username}</h2>
 		<h1 class="text-xl" style="font-style: italic;">Your role is set to {auth.user?.role}.</h1>
+		<h1 class="text-xl" style="font-style: italic;">You {(user.admin === true) ? "ARE" : "ARE NOT"} an ADMIN user.</h1>
+		
 
 		<Button on:click={logout}>Log Out</Button>
 
 		<!-- Event selector for admins -->
-		{#if auth.user?.role === "ADMIN"}
+		{#if user.admin === true}
 			{#if desktop}
 				<div class="flex border-t border-neutral-500 pt-4">
 					<div class="my-auto w-full">

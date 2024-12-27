@@ -54,7 +54,7 @@ export const adminProcedure = t.procedure.use(async (opts) => {
     if (!ctx.token) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Unauthorized' });
 
     const user = await db.query.users.findFirst({ where: eq(users.token, ctx.token) });
-    if (!user || user.role !== "ADMIN") throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Unauthorized' });
+    if (!user || user.admin !== true) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Unauthorized' });
 
     return opts.next({
         ctx: {

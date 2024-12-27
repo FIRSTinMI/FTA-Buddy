@@ -11,24 +11,32 @@
 		five: false,
 		six: false,
 		seven: false,
-	}
+	};
 	let loadedState = {
-		one: false,
-		two: false,
-		three: false,
-		four: false,
-		five: false,
-		six: false,
-		seven: false,
+		...openState,
+	};
+
+	$: {
+		if (openState.one) loadedState.one = true;
+		if (openState.two) loadedState.two = true;
+		if (openState.three) loadedState.three = true;
+		if (openState.four) loadedState.four = true;
+		if (openState.five) loadedState.five = true;
+		if (openState.six) loadedState.six = true;
+		if (openState.seven) loadedState.seven = true;
 	}
 
-	$: { if (openState.one) loadedState.one = true; }
-    $: { if (openState.two) loadedState.two = true; }
-    $: { if (openState.three) loadedState.three = true; }
-    $: { if (openState.four) loadedState.four = true; }
-    $: { if (openState.five) loadedState.five = true; }
-    $: { if (openState.six) loadedState.six = true; }
-    $: { if (openState.seven) loadedState.seven = true; }
+	addEventListener("load", async () => {
+		// Once the page is loaded, wait 100ms, then generate the QR codes
+		await new Promise((r) => setTimeout(r, 100));
+		loadedState.one = true;
+		loadedState.two = true;
+		loadedState.three = true;
+		loadedState.four = true;
+		loadedState.five = true;
+		loadedState.six = true;
+		loadedState.seven = true;
+	});
 </script>
 
 <div class="container mx-auto p-2 pr-3 w-full">
@@ -40,7 +48,9 @@
 			<span slot="header">Pack Case 23/24 Amp and Truss</span>
 			{#if openState.one === true || loadedState.one === true}
 				{#if $settingsStore.fimSpecifics}
-					<a href="/app/pdf/FIM_Case_23_24.pdf" target="_blank"><QrCode value="https://ftabuddy.com/app/pdf/FIM_Case_23_24.pdf" padding={5}></QrCode></a>
+					<a href="/app/pdf/FIM_Case_23_24.pdf" target="_blank"
+						><QrCode value="https://ftabuddy.com/app/pdf/FIM_Case_23_24.pdf" padding={5}></QrCode></a
+					>
 				{:else}
 					<a href="https://roadcase.frc.tools/23" target="_blank"><QrCode value="https://roadcase.frc.tools/23" padding={5} /></a>
 				{/if}

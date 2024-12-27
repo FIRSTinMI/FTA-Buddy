@@ -1,12 +1,6 @@
 <script lang="ts">
 	import Icon from "@iconify/svelte";
 	import { Accordion, AccordionItem, Button } from "flowbite-svelte";
-	import QrCode from "svelte-qrcode";
-
-	let qrcodeOpenState = false;
-	let qrcodeLoadedState = false;
-
-	$: { if (qrcodeOpenState) qrcodeLoadedState = true; }
 </script>
 
 <div class="container mx-auto p-2 pr-3 w-full">
@@ -32,14 +26,11 @@
 		</div>
 	</div>
 
-	<Accordion flush class="text-left">
-		<AccordionItem class="text-black dark:text-white" bind:open={qrcodeOpenState}>
-			<span slot="header">FIRST in Michigan AV Docs</span>
-			{#if qrcodeOpenState === true || qrcodeLoadedState === true}
-				<a href="https://docs.fimav.us/" target="_blank"><QrCode value="https://docs.fimav.us/" padding={5}></QrCode></a>
-			{/if}
-		</AccordionItem>
+	<div class="mt-2">
+		FIM AV: <a href="https://docs.fimav.us/" target="_blank" class="underline">docs.fimav.us</a>
+	</div>
 
+	<Accordion flush class="text-left">
 		<AccordionItem class="text-black dark:text-white">
 			<span slot="header">Keyboard Shortcuts</span>
 

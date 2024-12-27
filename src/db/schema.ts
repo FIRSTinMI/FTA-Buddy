@@ -1,6 +1,6 @@
-import { boolean, integer, jsonb, pgEnum, pgTable, serial, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core"
+import { boolean, integer, jsonb, pgEnum, pgTable, serial, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 
-export const roleEnum = pgEnum('role', ['ADMIN', 'FTA', 'FTAA', 'CSA', 'RI']);
+export const roleEnum = pgEnum('role', ['FTA', 'FTAA', 'CSA', 'RI']);
 
 export const users = pgTable('users', {
     id: serial('id').primaryKey(),
@@ -12,6 +12,7 @@ export const users = pgTable('users', {
     events: jsonb('events').notNull().default('[]'),
     role: roleEnum('role').notNull().default('FTA'),
     token: varchar('token').notNull().default(''),
+    admin: boolean('admin').notNull().default(false),
 });
 
 export const User = typeof users.$inferInsert;
@@ -88,7 +89,7 @@ export const analyzedLogs = pgTable('analyzed_logs', {
     bypassed: boolean('bypassed').notNull().default(false),
 });
 
-export const cycleLogs = pgTable('cycle_logs', { 
+export const cycleLogs = pgTable('cycle_logs', {
     id: uuid('id').primaryKey(),
     event: varchar('event').notNull(),
     match_number: integer('match_number').notNull(),

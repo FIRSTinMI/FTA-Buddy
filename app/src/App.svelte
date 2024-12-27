@@ -55,6 +55,7 @@
 		"/app/fieldmanuals",
 		"/app/componentmanuals",
 		"/app/wiringdiagrams",
+		"/app/softwaredocs",
 	];
 	const pageIsPublicLog = window.location.pathname.startsWith("/app/logs/") && window.location.pathname.split("/")[3].length == 36;
 

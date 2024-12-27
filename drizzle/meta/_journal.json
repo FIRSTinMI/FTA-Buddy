@@ -155,6 +155,13 @@
       "when": 1729628996473,
       "tag": "0021_soft_spyke",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "5",
+      "when": 1735316862000,
+      "tag": "0022_clean_blue_blade",
+      "breakpoints": true
     }
   ]
 }

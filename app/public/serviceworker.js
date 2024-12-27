@@ -41,6 +41,8 @@ let contentToCache = [
 	"/app/FIM_Case_23_24.pdf",
 	"/app/FIM_Case_31.pdf",
 	"/app/FIM_Case_32.pdf",
+	"/app/frc-control-system-layout-ctre.png",
+	"/app/frc-control-system-layout-rev.png",
 ];
 
 self.addEventListener("install", (evt) => {

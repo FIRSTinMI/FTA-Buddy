@@ -29,7 +29,7 @@
 	import { onDestroy, onMount } from "svelte";
 	import CreateTicket from "./pages/tickets-notes/CreateTicket.svelte";
 	import ViewTicket from "./pages/tickets-notes/ViewTicket.svelte";
-	import { startBackgroundSubscription } from "./util/notifications";
+	import { startBackgroundSubscription, stopBackgroundSubscription } from "./util/notifications";
 	import { trpc } from "./main";
 	import UpdateToast from "./components/UpdateToast.svelte";
 	import EventDashboard from "./pages/EventDashboard.svelte";
@@ -270,6 +270,10 @@
 	setInterval(() => {
 		if (window.outerWidth > 1900) fullscreen = window.innerHeight === 1080;
 	}, 200);
+
+	onDestroy(() => {
+		stopBackgroundSubscription();
+	});
 </script>
 
 {#if showToast}

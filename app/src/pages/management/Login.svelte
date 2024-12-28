@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { Button, Input, Label, Select, type SelectOptionType } from "flowbite-svelte";
 	import { trpc } from "../../main";
-	import { authStore } from "../../stores/auth";
 	import { userStore } from "../../stores/user";
 	import { eventStore } from "../../stores/event";
 	import { navigate } from "svelte-routing";
@@ -10,7 +9,6 @@
 
 	export let toast: (title: string, text: string, color?: string) => void;
 
-	let auth = $authStore;
 	let event = $eventStore;
 	let user = $userStore;
 
@@ -45,16 +43,14 @@
 				role,
 			});
 
-			authStore.set({
+			userStore.set({
 				token: res.token,
 				eventToken: "",
-				user: {
-					username,
-					email,
-					role,
-					id: res.id,
-					admin: false,
-				},
+				username,
+				email,
+				role,
+				id: res.id,
+				admin: false,
 			});
 
 			toast("Success", "Account created successfully", "green-500");
@@ -79,16 +75,14 @@
 		try {
 			const res = await trpc.user.login.query({ email, password });
 
-			authStore.set({
+			userStore.set({
 				token: res.token,
 				eventToken: "",
-				user: {
-					username: res.username,
-					email: res.email,
-					role: res.role,
-					id: res.id,
-					admin: res.admin,
-				},
+				username: res.username,
+				email: res.email,
+				role: res.role,
+				id: res.id,
+				admin: res.admin,
 			});
 			toast("Success", "Logged in successfully", "green-500");
 		} catch (err: any) {
@@ -100,13 +94,21 @@
 	}
 
 	function logout() {
-		authStore.set({ token: "", eventToken: "", user: undefined });
+		userStore.set({ 
+			token: "", 
+			eventToken: "",
+			username: "",
+			email: "",
+			role: "FTA",
+			id: -1,
+			admin: false,
+		});
 		window.location.reload();
 	}
 
-	authStore.subscribe((value) => {
+	userStore.subscribe((value) => {
 		//console.log(value);
-		auth = value;
+		user = value;
 		updateEventList();
 	});
 
@@ -128,7 +130,7 @@
 
 	async function adminSelectEvent() {
 		if (event.code === "none") {
-			authStore.set({ ...auth, eventToken: "" });
+			userStore.set({ ...user, eventToken: "" });
 			eventStore.set({ code: "", pin: "", teams: [] });
 			return;
 		}
@@ -137,7 +139,7 @@
 
 			//console.log(res.teams);
 
-			authStore.set({ ...auth, eventToken: res.token });
+			userStore.set({ ...user, eventToken: res.token });
 			eventStore.set({
 				code: event.code,
 				pin: res.pin,
@@ -159,7 +161,7 @@
 				code: eventCode,
 				pin: eventPin,
 			});
-			authStore.set({ ...auth, eventToken: res.token });
+			userStore.set({ ...user, eventToken: res.token });
 			eventStore.set({
 				code: eventCode,
 				pin: eventPin,
@@ -182,25 +184,27 @@
 			const res = await trpc.user.googleLogin.query({
 				token: googleUser.credential,
 			});
-			authStore.set({
+			userStore.set({
 				token: res.token,
 				eventToken: "",
-				user: {
-					username: res.username,
-					email: res.email,
-					role: res.role,
-					id: res.id,
-					admin: res.admin,
-				},
+				username: res.username,
+				email: res.email,
+				role: res.role,
+				id: res.id,
+				admin: res.admin,
 				googleToken: googleUser.credential,
 			});
 			toast("Success", "Logged in successfully", "green-500");
 		} catch (err: any) {
 			if (err.code === 404 || err.message.startsWith("User not found")) {
-				authStore.set({
-					token: "",
+				userStore.set({
+					token: "", 
 					eventToken: "",
-					user: undefined,
+					username: "",
+					email: "",
+					role: "FTA",
+					id: -1,
+					admin: false,
 					googleToken: googleUser.credential,
 				});
 				navigate("/app/google-signup");
@@ -220,8 +224,8 @@
 	<Spinner />
 {/if}
 
-<div class="container mx-auto md:max-w-4xl flex flex-col justify-center p-4 h-full space-y-4">
-	{#if !auth || !auth.token}
+<div class="container mx-auto md:max-w-4xl flex flex-col justify-center ">
+	{#if !user || !user.token}
 		<!-- Create Account -->
 		{#if view === "create"}
 			<h2 class="text-2xl" style="font-weight: bold;">Create Account</h2>
@@ -287,7 +291,7 @@
 					<div class="flex h-full">
 						<div class="my-auto w-full">
 							<h2 class="text-xl">Run FTA Buddy from this computer</h2>
-							{#if auth.eventToken}
+							{#if user.eventToken}
 								<Button on:click={() => navigate("/app")} class="w-full mt-4">Open Field Monitor</Button>
 								<Button on:click={() => navigate("/app/event-created")} class="w-full mt-4">See Event Pin</Button>
 								<Button on:click={() => navigate("/app/host")} class="w-full mt-4">Host New Event</Button>
@@ -333,12 +337,18 @@
 
 		<!-- Logged In -->
 	{:else}
-		<h2 class="text-3xl" style="font-weight: bold;">Welcome to FTA Buddy!</h2>
-		<h2 class="text-xl" style="font-weight: bold;">You are logged in as {auth.user?.username}</h2>
-		<h1 class="text-xl" style="font-style: italic;">Your role is set to {auth.user?.role}.</h1>
-		<h1 class="text-xl" style="font-style: italic;">You {user.admin === true ? "ARE" : "ARE NOT"} an ADMIN user.</h1>
-
-		<Button on:click={logout}>Log Out</Button>
+		<div class="flex pt-4">
+			<div class="my-auto w-full">
+				<h2 class="text-4xl" style="font-weight: bold;">Welcome to FTA Buddy!</h2>
+				<h2 class="text-xl" style="font-weight: bold;">You are logged in as {user.username}</h2>
+				<h1 class="text-xl" style="font-style: italic;">Your role is set to {user.role}.</h1>
+			</div>
+		</div>
+		<div class="flex pt-4">
+			<div class="my-auto w-full">
+				<Button class="w-full" on:click={logout}>Log Out</Button>
+			</div>
+		</div>
 
 		<!-- Event selector for admins -->
 		{#if user.admin === true}
@@ -351,10 +361,12 @@
 					</div>
 				</div>
 			{/if}
-
-			<h1 class="text-xl" style="font-weight:bold;">The Event Currently Selected Is: {event.code}</h1>
-
-			<div class="flex flex-col border-t border-neutral-500 pt-10 space-y-4">
+			<div class="flex pt-4">
+				<div class="my-auto w-full">
+					<h1 class="text-xl" style="font-weight:bold;">The Event Currently Selected Is: {event.code}</h1>
+				</div>
+			</div>
+			<div class="flex flex-col pt-10 space-y-4">
 				<Label for="event-selector">Admin Event Selector</Label>
 				<Select id="event-selector" bind:value={event.code} items={eventList} placeholder="Select Event" on:change={adminSelectEvent} />
 				<Button href="/" on:click={() => navigate("/")}>Go to App</Button>
@@ -362,11 +374,11 @@
 			</div>
 
 			<!-- Currently have an event selected -->
-		{:else if auth.eventToken}
+		{:else if user.eventToken}
 			<div class="flex flex-col border-t border-neutral-500 pt-10 space-y-2">
 				<h1 class="text-xl" style="font-weight:bold;">The Event Currently Selected Is: {event.code}</h1>
 				<Button href="/" on:click={() => navigate("/")}>Go to App</Button>
-				<Button outline on:click={() => (eventStore.set({ code: "", pin: "", teams: [] }), authStore.set({ ...auth, eventToken: "" }))}
+				<Button outline on:click={() => (eventStore.set({ code: "", pin: "", teams: [] }), userStore.set({ ...user, eventToken: "" }))}
 					>Leave Event</Button
 				>
 				<Button outline on:click={() => navigate("/app/event-created")}>See Event Pin</Button>
@@ -404,3 +416,6 @@
 		<a href="/app/privacy.html" class="underline">Privacy Policy</a>
 	</p>
 </div>
+
+<style>
+</style>

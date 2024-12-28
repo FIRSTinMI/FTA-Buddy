@@ -4,7 +4,7 @@
     import { trpc } from "../main";
     import type { EventChecklist } from "../../../shared/types";
     import { onDestroy, onMount } from "svelte";
-    import { authStore } from "../stores/auth";
+    import { userStore } from "../stores/user";
     import { eventStore } from "../stores/event";
     import { get } from "svelte/store";
 
@@ -72,7 +72,7 @@
         subscription?.unsubscribe();
 
         subscription = trpc.checklist.subscription.subscribe({
-            eventToken: $authStore.eventToken
+            eventToken: $userStore.eventToken
         }, {
             onData: (c: EventChecklist) => {
                 checklist = c;

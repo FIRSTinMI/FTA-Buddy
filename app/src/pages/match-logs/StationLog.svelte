@@ -18,7 +18,7 @@
 	import type { FMSLogFrame, ROBOT } from "../../../../shared/types";
 	import LogGraph from "../../components/LogGraph.svelte";
 	import QrCode from "svelte-qrcode";
-	import { authStore } from "../../stores/auth";
+	import { userStore } from "../../stores/user";
 	import { formatTimeNoAgo, formatTimeShortNoAgoSeconds } from "../../../../shared/formatTime";
 	import Spinner from "../../components/Spinner.svelte";
 	import { json2csv } from "json-2-csv";
@@ -35,7 +35,7 @@
 	let match: Awaited<ReturnType<typeof trpc.match.getStationMatch.query>>;
 	let matchPromise: Promise<any>;
 
-	if ($authStore.eventToken) {
+	if ($userStore.eventToken) {
 		matchPromise = trpc.match.getStationMatch.query({ id: matchid, station: station });
 	} else {
 		matchPromise = trpc.match.getPublicMatch.query({ id: matchid, sharecode: station });
@@ -157,7 +157,7 @@
 			Log published for 72 hours. Share this log only with team #{team} or other volunteers.
 		</p>
 		<div class="max-w-48 mx-auto">
-			<QrCode value="https://ftabuddy.com/app/logs/{matchid}/{shareid}" padding="5" />
+			<QrCode value="https://ftabuddy.com/app/logs/{matchid}/{shareid}" padding={5} />
 		</div>
 		<Button on:click={() => (shareOpen = false)} class="mt-2">Close</Button>
 	</div>
@@ -165,14 +165,14 @@
 
 <div class="container mx-auto p-2 lg:max-w-7xl w-full flex flex-col gap-2 md:gap-4">
 	<div class="flex">
-		{#if $authStore.eventToken}
+		{#if $userStore.eventToken}
 			<Button on:click={back} class="w-fit mx-1.5">Back</Button>
 			<Button on:click={share} class="w-fit mx-1.5">Share Log</Button>
 		{/if}
 		<Button on:click={exportLog} class="w-fit mx-1.5">Export CSV</Button>
 	</div>
 	{#await matchPromise}
-		<Spinner size="12" />
+		<Spinner/>
 	{:then}
 		<div>
 			<h1 class="text-xl">
@@ -231,12 +231,12 @@
 									<TableBodyCell
 										style="background-color: rgba(255,0,0,{frame.battery < 11 && frame.battery > 0
 											? (-1.5 * frame.battery ** 2 - 6.6 * frame.battery + 255) / 255
-											: 0})">{frame.battery.toFixed(2)}</TableBodyCell
+											: 0})">{typeof frame.battery === 'number' ? frame.battery.toFixed(2) : frame.battery}</TableBodyCell
 									>
 								{:else if ["averageTripTime", "lostPackets", "sentPackets", "signal", "noise", "txMCS", "rxMCS"].includes(col)}
-									<TableBodyCell>{frame[col].toFixed(0)}</TableBodyCell>
+									<TableBodyCell>{typeof frame[col] === 'number' ? frame[col].toFixed(0) : frame[col]}</TableBodyCell>
 								{:else if ["dataRateTotal", "txRate", "rxRate"].includes(col)}
-									<TableBodyCell>{frame[col].toFixed(2)}</TableBodyCell>
+									<TableBodyCell>{typeof frame[col] === 'number' ? frame[col].toFixed(2) : frame[col]}</TableBodyCell>
 								{:else}
 									<TableBodyCell class={frame[col] ? "" : "bg-red-500"}>{frame[col] ? "Y" : "N"}</TableBodyCell>
 								{/if}

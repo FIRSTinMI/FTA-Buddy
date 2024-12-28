@@ -12,7 +12,7 @@
 	import Login from "./pages/management/Login.svelte";
 	import Messages from "./pages/tickets-notes/Messages.svelte";
 	import Reference from "./pages/references/Reference.svelte";
-	import { authStore } from "./stores/auth";
+	import { userStore } from "./stores/user";
 	import { messagesStore } from "./stores/messages";
 	import { settingsStore } from "./stores/settings";
 	import { VERSIONS, update } from "./util/updater";
@@ -28,7 +28,7 @@
 	import { onDestroy, onMount } from "svelte";
 	import CreateTicket from "./pages/tickets-notes/CreateTicket.svelte";
 	import ViewTicket from "./pages/tickets-notes/ViewTicket.svelte";
-	import { startBackgroundSubscription } from "./util/notifications";
+	import { startBackgroundSubscription, stopBackgroundSubscription } from "./util/notifications";
 	import { trpc } from "./main";
 	import UpdateToast from "./components/UpdateToast.svelte";
 	import EventDashboard from "./pages/EventDashboard.svelte";
@@ -39,9 +39,38 @@
 	import WiringDiagrams from "./pages/references/WiringDiagrams.svelte";
 	import SoftwareDocs from "./pages/references/SoftwareDocs.svelte";
 
-	// Checking authentication
+	// Checking userentication
+	let user = get(userStore);
 
-	let auth = get(authStore);
+	// On mount check if the user's permissions have changed
+	onMount(async () => {
+		const checkAuth = await trpc.user.checkAuth.query({
+			token: user.token,
+			eventToken: user.eventToken,
+		});
+
+		if (checkAuth.user) {
+			userStore.set({
+				...checkAuth.user,
+				token: user.token,
+				eventToken: user.eventToken,
+			});
+		} else {
+			// No user found then reset
+			userStore.set({
+				email: "",
+				username: "",
+				id: -1,
+				token: "",
+				eventToken: "",
+				role: "FTA",
+				admin: false,
+			});
+		}
+
+		console.log(user);
+	});
+
 	const publicPaths = [
 		"/app",
 		"/app/",
@@ -59,7 +88,7 @@
 	];
 	const pageIsPublicLog = window.location.pathname.startsWith("/app/logs/") && window.location.pathname.split("/")[3].length == 36;
 
-	function redirectForAuth(a: typeof auth) {
+	function redirectForAuth(a: typeof user) {
 		if (!publicPaths.includes(window.location.pathname)) {
 			//user trying to acces protected page
 			if (!pageIsPublicLog) {
@@ -79,17 +108,17 @@
 		}
 	}
 
-	redirectForAuth(auth);
+	redirectForAuth(user);
 
-	authStore.subscribe((value) => {
+	userStore.subscribe((value) => {
 		redirectForAuth(value);
 
-		if (auth.eventToken !== value.eventToken) {
-			auth = value;
+		if (user.eventToken !== value.eventToken) {
+			user = value;
 			// If the event has changed we want to reconnect with the new event token
 			subscribeToFieldMonitor();
 		} else {
-			auth = value;
+			user = value;
 		}
 	});
 
@@ -233,6 +262,10 @@
 	setInterval(() => {
 		if (window.outerWidth > 1900) fullscreen = window.innerHeight === 1080;
 	}, 200);
+
+	onDestroy(() => {
+		stopBackgroundSubscription();
+	});
 </script>
 
 {#if showToast}
@@ -281,9 +314,9 @@
 	</div>
 	<Sidebar>
 		<SidebarWrapper divClass="overflow-y-auto py-4 px-3 rounded dark:bg-gray-800">
-			{#if auth.token && auth.eventToken}
+			{#if user.token && user.eventToken}
 				<SidebarGroup>
-					{#if auth.user?.role === "FTA" || auth.user?.role === "ADMIN"}
+					{#if user?.role === "FTA" || user?.role === "FTAA"}
 						<SidebarItem
 							label="Monitor"
 							on:click={() => {
@@ -295,7 +328,7 @@
 								<Icon icon="mdi:television" class="w-8 h-8" />
 							</svelte:fragment>
 						</SidebarItem>
-					{:else if auth.user?.role === "CSA" || auth.user?.role === "RI"}
+					{:else if user?.role === "CSA" || user?.role === "RI"}
 						<SidebarItem
 							label="Monitor"
 							on:click={() => {
@@ -319,7 +352,7 @@
 							<Icon icon="mdi:message-alert" class="w-8 h-8" />
 						</svelte:fragment>
 					</SidebarItem>
-					{#if auth.user?.role === "FTA" || auth.user?.role === "ADMIN"}
+					{#if user?.role === "FTA" || user?.role === "FTAA"}
 						<SidebarItem
 							label="Tickets"
 							on:click={() => {
@@ -339,7 +372,7 @@
 								</Indicator>
 							{/if}
 						</SidebarItem>
-					{:else if auth.user?.role === "CSA" || auth.user?.role === "RI"}
+					{:else if user?.role === "CSA" || user?.role === "RI"}
 						<SidebarItem
 							label="Tickets"
 							on:click={() => {
@@ -552,14 +585,14 @@
 </Drawer>
 
 <main>
-	<div class="bg-white dark:bg-neutral-800 w-screen h-screen flex flex-col">
+	<div class="bg-white dark:bg-neutral-800 w-screen h-dvh flex flex-col">
 		{#if !fullscreen}
 			<div class="bg-primary-700 dark:bg-primary-500 flex w-full justify-between px-2">
 				<Button class="!py-0 !px-0 text-white" color="none" on:click={openMenu}>
 					<Icon icon="mdi:menu" class="w-8 h-10" />
 				</Button>
 				<div class="flex-grow">
-					{#if auth.token && auth.eventToken}
+					{#if user.token && user.eventToken}
 						<h1 class="text-white text-lg">{event.code}</h1>
 					{/if}
 				</div>
@@ -567,20 +600,22 @@
 		{/if}
 		<Router basepath="/app/">
 			<div class="overflow-y-auto flex-grow pb-2">
-				{#if auth.user?.role === "FTA" || auth.user?.role === "ADMIN"}
-					<Route path="/">
-						<Monitor {fullscreen} {frameHandler} />
-					</Route>
-					<Route path="/messages">
-						<Messages bind:this={messagesChild} team={undefined} />
-					</Route>
-				{:else if auth.user?.role === "CSA" || auth.user?.role === "RI"}
-					<Route path="/">
-						<Messages bind:this={messagesChild} team={undefined} />
-					</Route>
-					<Route path="/monitor">
-						<Monitor {fullscreen} {frameHandler} />
-					</Route>
+				{#if user.token}
+					{#if user?.role === "FTA" || user?.role === "FTAA"}
+						<Route path="/">
+							<Monitor {fullscreen} {frameHandler} />
+						</Route>
+						<Route path="/messages">
+							<Messages bind:this={messagesChild} team={undefined} />
+						</Route>
+					{:else if user?.role === "CSA" || user?.role === "RI"}
+						<Route path="/">
+							<Messages bind:this={messagesChild} team={undefined} />
+						</Route>
+						<Route path="/monitor">
+							<Monitor {fullscreen} {frameHandler} />
+						</Route>
+					{/if}
 				{:else}
 					<Route path="/">
 						<Messages bind:this={messagesChild} team={undefined} />
@@ -609,21 +644,21 @@
 				<Route path="/dashboard" component={EventDashboard} />
 				<Route path="/event-report" component={EventReport} />
 				<Route path="/ftc-status" component={FTCStatus} />
+				<Route path="/login">
+					<Login {toast} />
+				</Route>
+				<Route path="/host">
+					<Host {toast} />
+				</Route>
+				<Route path="/event-created">
+					<PostEventCreation {toast} />
+				</Route>
+				<Route path="/google-signup">
+					<CompleteGoogleSignup {toast} />
+				</Route>
 			</div>
-			<Route path="/login">
-				<Login {toast} />
-			</Route>
-			<Route path="/host">
-				<Host {toast} />
-			</Route>
-			<Route path="/event-created">
-				<PostEventCreation {toast} />
-			</Route>
-			<Route path="/google-signup">
-				<CompleteGoogleSignup {toast} />
-			</Route>
 
-			{#if auth.token && auth.eventToken && !fullscreen}
+			{#if user.token && user.eventToken && !fullscreen}
 				<div class="flex justify-around py-2 bg-neutral-900 dark:bg-neutral-700 text-white">
 					<Link to="/app/">
 						<Button class="!p-2" color="none">

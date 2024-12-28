@@ -8,7 +8,8 @@ export interface Auth {
         email: string;
         role: string;
         id: number;
-    }
+        admin: boolean;
+    };
     googleToken?: string;
 }
 

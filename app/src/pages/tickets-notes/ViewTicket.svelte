@@ -8,7 +8,7 @@
 	import { ROBOT } from "../../../../shared/types";
 	import { Alert, Button, Textarea, ToolbarButton } from "flowbite-svelte";
 	import { navigate } from "svelte-routing";
-	import { authStore } from "../../stores/auth";
+	import { userStore } from "../../stores/user";
 	import Icon from "@iconify/svelte";
 	import Message from "../../components/Message.svelte";
 	import { onDestroy, onMount, tick } from "svelte";
@@ -22,7 +22,7 @@
 	let ticket: Awaited<ReturnType<typeof trpc.messages.getTicket.query>> | undefined = undefined;
 	let time: string = "";
 	let station: ROBOT | undefined = undefined;
-	let user = get(authStore).user;
+	let user = get(userStore);
 	let assignedToUser = false;
 
 	let subscription: ReturnType<typeof trpc.messages.ticketSubscription.subscribe> | undefined;
@@ -137,7 +137,7 @@
 				message: message.trim(),
 				team: ticket.team,
 				ticketId: ticket.id,
-				eventToken: get(authStore).eventToken,
+				eventToken: get(userStore).eventToken,
 			});
 
 			console.log({
@@ -183,7 +183,7 @@
 		if (subscription) subscription.unsubscribe();
 		if (ticket) {
 			subscription = trpc.messages.ticketSubscription.subscribe(
-				{ id: ticket.id, eventToken: $authStore.eventToken },
+				{ id: ticket.id, eventToken: $userStore.eventToken },
 				{
 					onData: (data) => {
 						console.log(data);

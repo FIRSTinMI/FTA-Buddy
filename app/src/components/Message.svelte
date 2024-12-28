@@ -2,14 +2,14 @@
     import { get } from "svelte/store";
     import { formatTime } from "../../../shared/formatTime";
     import { eventStore } from "../stores/event";
-    import { authStore } from "../stores/auth";
+    import { userStore } from "../stores/user";
     import type { Message, TicketMessage } from "../../../shared/types";
     import { twMerge } from "tailwind-merge";
 
     export let message: Message | TicketMessage;
     export let team: number;
-    let auth = get(authStore);
-    let user = auth.user;
+    
+    let user = $userStore;
     let event = get(eventStore).code;
 
     const MESSAGE_CLASSES = {

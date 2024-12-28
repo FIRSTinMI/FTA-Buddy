@@ -1,7 +1,7 @@
 import { eq, and } from "drizzle-orm";
-import { DSState, FieldState, MatchState, MatchStateMap, MonitorFrame, PartialMonitorFrame, ROBOT, StateChange, StateChangeType, TeamInfo, TeamWarnings } from "../../shared/types";
+import { DSState, FieldState, MatchState, MatchStateMap, MonitorFrame, PartialMonitorFrame, ROBOT, StateChange, StateChangeType, RobotInfo, RobotWarnings } from "../../shared/types";
 import { db } from "../db/db";
-import { events, messages, teamCycleLogs } from "../db/schema";
+import { events, messages, robotCycleLogs } from "../db/schema";
 import { getEvent } from "./get-event";
 import { randomUUID } from "crypto";
 
@@ -10,12 +10,12 @@ export function detectRadioNoDs(currentFrame: PartialMonitorFrame, pastFrames: M
     if (MatchStateMap[currentFrame.field] !== MatchState.PRESTART) return currentFrame;
     for (let _robot in ROBOT) {
         const robot = _robot as ROBOT;
-        const currentRobot = (currentFrame[robot as keyof PartialMonitorFrame] as TeamInfo);
+        const currentRobot = (currentFrame[robot as keyof PartialMonitorFrame] as RobotInfo);
         const currentSignal = currentRobot.signal;
 
         if (currentSignal === 0 || currentRobot.ds === DSState.GREEN) continue;
 
-        const pastSignals = (pastFrames.slice(-20).map(f => (f[robot as keyof MonitorFrame] as TeamInfo).signal));
+        const pastSignals = (pastFrames.slice(-20).map(f => (f[robot as keyof MonitorFrame] as RobotInfo).signal));
 
         // If the signal hasn't changed in the last 20 frames, the radio probably disconnected
         if (pastSignals.every(signal => signal === currentSignal)) continue;
@@ -32,12 +32,12 @@ export function detectStatusChange(currentFrame: PartialMonitorFrame, previousFr
 
     for (let _robot in ROBOT) {
         const robot = _robot as ROBOT;
-        const currentRobot = (currentFrame[robot as keyof MonitorFrame] as TeamInfo);
+        const currentRobot = (currentFrame[robot as keyof MonitorFrame] as RobotInfo);
 
         currentRobot.warnings = [];
 
         if (previousFrame) {
-            const previousRobot = (previousFrame[robot as keyof MonitorFrame] as TeamInfo);
+            const previousRobot = (previousFrame[robot as keyof MonitorFrame] as RobotInfo);
 
             if (currentFrame.field === FieldState.PRESTART_COMPLETED && previousFrame.field === FieldState.PRESTART_INITIATED) {
                 currentRobot.lastChange = new Date();
@@ -99,13 +99,13 @@ export async function processTeamWarnings(eventCode: string, frame: MonitorFrame
     const event = await getEvent('', eventCode);
 
     for (let station in ROBOT) {
-        let team = frame[station as keyof MonitorFrame] as TeamInfo;
-        if (!event.checklist[team.number]) continue;
-        if (!event.checklist[team.number].inspected) {
-            team.warnings.push(TeamWarnings.NOT_INSPECTED);
+        let robot = frame[station as keyof MonitorFrame] as RobotInfo;
+        if (!event.checklist[robot.number]) continue;
+        if (!event.checklist[robot.number].inspected) {
+            robot.warnings.push(RobotWarnings.NOT_INSPECTED);
         }
-        if (!event.checklist[team.number].radioProgrammed) {
-            team.warnings.push(TeamWarnings.RADIO_NOT_FLASHED);
+        if (!event.checklist[robot.number].radioProgrammed) {
+            robot.warnings.push(RobotWarnings.RADIO_NOT_FLASHED);
         }
 
         // The ticket warning is expensive on database transactions so only run it one time when prestart completes
@@ -113,23 +113,23 @@ export async function processTeamWarnings(eventCode: string, frame: MonitorFrame
             const teamTickets = await db.select()
                 .from(messages)
                 .where(and(
-                    eq(messages.team, team.number.toString()),
+                    eq(messages.team, robot.number.toString()),
                     eq(messages.event_code, event.code),
                     eq(messages.is_ticket, true)
                 )).orderBy(messages.closed_at);
 
             const openTicket = teamTickets.find(ticket => ticket.is_open);
             if (openTicket) {
-                team.warnings.push(TeamWarnings.OPEN_TICKET);
+                robot.warnings.push(RobotWarnings.OPEN_TICKET);
             } else {
                 // Find what their last match was
                 const previousMatch = await db.select()
-                    .from(teamCycleLogs)
+                    .from(robotCycleLogs)
                     .where(and(
-                        eq(teamCycleLogs.team, team.number),
-                        eq(teamCycleLogs.event, event.code)
+                        eq(robotCycleLogs.team, robot.number),
+                        eq(robotCycleLogs.event, event.code)
                     ))
-                    .orderBy(teamCycleLogs.prestart)
+                    .orderBy(robotCycleLogs.prestart)
                     .limit(1);
 
                 const recentlyClosedTickets = teamTickets.filter(ticket => !ticket.is_open);
@@ -138,7 +138,7 @@ export async function processTeamWarnings(eventCode: string, frame: MonitorFrame
                 for (let ticket of recentlyClosedTickets) {
                     // If ticket is closed and there either is no previous match or the previous match start time was before the ticket closed time
                     if (ticket.closed_at && (!previousMatchStart || ticket.closed_at > previousMatchStart)) {
-                        team.warnings.push(TeamWarnings.RECENT_TICKET);
+                        robot.warnings.push(RobotWarnings.RECENT_TICKET);
                         continue;
                     }
                 }
@@ -146,10 +146,10 @@ export async function processTeamWarnings(eventCode: string, frame: MonitorFrame
 
             // Then copy the warnings from the previous frame until the match ends
         } else if (!(frame.field === FieldState.MATCH_OVER || frame.field === FieldState.MATCH_ABORTED)) {
-            const previousFrameWarnings = previousFrame[station as keyof MonitorFrame] as TeamInfo;
+            const previousFrameWarnings = previousFrame[station as keyof MonitorFrame] as RobotInfo;
 
-            if (previousFrameWarnings.warnings.includes(TeamWarnings.OPEN_TICKET)) team.warnings.push(TeamWarnings.OPEN_TICKET);
-            if (previousFrameWarnings.warnings.includes(TeamWarnings.RECENT_TICKET)) team.warnings.push(TeamWarnings.RECENT_TICKET);
+            if (previousFrameWarnings.warnings.includes(RobotWarnings.OPEN_TICKET)) robot.warnings.push(RobotWarnings.OPEN_TICKET);
+            if (previousFrameWarnings.warnings.includes(RobotWarnings.RECENT_TICKET)) robot.warnings.push(RobotWarnings.RECENT_TICKET);
         }
     }
 
@@ -160,58 +160,58 @@ export async function processTeamCycles(eventCode: string, frame: MonitorFrame, 
     const event = await getEvent('', eventCode);
 
     // If the match is running and there is data, commit it and reset the tracking object
-    if (MatchStateMap[frame.field] === MatchState.RUNNING && event.teamCycleTracking.prestart) {
+    if (MatchStateMap[frame.field] === MatchState.RUNNING && event.robotCycleTracking.prestart) {
         const insert = [];
 
-        for (let team in ROBOT) {
-            const teamCycle = event.teamCycleTracking[team as ROBOT];
-            if (!teamCycle) continue;
+        for (let robot in ROBOT) {
+            const robotCycle = event.robotCycleTracking[robot as ROBOT];
+            if (!robotCycle) continue;
             insert.push({
                 id: randomUUID(),
                 event: eventCode,
                 match_number: frame.match,
                 play_number: frame.play,
                 level: frame.level,
-                team: teamCycle.team,
-                prestart: event.teamCycleTracking.prestart,
-                first_ds: teamCycle.firstDS,
-                last_ds: teamCycle.lastDS,
-                time_ds: teamCycle.timeDS,
-                first_radio: teamCycle.firstRadio,
-                last_radio: teamCycle.lastRadio,
-                time_radio: teamCycle.timeRadio,
-                first_rio: teamCycle.firstRio,
-                last_rio: teamCycle.lastRio,
-                time_rio: teamCycle.timeRio,
-                first_code: teamCycle.firstCode,
-                last_code: teamCycle.lastCode,
-                time_code: teamCycle.timeCode
+                team: robotCycle.team,
+                prestart: event.robotCycleTracking.prestart,
+                first_ds: robotCycle.firstDS,
+                last_ds: robotCycle.lastDS,
+                time_ds: robotCycle.timeDS,
+                first_radio: robotCycle.firstRadio,
+                last_radio: robotCycle.lastRadio,
+                time_radio: robotCycle.timeRadio,
+                first_rio: robotCycle.firstRio,
+                last_rio: robotCycle.lastRio,
+                time_rio: robotCycle.timeRio,
+                first_code: robotCycle.firstCode,
+                last_code: robotCycle.lastCode,
+                time_code: robotCycle.timeCode
             });
         }
 
         console.log(insert);
 
-        await db.insert(teamCycleLogs).values(insert);
-        event.teamCycleTracking = {};
+        await db.insert(robotCycleLogs).values(insert);
+        event.robotCycleTracking = {};
     }
 
     // Make sure to clear the cycle tracking if we re-prestart
-    if (frame.field === FieldState.PRESTART_INITIATED) event.teamCycleTracking = {};
+    if (frame.field === FieldState.PRESTART_INITIATED) event.robotCycleTracking = {};
 
     // Only process in prestart
     if (MatchStateMap[frame.field] !== MatchState.PRESTART) return;
 
     // If new match, set the prestart time
-    if (!event.teamCycleTracking.prestart) event.teamCycleTracking.prestart = event.lastPrestartDone || new Date();
+    if (!event.robotCycleTracking.prestart) event.robotCycleTracking.prestart = event.lastPrestartDone || new Date();
 
     for (let change of changes) {
-        let cycle = event.teamCycleTracking[change.station];
+        let cycle = event.robotCycleTracking[change.station];
 
         if (!cycle) {
-            event.teamCycleTracking[change.station] = {
+            event.robotCycleTracking[change.station] = {
                 team: change.robot.number
             };
-            cycle = event.teamCycleTracking[change.station];
+            cycle = event.robotCycleTracking[change.station];
         }
 
         if (!cycle) throw new Error('You should never see this error, but if you do look at the processTeamCycles function in util/frameProcessing');
@@ -222,20 +222,20 @@ export async function processTeamCycles(eventCode: string, frame: MonitorFrame, 
             case 'code':
                 if (!cycle.firstCode) cycle.firstCode = change.robot.lastChange || new Date();
                 cycle.lastCode = change.robot.lastChange || new Date();
-                cycle.timeCode = cycle.lastCode.getTime() - event.teamCycleTracking.prestart.getTime();
+                cycle.timeCode = cycle.lastCode.getTime() - event.robotCycleTracking.prestart.getTime();
             case 'rio':
                 if (!cycle.firstRio) cycle.firstRio = change.robot.lastChange || new Date();
                 cycle.lastRio = change.robot.lastChange || new Date();
-                cycle.timeRio = cycle.lastRio.getTime() - event.teamCycleTracking.prestart.getTime();
+                cycle.timeRio = cycle.lastRio.getTime() - event.robotCycleTracking.prestart.getTime();
             case 'radio':
                 if (!cycle.firstRadio) cycle.firstRadio = change.robot.lastChange || new Date();
                 cycle.lastRadio = change.robot.lastChange || new Date();
-                cycle.timeRadio = cycle.lastRadio.getTime() - event.teamCycleTracking.prestart.getTime();
+                cycle.timeRadio = cycle.lastRadio.getTime() - event.robotCycleTracking.prestart.getTime();
                 break;
             case 'ds':
                 if (!cycle.firstDS) cycle.firstDS = change.robot.lastChange || new Date();
                 cycle.lastDS = change.robot.lastChange || new Date();
-                cycle.timeDS = cycle.lastDS.getTime() - event.teamCycleTracking.prestart.getTime();
+                cycle.timeDS = cycle.lastDS.getTime() - event.robotCycleTracking.prestart.getTime();
         }
     }
 }

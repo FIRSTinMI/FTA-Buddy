@@ -8,29 +8,29 @@ export interface MonitorFrame {
     time: string;
     version: string;
     frameTime: number;
-    blue1: TeamInfo;
-    blue2: TeamInfo;
-    blue3: TeamInfo;
-    red1: TeamInfo;
-    red2: TeamInfo;
-    red3: TeamInfo;
+    blue1: RobotInfo;
+    blue2: RobotInfo;
+    blue3: RobotInfo;
+    red1: RobotInfo;
+    red2: RobotInfo;
+    red3: RobotInfo;
     lastCycleTime: string;
 }
 
 type PartialBy<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>> & Partial<Pick<T, K>>;
 
 export interface PartialMonitorFrame extends Omit<MonitorFrame, 'blue1' | 'blue2' | 'blue3' | 'red1' | 'red2' | 'red3'> {
-    blue1: PartialTeamInfo;
-    blue2: PartialTeamInfo;
-    blue3: PartialTeamInfo;
-    red1: PartialTeamInfo;
-    red2: PartialTeamInfo;
-    red3: PartialTeamInfo;
+    blue1: PartialRobotInfo;
+    blue2: PartialRobotInfo;
+    blue3: PartialRobotInfo;
+    red1: PartialRobotInfo;
+    red2: PartialRobotInfo;
+    red3: PartialRobotInfo;
 }
 
-export type PartialTeamInfo = PartialBy<TeamInfo, 'lastChange' | 'improved' | 'warnings'>
+export type PartialRobotInfo = PartialBy<RobotInfo, 'lastChange' | 'improved' | 'warnings'>
 
-export interface TeamInfo {
+export interface RobotInfo {
     number: number;
     ds: DSState;
     radio: boolean;
@@ -52,10 +52,10 @@ export interface TeamInfo {
     versionmm: boolean;
     lastChange: Date | null;
     improved: boolean;
-    warnings: TeamWarnings[];
+    warnings: RobotWarnings[];
 }
 
-export enum TeamWarnings {
+export enum RobotWarnings {
     NOT_INSPECTED,
     RADIO_NOT_FLASHED,
     SLOW,
@@ -130,7 +130,7 @@ export enum EnableState {
     ASTOP
 }
 
-export type MonitoredRobotParts = Omit<keyof TeamInfo, 'number' | 'bwu' | 'battery' | 'ping' | 'packets' | 'MAC' | 'RX' | 'RXMCS' | 'TX' | 'TXMCS' | 'SNR' | 'noise' | 'signal' | 'versionmm'>;
+export type MonitoredRobotParts = Omit<keyof RobotInfo, 'number' | 'bwu' | 'battery' | 'ping' | 'packets' | 'MAC' | 'RX' | 'RXMCS' | 'TX' | 'TXMCS' | 'SNR' | 'noise' | 'signal' | 'versionmm'>;
 
 export enum StateChangeType {
     FallingEdge,
@@ -139,7 +139,7 @@ export enum StateChangeType {
 
 export interface StateChange {
     station: ROBOT,
-    robot: TeamInfo,
+    robot: RobotInfo,
     key: MonitoredRobotParts,
     oldValue: boolean | DSState | EnableState,
     newValue: boolean | DSState | EnableState;
@@ -350,7 +350,7 @@ export interface ServerEvent {
     lastMatchEnd: Date | null,
     lastMatchRefDone: Date | null,
     lastMatchScoresPosted: Date | null;
-    teamCycleTracking: {
+    robotCycleTracking: {
         prestart?: Date,
         blue1?: TeamCycleTracking,
         blue2?: TeamCycleTracking,

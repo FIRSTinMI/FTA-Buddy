@@ -8,7 +8,6 @@
 	import { audioQueuer } from "../field-monitor";
 	import { trpc } from "../main";
 	import { userStore } from "../stores/user";
-	import { navigate } from "svelte-routing";
 
 	export let settingsOpen = false;
 	export const userRole = derived(userStore, ($userStore) => $userStore.role);

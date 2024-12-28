@@ -6,7 +6,7 @@
     MatchStateMap,
     ROBOT,
         type MonitorFrame,
-        type TeamInfo,
+        type RobotInfo,
     } from "../../../shared/types";
     import MonitorRow from "./MonitorRow.svelte";
     import { navigate } from "svelte-routing";
@@ -19,19 +19,19 @@
     export let monitorFrame: MonitorFrame;
     export let frameHandler: MonitorFrameHandler;
 
-    let modalTeam: TeamInfo | undefined;
+    let modalRobot: RobotInfo | undefined;
     let averages: Awaited<ReturnType<typeof trpc.cycles.getTeamAverageCycle.query>> | undefined;
     $: {
-        modalTeam = monitorFrame[modalStation];
-        timeSinceChange = modalTeam.lastChange ? formatTimeShort(modalTeam.lastChange) : "";
-        (async (team: number) => { averages = await trpc.cycles.getTeamAverageCycle.query({ teamNumber: team })})(modalTeam?.number);
+        modalRobot = monitorFrame[modalStation];
+        timeSinceChange = modalRobot.lastChange ? formatTimeShort(modalRobot.lastChange) : "";
+        (async (team: number) => { averages = await trpc.cycles.getTeamAverageCycle.query({ teamNumber: team })})(modalRobot?.number);
     }
 
-    let timeSinceChange = modalTeam?.lastChange ? formatTimeShort(modalTeam.lastChange) : "";
+    let timeSinceChange = modalRobot?.lastChange ? formatTimeShort(modalRobot.lastChange) : "";
 
     setInterval(() => {
         if (modalOpen) {
-            timeSinceChange = modalTeam?.lastChange ? formatTimeShort(modalTeam.lastChange) : "";
+            timeSinceChange = modalRobot?.lastChange ? formatTimeShort(modalRobot.lastChange) : "";
         }
     }, 1000);
 </script>
@@ -52,10 +52,10 @@
             <MonitorRow station={modalStation} {monitorFrame} detailView={() => {}} {frameHandler} />
         </div>
     </div>
-    {#if modalTeam}
+    {#if modalRobot}
         <div class="flex flex-col w-full items-center space-y-4 -mt-4">
             <p>
-                {#if modalTeam.ds === DSState.RED}
+                {#if modalRobot.ds === DSState.RED}
                     <p class="font-bold">Ethernet not plugged in</p>
                     <p>Unplugged {timeSinceChange}</p>
                     <ol class="text-left list-decimal space-y-2">
@@ -64,9 +64,9 @@
                         <li>Try a dongle</li>
                         <li>Try replacing the ethernet cable</li>
                     </ol>
-                {:else if modalTeam.ds === DSState.GREEN_X}
+                {:else if modalRobot.ds === DSState.GREEN_X}
                     <p class="font-bold">Ethernet plugged in but no communication with DS</p>
-                    {#if modalTeam.improved}
+                    {#if modalRobot.improved}
                         <p>Plugged in {timeSinceChange}</p>
                     {:else}
                         <p>Lost FMS {timeSinceChange}</p>
@@ -87,9 +87,9 @@
                         </li>
                         <li>If none of the above works, try the spare DS laptop. Advise the team to come during lunch or at the end of the day to do a connection test.</li>
                     </ol>
-                {:else if modalTeam.ds === DSState.MOVE_STATION}
+                {:else if modalRobot.ds === DSState.MOVE_STATION}
                     <p class="font-bold">Team is in wrong station</p>
-                    {#if modalTeam.improved}
+                    {#if modalRobot.improved}
                         <p>Plugged in {timeSinceChange}</p>
                     {:else}
                         <p>{timeSinceChange}</p>
@@ -97,9 +97,9 @@
                     <br />
                     Their DS will tell them which station to move to.<br />
                     If this is during playoffs, double check with the HR and Scorekeeper before instructing teams to move.
-                {:else if modalTeam.ds === DSState.WAITING}
+                {:else if modalRobot.ds === DSState.WAITING}
                     <p class="font-bold">Team is in wrong match</p>
-                    {#if modalTeam.improved}
+                    {#if modalRobot.improved}
                         <p>Plugged in {timeSinceChange}</p>
                     {:else}
                         <p>{timeSinceChange}</p>
@@ -116,25 +116,25 @@
                             still run as normal. If the match hasn't started yet, re-prestart.
                         </li>
                     </ol>
-                {:else if modalTeam.ds === DSState.BYPASS}
+                {:else if modalRobot.ds === DSState.BYPASS}
                     <p class="font-bold">Team is bypassed</p>
                     <p>{timeSinceChange}</p>
-                {:else if modalTeam.ds === DSState.ESTOP}
+                {:else if modalRobot.ds === DSState.ESTOP}
                     <p class="font-bold">Team is E-stopped</p>
                     <p>{timeSinceChange}</p>
                     <ol class="text-left list-decimal space-y-2">
                         <li>To clear an E-stop the roborio must be physically restarted and the DS software restarted.</li>
                         <li>If the robot was E-stopped by the HR, you should let the team know why.</li>
                     </ol>
-                {:else if modalTeam.ds === DSState.ASTOP}
+                {:else if modalRobot.ds === DSState.ASTOP}
                     <p class="font-bold">Team is A-stopped</p>
                     <p>{timeSinceChange}</p>
                     <ol class="text-left list-decimal space-y-2">
                         <li>The A-stop will clear once teleop starts, remember to reset the button after the match.</li>
                     </ol>
-                {:else if !modalTeam.radio}
+                {:else if !modalRobot.radio}
                     <p class="font-bold">Radio not connected to field</p>
-                    {#if modalTeam.improved}
+                    {#if modalRobot.improved}
                         <p>DS Connected {timeSinceChange}</p>
                     {:else}
                         <p>Lost Radio {timeSinceChange}</p>
@@ -148,9 +148,9 @@
                         <li>Make sure the WIFI light (opposite of the power light) is green, if it is amber or off the radio needs to be programmed.</li>
                         <li>If you notice all the lights are solid for a while, the radio may have gotten stuck. Reboot the radio.</li>
                     </ol>
-                {:else if !modalTeam.rio}
+                {:else if !modalRobot.rio}
                     <p class="font-bold">Radio connected but no communication with RIO</p>
-                    {#if modalTeam.improved}
+                    {#if modalRobot.improved}
                         <p>Radio Connected {timeSinceChange}</p>
                     {:else}
                         <p>Lost RIO {timeSinceChange}</p>
@@ -179,9 +179,9 @@
                             If the issue persists, replace the RIO.
                         </li>
                     </ol>
-                {:else if !modalTeam.code}
+                {:else if !modalRobot.code}
                     <p class="font-bold">Radio and RIO connected, but code not running</p>
-                    {#if modalTeam.improved}
+                    {#if modalRobot.improved}
                         <p>RIO Connected {timeSinceChange}</p>
                     {:else}
                         <p>Lost Code {timeSinceChange}</p>
@@ -197,17 +197,17 @@
                     <p class="font-bold">Robot Connected</p>
                     <p>{timeSinceChange}</p>
                     <br />
-                    {#if modalTeam.battery < 11}
-                        Low Battery {modalTeam.battery.toFixed(1)}V<br />
+                    {#if modalRobot.battery < 11}
+                        Low Battery {modalRobot.battery.toFixed(1)}V<br />
                     {/if}
-                    {#if modalTeam.bwu > 3.5}
-                        High Bandwidth Utilization {modalTeam.bwu.toFixed(2)}/4.00 mbps<br />
+                    {#if modalRobot.bwu > 3.5}
+                        High Bandwidth Utilization {modalRobot.bwu.toFixed(2)}/4.00 mbps<br />
                     {/if}
-                    {#if modalTeam.ping > 100}
-                        High Latency {modalTeam.ping}<br />
+                    {#if modalRobot.ping > 100}
+                        High Latency {modalRobot.ping}<br />
                     {/if}
-                    {#if modalTeam.packets > 10000}
-                        High Packet Loss: {modalTeam.packets}<br />
+                    {#if modalRobot.packets > 10000}
+                        High Packet Loss: {modalRobot.packets}<br />
                     {/if}
                 {/if}
             </p>
@@ -225,7 +225,7 @@
         </div>
     {/if}
     <div slot="footer">
-        <Button color="primary" on:click={() => navigate("/notes/" + modalTeam?.number)}>Notes</Button>
+        <Button color="primary" on:click={() => navigate("/notes/" + modalRobot?.number)}>Notes</Button>
         <Button color="primary" on:click={() => (modalOpen = false)}>Close</Button>
     </div>
 </Modal>

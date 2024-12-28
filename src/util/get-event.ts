@@ -74,7 +74,7 @@ export async function getEvent(eventToken: string, eventCode?: string) {
                 scheduleDetails: event.scheduleDetails as ScheduleDetails,
                 lastPrestartDone: null,
                 lastMatchEnd: null,
-                teamCycleTracking: {},
+                robotCycleTracking: {},
                 tickets: await getTickets({ eventCode }),
             };
 

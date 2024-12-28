@@ -1,5 +1,5 @@
 import { cycleTimeToMS } from "../../../shared/cycleTimeToMS";
-import { DSState, FieldState, MatchState, MatchStateMap, ROBOT, StateChangeType, type MonitorFrame, type StateChange, type TeamInfo } from "../../../shared/types";
+import { DSState, FieldState, MatchState, MatchStateMap, ROBOT, StateChangeType, type MonitorFrame, type StateChange, type RobotInfo } from "../../../shared/types";
 
 export interface MonitorEvent extends CustomEvent {
     detail: {
@@ -101,8 +101,8 @@ export class MonitorFrameHandler extends EventTarget {
 
         for (let _robot in ROBOT) {
             const robot = _robot as ROBOT;
-            const currentRobot = (currentFrame[robot as keyof MonitorFrame] as TeamInfo);
-            const previousRobot = (previousFrame[robot as keyof MonitorFrame] as TeamInfo);
+            const currentRobot = (currentFrame[robot as keyof MonitorFrame] as RobotInfo);
+            const previousRobot = (previousFrame[robot as keyof MonitorFrame] as RobotInfo);
 
             // Reset alerts played if prestart happened
             if (currentMatchState === MatchState.PRESTART && previousMatchState !== MatchState.PRESTART) {
@@ -153,7 +153,7 @@ export class MonitorFrameHandler extends EventTarget {
         return this.getPreviousFrame()?.[robot];
     }
 
-    public getHistory(robot: ROBOT, type: keyof TeamInfo, length: number = 50) {
+    public getHistory(robot: ROBOT, type: keyof RobotInfo, length: number = 50) {
         return this.frames.map((frame) => frame[robot]?.[type]).slice(-length);
     }
 

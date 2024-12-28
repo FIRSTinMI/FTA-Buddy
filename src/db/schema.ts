@@ -120,7 +120,7 @@ export const logPublishing = pgTable('log_publishing', {
     expire_time: timestamp('expire_time').notNull()
 });
 
-export const teamCycleLogs = pgTable('team_cycle_logs', {
+export const robotCycleLogs = pgTable('team_cycle_logs', {
     id: uuid('id').primaryKey(),
     event: varchar('event').notNull(),
     match_number: integer('match_number').notNull(),
@@ -142,7 +142,7 @@ export const teamCycleLogs = pgTable('team_cycle_logs', {
     time_code: integer('time_code'),
 });
 
-export const TeamCycleLog = typeof teamCycleLogs.$inferInsert;
+export const RobotCycleLog = typeof robotCycleLogs.$inferInsert;
 
 export const pushSubscriptions = pgTable('push_subscriptions', {
     id: serial('id').primaryKey(),

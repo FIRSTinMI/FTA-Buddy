@@ -7,7 +7,6 @@
 	import { subscribeToPush } from "../util/notifications";
 	import { audioQueuer } from "../field-monitor";
 	import { trpc } from "../main";
-	import { authStore } from "../stores/auth";
 	import { userStore } from "../stores/user";
 	import { navigate } from "svelte-routing";
 
@@ -17,20 +16,48 @@
 	export let installPrompt: Event | null;
 
 	let settings = get(settingsStore);
+	let user = get(userStore);
 	let loading = false;
 	let role: string;
-	$: role = $userRole;
+	//$: role = $userRole;
 
 	function updateSettings() {
 		settingsStore.set(settings);
 	}	
 
-	function updateUser(event: Event) {
+	async function updateUser(event: Event) {
     	const selectedRole = (event.target as HTMLSelectElement).value;
-    	userStore.update(user => {
-			navigate("/app/")
-      		return { ...user, role: selectedRole }; // Update the role in userStore
-    	});
+		const validRoles: ['FTA', 'FTAA', 'CSA', 'RI'] = ['FTA', 'FTAA', 'CSA', 'RI'];
+
+		if (!validRoles.includes(selectedRole as 'FTA' | 'FTAA' | 'CSA' | 'RI')) {
+        	console.error("Invalid role selected");
+        	toast("Error", "Invalid role selected", "red-500");
+        	return;
+    	}
+
+		try {
+			const res = await trpc.user.changeRole.mutate({
+				token: user.token,
+				newRole: selectedRole as 'FTA' | 'FTAA' | 'CSA' | 'RI'
+			});
+
+			userStore.update(user => {
+				//navigate("/app/")
+      			return { ...user, role: selectedRole }; // Update the role in userStore
+    		});
+
+			toast("Success", "Role changed successfully", "green-500");
+		} catch (err: any) {
+			console.error(err);
+			if (err.message.startsWith("[")) {
+				const obj = JSON.parse(err.message);
+				for (const key in obj) {
+					toast("Error Changing Role", obj[key].message);
+				}
+			} else {
+				toast("Error Changing Role", err.message);
+			}
+		}
   	}
 
 	function clearStorage() {
@@ -110,7 +137,7 @@
 			</div>
 			<div class="grid grid-cols-subgrid gap-2 row-span-3">
 				<p class="text-gray-700 dark:text-gray-400">Change My Role</p>
-				<Select bind:value={role} on:change={updateUser}>
+				<Select bind:value={user.role} on:change={updateUser}>
 					<option value="FTA">FTA</option>
 					<option value="FTAA">FTAA</option>
 					<option value="CSA">CSA</option>
@@ -156,7 +183,7 @@
 				<Toggle class="toggle" bind:checked={settings.developerMode} on:change={updateSettings}>Developer Mode</Toggle>
 				<Toggle class="toggle {!settings.developerMode && "hidden"}" bind:checked={settings.forceCloud} on:change={updateSettings}>Force cloud server</Toggle>
                 <Button class="{!settings.developerMode && 'hidden'}" on:click={() => {
-                    trpc.event.notification.query({ eventToken: $authStore.eventToken})
+                    trpc.event.notification.query({ eventToken: user.eventToken})
                 }} size="xs">Notification Test</Button>
 			</div>
 			<div class="grid gap-2 md:col-span-2">

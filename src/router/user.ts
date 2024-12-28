@@ -66,7 +66,7 @@ export const userRouter = router({
 
             if (user_current_role === input.newRole) {
                 throw new TRPCError({code: "BAD_REQUEST", message: 'Role is already the same. No update needed.'});
-            } else if (input.newRole !== 'FTA' || 'FTAA' || 'CSA' || 'RI') {
+            } else if (!['FTA', 'FTAA', 'CSA', 'RI'].includes(input.newRole)) {
                 throw new TRPCError({code: "BAD_REQUEST", message: "Entered Role is invalid. Ensure value is 'FTA', 'FTAA', 'CSA', or 'RI'"});
             } else {
                 await db.update(users).set({ role: input.newRole }).where(eq(users.token, input.token));

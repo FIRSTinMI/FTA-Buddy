@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Button, Helper, Indicator, Input, Label } from "flowbite-svelte";
 	import { onMount } from "svelte";
-	import { authStore } from "../../stores/auth";
+	import { userStore } from "../../stores/user";
 	import { eventStore } from "../../stores/event";
 	import { navigate } from "svelte-routing";
 
@@ -81,7 +81,7 @@
 				<h2 class="text-lg">Event Code: <code class="bg-neutral-900 px-2 py-.75 rounded-xl">{$eventStore.code}</code></h2>
 				<h2 class="text-lg">Event Pin: <code class="bg-neutral-900 px-2 py-.75 rounded-xl">{$eventStore.pin}</code></h2>
 				<p class="text-sm text-gray-600">
-					Event Token (for API use): <code class="bg-neutral-900 px-2 py-.75 rounded-lg">{$authStore.eventToken}</code>
+					Event Token (for API use): <code class="bg-neutral-900 px-2 py-.75 rounded-lg">{$userStore.eventToken}</code>
 				</p>
 			</div>
 		</div>

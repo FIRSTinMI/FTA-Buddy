@@ -3,7 +3,7 @@
 	import { trpc } from "../../main";
 	import { eventStore } from "../../stores/event";
 	import { get } from "svelte/store";
-	import { authStore } from "../../stores/auth";
+	import { userStore } from "../../stores/user";
 	import { toast } from "../../util/toast";
 	import { navigate } from "svelte-routing";
 	import NotesPolicy from "../../components/NotesPolicy.svelte";
@@ -48,7 +48,7 @@
 				summary: ticketSummary,
 				message: content,
 				matchID: match,
-				eventToken: get(authStore).eventToken,
+				eventToken: get(userStore).eventToken,
 			});
 			toast("Ticket created successfully", "success", "green-500");
 			navigate("/app/ticket/" + res.id);

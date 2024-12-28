@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { db } from "../db/db";
-import { router, publicProcedure } from "../trpc";
+import { router, publicProcedure, protectedProcedure } from "../trpc";
 import schema, { events, users } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -51,13 +51,40 @@ export const userRouter = router({
         }
     }),
 
+    changeRole: protectedProcedure
+        .input(
+            z.object({
+                token: z.string(),
+                newRole: z.enum(['FTA', 'FTAA', 'CSA', 'RI'])
+            })
+        )
+        .mutation(async ({ ctx, input}) => {
+            const user_token = ctx.user.token;
+            const user_current_role = ctx.user.role;
+
+            if (!user_token) throw new TRPCError({code: "BAD_REQUEST", message: 'No user token provided.'});            ;
+
+            if (user_current_role === input.newRole) {
+                throw new TRPCError({code: "BAD_REQUEST", message: 'Role is already the same. No update needed.'});
+            } else if (!['FTA', 'FTAA', 'CSA', 'RI'].includes(input.newRole)) {
+                throw new TRPCError({code: "BAD_REQUEST", message: "Entered Role is invalid. Ensure value is 'FTA', 'FTAA', 'CSA', or 'RI'"});
+            } else {
+                await db.update(users).set({ role: input.newRole }).where(eq(users.token, input.token));
+            }
+            
+            return {
+                newRole: input.newRole,
+                oldRole: user_current_role
+            }; 
+        }
+    ),
+
     createAccount: publicProcedure.input(z.object({
         email: z.string().email({ message: "Invalid email address" }),
         username: z.string().min(3, { message: "Username must be at least 3 characters long" }),
         password: z.string().min(8, { message: "Password must be at least 8 characters long" }),
-        role: z.enum(['ADMIN', 'FTA', 'FTAA', 'CSA', 'RI'])
+        role: z.enum(['FTA', 'FTAA', 'CSA', 'RI'])
     })).query(async ({ input }) => {
-        if (input.role === 'ADMIN') throw new TRPCError({ code: 'FORBIDDEN', message: 'Cannot create an admin account' });
         if (z.string().email().safeParse(input.email).success === false) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid email address' });
         if (input.username.length < 3) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Username must be at least 3 characters long' });
         if (input.password.length < 8) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Password must be at least 8 characters long' });
@@ -169,7 +196,8 @@ export const userRouter = router({
                 username: users.username,
                 email: users.email,
                 role: users.role,
-                id: users.id
+                id: users.id,
+                admin: users.admin
             })
                 .from(users)
                 .where(eq(users.token, input.token))

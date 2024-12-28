@@ -7,7 +7,7 @@
 	import { trpc } from "../../main";
 	import { eventStore, type Event } from "../../stores/event";
 	import Icon from "@iconify/svelte";
-	import { authStore } from "../../stores/auth";
+	import { userStore } from "../../stores/user";
 	import { toast } from "../../util/toast";
 	import { startBackgroundSubscription, stopBackgroundSubscription } from "../../util/notifications";
 	import NotesPolicy from "../../components/NotesPolicy.svelte";
@@ -53,7 +53,7 @@
 		if (foregroundSubscription) foregroundSubscription.unsubscribe();
 		foregroundSubscription = trpc.messages.foregroundSubscription.subscribe(
 			{
-				eventToken: get(authStore).eventToken,
+				eventToken: get(userStore).eventToken,
 			},
 			{
 				onData: (data) => {
@@ -78,7 +78,7 @@
 		teamSubscription = trpc.messages.teamSubscription.subscribe(
 			{
 				team,
-				eventToken: get(authStore).eventToken,
+				eventToken: get(userStore).eventToken,
 			},
 			{
 				onData: (data) => {
@@ -136,7 +136,7 @@
 			await trpc.messages.addMessage.query({
 				message: message.trim(),
 				team,
-				eventToken: get(authStore).eventToken,
+				eventToken: get(userStore).eventToken,
 			});
 		} catch (err: any) {
 			toast("Error Sending Message", err.message);

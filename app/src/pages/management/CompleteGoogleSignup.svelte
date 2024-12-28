@@ -2,20 +2,20 @@
 	import { Label, Input, Select, Button } from "flowbite-svelte";
 	import { get } from "svelte/store";
 	import { trpc } from "../../main";
-	import { authStore } from "../../stores/auth";
+	import { userStore } from "../../stores/user";
 	import Spinner from "../../components/Spinner.svelte";
 	import { navigate } from "svelte-routing";
 
 	export let toast: (title: string, text: string, color?: string) => void;
 
 	let username = "";
-	let role: "ADMIN" | "FTA" | "FTAA" | "CSA" = "FTA";
+	let role: "FTA" | "FTAA" | "CSA" | "RI";
 
 	let loading = false;
 
 	async function createGoogleUser(evt: Event) {
 		loading = true;
-		const googleToken = get(authStore).googleToken;
+		const googleToken = get(userStore).googleToken;
 
 		try {
 			const res = await trpc.user.createGoogleUser.query({
@@ -24,16 +24,15 @@
 				role,
 			});
 
-			authStore.set({
+			userStore.set({
 				token: res.token,
 				eventToken: "",
-				user: {
-					username,
-					email: res.email,
-					role,
-					id: res.id,
-				},
+				username,
+				email: res.email,
+				role,
+				id: res.id,
 				googleToken,
+				admin: false,
 			});
 
 			toast("Success", "Account created successfully", "green-500");

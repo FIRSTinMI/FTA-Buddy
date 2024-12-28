@@ -51,22 +51,24 @@
 
 		if (checkAuth.user) {
 			userStore.set({
-        		...checkAuth.user,
-        		token: user.token,
-        		eventToken: user.eventToken
-			})		
+				...checkAuth.user,
+				token: user.token,
+				eventToken: user.eventToken,
+			});
 		} else {
 			// No user found then reset
 			userStore.set({
 				email: "",
 				username: "",
-    			id: -1,
-    			token: "",
-    			eventToken: "",
-    			role: "FTA",
-    			admin: false
+				id: -1,
+				token: "",
+				eventToken: "",
+				role: "FTA",
+				admin: false,
 			});
 		}
+
+		console.log(user);
 	});
 
 	const publicPaths = [
@@ -87,23 +89,23 @@
 	const pageIsPublicLog = window.location.pathname.startsWith("/app/logs/") && window.location.pathname.split("/")[3].length == 36;
 
 	function redirectForAuth(a: typeof user) {
-		// if (!publicPaths.includes(window.location.pathname)) {
-		// 	//user trying to acces protected page
-		// 	if (!pageIsPublicLog) {
-		// 		//page is not public log
-		// 		if (!a.token || !a.eventToken) {
-		// 			navigate("/app/login"); //user is either not logged in or does not have event token
-		// 		}
-		// 		//user is logged in and has event token -- no redirect
-		// 	}
-		// 	//page is public log -- no tokens needed
-		// } else if (window.location.pathname == "/app" || window.location.pathname == "/app/") {
-		// 	//user is accessing public path that is /app or /app/
-		// 	if (!a.token || !a.eventToken) {
-		// 		navigate("/app/login"); //user is missing user token or event token
-		// 	}
-		// 	//user has user and event token -- no redirect
-		// }
+		if (!publicPaths.includes(window.location.pathname)) {
+			//user trying to acces protected page
+			if (!pageIsPublicLog) {
+				//page is not public log
+				if (!a.token || !a.eventToken) {
+					navigate("/app/login"); //user is either not logged in or does not have event token
+				}
+				//user is logged in and has event token -- no redirect
+			}
+			//page is public log -- no tokens needed
+		} else if (window.location.pathname == "/app" || window.location.pathname == "/app/") {
+			//user is accessing public path that is /app or /app/
+			if (!a.token || !a.eventToken) {
+				navigate("/app/login"); //user is missing user token or event token
+			}
+			//user has user and event token -- no redirect
+		}
 	}
 
 	redirectForAuth(user);
@@ -642,19 +644,19 @@
 				<Route path="/dashboard" component={EventDashboard} />
 				<Route path="/event-report" component={EventReport} />
 				<Route path="/ftc-status" component={FTCStatus} />
+				<Route path="/login">
+					<Login {toast} />
+				</Route>
+				<Route path="/host">
+					<Host {toast} />
+				</Route>
+				<Route path="/event-created">
+					<PostEventCreation {toast} />
+				</Route>
+				<Route path="/google-signup">
+					<CompleteGoogleSignup {toast} />
+				</Route>
 			</div>
-			<Route path="/login">
-				<Login {toast} />
-			</Route>
-			<Route path="/host">
-				<Host {toast} />
-			</Route>
-			<Route path="/event-created">
-				<PostEventCreation {toast} />
-			</Route>
-			<Route path="/google-signup">
-				<CompleteGoogleSignup {toast} />
-			</Route>
 
 			{#if user.token && user.eventToken && !fullscreen}
 				<div class="flex justify-around py-2 bg-neutral-900 dark:bg-neutral-700 text-white">

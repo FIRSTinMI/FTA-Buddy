@@ -10,9 +10,8 @@
 	import { userStore } from "../stores/user";
 	import { navigate } from "svelte-routing";
 
-
 	export let settingsOpen = false;
-	export const userRole = derived(userStore, $userStore => $userStore.role);
+	export const userRole = derived(userStore, ($userStore) => $userStore.role);
 	export let installPrompt: Event | null;
 
 	let settings = get(settingsStore);
@@ -23,28 +22,28 @@
 
 	function updateSettings() {
 		settingsStore.set(settings);
-	}	
+	}
 
 	async function updateUser(event: Event) {
-    	const selectedRole = (event.target as HTMLSelectElement).value;
-		const validRoles: ['FTA', 'FTAA', 'CSA', 'RI'] = ['FTA', 'FTAA', 'CSA', 'RI'];
+		const selectedRole = (event.target as HTMLSelectElement).value;
+		const validRoles: ["FTA", "FTAA", "CSA", "RI"] = ["FTA", "FTAA", "CSA", "RI"];
 
-		if (!validRoles.includes(selectedRole as 'FTA' | 'FTAA' | 'CSA' | 'RI')) {
-        	console.error("Invalid role selected");
-        	toast("Error", "Invalid role selected", "red-500");
-        	return;
-    	}
+		if (!validRoles.includes(selectedRole as "FTA" | "FTAA" | "CSA" | "RI")) {
+			console.error("Invalid role selected");
+			toast("Error", "Invalid role selected", "red-500");
+			return;
+		}
 
 		try {
 			const res = await trpc.user.changeRole.mutate({
 				token: user.token,
-				newRole: selectedRole as 'FTA' | 'FTAA' | 'CSA' | 'RI'
+				newRole: selectedRole as "FTA" | "FTAA" | "CSA" | "RI",
 			});
 
-			userStore.update(user => {
+			userStore.update((user) => {
 				//navigate("/app/")
-      			return { ...user, role: selectedRole }; // Update the role in userStore
-    		});
+				return { ...user, role: selectedRole }; // Update the role in userStore
+			});
 
 			toast("Success", "Role changed successfully", "green-500");
 		} catch (err: any) {
@@ -58,7 +57,7 @@
 				toast("Error Changing Role", err.message);
 			}
 		}
-  	}
+	}
 
 	function clearStorage() {
 		localStorage.clear();
@@ -143,7 +142,6 @@
 					<option value="CSA">CSA</option>
 					<option value="RI">RI</option>
 				</Select>
-				<Button on:click={() => (window.location.reload())} size="xs">Reload After Changing Role</Button>
 				<p class="text-gray-700 dark:text-gray-400">Audio Alerts</p>
 				<Toggle class="toggle" bind:checked={settings.soundAlerts} on:change={updateSettings}>Robot Connection</Toggle>
 				<Toggle class="toggle" bind:checked={settings.fieldGreen} on:change={updateSettings}>Field Green</Toggle>
@@ -181,10 +179,16 @@
 			<div class="grid grid-cols-subgrid gap-2 row-span-4">
 				<p class="text-gray-700 dark:text-gray-400">Developer</p>
 				<Toggle class="toggle" bind:checked={settings.developerMode} on:change={updateSettings}>Developer Mode</Toggle>
-				<Toggle class="toggle {!settings.developerMode && "hidden"}" bind:checked={settings.forceCloud} on:change={updateSettings}>Force cloud server</Toggle>
-                <Button class="{!settings.developerMode && 'hidden'}" on:click={() => {
-                    trpc.event.notification.query({ eventToken: user.eventToken})
-                }} size="xs">Notification Test</Button>
+				<Toggle class="toggle {!settings.developerMode && 'hidden'}" bind:checked={settings.forceCloud} on:change={updateSettings}
+					>Force cloud server</Toggle
+				>
+				<Button
+					class={!settings.developerMode && "hidden"}
+					on:click={() => {
+						trpc.event.notification.query({ eventToken: user.eventToken });
+					}}
+					size="xs">Notification Test</Button
+				>
 			</div>
 			<div class="grid gap-2 md:col-span-2">
 				{#if installPrompt}

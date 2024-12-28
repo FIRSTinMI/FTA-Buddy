@@ -12,6 +12,14 @@
 	let event = $eventStore;
 	let user = $userStore;
 
+	// If event token is missing, reset the event
+	// This prevents the admin event selector from showing that an event is selected when it's not
+	if (!user.eventToken) {
+		event.code = "";
+		event.pin = "";
+		event.teams = [];
+	}
+
 	console.log(user.admin);
 
 	let email = "";
@@ -94,8 +102,8 @@
 	}
 
 	function logout() {
-		userStore.set({ 
-			token: "", 
+		userStore.set({
+			token: "",
 			eventToken: "",
 			username: "",
 			email: "",
@@ -198,7 +206,7 @@
 		} catch (err: any) {
 			if (err.code === 404 || err.message.startsWith("User not found")) {
 				userStore.set({
-					token: "", 
+					token: "",
 					eventToken: "",
 					username: "",
 					email: "",
@@ -224,7 +232,7 @@
 	<Spinner />
 {/if}
 
-<div class="container mx-auto md:max-w-4xl flex flex-col justify-center ">
+<div class="container mx-auto max-w-xl md:max-w-3xl flex flex-col justify-center min-h-svh gap-4">
 	{#if !user || !user.token}
 		<!-- Create Account -->
 		{#if view === "create"}

@@ -15,9 +15,8 @@
 
 	let settings = get(settingsStore);
 	let user = get(userStore);
-	let loading = false;
 	let role: string;
-	//$: role = $userRole;
+	let loading = false;
 
 	function updateSettings() {
 		settingsStore.set(settings);

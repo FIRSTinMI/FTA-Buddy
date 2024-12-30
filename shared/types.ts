@@ -361,7 +361,7 @@ export interface ServerEvent {
         red2?: RobotCycleTracking,
         red3?: RobotCycleTracking;
     };
-    tickets: string[],
+    tickets: Ticket[],
 }
 
 export interface RobotCycleTracking {
@@ -405,6 +405,7 @@ export interface Ticket {
     author_id: number,
     author: Profile,
     assigned_to_id: number,
+    assigned_to?: Profile | null,
     event_code: string,
     is_open: boolean,
     text: string,

@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { eventProcedure, protectedProcedure, router } from "../trpc";
+import { adminProcedure, eventProcedure, protectedProcedure, router } from "../trpc";
 import { db } from "../db/db";
-import { tickets, events, messages } from "../db/schema";
+import { tickets, messages, users} from "../db/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { Message } from "../../shared/types";
@@ -16,19 +16,21 @@ export interface MessagePost {
 
 export const messagesRouter = router({
 
+    loadAllForEvent: adminProcedure.input(z.object({
+        event_code: z.string(),
+    })).query(async ({ctx, input}) => {
+        const eventMessages = await db.query.messages.findMany({
+            where:eq(messages.event_code, input.event_code),
+        });
+        
+        return eventMessages;    
+    }),
+
     getAllOnTicket: eventProcedure.input(z.object({
         ticket_id: z.string().uuid(),
         author_id: z.number(),
         event_code: z.string(),
     })).query(async ({ctx, input}) => {
-        const event = await getEvent(ctx.eventToken as string) || await db.query.events.findFirst({
-            where: eq(events.token, ctx.eventToken as string)
-        });
-
-        if (!event) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Event not found" });
-        }
-
         const ticket = await db.query.tickets.findFirst({
             where: and(
                 eq(tickets.id, input.ticket_id),
@@ -57,20 +59,27 @@ export const messagesRouter = router({
         });    
     }),
 
-    createOnTicket: protectedProcedure.input(z.object({
+    getById: eventProcedure.input(z.object({
+        id: z.string().uuid(),
+    })).query(async ({ ctx, input }) => {
+        const message = await db.query.messages.findFirst({
+            where: eq(messages.id, input.id),
+        });
+        
+        if (!message) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Message not found" });
+        }
+
+        return message;
+    }),
+
+    create: protectedProcedure.input(z.object({
         ticket_id: z.string().uuid(),
         team: z.number(),
         text: z.string(),
-        author_id: z.number(),
         event_code: z.string(),
     })).query(async ({ ctx, input }) => {
-        const event = await getEvent(ctx.eventToken as string) || await db.query.events.findFirst({
-            where: eq(events.token, ctx.eventToken as string)
-        });
-
-        if (!event) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Event not found" });
-        }
+        const event = await getEvent(ctx.eventToken as string);
 
         const ticket = await db.query.tickets.findFirst({
             where: and(
@@ -83,11 +92,25 @@ export const messagesRouter = router({
             throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
         }
 
+        const authorProfile = await db.query.users.findFirst({
+            where: eq(users.id, ctx.user.id)
+        });
+
+        if (!authorProfile) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
+        }
+
         const insert = await db.insert(messages).values({
             id: randomUUID(),
             ticket_id: ticket.id,
-            author_id: input.author_id,
+            author_id: authorProfile.id,
+            author: {
+                id: authorProfile.id,
+                username: authorProfile.username,
+                role: authorProfile.role,
+            },
             text: input.text,
+            event_code: ticket.event_code,
             created_at: new Date(),
             updated_at: new Date(),
         }).returning();
@@ -116,40 +139,10 @@ export const messagesRouter = router({
         return insert[0];
     }),
 
-    getById: eventProcedure.input(z.object({
-        id: z.string().uuid(),
-    })).query(async ({ ctx, input }) => {
-        const event = await db.query.events.findFirst({
-            where: eq(events.token, ctx.eventToken as string)
-        });
-        
-        if (!event) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Event not found" });
-        }
-
-        const message = await db.query.messages.findFirst({
-            where: eq(messages.id, input.id),
-        });
-        
-        if (!message) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Message not found" });
-        }
-
-        return message;
-    }),
-
     editText: protectedProcedure.input(z.object({
         message_id: z.string().uuid(),
         new_text: z.string(),
     })).query(async ({ ctx, input }) => {
-        const event = await db.query.events.findFirst({
-            where: eq(events.token, ctx.eventToken as string)
-        });
-        
-        if (!event) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Event not found" });
-        }
-
         const message = await db.query.messages.findFirst({
             where: eq(messages.id, input.message_id),
         });
@@ -172,14 +165,6 @@ export const messagesRouter = router({
     delete: protectedProcedure.input(z.object({
         message_id: z.string().uuid(),
     })).query(async ({ ctx, input }) => {
-        const event = await db.query.events.findFirst({
-            where: eq(events.token, ctx.eventToken as string)
-        });
-        
-        if (!event) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Event not found" });
-        }
-
         const message = await db.query.messages.findFirst({
             where: eq(messages.id, input.message_id),
         });

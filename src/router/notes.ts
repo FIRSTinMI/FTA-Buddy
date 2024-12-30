@@ -14,13 +14,7 @@ import { randomUUID } from "crypto";
 export const notesRouter = router({
 
     getAll: eventProcedure.query(async ({ ctx }) => {
-        const event = await getEvent(ctx.eventToken as string) || await db.query.events.findFirst({
-            where: eq(events.token, ctx.eventToken as string)
-        });
-
-        if (!event) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Event not found" });
-        }
+        const event = await getEvent(ctx.eventToken as string);
 
         const eventNotes = await db.query.notes.findMany({
              where: eq(notes.event_code, event.code) 
@@ -41,13 +35,7 @@ export const notesRouter = router({
         author_id: z.number(),
         event_code: z.string(),
     })).query(async ({ctx, input}) => {
-        const event = await getEvent(ctx.eventToken as string) || await db.query.events.findFirst({
-            where: eq(events.token, ctx.eventToken as string)
-        });
-
-        if (!event) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Event not found" });
-        }
+        const event = await getEvent(ctx.eventToken as string);
 
         const notesByAuthor = await db.query.notes.findMany({
             where: and(
@@ -70,13 +58,7 @@ export const notesRouter = router({
     getAllByTeam: eventProcedure.input(z.object({
         team_number: z.number()
     })).query(async ({ctx, input}) => {
-        const event = await getEvent(ctx.eventToken as string) || await db.query.events.findFirst({
-            where: eq(events.token, ctx.eventToken as string)
-        });
-
-        if (!event) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Event not found" });
-        }
+        const event = await getEvent(ctx.eventToken as string);
 
         const notesByTeam = await db.query.tickets.findMany({
             where: and(
@@ -96,47 +78,10 @@ export const notesRouter = router({
         });    
     }),
 
-    create: protectedProcedure.input(z.object({
-        team: z.number(),
-        text: z.string(),
-        author_id: z.number(),
-    })).query(async ({ ctx, input }) => {
-        const event = await getEvent(ctx.eventToken as string) || await db.query.events.findFirst({
-            where: eq(events.token, ctx.eventToken as string)
-        });
-
-        if (!event) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Event not found" });
-        }
-
-        const insert = await db.insert(notes).values({
-            id: randomUUID(),
-            team: input.team,
-            author_id: input.author_id,
-            text: input.text,
-            created_at: new Date(),
-            updated_at: new Date(),
-        }).returning();
-
-        if (!insert[0]) {
-            throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Note" });
-        }
-
-        return insert[0];
-    }),
-
     getById: protectedProcedure.input(z.object({
         id: z.string().uuid(),
         event_code: z.string()
     })).query(async ({ ctx, input }) => {
-        const event = await db.query.events.findFirst({
-            where: eq(events.token, ctx.eventToken as string)
-        });
-        
-        if (!event) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Event not found" });
-        }
-
         const note = await db.query.notes.findFirst({
             where: and(
                 eq(notes.id, input.id),
@@ -151,22 +96,50 @@ export const notesRouter = router({
         return note;
     }),
 
+    create: protectedProcedure.input(z.object({
+        team: z.number(),
+        text: z.string(),
+    })).query(async ({ ctx, input }) => {
+        const event = await getEvent(ctx.eventToken as string);
+
+        const authorProfile = await db.query.users.findFirst({
+            where: eq(users.id, ctx.user.id)
+        });
+
+        if (!authorProfile) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
+        }
+
+        const insert = await db.insert(notes).values({
+            id: randomUUID(),
+            team: input.team,
+            author_id: authorProfile.id,
+            author: {
+                id: authorProfile.id,
+                username: authorProfile.username,
+                role: authorProfile.role,
+            },
+            text: input.text,
+            created_at: new Date(),
+            updated_at: new Date(),
+        }).returning();
+
+        if (!insert[0]) {
+            throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Note" });
+        }
+
+        return insert[0];
+    }),
+
     editText: protectedProcedure.input(z.object({
         note_id: z.string().uuid(),
         new_text: z.string(),
+        event_code: z.string()
     })).query(async ({ ctx, input }) => {
-        const event = await db.query.events.findFirst({
-            where: eq(events.token, ctx.eventToken as string)
-        });
-        
-        if (!event) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Event not found" });
-        }
-
         const note = await db.query.tickets.findFirst({
             where: and(
                 eq(tickets.id, input.note_id),
-                eq(tickets.event_code, event.code),
+                eq(tickets.event_code, input.event_code),
             )
         });
         
@@ -183,6 +156,26 @@ export const notesRouter = router({
         }
 
         return update;
+    }),
+
+    delete: protectedProcedure.input(z.object({
+        note_id: z.string().uuid(),
+    })).query(async ({ ctx, input }) => {
+        const note = await db.query.notes.findFirst({
+            where: eq(notes.id, input.note_id),
+        });
+        
+        if (!note) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
+        }
+
+        const result = await db.delete(notes).where(eq(notes.id, input.note_id));
+
+        if (!result) {
+            throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to delete Note" });
+        }
+
+        return result;
     }),
 
 });

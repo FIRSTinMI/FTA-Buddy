@@ -5,7 +5,7 @@ import { DEFAULT_MONITOR } from "../../shared/constants";
 import { TeamList, EventChecklist, ScheduleDetails, ServerEvent } from "../../shared/types";
 import { db } from "../db/db";
 import schema from "../db/schema";
-import { getEventTicketIDs } from "../router/tickets";
+import { getEventTickets } from "../router/tickets";
 
 let loadingEvents: { [key: string]: Promise<ServerEvent>; } = {};
 
@@ -77,21 +77,18 @@ export async function getEvent(eventToken: string, eventCode?: string) {
                 lastPrestartDone: null,
                 lastMatchEnd: null,
                 robotCycleTracking: {},
-                tickets: await getEventTicketIDs( eventCode ),
+                tickets: await getEventTickets( eventCode ),
             };
 
             // Keep tickets in memory so it loads faster
             events[eventCode].ticketEmitter.on('create', async () => {
-                events[eventCode].tickets = await getTickets({ eventCode });
+                events[eventCode].tickets = await getEventTickets( eventCode );
             });
             events[eventCode].ticketEmitter.on('assign', async () => {
-                events[eventCode].tickets = await getTickets({ eventCode });
+                events[eventCode].tickets = await getEventTickets( eventCode );
             });
             events[eventCode].ticketEmitter.on('status', async () => {
-                events[eventCode].tickets = await getTickets({ eventCode });
-            });
-            events[eventCode].ticketEmitter.on('ticketReply', async () => {
-                events[eventCode].tickets = await getTickets({ eventCode });
+                events[eventCode].tickets = await getEventTickets( eventCode );
             });
 
             console.log('Event loaded into memory: ', eventCode);

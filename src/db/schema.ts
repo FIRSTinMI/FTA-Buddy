@@ -35,8 +35,10 @@ export const tickets = pgTable('tickets', {
     id: uuid('id').primaryKey(),
     team: integer('team').notNull().default(-1),
     subject: varchar('subject').notNull().default(''),
-    author_id: integer('author_id').references(() => users.id),
+    author_id: integer('author_id').notNull(),
+    author: jsonb('author').notNull(),
     assigned_to_id: integer('assigned_to').notNull().default(-1),
+    assigned_to: jsonb('assigned_to'),
     event_code: varchar('event_code').notNull().default(''),
     is_open: boolean('is_open').notNull().default(true),
     text: varchar('text').notNull().default(''),
@@ -45,7 +47,7 @@ export const tickets = pgTable('tickets', {
     closed_at: timestamp('closed_at'),
     messages: jsonb('messages').notNull().default('[]'),
     match_id: uuid('match_id').references(() => matchLogs.id),
-    followers: jsonb('folowers').notNull().default('[]')
+    followers: jsonb('followers').notNull().default('[]')
 });
 
 export const Ticket = typeof tickets.$inferInsert;
@@ -54,7 +56,9 @@ export const messages = pgTable('messages', {
     id: uuid('id').primaryKey(),
     ticket_id: uuid('ticket_id').references(() => tickets.id),
     text: varchar('text').notNull().default(''),
-    author_id: integer('author_id').references(() => users.id),
+    author_id: integer('author_id').notNull(),
+    author: jsonb('author').notNull(),
+    event_code: varchar('event_code').notNull().default(''),
     created_at: timestamp('created_at').notNull().defaultNow(),
     updated_at: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -64,7 +68,8 @@ export const Message = typeof messages.$inferInsert;
 export const notes = pgTable('notes', {
     id: uuid('id').primaryKey(),
     text: varchar('text').notNull().default(''),
-    author_id: integer('author_id').references(() => users.id),
+    author_id: integer('author_id').notNull(),
+    author: jsonb('author').notNull(),
     team: integer('team').notNull().default(-1),
     event_code: varchar('event_code').notNull().default(''),
     created_at: timestamp('created_at').notNull().defaultNow(),

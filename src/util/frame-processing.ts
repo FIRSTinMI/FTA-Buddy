@@ -1,7 +1,7 @@
 import { eq, and } from "drizzle-orm";
 import { DSState, FieldState, MatchState, MatchStateMap, MonitorFrame, PartialMonitorFrame, ROBOT, StateChange, StateChangeType, RobotInfo, RobotWarnings } from "../../shared/types";
 import { db } from "../db/db";
-import { events, messages, robotCycleLogs } from "../db/schema";
+import { events, tickets, robotCycleLogs } from "../db/schema";
 import { getEvent } from "./get-event";
 import { randomUUID } from "crypto";
 
@@ -111,12 +111,11 @@ export async function processTeamWarnings(eventCode: string, frame: MonitorFrame
         // The ticket warning is expensive on database transactions so only run it one time when prestart completes
         if (frame.field === FieldState.PRESTART_COMPLETED && previousFrame.field === FieldState.PRESTART_INITIATED) {
             const teamTickets = await db.select()
-                .from(messages)
+                .from(tickets)
                 .where(and(
-                    eq(messages.team, robot.number.toString()),
-                    eq(messages.event_code, event.code),
-                    eq(messages.is_ticket, true)
-                )).orderBy(messages.closed_at);
+                    eq(tickets.team, robot.number),
+                    eq(tickets.event_code, event.code),
+                )).orderBy(tickets.updated_at);
 
             const openTicket = teamTickets.find(ticket => ticket.is_open);
             if (openTicket) {

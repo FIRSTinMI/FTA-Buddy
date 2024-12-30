@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, Label, Modal, Select, Toggle, Range } from "flowbite-svelte";
+	import { Button, Label, Modal, Select, Toggle, Range, type SelectOptionType } from "flowbite-svelte";
 	import { get, derived } from "svelte/store";
 	import { settingsStore } from "../stores/settings";
 	import Spinner from "./Spinner.svelte";
@@ -15,32 +15,28 @@
 
 	let settings = get(settingsStore);
 	let user = get(userStore);
-	let role: string;
 	let loading = false;
+
+	const roleOptions: SelectOptionType<string>[] = [
+		{ value: "FTA", name: "FTA" },
+		{ value: "FTAA", name: "FTAA" },
+		{ value: "CSA", name: "CSA" },
+		{ value: "RI", name: "RI" },
+	];
 
 	function updateSettings() {
 		settingsStore.set(settings);
 	}
 
-	async function updateUser(event: Event) {
-		const selectedRole = (event.target as HTMLSelectElement).value;
-		const validRoles: ["FTA", "FTAA", "CSA", "RI"] = ["FTA", "FTAA", "CSA", "RI"];
-
-		if (!validRoles.includes(selectedRole as "FTA" | "FTAA" | "CSA" | "RI")) {
-			console.error("Invalid role selected");
-			toast("Error", "Invalid role selected", "red-500");
-			return;
-		}
-
+	async function updateUser() {
 		try {
-			const res = await trpc.user.changeRole.mutate({
-				token: user.token,
-				newRole: selectedRole as "FTA" | "FTAA" | "CSA" | "RI",
+			await trpc.user.changeRole.mutate({
+				newRole: user.role,
 			});
 
-			userStore.update((user) => {
+			userStore.update((u) => {
 				//navigate("/app/")
-				return { ...user, role: selectedRole }; // Update the role in userStore
+				return { ...u, role: user.role }; // Update the role in userStore
 			});
 
 			toast("Success", "Role changed successfully", "green-500");
@@ -134,23 +130,22 @@
 			</div>
 			<div class="grid grid-cols-subgrid gap-2 row-span-3">
 				<p class="text-gray-700 dark:text-gray-400">Change My Role</p>
-				<Select bind:value={user.role} on:change={updateUser}>
-					<option value="FTA">FTA</option>
-					<option value="FTAA">FTAA</option>
-					<option value="CSA">CSA</option>
-					<option value="RI">RI</option>
-				</Select>
+				<Select items={roleOptions} bind:value={user.role} on:change={updateUser} />
 				<p class="text-gray-700 dark:text-gray-400">Audio Alerts</p>
 				<Toggle class="toggle" bind:checked={settings.soundAlerts} on:change={updateSettings}>Robot Connection</Toggle>
 				<Toggle class="toggle" bind:checked={settings.fieldGreen} on:change={updateSettings}>Field Green</Toggle>
 			</div>
 			<div class="grid grid-cols-subgrid gap-2 row-span-6">
 				<p class="text-gray-700 dark:text-gray-400">Music</p>
-				<Select bind:value={settings.musicType} on:change={updateSettings}>
-					<option value="none">None</option>
-					<option value="jazz">Jazz</option>
-					<option value="lofi">Lofi</option>
-				</Select>
+				<Select
+					items={[
+						{ value: "none", name: "None" },
+						{ value: "jazz", name: "Jazz" },
+						{ value: "lofi", name: "Lofi" },
+					]}
+					bind:value={settings.musicType}
+					on:change={updateSettings}
+				/>
 				<Label>Volume</Label>
 				<div class="flex">
 					<Range

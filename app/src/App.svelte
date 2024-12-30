@@ -269,7 +269,7 @@
 </script>
 
 {#if showToast}
-	<div class="fixed bottom-0 left-0 p-4">
+	<div class="fixed bottom-0 left-0 p-4 z-100">
 		<Toast
 			bind:open={showToast}
 			class="dark:bg-{toastColor}"

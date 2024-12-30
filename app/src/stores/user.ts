@@ -6,7 +6,7 @@ export interface User {
     id: number;
     token: string;
     eventToken: string;
-    role: string;
+    role: "FTA" | "FTAA" | "CSA" | "RI";
     admin: boolean;
     googleToken?: string;
 }

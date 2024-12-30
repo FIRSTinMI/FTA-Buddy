@@ -32,7 +32,7 @@ export const events = pgTable('events', {
 export const Event = typeof events.$inferInsert;
 
 export const tickets = pgTable('tickets', {
-    id: uuid('id').primaryKey(),
+    id: serial('id').primaryKey(),
     team: integer('team').notNull().default(-1),
     subject: varchar('subject').notNull().default(''),
     author_id: integer('author_id').notNull(),
@@ -54,7 +54,7 @@ export const Ticket = typeof tickets.$inferInsert;
 
 export const messages = pgTable('messages', {
     id: uuid('id').primaryKey(),
-    ticket_id: uuid('ticket_id').references(() => tickets.id),
+    ticket_id: serial('ticket_id').references(() => tickets.id),
     text: varchar('text').notNull().default(''),
     author_id: integer('author_id').notNull(),
     author: jsonb('author').notNull(),

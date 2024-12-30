@@ -169,7 +169,7 @@ export const ticketsRouter = router({
 
 
     getAuthorProfile: eventProcedure.input(z.object({
-        ticket_id: z.string().uuid(),
+        ticket_id: z.number(),
     })).query(async ({ctx, input}) => {
         const event = await getEvent(ctx.eventToken as string)
 
@@ -194,7 +194,7 @@ export const ticketsRouter = router({
     }),
 
     getById: protectedProcedure.input(z.object({
-        id: z.string().uuid(),
+        id: z.number(),
         event_code: z.string()
     })).query(async ({ ctx, input }) => {
         const ticket = await db.query.tickets.findFirst({
@@ -212,14 +212,14 @@ export const ticketsRouter = router({
     }),
 
     getAssignedToProfile: eventProcedure.input(z.object({
-        ticket_id: z.string().uuid(),
+        id: z.number(),
     })).query(async ({ctx, input}) => {
         const event = await getEvent(ctx.eventToken as string)
 
         const ticket = await db.query.tickets.findFirst({
             where: and(
                 eq(tickets.event_code, event.code),
-                eq(tickets.id, input.ticket_id)
+                eq(tickets.id, input.id)
             )
         });
 
@@ -252,7 +252,6 @@ export const ticketsRouter = router({
         }
 
         const insert = await db.insert(tickets).values({
-            id: randomUUID(),
             team: input.team,
             subject: input.subject,
             author_id: ctx.user.id,
@@ -292,7 +291,7 @@ export const ticketsRouter = router({
     }),
 
     updateStatus: protectedProcedure.input(z.object({
-        id: z.string().uuid(),
+        id: z.number(),
         new_status: z.boolean(),
         event_code: z.string(),
     })).query(async ({ ctx, input }) => {
@@ -330,14 +329,14 @@ export const ticketsRouter = router({
     }),
 
     assign: protectedProcedure.input(z.object({
-        ticket_id: z.string().uuid(),
+        id: z.number(),
         user_id: z.number(),
         assign: z.boolean(),
         event_code: z.string(),
     })).query(async ({ ctx, input }) => {
         const ticket = await db.query.tickets.findFirst({
             where: and(
-                eq(tickets.id, input.ticket_id),
+                eq(tickets.id, input.id),
                 eq(tickets.event_code, input.event_code),
             )
         });
@@ -365,7 +364,7 @@ export const ticketsRouter = router({
 
         const update = await db.update(tickets).set({
             assigned_to_id: input.user_id
-        }).where(eq(tickets.id, input.ticket_id)).returning();
+        }).where(eq(tickets.id, input.id)).returning();
 
 
         if (!update) {
@@ -398,13 +397,13 @@ export const ticketsRouter = router({
     }),
 
     editText: protectedProcedure.input(z.object({
-        ticket_id: z.string().uuid(),
+        id: z.number(),
         new_text: z.string(),
         event_code: z.string(),
     })).query(async ({ ctx, input }) => {
         const ticket = await db.query.tickets.findFirst({
             where: and(
-                eq(tickets.id, input.ticket_id),
+                eq(tickets.id, input.id),
                 eq(tickets.event_code, input.event_code),
             )
         });
@@ -415,7 +414,7 @@ export const ticketsRouter = router({
 
         const update = await db.update(tickets).set({
             text: input.new_text
-        }).where(eq(tickets.id, input.ticket_id)).returning();
+        }).where(eq(tickets.id, input.id)).returning();
 
         if (!update) {
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Ticket text" });
@@ -425,13 +424,13 @@ export const ticketsRouter = router({
     }),
 
     editSubject: protectedProcedure.input(z.object({
-        ticket_id: z.string().uuid(),
+        id: z.number(),
         new_subject: z.string(),
         event_code: z.string(),
     })).query(async ({ ctx, input }) => {
         const ticket = await db.query.tickets.findFirst({
             where: and(
-                eq(tickets.id, input.ticket_id),
+                eq(tickets.id, input.id),
                 eq(tickets.event_code, input.event_code),
             )
         });
@@ -442,7 +441,7 @@ export const ticketsRouter = router({
 
         const update = await db.update(tickets).set({
             text: input.new_subject
-        }).where(eq(tickets.id, input.ticket_id)).returning();
+        }).where(eq(tickets.id, input.id)).returning();
 
         if (!update) {
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Ticket subject" });
@@ -452,11 +451,11 @@ export const ticketsRouter = router({
     }),
 
     follow: protectedProcedure.input(z.object({
-        ticket_id: z.string().uuid(),
+        id: z.number(),
     })).query(async ({ ctx, input }) => {
         const ticket = await db.query.tickets.findFirst({
             where: and(
-                eq(tickets.id, input.ticket_id),
+                eq(tickets.id, input.id),
             )
         });
         
@@ -474,7 +473,7 @@ export const ticketsRouter = router({
 
         const update = await db.update(tickets).set({
             followers: followers,
-        }).where(eq(tickets.id, input.ticket_id)).returning();
+        }).where(eq(tickets.id, input.id)).returning();
 
         if (!update) {
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Ticket followers" });
@@ -484,11 +483,11 @@ export const ticketsRouter = router({
     }),
 
     unfollow: protectedProcedure.input(z.object({
-        ticket_id: z.string().uuid(),
+        id: z.number(),
     })).query(async ({ ctx, input }) => {
         const ticket = await db.query.tickets.findFirst({
             where: and(
-                eq(tickets.id, input.ticket_id),
+                eq(tickets.id, input.id),
             )
         });
         
@@ -508,7 +507,7 @@ export const ticketsRouter = router({
 
         const update = await db.update(tickets).set({
             followers: updatedFollowers,
-        }).where(eq(tickets.id, input.ticket_id)).returning();
+        }).where(eq(tickets.id, input.id)).returning();
 
         if (!update) {
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Ticket followers" });
@@ -518,10 +517,10 @@ export const ticketsRouter = router({
     }),
 
     delete: protectedProcedure.input(z.object({
-        ticket_id: z.string().uuid(),
+        id: z.number(),
     })).query(async ({ ctx, input }) => {
         const ticket = await db.query.tickets.findFirst({
-            where: eq(tickets.id, input.ticket_id),
+            where: eq(tickets.id, input.id),
         });
         
         if (!ticket) {
@@ -531,7 +530,7 @@ export const ticketsRouter = router({
         let result;
 
         if (ticket.messages === null || ticket.is_open === false) {
-            result = await db.delete(tickets).where(eq(tickets.id, input.ticket_id));
+            result = await db.delete(tickets).where(eq(tickets.id, input.id));
         } else {
             throw new TRPCError({ code: "BAD_REQUEST", message: "Unable to delete Ticket with linked Messages" });
         }
@@ -591,7 +590,7 @@ export const ticketsRouter = router({
     }),
 
     ticketSubscription: publicProcedure.input(z.object({
-        ticket_id: z.string().uuid(),
+        id: z.number(),
         eventToken: z.string(),
         user_id: z.number(),
     })).subscription(async ({ input }) => {
@@ -602,7 +601,7 @@ export const ticketsRouter = router({
         }
 
         const ticket = await db.query.tickets.findFirst({
-            where: eq(tickets.id, input.ticket_id)
+            where: eq(tickets.id, input.id)
         });
         
         if (!ticket) {
@@ -626,7 +625,7 @@ export const ticketsRouter = router({
 
         return observable<TicketPost>((emitter) => {
             const listener = (type: "assign" | "status", tkt: Ticket) => {
-                if ((tkt.id === input.ticket_id)) {
+                if ((tkt.id === input.id)) {
                     emitter.next({
                         type,
                         data: tkt

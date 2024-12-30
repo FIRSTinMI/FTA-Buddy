@@ -27,7 +27,7 @@ export const messagesRouter = router({
     }),
 
     getAllOnTicket: eventProcedure.input(z.object({
-        ticket_id: z.string().uuid(),
+        ticket_id: z.number(),
         author_id: z.number(),
         event_code: z.string(),
     })).query(async ({ctx, input}) => {
@@ -74,7 +74,7 @@ export const messagesRouter = router({
     }),
 
     create: protectedProcedure.input(z.object({
-        ticket_id: z.string().uuid(),
+        ticket_id: z.number(),
         team: z.number(),
         text: z.string(),
         event_code: z.string(),

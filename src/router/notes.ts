@@ -6,8 +6,6 @@ import { and, eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { Note } from "../../shared/types";
 import { getEvent } from "../util/get-event";
-import { observable } from "@trpc/server/observable";
-import { sendNotification } from "../util/push-notifications";
 import { randomUUID } from "crypto";
 
 
@@ -132,14 +130,14 @@ export const notesRouter = router({
     }),
 
     editText: protectedProcedure.input(z.object({
-        note_id: z.string().uuid(),
+        id: z.string().uuid(),
         new_text: z.string(),
         event_code: z.string()
     })).query(async ({ ctx, input }) => {
-        const note = await db.query.tickets.findFirst({
+        const note = await db.query.notes.findFirst({
             where: and(
-                eq(tickets.id, input.note_id),
-                eq(tickets.event_code, input.event_code),
+                eq(notes.id, input.id),
+                eq(notes.event_code, input.event_code),
             )
         });
         
@@ -149,7 +147,7 @@ export const notesRouter = router({
 
         const update = await db.update(notes).set({
             text: input.new_text
-        }).where(eq(notes.id, input.note_id)).returning();
+        }).where(eq(notes.id, input.id)).returning();
 
         if (!update) {
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Ticket text" });
@@ -159,17 +157,17 @@ export const notesRouter = router({
     }),
 
     delete: protectedProcedure.input(z.object({
-        note_id: z.string().uuid(),
+        id: z.string().uuid(),
     })).query(async ({ ctx, input }) => {
         const note = await db.query.notes.findFirst({
-            where: eq(notes.id, input.note_id),
+            where: eq(notes.id, input.id),
         });
         
         if (!note) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
         }
 
-        const result = await db.delete(notes).where(eq(notes.id, input.note_id));
+        const result = await db.delete(notes).where(eq(notes.id, input.id));
 
         if (!result) {
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to delete Note" });

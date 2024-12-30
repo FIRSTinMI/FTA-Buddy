@@ -399,7 +399,7 @@ export interface Profile {
 }
 
 export interface Ticket {
-    id: string,
+    id: number,
     team: number,
     subject: string,
     author_id: number,

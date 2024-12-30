@@ -10,7 +10,7 @@ export const users = pgTable('users', {
     created_at: timestamp('created_at').notNull().defaultNow(),
     last_seen: timestamp('last_seen').notNull().defaultNow(),
     events: jsonb('events').notNull().default('[]'),
-    role: roleEnum('role').notNull().default('FTA'),
+    role: roleEnum('role').notNull().default('FTA'), 
     token: varchar('token').notNull().default(''),
     admin: boolean('admin').notNull().default(false),
 });
@@ -31,23 +31,47 @@ export const events = pgTable('events', {
 
 export const Event = typeof events.$inferInsert;
 
-export const messages = pgTable('messages', {
-    id: serial('id').primaryKey(),
-    summary: varchar('summary'),
-    message: varchar('message').notNull(),
-    created_at: timestamp('created_at').notNull().defaultNow(),
-    user_id: serial('user_id').references(() => users.id).notNull(),
-    team: varchar('team').notNull(),
-    event_code: varchar('event_code').references(() => events.code).notNull(),
-    thread_id: serial('thread'),
-    is_ticket: boolean('is_ticket').notNull().default(false),
+export const tickets = pgTable('tickets', {
+    id: uuid('id').primaryKey(),
+    team: integer('team').notNull().default(-1),
+    subject: varchar('subject').notNull().default(''),
+    author_id: integer('author_id').references(() => users.id),
+    assigned_to_id: integer('assigned_to').notNull().default(-1),
+    event_code: varchar('event_code').notNull().default(''),
     is_open: boolean('is_open').notNull().default(true),
-    assigned_to: jsonb('assigned_to').notNull().default('[]'),
+    text: varchar('text').notNull().default(''),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+    updated_at: timestamp('updated_at').notNull().defaultNow(),
     closed_at: timestamp('closed_at'),
+    messages: jsonb('messages').notNull().default('[]'),
     match_id: uuid('match_id').references(() => matchLogs.id),
+    followers: jsonb('folowers').notNull().default('[]')
+});
+
+export const Ticket = typeof tickets.$inferInsert;
+
+export const messages = pgTable('messages', {
+    id: uuid('id').primaryKey(),
+    ticket_id: uuid('ticket_id').references(() => tickets.id),
+    text: varchar('text').notNull().default(''),
+    author_id: integer('author_id').references(() => users.id),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+    updated_at: timestamp('updated_at').notNull().defaultNow(),
 });
 
 export const Message = typeof messages.$inferInsert;
+
+export const notes = pgTable('notes', {
+    id: uuid('id').primaryKey(),
+    text: varchar('text').notNull().default(''),
+    author_id: integer('author_id').references(() => users.id),
+    team: integer('team').notNull().default(-1),
+    event_code: varchar('event_code').notNull().default(''),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+    updated_at: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const Note = typeof notes.$inferInsert;
 
 export const levelEnum = pgEnum('level', ['None', 'Practice', 'Qualification', 'Playoff']);
 

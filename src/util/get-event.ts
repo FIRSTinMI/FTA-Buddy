@@ -5,7 +5,7 @@ import { DEFAULT_MONITOR } from "../../shared/constants";
 import { TeamList, EventChecklist, ScheduleDetails, ServerEvent } from "../../shared/types";
 import { db } from "../db/db";
 import schema from "../db/schema";
-import { getTickets } from "../router/messages";
+import { getEventTicketIDs } from "../router/tickets";
 
 let loadingEvents: { [key: string]: Promise<ServerEvent>; } = {};
 
@@ -55,6 +55,7 @@ export async function getEvent(eventToken: string, eventCode?: string) {
             }
 
             events[eventCode] = {
+                year: event.year,
                 code: eventCode,
                 token: eventToken,
                 teams: event.teams as TeamList,
@@ -70,12 +71,13 @@ export async function getEvent(eventToken: string, eventCode?: string) {
                 fieldStatusEmitter: new EventEmitter(),
                 checklistEmitter: new EventEmitter(),
                 ticketEmitter: new EventEmitter(),
+                messageEmitter: new EventEmitter(),
                 cycleEmitter: new EventEmitter(),
                 scheduleDetails: event.scheduleDetails as ScheduleDetails,
                 lastPrestartDone: null,
                 lastMatchEnd: null,
                 robotCycleTracking: {},
-                tickets: await getTickets({ eventCode }),
+                tickets: await getEventTicketIDs( eventCode ),
             };
 
             // Keep tickets in memory so it loads faster

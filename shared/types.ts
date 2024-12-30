@@ -333,11 +333,13 @@ export type TeamList = ({ number: string, name: string, inspected: boolean })[]
 export interface ServerEvent {
     code: string,
     token: string,
+    year: number,
     fieldMonitorEmitter: EventEmitter,
     robotStateChangeEmitter: EventEmitter,
     fieldStatusEmitter: EventEmitter,
     checklistEmitter: EventEmitter,
     ticketEmitter: EventEmitter,
+    messageEmitter: EventEmitter,
     cycleEmitter: EventEmitter,
     teams: TeamList,
     checklist: EventChecklist,
@@ -352,17 +354,17 @@ export interface ServerEvent {
     lastMatchScoresPosted: Date | null;
     robotCycleTracking: {
         prestart?: Date,
-        blue1?: TeamCycleTracking,
-        blue2?: TeamCycleTracking,
-        blue3?: TeamCycleTracking,
-        red1?: TeamCycleTracking,
-        red2?: TeamCycleTracking,
-        red3?: TeamCycleTracking;
+        blue1?: RobotCycleTracking,
+        blue2?: RobotCycleTracking,
+        blue3?: RobotCycleTracking,
+        red1?: RobotCycleTracking,
+        red2?: RobotCycleTracking,
+        red3?: RobotCycleTracking;
     };
-    tickets: Ticket[];
+    tickets: string[],
 }
 
-export interface TeamCycleTracking {
+export interface RobotCycleTracking {
     team: number,
     firstDS?: Date,
     lastDS?: Date,
@@ -393,56 +395,47 @@ export interface CycleData {
 export interface Profile {
     id: number,
     username: string,
-    role: "ADMIN" | "FTAA" | "FTA" | "CSA" | "RI";
+    role: "FTAA" | "FTA" | "CSA" | "RI";
 }
 
 export interface Ticket {
-    id: number,
-    team: string,
-    teamName?: string,
-    summary: string,
-    user_id: number,
-    user?: Profile,
-    assigned_to: Profile[],
+    id: string,
+    team: number,
+    subject: string,
+    author_id: number,
+    author: Profile,
+    assigned_to_id: number,
     event_code: string,
-    is_ticket: true,
     is_open: boolean,
-    matchId?: string,
-    message: string,
+    text: string,
     created_at: Date,
+    updated_at: Date,
     closed_at?: Date | null,
-    messages: TicketMessage[];
-    match?: {
-        id: string,
-        match_number: number,
-        play_number: number,
-        level: TournamentLevel,
-        stations: {
-            blue1: number,
-            blue2: number,
-            blue3: number,
-            red1: number,
-            red2: number,
-            red3: number;
-        };
-    };
+    messages: Message[],
+    matchId?: string,
+    followers: Profile[],
 }
 
-export interface TicketMessage extends Message {
+export interface Note {
+    id: string,
+    text: string,
+    author_id: number,
+    author: Profile,
+    team: number,
+    event_code: string,
+    created_at: Date,
+    updated_at: Date,
 }
 
 export interface Message {
     id: number,
-    message: string,
-    user_id: number,
-    team: string,
-    event_code: string,
-    thread_id: number,
-    is_ticket: false,
-    is_open: boolean,
+    ticket_id: number,
     match_id: string | null,
+    text: string,
+    author_id: number,
+    author: Profile,
     created_at: Date,
-    user?: Profile;
+    updated_at: Date,
 }
 
 export type ScheduleBreakdown = {

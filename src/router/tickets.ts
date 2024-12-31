@@ -8,7 +8,6 @@ import { Ticket, Profile} from "../../shared/types";
 import { getEvent } from "../util/get-event";
 import { observable } from "@trpc/server/observable";
 import { sendNotification } from "../util/push-notifications";
-import { randomUUID } from "crypto";
 
 export interface TicketPost {
     type: "create" | "assign" | "status";
@@ -35,143 +34,57 @@ export const ticketsRouter = router({
         });
     }),
 
-    getAllByAuthorID: eventProcedure.input(z.object({
-        author_id: z.number()
+    getAllBy: eventProcedure.input(z.object({
+        event_code: z.string().optional(),
+        author_id: z.number().optional(),
+        team_number: z.number().optional(),
+        assigned_to_id: z.number().optional(),
+        is_open: z.boolean().optional(),
     })).query(async ({ctx, input}) => {
-        const event = await getEvent(ctx.eventToken as string)
+        let query = [];
 
-        const ticketsByAuthor = await db.query.tickets.findMany({
-            where: and(
-                eq(tickets.event_code, event.code),
-                eq(tickets.author_id, input.author_id)
-            )
-        });
-
-        if (!ticketsByAuthor) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "No Tickets found by provided user" });
+        if (input.event_code) {
+            query.push(eq(tickets.event_code, input.event_code));
+        }
+        if (input.team_number) {
+            query.push(eq(tickets.team, input.team_number));
+        }
+        if (input.author_id) {
+            query.push(eq(tickets.author_id, input.author_id));
+        }
+        if (input.assigned_to_id) {
+            query.push(eq(tickets.assigned_to_id, input.assigned_to_id));
+        }
+        if (input.is_open !== undefined) {
+            query.push(eq(tickets.is_open, input.is_open));
         }
 
-        return ticketsByAuthor.sort((a, b) => {
+        const results = await db.query.tickets.findMany({
+            where: and(...query)
+        });
+
+        if (!results) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "No Tickets found by provided criteria" });
+        }
+
+        return results.sort((a, b) => {
             let aTime = a.created_at.getTime();
             let bTime = b.created_at.getTime();
             return aTime - bTime;
-        });    
-    }),
-
-    getAllByTeam: eventProcedure.input(z.object({
-        team_number: z.number()
-    })).query(async ({ctx, input}) => {
-        const event = await getEvent(ctx.eventToken as string)
-
-        const ticketsByTeam = await db.query.tickets.findMany({
-            where: and(
-                eq(tickets.event_code, event.code), 
-                eq(tickets.team, input.team_number)
-            )
         });
-
-        if (!ticketsByTeam) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "No Tickets found for provided team" });
-        }
-
-        return ticketsByTeam.sort((a, b) => {
-            let aTime = a.created_at.getTime();
-            let bTime = b.created_at.getTime();
-            return aTime - bTime;
-        });    
     }),
-
-    getAllByAssignedToId: eventProcedure.input(z.object({
-        assigned_to_id: z.number()
-    })).query(async ({ctx, input}) => {
-        const event = await getEvent(ctx.eventToken as string);
-
-        const ticketsByAssignedTo = await db.query.tickets.findMany({
-            where: and(
-                eq(tickets.event_code, event.code), 
-                eq(tickets.assigned_to_id, input.assigned_to_id)
-            )
-        });
-
-        if (!ticketsByAssignedTo) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "No Tickets found assigned to the provided user" });
-        }
-
-        return ticketsByAssignedTo.sort((a, b) => {
-            let aTime = a.created_at.getTime();
-            let bTime = b.created_at.getTime();
-            return aTime - bTime;
-        });    
-    }),
-
-    getAllUnassigned: eventProcedure.query(async ({ctx}) => {
-        const event = await getEvent(ctx.eventToken as string);
-
-        const unassignedTickets = await db.query.tickets.findMany({
-            where: and(
-                eq(tickets.event_code, event.code),
-                eq(tickets.assigned_to_id, -1)
-            )
-        });
-
-        if (!unassignedTickets) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "No unassigned Tickets found" });
-        }
-
-        return unassignedTickets.sort((a, b) => {
-            let aTime = a.created_at.getTime();
-            let bTime = b.created_at.getTime();
-            return aTime - bTime;
-        });    
-    }),
-
-    getAllOpen: eventProcedure.query(async ({ctx}) => {
-        const event = await getEvent(ctx.eventToken as string);
-
-        const openTickets = await db.query.tickets.findMany({
-            where: and(
-                eq(tickets.event_code, event.code),
-                eq(tickets.is_open, true)
-            )
-        });
-
-        if (!openTickets) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "No open Tickets found" });
-        }
-
-        return openTickets.sort((a, b) => {
-            let aTime = a.created_at.getTime();
-            let bTime = b.created_at.getTime();
-            return aTime - bTime;
-        });    
-    }),
-
-    getAllClosed: eventProcedure.query(async ({ctx}) => {
-        const event = await getEvent(ctx.eventToken as string);
-
-        const closedTickets = await db.query.tickets.findMany({
-            where: and(
-                eq(tickets.event_code, event.code),
-                eq(tickets.is_open, false)
-            )
-        });
-
-        if (!closedTickets) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "No open Tickets found" });
-        }
-
-        return closedTickets.sort((a, b) => {
-            let aTime = a.created_at.getTime();
-            let bTime = b.created_at.getTime();
-            return aTime - bTime;
-        });    
-    }),
-
 
     getAuthorProfile: eventProcedure.input(z.object({
         ticket_id: z.number(),
+        event_code: z.string().optional(),
     })).query(async ({ctx, input}) => {
-        const event = await getEvent(ctx.eventToken as string)
+        let event;
+
+        if(!input.event_code) {
+            event = await getEvent(ctx.eventToken as string)
+        } else {
+            event = await getEvent(input.event_code);
+        }
 
         const ticket = await db.query.tickets.findFirst({
             where: and(
@@ -193,9 +106,9 @@ export const ticketsRouter = router({
         return profile;
     }),
 
-    getById: protectedProcedure.input(z.object({
+    getById: eventProcedure.input(z.object({
         id: z.number(),
-        event_code: z.string()
+        event_code: z.string(),
     })).query(async ({ ctx, input }) => {
         const ticket = await db.query.tickets.findFirst({
             where: and(
@@ -213,8 +126,9 @@ export const ticketsRouter = router({
 
     getAssignedToProfile: eventProcedure.input(z.object({
         id: z.number(),
+        event_code: z.string(),
     })).query(async ({ctx, input}) => {
-        const event = await getEvent(ctx.eventToken as string)
+        const event = await getEvent(input.event_code);
 
         const ticket = await db.query.tickets.findFirst({
             where: and(
@@ -236,7 +150,7 @@ export const ticketsRouter = router({
         return profile;
     }),
 
-    create: protectedProcedure.input(z.object({
+    create: eventProcedure.input(z.object({
         team: z.number(),
         subject: z.string(),
         text: z.string(),
@@ -244,7 +158,7 @@ export const ticketsRouter = router({
         const event = await getEvent(ctx.eventToken as string);
 
         const authorProfile = await db.query.users.findFirst({
-            where: eq(users.id, ctx.user.id)
+            where: eq(users.token, ctx.token ?? "")
         });
 
         if (!authorProfile) {
@@ -254,7 +168,7 @@ export const ticketsRouter = router({
         const insert = await db.insert(tickets).values({
             team: input.team,
             subject: input.subject,
-            author_id: ctx.user.id,
+            author_id: authorProfile.id,
             author: {
                 id: authorProfile.id,
                 username: authorProfile.username,
@@ -274,11 +188,11 @@ export const ticketsRouter = router({
 
         event.ticketEmitter.emit('create', { 
             ...insert[0], user: { 
-                username: ctx.user.username, id: ctx.user.id, role: ctx.user.role 
+                username: authorProfile.username, id: authorProfile.id, role: authorProfile.role 
             } 
         });
 
-        sendNotification(event.users.filter(u => (u !== ctx.user.id)), {
+        sendNotification(event.users.filter(u => (u !== authorProfile.id)), {
             title: `New Ticket: Team ${input.team}`,
             body: input.subject,
             tag: 'Ticket Created',
@@ -290,7 +204,7 @@ export const ticketsRouter = router({
         return insert[0];
     }),
 
-    updateStatus: protectedProcedure.input(z.object({
+    updateStatus: eventProcedure.input(z.object({
         id: z.number(),
         new_status: z.boolean(),
         event_code: z.string(),
@@ -328,7 +242,7 @@ export const ticketsRouter = router({
         return update[0];
     }),
 
-    assign: protectedProcedure.input(z.object({
+    assign: eventProcedure.input(z.object({
         id: z.number(),
         user_id: z.number(),
         assign: z.boolean(),
@@ -352,7 +266,7 @@ export const ticketsRouter = router({
         }).from(users).where(eq(users.id, input.user_id));
 
 
-        if (!profile) {
+        if (!profile[0]) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve User profile" });
         }
 
@@ -382,7 +296,7 @@ export const ticketsRouter = router({
             });
         }
 
-        if (input.user_id !== ctx.user.id) {
+        if (input.user_id !== profile[0].id) {
             sendNotification([input.user_id], {
                 title: `Ticket #${ticket.id} Assigned to you`,
                 body: `You have been assigned to ticket #${ticket.id} for team ${ticket.team}`,
@@ -396,7 +310,7 @@ export const ticketsRouter = router({
         return profile;
     }),
 
-    editText: protectedProcedure.input(z.object({
+    editText: eventProcedure.input(z.object({
         id: z.number(),
         new_text: z.string(),
         event_code: z.string(),
@@ -423,7 +337,7 @@ export const ticketsRouter = router({
         return update;
     }),
 
-    editSubject: protectedProcedure.input(z.object({
+    editSubject: eventProcedure.input(z.object({
         id: z.number(),
         new_subject: z.string(),
         event_code: z.string(),
@@ -452,10 +366,12 @@ export const ticketsRouter = router({
 
     follow: protectedProcedure.input(z.object({
         id: z.number(),
+        event_code: z.string(),
     })).query(async ({ ctx, input }) => {
         const ticket = await db.query.tickets.findFirst({
             where: and(
                 eq(tickets.id, input.id),
+                eq(tickets.event_code, input.event_code),
             )
         });
         
@@ -484,10 +400,12 @@ export const ticketsRouter = router({
 
     unfollow: protectedProcedure.input(z.object({
         id: z.number(),
+        event_code: z.string(),
     })).query(async ({ ctx, input }) => {
         const ticket = await db.query.tickets.findFirst({
             where: and(
                 eq(tickets.id, input.id),
+                eq(tickets.event_code, input.event_code),
             )
         });
         
@@ -516,11 +434,15 @@ export const ticketsRouter = router({
         return update;
     }),
 
-    delete: protectedProcedure.input(z.object({
+    delete: eventProcedure.input(z.object({
         id: z.number(),
+        event_code: z.string(),
     })).query(async ({ ctx, input }) => {
         const ticket = await db.query.tickets.findFirst({
-            where: eq(tickets.id, input.id),
+            where: and(
+                eq(tickets.id, input.id),
+                eq(tickets.event_code, input.event_code),
+            )
         });
         
         if (!ticket) {

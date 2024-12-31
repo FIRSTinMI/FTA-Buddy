@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
 import { db } from "../db/db";
-import { pushSubscriptions, tickets, users, events } from "../db/schema";
+import { pushSubscriptions, tickets, users, events, messages } from "../db/schema";
 import { and, eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
-import { Ticket, Profile} from "../../shared/types";
+import { Ticket, Profile, Message} from "../../shared/types";
 import { getEvent } from "../util/get-event";
 import { observable } from "@trpc/server/observable";
 import { sendNotification } from "../util/push-notifications";
@@ -154,6 +154,7 @@ export const ticketsRouter = router({
         team: z.number(),
         subject: z.string(),
         text: z.string(),
+        match_id: z.string().optional(),
     })).query(async ({ ctx, input }) => {
         const event = await getEvent(ctx.eventToken as string);
 
@@ -179,7 +180,9 @@ export const ticketsRouter = router({
             text: input.text,
             created_at: new Date(),
             updated_at: new Date(),
-            messages: '[]',
+            event_code: event.code,
+            match_id: input.match_id,
+            messages: null,
         }).returning();
 
         if (!insert[0]) {
@@ -192,7 +195,7 @@ export const ticketsRouter = router({
             } 
         });
 
-        sendNotification(event.users.filter(u => (u !== authorProfile.id)), {
+        sendNotification(event.users.filter(user => user.id === authorProfile.id).map(user => user.id), {
             title: `New Ticket: Team ${input.team}`,
             body: input.subject,
             tag: 'Ticket Created',
@@ -222,7 +225,7 @@ export const ticketsRouter = router({
 
         const update = await db.update(tickets).set({
             is_open: input.new_status,
-            closed_at: input.new_status ? new Date() : null
+            closed_at: !input.new_status ? new Date() : null
         }).where(eq(tickets.id, input.id)).returning();
 
         (await getEvent("", ticket.event_code)).ticketEmitter.emit('status', update[0]);
@@ -464,6 +467,49 @@ export const ticketsRouter = router({
         return result;
     }),
 
+    addMessage: eventProcedure.input(z.object({
+        ticket_id: z.number(),
+        message_id: z.string().uuid(),
+        event_code: z.string(),
+    })).query(async ({ ctx, input }) => {
+        const ticket = await db.query.tickets.findFirst({
+            where: and(
+                eq(tickets.id, input.ticket_id),
+                eq(tickets.event_code, input.event_code),
+            )
+        });
+        
+        if (!ticket) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
+        }
+
+        let ticketMessages = ticket.messages as Message[];
+        let newMessage: Message | undefined;
+
+        newMessage = await db.query.messages.findFirst({
+            where: and(
+                eq(messages.ticket_id, input.ticket_id),
+                eq(messages.id, input.message_id),
+            )
+        });
+
+        let update;
+
+        if (newMessage) {
+            ticketMessages.push(newMessage);
+
+            update = await db.update(tickets).set({
+                messages: ticketMessages,
+            }).where(eq(tickets.id, input.ticket_id)).returning();
+        }
+
+        if (!update) {
+            throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Ticket followers" });
+        }
+
+        return update;
+    }),
+
     backgroundSubscription: publicProcedure.input(z.object({
         eventToken: z.string()
     })).subscription(async ({ input }) => {
@@ -561,34 +607,6 @@ export const ticketsRouter = router({
             return () => {
                 event.ticketEmitter.removeListener('assign', (tkt) => listener("assign", tkt));
                 event.ticketEmitter.removeListener('status', (tkt) => listener("status", tkt));
-            };
-        });
-    }),
-
-    teamSubscription: publicProcedure.input(z.object({
-        team: z.number(),
-        eventToken: z.string()
-    })).subscription(async ({ input }) => {
-        const event = await getEvent(input.eventToken);
-
-        return observable<TicketPost>((emitter) => {
-            const listener = (type: "assign" | "status" | "create", tkt: Ticket) => {
-                if (tkt.team == input.team) {
-                    emitter.next({
-                        type,
-                        data: tkt
-                    });
-                }
-            };
-
-            event.ticketEmitter.on('assign', (tkt) => listener("assign", tkt));
-            event.ticketEmitter.on('status', (tkt) => listener("status", tkt));
-            event.ticketEmitter.on('create', (tkt) => listener("create", tkt));
-
-            return () => {
-                event.ticketEmitter.removeListener('assign', (tkt) => listener("assign", tkt));
-                event.ticketEmitter.removeListener('status', (tkt) => listener("status", tkt));
-                event.ticketEmitter.removeListener('create', (tkt) => listener("create", tkt));
             };
         });
     }),

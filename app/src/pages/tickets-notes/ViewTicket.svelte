@@ -5,67 +5,84 @@
 	import { formatTime } from "../../../../shared/formatTime";
 	import { toast } from "../../util/toast";
 	import { eventStore } from "../../stores/event";
-	import { ROBOT } from "../../../../shared/types";
+	import { ROBOT, Ticket} from "../../../../shared/types";
 	import { Alert, Button, Textarea, ToolbarButton } from "flowbite-svelte";
 	import { navigate } from "svelte-routing";
 	import { userStore } from "../../stores/user";
 	import Icon from "@iconify/svelte";
-	import Message from "../../components/Message.svelte";
+	import Message from "../../components/MessageCard.svelte";
 	import { onDestroy, onMount, tick } from "svelte";
 	import { startBackgroundSubscription, stopBackgroundSubscription } from "../../util/notifications";
 	import { settingsStore } from "../../stores/settings";
 	import NotesPolicy from "../../components/NotesPolicy.svelte";
+    import MessageCard from "../../components/MessageCard.svelte";
 
-	export let id: string;
+	export let ticket_id: number;
 
-	let promise = trpc.messages.getTicket.query({ id: parseInt(id) });
-	let ticket: Awaited<ReturnType<typeof trpc.messages.getTicket.query>> | undefined = undefined;
-	let time: string = "";
-	let station: ROBOT | undefined = undefined;
+	let event = get(eventStore);
 	let user = get(userStore);
+
+	let ticket: Awaited<ReturnType<typeof trpc.tickets.getById.query>>;
+
+	let ticketPromise: Promise<any> | undefined;
+	
+	let matchId: string | undefined | null;
+
+	let matchPromise: Promise<any> | undefined;
+
+	let match: Awaited<ReturnType<typeof trpc.match.getMatch.query>>;
+
+	let time: string = "";
+
+	let station: ROBOT | undefined = undefined;
+
 	let assignedToUser = false;
 
-	let subscription: ReturnType<typeof trpc.messages.ticketSubscription.subscribe> | undefined;
+	let subscription: ReturnType<typeof trpc.tickets.ticketSubscription.subscribe> | undefined;
 
-	$: if (ticket && user) {
-		assignedToUser = ticket.assigned_to.map((u) => u?.id).includes(user.id);
-	}
+	async function getTicketAndMatch() {
+		ticketPromise = trpc.tickets.getById.query({id: ticket_id, event_code: event.code});
+		ticket = await ticketPromise;
 
-	promise
-		.then(async (res) => {
-			res.messages = res.messages.reverse();
-			ticket = res;
-			time = formatTime(ticket?.created_at);
-			if (ticket.match) {
+		if (ticket) {
+			if (ticket.match_id){
+				matchId = ticket.match_id;
+				matchPromise = trpc.match.getMatch.query({id: matchId})
+				match = await matchPromise;
+
 				switch (ticket.team) {
-					case ticket.match.stations.red1:
+					case match.red1:
 						station = ROBOT.red1;
 						break;
-					case ticket.match.stations.red2:
+					case match.red2:
 						station = ROBOT.red2;
 						break;
-					case ticket.match.stations.red3:
+					case match.red3:
 						station = ROBOT.red3;
 						break;
-					case ticket.match.stations.blue1:
+					case match.blue1:
 						station = ROBOT.blue1;
 						break;
-					case ticket.match.stations.blue2:
+					case match.blue2:
 						station = ROBOT.blue2;
 						break;
-					case ticket.match.stations.blue3:
+					case match.blue3:
 						station = ROBOT.blue3;
 						break;
+					default:
+						console.log("Unable to assign match station")
+						break;
 				}
+			} else {
+				matchId = null;
 			}
+			time = formatTime(ticket.created_at);
+		}
+	}
 
-			await tick();
-			scrollToBottom();
-		})
-		.catch((err) => {
-			console.error(err);
-			toast("An error occurred while fetching the ticket", err.message);
-		});
+	onMount(async () => {
+		getTicketAndMatch();
+    });
 
 	setInterval(
 		() => {
@@ -75,10 +92,15 @@
 		time.includes("s ") ? 1000 : 60000
 	);
 
-	async function closeOpenTicket() {
+	async function changeOpenStatus() {
+		let update;
 		if (!ticket) return;
 		try {
-			const update = await trpc.messages.updateTicketStatus.query({ id: ticket.id, status: !ticket.is_open });
+			if (ticket.is_open === true) {
+				update = await trpc.tickets.updateStatus.query({ id: ticket.id, new_status: false, event_code: event.code });
+			} else {
+				update = await trpc.tickets.updateStatus.query({ id: ticket.id, new_status: true, event_code: event.code });
+			}
 			ticket.is_open = update.is_open;
 		} catch (err: any) {
 			toast("An error occurred while updating the ticket", err.message);
@@ -88,10 +110,17 @@
 	}
 
 	async function assignSelf() {
+		let update;
 		if (!ticket) return;
 		try {
-			const update = await trpc.messages.assignTicket.query({ id: ticket.id, user: user?.id ?? 0, assign: !assignedToUser });
-			ticket.assigned_to = update;
+			if (ticket.assigned_to_id === user.id) {
+				update = await trpc.tickets.assign.query({ id: ticket.id, user_id: user.id, assign: false, event_code: event.code});
+			} else {
+				update = await trpc.tickets.assign.query({ id: ticket.id, user_id: user.id, assign: true, event_code: event.code});
+			}
+			if (update){
+				ticket.assigned_to = update[0];
+			}
 		} catch (err: any) {
 			toast("An error occurred while updating the ticket", err.message);
 			console.error(err);
@@ -100,13 +129,13 @@
 	}
 
 	function viewLog() {
-		if (!ticket || !ticket.match || !station) return;
-		navigate(`/app/logs/${ticket.match.id}/${station}`);
+		if (!ticket || !ticket.match_id || !station) return;
+		navigate(`/app/logs/${ticket.match_id}/${station}`);
 	}
 
 	function back() {
 		if (window.history.state === null) {
-			navigate("/app/messages");
+			navigate("/app/tickets");
 		} else {
 			window.history.back();
 		}
@@ -115,13 +144,13 @@
 	function sendKey(event: KeyboardEvent) {
 		if (event.key === "Enter" && !event.shiftKey) {
 			event.preventDefault();
-			sendMessage(new SubmitEvent("submit"));
+			postMessage(new SubmitEvent("submit"));
 		}
 	}
 
 	let message: string = "";
 
-	async function sendMessage(evt: SubmitEvent) {
+	async function postMessage(evt: SubmitEvent) {
 		if (message.trim().length < 1) {
 			toast("Error Sending Message", "Message cannot be empty");
 		}
@@ -133,11 +162,10 @@
 				await notesPolicyElm.confirmPolicy();
 			}
 
-			await trpc.messages.addMessage.query({
-				message: message.trim(),
-				team: ticket.team,
-				ticketId: ticket.id,
-				eventToken: get(userStore).eventToken,
+			const messageId = await trpc.messages.create.query({
+				text: message.trim(),
+				ticket_id: ticket.id,
+				event_code: event.code,
 			});
 
 			console.log({
@@ -146,18 +174,14 @@
 				team: ticket.team.toString(),
 				user: user,
 				user_id: user.id,
-				event_code: get(eventStore).code,
+				event_code: event.code,
 				created_at: new Date(),
 			});
 
-			ticket.messages.push({
-				id: 0,
-				message: message.trim(),
-				team: ticket.team.toString(),
-				user: user,
-				user_id: user.id,
-				event_code: get(eventStore).code,
-				created_at: new Date(),
+			await trpc.tickets.addMessage.query({
+				ticket_id: ticket.id,
+				message_id: messageId,
+				event_code: event.code, 
 			});
 
 			message = "";
@@ -182,24 +206,21 @@
 		stopBackgroundSubscription();
 		if (subscription) subscription.unsubscribe();
 		if (ticket) {
-			subscription = trpc.messages.ticketSubscription.subscribe(
-				{ id: ticket.id, eventToken: $userStore.eventToken },
+			subscription = trpc.tickets.ticketSubscription.subscribe(
+				{ id: ticket.id, eventToken: user.eventToken, user_id: user.id },
 				{
 					onData: (data) => {
 						console.log(data);
-						if (!ticket) return;
-						if (data.data.is_ticket) {
+						if (ticket && data){
 							if (data.data.id !== ticket.id) return;
+							if (data.type === "status") {
+								ticket.is_open = data.data.is_open;
+							} else if (data.type === "assign") {
+								ticket.assigned_to_id = data.data.assigned_to_id;
+								ticket.assigned_to = data.data.assigned_to;
+							}
 						} else {
-							if (data.data.thread_id !== ticket.id) return;
-						}
-
-						if (data.type === "status") {
-							ticket.is_open = data.data.is_open;
-						} else if (data.type === "assign" && data.data.is_ticket) {
-							ticket.assigned_to = data.data.assigned_to;
-						} else if (data.type === "ticketReply" && !data.data.is_ticket) {
-							ticket.messages.push(data.data);
+							return;
 						}
 					},
 				}
@@ -217,14 +238,14 @@
 
 <div class="container mx-auto px-2 pt-2 h-full flex flex-col gap-2 max-w-5xl">
 	<Button on:click={back} class="w-fit">Back</Button>
-	{#await promise}
+	{#await ticketPromise}
 		<Spinner />
 	{:then}
-		{#if ticket === undefined}
+		{#if !ticket}
 			<p class="text-red-500">Ticket not found</p>
 		{:else}
 			<h1 class="text-2xl font-bold">
-				Ticket #{id} -
+				Ticket #{ticket_id} -
 				{#if ticket.is_open}
 					<span class="text-green-500 font-bold">Open</span>
 				{:else}
@@ -232,47 +253,48 @@
 				{/if}
 			</h1>
 			<div class="text-left">
-				<p class="text-lg">Team: {ticket.team} - {get(eventStore).teams.find((t) => t.number == ticket?.team)?.name}</p>
+				<p class="text-lg">Team: {ticket.team} - {get(eventStore).teams.find((team) => parseInt(team.number) === ticket.team)}</p>
 				<p class="text-lg">Created: {time}</p>
 				<p class="text-lg">
 					Assigned To:
-					{#if ticket.assigned_to && ticket.assigned_to.length > 0}
-						{ticket.assigned_to.map((p) => p?.username).join(", ")}
+					{#if ticket.assigned_to}
+						{ticket.assigned_to.username}
 					{:else}
 						Unassigned
 					{/if}
 				</p>
-				{#if ticket.match}
+				{#if match}
 					<p class="text-lg">
-						Match: {ticket.match.level.replace("None", "Test")}
-						{ticket.match.match_number}/{ticket.match.play_number}
+						Match: {match.level.replace("None", "Test")}
+						{match.match_number}/{match.play_number}
 						{station}
 					</p>
 				{/if}
 			</div>
 			<div class="flex gap-2">
-				<Button size="sm" on:click={() => closeOpenTicket()}>{ticket.is_open ? "Close Ticket" : "Reopen Ticket"}</Button>
+				<Button size="sm" on:click={() => changeOpenStatus()}>{ticket.is_open ? "Close Ticket" : "Reopen Ticket"}</Button>
 				{#if user}
 					<Button size="sm" on:click={() => assignSelf()}>
 						{assignedToUser ? "Unassign" : "👀 Claim Ticket"}
 					</Button>
 				{/if}
-				{#if ticket.match}
+				{#if match}
 					<Button size="sm" on:click={() => viewLog()}>View Log</Button>
 				{/if}
 			</div>
 			<div class="flex flex-col overflow-y-auto h-full" id="chat">
 				<div class="flex flex-col grow gap-2 justify-end">
-					{#if ticket.messages.length < 1}
+					{#if !ticket.messages}
 						<div class="text-center">No messages</div>
+					{:else}
+						{#each ticket.messages as message}
+							<MessageCard {message} />
+						{/each}
 					{/if}
-					{#each ticket.messages as message}
-						<Message {message} team={ticket.team} />
-					{/each}
 				</div>
 			</div>
-			<form on:submit|preventDefault={sendMessage}>
-				<label for="chat" class="sr-only">Your message</label>
+			<form on:submit|preventDefault={postMessage}>
+				<label for="chat" class="sr-only">Add a Message:</label>
 				<Alert color="dark" class="px-0 py-2">
 					<svelte:fragment slot="icon">
 						<Textarea id="chat" class="ml-3" rows="1" placeholder="Your message..." on:keydown={sendKey} bind:value={message} />

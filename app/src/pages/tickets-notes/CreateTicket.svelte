@@ -10,45 +10,49 @@
 	import { settingsStore } from "../../stores/settings";
 
 	export let team: number | undefined;
+	const event = get(eventStore);
 
-	let teamOptions: SelectOptionType<number>[] = get(eventStore)
+	let teamOptions: SelectOptionType<number>[] = event
 		.teams.map((team) => ({ value: parseInt(team.number), name: `${team.number} - ${team.name}` }))
 		.sort((a, b) => a.value - b.value);
 
-	let promise: ReturnType<typeof trpc.match.getMatchNumbers.query>;
+	let matchesPromise: ReturnType<typeof trpc.match.getMatchNumbers.query>;
 	let matches: SelectOptionType<string>[] = [];
-	export let match: string | undefined = undefined;
 
-	async function getMatchesForTeam(team: number) {
-		promise = trpc.match.getMatchNumbers.query({ team });
-		matches = (await promise).map((match) => ({
-			value: match.id,
-			name: `${match.level} ${match.match_number}/${match.play_number}`,
-		}));
+	export let matchId: string | undefined = undefined;
+
+	async function getMatchesForTeam(team: number | undefined) {
+		if (team) {
+			matchesPromise = trpc.match.getMatchNumbers.query({ team });
+			matches = (await matchesPromise).map((match) => ({
+				value: match.id,
+				name: `${match.level} ${match.match_number}/${match.play_number}`,
+			}));
+		}
 	}
 
 	let disableSubmit = false;
-	let ticketSummary: string = "";
-	let content: string = "";
+
+	let ticketSubject: string = "";
+	let ticketText: string = "";
 
 	$: {
-		disableSubmit = team === undefined || content.length === 0;
+		disableSubmit = team === undefined || ticketText.length === 0 || ticketSubject.length === 0;
 	}
 
 	async function createTicket(evt: Event) {
-		if (team === undefined || content.length === 0) return;
+		if (team === undefined || ticketText.length === 0 || ticketSubject.length === 0) return;
 
 		try {
 			if (!$settingsStore.acknowledgedNotesPolicy) {
 				await notesPolicyElm.confirmPolicy();
 			}
 
-			const res = await trpc.messages.createTicket.query({
+			const res = await trpc.tickets.create.query({
 				team: team,
-				summary: ticketSummary,
-				message: content,
-				matchID: match,
-				eventToken: get(userStore).eventToken,
+				subject: ticketSubject,
+				text: ticketText,
+				match_id: matchId,
 			});
 			toast("Ticket created successfully", "success", "green-500");
 			navigate("/app/ticket/" + res.id);
@@ -79,18 +83,22 @@
 			Select Team
 			<Select class="mt-2" items={teamOptions} bind:value={team} on:change={() => getMatchesForTeam(team)} />
 		</Label>
-		<Label for="summary">Ticket Summary</Label>
-		<Textarea id="summary" class="w-full" bind:value={ticketSummary} />
-		<Label for="textarea">Ticket Content</Label>
-		<Textarea id="textarea" class="w-full" rows="5" bind:value={content} />
-		{#await promise then}
+
+		<Label for="subject">Ticket Subject:</Label>
+		<Textarea id="subject" class="w-full" bind:value={ticketSubject} />
+
+		<Label for="text">Ticket Text:</Label>
+		<Textarea id="text" class="w-full" rows="5" bind:value={ticketText} />
+
+		{#await matchesPromise then}
 			{#if matches.length > 0}
 				<Label class="w-full text-left">
 					Attach Ticket to a Match <span class="text-xs text-gray-600">(optional)</span>
-					<Select class="mt-2" items={matches} bind:value={match} />
+					<Select class="mt-2" items={matches} bind:value={matchId} />
 				</Label>
 			{/if}
 		{/await}
+		
 		<Button type="submit" disabled={disableSubmit}>Create Ticket</Button>
 	</form>
 </div>

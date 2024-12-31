@@ -2,12 +2,17 @@ import { z } from "zod";
 import { eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
 import { db } from "../db/db";
 import { pushSubscriptions, tickets, users, events, notes } from "../db/schema";
+import { observable } from "@trpc/server/observable";
 import { and, eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { Note } from "../../shared/types";
 import { getEvent } from "../util/get-event";
 import { randomUUID } from "crypto";
 
+export interface NotePost {
+    type: "create";
+    data: Note;
+}
 
 export const notesRouter = router({
 
@@ -174,6 +179,30 @@ export const notesRouter = router({
         }
 
         return result;
+    }),
+
+    teamSubscription: publicProcedure.input(z.object({
+        team: z.number(),
+        eventToken: z.string()
+    })).subscription(async ({ input }) => {
+        const event = await getEvent(input.eventToken);
+
+        return observable<NotePost>((emitter) => {
+            const listener = (type: "create", note: Note) => {
+                if (note.team == input.team) {
+                    emitter.next({
+                        type,
+                        data: note
+                    });
+                }
+            };
+
+            event.ticketEmitter.on('create', (note) => listener("create", note));
+
+            return () => {
+                event.ticketEmitter.removeListener('create', (note) => listener("create", note));
+            };
+        });
     }),
 
 });

@@ -1,47 +1,27 @@
 import { writable } from "svelte/store";
+import type { Profile } from "../../../shared/types";
 
 export interface Message {
-    id: number;
-    message: string;
-    created_at: Date;
-    user_id: number;
-    team: string;
-    event_code: string;
-    username: string;
-    thread_id: number;
-}
-
-export interface Ticket extends Message {
-    is_ticket: true;
-    is_open: boolean;
-    assigned_to: [];
-    closed_at?: Date;
-}
-
-export interface Notes {
-    messages: { [key: string]: Message[] };
-    tickets: Ticket[];
-    unread: number;
+    id: number,
+    ticket_id: number,
+    match_id: string | null,
+    text: string,
+    author_id: number,
+    author: Profile,
+    created_at: Date,
+    updated_at: Date,
 }
 
 let initialMessages = localStorage.getItem('messages');
 
 if (!initialMessages) {
-    initialMessages = JSON.stringify({
-        messages: {},
-        tickets: [],
-        unread: 0,
-    });
+    initialMessages = JSON.stringify(null);
 }
 
-export const messagesStore = writable<Notes>(JSON.parse(initialMessages));
-messagesStore.subscribe((value: Notes) => {
+export const messagesStore = writable<Message>(JSON.parse(initialMessages));
+messagesStore.subscribe((value: Message) => {
     if (value === undefined) {
-        value = {
-            messages: {},
-            tickets: [],
-            unread: 0,
-        };
+        return;
     }
-    localStorage.setItem('notes', JSON.stringify(value));
+    localStorage.setItem('message', JSON.stringify(value));
 });

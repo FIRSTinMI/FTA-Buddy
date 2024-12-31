@@ -42,17 +42,13 @@ export const messagesRouter = router({
             throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
         }
 
-        const messageIds = ticket.messages as string[];
+        const messages = ticket.messages as Message[];
 
-        const messagesOnTicket = await db.query.messages.findMany({
-            where: inArray(messages.id, messageIds),
-        });
-
-        if (!messagesOnTicket) {
+        if (!messages) {
             throw new TRPCError({ code: "NOT_FOUND", message: "No Messages found on this Ticket" });
         }
 
-        return messagesOnTicket.sort((a, b) => {
+        return messages.sort((a, b) => {
             let aTime = a.created_at.getTime();
             let bTime = b.created_at.getTime();
             return aTime - bTime;
@@ -75,7 +71,6 @@ export const messagesRouter = router({
 
     create: protectedProcedure.input(z.object({
         ticket_id: z.number(),
-        team: z.number(),
         text: z.string(),
         event_code: z.string(),
     })).query(async ({ ctx, input }) => {
@@ -128,7 +123,7 @@ export const messagesRouter = router({
         const followers = ticket.followers as number[];
 
         sendNotification(followers, {
-            title: `New Message on Ticket "${ticket.subject}": Team ${input.team}`,
+            title: `New Message on Ticket "${ticket.subject}"`,
             body: input.text,
             tag: 'New Message on Ticket',
             data: {
@@ -136,7 +131,7 @@ export const messagesRouter = router({
             }
         });
 
-        return insert[0];
+        return insert[0].id;
     }),
 
     editText: protectedProcedure.input(z.object({

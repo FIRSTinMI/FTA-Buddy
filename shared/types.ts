@@ -343,7 +343,7 @@ export interface ServerEvent {
     cycleEmitter: EventEmitter,
     teams: TeamList,
     checklist: EventChecklist,
-    users: number[],
+    users: Profile[],
     monitorFrame: MonitorFrame,
     history: MonitorFrame[],
     scheduleDetails: ScheduleDetails,
@@ -412,9 +412,9 @@ export interface Ticket {
     created_at: Date,
     updated_at: Date,
     closed_at?: Date | null,
-    messages: Message[],
+    messages: Message[] | null,
     matchId?: string,
-    followers: Profile[],
+    followers: number[] | null,
 }
 
 export interface Note {
@@ -429,9 +429,8 @@ export interface Note {
 }
 
 export interface Message {
-    id: number,
+    id: string,
     ticket_id: number,
-    match_id: string | null,
     text: string,
     author_id: number,
     author: Profile,

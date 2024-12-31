@@ -1,4 +1,5 @@
 import { boolean, integer, jsonb, pgEnum, pgTable, serial, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { Profile, Message } from "../../shared/types";
 
 export const roleEnum = pgEnum('role', ['FTA', 'FTAA', 'CSA', 'RI']);
 
@@ -36,47 +37,41 @@ export const tickets = pgTable('tickets', {
     team: integer('team').notNull().default(-1),
     subject: varchar('subject').notNull().default(''),
     author_id: integer('author_id').notNull(),
-    author: jsonb('author').notNull(),
+    author: jsonb('author').$type<Profile>().notNull(),
     assigned_to_id: integer('assigned_to').notNull().default(-1),
-    assigned_to: jsonb('assigned_to'),
+    assigned_to: jsonb('assigned_to').$type<Profile>(),
     event_code: varchar('event_code').notNull().default(''),
     is_open: boolean('is_open').notNull().default(true),
     text: varchar('text').notNull().default(''),
     created_at: timestamp('created_at').notNull().defaultNow(),
     updated_at: timestamp('updated_at').notNull().defaultNow(),
     closed_at: timestamp('closed_at'),
-    messages: jsonb('messages').notNull().default('[]'),
+    messages: jsonb('messages').$type<Message[]>(),
     match_id: uuid('match_id').references(() => matchLogs.id),
-    followers: jsonb('followers').notNull().default('[]')
+    followers: jsonb('followers').$type<number[]>()
 });
-
-export const Ticket = typeof tickets.$inferInsert;
 
 export const messages = pgTable('messages', {
     id: uuid('id').primaryKey(),
     ticket_id: serial('ticket_id').references(() => tickets.id),
     text: varchar('text').notNull().default(''),
     author_id: integer('author_id').notNull(),
-    author: jsonb('author').notNull(),
+    author: jsonb('author').$type<Profile>().notNull(),
     event_code: varchar('event_code').notNull().default(''),
     created_at: timestamp('created_at').notNull().defaultNow(),
     updated_at: timestamp('updated_at').notNull().defaultNow(),
 });
-
-export const Message = typeof messages.$inferInsert;
 
 export const notes = pgTable('notes', {
     id: uuid('id').primaryKey(),
     text: varchar('text').notNull().default(''),
     author_id: integer('author_id').notNull(),
-    author: jsonb('author').notNull(),
+    author: jsonb('author').notNull().$type<Profile>(),
     team: integer('team').notNull().default(-1),
     event_code: varchar('event_code').notNull().default(''),
     created_at: timestamp('created_at').notNull().defaultNow(),
     updated_at: timestamp('updated_at').notNull().defaultNow(),
 });
-
-export const Note = typeof notes.$inferInsert;
 
 export const levelEnum = pgEnum('level', ['None', 'Practice', 'Qualification', 'Playoff']);
 

@@ -22,6 +22,7 @@ import { createProxyServer } from 'http-proxy';
 import proxy from 'express-http-proxy';
 import { createServer } from 'http';
 import { messagesRouter } from './router/messages';
+import { ticketsRouter } from './router/tickets';
 import { json2csv } from 'json-2-csv';
 import { Marked } from 'marked';
 import { join } from 'path';
@@ -34,6 +35,7 @@ import { observable } from '@trpc/server/observable';
 import { initializePushNotifications } from './util/push-notifications';
 import { logAnalysisLoop } from './util/log-analysis';
 import { ftcRouter } from './router/ftc';
+import { notesRouter } from './router/notes';
 
 const port = parseInt(process.env.PORT || '3001');
 
@@ -51,6 +53,8 @@ const appRouter = router({
     field: fieldMonitorRouter,
     cycles: cycleRouter,
     messages: messagesRouter,
+    tickets: ticketsRouter,
+    notes: notesRouter,
     app: router({
         version: publicProcedure.subscription(async () => {
             return observable<string>((emitter) => {

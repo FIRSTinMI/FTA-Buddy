@@ -195,7 +195,7 @@ export const ticketsRouter = router({
             } 
         });
 
-        ticketCreateNotification({
+        ticketCreateNotification(ctx, {
             title: `New Ticket: Team ${input.team}, Event ${event.code}`,
             body: input.subject,
             tag: `Ticket Created`,
@@ -249,7 +249,7 @@ export const ticketsRouter = router({
         // const followers = ticket.followers as number[];
 
         if (ticket.followers) {
-            ticketNotification(ticket.followers, {
+            ticketNotification(ctx, ticket.followers, {
                 title: `Ticket ${ticket.id}: Status Changed to ${ticket.is_open ? `OPEN` : `CLOSED`}`,
                 body: ticket.subject,
                 tag: `Ticket Status Changed`,
@@ -313,7 +313,7 @@ export const ticketsRouter = router({
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to assign User" });
         }
 
-        ticketAssignNotification(input.user_id, {
+        ticketAssignNotification(ctx, input.user_id, {
             title: `Ticket #${ticket.id} Assigned to You`,
             body: `You have been assigned to ticket #${ticket.id} for team ${ticket.team}`,
             tag: 'Ticket Assigned',
@@ -323,7 +323,7 @@ export const ticketsRouter = router({
         });
 
         if (ticket.followers) {
-            ticketNotification(ticket.followers, {
+            ticketNotification(ctx, ticket.followers, {
                 title: `Ticket ${ticket.id}: Reassigned to ${profile[0].username}`,
                 body: ticket.subject,
                 tag: `Ticket Reassigned`,
@@ -382,7 +382,7 @@ export const ticketsRouter = router({
                 }  
             });
 
-            ticketAssignNotification(user_profile.id, {
+            ticketAssignNotification(ctx, user_profile.id, {
                 title: `Unassigned from Ticket #${ticket.id}`,
                 body: `You have been unassigned from ticket #${ticket.id} for Team #${ticket.team}`,
                 tag: 'Ticket Assigned',
@@ -392,7 +392,7 @@ export const ticketsRouter = router({
             });
 
             if (ticket.followers) {
-                ticketNotification(ticket.followers, {
+                ticketNotification(ctx, ticket.followers, {
                     title: `Ticket ${ticket.id}: Unassigned ${user_profile.username}`,
                     body: `User ${user_profile.username} has been unassigned from Ticket #${ticket.id} for Team #${ticket.team}`,
                     tag: `Ticket Assigned`,
@@ -612,7 +612,7 @@ export const ticketsRouter = router({
             });
 
             if (ticket.followers) {
-                ticketNotification(ticket.followers.filter(user_id => user_id !== newMessage.author.id).map(user_id => user_id), {
+                ticketNotification(ctx, ticket.followers.filter(user_id => user_id !== newMessage.author.id).map(user_id => user_id), {
                     title: `New Message: Ticket #${ticket.id} by ${newMessage.author.username}`,
                     body: newMessage.text,
                     tag: 'New Message Added',

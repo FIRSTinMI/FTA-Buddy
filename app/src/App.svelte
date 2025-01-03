@@ -1,7 +1,7 @@
 <script lang="ts">
 	import FTCStatus from "./pages/ftc/FTCStatus.svelte";
 	import Icon from "@iconify/svelte";
-	import { Button, CloseButton, DarkMode, Drawer, Indicator, Modal, Sidebar, SidebarGroup, SidebarItem, SidebarWrapper, Toast } from "flowbite-svelte";
+	import { Button, CloseButton, Drawer, Indicator, Modal, Sidebar, SidebarGroup, SidebarItem, SidebarWrapper, Toast } from "flowbite-svelte";
 	import { Link, Route, Router, navigate } from "svelte-routing";
 	import { get } from "svelte/store";
 	import { frameHandler, subscribeToFieldMonitor } from "./field-monitor";
@@ -10,10 +10,9 @@
 	import Flashcard from "./pages/Flashcards.svelte";
 	import Monitor from "./pages/Monitor.svelte";
 	import Login from "./pages/management/Login.svelte";
-	import Messages from "./pages/tickets-notes/Messages.svelte";
+	import Messages from "./pages/tickets-notes/TicketList.svelte";
 	import Reference from "./pages/references/Reference.svelte";
 	import { userStore } from "./stores/user";
-	import { messagesStore } from "./stores/messages";
 	import { settingsStore } from "./stores/settings";
 	import { VERSIONS, update } from "./util/updater";
 	import { sineIn } from "svelte/easing";
@@ -28,7 +27,6 @@
 	import { onDestroy, onMount } from "svelte";
 	import CreateTicket from "./pages/tickets-notes/CreateTicket.svelte";
 	import ViewTicket from "./pages/tickets-notes/ViewTicket.svelte";
-	import { startBackgroundSubscription, stopBackgroundSubscription } from "./util/notifications";
 	import { trpc } from "./main";
 	import UpdateToast from "./components/UpdateToast.svelte";
 	import EventDashboard from "./pages/EventDashboard.svelte";
@@ -38,9 +36,14 @@
 	import ComponentManuals from "./pages/references/ComponentManuals.svelte";
 	import WiringDiagrams from "./pages/references/WiringDiagrams.svelte";
 	import SoftwareDocs from "./pages/references/SoftwareDocs.svelte";
+    import TicketList from "./pages/tickets-notes/TicketList.svelte";
+    import NoteList from "./pages/tickets-notes/NoteList.svelte";
+    import NotificationList from "./pages/tickets-notes/NotificationList.svelte";
+    import { notificationsStore } from "./stores/notifications";
 
 	// Checking userentication
 	let user = get(userStore);
+	let notifications = get(notificationsStore);
 
 	// On mount check if the user's permissions have changed
 	onMount(async () => {
@@ -230,16 +233,6 @@
 		installPrompt = null;
 	});
 
-	// Update notification count
-	startBackgroundSubscription();
-
-	let notifications = get(messagesStore).unread || 0;
-	messagesStore.subscribe((value) => {
-		notifications = value.unread;
-	});
-
-	let messagesChild: Messages;
-
 	let event = get(eventStore);
 	eventStore.subscribe((value) => {
 		event = value;
@@ -262,10 +255,6 @@
 	setInterval(() => {
 		if (window.outerWidth > 1900) fullscreen = window.innerHeight === 1080;
 	}, 200);
-
-	onDestroy(() => {
-		stopBackgroundSubscription();
-	});
 </script>
 
 {#if showToast}
@@ -330,14 +319,14 @@
 						</SidebarItem>
 					{:else if user?.role === "CSA" || user?.role === "RI"}
 						<SidebarItem
-							label="Monitor"
+							label="Tickets"
 							on:click={() => {
 								hideMenu = true;
-								navigate("/app/monitor");
+								navigate("/app/");
 							}}
 						>
 							<svelte:fragment slot="icon">
-								<Icon icon="mdi:television" class="w-8 h-8" />
+								<Icon icon="mdi:message-text" class="w-8 h-8" />
 							</svelte:fragment>
 						</SidebarItem>
 					{/if}
@@ -363,34 +352,18 @@
 							<svelte:fragment slot="icon">
 								<Icon icon="mdi:message-text" class="w-8 h-8" />
 							</svelte:fragment>
-							{#if notifications > 0}
-								<Indicator color="red" border size="xl" placement="top-left">
-									<span
-										class="text-white
-                                	text-xs">{notifications}</span
-									>
-								</Indicator>
-							{/if}
 						</SidebarItem>
 					{:else if user?.role === "CSA" || user?.role === "RI"}
 						<SidebarItem
-							label="Tickets"
+							label="Monitor"
 							on:click={() => {
 								hideMenu = true;
-								navigate("/app/");
+								navigate("/app/monitor");
 							}}
 						>
 							<svelte:fragment slot="icon">
-								<Icon icon="mdi:message-text" class="w-8 h-8" />
+								<Icon icon="mdi:television" class="w-8 h-8" />
 							</svelte:fragment>
-							{#if notifications > 0}
-								<Indicator color="red" border size="xl" placement="top-left">
-									<span
-										class="text-white
-                                	text-xs">{notifications}</span
-									>
-								</Indicator>
-							{/if}
 						</SidebarItem>
 					{/if}
 					<SidebarItem
@@ -425,6 +398,25 @@
 						<svelte:fragment slot="icon">
 							<Icon icon="mdi:file-document-outline" class="w-8 h-8" />
 						</svelte:fragment>
+					</SidebarItem>
+					<SidebarItem
+						label="My Notifications"
+						on:click={() => {
+							hideMenu = true;
+							navigate("/app/notifications");
+						}}
+					>
+						<svelte:fragment slot="icon">
+							<Icon icon="mdi:file-document-outline" class="w-8 h-8" />
+						</svelte:fragment>
+						{#if notifications.length > 0}
+							<Indicator color="red" border size="xl" placement="top-left">
+								<span
+									class="text-white
+								text-xs">{notifications.length}</span
+								>
+							</Indicator>
+						{/if}
 					</SidebarItem>
 				</SidebarGroup>
 			{/if}
@@ -605,12 +597,12 @@
 						<Route path="/">
 							<Monitor {fullscreen} {frameHandler} />
 						</Route>
-						<Route path="/messages">
-							<Messages bind:this={messagesChild} team={undefined} />
+						<Route path="/tickets">
+							<TicketList/>
 						</Route>
 					{:else if user?.role === "CSA" || user?.role === "RI"}
 						<Route path="/">
-							<Messages bind:this={messagesChild} team={undefined} />
+							<TicketList/>
 						</Route>
 						<Route path="/monitor">
 							<Monitor {fullscreen} {frameHandler} />
@@ -618,14 +610,16 @@
 					{/if}
 				{:else}
 					<Route path="/">
-						<Messages bind:this={messagesChild} team={undefined} />
+						<TicketList/>
 					</Route>
 					<Route path="/monitor">
 						<Monitor {fullscreen} {frameHandler} />
 					</Route>
 				{/if}
 
+				<Route path="/notifications" component={NotificationList} />
 				<Route path="/flashcards" component={Flashcard} />
+				<Route path="/notes" component={NoteList} />
 				<Route path="/references" component={Reference} />
 				<Route path="/statuslights" component={StatusLights} />
 				<Route path="/fieldmanuals" component={FieldManuals} />
@@ -660,27 +654,45 @@
 
 			{#if user.token && user.eventToken && !fullscreen}
 				<div class="flex justify-around py-2 bg-neutral-900 dark:bg-neutral-700 text-white">
-					<Link to="/app/">
-						<Button class="!p-2" color="none">
-							<Icon icon="mdi:television" class="w-8 h-8" />
-						</Button>
-					</Link>
-					<Link to="/app/flashcards">
-						<Button class="!p-2" color="none">
-							<Icon icon="mdi:message-alert" class="w-8 h-8" />
-						</Button>
-					</Link>
-					<Link to="/app/references">
-						<Button class="!p-2" color="none">
-							<Icon icon="mdi:file-document-outline" class="w-8 h-8" />
-						</Button>
-					</Link>
-					<Link to="/app/messages">
+					{#if user?.role === "FTA" || user?.role === "FTAA"}
+						<Link to="/app/">
+							<Button class="!p-2" color="none">
+								<Icon icon="mdi:television" class="w-8 h-8" />
+							</Button>
+						</Link>
+						<Link to="/app/flashcards">
+							<Button class="!p-2" color="none">
+								<Icon icon="mdi:message-alert" class="w-8 h-8" />
+							</Button>
+						</Link>
+						<Link to="/app/references">
+							<Button class="!p-2" color="none">
+								<Icon icon="mdi:file-document-outline" class="w-8 h-8" />
+							</Button>
+						</Link>
+					{:else if user?.role === "CSA" || user?.role === "RI"}
+						<Link to="/app/">
+							<Button class="!p-2" color="none">
+								<Icon icon="mdi:message-alert" class="w-8 h-8" />
+							</Button>
+						</Link>
+						<Link to="/app/statuslights">
+							<Button class="!p-2" color="none">
+								<Icon icon="heroicons:sun-16-solid" class="w-8 h-8" />
+							</Button>
+						</Link>
+						<Link to="/app/softwaredocs">
+							<Button class="!p-2" color="none">
+								<Icon icon="mdi:file-document-outline" class="w-8 h-8" />
+							</Button>
+						</Link>
+					{/if}
+					<Link to="/app/notifications">
 						<Button class="!p-2 relative" color="none">
 							<Icon icon="mdi:message-text" class="w-8 h-8" />
-							{#if notifications > 0}
+							{#if notifications.length > 0}
 								<Indicator color="red" border size="xl" placement="top-left">
-									<span class="text-white text-xs">{notifications}</span>
+									<span class="text-white text-xs">{notifications.length}</span>
 								</Indicator>
 							{/if}
 						</Button>

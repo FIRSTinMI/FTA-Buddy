@@ -32,7 +32,7 @@ import hljs from 'highlight.js';
 import json from 'highlight.js/lib/languages/json';
 import { gfmHeadingId } from 'marked-gfm-heading-id';
 import { observable } from '@trpc/server/observable';
-import { initializePushNotifications } from './util/push-notifications';
+import { initializePushNotifications } from '../shared/push-notifications';
 import { logAnalysisLoop } from './util/log-analysis';
 import { ftcRouter } from './router/ftc';
 import { notesRouter } from './router/notes';

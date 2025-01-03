@@ -4,7 +4,7 @@
 	import { eventStore } from "../../stores/event";
 	import { get } from "svelte/store";
 	import { userStore } from "../../stores/user";
-	import { toast } from "../../util/toast";
+	import { toast } from "../../../../shared/toast";
 	import { navigate } from "svelte-routing";
 	import NotesPolicy from "../../components/NotesPolicy.svelte";
 	import { settingsStore } from "../../stores/settings";

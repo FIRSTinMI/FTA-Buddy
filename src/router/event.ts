@@ -8,7 +8,7 @@ import { generateToken } from "./user";
 import { EventChecklist, TeamList, TournamentLevel } from '../../shared/types';
 import { createHash } from 'crypto';
 import { getEvent } from "../util/get-event";
-import { sendNotification } from "../util/push-notifications";
+import { sendNotification } from "../../shared/push-notifications";
 
 export const eventRouter = router({
     checkCode: publicProcedure.input(z.object({

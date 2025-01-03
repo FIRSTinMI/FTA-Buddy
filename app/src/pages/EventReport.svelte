@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Button } from "flowbite-svelte";
 	import { trpc } from "../main";
-	import { toast } from "../util/toast";
+	import { toast } from "../../../shared/toast";
 
     async function downloadCycleTimeReport() {
         try {

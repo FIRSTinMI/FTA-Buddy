@@ -17,6 +17,7 @@ export interface Settings {
     musicVolume: number;
     musicType: 'none' | 'jazz' | 'lofi';
     acknowledgedNotesPolicy: boolean;
+    ticketCreateAlerts: boolean;
 }
 
 let initialSettings = localStorage.getItem('settings');
@@ -37,7 +38,8 @@ const defaultSettings: Settings = {
     roundGreen: true,
     musicVolume: 12,
     musicType: 'none',
-    acknowledgedNotesPolicy: false
+    acknowledgedNotesPolicy: false,
+    ticketCreateAlerts: false,
 };
 
 if (!initialSettings) {

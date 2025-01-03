@@ -7,8 +7,8 @@
 	import { eventStore, type Event } from "../../stores/event";
 	import Icon from "@iconify/svelte";
 	import { userStore } from "../../stores/user";
-	import { toast } from "../../util/toast";
-	import { startBackgroundSubscription, stopBackgroundSubscription } from "../../util/notifications";
+	import { toast } from "../../../../shared/toast";
+	// import { startBackgroundSubscription, stopBackgroundSubscription } from "../../util/notifications";
 	import NotesPolicy from "../../components/NotesPolicy.svelte";
 	import { settingsStore } from "../../stores/settings";
 	import Spinner from "../../components/Spinner.svelte";
@@ -49,7 +49,7 @@
 
 	let ticketsPromise: Promise<any> | undefined;
 
-	let foregroundSubscription: ReturnType<typeof trpc.tickets.foregroundSubscription.subscribe> | undefined;
+	let updater: ReturnType<typeof trpc.tickets.foregroundUpdater.subscribe> | undefined;
 
 	function filterTickets(option: string) {
 		if (option === "team" && teamSelected !== -1) {
@@ -77,19 +77,20 @@
 	}
 
 	function foregroundSubscribe() {
-		if (foregroundSubscription) foregroundSubscription.unsubscribe();
-		foregroundSubscription = trpc.tickets.foregroundSubscription.subscribe(
+		if (updater) updater.unsubscribe();
+		updater = trpc.tickets.foregroundUpdater.subscribe(
 			{
 				eventToken: get(userStore).eventToken,
 			},
 			{
 				onData: (data) => {
 					console.log(data);
-					if (data.type === "status" || data.type === "assign") {
+					if (data.type === "status" || data.type === "assign" || data.type === "add_message") {
 						const matchingTicket = tickets.find((t) => t.id === data.data.id);
-						if (!matchingTicket) {
+						if (matchingTicket) {
 							if (data.type === "status") matchingTicket.is_open = data.data.is_open;
 							if (data.type === "assign") matchingTicket.assigned_to = data.data.assigned_to;
+							if (data.type === "add_message") matchingTicket.messages = data.data.assigned_to;
 						}
 						tickets = tickets;
 					} else if (data.type === "create") {
@@ -103,12 +104,12 @@
 	onMount(() => {
 		getTickets();
 		foregroundSubscribe();
-		stopBackgroundSubscription();
+		// stopBackgroundSubscription();
 	});
 
 	onDestroy(() => {
-		if (foregroundSubscription) foregroundSubscription.unsubscribe();
-		startBackgroundSubscription();
+		if (updater) updater.unsubscribe();
+		// startBackgroundSubscription();
 	});
 
 	let notesPolicyElm: NotesPolicy;
@@ -122,17 +123,17 @@
 			<h1 class="text-3xl" style="font-weight: bold">Event Tickets</h1>
 			<Label>
 				Select a Filter Option
-				<Select class="mt-2" items={filterOptions} bind:value={filterSelected} />
+				<Select class="mt-2" items={filterOptions} bind:value={filterSelected} on:change={() => filterTickets} />
 			</Label>
 			{#if filterSelected === 'team'}
 				<Label>
 					Select a Team
-					<Select class="mt-2" items={teamOptions} bind:value={teamSelected} />
+					<Select class="mt-2" items={teamOptions} bind:value={teamSelected} on:change={() => filterTickets}/>
 				</Label>
 			{:else if filterSelected === 'assigned_to'}
 				<Label>
 					Select a User
-					<Select class="mt-2" items={userOptions} bind:value={userSelected} />
+					<Select class="mt-2" items={userOptions} bind:value={userSelected} on:change={() => filterTickets}/>
 				</Label>
 			{/if}
 		</div>

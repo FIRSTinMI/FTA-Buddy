@@ -339,7 +339,6 @@ export interface ServerEvent {
     fieldStatusEmitter: EventEmitter,
     checklistEmitter: EventEmitter,
     ticketEmitter: EventEmitter,
-    messageEmitter: EventEmitter,
     cycleEmitter: EventEmitter,
     teams: TeamList,
     checklist: EventChecklist,
@@ -436,6 +435,18 @@ export interface Message {
     author: Profile,
     created_at: Date,
     updated_at: Date,
+}
+
+export interface Notification {
+    id: string,
+    timestamp: Date,
+    title: string;
+    body: string;
+    icon?: string;
+    tag?: string;
+    data?: {
+        page?: string;
+    };
 }
 
 export type ScheduleBreakdown = {

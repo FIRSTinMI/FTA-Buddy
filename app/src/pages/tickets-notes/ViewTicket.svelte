@@ -3,16 +3,16 @@
 	import Spinner from "../../components/Spinner.svelte";
 	import { trpc } from "../../main";
 	import { formatTime } from "../../../../shared/formatTime";
-	import { toast } from "../../util/toast";
+	import { toast } from "../../../../shared/toast";
 	import { eventStore } from "../../stores/event";
-	import { ROBOT, Ticket} from "../../../../shared/types";
+	import { ROBOT} from "../../../../shared/types";
 	import { Alert, Button, Textarea, ToolbarButton } from "flowbite-svelte";
 	import { navigate } from "svelte-routing";
 	import { userStore } from "../../stores/user";
 	import Icon from "@iconify/svelte";
 	import Message from "../../components/MessageCard.svelte";
 	import { onDestroy, onMount, tick } from "svelte";
-	import { startBackgroundSubscription, stopBackgroundSubscription } from "../../util/notifications";
+	// import { startBackgroundSubscription, stopBackgroundSubscription } from "../../util/notifications";
 	import { settingsStore } from "../../stores/settings";
 	import NotesPolicy from "../../components/NotesPolicy.svelte";
     import MessageCard from "../../components/MessageCard.svelte";
@@ -38,7 +38,7 @@
 
 	let assignedToUser = false;
 
-	let subscription: ReturnType<typeof trpc.tickets.ticketSubscription.subscribe> | undefined;
+	let updater: ReturnType<typeof trpc.tickets.ticketUpdater.subscribe> | undefined;
 
 	async function getTicketAndMatch() {
 		ticketPromise = trpc.tickets.getById.query({id: ticket_id, event_code: event.code});
@@ -203,10 +203,10 @@
 	}
 
 	onMount(() => {
-		stopBackgroundSubscription();
-		if (subscription) subscription.unsubscribe();
+		// stopBackgroundSubscription();
+		if (updater) updater.unsubscribe();
 		if (ticket) {
-			subscription = trpc.tickets.ticketSubscription.subscribe(
+			updater = trpc.tickets.ticketUpdater.subscribe(
 				{ id: ticket.id, eventToken: user.eventToken, user_id: user.id },
 				{
 					onData: (data) => {
@@ -218,6 +218,8 @@
 							} else if (data.type === "assign") {
 								ticket.assigned_to_id = data.data.assigned_to_id;
 								ticket.assigned_to = data.data.assigned_to;
+							} else if (data.type === "add_message") {
+								ticket.messages = data.data.messages;
 							}
 						} else {
 							return;
@@ -229,7 +231,7 @@
 	});
 
 	onDestroy(() => {
-		startBackgroundSubscription();
+		// startBackgroundSubscription();
 	});
 	let notesPolicyElm: NotesPolicy;
 </script>

@@ -3,7 +3,7 @@
 	import { get, derived } from "svelte/store";
 	import { settingsStore } from "../stores/settings";
 	import Spinner from "./Spinner.svelte";
-	import { toast } from "../util/toast";
+	import { toast } from "../../../shared/toast";
 	import { subscribeToPush } from "../util/notifications";
 	import { audioQueuer } from "../field-monitor";
 	import { trpc } from "../main";

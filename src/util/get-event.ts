@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { EventEmitter } from "events";
 import { eventCodes, events } from "..";
 import { DEFAULT_MONITOR } from "../../shared/constants";
-import { TeamList, EventChecklist, ScheduleDetails, ServerEvent } from "../../shared/types";
+import { TeamList, EventChecklist, ScheduleDetails, ServerEvent, Profile } from "../../shared/types";
 import { db } from "../db/db";
 import schema from "../db/schema";
 import { getEventTickets } from "../router/tickets";
@@ -60,7 +60,7 @@ export async function getEvent(eventToken: string, eventCode?: string) {
                 token: eventToken,
                 teams: event.teams as TeamList,
                 checklist: event.checklist as EventChecklist,
-                users: event.users as number[],
+                users: event.users as Profile[],
                 monitorFrame: DEFAULT_MONITOR,
                 history: [DEFAULT_MONITOR],
                 lastMatchStart: null,
@@ -71,7 +71,6 @@ export async function getEvent(eventToken: string, eventCode?: string) {
                 fieldStatusEmitter: new EventEmitter(),
                 checklistEmitter: new EventEmitter(),
                 ticketEmitter: new EventEmitter(),
-                messageEmitter: new EventEmitter(),
                 cycleEmitter: new EventEmitter(),
                 scheduleDetails: event.scheduleDetails as ScheduleDetails,
                 lastPrestartDone: null,
@@ -81,7 +80,7 @@ export async function getEvent(eventToken: string, eventCode?: string) {
             };
 
             // Keep tickets in memory so it loads faster
-            events[eventCode].ticketEmitter.on('create', async () => {
+            events[eventCode].ticketEmitter.on('add_message', async () => {
                 events[eventCode].tickets = await getEventTickets( eventCode );
             });
             events[eventCode].ticketEmitter.on('assign', async () => {

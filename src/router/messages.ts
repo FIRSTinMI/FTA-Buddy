@@ -6,7 +6,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { Message } from "../../shared/types";
 import { getEvent } from "../util/get-event";
-import { sendNotification } from "../util/push-notifications";
+import { sendNotification } from "../../shared/push-notifications";
 import { randomUUID } from "crypto";
 
 export interface MessagePost {

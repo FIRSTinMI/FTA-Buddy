@@ -7,8 +7,7 @@
 	import { eventStore, type Event } from "../../stores/event";
 	import Icon from "@iconify/svelte";
 	import { userStore } from "../../stores/user";
-	import { toast } from "../../util/toast";
-	import { startBackgroundSubscription, stopBackgroundSubscription } from "../../util/notifications";
+	import { toast } from "../../../../shared/toast";
 	import NotesPolicy from "../../components/NotesPolicy.svelte";
 	import { settingsStore } from "../../stores/settings";
 	import Spinner from "../../components/Spinner.svelte";

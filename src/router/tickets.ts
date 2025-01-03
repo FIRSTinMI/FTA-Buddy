@@ -7,10 +7,10 @@ import { TRPCError } from "@trpc/server";
 import { Ticket, Profile, Message} from "../../shared/types";
 import { getEvent } from "../util/get-event";
 import { observable } from "@trpc/server/observable";
-import { sendNotification } from "../util/push-notifications";
+import { ticketAssignNotification, ticketCreateNotification, ticketNotification } from "../../shared/push-notifications";
 
 export interface TicketPost {
-    type: "create" | "assign" | "status";
+    type: "assign" | "status" | "add_message" | "create" | "edit" | "follow" | "delete";
     data: Ticket;
 }
 
@@ -195,14 +195,23 @@ export const ticketsRouter = router({
             } 
         });
 
-        sendNotification(event.users.filter(user => user.id === authorProfile.id).map(user => user.id), {
-            title: `New Ticket: Team ${input.team}`,
+        ticketCreateNotification({
+            title: `New Ticket: Team ${input.team}, Event ${event.code}`,
             body: input.subject,
-            tag: 'Ticket Created',
+            tag: `Ticket Created`,
             data: {
                 page: 'ticket/' + insert[0].id,
-            }
+            },
         });
+
+        // sendNotification(event.users.filter(user => user.id === authorProfile.id).map(user => user.id), {
+        //     title: `New Ticket: Team ${input.team}`,
+        //     body: input.subject,
+        //     tag: 'Ticket Created',
+        //     data: {
+        //         page: 'ticket/' + insert[0].id,
+        //     }
+        // });
 
         return insert[0];
     }),
@@ -212,6 +221,8 @@ export const ticketsRouter = router({
         new_status: z.boolean(),
         event_code: z.string(),
     })).query(async ({ ctx, input }) => {
+        const event = await getEvent(ctx.eventToken as string);
+
         const ticket = await db.query.tickets.findFirst({
             where: and(
                 eq(tickets.event_code, input.event_code),
@@ -228,19 +239,34 @@ export const ticketsRouter = router({
             closed_at: !input.new_status ? new Date() : null
         }).where(eq(tickets.id, input.id)).returning();
 
-        (await getEvent("", ticket.event_code)).ticketEmitter.emit('status', update[0]);
+        event.ticketEmitter.emit('status', { 
+            ...update[0], user: { 
+                username: ticket.author.username, id: ticket.author.id, role: ticket.author.role 
+            } 
+        });
 
         //update users who follow this ticket
-        const followers = ticket.followers as number[];
+        // const followers = ticket.followers as number[];
 
-        sendNotification(followers, {
-            title: `Ticket #${ticket.id} ${input.new_status ? "Reopened" : "Closed"}`,
-            body: `Team ${ticket.team}`,
-            tag: 'Ticket Update',
-            data: {
-                page: 'ticket/' + ticket.id,
-            }
-        });
+        if (ticket.followers) {
+            ticketNotification(ticket.followers, {
+                title: `Ticket ${ticket.id}: Status Changed to ${ticket.is_open ? `OPEN` : `CLOSED`}`,
+                body: ticket.subject,
+                tag: `Ticket Status Changed`,
+                data: {
+                    page: 'ticket/' + ticket.id,
+                },
+            });
+        }
+
+        // sendNotification(followers, {
+        //     title: `Ticket #${ticket.id} ${input.new_status ? "Reopened" : "Closed"}`,
+        //     body: `Team ${ticket.team}`,
+        //     tag: 'Ticket Update',
+        //     data: {
+        //         page: 'ticket/' + ticket.id,
+        //     }
+        // });
 
         return update[0];
     }),
@@ -248,9 +274,10 @@ export const ticketsRouter = router({
     assign: eventProcedure.input(z.object({
         id: z.number(),
         user_id: z.number(),
-        assign: z.boolean(),
         event_code: z.string(),
     })).query(async ({ ctx, input }) => {
+        const event = await getEvent(ctx.eventToken as string);
+
         const ticket = await db.query.tickets.findFirst({
             where: and(
                 eq(tickets.id, input.id),
@@ -268,19 +295,79 @@ export const ticketsRouter = router({
             role: users.role,
         }).from(users).where(eq(users.id, input.user_id));
 
-
         if (!profile[0]) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve User profile" });
         }
 
-        if (input.assign && ticket.assigned_to_id === input.user_id) {
+        if (ticket.assigned_to_id === input.user_id) {
             throw new TRPCError({ code: "BAD_REQUEST", message: "User is already assigned to this ticket" });
-        } else if (!input.assign && ticket.assigned_to_id === -1) {
-            throw new TRPCError({ code: "BAD_REQUEST", message: "No user currently assigned to this ticket" });
         }
 
         const update = await db.update(tickets).set({
-            assigned_to_id: input.user_id
+            assigned_to_id: input.user_id,
+            assigned_to: profile[0],
+        }).where(eq(tickets.id, input.id)).returning();
+
+
+        if (!update) {
+            throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to assign User" });
+        }
+
+        ticketAssignNotification(input.user_id, {
+            title: `Ticket #${ticket.id} Assigned to You`,
+            body: `You have been assigned to ticket #${ticket.id} for team ${ticket.team}`,
+            tag: 'Ticket Assigned',
+            data: {
+                page: 'ticket/' + ticket.id,
+            }
+        });
+
+        if (ticket.followers) {
+            ticketNotification(ticket.followers, {
+                title: `Ticket ${ticket.id}: Reassigned to ${profile[0].username}`,
+                body: ticket.subject,
+                tag: `Ticket Reassigned`,
+                data: {
+                    page: 'ticket/' + ticket.id,
+                },
+            });
+        }
+
+        event.ticketEmitter.emit('assign', { 
+            ...update, user: { 
+                username: profile[0].username, id: profile[0].id, role: profile[0].role 
+            } 
+        });
+
+        return profile;
+    }),
+
+    unAssign: eventProcedure.input(z.object({
+        id: z.number(),
+        event_code: z.string(),
+    })).query(async ({ ctx, input }) => {
+        const event = await getEvent(ctx.eventToken as string);
+
+        const ticket = await db.query.tickets.findFirst({
+            where: and(
+                eq(tickets.id, input.id),
+                eq(tickets.event_code, input.event_code),
+            )
+        });
+        
+        if (!ticket) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
+        }
+
+        if (ticket.assigned_to_id === -1) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "No user currently assigned to this ticket" });
+        }
+
+        const user_profile = ticket.assigned_to;
+
+        const update = await db.update(tickets).set({
+            assigned_to_id: -1,
+            assigned_to: null,
         }).where(eq(tickets.id, input.id)).returning();
 
 
@@ -288,29 +375,35 @@ export const ticketsRouter = router({
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update assignation status" });
         }
 
-        if (input.user_id === -1) {
-            (await getEvent("", ticket.event_code)).ticketEmitter.emit('un-assign', {
-                 ...update[0], assigned_to_id: input.user_id 
+        if (user_profile?.id) {
+            event.ticketEmitter.emit('assign', {
+                ...update[0], user: { 
+                    username: user_profile.username, id: user_profile.id, role: user_profile.role 
+                }  
             });
-            return null;
-        } else {
-            (await getEvent("", ticket.event_code)).ticketEmitter.emit('assign', {
-                 ...update[0], assigned_to_id: input.user_id 
-            });
-        }
 
-        if (input.user_id !== profile[0].id) {
-            sendNotification([input.user_id], {
-                title: `Ticket #${ticket.id} Assigned to you`,
-                body: `You have been assigned to ticket #${ticket.id} for team ${ticket.team}`,
-                tag: 'Ticket Update',
+            ticketAssignNotification(user_profile.id, {
+                title: `Unassigned from Ticket #${ticket.id}`,
+                body: `You have been unassigned from ticket #${ticket.id} for Team #${ticket.team}`,
+                tag: 'Ticket Assigned',
                 data: {
                     page: 'ticket/' + ticket.id,
                 }
             });
+
+            if (ticket.followers) {
+                ticketNotification(ticket.followers, {
+                    title: `Ticket ${ticket.id}: Unassigned ${user_profile.username}`,
+                    body: `User ${user_profile.username} has been unassigned from Ticket #${ticket.id} for Team #${ticket.team}`,
+                    tag: `Ticket Assigned`,
+                    data: {
+                        page: 'ticket/' + ticket.id,
+                    },
+                });
+            }
         }
 
-        return profile;
+        return user_profile;
     }),
 
     editText: eventProcedure.input(z.object({
@@ -318,6 +411,8 @@ export const ticketsRouter = router({
         new_text: z.string(),
         event_code: z.string(),
     })).query(async ({ ctx, input }) => {
+        const event = await getEvent(ctx.eventToken as string);
+        
         const ticket = await db.query.tickets.findFirst({
             where: and(
                 eq(tickets.id, input.id),
@@ -337,6 +432,12 @@ export const ticketsRouter = router({
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Ticket text" });
         }
 
+        event.ticketEmitter.emit('edit', { 
+            ...update, user: { 
+                username: ticket.author.username, id: ticket.author.id, role: ticket.author.role 
+            } 
+        });
+
         return update;
     }),
 
@@ -345,6 +446,8 @@ export const ticketsRouter = router({
         new_subject: z.string(),
         event_code: z.string(),
     })).query(async ({ ctx, input }) => {
+        const event = await getEvent(ctx.eventToken as string);
+
         const ticket = await db.query.tickets.findFirst({
             where: and(
                 eq(tickets.id, input.id),
@@ -364,47 +467,22 @@ export const ticketsRouter = router({
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Ticket subject" });
         }
 
+        event.ticketEmitter.emit('edit', { 
+            ...update, user: { 
+                username: ticket.author.username, id: ticket.author.id, role: ticket.author.role 
+            } 
+        });
+
         return update;
     }),
 
     follow: protectedProcedure.input(z.object({
         id: z.number(),
+        follow: z.boolean(),
         event_code: z.string(),
     })).query(async ({ ctx, input }) => {
-        const ticket = await db.query.tickets.findFirst({
-            where: and(
-                eq(tickets.id, input.id),
-                eq(tickets.event_code, input.event_code),
-            )
-        });
-        
-        if (!ticket) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
-        }
+        const event = await getEvent(ctx.eventToken as string);
 
-        let followers = ticket.followers as number[];
-
-        if (!followers.includes(ctx.user.id)) {
-            followers.push(ctx.user.id);
-        } else {
-            throw new TRPCError({ code: "BAD_REQUEST", message: "Current User is already following provided Ticket" });
-        }
-
-        const update = await db.update(tickets).set({
-            followers: followers,
-        }).where(eq(tickets.id, input.id)).returning();
-
-        if (!update) {
-            throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Ticket followers" });
-        }
-
-        return update;
-    }),
-
-    unfollow: protectedProcedure.input(z.object({
-        id: z.number(),
-        event_code: z.string(),
-    })).query(async ({ ctx, input }) => {
         const ticket = await db.query.tickets.findFirst({
             where: and(
                 eq(tickets.id, input.id),
@@ -419,28 +497,40 @@ export const ticketsRouter = router({
         const followers = ticket.followers as number[];
 
         let updatedFollowers: number[] = [];
+        let update;
 
         if (followers.includes(ctx.user.id)) {
-            updatedFollowers = followers.filter(num => num !== ctx.user.id);
-        } else {
-            throw new TRPCError({ code: "BAD_REQUEST", message: "Current User not following provided Ticket" });
-        }
+            followers.push(ctx.user.id);
 
-        const update = await db.update(tickets).set({
-            followers: updatedFollowers,
-        }).where(eq(tickets.id, input.id)).returning();
+            update = await db.update(tickets).set({
+                followers: followers,
+            }).where(eq(tickets.id, input.id)).returning();
+
+        } else if (!followers.includes(ctx.user.id)) {
+            update = await db.update(tickets).set({
+                followers: updatedFollowers,
+            }).where(eq(tickets.id, input.id)).returning();
+        } else {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Current User is already following provided Ticket" });
+        }
 
         if (!update) {
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Ticket followers" });
         }
 
-        return update;
+        event.ticketEmitter.emit('follow', { 
+            ...update, user: { 
+                username: ticket.author.username, id: ticket.author.id, role: ticket.author.role 
+            } 
+        });
     }),
 
     delete: eventProcedure.input(z.object({
         id: z.number(),
         event_code: z.string(),
     })).query(async ({ ctx, input }) => {
+        const event = await getEvent(ctx.eventToken as string);
+
         const ticket = await db.query.tickets.findFirst({
             where: and(
                 eq(tickets.id, input.id),
@@ -464,6 +554,12 @@ export const ticketsRouter = router({
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to delete Ticket" });
         }
 
+        event.ticketEmitter.emit('delete', { 
+            ...result, user: { 
+                username: ticket.author.username, id: ticket.author.id, role: ticket.author.role 
+            } 
+        });
+
         return result;
     }),
 
@@ -472,6 +568,8 @@ export const ticketsRouter = router({
         message_id: z.string().uuid(),
         event_code: z.string(),
     })).query(async ({ ctx, input }) => {
+        const event = await getEvent(ctx.eventToken as string);
+
         const ticket = await db.query.tickets.findFirst({
             where: and(
                 eq(tickets.id, input.ticket_id),
@@ -501,16 +599,33 @@ export const ticketsRouter = router({
             update = await db.update(tickets).set({
                 messages: ticketMessages,
             }).where(eq(tickets.id, input.ticket_id)).returning();
-        }
+        
 
-        if (!update) {
-            throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Ticket followers" });
-        }
+            if (!update) {
+                throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Ticket Messages" });
+            }
 
+            event.ticketEmitter.emit('add_message', { 
+                ...update, user: { 
+                    username: newMessage.author.username, id: newMessage.author.id, role: newMessage.author.role 
+                } 
+            });
+
+            if (ticket.followers) {
+                ticketNotification(ticket.followers.filter(user_id => user_id !== newMessage.author.id).map(user_id => user_id), {
+                    title: `New Message: Ticket #${ticket.id} by ${newMessage.author.username}`,
+                    body: newMessage.text,
+                    tag: 'New Message Added',
+                    data: {
+                        page: 'ticket/' + ticket.id,
+                    }
+                });
+            }
+        }
         return update;
     }),
 
-    backgroundSubscription: publicProcedure.input(z.object({
+    ticketCreateSubscription: publicProcedure.input(z.object({
         eventToken: z.string()
     })).subscription(async ({ input }) => {
         const event = await getEvent(input.eventToken);
@@ -533,31 +648,33 @@ export const ticketsRouter = router({
 
 
 
-    foregroundSubscription: publicProcedure.input(z.object({
+    foregroundUpdater: publicProcedure.input(z.object({
         eventToken: z.string()
     })).subscription(async ({ input }) => {
         const event = await getEvent(input.eventToken);
 
         return observable<TicketPost>((emitter) => {
-            const listener = (type: "assign" | "status" | "create", tkt: Ticket) => {
+            const listener = (type: "assign" | "status" | "create" | "add_message", tkt: Ticket) => {
                 emitter.next({
                     type,
                     data: tkt
                 });
             };
 
-            event.ticketEmitter.on('assign', (tkt) => listener("assign", tkt));
-            event.ticketEmitter.on('status', (tkt) => listener("status", tkt));
             event.ticketEmitter.on('create', (tkt) => listener("create", tkt));
+            event.ticketEmitter.on('add_message', (tkt) => listener("add_message", tkt));
+            event.ticketEmitter.on('status', (tkt) => listener("status", tkt));
+            event.ticketEmitter.on('assign', (tkt) => listener("assign", tkt));
             return () => {
-                event.ticketEmitter.removeListener('assign', (tkt) => listener("assign", tkt));
+                event.ticketEmitter.removeListener('add_message', (tkt) => listener("add_message", tkt));
                 event.ticketEmitter.removeListener('status', (tkt) => listener("status", tkt));
+                event.ticketEmitter.removeListener('assign', (tkt) => listener("assign", tkt));
                 event.ticketEmitter.removeListener('create', (tkt) => listener("create", tkt));
             };
         });
     }),
 
-    ticketSubscription: publicProcedure.input(z.object({
+    ticketUpdater: publicProcedure.input(z.object({
         id: z.number(),
         eventToken: z.string(),
         user_id: z.number(),
@@ -592,7 +709,7 @@ export const ticketsRouter = router({
         }
 
         return observable<TicketPost>((emitter) => {
-            const listener = (type: "assign" | "status", tkt: Ticket) => {
+            const listener = (type: "assign" | "status" | "create" | "add_message", tkt: Ticket) => {
                 if ((tkt.id === input.id)) {
                     emitter.next({
                         type,
@@ -601,12 +718,15 @@ export const ticketsRouter = router({
                 }
             };
 
-            event.ticketEmitter.on('assign', (tkt) => listener("assign", tkt));
+            event.ticketEmitter.on('create', (tkt) => listener("create", tkt));
+            event.ticketEmitter.on('add_message', (tkt) => listener("add_message", tkt));
             event.ticketEmitter.on('status', (tkt) => listener("status", tkt));
-
+            event.ticketEmitter.on('assign', (tkt) => listener("assign", tkt));
             return () => {
-                event.ticketEmitter.removeListener('assign', (tkt) => listener("assign", tkt));
+                event.ticketEmitter.removeListener('add_message', (tkt) => listener("add_message", tkt));
                 event.ticketEmitter.removeListener('status', (tkt) => listener("status", tkt));
+                event.ticketEmitter.removeListener('assign', (tkt) => listener("assign", tkt));
+                event.ticketEmitter.removeListener('create', (tkt) => listener("create", tkt));
             };
         });
     }),

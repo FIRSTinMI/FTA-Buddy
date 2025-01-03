@@ -5,7 +5,6 @@ export interface Event {
     code: string;
     pin: string;
     teams: ({ number: string, name: string, inspected: boolean })[];
-    users: Profile[];
 }
 
 let initialEvent = localStorage.getItem('event');

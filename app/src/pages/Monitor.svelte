@@ -7,7 +7,7 @@
     import { onDestroy, onMount } from "svelte";
     import { trpc } from "../main";
     import { cycleTimeToMS } from "../../../shared/cycleTimeToMS";
-	import { authStore } from "../stores/auth";
+	import { userStore } from "../stores/user";
 	import { audioQueuer } from "../field-monitor";
 	import Spinner from "../components/Spinner.svelte";
 	import { updateScheduleText } from "../util/schedule-detail-formatter";
@@ -44,7 +44,7 @@
             
         if (cycleSubscription) cycleSubscription.unsubscribe();
         cycleSubscription = trpc.cycles.subscription.subscribe({
-                eventToken: $authStore.eventToken, 
+                eventToken: $userStore.eventToken, 
             }, {
             onData: (data) => {
                 averageCycleTimeMS = data.averageCycleTime ?? 7*60*1000;

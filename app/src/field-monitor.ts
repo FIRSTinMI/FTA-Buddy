@@ -1,11 +1,11 @@
 import { get } from "svelte/store";
 import { trpc } from "./main";
-import { authStore } from "./stores/auth";
+import { userStore } from "./stores/user";
 import { DSState, FieldState, MatchState, MatchStateMap, ROBOT, type MonitorFrame } from "../../shared/types";
 import { AudioQueuer } from "./util/audioAlerts";
 import { MonitorFrameHandler, type MonitorEvent } from "./util/monitorFrameHandler";
 import { settingsStore } from "./stores/settings";
-import { robotNotification } from "./util/notifications";
+import { robotNotification } from "../../shared/push-notifications";
 
 // Initialize frame handler and audio queue
 export const frameHandler = new MonitorFrameHandler();
@@ -61,12 +61,12 @@ export async function subscribeToFieldMonitor() {
     fieldStateSubscription?.unsubscribe();
     robotStateSubscription?.unsubscribe();
 
-    if (!get(authStore).eventToken) return;
+    if (!get(userStore).eventToken) return;
 
     frameHandler.setHistory(await trpc.field.history.query());
 
     subscription = trpc.field.robots.subscribe({
-        eventToken: get(authStore).eventToken
+        eventToken: get(userStore).eventToken
     }, {
         onData: (data) => {
             frameHandler.feed(data);
@@ -74,7 +74,7 @@ export async function subscribeToFieldMonitor() {
     });
 
     fieldStateSubscription = trpc.field.fieldStatus.subscribe({
-        eventToken: get(authStore).eventToken
+        eventToken: get(userStore).eventToken
     }, {
         onData: (data) => {
             frameHandler.fieldStatusChange(data);
@@ -82,7 +82,7 @@ export async function subscribeToFieldMonitor() {
     });
 
     robotStateSubscription = trpc.field.robotStatus.subscribe({
-        eventToken: get(authStore).eventToken
+        eventToken: get(userStore).eventToken
     }, {
         onData: (data) => {
             frameHandler.robotStatusChange(data);

@@ -9,7 +9,7 @@ import { toast } from "./toast";
 import { userStore } from "../app/src/stores/user";
 import { settingsStore } from "../app/src/stores/settings";
 import { addNotification } from "../app/src/stores/notifications";
-import { get } from 'svelte/store';
+//import { get } from '../app/node_modules/svelte/store';
 
 const publicVapidKey = process.env.VAPID_PUBLIC_KEY || '';
 const privateVapidKey = process.env.VAPID_PRIVATE_KEY || '';
@@ -68,27 +68,27 @@ export function robotNotification(user_id: number, type: string, event: MonitorE
     });
 }
 
-export function ticketNotification(users: number[], data: NotificationData) {
+export function ticketNotification(context: any, users: number[], data: NotificationData) {
     let userArray: number[] = [];
 
     sendNotification(userArray, data);
 
-    if (userArray.includes(get(userStore).id)) {
+    if (userArray.includes(context.user_id)) {
         addNotification(data);
     }
 }
 
-export function ticketCreateNotification(data: NotificationData) {
-    if (get(settingsStore).ticketCreateAlerts) {
-        ticketNotification([get(userStore).id], data);
+export function ticketCreateNotification(context: any, data: NotificationData) {
+    if (context.settingsStore.ticketCreateSubscription) {
+        ticketNotification(context, [context.user_id], data);
         addNotification(data);
     }
 }
 
-export function ticketAssignNotification(assigned_user_id: number, data: NotificationData) {
-    if (get(userStore).id === assigned_user_id) {
+export function ticketAssignNotification(context: any, assigned_user_id: number, data: NotificationData) {
+    if (context.user_id === assigned_user_id) {
         addNotification(data);
-        ticketNotification([get(userStore).id], data);
+        ticketNotification(context, [context.user_id], data);
     }
 }
 

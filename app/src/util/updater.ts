@@ -1,5 +1,5 @@
 import { get } from "svelte/store";
-import { authStore } from "../stores/auth";
+import { userStore } from "../stores/user";
 import { eventStore } from "../stores/event";
 import { settingsStore } from "../stores/settings";
 
@@ -99,7 +99,7 @@ export const VERSIONS: { [key: string]: Version; } = {
         </ul>`,
         update: () => {
             eventStore.set({ code: "", pin: "", teams: [] });
-            authStore.set({ ...get(authStore), eventToken: "" });
+            userStore.set({ ...get(userStore), eventToken: "" });
         }
     },
     '2.4.5': {

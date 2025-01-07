@@ -1,4 +1,5 @@
 import { EventEmitter } from "events";
+import { TypedEmitter } from "tiny-typed-emitter";
 
 export interface MonitorFrame {
     field: FieldState;
@@ -338,7 +339,10 @@ export interface ServerEvent {
     robotStateChangeEmitter: EventEmitter,
     fieldStatusEmitter: EventEmitter,
     checklistEmitter: EventEmitter,
-    ticketEmitter: EventEmitter,
+    ticketUpdateEmitter: TypedEmitter,
+    //ticketPushEmitter: TypedEmitter,
+    noteUpdateEmitter: TypedEmitter,
+    //notePushEmitter: TypedEmitter,
     cycleEmitter: EventEmitter,
     teams: TeamList,
     checklist: EventChecklist,
@@ -361,6 +365,81 @@ export interface ServerEvent {
         red3?: RobotCycleTracking;
     };
     tickets: Ticket[],
+    notes: Note[],
+}
+
+export type TicketUpdateEvents = {
+    create: (
+        kind: "create",
+        data: { 
+            ticket: Ticket 
+        }
+    ) => void;
+    assign: (
+        kind: "assign",
+        data: { 
+            ticket_id: number,
+            assigned_to_id: number
+        }
+    ) => void;
+    status: (
+        kind: "status",
+        data: { 
+            ticket_id: number,
+            is_open: number 
+        }
+    ) => void;
+    follow: (
+        kind: "follow",
+        data: {
+            ticket_id: number,
+            is_open: number,
+        }
+    ) => void;
+    delete_ticket: (
+        kind: "delete_ticket",
+        data: { 
+            ticket_id: number 
+        }
+    ) => void;
+    edit: (
+        kind: "edit",
+        data: {
+            ticket_id: number,
+            ticket_subject: string,
+            ticket_text: string,
+            ticket_updated_at: Date,
+        }
+    ) => void;
+    add_message: (
+        kind: "add_message",
+        data: { 
+            message: Message 
+        }
+    ) => void;
+    edit_message: (
+        kind: "edit_message",
+        data: {
+            message: Message,
+        }
+    ) => void;
+    delete_message: (
+        kind: "delete_message",
+        data: {
+            ticket_id: number,
+            message_id: string,
+        }
+    ) => void;
+}
+
+export type NoteUpdateEvents = {
+    create: (data: { note: Note, }) => void;
+    edit: (data: {
+        note_id: string,
+        note_text: string,
+        note_updated_at: Date
+    }) => void;
+    delete: (data: { note_id: string }) => void;
 }
 
 export interface RobotCycleTracking {
@@ -395,6 +474,7 @@ export interface Profile {
     id: number,
     username: string,
     role: "FTAA" | "FTA" | "CSA" | "RI";
+    admin: boolean,
 }
 
 export interface Ticket {
@@ -402,25 +482,22 @@ export interface Ticket {
     team: number,
     subject: string,
     author_id: number,
-    author: Profile,
     assigned_to_id: number,
-    assigned_to?: Profile | null,
     event_code: string,
     is_open: boolean,
     text: string,
     created_at: Date,
     updated_at: Date,
     closed_at?: Date | null,
-    messages: Message[] | null,
-    matchId?: string,
+    match_id?: string | null,
     followers: number[] | null,
+    messages?: Message[],
 }
 
 export interface Note {
     id: string,
     text: string,
     author_id: number,
-    author: Profile,
     team: number,
     event_code: string,
     created_at: Date,
@@ -432,7 +509,7 @@ export interface Message {
     ticket_id: number,
     text: string,
     author_id: number,
-    author: Profile,
+    event_code: string,
     created_at: Date,
     updated_at: Date,
 }

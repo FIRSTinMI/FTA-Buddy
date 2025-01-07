@@ -1,13 +1,18 @@
 import { eq } from "drizzle-orm";
 import { EventEmitter } from "events";
+import { TypedEmitter } from 'tiny-typed-emitter';
 import { eventCodes, events } from "..";
 import { DEFAULT_MONITOR } from "../../shared/constants";
-import { TeamList, EventChecklist, ScheduleDetails, ServerEvent, Profile } from "../../shared/types";
+import { TeamList, EventChecklist, ScheduleDetails, ServerEvent, Profile, TicketUpdateEvents, NoteUpdateEvents } from "../../shared/types";
 import { db } from "../db/db";
 import schema from "../db/schema";
 import { getEventTickets } from "../router/tickets";
+import { getEventNotes } from "../router/notes";
+import { getEventMessages } from "../router/messages";
+
 
 let loadingEvents: { [key: string]: Promise<ServerEvent>; } = {};
+
 
 /**
  * Get the event object from either the event token or the event code
@@ -37,6 +42,9 @@ export async function getEvent(eventToken: string, eventCode?: string) {
     if (loadingEvents.hasOwnProperty(eventCode)) {
         return await loadingEvents[eventCode];
     }
+
+    const ticketUpdateEmitter = new TypedEmitter<TicketUpdateEvents>();
+    const noteUpdateEmitter = new TypedEmitter<NoteUpdateEvents>();
 
     loadingEvents[eventCode] = new Promise(async (resolve) => {
         const eventInMemory = events[eventCode];
@@ -70,27 +78,20 @@ export async function getEvent(eventToken: string, eventCode?: string) {
                 robotStateChangeEmitter: new EventEmitter(),
                 fieldStatusEmitter: new EventEmitter(),
                 checklistEmitter: new EventEmitter(),
-                ticketEmitter: new EventEmitter(),
+                ticketUpdateEmitter: ticketUpdateEmitter,
+                //ticketPushEmitter: new TypedEmitter(),
+                noteUpdateEmitter: noteUpdateEmitter,
+                //notePushEmitter: new TypedEmitter(),
                 cycleEmitter: new EventEmitter(),
                 scheduleDetails: event.scheduleDetails as ScheduleDetails,
                 lastPrestartDone: null,
                 lastMatchEnd: null,
                 robotCycleTracking: {},
                 tickets: await getEventTickets( eventCode ),
+                notes: await getEventNotes( eventCode )
             };
 
-            // Keep tickets in memory so it loads faster
-            events[eventCode].ticketEmitter.on('add_message', async () => {
-                events[eventCode].tickets = await getEventTickets( eventCode );
-            });
-            events[eventCode].ticketEmitter.on('assign', async () => {
-                events[eventCode].tickets = await getEventTickets( eventCode );
-            });
-            events[eventCode].ticketEmitter.on('status', async () => {
-                events[eventCode].tickets = await getEventTickets( eventCode );
-            });
-
-            console.log('Event loaded into memory: ', eventCode);
+            //console.log('Event loaded into memory: ', eventCode);
         }
 
         resolve(events[eventCode]);

@@ -5,6 +5,7 @@ export interface Event {
     code: string;
     pin: string;
     teams: ({ number: string, name: string, inspected: boolean })[];
+    users: Profile[];
 }
 
 let initialEvent = localStorage.getItem('event');
@@ -13,7 +14,8 @@ if (!initialEvent) {
     initialEvent = JSON.stringify({
         code: '',
         pin: '',
-        teams: []
+        teams: [],
+        users: [],
     });
 }
 
@@ -23,7 +25,8 @@ try {
     initialEvent = JSON.stringify({
         code: '',
         pin: '',
-        teams: []
+        teams: [],
+        users: [],
     });
 }
 

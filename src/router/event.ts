@@ -8,7 +8,7 @@ import { generateToken } from "./user";
 import { EventChecklist, TeamList, TournamentLevel } from '../../shared/types';
 import { createHash } from 'crypto';
 import { getEvent } from "../util/get-event";
-import { sendNotification } from "../../shared/push-notifications";
+import { sendNotification } from "../../app/src/util/push-notifications";
 
 export const eventRouter = router({
     checkCode: publicProcedure.input(z.object({
@@ -54,7 +54,7 @@ export const eventRouter = router({
 
         const eventList = ctx.user.events as string[];
 
-        event.users = Array.from(new Set([...event.users, ctx.user.id]));
+        event.users = Array.from(new Set([...event.users.filter(user => typeof user !== 'number'), ctx.user]));
 
         await db.update(users).set({ events: Array.from(new Set([...eventList, event.code])) }).where(eq(users.id, ctx.user.id));
         await db.update(events).set({ users: event.users }).where(eq(events.code, event.code));
@@ -91,7 +91,7 @@ export const eventRouter = router({
 
         const eventList = ctx.user.events as string[];
 
-        event.users = Array.from(new Set([...event.users, ctx.user.id]));
+        event.users = Array.from(new Set([...event.users.filter(user => typeof user !== 'number'), ctx.user]));
 
         await db.update(users).set({ events: Array.from(new Set([...eventList, event.code])) }).where(eq(users.id, ctx.user.id));
         await db.update(events).set({ users: event.users }).where(eq(events.code, event.code));
@@ -189,20 +189,4 @@ export const eventRouter = router({
         const musicOrder = hash.toString('hex').split('');
         return musicOrder.map(s => parseInt(s, 16));
     }),
-
-    notification: adminProcedure.input(z.object({
-        eventToken: z.string(),
-    })).query(async ({ input }) => {
-        const event = await getEvent(input.eventToken);
-
-        console.log('Sending notification to', event.users);
-
-        sendNotification(event.users, {
-            title: 'Test',
-            body: 'Test notification',
-            data: {
-                page: 'messages'
-            }
-        });
-    })
 });

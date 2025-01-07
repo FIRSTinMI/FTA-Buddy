@@ -1,5 +1,6 @@
 import { boolean, integer, jsonb, pgEnum, pgTable, serial, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import { Profile, Message } from "../../shared/types";
+import { relations } from "drizzle-orm";
 
 export const roleEnum = pgEnum('role', ['FTA', 'FTAA', 'CSA', 'RI']);
 
@@ -32,32 +33,36 @@ export const events = pgTable('events', {
 
 export const Event = typeof events.$inferInsert;
 
+export const eventTicketsRelations = relations(events, ({ many }) => ({
+	tickets: many(tickets),
+}));
+
 export const tickets = pgTable('tickets', {
     id: serial('id').primaryKey(),
     team: integer('team').notNull().default(-1),
     subject: varchar('subject').notNull().default(''),
     author_id: integer('author_id').notNull(),
-    author: jsonb('author').$type<Profile>().notNull(),
     assigned_to_id: integer('assigned_to').notNull().default(-1),
-    assigned_to: jsonb('assigned_to').$type<Profile>(),
-    event_code: varchar('event_code').notNull().default(''),
+    event_code: varchar('event_code').references(() => events.code).notNull(),
     is_open: boolean('is_open').notNull().default(true),
     text: varchar('text').notNull().default(''),
     created_at: timestamp('created_at').notNull().defaultNow(),
     updated_at: timestamp('updated_at').notNull().defaultNow(),
     closed_at: timestamp('closed_at'),
-    messages: jsonb('messages').$type<Message[]>(),
     match_id: uuid('match_id').references(() => matchLogs.id),
     followers: jsonb('followers').$type<number[]>()
 });
 
+export const ticketMessagesRelations = relations(tickets, ({ many }) => ({
+	messages: many(messages),
+}));
+
 export const messages = pgTable('messages', {
     id: uuid('id').primaryKey(),
-    ticket_id: serial('ticket_id').references(() => tickets.id),
+    ticket_id: serial('ticket_id').references(() => tickets.id).notNull(),
     text: varchar('text').notNull().default(''),
     author_id: integer('author_id').notNull(),
-    author: jsonb('author').$type<Profile>().notNull(),
-    event_code: varchar('event_code').notNull().default(''),
+    event_code: varchar('event_code').references(() => events.code).notNull(),
     created_at: timestamp('created_at').notNull().defaultNow(),
     updated_at: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -66,9 +71,8 @@ export const notes = pgTable('notes', {
     id: uuid('id').primaryKey(),
     text: varchar('text').notNull().default(''),
     author_id: integer('author_id').notNull(),
-    author: jsonb('author').notNull().$type<Profile>(),
     team: integer('team').notNull().default(-1),
-    event_code: varchar('event_code').notNull().default(''),
+    event_code: varchar('event_code').references(() => events.code).notNull(),
     created_at: timestamp('created_at').notNull().defaultNow(),
     updated_at: timestamp('updated_at').notNull().defaultNow(),
 });

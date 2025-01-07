@@ -24,7 +24,7 @@
 
 	let filteredNotes: Note[] | null;
 
-	let notes: Awaited<ReturnType<typeof trpc.notes.getAll.query>> = [] as Awaited<ReturnType<typeof trpc.notes.getAll.query>>;
+	let notes: Awaited<ReturnType<typeof trpc.notes.getAll.query>> = [] as Note[];
 
 	let notesPromise: Promise<any> | undefined;
 

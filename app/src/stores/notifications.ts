@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
 import { randomUUID } from 'crypto';
-import { type NotificationData } from '../../../shared/push-notifications';
+import { type NotificationData } from '../util/push-notifications';
 
 
 export interface Notification {

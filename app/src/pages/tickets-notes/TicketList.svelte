@@ -45,11 +45,9 @@
 
 	let filteredTickets: Ticket[] | null;
 
-	let tickets: Awaited<ReturnType<typeof trpc.tickets.getAll.query>> = [] as Awaited<ReturnType<typeof trpc.tickets.getAll.query>>;
+	let tickets: Awaited<ReturnType<typeof trpc.tickets.getAllWithMessages.query>> = [] as Ticket[];
 
 	let ticketsPromise: Promise<any> | undefined;
-
-	let updater: ReturnType<typeof trpc.tickets.foregroundUpdater.subscribe> | undefined;
 
 	function filterTickets(option: string) {
 		if (option === "team" && teamSelected !== -1) {
@@ -72,44 +70,12 @@
 	}
 
 	async function getTickets() {
-		ticketsPromise = trpc.tickets.getAll.query();
+		ticketsPromise = trpc.tickets.getAllWithMessages.query();
 		tickets = await ticketsPromise;
-	}
-
-	function foregroundSubscribe() {
-		if (updater) updater.unsubscribe();
-		updater = trpc.tickets.foregroundUpdater.subscribe(
-			{
-				eventToken: get(userStore).eventToken,
-			},
-			{
-				onData: (data) => {
-					console.log(data);
-					if (data.type === "status" || data.type === "assign" || data.type === "add_message") {
-						const matchingTicket = tickets.find((t) => t.id === data.data.id);
-						if (matchingTicket) {
-							if (data.type === "status") matchingTicket.is_open = data.data.is_open;
-							if (data.type === "assign") matchingTicket.assigned_to = data.data.assigned_to;
-							if (data.type === "add_message") matchingTicket.messages = data.data.assigned_to;
-						}
-						tickets = tickets;
-					} else if (data.type === "create") {
-						getTickets();
-					}
-				},
-			}
-		);
 	}
 
 	onMount(() => {
 		getTickets();
-		foregroundSubscribe();
-		// stopBackgroundSubscription();
-	});
-
-	onDestroy(() => {
-		if (updater) updater.unsubscribe();
-		// startBackgroundSubscription();
 	});
 
 	let notesPolicyElm: NotesPolicy;

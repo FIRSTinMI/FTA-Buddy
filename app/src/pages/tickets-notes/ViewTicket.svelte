@@ -5,14 +5,12 @@
 	import { formatTime } from "../../../../shared/formatTime";
 	import { toast } from "../../../../shared/toast";
 	import { eventStore } from "../../stores/event";
-	import { ROBOT} from "../../../../shared/types";
+	import { ROBOT, type Profile} from "../../../../shared/types";
 	import { Alert, Button, Textarea, ToolbarButton } from "flowbite-svelte";
 	import { navigate } from "svelte-routing";
 	import { userStore } from "../../stores/user";
 	import Icon from "@iconify/svelte";
-	import Message from "../../components/MessageCard.svelte";
 	import { onDestroy, onMount, tick } from "svelte";
-	// import { startBackgroundSubscription, stopBackgroundSubscription } from "../../util/notifications";
 	import { settingsStore } from "../../stores/settings";
 	import NotesPolicy from "../../components/NotesPolicy.svelte";
     import MessageCard from "../../components/MessageCard.svelte";
@@ -22,11 +20,11 @@
 	let event = get(eventStore);
 	let user = get(userStore);
 
-	let ticket: Awaited<ReturnType<typeof trpc.tickets.getById.query>>;
+	let ticket: Awaited<ReturnType<typeof trpc.tickets.getByIdWithMessages.query>>;
 
 	let ticketPromise: Promise<any> | undefined;
 	
-	let matchId: string | undefined | null;
+	let match_id: string | undefined | null;
 
 	let matchPromise: Promise<any> | undefined;
 
@@ -35,19 +33,22 @@
 	let time: string = "";
 
 	let station: ROBOT | undefined = undefined;
+	
+	let assignedToProfile: Profile | null;
 
 	let assignedToUser = false;
 
-	let updater: ReturnType<typeof trpc.tickets.ticketUpdater.subscribe> | undefined;
-
 	async function getTicketAndMatch() {
-		ticketPromise = trpc.tickets.getById.query({id: ticket_id, event_code: event.code});
+		ticketPromise = trpc.tickets.getByIdWithMessages.query({
+			id: ticket_id,
+			event_code: event.code
+		});
 		ticket = await ticketPromise;
 
 		if (ticket) {
 			if (ticket.match_id){
-				matchId = ticket.match_id;
-				matchPromise = trpc.match.getMatch.query({id: matchId})
+				match_id = ticket.match_id;
+				matchPromise = trpc.match.getMatch.query({id: match_id})
 				match = await matchPromise;
 
 				switch (ticket.team) {
@@ -74,7 +75,7 @@
 						break;
 				}
 			} else {
-				matchId = null;
+				match_id = null;
 			}
 			time = formatTime(ticket.created_at);
 		}
@@ -114,18 +115,20 @@
 		if (!ticket) return;
 		try {
 			if (ticket.assigned_to_id === user.id) {
-				update = await trpc.tickets.assign.query({ id: ticket.id, user_id: user.id, assign: false, event_code: event.code});
+				update = await trpc.tickets.unAssign.query({ ticket_id: ticket.id, event_code: event.code});
 			} else {
-				update = await trpc.tickets.assign.query({ id: ticket.id, user_id: user.id, assign: true, event_code: event.code});
-			}
-			if (update){
-				ticket.assigned_to = update[0];
+				update = await trpc.tickets.assign.query({ id: ticket.id, user_id: user.id, event_code: event.code});
 			}
 		} catch (err: any) {
 			toast("An error occurred while updating the ticket", err.message);
 			console.error(err);
 			return;
 		}
+	}
+
+	async function getAssignedProfile() {
+		assignedToProfile = await trpc.tickets.getAssignedToProfile.query({ ticket_id: ticket_id, event_code: event.code });
+		return assignedToProfile;
 	}
 
 	function viewLog() {
@@ -148,10 +151,10 @@
 		}
 	}
 
-	let message: string = "";
+	let message_text: string = "";
 
 	async function postMessage(evt: SubmitEvent) {
-		if (message.trim().length < 1) {
+		if (message_text.trim().length < 1) {
 			toast("Error Sending Message", "Message cannot be empty");
 		}
 
@@ -162,29 +165,13 @@
 				await notesPolicyElm.confirmPolicy();
 			}
 
-			const messageId = await trpc.messages.create.query({
-				text: message.trim(),
+			const message = await trpc.tickets.messages.create.query({
+				text: message_text.trim(),
 				ticket_id: ticket.id,
 				event_code: event.code,
 			});
 
-			console.log({
-				id: 0,
-				message: message.trim(),
-				team: ticket.team.toString(),
-				user: user,
-				user_id: user.id,
-				event_code: event.code,
-				created_at: new Date(),
-			});
-
-			await trpc.tickets.addMessage.query({
-				ticket_id: ticket.id,
-				message_id: messageId,
-				event_code: event.code, 
-			});
-
-			message = "";
+			message_text = "";
 
 			ticket = { ...ticket };
 		} catch (err: any) {
@@ -202,37 +189,6 @@
 		}
 	}
 
-	onMount(() => {
-		// stopBackgroundSubscription();
-		if (updater) updater.unsubscribe();
-		if (ticket) {
-			updater = trpc.tickets.ticketUpdater.subscribe(
-				{ id: ticket.id, eventToken: user.eventToken, user_id: user.id },
-				{
-					onData: (data) => {
-						console.log(data);
-						if (ticket && data){
-							if (data.data.id !== ticket.id) return;
-							if (data.type === "status") {
-								ticket.is_open = data.data.is_open;
-							} else if (data.type === "assign") {
-								ticket.assigned_to_id = data.data.assigned_to_id;
-								ticket.assigned_to = data.data.assigned_to;
-							} else if (data.type === "add_message") {
-								ticket.messages = data.data.messages;
-							}
-						} else {
-							return;
-						}
-					},
-				}
-			);
-		}
-	});
-
-	onDestroy(() => {
-		// startBackgroundSubscription();
-	});
 	let notesPolicyElm: NotesPolicy;
 </script>
 
@@ -259,8 +215,8 @@
 				<p class="text-lg">Created: {time}</p>
 				<p class="text-lg">
 					Assigned To:
-					{#if ticket.assigned_to}
-						{ticket.assigned_to.username}
+					{#if assignedToProfile}
+						{assignedToProfile.username}
 					{:else}
 						Unassigned
 					{/if}
@@ -284,6 +240,10 @@
 					<Button size="sm" on:click={() => viewLog()}>View Log</Button>
 				{/if}
 			</div>
+			<div class="text-left">
+				<p class="font-bold">{ticket.subject}</p>
+				<p>{ticket.text}</p>
+			</div>
 			<div class="flex flex-col overflow-y-auto h-full" id="chat">
 				<div class="flex flex-col grow gap-2 justify-end">
 					{#if !ticket.messages}
@@ -299,7 +259,7 @@
 				<label for="chat" class="sr-only">Add a Message:</label>
 				<Alert color="dark" class="px-0 py-2">
 					<svelte:fragment slot="icon">
-						<Textarea id="chat" class="ml-3" rows="1" placeholder="Your message..." on:keydown={sendKey} bind:value={message} />
+						<Textarea id="chat" class="ml-3" rows="1" placeholder="Your message..." on:keydown={sendKey} bind:value={message_text} />
 						<ToolbarButton type="submit" color="blue" class="rounded-full text-primary-600 dark:text-primary-500">
 							<Icon icon="mdi:send" class="w-6 h-8" />
 							<span class="sr-only">Send message</span>

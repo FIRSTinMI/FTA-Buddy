@@ -16,7 +16,7 @@
 		</div>
 		<div class="flex flex-col grow gap-2">
             {#if !notifications || notifications.length < 1}
-                <div class="text-center">No Notes Yet</div>
+                <div class="text-center">No Notifications Yet</div>
             {:else}
                 {#each notifications as notification}
                     <NotificationCard {notification}/>

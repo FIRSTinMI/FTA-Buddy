@@ -5,7 +5,7 @@ import { DSState, FieldState, MatchState, MatchStateMap, ROBOT, type MonitorFram
 import { AudioQueuer } from "./util/audioAlerts";
 import { MonitorFrameHandler, type MonitorEvent } from "./util/monitorFrameHandler";
 import { settingsStore } from "./stores/settings";
-import { robotNotification } from "../../shared/push-notifications";
+import { robotNotification } from "./util/push-notifications";
 
 // Initialize frame handler and audio queue
 export const frameHandler = new MonitorFrameHandler();

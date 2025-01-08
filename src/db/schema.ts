@@ -1,7 +1,6 @@
 import { boolean, integer, jsonb, pgEnum, pgTable, serial, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import { Profile, Message } from "../../shared/types";
 import { relations } from "drizzle-orm";
-
 export const roleEnum = pgEnum('role', ['FTA', 'FTAA', 'CSA', 'RI']);
 
 export const users = pgTable('users', {
@@ -12,7 +11,7 @@ export const users = pgTable('users', {
     created_at: timestamp('created_at').notNull().defaultNow(),
     last_seen: timestamp('last_seen').notNull().defaultNow(),
     events: jsonb('events').notNull().default('[]'),
-    role: roleEnum('role').notNull().default('FTA'), 
+    role: roleEnum('role').notNull().default('FTA'),
     token: varchar('token').notNull().default(''),
     admin: boolean('admin').notNull().default(false),
 });
@@ -33,17 +32,13 @@ export const events = pgTable('events', {
 
 export const Event = typeof events.$inferInsert;
 
-export const eventTicketsRelations = relations(events, ({ many }) => ({
-	tickets: many(tickets),
-}));
-
 export const tickets = pgTable('tickets', {
     id: serial('id').primaryKey(),
     team: integer('team').notNull().default(-1),
     subject: varchar('subject').notNull().default(''),
-    author_id: serial('author_id').references(() => users.id).notNull(),
+    author_id: integer('author_id').references(() => users.id).notNull(),
     author: jsonb('author').$type<Profile>(),
-    assigned_to_id: serial('assigned_to_id').references(() => users.id),
+    assigned_to_id: integer('assigned_to_id').references(() => users.id),
     assigned_to: jsonb('assigned_to').$type<Profile>(),
     event_code: varchar('event_code').references(() => events.code).notNull(),
     is_open: boolean('is_open').notNull().default(true),
@@ -55,13 +50,17 @@ export const tickets = pgTable('tickets', {
     followers: jsonb('followers').$type<number[]>()
 });
 
-export const ticketMessagesRelations = relations(tickets, ({ many }) => ({
-	messages: many(messages),
+export const eventTicketsRelations = relations(events, ({ many }) => ({
+    tickets: many(tickets),
+}));
+
+export const ticketEventRelations = relations(tickets, ({ one }) => ({
+    event: one(events, { fields: [tickets.event_code], references: [events.code] }),
 }));
 
 export const messages = pgTable('messages', {
     id: uuid('id').primaryKey(),
-    ticket_id: serial('ticket_id').references(() => tickets.id).notNull(),
+    ticket_id: integer('ticket_id').references(() => tickets.id).notNull(),
     text: varchar('text').notNull().default(''),
     author_id: integer('author_id').references(() => users.id).notNull(),
     author: jsonb('author').$type<Profile>(),
@@ -69,6 +68,14 @@ export const messages = pgTable('messages', {
     created_at: timestamp('created_at').notNull().defaultNow(),
     updated_at: timestamp('updated_at').notNull().defaultNow(),
 });
+
+export const ticketMessagesRelations = relations(tickets, ({ many }) => ({
+    messages: many(messages),
+}));
+
+export const messageTicketRelations = relations(messages, ({ one }) => ({
+    ticket: one(tickets, { fields: [messages.ticket_id], references: [tickets.id] }),
+}));
 
 export const notes = pgTable('notes', {
     id: uuid('id').primaryKey(),

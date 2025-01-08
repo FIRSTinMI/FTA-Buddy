@@ -225,6 +225,13 @@
       "when": 1736362732971,
       "tag": "0031_happy_shotgun",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "5",
+      "when": 1736363709374,
+      "tag": "0032_real_red_hulk",
+      "breakpoints": true
     }
   ]
 }

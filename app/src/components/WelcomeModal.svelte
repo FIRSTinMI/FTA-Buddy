@@ -5,7 +5,7 @@
 	import { onMount } from "svelte";
 	import { settingsStore } from "../stores/settings";
 	import { toast } from "../../../shared/toast";
-	import { subscribeToPush } from "../../../shared/push-notifications";
+	import { subscribeToPush } from "../util/push-notifications";
 	import { trpc } from "../main";
 
 	export let welcomeOpen = false;

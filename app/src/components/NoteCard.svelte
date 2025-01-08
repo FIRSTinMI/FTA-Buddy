@@ -14,7 +14,8 @@
                 <span class="sm">{time}</span>
             </p>
         </div>
-        <div class="flex flex-col p-2 grow text-left hidden sm:block">
+        <div class="flex flex-col p-2 grow text-left sm:block">
+            <p class="font-bold text-xl">{note.team}</p>
             <p class="font-bold">{note.text}</p>
         </div>
         <div class="flex flex-col sm:pl-4 sm:pr-2 pb-4 sm:pt-4">

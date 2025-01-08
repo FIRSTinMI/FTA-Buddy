@@ -4,7 +4,7 @@
 	import { settingsStore } from "../stores/settings";
 	import Spinner from "./Spinner.svelte";
 	import { toast } from "../../../shared/toast";
-	import { subscribeToPush } from "../../../shared/push-notifications";
+	import { subscribeToPush } from "../util/push-notifications";
 	import { audioQueuer } from "../field-monitor";
 	import { trpc } from "../main";
 	import { userStore } from "../stores/user";
@@ -178,7 +178,7 @@
 				<Button
 					class={!settings.developerMode && "hidden"}
 					on:click={() => {
-						trpc.event.notification.query({ eventToken: user.eventToken });
+						//trpc.event.notification.query({ eventToken: user.eventToken });
 					}}
 					size="xs">Notification Test</Button
 				>

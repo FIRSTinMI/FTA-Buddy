@@ -159,16 +159,16 @@ export const eventRouter = router({
 
         const user = await db.query.users.findFirst({ where: eq(users.token, ctx.token ?? "") });
 
-        await db.insert(events).values({
+        const event = await db.insert(events).values({
             code: input.code,
             pin: input.pin,
             token,
             teams,
             checklist,
             users: [user?.id]
-        });
+        }).returning();
 
-        return { code: input.code, token, teams };
+        return event[0];
     }),
 
     getAll: publicProcedure.query(async () => {

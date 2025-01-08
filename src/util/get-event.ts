@@ -3,7 +3,7 @@ import { EventEmitter } from "events";
 import { TypedEmitter } from 'tiny-typed-emitter';
 import { eventCodes, events } from "..";
 import { DEFAULT_MONITOR } from "../../shared/constants";
-import { TeamList, EventChecklist, ScheduleDetails, ServerEvent, Profile, TicketUpdateEvents, NoteUpdateEvents } from "../../shared/types";
+import { TeamList, EventChecklist, ScheduleDetails, ServerEvent, Profile, TicketUpdateEvents, NoteUpdateEvents, Ticket, Note } from "../../shared/types";
 import { db } from "../db/db";
 import schema from "../db/schema";
 import { getEventTickets } from "../router/tickets";
@@ -87,8 +87,8 @@ export async function getEvent(eventToken: string, eventCode?: string) {
                 lastPrestartDone: null,
                 lastMatchEnd: null,
                 robotCycleTracking: {},
-                tickets: await getEventTickets( eventCode ),
-                notes: await getEventNotes( eventCode )
+                tickets: await getEventTickets( eventCode ) as Ticket[],
+                notes: await getEventNotes( eventCode ) as Note[],
             };
 
             //console.log('Event loaded into memory: ', eventCode);

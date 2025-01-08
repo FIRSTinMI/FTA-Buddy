@@ -15,13 +15,13 @@
 
     // the path generator
     const pathLine = line()
-        .x((d) => xScale(d.time))
-        .y((d) => yScale((max + min) - d.data))
+        .x((d) => xScale(d[0]))
+        .y((d) => yScale((max + min) - d[1]))
         .curve(curveBasis);
 </script>
 
 <svg viewBox="0 0 100 100">
-    <path d={pathLine(data)} />
+    <path d={pathLine(data.map(d => [d.time, d.data]))} />
 </svg>
 
 <style>

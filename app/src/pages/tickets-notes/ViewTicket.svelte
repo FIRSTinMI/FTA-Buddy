@@ -34,8 +34,6 @@
 
 	let station: ROBOT | undefined = undefined;
 	
-	let assignedToProfile: Profile | null;
-
 	let assignedToUser = false;
 
 	async function getTicketAndMatch() {
@@ -126,11 +124,6 @@
 		}
 	}
 
-	async function getAssignedProfile() {
-		assignedToProfile = await trpc.tickets.getAssignedToProfile.query({ ticket_id: ticket_id, event_code: event.code });
-		return assignedToProfile;
-	}
-
 	function viewLog() {
 		if (!ticket || !ticket.match_id || !station) return;
 		navigate(`/app/logs/${ticket.match_id}/${station}`);
@@ -215,10 +208,10 @@
 				<p class="text-lg">Created: {time}</p>
 				<p class="text-lg">
 					Assigned To:
-					{#if assignedToProfile}
-						{assignedToProfile.username}
-					{:else}
+					{#if ticket.assigned_to_id === -1}
 						Unassigned
+					{:else}
+						{ticket.assigned_to?.username}
 					{/if}
 				</p>
 				{#if match}

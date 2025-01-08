@@ -3,9 +3,11 @@
 	import { onMount } from "svelte";
 	import { userStore } from "../../stores/user";
 	import { eventStore } from "../../stores/event";
+	import type { Event } from "../../stores/event";
 	import { trpc } from "../../main";
 	import { navigate } from "svelte-routing";
 	import Spinner from "../../components/Spinner.svelte";
+    import type { Profile } from "../../../../shared/types";
 
 	export let toast: (title: string, text: string, color?: string) => void;
 
@@ -63,7 +65,7 @@
 	let eventPin = Math.random().toString().slice(2, 6);
 	let loading = false;
 
-	async function createEvent(evt: Event) {
+	async function createEvent(evt: SubmitEvent) {
 		loading = true;
 
 		try {
@@ -81,7 +83,8 @@
 			eventStore.set({
 				code: eventCode,
 				pin: eventPin,
-				teams: res.teams,
+				teams: res.teams as { number: string; name: string; inspected: boolean; }[],
+				users: res.users as Profile[],
 			});
 
 			window.postMessage({ source: "page", type: "eventCode", code: eventCode, token: res.token }, "*");

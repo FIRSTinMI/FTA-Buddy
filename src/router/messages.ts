@@ -7,13 +7,12 @@ import { TRPCError } from "@trpc/server";
 import { Message, Profile } from "../../shared/types";
 import { getEvent } from "../util/get-event";
 import { randomUUID } from "crypto";
-import { observable } from "@trpc/server/observable";
 
 export const messagesRouter = router({
 
     loadAllForEvent: adminProcedure.input(z.object({
         event_code: z.string(),
-    })).query(async ({ctx, input}) => {
+    })).query(async ({ input }) => {
         const eventMessages = await db.query.messages.findMany({
             where:eq(messages.event_code, input.event_code),
             orderBy: [asc(messages.created_at)],
@@ -25,7 +24,7 @@ export const messagesRouter = router({
 
     getById: eventProcedure.input(z.object({
         id: z.string().uuid(),
-    })).query(async ({ ctx, input }) => {
+    })).query(async ({ input }) => {
         const message = await db.query.messages.findFirst({
             where: eq(messages.id, input.id),
         });
@@ -35,35 +34,6 @@ export const messagesRouter = router({
         }
 
         return message as Message;
-    }),
-
-    getAuthorProfile: eventProcedure.input(z.object({
-        message_id: z.string().uuid(),
-        event_code: z.string()
-    })).query(async ({ ctx, input }) => {
-        const message = await db.query.messages.findFirst({
-            where: and(
-                eq(messages.id, input.message_id),
-                eq(messages.event_code, input.event_code),
-            )
-        });
-        
-        if (!message) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Message not found" });
-        }
-
-        const profile = await db.select({
-            id: users.id,
-            username: users.username,
-            role: users.role,
-            admin: users.admin,
-        }).from(users).where(eq(users.id, message.author_id));
-        
-        if (!profile[0]) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
-        }
-
-        return profile[0] as Profile;
     }),
 
     create: eventProcedure.input(z.object({
@@ -84,18 +54,22 @@ export const messagesRouter = router({
             throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
         }
 
-        const authorProfile = await db.query.users.findFirst({
-            where: eq(users.token, ctx.token as string)
-        });
+        const authorProfile = await db.select({
+            id: users.id,
+            username: users.username,
+            role: users.role,
+            admin: users.admin,
+        }).from(users).where(eq(users.token, ctx.token as string)) as Profile[];
 
-        if (!authorProfile) {
+        if (!authorProfile[0]) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
         }
 
         const insert = await db.insert(messages).values({
             id: randomUUID(),
             ticket_id: ticket.id,
-            author_id: authorProfile.id,
+            author_id: authorProfile[0].id,
+            author: authorProfile[0],
             text: input.text,
             event_code: ticket.event_code,
             created_at: new Date(),
@@ -105,6 +79,13 @@ export const messagesRouter = router({
         if (!insert[0]) {
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Message on this Ticket" });
         }
+
+        event.ticketUpdateEmitter.emit("add_message", {
+            kind: "add_message",
+            data: {
+                message: insert[0],
+            }
+        });
 
         return insert[0] as Message;
     }),
@@ -161,6 +142,13 @@ export const messagesRouter = router({
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Message text" });
         }
 
+        event.ticketUpdateEmitter.emit("edit_message", {
+            kind: "edit_message",
+            data: {
+                message: update[0],
+            }
+        });
+
         return update[0] as Message;
     }),
 
@@ -200,6 +188,14 @@ export const messagesRouter = router({
         if (!result) {
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to delete Message" });
         }
+
+        event.ticketUpdateEmitter.emit("delete_message", {
+            kind: "delete_message",
+            data: {
+                ticket_id: message.ticket_id,
+                message_id: message.id,
+            }
+        });
 
         return message.id;
     }),

@@ -380,6 +380,7 @@ export type TicketUpdateEvents = {
         data: { 
             ticket_id: number,
             assigned_to_id: number
+            assigned_to: Profile | null,
         }
     ) => void;
     status: (
@@ -433,13 +434,26 @@ export type TicketUpdateEvents = {
 }
 
 export type NoteUpdateEvents = {
-    create: (data: { note: Note, }) => void;
-    edit: (data: {
-        note_id: string,
-        note_text: string,
-        note_updated_at: Date
-    }) => void;
-    delete: (data: { note_id: string }) => void;
+    create: (
+        kind: "create",
+        data: {
+            note: Note, 
+        }
+    ) => void;
+    edit: (
+        kind: "edit",
+        data: {
+            note_id: string,
+            note_text: string,
+            note_updated_at: Date
+        }
+    ) => void;
+    delete: (
+        kind: "delete",
+        data: { 
+            note_id: string 
+        }
+    ) => void;
 }
 
 export interface RobotCycleTracking {
@@ -482,7 +496,9 @@ export interface Ticket {
     team: number,
     subject: string,
     author_id: number,
+    author: Profile,
     assigned_to_id: number,
+    assigned_to: Profile | null,
     event_code: string,
     is_open: boolean,
     text: string,
@@ -498,6 +514,7 @@ export interface Note {
     id: string,
     text: string,
     author_id: number,
+    author: Profile,
     team: number,
     event_code: string,
     created_at: Date,
@@ -509,6 +526,7 @@ export interface Message {
     ticket_id: number,
     text: string,
     author_id: number,
+    author: Profile,
     event_code: string,
     created_at: Date,
     updated_at: Date,

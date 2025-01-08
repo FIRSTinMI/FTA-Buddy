@@ -74,36 +74,6 @@ export const ticketsRouter = router({
         return results as Ticket[];
     }),
 
-    getAuthorProfile: eventProcedure.input(z.object({
-        ticket_id: z.number(),
-        event_code: z.string(),
-    })).query(async ({ctx, input}) => {
-
-        const ticket = await db.query.tickets.findFirst({
-            where: and(
-                eq(tickets.event_code, input.event_code),
-                eq(tickets.id, input.ticket_id)
-            ),
-        });
-
-        if (!ticket) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "No Tickets found by provided User" });
-        }
-
-        const profile = await db.select({
-            id: users.id,
-            username: users.username,
-            role: users.role,
-            admin: users.admin,
-        }).from(users).where(eq(users.id, ticket.author_id));
-        
-        if (!profile[0]) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
-        }
-
-        return profile[0] as Profile;
-    }),
-
     getByIdWithMessages: eventProcedure.input(z.object({
         id: z.number(),
         event_code: z.string(),
@@ -123,42 +93,6 @@ export const ticketsRouter = router({
         }
 
         return ticket as Ticket;
-    }),
-
-    getAssignedToProfile: eventProcedure.input(z.object({
-        ticket_id: z.number(),
-        event_code: z.string(),
-    })).query(async ({ctx, input}) => {
-        const event = await getEvent(input.event_code);
-
-        const ticket = await db.query.tickets.findFirst({
-            where: and(
-                eq(tickets.event_code, event.code),
-                eq(tickets.id, input.ticket_id),
-            )
-        });
-
-        if (!ticket) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Unable to find Ticket by provided ID" });
-        }
-
-        if (ticket.assigned_to_id === -1) {
-            console.log("Ticket is currently unassigned.")
-            return null;
-        }
-
-        const profile = await db.select({
-            id: users.id,
-            username: users.username,
-            role: users.role,
-            admin: users.admin,
-        }).from(users).where(eq(users.id, ticket.assigned_to_id));   
-
-        if (!profile[0]) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Unable to find Profile of assigned User." });
-        }
-
-        return profile[0] as Profile;
     }),
 
     create: eventProcedure.input(z.object({
@@ -181,6 +115,7 @@ export const ticketsRouter = router({
             team: input.team,
             subject: input.subject,
             author_id: authorProfile.id,
+            author: authorProfile as Profile, // Ensure author is not null
             assigned_to_id: -1,
             is_open: true,
             text: input.text,
@@ -242,6 +177,14 @@ export const ticketsRouter = router({
             closed_at: !input.new_status ? new Date() : null
         }).where(eq(tickets.id, input.id)).returning();
 
+        event.ticketUpdateEmitter.emit("status", {
+            kind: "status",
+            data: {
+                ticket_id: update[0].id,
+                is_open: update[0].is_open
+            },
+        });
+
         return update[0] as Ticket;
     }),
 
@@ -297,12 +240,22 @@ export const ticketsRouter = router({
 
         const update = await db.update(tickets).set({
             assigned_to_id: input.user_id,
+            assigned_to: profile[0] as Profile,
         }).where(eq(tickets.id, input.id)).returning();
 
 
         if (!update[0]) {
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to assign User" });
         }
+
+        event.ticketUpdateEmitter.emit("assign", {
+            kind: "assign",
+            data: {
+                ticket_id: update[0].id,
+                assigned_to_id: update[0].assigned_to_id,
+                assigned_to: profile[0] as Profile,
+            },
+        });
 
         return update[0] as Ticket;
     }),
@@ -328,25 +281,41 @@ export const ticketsRouter = router({
             throw new TRPCError({ code: "BAD_REQUEST", message: "No user currently assigned to this ticket" });
         }
 
-        const profile = await db.select({
-            id: users.id,
-            username: users.username,
-            role: users.role,
-            admin: users.admin,
-        }).from(users).where(eq(users.id, ticket.assigned_to_id));
+        let profile: Profile[] | null = [];
 
+        if (ticket.assigned_to === null) {
+            profile = await db.select({
+                id: users.id,
+                username: users.username,
+                role: users.role,
+                admin: users.admin,
+            }).from(users).where(eq(users.id, ticket.assigned_to_id));
+        } else {
+            profile?.push(ticket.assigned_to);
+        }
+        
         if (!profile[0]) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Unable to find User currently assigned to Ticket" });
         }
 
         const update = await db.update(tickets).set({
             assigned_to_id: -1,
+            assigned_to: null,
         }).where(eq(tickets.id, input.ticket_id)).returning();
 
 
         if (!update[0]) {
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update assignation status" });
         }
+
+        event.ticketUpdateEmitter.emit("assign", {
+            kind: "assign",
+            data: {
+                ticket_id: update[0].id,
+                assigned_to_id: update[0].assigned_to_id,
+                assigned_to: null,
+            },
+        });
 
         return update[0] as Ticket;
     }),
@@ -394,6 +363,16 @@ export const ticketsRouter = router({
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Ticket text" });
         }
 
+        event.ticketUpdateEmitter.emit("edit", {
+            kind: "edit",
+            data: {
+                ticket_id: update[0].id,
+                ticket_subject: update[0].subject,
+                ticket_text: update[0].text,
+                ticket_updated_at: update[0].updated_at,
+            }
+        });
+
         return update[0] as Ticket;
     }),
 
@@ -440,6 +419,16 @@ export const ticketsRouter = router({
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Ticket subject" });
         }
 
+        event.ticketUpdateEmitter.emit("edit", {
+            kind: "edit",
+            data: {
+                ticket_id: update[0].id,
+                ticket_subject: update[0].subject,
+                ticket_text: update[0].text,
+                ticket_updated_at: update[0].updated_at,
+            }
+        });
+
         return update[0] as Ticket;
     }),
 
@@ -469,7 +458,7 @@ export const ticketsRouter = router({
                 username: users.username,
                 role: users.role,
                 admin: users.admin,
-            }).from(users).where(eq(users.token, ctx.token));
+            }).from(users).where(eq(users.token, ctx.token as string));
         } else {
             throw new TRPCError({ code: "BAD_REQUEST", message: "User token not provided in context object" });
         }
@@ -489,7 +478,7 @@ export const ticketsRouter = router({
 
             update = await db.update(tickets).set({
                 followers: followers,
-            }).where(eq(tickets.id, input.id)).returning();
+            }).where(eq(tickets.id, input.id)).returning() as Ticket[];
 
         } else if (!followers.includes(ctx.user.id) && input.follow === false) {
 
@@ -505,12 +494,20 @@ export const ticketsRouter = router({
 
             update = await db.update(tickets).set({
                 followers: updatedFollowers,
-            }).where(eq(tickets.id, input.id)).returning();
+            }).where(eq(tickets.id, input.id)).returning() as Ticket[];
         } 
 
         if (!update || (Array.isArray(update) && update.length === 0)) {
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Ticket followers" });
         }
+
+        event.ticketUpdateEmitter.emit("follow", {
+            kind: "follow",
+            data: {
+                ticket_id: update[0].id,
+                is_open: update[0].is_open,
+            }
+        });
 
         return update[0] as Ticket;
     }),
@@ -565,6 +562,13 @@ export const ticketsRouter = router({
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to delete Ticket" });
         }
 
+        event.ticketUpdateEmitter.emit("delete_ticket", {
+            kind: "delete_ticket",
+            data: {
+                ticket_id: ticket.id,
+            }
+        });
+
         return ticket.id;
     }),
 
@@ -586,10 +590,6 @@ export const ticketsRouter = router({
         }),
     })).subscription(async ({ ctx, input }) => {
         const event = await getEvent(input.eventToken);
-
-        const currentUser = await db.query.users.findFirst({
-            where: eq(users.token, ctx.token as string)
-        });
 
         return observable<TicketUpdateEvents>((emitter) => {
             if (input.eventOptions.create === true) {
@@ -657,9 +657,7 @@ export const ticketsRouter = router({
                 event.ticketUpdateEmitter.on("add_message", ({ data }) => {
                     if (input.ticket_id) {
                         if(data.message.ticket_id === input.ticket_id) {
-                            if (currentUser && currentUser.id !== data.message.author_id) {
-                                emitter.next(data);
-                            }
+                            emitter.next(data);
                         }
                     } else {
                         emitter.next(data);
@@ -671,9 +669,7 @@ export const ticketsRouter = router({
                 event.ticketUpdateEmitter.on("edit_message", ({ data }) => {
                     if (input.ticket_id) {
                         if(data.ticket_id === input.ticket_id) {
-                            if (currentUser && currentUser.id !== data.message.author_id) {
-                                emitter.next(data);
-                            }
+                            emitter.next(data);
                         }
                     } else {
                         emitter.next(data);

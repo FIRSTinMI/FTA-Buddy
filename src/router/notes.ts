@@ -5,7 +5,7 @@ import { pushSubscriptions, tickets, users, events, notes } from "../db/schema";
 import { observable } from "@trpc/server/observable";
 import { and, asc, eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
-import { Note, Profile } from "../../shared/types";
+import { Note, NoteUpdateEvents, Profile } from "../../shared/types";
 import { getEvent } from "../util/get-event";
 import { randomUUID } from "crypto";
 
@@ -85,53 +85,28 @@ export const notesRouter = router({
         return note as Note;
     }),
 
-    getAuthorProfile: eventProcedure.input(z.object({
-        note_id: z.string().uuid(),
-        event_code: z.string()
-    })).query(async ({ ctx, input }) => {
-        const note = await db.query.notes.findFirst({
-            where: and(
-                eq(notes.id, input.note_id),
-                eq(notes.event_code, input.event_code),
-            )
-        });
-        
-        if (!note) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
-        }
-
-        const profile = await db.select({
-            id: users.id,
-            username: users.username,
-            role: users.role,
-            admin: users.admin,
-        }).from(users).where(eq(users.id, note.author_id));
-        
-        if (!profile[0]) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
-        }
-
-        return profile[0] as Profile;
-    }),
-
     create: eventProcedure.input(z.object({
         team: z.number(),
         text: z.string(),
     })).query(async ({ ctx, input }) => {
         const event = await getEvent(ctx.eventToken as string);
 
-        const authorProfile = await db.query.users.findFirst({
-            where: eq(users.token, ctx.token as string)
-        });
+        const authorProfile = await db.select({
+            id: users.id,
+            username: users.username,
+            role: users.role,
+            admin: users.admin,
+        }).from(users).where(eq(users.token, ctx.token as string)) as Profile[];
 
-        if (!authorProfile) {
+        if (!authorProfile[0]) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
         }
 
         const insert = await db.insert(notes).values({
             id: randomUUID(),
             team: input.team,
-            author_id: authorProfile.id,
+            author_id: authorProfile[0].id,
+            author: authorProfile[0],
             text: input.text,
             event_code: event.code,
             created_at: new Date(),
@@ -141,6 +116,13 @@ export const notesRouter = router({
         if (!insert[0]) {
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Note" });
         }
+
+        event.noteUpdateEmitter.emit("create", {
+            kind: "create",
+            data: {
+                note: insert[0],
+            }
+        });
 
         return insert[0] as Note;
     }),
@@ -188,6 +170,15 @@ export const notesRouter = router({
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Ticket text" });
         }
 
+        event.noteUpdateEmitter.emit("edit", {
+            kind: "edit",
+            data: {
+                note_id: update[0].id,
+                note_text: update[0].text,
+                note_updated_at: update[0].updated_at,
+            }
+        });
+
         return update[0] as Note;
     }),
 
@@ -227,7 +218,65 @@ export const notesRouter = router({
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to delete Note" });
         }
 
+        event.noteUpdateEmitter.emit("delete", {
+            kind: "delete",
+            data: {
+                note_id: note.id,
+            }
+        });
+
         return note.id;
+    }),
+
+    updateSubscription: publicProcedure.input(z.object({
+        eventToken: z.string(),
+        note_id: z.string().uuid().optional(),
+        eventOptions: z.object({
+            create: z.boolean().optional(),
+            edit: z.boolean().optional(),
+            delete: z.boolean().optional(),
+        }),
+    })).subscription(async ({ctx, input }) => {
+        const event = await getEvent(input.eventToken);
+
+        return observable<NoteUpdateEvents>((emitter) => {
+            if (input.eventOptions.create === true) {
+                event.ticketUpdateEmitter.on("create", ({ data }) => {
+                    if (input.note_id) {
+                        if(data.note.id === input.note_id) {
+                            emitter.next(data);
+                        }
+                    } else {
+                        emitter.next(data);
+                    }
+                    
+                });
+            }
+
+            if (input.eventOptions.edit === true) {
+                event.ticketUpdateEmitter.on("edit", ({ data }) => {
+                    if (input.note_id) {
+                        if(data.note_id === input.note_id) {
+                                emitter.next(data);
+                        }
+                    } else {
+                        emitter.next(data);
+                    }
+                });
+            }
+
+            if (input.eventOptions.delete === true) {
+                event.ticketUpdateEmitter.on("delete", ({ data }) => {
+                    if (input.note_id) {
+                        if(data.note_id === input.note_id) {
+                            emitter.next(data);
+                        }
+                    } else {
+                        emitter.next(data);
+                    }
+                });
+            }
+        });
     }),
 });
 

@@ -183,6 +183,20 @@
       "when": 1735597895431,
       "tag": "0025_dizzy_triathlon",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "5",
+      "when": 1736278863821,
+      "tag": "0026_glorious_quentin_quire",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "5",
+      "when": 1736354195990,
+      "tag": "0027_shiny_mad_thinker",
+      "breakpoints": true
     }
   ]
 }

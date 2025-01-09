@@ -2,7 +2,7 @@
 	import { get } from "svelte/store";
 	import Spinner from "../../components/Spinner.svelte";
 	import { trpc } from "../../main";
-	import { formatTime } from "../../../../shared/formatTime";
+	import { formatTimeNoAgoHourMins } from "../../../../shared/formatTime";
 	import { toast } from "../../../../shared/toast";
 	import { eventStore } from "../../stores/event";
 	import { ROBOT, type Profile} from "../../../../shared/types";
@@ -15,7 +15,10 @@
 	import NotesPolicy from "../../components/NotesPolicy.svelte";
     import MessageCard from "../../components/MessageCard.svelte";
 
-	export let ticket_id: number;
+
+	export let id: number;
+
+	let ticket_id = parseInt(id);
 
 	let event = get(eventStore);
 	let user = get(userStore);
@@ -75,18 +78,21 @@
 			} else {
 				match_id = null;
 			}
-			time = formatTime(ticket.created_at);
+			time = formatTimeNoAgoHourMins(ticket.created_at);
 		}
 	}
 
 	onMount(async () => {
 		getTicketAndMatch();
+		if (ticket){
+			assignedToUser = (ticket.assigned_to_id === user.id) ? true : false;
+		}
     });
 
 	setInterval(
 		() => {
 			if (!ticket) return;
-			time = formatTime(ticket?.created_at);
+			time = formatTimeNoAgoHourMins(ticket?.created_at);
 		},
 		time.includes("s ") ? 1000 : 60000
 	);
@@ -95,12 +101,16 @@
 		let update;
 		if (!ticket) return;
 		try {
-			if (ticket.is_open === true) {
-				update = await trpc.tickets.updateStatus.query({ id: ticket.id, new_status: false, event_code: event.code });
+			if (ticket.messages.length > 0){
+				if (ticket.is_open === true) {
+					update = await trpc.tickets.updateStatus.query({ id: ticket.id, new_status: false, event_code: event.code });
+				} else {
+					update = await trpc.tickets.updateStatus.query({ id: ticket.id, new_status: true, event_code: event.code });
+				}
+				ticket.is_open = update.is_open;
 			} else {
-				update = await trpc.tickets.updateStatus.query({ id: ticket.id, new_status: true, event_code: event.code });
+				toast("Ticket must have at least 1 Added Message to be Closed", "");
 			}
-			ticket.is_open = update.is_open;
 		} catch (err: any) {
 			toast("An error occurred while updating the ticket", err.message);
 			console.error(err);
@@ -111,11 +121,14 @@
 	async function assignSelf() {
 		let update;
 		if (!ticket) return;
+		assignedToUser = (ticket.assigned_to_id === user.id) ? true : false;
 		try {
 			if (ticket.assigned_to_id === user.id) {
 				update = await trpc.tickets.unAssign.query({ ticket_id: ticket.id, event_code: event.code});
+				assignedToUser = false;
 			} else {
 				update = await trpc.tickets.assign.query({ id: ticket.id, user_id: user.id, event_code: event.code});
+				assignedToUser = true;
 			}
 		} catch (err: any) {
 			toast("An error occurred while updating the ticket", err.message);
@@ -131,7 +144,7 @@
 
 	function back() {
 		if (window.history.state === null) {
-			navigate("/app/tickets");
+			navigate("/app/");
 		} else {
 			window.history.back();
 		}
@@ -187,7 +200,7 @@
 
 <NotesPolicy bind:this={notesPolicyElm} />
 
-<div class="container mx-auto px-2 pt-2 h-full flex flex-col gap-2 max-w-5xl">
+<div class="container mx-auto px-2 pt-2 flex flex-col gap-2 max-w-5xl">
 	<Button on:click={back} class="w-fit">Back</Button>
 	{#await ticketPromise}
 		<Spinner />
@@ -195,7 +208,7 @@
 		{#if !ticket}
 			<p class="text-red-500">Ticket not found</p>
 		{:else}
-			<h1 class="text-2xl font-bold">
+			<h1 class="text-3xl font-bold">
 				Ticket #{ticket_id} -
 				{#if ticket.is_open}
 					<span class="text-green-500 font-bold">Open</span>
@@ -204,19 +217,19 @@
 				{/if}
 			</h1>
 			<div class="text-left">
-				<p class="text-lg">Team: {ticket.team} - {get(eventStore).teams.find((team) => parseInt(team.number) === ticket.team)}</p>
-				<p class="text-lg">Created: {time}</p>
-				<p class="text-lg">
-					Assigned To:
-					{#if ticket.assigned_to_id === -1}
+				<p><b>Team:</b> {ticket.team} - {get(eventStore).teams.find((team) => parseInt(team.number) === ticket.team).name}</p>
+				<p><b>Created:</b> {time}</p>
+				<p>
+					<b>Assigned To:</b>
+					{#if !ticket.assigned_to_id}
 						Unassigned
 					{:else}
 						{ticket.assigned_to?.username}
 					{/if}
 				</p>
 				{#if match}
-					<p class="text-lg">
-						Match: {match.level.replace("None", "Test")}
+					<p>
+						<b>Match:</b> {match.level.replace("None", "Test")}
 						{match.match_number}/{match.play_number}
 						{station}
 					</p>
@@ -226,15 +239,23 @@
 				<Button size="sm" on:click={() => changeOpenStatus()}>{ticket.is_open ? "Close Ticket" : "Reopen Ticket"}</Button>
 				{#if user}
 					<Button size="sm" on:click={() => assignSelf()}>
-						{assignedToUser ? "Unassign" : "👀 Claim Ticket"}
+						{#if ticket.assigned_to_id === user.id}
+							Unassign
+						{:else if ticket.assigned_to_id === null || ticket.assigned_to_id === undefined}
+							👀 Claim Ticket
+						{:else}
+							❌ Already Assigned
+						{/if}
 					</Button>
 				{/if}
 				{#if match}
 					<Button size="sm" on:click={() => viewLog()}>View Log</Button>
 				{/if}
 			</div>
-			<div class="text-left">
+			<div class="text-left text-2xl pt-4">
 				<p class="font-bold">{ticket.subject}</p>
+			</div>
+			<div class="text-left">
 				<p>{ticket.text}</p>
 			</div>
 			<div class="flex flex-col overflow-y-auto h-full" id="chat">

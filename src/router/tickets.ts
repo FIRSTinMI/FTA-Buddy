@@ -116,7 +116,8 @@ export const ticketsRouter = router({
             subject: input.subject,
             author_id: authorProfile.id,
             author: authorProfile as Profile, // Ensure author is not null
-            assigned_to_id: -1,
+            assigned_to_id: null,
+            assigned_to: null,
             is_open: true,
             text: input.text,
             created_at: new Date(),
@@ -206,23 +207,6 @@ export const ticketsRouter = router({
             throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
         }
 
-        let currentUserProfile: Profile[] | undefined;
-
-        if (ctx.token) {
-            currentUserProfile = await db.select({
-                id: users.id,
-                username: users.username,
-                role: users.role,
-                admin: users.admin,
-            }).from(users).where(eq(users.token, ctx.token));
-        } else {
-            throw new TRPCError({ code: "BAD_REQUEST", message: "User token not provided in context object" });
-        }
-        
-        if (!currentUserProfile[0]) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Current User not found by token" });
-        }
-
         const profile = await db.select({
             id: users.id,
             username: users.username,
@@ -283,15 +267,17 @@ export const ticketsRouter = router({
 
         let profile: Profile[] | null = [];
 
-        if (ticket.assigned_to === null) {
+        if (ticket.assigned_to === null && ticket.assigned_to_id) {
             profile = await db.select({
                 id: users.id,
                 username: users.username,
                 role: users.role,
                 admin: users.admin,
             }).from(users).where(eq(users.id, ticket.assigned_to_id));
-        } else {
-            profile?.push(ticket.assigned_to);
+        } else if (ticket.assigned_to_id === null) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "No user currently assigned to this Ticket" });
+        } else if (ticket.assigned_to_id !== null && ticket.assigned_to !== null) {
+            profile.push(ticket.assigned_to);
         }
         
         if (!profile[0]) {
@@ -299,7 +285,7 @@ export const ticketsRouter = router({
         }
 
         const update = await db.update(tickets).set({
-            assigned_to_id: -1,
+            assigned_to_id: null,
             assigned_to: null,
         }).where(eq(tickets.id, input.ticket_id)).returning();
 

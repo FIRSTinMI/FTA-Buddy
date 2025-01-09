@@ -407,7 +407,7 @@
 						}}
 					>
 						<svelte:fragment slot="icon">
-							<Icon icon="mdi:file-document-outline" class="w-8 h-8" />
+							<Icon icon="fluent:alert-on-16-filled" class="w-8 h-8" />
 						</svelte:fragment>
 						{#if notifications.length > 0}
 							<Indicator color="red" border size="xl" placement="top-left">
@@ -616,7 +616,7 @@
 						<Monitor {fullscreen} {frameHandler} />
 					</Route>
 				{/if}
-
+				
 				<Route path="/notifications" component={NotificationList} />
 				<Route path="/flashcards" component={Flashcard} />
 				<Route path="/notes" component={NoteList} />

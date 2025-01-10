@@ -13,7 +13,7 @@
             <p class="sm:w-28 text-wrap italic font-bold p-2">{note.author.username} - {note.author.role}</p>
         </div>
         <div class="p-4 grow text-left">
-            <p class="font-bold text-xl">{note.team}</p>
+            <p class="font-bold underline underline-offset-2 text-xl">{note.team}</p>
             <p class="text-wrap">{note.text}</p>
         </div>
         <div class="text-right sm:text-center sm:place-content-center">

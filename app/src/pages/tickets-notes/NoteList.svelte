@@ -25,7 +25,7 @@
 		.sort((a, b) => parseInt(a.number) - parseInt(b.number))
 		.map((v) => ({ value: parseInt(v.number), name: `${v.number} - ${v.name}` }));
 
-	teamOptions.push({value: -1, name: "No Selected Team"})
+	teamOptions.unshift({value: -1, name: "No Selected Team"})
 
 	let filteredNotes: Note[] | null;
 
@@ -36,6 +36,12 @@
 	async function getNotes() {
 		notesPromise = trpc.notes.getAll.query();
 		notes = await notesPromise;
+	}
+
+	function filterNotes() {
+		if (teamSelected !== -1) {
+			filteredNotes = notes.filter(note => note.team === teamSelected)
+		}
 	}
 
 	onMount(() => {
@@ -88,12 +94,8 @@
 <form class="text-left flex flex-col gap-4" on:submit|preventDefault={createNote}>
 	<Label class="w-full text-left">
 		Select Team:
-		<Select class="mt-2" items={teamOptions} bind:value={team}/>
+		<Select class="mt-2" items={teamOptions} bind:value={teamSelected}/>
 	</Label>
-	<Label for="text">Text:</Label>
-	<Textarea id="text" class="w-full" rows="5" bind:value={noteText} />
-	
-	<Button type="submit" disabled={disableSubmit}>Create Note</Button>
 </form>
 </Modal>
 
@@ -106,6 +108,10 @@
                 Select a Team (optional):
                 <Select class="mt-2" items={teamOptions} bind:value={teamSelected} />
             </Label>
+			<div class="flex flex-row space-x-2">
+				<Button class="w-1/2" on:click={() => filterNotes()}>Apply Filters</Button>
+				<Button class="w-1/2" on:click={() => (teamSelected = -1)}>Clear Filters</Button>
+			</div>
 		</div>
 		<div class="flex flex-col grow gap-2">
 			{#await notesPromise}

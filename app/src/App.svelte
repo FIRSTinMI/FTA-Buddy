@@ -25,7 +25,6 @@
 	import MatchLogsList from "./pages/match-logs/MatchLogsList.svelte";
 	import Checklist from "./pages/Checklist.svelte";
 	import { onDestroy, onMount } from "svelte";
-	import CreateTicket from "./pages/tickets-notes/CreateTicket.svelte";
 	import ViewTicket from "./pages/tickets-notes/ViewTicket.svelte";
 	import { trpc } from "./main";
 	import UpdateToast from "./components/UpdateToast.svelte";
@@ -396,7 +395,7 @@
 						}}
 					>
 						<svelte:fragment slot="icon">
-							<Icon icon="uil:file-graph" class="w-8 h-8" />
+							<Icon icon="clarity:note-solid" class="w-8 h-8" />
 						</svelte:fragment>
 					</SidebarItem>
 					<SidebarItem
@@ -638,7 +637,6 @@
 				<Route path="/softwaredocs" component={SoftwareDocs} />
 				<Route path="/wiringdiagrams" component={WiringDiagrams} />
 				<Route path="/messages/:team" component={Messages} />
-				<Route path="/ticket" component={CreateTicket} />
 				<Route path="/ticket/:id" component={ViewTicket} />
 				<Route path="/logs">
 					<MatchLogsList {toast} />

@@ -49,22 +49,23 @@
 
 	let ticketsPromise: Promise<any> | undefined;
 
-	function filterTickets(option: string) {
-		if (option === "team" && teamSelected !== -1) {
-			filteredTickets = tickets.filter(ticket => !ticket.team === teamSelected);
-		} else if (option === "team" && teamSelected === -1) {
+	function filterTickets() {
+		console.log("Option " + filterSelected + " Team Selected " + teamSelected);
+		if (filterSelected === "team" && teamSelected !== -1) {
+			filteredTickets = tickets.filter(ticket => ticket.team === teamSelected);
+		} else if (filterSelected === "team" && teamSelected === -1) {
 			filteredTickets = null;
-		} else if (option === "open") {
+		} else if (filterSelected === "open") {
 			filteredTickets = tickets.filter(ticket => ticket.is_open === true);
-		} else if (option === "closed") {
+		} else if (filterSelected === "closed") {
 			filteredTickets = tickets.filter(ticket => ticket.is_open === false);
-		} else if (option === "unassigned") {
+		} else if (filterSelected === "unassigned") {
 			filteredTickets = tickets.filter(ticket => ticket.assigned_to_id === null);
-		} else if (option === "assigned_to" && userSelected !== null) {
+		} else if (filterSelected === "assigned_to" && userSelected !== null) {
 			filteredTickets = tickets.filter(ticket => ticket.assigned_to_id === userSelected);
-		} else if (option === "assigned_to" && userSelected === null) {
+		} else if (filterSelected === "assigned_to" && userSelected === null) {
 			filteredTickets = null;
-		} else if (option === "none") {
+		} else if (filterSelected === "none") {
 			filteredTickets = tickets;
 		} else {
 			filteredTickets = tickets;
@@ -132,14 +133,6 @@
 			return;
 		}
 	}
-
-	function back() {
-		if (window.history.state === null) {
-			navigate("/app/messages");
-		} else {
-			window.history.back();
-		}
-	}
 </script>
 
 <NotesPolicy bind:this={notesPolicyElm} /> 
@@ -177,20 +170,24 @@
 			<h1 class="text-3xl mt-2" style="font-weight: bold">Event Tickets</h1>
 			<Button class="m-3" on:click={() => (createModalOpen = true)}>Create a New Ticket</Button>
 			<Label>
-				Select a Filter Option (optional)
-				<Select class="mt-2" items={filterOptions} bind:value={filterSelected} on:change={() => filterTickets} />
+				Select a Filter (optional):
+				<Select class="mt-2" items={filterOptions} bind:value={filterSelected} />
 			</Label>
 			{#if filterSelected === 'team'}
 				<Label>
 					Select a Team
-					<Select class="mt-2" items={teamOptions} bind:value={teamSelected} on:change={() => filterTickets}/>
+					<Select class="mt-2" items={teamOptions} bind:value={teamSelected}/>
 				</Label>
 			{:else if filterSelected === 'assigned_to'}
 				<Label>
 					Select a User
-					<Select class="mt-2" items={userOptions} bind:value={userSelected} on:change={() => filterTickets}/>
+					<Select class="mt-2" items={userOptions} bind:value={userSelected}/>
 				</Label>
 			{/if}
+			<div class="flex flex-row space-x-2">
+				<Button class="w-1/2" on:click={() => filterTickets()}>Apply Filters</Button>
+				<Button class="w-1/2" on:click={() => (filterSelected = "")}>Clear Filters</Button>
+			</div>
 		</div>
 		<div class="flex flex-col grow gap-2 mt-5">
 			{#await ticketsPromise}

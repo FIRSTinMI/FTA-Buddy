@@ -1,25 +1,23 @@
 <script lang="ts">
     import { Card } from "flowbite-svelte";
     import type { Note } from "../../../shared/types";
-    import { formatTimeShort } from "../../../shared/formatTime";
+    import { formatTimeNoAgoHourMins } from "../../../shared/formatTime";
 
     export let note: Note;
 
-    let time = note.created_at;
+    let time = formatTimeNoAgoHourMins(note.created_at);
 </script>
 <Card padding="none" size="none" class="w-full text-black dark:text-white dark:bg-neutral-800">
-    <div class="flex flex-col sm:flex-row sm:divide-x divide-gray-500 pt-2 sm:pt-0 sm:gap-4 px-4">
-        <div class="flex flex-col sm:my-auto">
-            <p>#{note.id}
-                <span class="sm">{time}</span>
-            </p>
+    <div class="flex flex-col sm:flex-row divide-y sm:divide-x divide-gray-500 pt-2 px-4">
+        <div class="text-left sm:text-center sm:place-content-center">
+            <p class="sm:w-28 text-wrap italic font-bold p-2">{note.author.username} - {note.author.role}</p>
         </div>
-        <div class="flex flex-col p-2 grow text-left sm:block">
+        <div class="p-4 grow text-left">
             <p class="font-bold text-xl">{note.team}</p>
-            <p class="font-bold">{note.text}</p>
+            <p class="text-wrap">{note.text}</p>
         </div>
-        <div class="flex flex-col sm:pl-4 sm:pr-2 pb-4 sm:pt-4">
-            <p class="text-wrap">{note.author.username}</p>
+        <div class="text-right sm:text-center sm:place-content-center">
+            <p class="sm:w-20 text-wrap italic p-2">{time}</p>
         </div>
     </div>
 </Card>

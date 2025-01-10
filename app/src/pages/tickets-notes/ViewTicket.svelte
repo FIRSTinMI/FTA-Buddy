@@ -200,8 +200,8 @@
 
 <NotesPolicy bind:this={notesPolicyElm} />
 
-<div class="container mx-auto px-2 pt-2 flex flex-col gap-2 max-w-5xl">
-	<Button on:click={back} class="w-fit">Back</Button>
+<div class="mx-auto px-2 pt-2 flex flex-col gap-2 max-w-5xl">
+	<Button on:click={back} class="w-full sm:w-fit">Back</Button>
 	{#await ticketPromise}
 		<Spinner />
 	{:then}
@@ -224,7 +224,7 @@
 					{#if !ticket.assigned_to_id}
 						Unassigned
 					{:else}
-						{ticket.assigned_to?.username}
+						{ticket.assigned_to?.username} - {ticket.assigned_to?.role}
 					{/if}
 				</p>
 				{#if match}
@@ -252,13 +252,13 @@
 					<Button size="sm" on:click={() => viewLog()}>View Log</Button>
 				{/if}
 			</div>
-			<div class="text-left text-2xl pt-4">
+			<div class="text-left text-2xl pt-4 pl-4">
 				<p class="font-bold">{ticket.subject}</p>
 			</div>
-			<div class="text-left">
+			<div class="text-left p-4">
 				<p>{ticket.text}</p>
 			</div>
-			<div class="flex flex-col overflow-y-auto h-full" id="chat">
+			<div class="flex flex-col h-full" id="chat">
 				<div class="flex flex-col grow gap-2 justify-end">
 					{#if !ticket.messages}
 						<div class="text-center">No messages</div>
@@ -269,7 +269,7 @@
 					{/if}
 				</div>
 			</div>
-			<form on:submit|preventDefault={postMessage}>
+			<form class="w-full" on:submit|preventDefault={postMessage}>
 				<label for="chat" class="sr-only">Add a Message:</label>
 				<Alert color="dark" class="px-0 py-2">
 					<svelte:fragment slot="icon">

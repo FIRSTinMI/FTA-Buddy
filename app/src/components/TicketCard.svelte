@@ -4,42 +4,41 @@
 <script lang="ts">
     import { Card, Button } from "flowbite-svelte";
     import type { Ticket } from "../../../shared/types";
-    import { formatTimeShort } from "../../../shared/formatTime";
+    import { formatTimeNoAgoHourMins } from "../../../shared/formatTime";
     import { navigate } from "svelte-routing";
 
     export let ticket: Ticket;
 
-    let time = formatTimeShort(((ticket.closed_at && !ticket.is_open) ? ticket.closed_at : ticket.created_at));
+    let time = formatTimeNoAgoHourMins(((ticket.closed_at && !ticket.is_open) ? ticket.closed_at : ticket.created_at));
 
     setInterval(() => {
-        time = formatTimeShort(((ticket.closed_at && !ticket.is_open) ? ticket.closed_at : ticket.created_at));
+        time = formatTimeNoAgoHourMins(((ticket.closed_at && !ticket.is_open) ? ticket.closed_at : ticket.created_at));
     }, (time.includes("s ") ? 1000 : 60000));
 
 </script>
 <Card href="ticket/{ticket.id}" padding="none" size="none" class="w-full text-black dark:text-white dark:bg-neutral-800">
-    <div class="flex flex-col sm:flex-row sm:divide-y divide-gray-500 pt-2 sm:pt-0 sm:gap-4 px-4 min-h-24">
-        <div class="flex flex-col sm:my-auto w-40">
-            <p>#{ticket.id}:
+    <div class="flex flex-col sm:flex-row divide-y sm:divide-x divide-gray-500 pt-2 px-4 min-h-24">
+        <div class="flex flex-row sm:flex-col place-content-between sm:place-content-center p-2 sm:w-40">
+            <p class="font-bold sm:text-center">#{ticket.id}:
                 {#if ticket.is_open}
-                    <span class="text-green-500 dark:text-green-500 font-bold"> Open</span>
+                    <span class="text-green-500 dark:text-green-500 font-bold text-left sm:text-center"> Open</span>
                 {:else}
-                    <span class="font-bold"> Closed</span>
+                    <span class="font-bold sm:text-center"> Closed</span>
                 {/if}
-                <span class="sm:hidden">{time}</span>
             </p>
             {#if ticket.team}
-                <p class="sm:text-lg">Team: {ticket.team}</p>
+                <p class="text-right sm:text-center"><b>Team:</b> {ticket.team}</p>
             {/if}
         </div>
-        <div class="flex flex-col p-2 grow text-left sm:block place-content-center">
+        <div class="p-2 grow place-content-center">
             <p class="font-bold text-lg">{ticket.subject}</p>
         </div>
-        <div class="flex flex-col sm:pl-4 sm:pr-2 pb-4 sm:pt-4 w-40 place-content-center">
-            <p class="hidden sm:block">{formatTimeShort((!ticket.is_open && ticket.closed_at) ? ticket.closed_at : ticket.created_at)}</p>
+        <div class="flex flex-row sm:flex-col pb-4 place-content-between sm:place-content-center sm:w-40 p-2">
+            <p class="text-left sm:text-center">{time}</p>
             {#if ticket.assigned_to_id === null}
-                <p class="font-bold">Unassigned</p>
+                <p class="text-wrap font-bold text-right sm:text-center">Unassigned</p>
             {:else}
-                <p class="text-wrap font-bold">Assigned to: {ticket.assigned_to?.username}</p>
+                <p class="text-wrap font-bold text-right sm:text-center">Assigned to: {ticket.assigned_to?.username}</p>
             {/if}
         </div>
     </div>

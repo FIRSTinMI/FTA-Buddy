@@ -8,15 +8,15 @@
     let time = formatTimeNoAgoHourMins(message.created_at);
 </script>
 <Card padding="none" size="none" class="w-full text-black dark:text-white dark:bg-neutral-800">
-    <div class="flex flex-col sm:flex-row sm:divide-x items-stretch divide-gray-500 pt-2 sm:pt-0 sm:gap-4 px-4">
-        <div class="flex flex-col place-content-center text-center">
-            <p class="w-28 text-wrap italic font-bold ">{message.author.username}</p>
+    <div class="flex flex-col sm:flex-row divide-y sm:divide-x divide-gray-500 pt-2 px-4">
+        <div class="text-left sm:text-center sm:place-content-center">
+            <p class="sm:w-28 text-wrap italic font-bold p-2">{message.author.username} - {message.author.role}</p>
         </div>
-        <div class="flex flex-col p-2 grow text-left place-content-center">
+        <div class="p-4 grow text-left">
             <p class="text-wrap">{message.text}</p>
         </div>
-        <div class="flex flex-col place-content-center text-center">
-            <p class="w-20 text-wrap italic">{time}</p>
+        <div class="text-right sm:text-center sm:place-content-center">
+            <p class="sm:w-20 text-wrap italic p-2">{time}</p>
         </div>
     </div>
 </Card>

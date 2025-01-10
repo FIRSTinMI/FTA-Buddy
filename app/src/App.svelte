@@ -389,6 +389,17 @@
 						</svelte:fragment>
 					</SidebarItem>
 					<SidebarItem
+						label="Team Notes"
+						on:click={() => {
+							hideMenu = true;
+							navigate("/app/notes");
+						}}
+					>
+						<svelte:fragment slot="icon">
+							<Icon icon="uil:file-graph" class="w-8 h-8" />
+						</svelte:fragment>
+					</SidebarItem>
+					<SidebarItem
 						label="Event Report"
 						on:click={() => {
 							hideMenu = true;
@@ -450,7 +461,7 @@
 						hideMenu = true;
 						navigate("/app/statuslights");
 					}}
-					class="text-xs ml-8 p-0"
+					class="text-xs ml-8 pt-1 pb-1"
 				>
 					<svelte:fragment slot="icon">
 						<Icon icon="heroicons:sun-16-solid" class="size-6" />
@@ -462,7 +473,7 @@
 						hideMenu = true;
 						navigate("/app/componentmanuals");
 					}}
-					class="text-xs ml-8 p-0"
+					class="text-xs ml-8 pt-1 pb-1"
 				>
 					<svelte:fragment slot="icon">
 						<Icon icon="streamline:manual-book-solid" class="size-6" />
@@ -474,7 +485,7 @@
 						hideMenu = true;
 						navigate("/app/wiringdiagrams");
 					}}
-					class="text-xs ml-8 p-0"
+					class="text-xs ml-8 pt-1 pb-1"
 				>
 					<svelte:fragment slot="icon">
 						<Icon icon="fa6-solid:chart-diagram" class="size-6" />
@@ -486,7 +497,7 @@
 						hideMenu = true;
 						navigate("/app/softwaredocs");
 					}}
-					class="text-xs ml-8 p-0"
+					class="text-xs ml-8 pt-1 pb-1"
 				>
 					<svelte:fragment slot="icon">
 						<Icon icon="ion:library" class="size-6" />
@@ -498,7 +509,7 @@
 						hideMenu = true;
 						navigate("/app/fieldmanuals");
 					}}
-					class="text-xs ml-8 p-0"
+					class="text-xs ml-8 pt-1 pb-1"
 				>
 					<svelte:fragment slot="icon">
 						<Icon icon="tabler:soccer-field" class="size-6" />
@@ -577,7 +588,7 @@
 </Drawer>
 
 <main>
-	<div class="bg-white dark:bg-neutral-800 w-screen h-dvh flex flex-col">
+	<div class="bg-white dark:bg-neutral-800 w-screen h-dvh flex flex-col fixed top-0 left-0 w-full">
 		{#if !fullscreen}
 			<div class="bg-primary-700 dark:bg-primary-500 flex w-full justify-between px-2">
 				<Button class="!py-0 !px-0 text-white" color="none" on:click={openMenu}>
@@ -585,7 +596,7 @@
 				</Button>
 				<div class="flex-grow">
 					{#if user.token && user.eventToken}
-						<h1 class="text-white text-lg">{event.code}</h1>
+						<h1 class="text-white text-lg place-content-center pt-1 font-bold">{event.code}</h1>
 					{/if}
 				</div>
 			</div>
@@ -653,7 +664,7 @@
 			</div>
 
 			{#if user.token && user.eventToken && !fullscreen}
-				<div class="flex justify-around py-2 bg-neutral-900 dark:bg-neutral-700 text-white">
+				<div class="fixed bottom-0 left-0 w-full flex justify-around py-2 bg-neutral-900 dark:bg-neutral-700 text-white">
 					{#if user?.role === "FTA" || user?.role === "FTAA"}
 						<Link to="/app/">
 							<Button class="!p-2" color="none">
@@ -689,7 +700,7 @@
 					{/if}
 					<Link to="/app/notifications">
 						<Button class="!p-2 relative" color="none">
-							<Icon icon="mdi:message-text" class="w-8 h-8" />
+							<Icon icon="fluent:alert-on-16-filled" class="w-8 h-8" />
 							{#if notifications.length > 0}
 								<Indicator color="red" border size="xl" placement="top-left">
 									<span class="text-white text-xs">{notifications.length}</span>

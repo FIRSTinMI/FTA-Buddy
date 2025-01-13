@@ -340,7 +340,7 @@ export interface ServerEvent {
     fieldStatusEmitter: EventEmitter,
     checklistEmitter: EventEmitter,
     ticketUpdateEmitter: TypedEmitter<TicketEvents>,
-    //ticketPushEmitter: TypedEmitter,
+    ticketPushEmitter: TypedEmitter<TicketEvents>,
     //notePushEmitter: TypedEmitter,
     cycleEmitter: EventEmitter,
     teams: TeamList,
@@ -393,7 +393,7 @@ export type TicketEvents = {
         data: {
             kind: "follow",
             ticket_id: number,
-            followers: number[] | null,
+            followers: number[],
         }
     ) => void;
     delete_ticket: (
@@ -507,7 +507,7 @@ export interface Ticket {
     updated_at: Date,
     closed_at?: Date | null,
     match_id?: string | null,
-    followers: number[] | null,
+    followers: number[],
     messages?: Message[],
 }
 

@@ -44,6 +44,7 @@ export async function getEvent(eventToken: string, eventCode?: string) {
     }
 
     const ticketUpdateEmitter = new TypedEmitter<TicketEvents>();
+    const ticketPushEmitter = new TypedEmitter<TicketEvents>();
 
     loadingEvents[eventCode] = new Promise(async (resolve) => {
         const eventInMemory = events[eventCode];
@@ -78,7 +79,7 @@ export async function getEvent(eventToken: string, eventCode?: string) {
                 fieldStatusEmitter: new EventEmitter(),
                 checklistEmitter: new EventEmitter(),
                 ticketUpdateEmitter: ticketUpdateEmitter,
-                //ticketPushEmitter: new TypedEmitter(),
+                ticketPushEmitter: ticketPushEmitter,
                 //notePushEmitter: new TypedEmitter(),
                 cycleEmitter: new EventEmitter(),
                 scheduleDetails: event.scheduleDetails as ScheduleDetails,

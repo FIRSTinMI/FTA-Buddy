@@ -131,6 +131,7 @@ export const ticketsRouter = router({
                 created_at: new Date(),
                 updated_at: new Date(),
                 event_code: event.code,
+                followers: [],
                 match_id: input.match_id,
             }).returning();
         } else {
@@ -146,6 +147,7 @@ export const ticketsRouter = router({
                 created_at: new Date(),
                 updated_at: new Date(),
                 event_code: event.code,
+                followers: [],
                 match_id: null,
             }).returning();
         }
@@ -521,6 +523,127 @@ export const ticketsRouter = router({
     messages: messageRouter,
 
     updateSubscription: publicProcedure.input(z.object({
+        eventToken: z.string(),
+        ticket_id: z.number().optional(),
+        eventOptions: z.object({
+            create: z.boolean().optional(),
+            assign: z.boolean().optional(),
+            status: z.boolean().optional(),
+            follow: z.boolean().optional(),
+            delete_ticket: z.boolean().optional(),
+            edit: z.boolean().optional(),
+            add_message: z.boolean().optional(),
+            edit_message: z.boolean().optional(),
+            delete_message: z.boolean().optional(),
+        }),
+    })).subscription(async ({ ctx, input }) => {
+        const event = await getEvent(input.eventToken);
+
+        return observable((emitter) => {
+            if (input.eventOptions.create === true) {
+                event.ticketUpdateEmitter.on("create", ( data ) => {
+                    if (input.ticket_id) {
+                        if(data.ticket.id === input.ticket_id) {
+                            emitter.next(data);
+                        }
+                    } else {
+                        emitter.next(data);
+                    }
+                    
+                });
+            }
+
+            if (input.eventOptions.assign === true) {
+                event.ticketUpdateEmitter.on("assign", ( data ) => {
+                    if (input.ticket_id) {
+                        if(data.ticket_id === input.ticket_id) {
+                            emitter.next(data);
+                        }
+                    } else {
+                        emitter.next(data);
+                    }
+                });
+            }
+
+            if (input.eventOptions.status === true) {
+                event.ticketUpdateEmitter.on("status", ( data ) => {
+                    if (input.ticket_id) {
+                        if(data.ticket_id === input.ticket_id) {
+                            emitter.next(data);
+                        }
+                    } else {
+                        emitter.next(data);
+                    }
+                });
+            }
+
+            if (input.eventOptions.follow === true) {
+                event.ticketUpdateEmitter.on("follow", ( data ) => {
+                    if (input.ticket_id) {
+                        if(data.ticket_id === input.ticket_id) {
+                            emitter.next(data);
+                        }
+                    } else {
+                        emitter.next(data);
+                    }
+                });
+            }
+
+            if (input.eventOptions.delete_ticket === true) {
+                event.ticketUpdateEmitter.on("delete_ticket", ( data ) => {
+                    if (input.ticket_id) {
+                        if(data.ticket_id === input.ticket_id) {
+                            emitter.next(data);
+                        }
+                    } else {
+                        emitter.next(data);
+                    }
+                });
+            }
+
+            if (input.eventOptions.add_message === true) {
+                event.ticketUpdateEmitter.on("add_message", ( data ) => {
+                    if (input.ticket_id) {
+                        if(data.message.ticket_id === input.ticket_id) {
+                            emitter.next(data);
+                        }
+                    } else {
+                        emitter.next(data);
+                    }
+                });
+            }
+
+            if (input.eventOptions.edit_message === true) {
+                event.ticketUpdateEmitter.on("edit_message", ( data ) => {
+                    if (input.ticket_id) {
+                        if(data.message.ticket_id === input.ticket_id) {
+                            emitter.next(data);
+                        }
+                    } else {
+                        emitter.next(data);
+                    }
+                });
+            }
+
+            if (input.eventOptions.delete_message === true) {
+                event.ticketUpdateEmitter.on("delete_message", ( data ) => {
+                    if (input.ticket_id) {
+                        if(data.ticket_id === input.ticket_id) {
+                            emitter.next(data);
+                        }
+                    } else {
+                        emitter.next(data);
+                    }
+                });
+            }
+
+            return () => {
+                event.ticketUpdateEmitter.removeAllListeners();
+			};
+        });
+    }),
+
+    pushSubscription: publicProcedure.input(z.object({
         eventToken: z.string(),
         ticket_id: z.number().optional(),
         eventOptions: z.object({

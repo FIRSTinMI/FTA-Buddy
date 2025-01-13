@@ -262,6 +262,28 @@
 		}
 	}
 
+	async function toggleFollowTicket() {
+		try {
+			if (!ticket.followers.includes(user.id)) {
+				const res = await trpc.tickets.follow.query({
+					id: ticket_id,
+					follow: true,
+					event_code: event.code,
+				});
+			} else {
+				const res = await trpc.tickets.follow.query({
+					id: ticket_id,
+					follow: false,
+					event_code: event.code,
+				});
+			}
+		} catch (err: any) {
+			toast("An error occurred while following the Ticket", err.message);
+			console.error(err);
+			return;
+		}
+	}
+
 	function foregroundUpdate() {
 		if (foregroundUpdate && typeof foregroundUpdate.unsubscribe === "function") foregroundUpdate.unsubscribe();
 		foregroundUpdate = trpc.tickets.updateSubscription.subscribe(
@@ -272,6 +294,7 @@
 					assign: true,
 					status: true,
 					edit: true,
+					follow: true,
 				}
 			},
 			{
@@ -283,6 +306,8 @@
 							ticket.assigned_to = data.assigned_to;
 						} else if (data.kind === "status") {
 							ticket.is_open = data.is_open;
+						} else if (data.kind === "follow") {
+							ticket.followers = data.followers;
 						}
 					}
 				},
@@ -325,18 +350,27 @@
 			<p class="text-red-500">Ticket not found</p>
 		{:else}
 			{#if (user.id === ticket.author_id)}
-				<div class="flex flex-row justify-between items-stretch h-10">
-					<Button on:click={back} class=" "><ArrowLeftOutline class=""/></Button>
-					<div>
-						<Button on:click={() => (location.reload())} class=""><Icon icon="charm:refresh" style="height: 20px; width: 20px;"/></Button>
-						<Button on:click={() => (editTicketView = true)} class=""><EditOutline class=""/></Button>
-						<Button on:click={() => (deleteTicketPopup = true)} class=""><TrashBinOutline class=""/></Button>
+				<div class="flex flex-row justify-between h-10 gap-1">
+					<div class="flex flex-row gap-1">
+						<Button on:click={back} class=""><ArrowLeftOutline class="" style="height: 13px; width: 13px;"/></Button>
+						{#if (!ticket.followers.includes(user.id))}
+							<Button on:click={toggleFollowTicket} class=""><Icon icon="simple-line-icons:user-following" style="height: 13px; width: 18px; padding-right: 4px;"/> Follow</Button>
+						{:else}
+							<Button on:click={toggleFollowTicket} class=""><Icon icon="simple-line-icons:user-unfollow" style="height: 13px; width: 18px; padding-right: 4px;"/> Unfollow</Button>
+						{/if}
+					</div>
+					<div class="flex flex-row gap-1">
+						<Button on:click={() => (location.reload())} class=""><Icon icon="charm:refresh" style="height: 13px; width: 13px;"/></Button>
+						{#if (ticket.author_id === user.id)}
+							<Button on:click={() => (editTicketView = true)} class=""><EditOutline class="" style="height: 13px; width: 13px;"/></Button>
+							<Button on:click={() => (deleteTicketPopup = true)} class=""><TrashBinOutline class="" style="height: 13px; width: 13px;"/></Button>
+						{/if}
 					</div>
 				</div>
 			{:else}	
 				<div class="flex flex-row justify-between items-stretch h-10">
 					<Button on:click={back} class="w-full sm:w-fit">Back</Button>
-					<Button on:click={() => (location.reload())} class=""><Icon icon="charm:refresh" style="height: 20px; width: 20px;"/></Button>
+					<Button on:click={() => (location.reload())} class=""><Icon icon="charm:refresh" style="height: 15px; width: 15px;"/></Button>
 				</div>
 			{/if}
 			<h1 class="text-3xl font-bold p-2">

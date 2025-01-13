@@ -47,7 +47,7 @@ export const tickets = pgTable('tickets', {
     updated_at: timestamp('updated_at').notNull().defaultNow(),
     closed_at: timestamp('closed_at'),
     match_id: uuid('match_id').references(() => matchLogs.id),
-    followers: jsonb('followers').$type<number[]>()
+    followers: jsonb('followers').$type<number[]>().default([]).notNull(),
 });
 
 export const eventTicketsRelations = relations(events, ({ many }) => ({

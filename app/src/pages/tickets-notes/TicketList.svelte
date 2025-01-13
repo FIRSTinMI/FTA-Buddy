@@ -189,7 +189,7 @@
 				<Button class="w-1/2" on:click={() => (filterSelected = "")}>Clear Filters</Button>
 			</div>
 		</div>
-		<div class="flex flex-col grow gap-2 mt-5">
+		<div class="flex flex-col grow gap-2 mt-4">
 			{#await ticketsPromise}
 				<Spinner />
 			{:then}

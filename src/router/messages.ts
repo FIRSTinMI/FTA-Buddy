@@ -82,15 +82,14 @@ export const messagesRouter = router({
 
         event.ticketUpdateEmitter.emit("add_message", {
             kind: "add_message",
-            data: {
-                message: insert[0],
-            }
+            ticket_id: ticket.id,
+            message: insert[0] as Message,
         });
 
         return insert[0] as Message;
     }),
 
-    editText: eventProcedure.input(z.object({
+    edit: eventProcedure.input(z.object({
         ticket_id: z.number(),
         message_id: z.string().uuid(),
         new_text: z.string(),
@@ -144,9 +143,8 @@ export const messagesRouter = router({
 
         event.ticketUpdateEmitter.emit("edit_message", {
             kind: "edit_message",
-            data: {
-                message: update[0],
-            }
+            ticket_id: ticket.id,
+            message: update[0] as Message,
         });
 
         return update[0] as Message;
@@ -191,10 +189,8 @@ export const messagesRouter = router({
 
         event.ticketUpdateEmitter.emit("delete_message", {
             kind: "delete_message",
-            data: {
-                ticket_id: message.ticket_id,
-                message_id: message.id,
-            }
+            ticket_id: message.ticket_id,
+            message_id: message.id,
         });
 
         return message.id;

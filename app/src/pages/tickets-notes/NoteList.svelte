@@ -67,18 +67,16 @@
 
 	async function createNote(evt: Event) {
 		if (team === undefined || team === -1) return;
-
 		try {
 			if (!$settingsStore.acknowledgedNotesPolicy) {
 				await notesPolicyElm.confirmPolicy();
 			}
-
 			const res = await trpc.notes.create.query({
 				team: team,
 				text: noteText,
 			});
 			toast("Note created successfully", "success", "green-500");
-			navigate("/app/notes");
+			location.reload();
 		} catch (err: any) {
 			toast("An error occurred while creating the note", err.message);
 			console.error(err);
@@ -90,13 +88,17 @@
 <NotesPolicy bind:this={notesPolicyElm} /> 
 
 <Modal bind:open={createModalOpen} size="lg" outsideclose dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
-<div slot="header"><h1 class="text-2xl font-bold text-black dark:text-white">Create a Note</h1></div>
-<form class="text-left flex flex-col gap-4" on:submit|preventDefault={createNote}>
-	<Label class="w-full text-left">
-		Select Team:
-		<Select class="mt-2" items={teamOptions} bind:value={teamSelected}/>
-	</Label>
-</form>
+	<div slot="header"><h1 class="text-2xl font-bold text-black dark:text-white">Create a Note</h1></div>
+	<form class="text-left flex flex-col gap-4" on:submit={createNote}>
+		<Label class="w-full text-left">
+			Select Team:
+			<Select class="mt-2" items={teamOptions} bind:value={team}/>
+		</Label>
+		<Label for="text">Text:</Label>
+		<Textarea id="text" class="w-full" rows="5" bind:value={noteText} />
+		
+		<Button type="submit" disabled={disableSubmit}>Create Note</Button>
+	</form>
 </Modal>
 
 <div class="container max-w-6xl mx-auto px-2 pt-2 h-full flex flex-col gap-2">
@@ -108,7 +110,7 @@
                 Select a Team (optional):
                 <Select class="mt-2" items={teamOptions} bind:value={teamSelected} />
             </Label>
-			<div class="flex flex-row space-x-2">
+			<div class="flex flex-row space-x-2 mb-8">
 				<Button class="w-1/2" on:click={() => filterNotes()}>Apply Filters</Button>
 				<Button class="w-1/2" on:click={() => (teamSelected = -1)}>Clear Filters</Button>
 			</div>

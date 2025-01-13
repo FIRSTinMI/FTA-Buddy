@@ -20,8 +20,6 @@
 		event.teams = [];
 	}
 
-	console.log(user.admin);
-
 	let email = "";
 	let username = "";
 	let password = "";

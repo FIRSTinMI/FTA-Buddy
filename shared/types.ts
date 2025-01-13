@@ -339,9 +339,8 @@ export interface ServerEvent {
     robotStateChangeEmitter: EventEmitter,
     fieldStatusEmitter: EventEmitter,
     checklistEmitter: EventEmitter,
-    ticketUpdateEmitter: TypedEmitter,
+    ticketUpdateEmitter: TypedEmitter<TicketEvents>,
     //ticketPushEmitter: TypedEmitter,
-    noteUpdateEmitter: TypedEmitter,
     //notePushEmitter: TypedEmitter,
     cycleEmitter: EventEmitter,
     teams: TeamList,
@@ -368,44 +367,44 @@ export interface ServerEvent {
     notes: Note[],
 }
 
-export type TicketUpdateEvents = {
+export type TicketEvents = {
     create: (
-        kind: "create",
         data: { 
+            kind: "create",
             ticket: Ticket 
         }
     ) => void;
     assign: (
-        kind: "assign",
         data: { 
+            kind: "assign",
             ticket_id: number,
-            assigned_to_id: number
+            assigned_to_id: number | null,
             assigned_to: Profile | null,
         }
     ) => void;
     status: (
-        kind: "status",
         data: { 
+            kind: "status",
             ticket_id: number,
-            is_open: number 
+            is_open: boolean 
         }
     ) => void;
     follow: (
-        kind: "follow",
         data: {
+            kind: "follow",
             ticket_id: number,
-            is_open: number,
+            followers: number[] | null,
         }
     ) => void;
     delete_ticket: (
-        kind: "delete_ticket",
         data: { 
+            kind: "delete_ticket",
             ticket_id: number 
         }
     ) => void;
     edit: (
-        kind: "edit",
         data: {
+            kind: "edit",
             ticket_id: number,
             ticket_subject: string,
             ticket_text: string,
@@ -413,44 +412,46 @@ export type TicketUpdateEvents = {
         }
     ) => void;
     add_message: (
-        kind: "add_message",
         data: { 
+            kind: "add_message",
+            ticket_id: number,
             message: Message 
         }
     ) => void;
     edit_message: (
-        kind: "edit_message",
         data: {
+            kind: "edit_message",
+            ticket_id: number,
             message: Message,
         }
     ) => void;
     delete_message: (
-        kind: "delete_message",
         data: {
+            kind: "delete_message",
             ticket_id: number,
             message_id: string,
         }
     ) => void;
 }
 
-export type NoteUpdateEvents = {
+export type NoteEvents = {
     create: (
-        kind: "create",
         data: {
+            kind: "create",
             note: Note, 
         }
     ) => void;
     edit: (
-        kind: "edit",
         data: {
+            kind: "edit",
             note_id: string,
             note_text: string,
             note_updated_at: Date
         }
     ) => void;
     delete: (
-        kind: "delete",
         data: { 
+            kind: "delete",
             note_id: string 
         }
     ) => void;

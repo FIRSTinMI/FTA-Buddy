@@ -6,7 +6,8 @@
 	import { toast } from "../../../../shared/toast";
 	import { eventStore } from "../../stores/event";
 	import { ROBOT, type Profile} from "../../../../shared/types";
-	import { Alert, Button, Textarea, ToolbarButton } from "flowbite-svelte";
+	import { Alert, Button, Textarea, ToolbarButton, Modal, Label } from "flowbite-svelte";
+	import { EditOutline, ExclamationCircleOutline, TrashBinOutline, ArrowLeftOutline } from 'flowbite-svelte-icons';
 	import { navigate } from "svelte-routing";
 	import { userStore } from "../../stores/user";
 	import Icon from "@iconify/svelte";
@@ -14,7 +15,6 @@
 	import { settingsStore } from "../../stores/settings";
 	import NotesPolicy from "../../components/NotesPolicy.svelte";
     import MessageCard from "../../components/MessageCard.svelte";
-
 
 	export let id: number;
 
@@ -38,6 +38,14 @@
 	let station: ROBOT | undefined = undefined;
 	
 	let assignedToUser = false;
+	
+	let sortedMessages: Message[] | null;
+
+	let deleteTicketPopup = false;
+
+	let editTicketView = false;
+	let editTicketText: string;
+	let editTicketSubject: string;
 
 	async function getTicketAndMatch() {
 		ticketPromise = trpc.tickets.getByIdWithMessages.query({
@@ -79,14 +87,18 @@
 				match_id = null;
 			}
 			time = formatTimeNoAgoHourMins(ticket.created_at);
+
+			sortedMessages = ticket.messages.sort((a, b) => a.created_at - b.created_at);
+
+			assignedToUser = (ticket.assigned_to_id === user.id) ? true : false;
+			editTicketText = ticket.text;
+			editTicketSubject = ticket.subject;
 		}
 	}
 
 	onMount(async () => {
 		getTicketAndMatch();
-		if (ticket){
-			assignedToUser = (ticket.assigned_to_id === user.id) ? true : false;
-		}
+		foregroundUpdate();
     });
 
 	setInterval(
@@ -144,7 +156,11 @@
 
 	function back() {
 		if (window.history.state === null) {
-			navigate("/app/");
+			if (user.role === "CSA" || user.role === "RI") {
+				navigate("/app/");
+			} else {
+				navigate("/app/tickets/")
+			}
 		} else {
 			window.history.back();
 		}
@@ -195,20 +211,135 @@
 		}
 	}
 
+	async function editTicket() {
+		try {
+			if (editTicketText !== ticket.text && editTicketSubject !== ticket.subject) {
+				const res = await trpc.tickets.edit.query({
+					id: ticket_id,
+					new_text: editTicketText,
+					new_subject: editTicketSubject,
+					event_code: event.code,
+				});
+				toast("Ticket edited successfully", "success", "green-500");
+			} else if (editTicketText !== ticket.text) {
+				const res = await trpc.tickets.edit.query({
+					id: ticket_id,
+					new_text: editTicketText,
+					event_code: event.code,
+				});
+				toast("Ticket edited successfully", "success", "green-500");
+			} else if (editTicketSubject !== ticket.subject) {
+				const res = await trpc.tickets.edit.query({
+					id: ticket_id,
+					new_subject: editTicketSubject,
+					event_code: event.code,
+				});
+				toast("Ticket edited successfully", "success", "green-500");
+			}
+		} catch (err: any) {
+			toast("An error occurred while editing the Ticket", err.message);
+			console.error(err);
+			return;
+		}
+	}
+
+	async function deleteTicket() {
+		try{
+			if (!ticket.messages || ticket.is_open || !ticket.followers) {
+				const res = await trpc.tickets.delete.query({
+					id: ticket_id,
+					event_code: event.code,
+				});
+				toast("Ticket deleted successfully", "success", "green-500");
+			} else {
+				toast("Ticket has messages or followers or is closed", "");
+			}
+			back();
+		} catch (err: any) {
+			toast("An error occurred while deleting the Ticket", err.message);
+			console.error(err);
+			return;
+		}
+	}
+
+	function foregroundUpdate() {
+		if (foregroundUpdate && typeof foregroundUpdate.unsubscribe === "function") foregroundUpdate.unsubscribe();
+		foregroundUpdate = trpc.tickets.updateSubscription.subscribe(
+			{
+				eventToken: get(userStore).eventToken,
+				ticket_id: ticket_id,
+				eventOptions: {
+					assign: true,
+					status: true,
+					edit: true,
+				}
+			},
+			{
+				onData: (data) => {
+					const ticketMatch = (data.ticket_id === ticket.id);
+					if (ticketMatch) {
+						if (data.kind === "assign") {
+							ticket.assigned_to_id = data.assigned_to_id;
+							ticket.assigned_to = data.assigned_to;
+						} else if (data.kind === "status") {
+							ticket.is_open = data.is_open;
+						}
+					}
+				},
+			}
+		);
+	}
+
 	let notesPolicyElm: NotesPolicy;
 </script>
+
+<Modal bind:open={editTicketView} size="lg" dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
+	<div slot="header">
+		<h1 class="text-2xl font-bold text-black dark:text-white place-content-center">Edit Ticket #{ticket_id}</h1>
+	</div>
+	<form class="text-left flex flex-col gap-4" on:submit={editTicket}>
+		<Label for="subject">Edit Subject:</Label>
+		<Textarea id="subject" class="w-full" rows="1" bind:value={editTicketSubject} />
+		<Label for="text">Edit Text:</Label>
+		<Textarea id="text" class="w-full" rows="5" bind:value={editTicketText} />
+		<Button type="submit">Save Changes</Button>
+	</form>
+</Modal>
+
+<Modal bind:open={deleteTicketPopup} size="sm" outsideclose dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
+	<div class="text-center">
+		<h3 class="mb-5 text-lg">Are you sure you want to delete this Ticket?</h3>
+		<h2 class="mb-5 text-sm">Unable to delete Tickets that have attached Messages or followers, or those that have been closed.</h2>		
+		<Button on:click={deleteTicket} color="red" class="me-2">Yes, I'm sure</Button>
+		<Button on:click={() => (deleteTicketPopup = false)}>No, cancel</Button>
+	  </div>
+</Modal>
 
 <NotesPolicy bind:this={notesPolicyElm} />
 
 <div class="mx-auto px-2 pt-2 flex flex-col gap-2 max-w-5xl">
-	<Button on:click={back} class="w-full sm:w-fit">Back</Button>
 	{#await ticketPromise}
 		<Spinner />
 	{:then}
 		{#if !ticket}
 			<p class="text-red-500">Ticket not found</p>
 		{:else}
-			<h1 class="text-3xl font-bold">
+			{#if (user.id === ticket.author_id)}
+				<div class="flex flex-row justify-between items-stretch h-10">
+					<Button on:click={back} class=" "><ArrowLeftOutline class=""/></Button>
+					<div>
+						<Button on:click={() => (location.reload())} class=""><Icon icon="charm:refresh" style="height: 20px; width: 20px;"/></Button>
+						<Button on:click={() => (editTicketView = true)} class=""><EditOutline class=""/></Button>
+						<Button on:click={() => (deleteTicketPopup = true)} class=""><TrashBinOutline class=""/></Button>
+					</div>
+				</div>
+			{:else}	
+				<div class="flex flex-row justify-between items-stretch h-10">
+					<Button on:click={back} class="w-full sm:w-fit">Back</Button>
+					<Button on:click={() => (location.reload())} class=""><Icon icon="charm:refresh" style="height: 20px; width: 20px;"/></Button>
+				</div>
+			{/if}
+			<h1 class="text-3xl font-bold p-2">
 				Ticket #{ticket_id} -
 				{#if ticket.is_open}
 					<span class="text-green-500 font-bold">Open</span>
@@ -218,7 +349,7 @@
 			</h1>
 			<div class="text-left">
 				<p><b>Team:</b> {ticket.team} - {get(eventStore).teams.find((team) => parseInt(team.number) === ticket.team).name}</p>
-				<p><b>Created:</b> {time}</p>
+				<p><b>Created:</b> {time} by {ticket.author.username}</p>
 				<p>
 					<b>Assigned To:</b>
 					{#if !ticket.assigned_to_id}
@@ -230,12 +361,12 @@
 				{#if match}
 					<p>
 						<b>Match:</b> {match.level.replace("None", "Test")}
-						{match.match_number}/{match.play_number}
+						Match #{match.match_number}/Play #{match.play_number}
 						{station}
 					</p>
 				{/if}
 			</div>
-			<div class="flex gap-2">
+			<div class="flex gap-2 place-content-center sm:place-content-start">
 				<Button size="sm" on:click={() => changeOpenStatus()}>{ticket.is_open ? "Close Ticket" : "Reopen Ticket"}</Button>
 				{#if user}
 					<Button size="sm" on:click={() => assignSelf()}>
@@ -260,10 +391,10 @@
 			</div>
 			<div class="flex flex-col h-full" id="chat">
 				<div class="flex flex-col grow gap-2 justify-end">
-					{#if !ticket.messages}
+					{#if !sortedMessages}
 						<div class="text-center">No messages</div>
 					{:else}
-						{#each ticket.messages as message}
+						{#each sortedMessages as message}
 							<MessageCard {message} />
 						{/each}
 					{/if}

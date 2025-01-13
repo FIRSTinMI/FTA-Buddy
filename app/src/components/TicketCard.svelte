@@ -1,6 +1,3 @@
-<svelte:head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</svelte:head>
 <script lang="ts">
     import { Card, Button } from "flowbite-svelte";
     import type { Ticket } from "../../../shared/types";
@@ -17,7 +14,7 @@
 
 </script>
 <Card href="ticket/{ticket.id}" padding="none" size="none" class="w-full text-black dark:text-white dark:bg-neutral-800">
-    <div class="flex flex-col sm:flex-row divide-y sm:divide-x divide-gray-500 pt-2 px-4 min-h-24">
+    <div class="flex flex-col sm:flex-row max-sm:divide-y sm:divide-x divide-gray-500 pt-2 px-4 min-h-24">
         <div class="flex flex-row sm:flex-col place-content-between sm:place-content-center p-2 sm:w-40">
             <p class="font-bold sm:text-center">#{ticket.id}:
                 {#if ticket.is_open}
@@ -30,8 +27,8 @@
                 <p class="text-right sm:text-center"><b>Team:</b> {ticket.team}</p>
             {/if}
         </div>
-        <div class="p-2 grow place-content-center">
-            <p class="font-bold text-lg">{ticket.subject}</p>
+        <div class="p-2 grow place-content-center text-left">
+            <p class="font-bold text-lg pl-4">{ticket.subject}</p>
         </div>
         <div class="flex flex-row sm:flex-col pb-4 place-content-between sm:place-content-center sm:w-40 p-2">
             <p class="text-left sm:text-center">{time}</p>

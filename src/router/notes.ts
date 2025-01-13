@@ -5,7 +5,7 @@ import { pushSubscriptions, tickets, users, events, notes } from "../db/schema";
 import { observable } from "@trpc/server/observable";
 import { and, asc, eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
-import { Note, NoteUpdateEvents, Profile } from "../../shared/types";
+import { Note, Profile } from "../../shared/types";
 import { getEvent } from "../util/get-event";
 import { randomUUID } from "crypto";
 
@@ -117,17 +117,10 @@ export const notesRouter = router({
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Note" });
         }
 
-        event.noteUpdateEmitter.emit("create", {
-            kind: "create",
-            data: {
-                note: insert[0],
-            }
-        });
-
         return insert[0] as Note;
     }),
 
-    editText: eventProcedure.input(z.object({
+    edit: eventProcedure.input(z.object({
         id: z.string().uuid(),
         new_text: z.string(),
         event_code: z.string()
@@ -170,15 +163,6 @@ export const notesRouter = router({
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Ticket text" });
         }
 
-        event.noteUpdateEmitter.emit("edit", {
-            kind: "edit",
-            data: {
-                note_id: update[0].id,
-                note_text: update[0].text,
-                note_updated_at: update[0].updated_at,
-            }
-        });
-
         return update[0] as Note;
     }),
 
@@ -218,66 +202,59 @@ export const notesRouter = router({
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to delete Note" });
         }
 
-        event.noteUpdateEmitter.emit("delete", {
-            kind: "delete",
-            data: {
-                note_id: note.id,
-            }
-        });
-
         return note.id;
     }),
 
-    updateSubscription: publicProcedure.input(z.object({
-        eventToken: z.string(),
-        note_id: z.string().uuid().optional(),
-        eventOptions: z.object({
-            create: z.boolean().optional(),
-            edit: z.boolean().optional(),
-            delete: z.boolean().optional(),
-        }),
-    })).subscription(async ({ctx, input }) => {
-        const event = await getEvent(input.eventToken);
+    // updateSubscription: publicProcedure.input(z.object({
+    //     eventToken: z.string(),
+    //     note_id: z.string().uuid().optional(),
+    //     eventOptions: z.object({
+    //         create: z.boolean().optional(),
+    //         edit: z.boolean().optional(),
+    //         delete: z.boolean().optional(),
+    //     }),
+    // })).subscription(async ({ctx, input }) => {
+    //     const event = await getEvent(input.eventToken);
 
-        return observable<NoteUpdateEvents>((emitter) => {
-            if (input.eventOptions.create === true) {
-                event.ticketUpdateEmitter.on("create", ({ data }) => {
-                    if (input.note_id) {
-                        if(data.note.id === input.note_id) {
-                            emitter.next(data);
-                        }
-                    } else {
-                        emitter.next(data);
-                    }
+    //     return observable((emitter) => {
+    //         if (input.eventOptions.create === true) {
+    //             event.noteUpdateEmitter.on("create", ( data ) => {
+    //                 if (input.note_id) {
+    //                     if(data.note.id === input.note_id) {
+    //                         emitter.next(data);
+    //                     }
+    //                 } else {
+    //                     emitter.next(data);
+    //                 }
                     
-                });
-            }
+    //             });
+    //         }
 
-            if (input.eventOptions.edit === true) {
-                event.ticketUpdateEmitter.on("edit", ({ data }) => {
-                    if (input.note_id) {
-                        if(data.note_id === input.note_id) {
-                                emitter.next(data);
-                        }
-                    } else {
-                        emitter.next(data);
-                    }
-                });
-            }
+    //         if (input.eventOptions.edit === true) {
+    //             event.noteUpdateEmitter.on("edit", ( data ) => {
+    //                 if (input.note_id) {
+    //                     if(data.note_id === input.note_id) {
+    //                             emitter.next(data);
+    //                     }
+    //                 } else {
+    //                     emitter.next(data);
+    //                 }
+    //             });
+    //         }
 
-            if (input.eventOptions.delete === true) {
-                event.ticketUpdateEmitter.on("delete", ({ data }) => {
-                    if (input.note_id) {
-                        if(data.note_id === input.note_id) {
-                            emitter.next(data);
-                        }
-                    } else {
-                        emitter.next(data);
-                    }
-                });
-            }
-        });
-    }),
+    //         if (input.eventOptions.delete === true) {
+    //             event.noteUpdateEmitter.on("delete", ( data ) => {
+    //                 if (input.note_id) {
+    //                     if(data.note_id === input.note_id) {
+    //                         emitter.next(data);
+    //                     }
+    //                 } else {
+    //                     emitter.next(data);
+    //                 }
+    //             });
+    //         }
+    //     });
+    // }),
 });
 
 export async function getEventNotes(event_code: string) {

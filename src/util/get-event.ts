@@ -3,7 +3,7 @@ import { EventEmitter } from "events";
 import { TypedEmitter } from 'tiny-typed-emitter';
 import { eventCodes, events } from "..";
 import { DEFAULT_MONITOR } from "../../shared/constants";
-import { TeamList, EventChecklist, ScheduleDetails, ServerEvent, Profile, TicketUpdateEvents, NoteUpdateEvents, Ticket, Note } from "../../shared/types";
+import { TeamList, EventChecklist, ScheduleDetails, ServerEvent, Profile, TicketEvents, NoteEvents, Ticket, Note } from "../../shared/types";
 import { db } from "../db/db";
 import schema from "../db/schema";
 import { getEventTickets } from "../router/tickets";
@@ -43,8 +43,7 @@ export async function getEvent(eventToken: string, eventCode?: string) {
         return await loadingEvents[eventCode];
     }
 
-    const ticketUpdateEmitter = new TypedEmitter<TicketUpdateEvents>();
-    const noteUpdateEmitter = new TypedEmitter<NoteUpdateEvents>();
+    const ticketUpdateEmitter = new TypedEmitter<TicketEvents>();
 
     loadingEvents[eventCode] = new Promise(async (resolve) => {
         const eventInMemory = events[eventCode];
@@ -80,7 +79,6 @@ export async function getEvent(eventToken: string, eventCode?: string) {
                 checklistEmitter: new EventEmitter(),
                 ticketUpdateEmitter: ticketUpdateEmitter,
                 //ticketPushEmitter: new TypedEmitter(),
-                noteUpdateEmitter: noteUpdateEmitter,
                 //notePushEmitter: new TypedEmitter(),
                 cycleEmitter: new EventEmitter(),
                 scheduleDetails: event.scheduleDetails as ScheduleDetails,

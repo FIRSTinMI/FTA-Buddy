@@ -5,7 +5,7 @@ import { pushSubscriptions, tickets, users, events, messages } from "../db/schem
 import type { User } from "../db/schema";
 import { and, asc, desc, eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
-import { Ticket, Profile, Message, TicketUpdateEvents} from "../../shared/types";
+import { Ticket, Profile} from "../../shared/types";
 import { getEvent } from "../util/get-event";
 import { observable } from "@trpc/server/observable";
 import { messagesRouter } from "./messages";
@@ -23,7 +23,9 @@ export const ticketsRouter = router({
             where: eq(tickets.event_code, event.code),
             orderBy: [asc(tickets.created_at)],
             with: {
-                messages: true,
+                messages: {
+                    orderBy: [asc(messages.id)],
+                },
             }
         });
 
@@ -63,8 +65,10 @@ export const ticketsRouter = router({
             where: and(...query),
             orderBy: [asc(tickets.created_at)],
             with: {
-                messages: true,
-            }
+                messages: {
+                    orderBy: [asc(messages.id)],
+                },
+            },
         });
 
         if (!results) {
@@ -84,7 +88,9 @@ export const ticketsRouter = router({
                 eq(tickets.event_code, input.event_code),
             ),
             with: {
-                messages: true,
+                messages: {
+                    orderBy: [asc(messages.id)],
+                },
             }
         });
         
@@ -111,20 +117,39 @@ export const ticketsRouter = router({
             throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
         }
 
-        const insert = await db.insert(tickets).values({
-            team: input.team,
-            subject: input.subject,
-            author_id: authorProfile.id,
-            author: authorProfile as Profile, // Ensure author is not null
-            assigned_to_id: null,
-            assigned_to: null,
-            is_open: true,
-            text: input.text,
-            created_at: new Date(),
-            updated_at: new Date(),
-            event_code: event.code,
-            match_id: input.match_id,
-        }).returning();
+        let insert;
+        if (input.match_id) {
+            insert = await db.insert(tickets).values({
+                team: input.team,
+                subject: input.subject,
+                author_id: authorProfile.id,
+                author: authorProfile as Profile, // Ensure author is not null
+                assigned_to_id: null,
+                assigned_to: null,
+                is_open: true,
+                text: input.text,
+                created_at: new Date(),
+                updated_at: new Date(),
+                event_code: event.code,
+                match_id: input.match_id,
+            }).returning();
+        } else {
+            insert = await db.insert(tickets).values({
+                team: input.team,
+                subject: input.subject,
+                author_id: authorProfile.id,
+                author: authorProfile as Profile, // Ensure author is not null
+                assigned_to_id: null,
+                assigned_to: null,
+                is_open: true,
+                text: input.text,
+                created_at: new Date(),
+                updated_at: new Date(),
+                event_code: event.code,
+                match_id: null,
+            }).returning();
+        }
+        
 
         if (!insert[0]) {
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Ticket" });
@@ -132,7 +157,7 @@ export const ticketsRouter = router({
 
         event.ticketUpdateEmitter.emit("create", {
             kind: "create",
-            data: insert[0],
+            ticket: insert[0] as Ticket,
         });
 
         return insert[0] as Ticket;
@@ -180,10 +205,8 @@ export const ticketsRouter = router({
 
         event.ticketUpdateEmitter.emit("status", {
             kind: "status",
-            data: {
-                ticket_id: update[0].id,
-                is_open: update[0].is_open
-            },
+            ticket_id: update[0].id,
+            is_open: update[0].is_open
         });
 
         return update[0] as Ticket;
@@ -234,11 +257,9 @@ export const ticketsRouter = router({
 
         event.ticketUpdateEmitter.emit("assign", {
             kind: "assign",
-            data: {
-                ticket_id: update[0].id,
-                assigned_to_id: update[0].assigned_to_id,
-                assigned_to: profile[0] as Profile,
-            },
+            ticket_id: update[0].id,
+            assigned_to_id: update[0].assigned_to_id,
+            assigned_to: profile[0] as Profile,
         });
 
         return update[0] as Ticket;
@@ -296,19 +317,18 @@ export const ticketsRouter = router({
 
         event.ticketUpdateEmitter.emit("assign", {
             kind: "assign",
-            data: {
-                ticket_id: update[0].id,
-                assigned_to_id: update[0].assigned_to_id,
-                assigned_to: null,
-            },
+            ticket_id: update[0].id,
+            assigned_to_id: update[0].assigned_to_id,
+            assigned_to: null,
         });
 
         return update[0] as Ticket;
     }),
 
-    editText: eventProcedure.input(z.object({
+    edit: eventProcedure.input(z.object({
         id: z.number(),
-        new_text: z.string(),
+        new_text: z.string().optional(),
+        new_subject: z.string().optional(),
         event_code: z.string(),
     })).query(async ({ ctx, input }) => {
         const event = await getEvent(ctx.eventToken as string);
@@ -342,7 +362,9 @@ export const ticketsRouter = router({
         }
 
         const update = await db.update(tickets).set({
-            text: input.new_text
+            text: input.new_text,
+            subject: input.new_subject,
+            updated_at: new Date()
         }).where(eq(tickets.id, input.id)).returning();
 
         if (!update[0]) {
@@ -351,68 +373,10 @@ export const ticketsRouter = router({
 
         event.ticketUpdateEmitter.emit("edit", {
             kind: "edit",
-            data: {
-                ticket_id: update[0].id,
-                ticket_subject: update[0].subject,
-                ticket_text: update[0].text,
-                ticket_updated_at: update[0].updated_at,
-            }
-        });
-
-        return update[0] as Ticket;
-    }),
-
-    editSubject: eventProcedure.input(z.object({
-        id: z.number(),
-        new_subject: z.string(),
-        event_code: z.string(),
-    })).query(async ({ ctx, input }) => {
-        const event = await getEvent(ctx.eventToken as string);
-
-        const ticket = await db.query.tickets.findFirst({
-            where: and(
-                eq(tickets.id, input.id),
-                eq(tickets.event_code, input.event_code),
-            )
-        });
-        
-        if (!ticket) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
-        }
-
-        let currentUserProfile: Profile[] | undefined;
-
-        if (ctx.token) {
-            currentUserProfile = await db.select({
-                id: users.id,
-                username: users.username,
-                role: users.role,
-                admin: users.admin,
-            }).from(users).where(eq(users.token, ctx.token));
-        } else {
-            throw new TRPCError({ code: "BAD_REQUEST", message: "User token not provided in context object" });
-        }
-        
-        if (!currentUserProfile[0]) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Current User not found by token" });
-        }
-
-        const update = await db.update(tickets).set({
-            text: input.new_subject
-        }).where(eq(tickets.id, input.id)).returning();
-
-        if (!update[0]) {
-            throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Ticket subject" });
-        }
-
-        event.ticketUpdateEmitter.emit("edit", {
-            kind: "edit",
-            data: {
-                ticket_id: update[0].id,
-                ticket_subject: update[0].subject,
-                ticket_text: update[0].text,
-                ticket_updated_at: update[0].updated_at,
-            }
+            ticket_id: update[0].id,
+            ticket_subject: update[0].subject,
+            ticket_text: update[0].text,
+            ticket_updated_at: update[0].updated_at,
         });
 
         return update[0] as Ticket;
@@ -489,10 +453,8 @@ export const ticketsRouter = router({
 
         event.ticketUpdateEmitter.emit("follow", {
             kind: "follow",
-            data: {
-                ticket_id: update[0].id,
-                is_open: update[0].is_open,
-            }
+            ticket_id: update[0].id,
+            followers: update[0].followers,
         });
 
         return update[0] as Ticket;
@@ -550,9 +512,7 @@ export const ticketsRouter = router({
 
         event.ticketUpdateEmitter.emit("delete_ticket", {
             kind: "delete_ticket",
-            data: {
-                ticket_id: ticket.id,
-            }
+            ticket_id: ticket.id,
         });
 
         return ticket.id;
@@ -577,9 +537,9 @@ export const ticketsRouter = router({
     })).subscription(async ({ ctx, input }) => {
         const event = await getEvent(input.eventToken);
 
-        return observable<TicketUpdateEvents>((emitter) => {
+        return observable((emitter) => {
             if (input.eventOptions.create === true) {
-                event.ticketUpdateEmitter.on("create", ({ data }) => {
+                event.ticketUpdateEmitter.on("create", ( data ) => {
                     if (input.ticket_id) {
                         if(data.ticket.id === input.ticket_id) {
                             emitter.next(data);
@@ -592,7 +552,7 @@ export const ticketsRouter = router({
             }
 
             if (input.eventOptions.assign === true) {
-                event.ticketUpdateEmitter.on("assign", ({ data }) => {
+                event.ticketUpdateEmitter.on("assign", ( data ) => {
                     if (input.ticket_id) {
                         if(data.ticket_id === input.ticket_id) {
                             emitter.next(data);
@@ -604,7 +564,7 @@ export const ticketsRouter = router({
             }
 
             if (input.eventOptions.status === true) {
-                event.ticketUpdateEmitter.on("status", ({ data }) => {
+                event.ticketUpdateEmitter.on("status", ( data ) => {
                     if (input.ticket_id) {
                         if(data.ticket_id === input.ticket_id) {
                             emitter.next(data);
@@ -616,7 +576,7 @@ export const ticketsRouter = router({
             }
 
             if (input.eventOptions.follow === true) {
-                event.ticketUpdateEmitter.on("follow", ({ data }) => {
+                event.ticketUpdateEmitter.on("follow", ( data ) => {
                     if (input.ticket_id) {
                         if(data.ticket_id === input.ticket_id) {
                             emitter.next(data);
@@ -628,7 +588,7 @@ export const ticketsRouter = router({
             }
 
             if (input.eventOptions.delete_ticket === true) {
-                event.ticketUpdateEmitter.on("delete_ticket", ({ data }) => {
+                event.ticketUpdateEmitter.on("delete_ticket", ( data ) => {
                     if (input.ticket_id) {
                         if(data.ticket_id === input.ticket_id) {
                             emitter.next(data);
@@ -640,7 +600,7 @@ export const ticketsRouter = router({
             }
 
             if (input.eventOptions.add_message === true) {
-                event.ticketUpdateEmitter.on("add_message", ({ data }) => {
+                event.ticketUpdateEmitter.on("add_message", ( data ) => {
                     if (input.ticket_id) {
                         if(data.message.ticket_id === input.ticket_id) {
                             emitter.next(data);
@@ -652,7 +612,19 @@ export const ticketsRouter = router({
             }
 
             if (input.eventOptions.edit_message === true) {
-                event.ticketUpdateEmitter.on("edit_message", ({ data }) => {
+                event.ticketUpdateEmitter.on("edit_message", ( data ) => {
+                    if (input.ticket_id) {
+                        if(data.message.ticket_id === input.ticket_id) {
+                            emitter.next(data);
+                        }
+                    } else {
+                        emitter.next(data);
+                    }
+                });
+            }
+
+            if (input.eventOptions.delete_message === true) {
+                event.ticketUpdateEmitter.on("delete_message", ( data ) => {
                     if (input.ticket_id) {
                         if(data.ticket_id === input.ticket_id) {
                             emitter.next(data);
@@ -663,17 +635,9 @@ export const ticketsRouter = router({
                 });
             }
 
-            if (input.eventOptions.delete_message === true) {
-                event.ticketUpdateEmitter.on("delete_message", ({ data }) => {
-                    if (input.ticket_id) {
-                        if(data.ticket_id === input.ticket_id) {
-                            emitter.next(data);
-                        }
-                    } else {
-                        emitter.next(data);
-                    }
-                });
-            }
+            return () => {
+                event.ticketUpdateEmitter.removeAllListeners();
+			};
         });
     }),
 });

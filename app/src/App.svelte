@@ -70,7 +70,7 @@
 			});
 		}
 
-		console.log(user);
+		//console.log(user);
 	});
 
 	const publicPaths = [
@@ -587,19 +587,17 @@
 </Drawer>
 
 <main>
-	<div class="bg-white dark:bg-neutral-800 w-screen h-dvh flex flex-col fixed top-0 left-0 w-full">
-		{#if !fullscreen}
-			<div class="bg-primary-700 dark:bg-primary-500 flex w-full justify-between px-2">
-				<Button class="!py-0 !px-0 text-white" color="none" on:click={openMenu}>
-					<Icon icon="mdi:menu" class="w-8 h-10" />
-				</Button>
-				<div class="flex-grow">
-					{#if user.token && user.eventToken}
-						<h1 class="text-white text-lg place-content-center pt-1 font-bold">{event.code}</h1>
-					{/if}
-				</div>
+	<div style="padding-bottom: 64px" class="bg-white dark:bg-neutral-800 w-screen h-dvh flex flex-col fixed top-0 left-0 w-full">
+		<div class="bg-primary-700 dark:bg-primary-500 flex w-full justify-between px-2">
+			<Button class="!py-0 !px-0 text-white" color="none" on:click={openMenu}>
+				<Icon icon="mdi:menu" class="w-8 h-10" />
+			</Button>
+			<div class="flex-grow">
+				{#if user.token && user.eventToken}
+					<h1 class="text-white text-lg place-content-center pt-1 font-bold">{event.code}</h1>
+				{/if}
 			</div>
-		{/if}
+		</div>
 		<Router basepath="/app/">
 			<div class="overflow-y-auto flex-grow pb-2">
 				{#if user.token}

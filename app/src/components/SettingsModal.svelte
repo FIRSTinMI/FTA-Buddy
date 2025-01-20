@@ -4,7 +4,7 @@
 	import { settingsStore } from "../stores/settings";
 	import Spinner from "./Spinner.svelte";
 	import { toast } from "../../../shared/toast";
-	import { startBackgroundCreateTicketSubscription, stopBackgroundCreateTicketSubscription, subscribeToPush } from "../util/push-notifications";
+	import { startBackgroundCreateTicketSubscription, stopBackgroundCreateTicketSubscription, subscribeToPush } from "../util/notifications";
 	import { audioQueuer } from "../field-monitor";
 	import { trpc } from "../main";
 	import { userStore } from "../stores/user";
@@ -117,7 +117,7 @@
 			settings.ticketCreateAlerts = true;
 			updateSettings();
 		} else {
-			console.log("start ticket create subscription");
+			console.log("stop ticket create subscription");
 			stopBackgroundCreateTicketSubscription();
 			settings.ticketCreateAlerts = false;
 			updateSettings();

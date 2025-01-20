@@ -65,8 +65,13 @@ userStore.subscribe((value) => {
     });
 });
 
+const target = document.getElementById("app");
+if (!target) {
+    throw new Error("App target element not found");
+}
+
 const app = new App({
-    target: document.getElementById("app"),
+    target: target,
 });
 
 export default app;

@@ -6,12 +6,11 @@ import { settingsStore } from "../stores/settings";
 import { toast } from "../../../shared/toast";
 
 let user = get(userStore);
-//let event = get(eventStore);
 
 export interface NotificationOptions {
-    title: string;
-    body?: string;
-    icon?: string;
+    title: string,
+    body?: string,
+    icon?: string,
     data: {
         path: string,
     }
@@ -28,8 +27,6 @@ export function createNotification(options: NotificationOptions) {
     options = options ?? { title: "Default title" };
 
     const notification = new Notification(options.title, options);
-
-
 
     notification.onclick = () => {
         console.log('Notification clicked');
@@ -63,6 +60,7 @@ export function startBackgroundTicketSubscription(ticket_id: number) {
     backgroundTicketSubscription = trpc.tickets.pushSubscription.subscribe(
         {
             eventToken: user.eventToken,
+            userToken: user.token,
             ticket_id: ticket_id,
             eventOptions: {
                 assign: true,
@@ -141,37 +139,45 @@ export function startBackgroundCreateTicketSubscription() {
     console.log("Made it to startBackgroundCreateTicketSubscription");
     if (backgroundCreateTicketSubscription && typeof backgroundCreateTicketSubscription.unsubscribe === "function") backgroundCreateTicketSubscription.unsubscribe();
     console.log("Checked if subscription object exists");
-    backgroundCreateTicketSubscription = trpc.tickets.pushSubscription.subscribe(
-        {
-            eventToken: user.eventToken,
-            eventOptions: {
-                create: true,
-            }
-        },
-        {
-            onData: (data) => {
-                console.log("in data reciever 1");
-                switch (data.kind) {
-                    case "create":
-                        console.log("in data reciever 2");
-                        if (get(settingsStore).ticketCreateAlerts) {
-                            console.log("Made it to Sending Create Notification");
-                            createNotification({
-                                title: `New Ticket #${data.ticket_id} has been created by ${data.ticket.author}`,
-                                icon: "app/public/icon192_rounded.png",
-                                data: {
-                                    path: `/app/ticket/${data.ticket_id}`
-                                }
-                            });
-                        }
-                        break;
-                    default:
-                        console.warn(`Unhandled event kind: ${data.kind}`);
-                        break;
+    try {
+        backgroundCreateTicketSubscription = trpc.tickets.pushSubscription.subscribe(
+            {
+                eventToken: user.eventToken,
+                userToken: user.token,
+                eventOptions: {
+                    create: true,
                 }
-            }
-        },
-    );
+            },
+            {
+                // onData: (data) => console.log("Received data:", data),
+                // onError: (err) => console.error("Subscription error:", err),
+                onData: (data) => {
+                    console.log(Notification.permission);
+                    console.log("in data reciever 1");
+                    switch (data.kind) {
+                        case "create":
+                            console.log("in data reciever 2");
+                            if (get(settingsStore).ticketCreateAlerts) {
+                                console.log("Made it to Sending Create Notification");
+                                createNotification({
+                                    title: `New Ticket #${data.ticket_id} has been created by ${data.ticket.author}`,
+                                    icon: "app/public/icon192_rounded.png",
+                                    data: {
+                                        path: `/app/ticket/${data.ticket_id}`
+                                    }
+                                });
+                            }
+                            break;
+                        default:
+                            console.warn(`Unhandled event kind: ${data.kind}`);
+                            break;
+                    }
+                }
+            },
+        );
+    } catch (err: any) {
+        console.error("Subscription setup error:", err);
+    }
     //console.log(`Listeners ${event.ticketPushEmitter.listenerCount()}`);
 }
 

@@ -1,13 +1,14 @@
 <script lang="ts">
     import { Card, Modal, Label, Textarea, Button } from "flowbite-svelte";
     import { EditOutline, TrashBinOutline } from 'flowbite-svelte-icons';
-    import type { Message } from "../../../shared/types";
+    import type { Message, Note } from "../../../shared/types";
     import { formatTimeNoAgoHourMins } from "../../../shared/formatTime";
     import { trpc } from "../main";
     import { eventStore } from "../stores/event";
     import { userStore } from "../stores/user";
     import { get } from "svelte/store";
     import { navigate } from "svelte-routing";
+    import { toast } from "../../../shared/toast";
 
 
     let event = get(eventStore);

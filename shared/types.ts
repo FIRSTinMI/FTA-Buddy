@@ -339,8 +339,8 @@ export interface ServerEvent {
     robotStateChangeEmitter: EventEmitter,
     fieldStatusEmitter: EventEmitter,
     checklistEmitter: EventEmitter,
-    ticketUpdateEmitter: TypedEmitter<TicketEvents>,
-    ticketPushEmitter: TypedEmitter<TicketEvents>,
+    ticketUpdateEmitter: TypedEmitter<TicketUpdateEvents>,
+    ticketPushEmitter: TypedEmitter<TicketPushEvents>,
     //notePushEmitter: TypedEmitter,
     cycleEmitter: EventEmitter,
     teams: TeamList,
@@ -367,10 +367,11 @@ export interface ServerEvent {
     notes: Note[],
 }
 
-export type TicketEvents = {
+export type TicketUpdateEvents = {
     create: (
         data: { 
             kind: "create",
+            ticket_id: number,
             ticket: Ticket 
         }
     ) => void;
@@ -434,7 +435,145 @@ export type TicketEvents = {
     ) => void;
 }
 
-export type NoteEvents = {
+type AssignUpdateTicketEvent = {
+    kind: "assign";
+    ticket_id: number;
+    assigned_to_id: number | null;
+    assigned_to: Profile | null;
+};
+
+type StatusUpdateTicketEvent = {
+    kind: "status";
+    ticket_id: number;
+    is_open: boolean;
+};
+
+type FollowUpdateTicketEvent = {
+    kind: "follow";
+    ticket_id: number;
+    followers: number[];
+};
+
+type CreateUpdateTicketEvent = {
+    kind: "create";
+    ticket_id: number,
+    ticket: Ticket;
+};
+
+type DeleteTicketUpdateTicketEvent = {
+    kind: "delete_ticket";
+    ticket_id: number;
+};
+
+type EditUpdateTicketEvent = {
+    kind: "edit";
+    ticket_id: number;
+    ticket_subject: string;
+    ticket_text: string;
+    ticket_updated_at: Date;
+};
+
+type AddMessageUpdateTicketEvent = {
+    kind: "add_message";
+    ticket_id: number;
+    message: Message;
+};
+
+type EditMessageUpdateTicketEvent = {
+    kind: "edit_message";
+    ticket_id: number;
+    message: Message;
+};
+
+type DeleteMessageUpdateTicketEvent = {
+    kind: "delete_message";
+    ticket_id: number;
+    message_id: string;
+};
+
+export type TicketUpdateEventData =
+    | AssignUpdateTicketEvent
+    | StatusUpdateTicketEvent
+    | FollowUpdateTicketEvent
+    | CreateUpdateTicketEvent
+    | DeleteTicketUpdateTicketEvent
+    | EditUpdateTicketEvent
+    | AddMessageUpdateTicketEvent
+    | EditMessageUpdateTicketEvent
+    | DeleteMessageUpdateTicketEvent;
+
+export type TicketPushEvents = {
+    create: (
+        data: { 
+            kind: "create",
+            ticket_id: number,
+            ticket: Ticket 
+        }
+    ) => void;
+    assign: (
+        data: { 
+            kind: "assign",
+            ticket_id: number,
+            assigned_to_id: number | null,
+            assigned_to: Profile | null,
+            followers: number[] | null,
+        }
+    ) => void;
+    status: (
+        data: { 
+            kind: "status",
+            ticket_id: number,
+            is_open: boolean,
+            user: Profile,
+            followers: number[] | null,
+        }
+    ) => void;
+    add_message: (
+        data: { 
+            kind: "add_message",
+            ticket_id: number,
+            message: Message,
+            followers: number[] | null,
+        }
+    ) => void;
+}
+
+type AssignPushTicketEvent = {
+    kind: "assign";
+    ticket_id: number;
+    assigned_to_id: number | null;
+    assigned_to: Profile | null;
+    followers: number[] | null,
+};
+
+type StatusPushTicketEvent = {
+    kind: "status";
+    ticket_id: number;
+    is_open: boolean;
+    user: Profile,
+    followers: number[] | null,
+};
+
+type CreatePushTicketEvent = {
+    kind: "create";
+    ticket_id: number,
+    ticket: Ticket;
+};
+
+type AddMessagePushTicketEvent = {
+    kind: "add_message";
+    ticket_id: number;
+    message: Message;
+    followers: number[] | null,
+};
+
+export type TicketPushEventData =
+    | AssignPushTicketEvent
+    | StatusPushTicketEvent
+    | CreatePushTicketEvent
+    | AddMessagePushTicketEvent;
+
+export type NoteUpdateEvents = {
     create: (
         data: {
             kind: "create",
@@ -498,7 +637,7 @@ export interface Ticket {
     subject: string,
     author_id: number,
     author: Profile,
-    assigned_to_id: number,
+    assigned_to_id: number | null,
     assigned_to: Profile | null,
     event_code: string,
     is_open: boolean,

@@ -4,7 +4,7 @@
 	import { settingsStore } from "../stores/settings";
 	import Spinner from "./Spinner.svelte";
 	import { toast } from "../../../shared/toast";
-	import { subscribeToPush } from "../util/push-notifications";
+	import { startBackgroundCreateTicketSubscription, stopBackgroundCreateTicketSubscription, subscribeToPush } from "../util/push-notifications";
 	import { audioQueuer } from "../field-monitor";
 	import { trpc } from "../main";
 	import { userStore } from "../stores/user";
@@ -109,6 +109,21 @@
 		audioQueuer.stopMusic();
 		clearTimeout(musicTestTimeout);
 	}
+
+	function enableCreateTicketAlerts() {
+		if (settings.ticketCreateAlerts) {
+			console.log("start ticket create subscription");
+			startBackgroundCreateTicketSubscription();
+			settings.ticketCreateAlerts = true;
+			updateSettings();
+		} else {
+			console.log("start ticket create subscription");
+			stopBackgroundCreateTicketSubscription();
+			settings.ticketCreateAlerts = false;
+			updateSettings();
+		}
+	}
+
 </script>
 
 {#if loading}
@@ -123,6 +138,7 @@
 				<p class="text-gray-700 dark:text-gray-400">General</p>
 				<Toggle class="toggle" bind:checked={settings.vibrations} on:change={updateSettings}>Vibrations</Toggle>
 				<Toggle class="toggle" bind:checked={settings.notifications} on:change={requestNotificationPermissions}>Ticket Notifications</Toggle>
+				<Toggle class="toggle" bind:checked={settings.ticketCreateAlerts} on:change={enableCreateTicketAlerts}>Ticket Creation Alerts</Toggle>
 				<Toggle class="toggle" bind:checked={settings.robotNotifications} on:change={requestNotificationPermissions}
 					>Robot Connection Notifications</Toggle
 				>

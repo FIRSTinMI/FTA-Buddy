@@ -5,7 +5,7 @@
 	import { formatTimeNoAgoHourMins } from "../../../../shared/formatTime";
 	import { toast } from "../../../../shared/toast";
 	import { eventStore } from "../../stores/event";
-	import { ROBOT, type Profile} from "../../../../shared/types";
+	import { ROBOT, type Message, type Profile, type TicketUpdateEvents, type TicketUpdateEventData} from "../../../../shared/types";
 	import { Alert, Button, Textarea, ToolbarButton, Modal, Label } from "flowbite-svelte";
 	import { EditOutline, ExclamationCircleOutline, TrashBinOutline, ArrowLeftOutline } from 'flowbite-svelte-icons';
 	import { navigate } from "svelte-routing";
@@ -15,8 +15,9 @@
 	import { settingsStore } from "../../stores/settings";
 	import NotesPolicy from "../../components/NotesPolicy.svelte";
     import MessageCard from "../../components/MessageCard.svelte";
+    import { startBackgroundTicketSubscription, stopBackgroundTicketSubscription } from "../../util/push-notifications";
 
-	export let id: number;
+	export let id: string;
 
 	let ticket_id = parseInt(id);
 
@@ -39,7 +40,7 @@
 	
 	let assignedToUser = false;
 	
-	let sortedMessages: Message[] | null;
+	let sortedMessages: Message[] | undefined;
 
 	let deleteTicketPopup = false;
 
@@ -88,7 +89,7 @@
 			}
 			time = formatTimeNoAgoHourMins(ticket.created_at);
 
-			sortedMessages = ticket.messages.sort((a, b) => a.created_at - b.created_at);
+			sortedMessages = ticket.messages?.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
 			assignedToUser = (ticket.assigned_to_id === user.id) ? true : false;
 			editTicketText = ticket.text;
@@ -113,7 +114,7 @@
 		let update;
 		if (!ticket) return;
 		try {
-			if (ticket.messages.length > 0){
+			if (ticket.messages && ticket.messages?.length > 0){
 				if (ticket.is_open === true) {
 					update = await trpc.tickets.updateStatus.query({ id: ticket.id, new_status: false, event_code: event.code });
 				} else {
@@ -270,6 +271,7 @@
 					follow: true,
 					event_code: event.code,
 				});
+				startBackgroundTicketSubscription(ticket_id);
 			} else {
 				const res = await trpc.tickets.follow.query({
 					id: ticket_id,
@@ -284,30 +286,37 @@
 		}
 	}
 
+	let foregroundUpdater: ReturnType<typeof trpc.tickets.pushSubscription.subscribe>;
+
 	function foregroundUpdate() {
-		if (foregroundUpdate && typeof foregroundUpdate.unsubscribe === "function") foregroundUpdate.unsubscribe();
-		foregroundUpdate = trpc.tickets.updateSubscription.subscribe(
+		if (foregroundUpdater && typeof foregroundUpdater.unsubscribe === "function") foregroundUpdater.unsubscribe();
+		foregroundUpdater = trpc.tickets.updateSubscription.subscribe(
 			{
 				eventToken: get(userStore).eventToken,
 				ticket_id: ticket_id,
 				eventOptions: {
 					assign: true,
 					status: true,
-					edit: true,
 					follow: true,
 				}
 			},
 			{
 				onData: (data) => {
-					const ticketMatch = (data.ticket_id === ticket.id);
-					if (ticketMatch) {
-						if (data.kind === "assign") {
-							ticket.assigned_to_id = data.assigned_to_id;
-							ticket.assigned_to = data.assigned_to;
-						} else if (data.kind === "status") {
-							ticket.is_open = data.is_open;
-						} else if (data.kind === "follow") {
-							ticket.followers = data.followers;
+					if (data.ticket_id === ticket.id) {
+						switch (data.kind) {
+							case "assign":
+								ticket.assigned_to_id = data.assigned_to_id;
+								ticket.assigned_to = data.assigned_to;
+								break;
+							case "status":
+								ticket.is_open = data.is_open;
+								break;
+							case "follow":
+								ticket.followers = data.followers;
+								break;
+							default:
+								console.warn(`Unhandled event kind: ${data.kind}`);
+								break;
 						}
 					}
 				},
@@ -382,7 +391,7 @@
 				{/if}
 			</h1>
 			<div class="text-left">
-				<p><b>Team:</b> {ticket.team} - {get(eventStore).teams.find((team) => parseInt(team.number) === ticket.team).name}</p>
+				<p><b>Team:</b> {ticket.team} - {get(eventStore).teams?.find((team) => parseInt(team.number) === ticket.team)?.name ?? 'Unknown'}</p>
 				<p><b>Created:</b> {time} by {ticket.author.username}</p>
 				<p>
 					<b>Assigned To:</b>

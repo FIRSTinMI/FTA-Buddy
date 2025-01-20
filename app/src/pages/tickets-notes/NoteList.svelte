@@ -65,7 +65,7 @@
 		disableSubmit = team === undefined || team === -1 || noteText.length < 1;
 	}
 
-	async function createNote(evt: Event) {
+	async function createNote(evt: SubmitEvent) {
 		if (team === undefined || team === -1) return;
 		try {
 			if (!$settingsStore.acknowledgedNotesPolicy) {

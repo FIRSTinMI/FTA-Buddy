@@ -32,7 +32,7 @@ import hljs from 'highlight.js';
 import json from 'highlight.js/lib/languages/json';
 import { gfmHeadingId } from 'marked-gfm-heading-id';
 import { observable } from '@trpc/server/observable';
-import { initializePushNotifications } from '../app/src/util/push-notifications';
+//import { initializePushNotifications } from '../app/src/util/push-notifications';
 import { logAnalysisLoop } from './util/log-analysis';
 import { ftcRouter } from './router/ftc';
 import { notesRouter } from './router/notes';
@@ -42,7 +42,7 @@ const port = parseInt(process.env.PORT || '3001');
 export const events: { [key: string]: ServerEvent; } = {};
 export const eventCodes: { [key: string]: string; } = {};
 
-initializePushNotifications();
+//initializePushNotifications();
 
 // TRPC Server
 const appRouter = router({

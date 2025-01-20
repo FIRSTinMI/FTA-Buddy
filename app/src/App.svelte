@@ -39,6 +39,7 @@
     import NoteList from "./pages/tickets-notes/NoteList.svelte";
     import NotificationList from "./pages/tickets-notes/NotificationList.svelte";
     import { notificationsStore } from "./stores/notifications";
+    import { startBackgroundCreateTicketSubscription, stopBackgroundCreateTicketSubscription } from "./util/push-notifications";
 
 	// Checking userentication
 	let user = get(userStore);

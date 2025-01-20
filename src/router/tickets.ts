@@ -5,8 +5,8 @@ import { pushSubscriptions, tickets, users, events, messages } from "../db/schem
 import type { User } from "../db/schema";
 import { and, asc, desc, eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
-import { Ticket, Profile} from "../../shared/types";
-import { getEvent } from "../util/get-event";
+import { Ticket, Profile, TicketUpdateEventData, TicketPushEventData, TicketUpdateEvents, TicketPushEvents } from "../../shared/types";
+import { getEvent, getListenerCount } from "../util/get-event";
 import { observable } from "@trpc/server/observable";
 import { messagesRouter } from "./messages";
 import { AwsRequestSigner } from "google-auth-library";
@@ -148,7 +148,7 @@ export const ticketsRouter = router({
                 updated_at: new Date(),
                 event_code: event.code,
                 followers: [],
-                match_id: null,
+                match_id: undefined,
             }).returning();
         }
         
@@ -159,8 +159,17 @@ export const ticketsRouter = router({
 
         event.ticketUpdateEmitter.emit("create", {
             kind: "create",
+            ticket_id: insert[0].id,
             ticket: insert[0] as Ticket,
         });
+
+        event.ticketPushEmitter.emit("create", {
+            kind: "create",
+            ticket_id: insert[0].id,
+            ticket: insert[0] as Ticket
+        });
+
+        getListenerCount(ctx.eventToken as string);
 
         return insert[0] as Ticket;
     }),
@@ -205,11 +214,22 @@ export const ticketsRouter = router({
             closed_at: !input.new_status ? new Date() : null
         }).where(eq(tickets.id, input.id)).returning();
 
+        getListenerCount(ctx.eventToken as string);
+
         event.ticketUpdateEmitter.emit("status", {
             kind: "status",
             ticket_id: update[0].id,
             is_open: update[0].is_open
         });
+
+        event.ticketPushEmitter.emit("status", {
+            kind: "status",
+            ticket_id: update[0].id,
+            is_open: update[0].is_open,
+            user: currentUserProfile[0],
+            followers: update[0].followers,
+        });
+
 
         return update[0] as Ticket;
     }),
@@ -262,6 +282,14 @@ export const ticketsRouter = router({
             ticket_id: update[0].id,
             assigned_to_id: update[0].assigned_to_id,
             assigned_to: profile[0] as Profile,
+        });
+
+        event.ticketPushEmitter.emit("assign", {
+            kind: "assign",
+            ticket_id: update[0].id,
+            assigned_to_id: update[0].assigned_to_id,
+            assigned_to: profile[0] as Profile,
+            followers: update[0].followers,
         });
 
         return update[0] as Ticket;
@@ -322,6 +350,14 @@ export const ticketsRouter = router({
             ticket_id: update[0].id,
             assigned_to_id: update[0].assigned_to_id,
             assigned_to: null,
+        });
+
+        event.ticketPushEmitter.emit("assign", {
+            kind: "assign",
+            ticket_id: update[0].id,
+            assigned_to_id: update[0].assigned_to_id,
+            assigned_to: null,
+            followers: update[0].followers,
         });
 
         return update[0] as Ticket;
@@ -536,109 +572,146 @@ export const ticketsRouter = router({
             edit_message: z.boolean().optional(),
             delete_message: z.boolean().optional(),
         }),
-    })).subscription(async ({ ctx, input }) => {
+    })).subscription(async ({ input }) => {
         const event = await getEvent(input.eventToken);
 
-        return observable((emitter) => {
-            if (input.eventOptions.create === true) {
-                event.ticketUpdateEmitter.on("create", ( data ) => {
-                    if (input.ticket_id) {
-                        if(data.ticket.id === input.ticket_id) {
-                            emitter.next(data);
-                        }
-                    } else {
+        return observable<TicketUpdateEventData>((emitter) => {
+            const createHandler: TicketUpdateEvents["create"] = ( data ) => {
+                if (data.kind === "create" && input.ticket_id) {
+                    if(data.ticket.id === input.ticket_id) {
                         emitter.next(data);
                     }
-                    
-                });
+                } else if (data.kind === "create") {
+                    emitter.next(data);
+                }
+            };
+
+            const assignHandler: TicketUpdateEvents["assign"] = ( data ) => {
+                if (data.kind === "assign" && input.ticket_id) {
+                    if(data.ticket_id === input.ticket_id) {
+                        emitter.next(data);
+                    }
+                } else if (data.kind === "assign") {
+                    emitter.next(data);
+                }
+            };
+
+            const statusHandler: TicketUpdateEvents["status"] = ( data ) => {
+                if (data.kind === "status" && input.ticket_id) {
+                    if(data.ticket_id === input.ticket_id) {
+                        emitter.next(data);
+                    }
+                } else if (data.kind === "status") {
+                    emitter.next(data);
+                }
+            };
+
+            const followHandler: TicketUpdateEvents["follow"] = ( data ) => {
+                if (data.kind === "follow" && input.ticket_id) {
+                    if(data.ticket_id === input.ticket_id) {
+                        emitter.next(data);
+                    }
+                } else if (data.kind === "follow") {
+                    emitter.next(data);
+                }
+            };
+
+            const deleteTicketHandler: TicketUpdateEvents["delete_ticket"] = ( data ) => {
+                if (data.kind === "delete_ticket" && input.ticket_id) {
+                    if(data.ticket_id === input.ticket_id) {
+                        emitter.next(data);
+                    }
+                } else if (data.kind === "delete_ticket") {
+                    emitter.next(data);
+                }
+            };
+
+            const editHandler: TicketUpdateEvents["edit"] = (data) => {
+                if (data.kind === "edit" && input.ticket_id) {
+                    if(data.ticket_id === input.ticket_id) {
+                        emitter.next(data);
+                    }
+                } else if (data.kind === "edit") {
+                    emitter.next(data);
+                }
+            };
+
+            const addMessageHandler: TicketUpdateEvents["add_message"] = ( data ) => {
+                if (data.kind === "add_message" && input.ticket_id) {
+                    if(data.message.ticket_id === input.ticket_id) {
+                        emitter.next(data);
+                    }
+                } else if (data.kind === "add_message") {
+                    emitter.next(data);
+                }
+            };
+
+            const editMessageHandler: TicketUpdateEvents["edit_message"] = ( data ) => {
+                if (data.kind === "edit_message" && input.ticket_id) {
+                    if(data.message.ticket_id === input.ticket_id) {
+                        emitter.next(data);
+                    }
+                } else if (data.kind === "edit_message") {
+                    emitter.next(data);
+                }
+            };
+
+            const deleteMessageHandler: TicketUpdateEvents["delete_message"] = ( data ) => {
+                if (data.kind === "delete_message" && input.ticket_id) {
+                    if(data.ticket_id === input.ticket_id) {
+                        emitter.next(data);
+                    }
+                } else if (data.kind === "delete_message") {
+                    emitter.next(data);
+                }
+            };
+
+            if (input.eventOptions.create === true) {
+                event.ticketUpdateEmitter.on("create", createHandler);
             }
 
             if (input.eventOptions.assign === true) {
-                event.ticketUpdateEmitter.on("assign", ( data ) => {
-                    if (input.ticket_id) {
-                        if(data.ticket_id === input.ticket_id) {
-                            emitter.next(data);
-                        }
-                    } else {
-                        emitter.next(data);
-                    }
-                });
+                event.ticketUpdateEmitter.on("assign", assignHandler);
             }
 
             if (input.eventOptions.status === true) {
-                event.ticketUpdateEmitter.on("status", ( data ) => {
-                    if (input.ticket_id) {
-                        if(data.ticket_id === input.ticket_id) {
-                            emitter.next(data);
-                        }
-                    } else {
-                        emitter.next(data);
-                    }
-                });
+                event.ticketUpdateEmitter.on("status", statusHandler);
             }
 
             if (input.eventOptions.follow === true) {
-                event.ticketUpdateEmitter.on("follow", ( data ) => {
-                    if (input.ticket_id) {
-                        if(data.ticket_id === input.ticket_id) {
-                            emitter.next(data);
-                        }
-                    } else {
-                        emitter.next(data);
-                    }
-                });
+                event.ticketUpdateEmitter.on("follow", followHandler);
             }
 
             if (input.eventOptions.delete_ticket === true) {
-                event.ticketUpdateEmitter.on("delete_ticket", ( data ) => {
-                    if (input.ticket_id) {
-                        if(data.ticket_id === input.ticket_id) {
-                            emitter.next(data);
-                        }
-                    } else {
-                        emitter.next(data);
-                    }
-                });
+                event.ticketUpdateEmitter.on("delete_ticket", deleteTicketHandler);
+            }
+
+            if (input.eventOptions.edit === true) {
+                event.ticketUpdateEmitter.on("edit", editHandler);
             }
 
             if (input.eventOptions.add_message === true) {
-                event.ticketUpdateEmitter.on("add_message", ( data ) => {
-                    if (input.ticket_id) {
-                        if(data.message.ticket_id === input.ticket_id) {
-                            emitter.next(data);
-                        }
-                    } else {
-                        emitter.next(data);
-                    }
-                });
+                event.ticketUpdateEmitter.on("add_message", addMessageHandler);
             }
 
             if (input.eventOptions.edit_message === true) {
-                event.ticketUpdateEmitter.on("edit_message", ( data ) => {
-                    if (input.ticket_id) {
-                        if(data.message.ticket_id === input.ticket_id) {
-                            emitter.next(data);
-                        }
-                    } else {
-                        emitter.next(data);
-                    }
-                });
+                event.ticketUpdateEmitter.on("edit_message", editMessageHandler);
             }
 
             if (input.eventOptions.delete_message === true) {
-                event.ticketUpdateEmitter.on("delete_message", ( data ) => {
-                    if (input.ticket_id) {
-                        if(data.ticket_id === input.ticket_id) {
-                            emitter.next(data);
-                        }
-                    } else {
-                        emitter.next(data);
-                    }
-                });
+                event.ticketUpdateEmitter.on("delete_message", deleteMessageHandler);
             }
 
             return () => {
-                event.ticketUpdateEmitter.removeAllListeners();
+                event.ticketUpdateEmitter.off("create", createHandler);
+                event.ticketUpdateEmitter.off("assign", assignHandler);
+                event.ticketUpdateEmitter.off("status", statusHandler);
+                event.ticketUpdateEmitter.off("follow", followHandler);
+                event.ticketUpdateEmitter.off("delete_ticket", deleteTicketHandler);
+                event.ticketUpdateEmitter.off("edit", editHandler);
+                event.ticketUpdateEmitter.off("add_message", addMessageHandler);
+                event.ticketUpdateEmitter.off("edit_message", editMessageHandler);
+                event.ticketUpdateEmitter.off("delete_message", deleteMessageHandler);
 			};
         });
     }),
@@ -650,118 +723,126 @@ export const ticketsRouter = router({
             create: z.boolean().optional(),
             assign: z.boolean().optional(),
             status: z.boolean().optional(),
-            follow: z.boolean().optional(),
-            delete_ticket: z.boolean().optional(),
-            edit: z.boolean().optional(),
             add_message: z.boolean().optional(),
-            edit_message: z.boolean().optional(),
-            delete_message: z.boolean().optional(),
         }),
     })).subscription(async ({ ctx, input }) => {
+        console.log(`Create Input = ${input.eventOptions.create}`);
+        console.log(`Assign Input = ${input.eventOptions.assign}`);
+        console.log(`Status Input = ${input.eventOptions.status}`);
+        console.log(`Add_Message Input = ${input.eventOptions.add_message}`);
+
         const event = await getEvent(input.eventToken);
 
-        return observable((emitter) => {
-            if (input.eventOptions.create === true) {
-                event.ticketUpdateEmitter.on("create", ( data ) => {
-                    if (input.ticket_id) {
-                        if(data.ticket.id === input.ticket_id) {
-                            emitter.next(data);
-                        }
-                    } else {
+        if (!event) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Event not found or invalid event token." });
+        }
+
+        let currentUserProfile: Profile[] | undefined;
+
+        if (ctx.token) {
+            currentUserProfile = await db.select({
+                id: users.id,
+                username: users.username,
+                role: users.role,
+                admin: users.admin,
+            }).from(users).where(eq(users.token, ctx.token as string));
+        } else {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "User token not provided in context object" });
+        }
+        
+        if (!currentUserProfile[0]) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Current User not found by token" });
+        }
+
+        return observable<TicketPushEventData>((emitter) => {
+            const createHandler: TicketPushEvents["create"] = ( data ) => {
+                console.log("in handler");
+                if (data.kind === "create" && input.ticket_id) {
+                    if(data.ticket.id === input.ticket_id) {
                         emitter.next(data);
                     }
-                    
-                });
+                } else if (data.kind === "create") {
+                    emitter.next(data);
+                }
+            };
+
+            const assignHandler: TicketPushEvents["assign"] = ( data ) => {
+                if (data.followers && data.followers?.includes(currentUserProfile[0].id)) {
+                    if (data.kind === "assign" && input.ticket_id) {
+                        if(data.ticket_id === input.ticket_id) {
+                            emitter.next(data);
+                        }
+                    } else if (data.kind === "assign") {
+                        emitter.next(data);
+                    }
+                }
+            };
+
+            const statusHandler: TicketPushEvents["status"] = ( data ) => {
+                if (data.followers && data.followers?.includes(currentUserProfile[0].id)) {
+                    if (data.kind === "status" && input.ticket_id) {
+                        if(data.ticket_id === input.ticket_id) {
+                            emitter.next(data);
+                        }
+                    } else if (data.kind === "status") {
+                        emitter.next(data);
+                    }
+                }
+            };
+
+            const addMessageHandler: TicketPushEvents["add_message"] = ( data ) => {
+                if (data.followers && data.followers?.includes(currentUserProfile[0].id)) {
+                    if (data.kind === "add_message" && input.ticket_id) {
+                        if(data.message.ticket_id === input.ticket_id) {
+                            emitter.next(data);
+                        }
+                    } else if (data.kind === "add_message") {
+                        emitter.next(data);
+                    }
+                }
+            };
+
+            if (input.eventOptions.create === true) {
+                event.ticketPushEmitter.on("create", createHandler);
             }
 
             if (input.eventOptions.assign === true) {
-                event.ticketUpdateEmitter.on("assign", ( data ) => {
-                    if (input.ticket_id) {
-                        if(data.ticket_id === input.ticket_id) {
-                            emitter.next(data);
-                        }
-                    } else {
-                        emitter.next(data);
-                    }
-                });
+                event.ticketPushEmitter.on("assign", assignHandler);
             }
 
             if (input.eventOptions.status === true) {
-                event.ticketUpdateEmitter.on("status", ( data ) => {
-                    if (input.ticket_id) {
-                        if(data.ticket_id === input.ticket_id) {
-                            emitter.next(data);
-                        }
-                    } else {
-                        emitter.next(data);
-                    }
-                });
-            }
-
-            if (input.eventOptions.follow === true) {
-                event.ticketUpdateEmitter.on("follow", ( data ) => {
-                    if (input.ticket_id) {
-                        if(data.ticket_id === input.ticket_id) {
-                            emitter.next(data);
-                        }
-                    } else {
-                        emitter.next(data);
-                    }
-                });
-            }
-
-            if (input.eventOptions.delete_ticket === true) {
-                event.ticketUpdateEmitter.on("delete_ticket", ( data ) => {
-                    if (input.ticket_id) {
-                        if(data.ticket_id === input.ticket_id) {
-                            emitter.next(data);
-                        }
-                    } else {
-                        emitter.next(data);
-                    }
-                });
+                event.ticketPushEmitter.on("status", statusHandler);
             }
 
             if (input.eventOptions.add_message === true) {
-                event.ticketUpdateEmitter.on("add_message", ( data ) => {
-                    if (input.ticket_id) {
-                        if(data.message.ticket_id === input.ticket_id) {
-                            emitter.next(data);
-                        }
-                    } else {
-                        emitter.next(data);
-                    }
-                });
-            }
-
-            if (input.eventOptions.edit_message === true) {
-                event.ticketUpdateEmitter.on("edit_message", ( data ) => {
-                    if (input.ticket_id) {
-                        if(data.message.ticket_id === input.ticket_id) {
-                            emitter.next(data);
-                        }
-                    } else {
-                        emitter.next(data);
-                    }
-                });
-            }
-
-            if (input.eventOptions.delete_message === true) {
-                event.ticketUpdateEmitter.on("delete_message", ( data ) => {
-                    if (input.ticket_id) {
-                        if(data.ticket_id === input.ticket_id) {
-                            emitter.next(data);
-                        }
-                    } else {
-                        emitter.next(data);
-                    }
-                });
+                event.ticketPushEmitter.on("add_message", addMessageHandler);
             }
 
             return () => {
-                event.ticketUpdateEmitter.removeAllListeners();
+                event.ticketPushEmitter.off("create", createHandler);
+                event.ticketPushEmitter.off("assign", assignHandler);
+                event.ticketPushEmitter.off("status", statusHandler);
+                event.ticketPushEmitter.off("add_message", addMessageHandler);
 			};
         });
+    }),
+
+    registerPush: protectedProcedure.input(z.object({
+        endpoint: z.string(),
+        expirationTime: z.date(),
+        keys: z.object({
+            p256dh: z.string(),
+            auth: z.string()
+        })
+    })).query(async ({ input, ctx }) => {
+        db.insert(pushSubscriptions).values({
+            endpoint: input.endpoint,
+            expirationTime: input.expirationTime,
+            keys: input.keys,
+            user_id: ctx.user.id
+        }).execute();
+
+        return true;
     }),
 });
 

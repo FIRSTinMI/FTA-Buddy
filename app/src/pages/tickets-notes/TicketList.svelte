@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Alert, Button, Label, Select, Textarea, ToolbarButton, Modal } from "flowbite-svelte";
+	import { Alert, Button, Label, Select, Textarea, ToolbarButton, Modal, type SelectOptionType } from "flowbite-svelte";
 	import { onDestroy, onMount } from "svelte";
 	import { get } from "svelte/store";
 	import TicketCard from "../../components/TicketCard.svelte";
@@ -11,8 +11,9 @@
 	import NotesPolicy from "../../components/NotesPolicy.svelte";
 	import { settingsStore } from "../../stores/settings";
 	import Spinner from "../../components/Spinner.svelte";
-    import type { Ticket } from "../../../../shared/types";
+    import type { TeamList, Ticket } from "../../../../shared/types";
 	import { navigate } from "svelte-routing";
+    import { ZodString } from "zod";
 
 
 	let createModalOpen = false;
@@ -108,23 +109,33 @@
 	let ticketText: string = "";
 
 	$: {
-		disableSubmit = team === undefined || ticketText.length === 0 || ticketSubject.length === 0;
+		disableSubmit = team === undefined || typeof team === "string" || ticketText.length === 0 || ticketSubject.length === 0;
 	}
 
-	async function createTicket(evt: Event) {
-		if (team === undefined || ticketText.length === 0 || ticketSubject.length === 0) return;
+	async function createTicket(evt: SubmitEvent) {
+		if (team === undefined || typeof team === "string" || ticketText.length === 0 || ticketSubject.length === 0) return;
 
 		try {
 			if (!$settingsStore.acknowledgedNotesPolicy) {
 				await notesPolicyElm.confirmPolicy();
 			}
 
-			const res = await trpc.tickets.create.query({
-				team: team,
-				subject: ticketSubject,
-				text: ticketText,
-				match_id: matchId,
-			});
+			let res;
+			if (matchId) {
+				res = await trpc.tickets.create.query({
+					team: team,
+					subject: ticketSubject,
+					text: ticketText,
+					match_id: matchId,
+				});
+			} else {
+				res = await trpc.tickets.create.query({
+					team: team,
+					subject: ticketSubject,
+					text: ticketText,
+					match_id: undefined,
+				});
+			}
 			toast("Ticket created successfully", "success", "green-500");
 			navigate("/app/ticket/" + res.id);
 		} catch (err: any) {

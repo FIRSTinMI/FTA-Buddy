@@ -15,7 +15,7 @@
 	import { settingsStore } from "../../stores/settings";
 	import NotesPolicy from "../../components/NotesPolicy.svelte";
     import MessageCard from "../../components/MessageCard.svelte";
-    import { startBackgroundTicketSubscription, stopBackgroundTicketSubscription } from "../../util/push-notifications";
+    import { startBackgroundTicketSubscription, stopBackgroundTicketSubscription } from "../../util/notifications";
 
 	export let id: string;
 

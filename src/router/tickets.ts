@@ -11,6 +11,7 @@ import { observable } from "@trpc/server/observable";
 import { messagesRouter } from "./messages";
 import { AwsRequestSigner } from "google-auth-library";
 import { dataSourceToNumber } from "@the-orange-alliance/api/lib/esm/models/types/DataSource";
+import { sendNotification } from "../util/push-notifications";
 
 const messageRouter = messagesRouter;
 
@@ -718,6 +719,7 @@ export const ticketsRouter = router({
 
     pushSubscription: publicProcedure.input(z.object({
         eventToken: z.string(),
+        userToken: z.string(),
         ticket_id: z.number().optional(),
         eventOptions: z.object({
             create: z.boolean().optional(),
@@ -725,12 +727,7 @@ export const ticketsRouter = router({
             status: z.boolean().optional(),
             add_message: z.boolean().optional(),
         }),
-    })).subscription(async ({ ctx, input }) => {
-        console.log(`Create Input = ${input.eventOptions.create}`);
-        console.log(`Assign Input = ${input.eventOptions.assign}`);
-        console.log(`Status Input = ${input.eventOptions.status}`);
-        console.log(`Add_Message Input = ${input.eventOptions.add_message}`);
-
+    })).subscription(async ({ input }) => {
         const event = await getEvent(input.eventToken);
 
         if (!event) {
@@ -739,15 +736,15 @@ export const ticketsRouter = router({
 
         let currentUserProfile: Profile[] | undefined;
 
-        if (ctx.token) {
+        if (input.userToken) {
             currentUserProfile = await db.select({
                 id: users.id,
                 username: users.username,
                 role: users.role,
                 admin: users.admin,
-            }).from(users).where(eq(users.token, ctx.token as string));
+            }).from(users).where(eq(users.token, input.userToken));
         } else {
-            throw new TRPCError({ code: "BAD_REQUEST", message: "User token not provided in context object" });
+            throw new TRPCError({ code: "BAD_REQUEST", message: "User token not provided in input object" });
         }
         
         if (!currentUserProfile[0]) {
@@ -756,7 +753,6 @@ export const ticketsRouter = router({
 
         return observable<TicketPushEventData>((emitter) => {
             const createHandler: TicketPushEvents["create"] = ( data ) => {
-                console.log("in handler");
                 if (data.kind === "create" && input.ticket_id) {
                     if(data.ticket.id === input.ticket_id) {
                         emitter.next(data);
@@ -819,6 +815,7 @@ export const ticketsRouter = router({
             }
 
             return () => {
+                console.log("Cleaning up listeners");
                 event.ticketPushEmitter.off("create", createHandler);
                 event.ticketPushEmitter.off("assign", assignHandler);
                 event.ticketPushEmitter.off("status", statusHandler);

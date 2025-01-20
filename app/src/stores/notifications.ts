@@ -1,12 +1,11 @@
 import { writable } from 'svelte/store';
 import { v4 as uuidv4 } from 'uuid';
-import { type NotificationOptions } from '../util/push-notifications';
+import { type NotificationOptions } from '../util/notifications';
 
 
 export interface Notification {
     id: string,
     timestamp: Date,
-    title: string;
     body?: string;
     icon?: string;
     tag?: string;

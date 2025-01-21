@@ -86,13 +86,6 @@ export const messagesRouter = router({
             message: insert[0] as Message,
         });
 
-        event.ticketPushEmitter.emit("add_message", {
-            kind: "add_message",
-            ticket_id: ticket.id,
-            message: insert[0] as Message,
-            followers: ticket.followers,
-        });
-
         return insert[0] as Message;
     }),
 

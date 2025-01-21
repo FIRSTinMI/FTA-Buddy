@@ -5,7 +5,7 @@ import { pushSubscriptions, tickets, users, events, messages } from "../db/schem
 import type { User } from "../db/schema";
 import { and, asc, desc, eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
-import { Ticket, Profile, TicketUpdateEventData, TicketPushEventData, TicketUpdateEvents, TicketPushEvents, NotificationEvents } from "../../shared/types";
+import { Ticket, Profile, TicketUpdateEventData, TicketUpdateEvents, NotificationEvents } from "../../shared/types";
 import { getEvent, getListenerCount } from "../util/get-event";
 import { observable } from "@trpc/server/observable";
 import { messagesRouter } from "./messages";
@@ -135,7 +135,7 @@ export const ticketsRouter = router({
                 created_at: new Date(),
                 updated_at: new Date(),
                 event_code: event.code,
-                followers: [],
+                followers: [authorProfile.id],
                 match_id: input.match_id,
             }).returning();
         } else {
@@ -151,7 +151,7 @@ export const ticketsRouter = router({
                 created_at: new Date(),
                 updated_at: new Date(),
                 event_code: event.code,
-                followers: [],
+                followers: [authorProfile.id],
                 match_id: undefined,
             }).returning();
         }
@@ -178,8 +178,6 @@ export const ticketsRouter = router({
                 ticket_id: insert[0].id,
             },
         });
-
-        getListenerCount(ctx.eventToken as string);
 
         return insert[0] as Ticket;
     }),
@@ -223,8 +221,6 @@ export const ticketsRouter = router({
             is_open: input.new_status,
             closed_at: !input.new_status ? new Date() : null
         }).where(eq(tickets.id, input.id)).returning();
-
-        getListenerCount(ctx.eventToken as string);
 
         event.ticketUpdateEmitter.emit("status", {
             kind: "status",
@@ -297,12 +293,28 @@ export const ticketsRouter = router({
             assigned_to: profile[0] as Profile,
         });
 
-        event.ticketPushEmitter.emit("assign", {
-            kind: "assign",
-            ticket_id: update[0].id,
-            assigned_to_id: update[0].assigned_to_id,
-            assigned_to: profile[0] as Profile,
-            followers: update[0].followers,
+        createNotification(ticket.followers, {
+            id: randomUUID(),
+            timestamp: new Date(),
+            topic: "Ticket-Assigned",
+            title: `Ticket #${ticket.id} Has Been Assigned`,
+            body: `Ticket #${ticket.id} assigned to ${profile[0].username}`,
+            data: {
+                page: "ticket/" + ticket.id,
+                ticket_id: ticket.id,
+            },
+        });
+
+        createNotification([profile[0].id], {
+            id: randomUUID(),
+            timestamp: new Date(),
+            topic: "Ticket-Assigned",
+            title: `A Ticket Has Been Assigned to You`,
+            body: `Ticket #${ticket.id} assigned to you`,
+            data: {
+                page: "ticket/" + ticket.id,
+                ticket_id: ticket.id,
+            },
         });
 
         return update[0] as Ticket;
@@ -365,12 +377,28 @@ export const ticketsRouter = router({
             assigned_to: null,
         });
 
-        event.ticketPushEmitter.emit("assign", {
-            kind: "assign",
-            ticket_id: update[0].id,
-            assigned_to_id: update[0].assigned_to_id,
-            assigned_to: null,
-            followers: update[0].followers,
+        createNotification(ticket.followers, {
+            id: randomUUID(),
+            timestamp: new Date(),
+            topic: "Ticket-Assigned",
+            title: `Ticket #${ticket.id} Has Been Set to Unassigned`,
+            body: `Ticket #${ticket.id} has been set to unassigned`,
+            data: {
+                page: "ticket/" + ticket.id,
+                ticket_id: ticket.id,
+            },
+        });
+
+        createNotification([profile[0].id], {
+            id: randomUUID(),
+            timestamp: new Date(),
+            topic: "Ticket-Assigned",
+            title: `No Longer Assigned to Ticket #${ticket.id}`,
+            body: `You are no longer assigned to Ticket #${ticket.id}`,
+            data: {
+                page: "ticket/" + ticket.id,
+                ticket_id: ticket.id,
+            },
         });
 
         return update[0] as Ticket;
@@ -506,6 +534,18 @@ export const ticketsRouter = router({
             kind: "follow",
             ticket_id: update[0].id,
             followers: update[0].followers,
+        });
+
+        createNotification([currentUserProfile[0].id], {
+            id: randomUUID(),
+            timestamp: new Date(),
+            topic: "Ticket-Follow",
+            title: `Now Following Ticket #${ticket.id}`,
+            body: `You are now following Ticket #${ticket.id}`,
+            data: {
+                page: "ticket/" + ticket.id,
+                ticket_id: ticket.id,
+            },
         });
 
         return update[0] as Ticket;
@@ -741,8 +781,6 @@ export const ticketsRouter = router({
             throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
         }
 
-        console.log(user.id + " has subscribed to WS notifications");
-
         return observable<Notification>((emitter) => {
 
             const notificationHandler: NotificationEvents['send'] = (data) => {
@@ -755,7 +793,6 @@ export const ticketsRouter = router({
             notificationEmitter.on("send", notificationHandler);
 
             return () => {
-                console.log("Cleaning up listeners");
                 notificationEmitter.off("send", notificationHandler);
             };
         });

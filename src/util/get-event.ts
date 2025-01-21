@@ -3,7 +3,7 @@ import { EventEmitter } from "events";
 import { TypedEmitter } from 'tiny-typed-emitter';
 import { eventCodes, events } from "..";
 import { DEFAULT_MONITOR } from "../../shared/constants";
-import { TeamList, EventChecklist, ScheduleDetails, ServerEvent, Profile, TicketUpdateEvents, NoteUpdateEvents, Ticket, Note, TicketPushEvents } from "../../shared/types";
+import { TeamList, EventChecklist, ScheduleDetails, ServerEvent, Profile, TicketUpdateEvents, Ticket, Note } from "../../shared/types";
 import { db } from "../db/db";
 import schema from "../db/schema";
 import { getEventTickets } from "../router/tickets";
@@ -44,7 +44,6 @@ export async function getEvent(eventToken: string, eventCode?: string) {
     }
 
     const ticketUpdateEmitter = new TypedEmitter<TicketUpdateEvents>();
-    const ticketPushEmitter = new TypedEmitter<TicketPushEvents>();
 
     loadingEvents[eventCode] = new Promise(async (resolve) => {
         const eventInMemory = events[eventCode];
@@ -79,8 +78,6 @@ export async function getEvent(eventToken: string, eventCode?: string) {
                 fieldStatusEmitter: new EventEmitter(),
                 checklistEmitter: new EventEmitter(),
                 ticketUpdateEmitter: ticketUpdateEmitter,
-                ticketPushEmitter: ticketPushEmitter,
-                //notePushEmitter: new TypedEmitter(),
                 cycleEmitter: new EventEmitter(),
                 scheduleDetails: event.scheduleDetails as ScheduleDetails,
                 lastPrestartDone: null,
@@ -103,6 +100,5 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 
 export async function getListenerCount(event_token: string) {
     const event = await getEvent(event_token);
-    console.log(`Push Listener Count - ${event.ticketPushEmitter.listenerCount('create')}`);
     console.log(`Update Listener Count - ${event.ticketUpdateEmitter.listenerCount('status')}`);
 }

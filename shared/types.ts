@@ -340,8 +340,6 @@ export interface ServerEvent {
     fieldStatusEmitter: EventEmitter,
     checklistEmitter: EventEmitter,
     ticketUpdateEmitter: TypedEmitter<TicketUpdateEvents>,
-    ticketPushEmitter: TypedEmitter<TicketPushEvents>,
-    //notePushEmitter: TypedEmitter,
     cycleEmitter: EventEmitter,
     teams: TeamList,
     checklist: EventChecklist,
@@ -511,100 +509,6 @@ export type NotificationEvents = {
     ) => void;
 };
 
-export type TicketPushEvents = {
-    create: (
-        data: {
-            kind: "create",
-            ticket_id: number,
-            ticket: Ticket;
-        }
-    ) => void;
-    assign: (
-        data: {
-            kind: "assign",
-            ticket_id: number,
-            assigned_to_id: number | null,
-            assigned_to: Profile | null,
-            followers: number[] | null,
-        }
-    ) => void;
-    status: (
-        data: {
-            kind: "status",
-            ticket_id: number,
-            is_open: boolean,
-            user: Profile,
-            followers: number[] | null,
-        }
-    ) => void;
-    add_message: (
-        data: {
-            kind: "add_message",
-            ticket_id: number,
-            message: Message,
-            followers: number[] | null,
-        }
-    ) => void;
-};
-
-type AssignPushTicketEvent = {
-    kind: "assign";
-    ticket_id: number;
-    assigned_to_id: number | null;
-    assigned_to: Profile | null;
-    followers: number[] | null,
-};
-
-type StatusPushTicketEvent = {
-    kind: "status";
-    ticket_id: number;
-    is_open: boolean;
-    user: Profile,
-    followers: number[] | null,
-};
-
-type CreatePushTicketEvent = {
-    kind: "create";
-    ticket_id: number,
-    ticket: Ticket;
-};
-
-type AddMessagePushTicketEvent = {
-    kind: "add_message";
-    ticket_id: number;
-    message: Message;
-    followers: number[] | null,
-};
-
-export type TicketPushEventData =
-    | AssignPushTicketEvent
-    | StatusPushTicketEvent
-    | CreatePushTicketEvent
-    | AddMessagePushTicketEvent;
-
-export type NoteUpdateEvents = {
-    create: (
-        data: {
-            kind: "create",
-            note: Note,
-        }
-    ) => void;
-    edit: (
-        data: {
-            kind: "edit",
-            note_id: string,
-            note_text: string,
-            note_updated_at: Date;
-        }
-    ) => void;
-    delete: (
-        data: {
-            kind: "delete",
-            note_id: string;
-        }
-    ) => void;
-};
-
 export interface RobotCycleTracking {
     team: number,
     firstDS?: Date,
@@ -681,7 +585,7 @@ export interface Message {
     updated_at: Date,
 }
 
-export type NotificationTopic = 'Ticket-Created' | 'Ticket-Status' | 'Ticket-Assigned' | 'New-Ticket-Message' | 'Robot-Status';
+export type NotificationTopic = 'Ticket-Created' | 'Ticket-Status' | 'Ticket-Assigned' | 'New-Ticket-Message' | "Ticket-Follow" | 'Robot-Status';
 export interface Notification {
     id: string,
     timestamp: Date,

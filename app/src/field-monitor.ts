@@ -124,7 +124,7 @@ frameHandler.addEventListener(`ds-drop`, (e) => {
         } else {
             if (settings.vibrations) navigator.vibrate(VIBRATION_PATTERNS.ds);
             if (settings.soundAlerts) audioQueuer.addRobotClip(evt.detail.robot, 'ds');
-            if (settings.robotNotifications) robotNotification('DS', evt.detail);
+            if (settings.notificationCategories.robot) robotNotification('DS', evt.detail);
         }
     }
 });

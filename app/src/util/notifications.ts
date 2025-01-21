@@ -20,10 +20,10 @@ export function createNotification(data: Notification) {
 
     const notification = new Notification(data.title, {
         body: data.body,
-        icon: data.icon ?? "/app/public/icon192_rounded.png",
+        icon: data.icon ?? "/public/icon192_rounded.png",
         tag: data.tag,
         data: {
-            path: `/app/${data.data?.page ?? ""}`
+            path: `${data.data?.page ?? ""}`
         }
     });
 
@@ -49,9 +49,9 @@ export function robotNotification(type: string, event: MonitorEvent["detail"]) {
         topic: 'Robot-Status',
         title: `${robot.number} Lost ${type.toLocaleUpperCase()}`,
         body: `${event.robot} lost ${type} at ${event.frame.time} in ${event.frame.match}.`,
-        icon: "/app/public/icon192_rounded.png",
+        icon: "/public/icon192_rounded.png",
         data: {
-            page: `/app/`
+            page: ``
         }
     });
 }

@@ -50,7 +50,7 @@ export const VERSIONS: { [key: string]: Version; } = {
         </ul>`,
         update: () => {
             settingsStore.update(s => {
-                s.robotNotifications = false;
+                s.notificationCategories.robot = false;
                 s.notifications = false;
                 return s;
             });
@@ -98,7 +98,7 @@ export const VERSIONS: { [key: string]: Version; } = {
         <li>Share button in match log will generate QR code to share that station's log with the team</li>
         </ul>`,
         update: () => {
-            eventStore.set({ code: "", pin: "", teams: [] });
+            eventStore.set({ code: "", pin: "", teams: [], users: [] });
             userStore.set({ ...get(userStore), eventToken: "" });
         }
     },

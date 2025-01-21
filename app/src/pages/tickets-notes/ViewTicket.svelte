@@ -318,7 +318,6 @@
 							case "add_message":
 								if (ticket.messages) {
 									ticket.messages.push(data.message);
-									console.log(ticket.messages);
 								} else {
 									ticket.messages = [data.message];
 								}

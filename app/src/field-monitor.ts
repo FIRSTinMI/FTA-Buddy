@@ -106,7 +106,7 @@ for (let type of ['radio', 'rio', 'code']) {
         if (evt.detail.match === MatchState.RUNNING && evt.detail.frame[evt.detail.robot].ds !== DSState.BYPASS) {
             if (settings.vibrations) navigator.vibrate(VIBRATION_PATTERNS[type as 'radio' | 'rio' | 'code']);
             if (settings.soundAlerts) audioQueuer.addRobotClip(evt.detail.robot, type as 'radio' | 'rio' | 'code');
-            if (settings.robotNotifications) robotNotification(type, evt.detail);
+            if (settings.notificationCategories.robot) robotNotification(type, evt.detail);
         }
     });
 }

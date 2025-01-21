@@ -59,20 +59,82 @@ self.addEventListener("activate", (evt) => {
 	console.log("Service worker activated");
 });
 
+function getSettingsStore() {
+	const settings = localStorage.getItem("settingsStore");
+	if (settings) {
+		return JSON.parse(settings);
+	}
+}
+
+function checkIfNotificationExists(id) {
+	const notifications = localStorage.getItem("notifications");
+	if (notifications) {
+		const parsed = JSON.parse(notifications);
+		return parsed.some((n) => n.id === id);
+	}
+	return false;
+}
+
+function addNotification(notification) {
+	const notifications = localStorage.getItem("notifications");
+	if (notifications) {
+		const parsed = JSON.parse(notifications);
+		parsed.push(notification);
+		localStorage.setItem("notifications", JSON.stringify(parsed));
+	} else {
+		localStorage.setItem("notifications", JSON.stringify([notification]));
+	}
+}
+
 self.addEventListener("push", async (evt) => {
 	const data = evt.data.json();
 	console.log(evt);
 	console.log(evt.data);
-	self.registration.showNotification(data.title, {
-		body: data.body,
-		icon: data.icon,
-		actions: data.actions,
-		tag: data.tag,
-		data: data.data,
-		badge: "https://ftabuddy.com/app/icon96_outline.png",
-		icon: "https://ftabuddy.com/app/icon512_rounded.png",
-	});
-	console.log(await clients.matchAll());
+
+	let sendNotification = false;
+
+	switch (data.topic) {
+		case "Ticket-Created": {
+			sendNotification = getSettingsStore().notificationCategories.create;
+			break;
+		}
+		case "Ticket-Assigned": {
+			sendNotification = getSettingsStore().notificationCategories.assign;
+			break;
+		}
+		case "Ticket-Status": {
+			sendNotification = getSettingsStore().notificationCategories.follow;
+			break;
+		}
+		case "New-Ticket-Message": {
+			sendNotification = getSettingsStore().notificationCategories.follow;
+			break;
+		}
+		case "Robot-Status": {
+			sendNotification = getSettingsStore().notificationCategories.robot;
+			break;
+		}
+		default: {
+			sendNotification = false;
+			break;
+		}
+	}
+
+	if (sendNotification) {
+		if (checkIfNotificationExists(data.id)) return;
+
+		// Add to notification store
+		addNotification(data);
+
+		// Send notification to browser
+		self.registration.showNotification(data.title, {
+			body: data.body ?? "",
+			tag: data.tag,
+			data: data.data,
+			icon: "https://ftabuddy.com" + (data.icon ?? "/app/icon512_rounded.png"),
+		});
+		console.log(await clients.matchAll());
+	}
 });
 
 self.addEventListener("notificationclick", (evt) => {

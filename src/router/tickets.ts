@@ -174,7 +174,7 @@ export const ticketsRouter = router({
             title: "New Ticket",
             body: `New Ticket created by ${authorProfile.username}`,
             data: {
-                page: "ticket",
+                page: "ticket/" + insert[0].id,
                 ticket_id: insert[0].id,
             },
         });
@@ -239,7 +239,7 @@ export const ticketsRouter = router({
             title: "Ticket Status Update",
             body: `Ticket status updated by ${currentUserProfile[0].username}`,
             data: {
-                page: "ticket",
+                page: "ticket/" + update[0].id,
                 ticket_id: update[0].id,
             },
         });

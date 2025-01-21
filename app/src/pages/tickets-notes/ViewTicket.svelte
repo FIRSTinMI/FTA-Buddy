@@ -5,17 +5,16 @@
 	import { formatTimeNoAgoHourMins } from "../../../../shared/formatTime";
 	import { toast } from "../../../../shared/toast";
 	import { eventStore } from "../../stores/event";
-	import { ROBOT, type Message, type Profile, type TicketUpdateEvents, type TicketUpdateEventData} from "../../../../shared/types";
+	import { ROBOT, type Message, type Profile, type TicketUpdateEvents, type TicketUpdateEventData } from "../../../../shared/types";
 	import { Alert, Button, Textarea, ToolbarButton, Modal, Label } from "flowbite-svelte";
-	import { EditOutline, ExclamationCircleOutline, TrashBinOutline, ArrowLeftOutline } from 'flowbite-svelte-icons';
+	import { EditOutline, ExclamationCircleOutline, TrashBinOutline, ArrowLeftOutline } from "flowbite-svelte-icons";
 	import { navigate } from "svelte-routing";
 	import { userStore } from "../../stores/user";
 	import Icon from "@iconify/svelte";
 	import { onDestroy, onMount, tick } from "svelte";
 	import { settingsStore } from "../../stores/settings";
 	import NotesPolicy from "../../components/NotesPolicy.svelte";
-    import MessageCard from "../../components/MessageCard.svelte";
-    import { startBackgroundTicketSubscription, stopBackgroundTicketSubscription } from "../../util/notifications";
+	import MessageCard from "../../components/MessageCard.svelte";
 
 	export let id: string;
 
@@ -27,7 +26,7 @@
 	let ticket: Awaited<ReturnType<typeof trpc.tickets.getByIdWithMessages.query>>;
 
 	let ticketPromise: Promise<any> | undefined;
-	
+
 	let match_id: string | undefined | null;
 
 	let matchPromise: Promise<any> | undefined;
@@ -37,9 +36,9 @@
 	let time: string = "";
 
 	let station: ROBOT | undefined = undefined;
-	
+
 	let assignedToUser = false;
-	
+
 	let sortedMessages: Message[] | undefined;
 
 	let deleteTicketPopup = false;
@@ -51,14 +50,14 @@
 	async function getTicketAndMatch() {
 		ticketPromise = trpc.tickets.getByIdWithMessages.query({
 			id: ticket_id,
-			event_code: event.code
+			event_code: event.code,
 		});
 		ticket = await ticketPromise;
 
 		if (ticket) {
-			if (ticket.match_id){
+			if (ticket.match_id) {
 				match_id = ticket.match_id;
-				matchPromise = trpc.match.getMatch.query({id: match_id})
+				matchPromise = trpc.match.getMatch.query({ id: match_id });
 				match = await matchPromise;
 
 				switch (ticket.team) {
@@ -81,7 +80,7 @@
 						station = ROBOT.blue3;
 						break;
 					default:
-						console.log("Unable to assign match station")
+						console.log("Unable to assign match station");
 						break;
 				}
 			} else {
@@ -91,7 +90,7 @@
 
 			sortedMessages = ticket.messages?.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
-			assignedToUser = (ticket.assigned_to_id === user.id) ? true : false;
+			assignedToUser = ticket.assigned_to_id === user.id ? true : false;
 			editTicketText = ticket.text;
 			editTicketSubject = ticket.subject;
 		}
@@ -100,7 +99,7 @@
 	onMount(async () => {
 		getTicketAndMatch();
 		foregroundUpdate();
-    });
+	});
 
 	setInterval(
 		() => {
@@ -114,7 +113,7 @@
 		let update;
 		if (!ticket) return;
 		try {
-			if (ticket.messages && ticket.messages?.length > 0){
+			if (ticket.messages && ticket.messages?.length > 0) {
 				if (ticket.is_open === true) {
 					update = await trpc.tickets.updateStatus.query({ id: ticket.id, new_status: false, event_code: event.code });
 				} else {
@@ -134,13 +133,13 @@
 	async function assignSelf() {
 		let update;
 		if (!ticket) return;
-		assignedToUser = (ticket.assigned_to_id === user.id) ? true : false;
+		assignedToUser = ticket.assigned_to_id === user.id ? true : false;
 		try {
 			if (ticket.assigned_to_id === user.id) {
-				update = await trpc.tickets.unAssign.query({ ticket_id: ticket.id, event_code: event.code});
+				update = await trpc.tickets.unAssign.query({ ticket_id: ticket.id, event_code: event.code });
 				assignedToUser = false;
 			} else {
-				update = await trpc.tickets.assign.query({ id: ticket.id, user_id: user.id, event_code: event.code});
+				update = await trpc.tickets.assign.query({ id: ticket.id, user_id: user.id, event_code: event.code });
 				assignedToUser = true;
 			}
 		} catch (err: any) {
@@ -160,7 +159,7 @@
 			if (user.role === "CSA" || user.role === "RI") {
 				navigate("/app/");
 			} else {
-				navigate("/app/tickets/")
+				navigate("/app/tickets/");
 			}
 		} else {
 			window.history.back();
@@ -245,7 +244,7 @@
 	}
 
 	async function deleteTicket() {
-		try{
+		try {
 			if (!ticket.messages || ticket.is_open || !ticket.followers) {
 				const res = await trpc.tickets.delete.query({
 					id: ticket_id,
@@ -271,7 +270,7 @@
 					follow: true,
 					event_code: event.code,
 				});
-				startBackgroundTicketSubscription(ticket_id);
+				// startBackgroundTicketSubscription(ticket_id);
 			} else {
 				const res = await trpc.tickets.follow.query({
 					id: ticket_id,
@@ -298,7 +297,7 @@
 					assign: true,
 					status: true,
 					follow: true,
-				}
+				},
 			},
 			{
 				onData: (data) => {
@@ -343,10 +342,10 @@
 <Modal bind:open={deleteTicketPopup} size="sm" outsideclose dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
 	<div class="text-center">
 		<h3 class="mb-5 text-lg">Are you sure you want to delete this Ticket?</h3>
-		<h2 class="mb-5 text-sm">Unable to delete Tickets that have attached Messages or followers, or those that have been closed.</h2>		
+		<h2 class="mb-5 text-sm">Unable to delete Tickets that have attached Messages or followers, or those that have been closed.</h2>
 		<Button on:click={deleteTicket} color="red" class="me-2">Yes, I'm sure</Button>
 		<Button on:click={() => (deleteTicketPopup = false)}>No, cancel</Button>
-	  </div>
+	</div>
 </Modal>
 
 <NotesPolicy bind:this={notesPolicyElm} />
@@ -358,28 +357,33 @@
 		{#if !ticket}
 			<p class="text-red-500">Ticket not found</p>
 		{:else}
-			{#if (user.id === ticket.author_id)}
+			{#if user.id === ticket.author_id}
 				<div class="flex flex-row justify-between h-10 gap-1">
 					<div class="flex flex-row gap-1">
-						<Button on:click={back} class=""><ArrowLeftOutline class="" style="height: 13px; width: 13px;"/></Button>
-						{#if (!ticket.followers.includes(user.id))}
-							<Button on:click={toggleFollowTicket} class=""><Icon icon="simple-line-icons:user-following" style="height: 13px; width: 18px; padding-right: 4px;"/> Follow</Button>
+						<Button on:click={back} class=""><ArrowLeftOutline class="" style="height: 13px; width: 13px;" /></Button>
+						{#if !ticket.followers.includes(user.id)}
+							<Button on:click={toggleFollowTicket} class=""
+								><Icon icon="simple-line-icons:user-following" style="height: 13px; width: 18px; padding-right: 4px;" /> Follow</Button
+							>
 						{:else}
-							<Button on:click={toggleFollowTicket} class=""><Icon icon="simple-line-icons:user-unfollow" style="height: 13px; width: 18px; padding-right: 4px;"/> Unfollow</Button>
+							<Button on:click={toggleFollowTicket} class=""
+								><Icon icon="simple-line-icons:user-unfollow" style="height: 13px; width: 18px; padding-right: 4px;" /> Unfollow</Button
+							>
 						{/if}
 					</div>
 					<div class="flex flex-row gap-1">
-						<Button on:click={() => (location.reload())} class=""><Icon icon="charm:refresh" style="height: 13px; width: 13px;"/></Button>
-						{#if (ticket.author_id === user.id)}
-							<Button on:click={() => (editTicketView = true)} class=""><EditOutline class="" style="height: 13px; width: 13px;"/></Button>
-							<Button on:click={() => (deleteTicketPopup = true)} class=""><TrashBinOutline class="" style="height: 13px; width: 13px;"/></Button>
+						<Button on:click={() => location.reload()} class=""><Icon icon="charm:refresh" style="height: 13px; width: 13px;" /></Button>
+						{#if ticket.author_id === user.id}
+							<Button on:click={() => (editTicketView = true)} class=""><EditOutline class="" style="height: 13px; width: 13px;" /></Button>
+							<Button on:click={() => (deleteTicketPopup = true)} class=""><TrashBinOutline class="" style="height: 13px; width: 13px;" /></Button
+							>
 						{/if}
 					</div>
 				</div>
-			{:else}	
+			{:else}
 				<div class="flex flex-row justify-between items-stretch h-10">
 					<Button on:click={back} class="w-full sm:w-fit">Back</Button>
-					<Button on:click={() => (location.reload())} class=""><Icon icon="charm:refresh" style="height: 15px; width: 15px;"/></Button>
+					<Button on:click={() => location.reload()} class=""><Icon icon="charm:refresh" style="height: 15px; width: 15px;" /></Button>
 				</div>
 			{/if}
 			<h1 class="text-3xl font-bold p-2">
@@ -391,7 +395,7 @@
 				{/if}
 			</h1>
 			<div class="text-left">
-				<p><b>Team:</b> {ticket.team} - {get(eventStore).teams?.find((team) => parseInt(team.number) === ticket.team)?.name ?? 'Unknown'}</p>
+				<p><b>Team:</b> {ticket.team} - {get(eventStore).teams?.find((team) => parseInt(team.number) === ticket.team)?.name ?? "Unknown"}</p>
 				<p><b>Created:</b> {time} by {ticket.author.username}</p>
 				<p>
 					<b>Assigned To:</b>
@@ -403,7 +407,8 @@
 				</p>
 				{#if match}
 					<p>
-						<b>Match:</b> {match.level.replace("None", "Test")}
+						<b>Match:</b>
+						{match.level.replace("None", "Test")}
 						Match #{match.match_number}/Play #{match.play_number}
 						{station}
 					</p>

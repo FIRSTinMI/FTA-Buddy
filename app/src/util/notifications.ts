@@ -4,19 +4,13 @@ import { userStore } from "../stores/user";
 import type { MonitorEvent } from "./monitorFrameHandler";
 import { settingsStore } from "../stores/settings";
 import { toast } from "../../../shared/toast";
+import type { Notification } from "../../../shared/types";
+import { addNotification, checkIfNotificationExists } from "../stores/notifications";
 
 let user = get(userStore);
 
-export interface NotificationOptions {
-    title: string,
-    body?: string,
-    icon?: string,
-    data: {
-        path: string,
-    };
-}
-
-export function createNotification(options: NotificationOptions) {
+export function createNotification(data: Notification) {
+    console.log('Creating notification:', data);
     if (!("Notification" in window)) {
         throw new Error("This browser does not support desktop notifications");
     }
@@ -24,15 +18,21 @@ export function createNotification(options: NotificationOptions) {
         throw new Error("You need to grant permission to show notifications");
     }
 
-    options = options ?? { title: "Default title" };
-
-    const notification = new Notification(options.title, options);
+    const notification = new Notification(data.title, {
+        body: data.body,
+        icon: data.icon ?? "/app/public/icon192_rounded.png",
+        tag: data.tag,
+        data: {
+            path: `/app/${data.data?.page ?? ""}`
+        }
+    });
 
     notification.onclick = () => {
         console.log('Notification clicked');
     };
 }
 
+// TODO: Wtf does this do?
 export function robotNotification(type: string, event: MonitorEvent["detail"]) {
     const robot = event.frame[event.robot];
     let path: string;
@@ -44,93 +44,16 @@ export function robotNotification(type: string, event: MonitorEvent["detail"]) {
     }
 
     createNotification({
+        id: crypto.randomUUID(),
+        timestamp: new Date(),
+        topic: 'Robot-Status',
         title: `${robot.number} Lost ${type.toLocaleUpperCase()}`,
         body: `${event.robot} lost ${type} at ${event.frame.time} in ${event.frame.match}.`,
-        icon: "app/public/icon192_rounded.png",
+        icon: "/app/public/icon192_rounded.png",
         data: {
-            path: path
+            page: `/app/`
         }
     });
-}
-
-let backgroundTicketSubscription: ReturnType<typeof trpc.tickets.pushSubscription.subscribe>;
-
-export function startBackgroundTicketSubscription(ticket_id: number) {
-    if (backgroundTicketSubscription && typeof backgroundTicketSubscription.unsubscribe === "function") backgroundTicketSubscription.unsubscribe();
-    backgroundTicketSubscription = trpc.tickets.pushSubscription.subscribe(
-        {
-            eventToken: user.eventToken,
-            userToken: user.token,
-            ticket_id: ticket_id,
-            eventOptions: {
-                assign: true,
-                status: true,
-                add_message: true,
-            }
-        },
-        {
-            onData: (data) => {
-                if (data.ticket_id === ticket_id) {
-                    switch (data.kind) {
-                        case "assign":
-                            if (data.assigned_to) {
-                                createNotification({
-                                    title: `Ticket #${ticket_id} has been assigned to ${data.assigned_to?.username}`,
-                                    icon: "app/public/icon192_rounded.png",
-                                    data: {
-                                        path: `/app/ticket/${data.ticket_id}`
-                                    }
-                                });
-                            } else {
-                                createNotification({
-                                    title: `Ticket #${ticket_id} is no longer assigned to a user`,
-                                    icon: "app/public/icon192_rounded.png",
-                                    data: {
-                                        path: `/app/ticket/${data.ticket_id}`
-                                    }
-                                });
-                            }
-                            break;
-                        case "status":
-                            if (!data.is_open) {
-                                createNotification({
-                                    title: `Ticket #${ticket_id} has been closed by ${data.user.username}`,
-                                    icon: "app/public/icon192_rounded.png",
-                                    data: {
-                                        path: `/app/ticket/${data.ticket_id}`
-                                    }
-                                });
-                            } else {
-                                createNotification({
-                                    title: `Ticket #${ticket_id} has been reopened by ${data.user.username}`,
-                                    icon: "app/public/icon192_rounded.png",
-                                    data: {
-                                        path: `/app/ticket/${data.ticket_id}`
-                                    }
-                                });
-                            }
-                            break;
-                        case "add_message":
-                            createNotification({
-                                title: `A new message by ${data.message.author.username} has been added to Ticket #${ticket_id}`,
-                                icon: "app/public/icon192_rounded.png",
-                                data: {
-                                    path: `/app/ticket/${data.ticket_id}`
-                                }
-                            });
-                            break;
-                        default:
-                            console.warn(`Unhandled event kind: ${data.kind}`);
-                            break;
-                    }
-                }
-            },
-        }
-    );
-}
-
-export function stopBackgroundTicketSubscription() {
-    backgroundTicketSubscription?.unsubscribe();
 }
 
 let backgroundNotificationSubscription: ReturnType<typeof trpc.tickets.pushSubscription.subscribe>;
@@ -146,8 +69,7 @@ export function startNotificationSubscription() {
                 token: user.token
             },
             {
-                // onData: (data) => console.log("Received data:", data),
-                // onError: (err) => console.error("Subscription error:", err),
+                onError: console.error,
                 onData: (data) => {
                     console.log(Notification.permission);
                     console.log("in data reciever 1");
@@ -181,17 +103,14 @@ export function startNotificationSubscription() {
                         }
                     }
 
-                    // TODO: Check if notification already exists
-
                     if (sendNotification) {
-                        createNotification({
-                            title: data.title,
-                            body: data.body,
-                            icon: "app/public/icon192_rounded.png",
-                            data: {
-                                path: `/app/${data.data?.page ?? ""}`
-                            }
-                        });
+                        if (checkIfNotificationExists(data.id)) return;
+
+                        // Add to notification store
+                        addNotification(data);
+
+                        // Send notification to browser
+                        createNotification(data);
                     }
                 }
             },

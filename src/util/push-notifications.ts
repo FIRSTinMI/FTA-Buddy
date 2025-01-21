@@ -34,19 +34,45 @@ export async function sendWebPushNotification(users: number[], data: Notificatio
     if (users.length === 0) return;
     const subscriptions = await db.query.pushSubscriptions.findMany({ where: inArray(pushSubscriptions.user_id, users) });
 
-    const notifications: Promise<SendResult>[] = [];
+    const notifications: Promise<SendResult | void>[] = [];
+    const subscriptionsToDelete: number[] = [];
+
     for (let subscription of subscriptions) {
         console.log('Sending notification to', subscription.user_id);
-        notifications.push(webpush.sendNotification({
-            endpoint: subscription.endpoint,
-            keys: subscription.keys as PushSubscription['keys'],
-        }, JSON.stringify(data), {
-            topic: data.topic,
-        }).then(res => {
-            console.log('Notification sent', res);
-            return res;
-        }));
+
+        const parsedUrl = new URL(subscription.endpoint);
+        const audience = `${parsedUrl.protocol}//${parsedUrl.hostname}`;
+        const vapidHeaders = webpush.getVapidHeaders(
+            audience,
+            'mailto:me@filipkin.com',
+            publicVapidKey,
+            privateVapidKey,
+            'aes128gcm'
+        );
+
+        notifications.push(
+            webpush.sendNotification({
+                endpoint: subscription.endpoint,
+                keys: subscription.keys as PushSubscription['keys'],
+            }, JSON.stringify(data), {
+                topic: data.topic,
+                headers: vapidHeaders
+            }).then(res => {
+                return res;
+            }).catch(err => {
+                if (err.statusCode === 410) {
+                    console.log('Subscription expired, deleting');
+                    subscriptionsToDelete.push(subscription.id);
+                } else {
+                    console.error('Error sending notification', err);
+                }
+            })
+        );
     }
 
     await Promise.all(notifications);
+
+    if (subscriptionsToDelete.length > 0) {
+        await db.delete(pushSubscriptions).where(inArray(pushSubscriptions.id, subscriptionsToDelete)).execute();
+    }
 }

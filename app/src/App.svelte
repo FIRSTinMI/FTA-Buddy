@@ -215,7 +215,7 @@
 				}
 			},
 		});
-		if (settings.ticketCreateAlerts) {
+		if (settings.notifications) {
 			startNotificationSubscription();
 		}
 	});

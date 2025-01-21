@@ -1,25 +1,19 @@
 import { writable } from 'svelte/store';
-import { v4 as uuidv4 } from 'uuid';
-import { type NotificationOptions } from '../util/notifications';
+import type { Notification } from '../../../shared/types';
+import { get } from 'svelte/store';
 
+const initialNotifications = localStorage.getItem('notifications');
 
-export interface Notification {
-    id: string,
-    timestamp: Date,
-    body?: string;
-    icon?: string;
-    tag?: string;
-    data: {
-        path: string;
-    };
+export const notificationsStore = writable<Notification[]>(initialNotifications ? JSON.parse(initialNotifications) : []);
+
+export function checkIfNotificationExists(id: string) {
+    return get(notificationsStore).some((n) => n.id === id);
 }
 
-export const notificationsStore = writable([] as Notification[]);
-
-export function addNotification(data: NotificationOptions) {
+export function addNotification(data: Notification) {
     notificationsStore.update((current) => [
         ...current,
-        { ...data, id: uuidv4() as string, timestamp: new Date() } // Unique ID for tracking
+        data
     ]);
 }
 
@@ -30,3 +24,7 @@ export function removeNotification(id: string) {
 export function clearNotifications() {
     notificationsStore.set([]);
 }
+
+notificationsStore.subscribe((notifications: Notification[]) => {
+    localStorage.setItem('notifications', JSON.stringify(notifications));
+});

@@ -79,7 +79,7 @@
 </Modal>
 
 <Card padding="none" size="none" class="w-full text-black dark:text-white dark:bg-neutral-800">
-    <div class="flex flex-col sm:flex-row max-sm:divide-y sm:divide-x divide-gray-500 pt-2 px-4">
+    <div class="flex flex-col sm:flex-row max-sm:divide-y sm:divide-x divide-gray-500 pt-2 px-4 min-h-28">
         <div class="flex flex-row justify-between text-left sm:block sm:text-center sm:place-content-center">
             <p class="sm:w-28 text-wrap italic font-bold p-2">{message.author.username} - {message.author.role}</p>
             {#if (user.id === message.author_id)}

@@ -4,6 +4,7 @@
     import { formatTimeShort } from "../../../shared/formatTime";
     import { notificationsStore, removeNotification } from "../stores/notifications";
     import { get } from "svelte/store";
+    import icon512_rounded from "/icon512_rounded.png"
 
     export let notification: Notification;
 
@@ -17,15 +18,20 @@
 
 </script>
 <Card href={notification.data?.page} on:click={() => removeNotification(notification.id)} padding="none" size="none" class="w-full text-black dark:text-white dark:bg-neutral-800">
-    <div class="flex flex-col sm:flex-row sm:divide-x divide-gray-500 pt-2 sm:pt-0 sm:gap-4 px-4">
-        <div class="flex flex-col sm:my-auto">
-            <p>#{notification.id}
-                <span class="sm:hidden">{time}</span>
-            </p>
+    <div class="flex flex-row">
+        <div class="content-center pl-2">
+            <img src={icon512_rounded} alt="FTA Buddy Logo" class="max-w-16 sm:max-w-20">
         </div>
-        <div class="flex flex-col p-2 grow text-left sm:block">
-            <p class="font-bold">{notification.title}</p>
-            <p>{notification.body}</p>
+        <div class="flex flex-col pl-2 pt-2 min-h-28 grow">
+            <div class="pt-2 grow">
+                <p class="font-bold pb-2 text-left">{notification.title}</p>
+            </div>
+            <div>
+                <p class="pt-2 text-left">{notification.body}</p>
+            </div>
+            <div class="flex flex-col sm:my-auto text-right p-2 italic">
+                <p>{time}</p>
+            </div>
         </div>
     </div>
 </Card>

@@ -35,7 +35,6 @@
 			});
 
 			userStore.update((u) => {
-				//navigate("/app/")
 				return { ...u, role: user.role }; // Update the role in userStore
 			});
 
@@ -110,18 +109,44 @@
 		clearTimeout(musicTestTimeout);
 	}
 
-	function enableCreateTicketAlerts() {
-		// if (settings.ticketCreateAlerts) {
-		// console.log("start ticket create subscription");
-		// startBackgroundCreateTicketSubscription();
-		// settings.ticketCreateAlerts = true;
-		// updateSettings();
-		// } else {
-		// console.log("stop ticket create subscription");
-		// stopBackgroundCreateTicketSubscription();
-		// settings.ticketCreateAlerts = false;
-		// updateSettings();
-		// }
+	function toggleTicketCreateAlerts() {
+		if (settings.notificationCategories.create) {
+			settings.notificationCategories.create = true;
+			updateSettings();
+		} else {
+			settings.notificationCategories.create = false;
+			updateSettings();
+		}
+	}
+
+	function toggleTicketFollowAlerts() {
+		if (settings.notificationCategories.follow) {
+			settings.notificationCategories.follow = true;
+			updateSettings();
+		} else {
+			settings.notificationCategories.follow = false;
+			updateSettings();
+		}
+	}
+
+	function toggleRobotAlerts() {
+		if (settings.notificationCategories.robot) {
+			settings.notificationCategories.robot = true;
+			updateSettings();
+		} else {
+			settings.notificationCategories.robot = false;
+			updateSettings();
+		}
+	}
+
+	function toggleTicketAssignAlerts() {
+		if (settings.notificationCategories.assign) {
+			settings.notificationCategories.assign = true;
+			updateSettings();
+		} else {
+			settings.notificationCategories.assign = false;
+			updateSettings();
+		}
 	}
 </script>
 
@@ -136,14 +161,14 @@
 			<div class="grid grid-cols-subgrid gap-2 row-span-5">
 				<p class="text-gray-700 dark:text-gray-400">General</p>
 				<Toggle class="toggle" bind:checked={settings.vibrations} on:change={updateSettings}>Vibrations</Toggle>
-				<Toggle class="toggle" bind:checked={settings.notifications} on:change={requestNotificationPermissions}>Notifications</Toggle>
-				<Toggle class="toggle" bind:checked={settings.notificationCategories.create} on:change={enableCreateTicketAlerts}>New Tickets</Toggle>
-				<Toggle class="toggle" bind:checked={settings.notificationCategories.follow} on:change={enableCreateTicketAlerts}
-					>Followed Ticket Updates</Toggle
-				>
-				<Toggle class="toggle" bind:checked={settings.notificationCategories.assign} on:change={enableCreateTicketAlerts}>Assigned Ticket</Toggle>
-				<Toggle class="toggle" bind:checked={settings.notificationCategories.robot} on:change={requestNotificationPermissions}>Robot Status</Toggle>
 				<Toggle class="toggle" bind:checked={settings.fimSpecifics} on:change={updateSettings}>FIM Specific Field Manuals</Toggle>
+				<Toggle class="toggle" bind:checked={settings.notifications} on:change={requestNotificationPermissions}>Enable Notifications</Toggle>
+				<div class="pl-4 grid grid-cols-subgrid gap-2 row-span-5">
+					<Toggle class="toggle" bind:checked={settings.notificationCategories.create} on:change={toggleTicketCreateAlerts}>New Tickets</Toggle>
+					<Toggle class="toggle" bind:checked={settings.notificationCategories.follow} on:change={toggleTicketFollowAlerts}>Followed Ticket Updates</Toggle>
+					<Toggle class="toggle" bind:checked={settings.notificationCategories.assign} on:change={toggleTicketAssignAlerts}>Assigned Ticket</Toggle>
+					<Toggle class="toggle" bind:checked={settings.notificationCategories.robot} on:change={toggleRobotAlerts}>Robot Status</Toggle>
+				</div>
 			</div>
 			<div class="grid grid-cols-subgrid gap-2 row-span-3">
 				<p class="text-gray-700 dark:text-gray-400">Change My Role</p>

@@ -59,9 +59,7 @@ export function robotNotification(type: string, event: MonitorEvent["detail"]) {
 let backgroundNotificationSubscription: ReturnType<typeof trpc.tickets.pushSubscription.subscribe>;
 
 export function startNotificationSubscription() {
-    console.log("Made it to startBackgroundCreateTicketSubscription");
     if (backgroundNotificationSubscription && typeof backgroundNotificationSubscription.unsubscribe === "function") backgroundNotificationSubscription.unsubscribe();
-    console.log("Checked if subscription object exists");
 
     try {
         backgroundNotificationSubscription = trpc.tickets.pushSubscription.subscribe(

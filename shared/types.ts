@@ -585,7 +585,14 @@ export interface Message {
     updated_at: Date,
 }
 
-export type NotificationTopic = 'Ticket-Created' | 'Ticket-Status' | 'Ticket-Assigned' | 'New-Ticket-Message' | "Ticket-Follow" | 'Robot-Status';
+export type NotificationTopic = 
+    | 'Ticket-Created'
+    | 'Ticket-Status' 
+    | 'Ticket-Assigned' 
+    | 'New-Ticket-Message' 
+    | "Ticket-Follow" 
+    | 'Robot-Status';
+    
 export interface Notification {
     id: string,
     timestamp: Date,

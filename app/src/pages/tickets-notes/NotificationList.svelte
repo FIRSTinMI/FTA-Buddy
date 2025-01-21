@@ -11,7 +11,7 @@
 <div class="container max-w-6xl mx-auto px-2 pt-2 h-full flex flex-col gap-2">
 	<div class="flex flex-col overflow-y-auto h-dvh">
 		<div class="flex flex-col grow gap-2">
-			<h1 class="text-3xl" style="font-weight: bold">User Notifications</h1>
+			<h1 class="text-3xl py-2" style="font-weight: bold">User Notifications</h1>
             <Button on:click={() => clearNotifications()}>Clear All Notifications</Button>
 		</div>
 		<div class="flex flex-col grow gap-2">

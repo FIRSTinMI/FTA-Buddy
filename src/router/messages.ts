@@ -7,6 +7,7 @@ import { TRPCError } from "@trpc/server";
 import { Message, Profile } from "../../shared/types";
 import { getEvent } from "../util/get-event";
 import { randomUUID } from "crypto";
+import { createNotification } from "../util/push-notifications";
 
 export const messagesRouter = router({
 
@@ -84,6 +85,18 @@ export const messagesRouter = router({
             kind: "add_message",
             ticket_id: ticket.id,
             message: insert[0] as Message,
+        });
+
+        createNotification(ticket.followers, {
+            id: randomUUID(),
+            timestamp: new Date(),
+            topic: "New-Ticket-Message",
+            title: `New Message Added to Ticket #${ticket.id}`,
+            body: `A new message has been added to Ticket #${ticket.id} by ${authorProfile[0].username}`,
+            data: {
+                page: "ticket/" + ticket.id,
+                ticket_id: ticket.id,
+            },
         });
 
         return insert[0] as Message;

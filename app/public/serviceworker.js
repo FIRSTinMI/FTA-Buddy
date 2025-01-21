@@ -121,10 +121,11 @@ self.addEventListener("push", async (evt) => {
 	}
 
 	if (sendNotification) {
-		if (checkIfNotificationExists(data.id)) return;
-
-		// Add to notification store
-		addNotification(data);
+		// Add to notification store if not robot alert
+		if (data.topic !== "Robot-Status") {
+			if (checkIfNotificationExists(data.id)) return;
+			addNotification(data);
+		}
 
 		// Send notification to browser
 		self.registration.showNotification(data.title, {

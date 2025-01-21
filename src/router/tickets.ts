@@ -171,7 +171,7 @@ export const ticketsRouter = router({
             id: randomUUID(),
             timestamp: new Date(),
             topic: "Ticket-Created",
-            title: "New Ticket",
+            title: `New Ticket for Team #${insert[0].team}`,
             body: `New Ticket created by ${authorProfile.username}`,
             data: {
                 page: "ticket/" + insert[0].id,
@@ -232,8 +232,8 @@ export const ticketsRouter = router({
             id: randomUUID(),
             timestamp: new Date(),
             topic: "Ticket-Status",
-            title: "Ticket Status Update",
-            body: `Ticket status updated by ${currentUserProfile[0].username}`,
+            title: `Ticket Status Updated to ${(update[0].is_open) ? "OPEN" : "CLOSED"}`,
+            body: `Ticket status updated by ${currentUserProfile[0].username} and is now ${(update[0].is_open) ? "OPEN" : "CLOSED"}`,
             data: {
                 page: "ticket/" + update[0].id,
                 ticket_id: update[0].id,
@@ -534,18 +534,6 @@ export const ticketsRouter = router({
             kind: "follow",
             ticket_id: update[0].id,
             followers: update[0].followers,
-        });
-
-        createNotification([currentUserProfile[0].id], {
-            id: randomUUID(),
-            timestamp: new Date(),
-            topic: "Ticket-Follow",
-            title: `Now Following Ticket #${ticket.id}`,
-            body: `You are now following Ticket #${ticket.id}`,
-            data: {
-                page: "ticket/" + ticket.id,
-                ticket_id: ticket.id,
-            },
         });
 
         return update[0] as Ticket;

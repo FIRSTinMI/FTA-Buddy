@@ -650,8 +650,11 @@ export const ticketsRouter = router({
             };
 
             const addMessageHandler: TicketUpdateEvents["add_message"] = (data) => {
+                console.log(data);
+                console.log(input.ticket_id, data.message.ticket_id);
                 if (data.kind === "add_message" && input.ticket_id) {
                     if (data.message.ticket_id === input.ticket_id) {
+                        console.log("emitting");
                         emitter.next(data);
                     }
                 } else if (data.kind === "add_message") {

@@ -88,13 +88,13 @@
 			}
 			time = formatTimeNoAgoHourMins(ticket.created_at);
 
-			sortedMessages = ticket.messages?.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-
 			assignedToUser = ticket.assigned_to_id === user.id ? true : false;
 			editTicketText = ticket.text;
 			editTicketSubject = ticket.subject;
 		}
 	}
+
+	$: sortedMessages = ticket && ticket.messages ? ticket.messages?.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) : [];
 
 	onMount(async () => {
 		getTicketAndMatch();
@@ -297,10 +297,12 @@
 					assign: true,
 					status: true,
 					follow: true,
+					add_message: true,
 				},
 			},
 			{
 				onData: (data) => {
+					console.log(data);
 					if (data.ticket_id === ticket.id) {
 						switch (data.kind) {
 							case "assign":
@@ -312,6 +314,15 @@
 								break;
 							case "follow":
 								ticket.followers = data.followers;
+								break;
+							case "add_message":
+								if (ticket.messages) {
+									ticket.messages.push(data.message);
+									console.log(ticket.messages);
+								} else {
+									ticket.messages = [data.message];
+								}
+								ticket = ticket;
 								break;
 							default:
 								console.warn(`Unhandled event kind: ${data.kind}`);

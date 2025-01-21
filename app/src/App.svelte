@@ -349,7 +349,7 @@
 							label="Tickets"
 							on:click={() => {
 								hideMenu = true;
-								navigate("/app/messages");
+								navigate("/app/tickets");
 							}}
 						>
 							<svelte:fragment slot="icon">

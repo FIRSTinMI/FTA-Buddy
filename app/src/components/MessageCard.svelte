@@ -32,6 +32,7 @@
                     message_id: message.id,
                     new_text: editMessageText,
                 });
+                editMessageView = false;
                 toast("Message Edited successfully", "success", "green-500");
             } else {
                 toast("Cannot Edit Message without Text", "red-500");
@@ -49,8 +50,8 @@
                 ticket_id: message.ticket_id,
                 message_id: message.id,
             });
+            deleteMessagePopup = false;
             toast("Message deleted successfully", "success", "green-500");
-            location.reload();
 		} catch (err: any) {
 			toast("An error occurred while deleting the Message", err.message);
 			console.error(err);

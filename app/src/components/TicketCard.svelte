@@ -13,7 +13,7 @@
     }, (time.includes("s ") ? 1000 : 60000));
 
 </script>
-<Card href="ticket/{ticket.id}" padding="none" size="none" class="w-full text-black dark:text-white dark:bg-neutral-800">
+<Card href="/app/ticket/{ticket.id}" padding="none" size="none" class="w-full text-black dark:text-white dark:bg-neutral-800">
     <div class="flex flex-col sm:flex-row max-sm:divide-y sm:divide-x divide-gray-500 pt-2 px-4 min-h-32">
         <div class="flex flex-row sm:flex-col place-content-between sm:place-content-center p-2 sm:w-40">
             <p class="font-bold sm:text-center">#{ticket.id}:

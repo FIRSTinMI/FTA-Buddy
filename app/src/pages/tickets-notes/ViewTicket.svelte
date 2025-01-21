@@ -298,6 +298,8 @@
 					status: true,
 					follow: true,
 					add_message: true,
+					edit_message: true,
+					delete_message: true,
 				},
 			},
 			{
@@ -322,6 +324,23 @@
 									ticket.messages = [data.message];
 								}
 								ticket = ticket;
+								break;
+							case "edit_message":
+								if (ticket.messages) {
+									let updatedMessages = ticket.messages.map((message) => {
+										if (message.id === data.message.id) {
+											return { ...message, text: data.message.text };
+										}
+										return message;
+									});
+									ticket.messages = updatedMessages;
+								}
+								break;
+							case "delete_message":
+								if (ticket.messages) {
+									let updatedMessages = ticket.messages.filter((message) => (message.id !== data.message_id));
+									ticket.messages = updatedMessages;
+								}
 								break;
 							default:
 								console.warn(`Unhandled event kind: ${data.kind}`);
@@ -383,18 +402,29 @@
 					</div>
 					<div class="flex flex-row gap-1">
 						<Button on:click={() => location.reload()} class=""><Icon icon="charm:refresh" style="height: 13px; width: 13px;" /></Button>
-						{#if ticket.author_id === user.id}
-							<Button on:click={() => (editTicketView = true)} class=""><EditOutline class="" style="height: 13px; width: 13px;" /></Button>
-							<Button on:click={() => (deleteTicketPopup = true)} class=""><TrashBinOutline class="" style="height: 13px; width: 13px;" /></Button
-							>
-						{/if}
+						<Button on:click={() => (editTicketView = true)} class=""><EditOutline class="" style="height: 13px; width: 13px;" /></Button>
+						<Button on:click={() => (deleteTicketPopup = true)} class=""><TrashBinOutline class="" style="height: 13px; width: 13px;" /></Button
+						>
 					</div>
 				</div>
 			{:else}
-				<div class="flex flex-row justify-between items-stretch h-10">
-					<Button on:click={back} class="w-full sm:w-fit">Back</Button>
-					<Button on:click={() => location.reload()} class=""><Icon icon="charm:refresh" style="height: 15px; width: 15px;" /></Button>
+			<div class="flex flex-row justify-between h-10 gap-1">
+				<div class="flex flex-row gap-1">
+					<Button on:click={back} class=""><ArrowLeftOutline class="" style="height: 13px; width: 13px;" /></Button>
+					{#if !ticket.followers.includes(user.id)}
+						<Button on:click={toggleFollowTicket} class=""
+							><Icon icon="simple-line-icons:user-following" style="height: 13px; width: 18px; padding-right: 4px;" /> Follow</Button
+						>
+					{:else}
+						<Button on:click={toggleFollowTicket} class=""
+							><Icon icon="simple-line-icons:user-unfollow" style="height: 13px; width: 18px; padding-right: 4px;" /> Unfollow</Button
+						>
+					{/if}
 				</div>
+				<div class="flex flex-row gap-1">
+					<Button on:click={() => location.reload()} class=""><Icon icon="charm:refresh" style="height: 13px; width: 13px;" /></Button>
+				</div>
+			</div>
 			{/if}
 			<h1 class="text-3xl font-bold p-2">
 				Ticket #{ticket_id} -

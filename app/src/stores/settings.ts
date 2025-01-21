@@ -12,12 +12,16 @@ export interface Settings {
     notifications: boolean;
     darkMode: boolean;
     inspectionAlerts: boolean;
-    robotNotifications: boolean;
     roundGreen: boolean;
     musicVolume: number;
     musicType: 'none' | 'jazz' | 'lofi';
     acknowledgedNotesPolicy: boolean;
-    ticketCreateAlerts: boolean;
+    notificationCategories: {
+        create: boolean;
+        follow: boolean;
+        assign: boolean;
+        robot: boolean;
+    };
 }
 
 let initialSettings = localStorage.getItem('settings');
@@ -34,12 +38,16 @@ const defaultSettings: Settings = {
     notifications: false,
     darkMode: true,
     inspectionAlerts: true,
-    robotNotifications: false,
     roundGreen: true,
     musicVolume: 12,
     musicType: 'none',
     acknowledgedNotesPolicy: false,
-    ticketCreateAlerts: false,
+    notificationCategories: {
+        create: true,
+        follow: true,
+        assign: true,
+        robot: true
+    }
 };
 
 if (!initialSettings) {

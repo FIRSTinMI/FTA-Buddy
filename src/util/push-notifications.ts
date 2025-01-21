@@ -5,6 +5,8 @@ import { inArray } from 'drizzle-orm';
 import { pushSubscriptions } from '../db/schema';
 import { randomUUID } from "crypto";
 import { timestamp } from 'drizzle-orm/mysql-core';
+import { notificationEmitter } from '..';
+import type { Notification } from '../../shared/types';
 
 const publicVapidKey = process.env.VAPID_PUBLIC_KEY || '';
 const privateVapidKey = process.env.VAPID_PRIVATE_KEY || '';
@@ -17,33 +19,20 @@ export function initializePushNotifications() {
     );
 };
 
-export interface NotificationData {
-    title: string;
-    body?: string;
-    icon?: string;
-    tag?: string;
-    data?: {
-        page?: string;
-    };
+export async function createNotification(users: number[], data: Notification) {
+    // Send notification to any active clients
+    notificationEmitter.emit('send', {
+        users,
+        notification: data
+    });
+
+    // Send push notifications
+    sendWebPushNotification(users, data);
 }
 
-export interface Notification {
-    id: string,
-    timestamp: Date,
-    title: string;
-    body?: string;
-    icon?: string;
-    tag?: string;
-    data?: {
-        page?: string;
-    };
-}
-
-export async function sendNotification(users: number[], data: NotificationData) {
+export async function sendWebPushNotification(users: number[], data: Notification) {
     if (users.length === 0) return;
     const subscriptions = await db.query.pushSubscriptions.findMany({ where: inArray(pushSubscriptions.user_id, users) });
-
-    console.log(subscriptions);
 
     const notifications: Promise<SendResult>[] = [];
     for (let subscription of subscriptions) {
@@ -52,7 +41,7 @@ export async function sendNotification(users: number[], data: NotificationData) 
             endpoint: subscription.endpoint,
             keys: subscription.keys as PushSubscription['keys'],
         }, JSON.stringify(data), {
-            topic: 'test'
+            topic: data.topic,
         }).then(res => {
             console.log('Notification sent', res);
             return res;
@@ -60,7 +49,4 @@ export async function sendNotification(users: number[], data: NotificationData) 
     }
 
     await Promise.all(notifications);
-
-    const savedNotification = { ...data, id: randomUUID(), timestamp: new Date()} as Notification;
-
 }

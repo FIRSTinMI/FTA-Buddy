@@ -1,6 +1,6 @@
 import { get } from "svelte/store";
 import { trpc } from "../main";
-import {userStore } from "../stores/user";
+import { userStore } from "../stores/user";
 import type { MonitorEvent } from "./monitorFrameHandler";
 import { settingsStore } from "../stores/settings";
 import { toast } from "../../../shared/toast";
@@ -13,7 +13,7 @@ export interface NotificationOptions {
     icon?: string,
     data: {
         path: string,
-    }
+    };
 }
 
 export function createNotification(options: NotificationOptions) {
@@ -38,11 +38,11 @@ export function robotNotification(type: string, event: MonitorEvent["detail"]) {
     let path: string;
 
     if (user.role === 'FTA' || user.role === "FTAA") {
-        path = "/app/"
+        path = "/app/";
     } else {
-        path = "/app/monitor/"
+        path = "/app/monitor/";
     }
-    
+
     createNotification({
         title: `${robot.number} Lost ${type.toLocaleUpperCase()}`,
         body: `${event.robot} lost ${type} at ${event.frame.time} in ${event.frame.match}.`,
@@ -88,7 +88,7 @@ export function startBackgroundTicketSubscription(ticket_id: number) {
                                     data: {
                                         path: `/app/ticket/${data.ticket_id}`
                                     }
-                                }); 
+                                });
                             }
                             break;
                         case "status":
@@ -133,20 +133,17 @@ export function stopBackgroundTicketSubscription() {
     backgroundTicketSubscription?.unsubscribe();
 }
 
-let backgroundCreateTicketSubscription: ReturnType<typeof trpc.tickets.pushSubscription.subscribe>;
+let backgroundNotificationSubscription: ReturnType<typeof trpc.tickets.pushSubscription.subscribe>;
 
-export function startBackgroundCreateTicketSubscription() {
+export function startNotificationSubscription() {
     console.log("Made it to startBackgroundCreateTicketSubscription");
-    if (backgroundCreateTicketSubscription && typeof backgroundCreateTicketSubscription.unsubscribe === "function") backgroundCreateTicketSubscription.unsubscribe();
+    if (backgroundNotificationSubscription && typeof backgroundNotificationSubscription.unsubscribe === "function") backgroundNotificationSubscription.unsubscribe();
     console.log("Checked if subscription object exists");
+
     try {
-        backgroundCreateTicketSubscription = trpc.tickets.pushSubscription.subscribe(
+        backgroundNotificationSubscription = trpc.tickets.pushSubscription.subscribe(
             {
-                eventToken: user.eventToken,
-                userToken: user.token,
-                eventOptions: {
-                    create: true,
-                }
+                token: user.token
             },
             {
                 // onData: (data) => console.log("Received data:", data),
@@ -154,23 +151,47 @@ export function startBackgroundCreateTicketSubscription() {
                 onData: (data) => {
                     console.log(Notification.permission);
                     console.log("in data reciever 1");
-                    switch (data.kind) {
-                        case "create":
-                            console.log("in data reciever 2");
-                            if (get(settingsStore).ticketCreateAlerts) {
-                                console.log("Made it to Sending Create Notification");
-                                createNotification({
-                                    title: `New Ticket #${data.ticket_id} has been created by ${data.ticket.author}`,
-                                    icon: "app/public/icon192_rounded.png",
-                                    data: {
-                                        path: `/app/ticket/${data.ticket_id}`
-                                    }
-                                });
+
+                    let sendNotification = false;
+
+                    switch (data.topic) {
+                        case 'Ticket-Created': {
+                            sendNotification = (get(settingsStore).notificationCategories.create);
+                            break;
+                        }
+                        case 'Ticket-Assigned': {
+                            sendNotification = (get(settingsStore).notificationCategories.assign);
+                            break;
+                        }
+                        case 'Ticket-Status': {
+                            sendNotification = (get(settingsStore).notificationCategories.follow);
+                            break;
+                        }
+                        case 'New-Ticket-Message': {
+                            sendNotification = (get(settingsStore).notificationCategories.follow);
+                            break;
+                        }
+                        case 'Robot-Status': {
+                            sendNotification = (get(settingsStore).notificationCategories.robot);
+                            break;
+                        }
+                        default: {
+                            sendNotification = false;
+                            break;
+                        }
+                    }
+
+                    // TODO: Check if notification already exists
+
+                    if (sendNotification) {
+                        createNotification({
+                            title: data.title,
+                            body: data.body,
+                            icon: "app/public/icon192_rounded.png",
+                            data: {
+                                path: `/app/${data.data?.page ?? ""}`
                             }
-                            break;
-                        default:
-                            console.warn(`Unhandled event kind: ${data.kind}`);
-                            break;
+                        });
                     }
                 }
             },
@@ -182,9 +203,9 @@ export function startBackgroundCreateTicketSubscription() {
 }
 
 export function stopBackgroundCreateTicketSubscription() {
-    if (!backgroundCreateTicketSubscription) return;
+    if (!backgroundNotificationSubscription) return;
 
-    backgroundCreateTicketSubscription?.unsubscribe();
+    backgroundNotificationSubscription?.unsubscribe();
 }
 
 const publicVapidKey = 'BFTN7PqbkHaSPpmQBbMANVP7NSJg2qGkSEisDlTborp3FMIlZAwvMVcEbCOS11JqPgDQLuk42DY5AU_mHQdyibs';

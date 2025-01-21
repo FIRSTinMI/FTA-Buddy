@@ -29,7 +29,7 @@ export interface PartialMonitorFrame extends Omit<MonitorFrame, 'blue1' | 'blue2
     red3: PartialRobotInfo;
 }
 
-export type PartialRobotInfo = PartialBy<RobotInfo, 'lastChange' | 'improved' | 'warnings'>
+export type PartialRobotInfo = PartialBy<RobotInfo, 'lastChange' | 'improved' | 'warnings'>;
 
 export interface RobotInfo {
     number: number;
@@ -220,7 +220,7 @@ export interface FMSLogFrame {
     txMCS: number | null,
     rxRate: number | null,
     rxMCS: number | null,
-    dataRateTotal: number
+    dataRateTotal: number;
 }
 
 export interface MatchLog {
@@ -325,11 +325,11 @@ export const FMSLevelMap: { [key in FMSEnums.Level]: "None" | "Practice" | "Qual
     [FMSEnums.Level.Practice]: "Practice",
     [FMSEnums.Level.Qualification]: "Qualification",
     [FMSEnums.Level.Playoff]: "Playoff"
-}
+};
 
-export interface TeamChecklist { present: boolean, weighed: boolean, inspected: boolean, radioProgrammed: boolean, connectionTested: boolean }
-export type EventChecklist = { [key: string]: TeamChecklist }
-export type TeamList = ({ number: string, name: string, inspected: boolean })[]
+export interface TeamChecklist { present: boolean, weighed: boolean, inspected: boolean, radioProgrammed: boolean, connectionTested: boolean; }
+export type EventChecklist = { [key: string]: TeamChecklist; };
+export type TeamList = ({ number: string, name: string, inspected: boolean; })[];
 
 export interface ServerEvent {
     code: string,
@@ -369,14 +369,14 @@ export interface ServerEvent {
 
 export type TicketUpdateEvents = {
     create: (
-        data: { 
+        data: {
             kind: "create",
             ticket_id: number,
-            ticket: Ticket 
+            ticket: Ticket;
         }
     ) => void;
     assign: (
-        data: { 
+        data: {
             kind: "assign",
             ticket_id: number,
             assigned_to_id: number | null,
@@ -384,10 +384,10 @@ export type TicketUpdateEvents = {
         }
     ) => void;
     status: (
-        data: { 
+        data: {
             kind: "status",
             ticket_id: number,
-            is_open: boolean 
+            is_open: boolean;
         }
     ) => void;
     follow: (
@@ -398,9 +398,9 @@ export type TicketUpdateEvents = {
         }
     ) => void;
     delete_ticket: (
-        data: { 
+        data: {
             kind: "delete_ticket",
-            ticket_id: number 
+            ticket_id: number;
         }
     ) => void;
     edit: (
@@ -413,10 +413,10 @@ export type TicketUpdateEvents = {
         }
     ) => void;
     add_message: (
-        data: { 
+        data: {
             kind: "add_message",
             ticket_id: number,
-            message: Message 
+            message: Message;
         }
     ) => void;
     edit_message: (
@@ -433,7 +433,7 @@ export type TicketUpdateEvents = {
             message_id: string,
         }
     ) => void;
-}
+};
 
 type AssignUpdateTicketEvent = {
     kind: "assign";
@@ -502,16 +502,25 @@ export type TicketUpdateEventData =
     | EditMessageUpdateTicketEvent
     | DeleteMessageUpdateTicketEvent;
 
+export type NotificationEvents = {
+    send: (
+        data: {
+            users: number[],
+            notification: Notification;
+        }
+    ) => void;
+};
+
 export type TicketPushEvents = {
     create: (
-        data: { 
+        data: {
             kind: "create",
             ticket_id: number,
-            ticket: Ticket 
+            ticket: Ticket;
         }
     ) => void;
     assign: (
-        data: { 
+        data: {
             kind: "assign",
             ticket_id: number,
             assigned_to_id: number | null,
@@ -520,7 +529,7 @@ export type TicketPushEvents = {
         }
     ) => void;
     status: (
-        data: { 
+        data: {
             kind: "status",
             ticket_id: number,
             is_open: boolean,
@@ -529,14 +538,14 @@ export type TicketPushEvents = {
         }
     ) => void;
     add_message: (
-        data: { 
+        data: {
             kind: "add_message",
             ticket_id: number,
             message: Message,
             followers: number[] | null,
         }
     ) => void;
-}
+};
 
 type AssignPushTicketEvent = {
     kind: "assign";
@@ -577,7 +586,7 @@ export type NoteUpdateEvents = {
     create: (
         data: {
             kind: "create",
-            note: Note, 
+            note: Note,
         }
     ) => void;
     edit: (
@@ -585,16 +594,16 @@ export type NoteUpdateEvents = {
             kind: "edit",
             note_id: string,
             note_text: string,
-            note_updated_at: Date
+            note_updated_at: Date;
         }
     ) => void;
     delete: (
-        data: { 
+        data: {
             kind: "delete",
-            note_id: string 
+            note_id: string;
         }
     ) => void;
-}
+};
 
 export interface RobotCycleTracking {
     team: number,
@@ -672,15 +681,18 @@ export interface Message {
     updated_at: Date,
 }
 
+export type NotificationTopic = 'Ticket-Created' | 'Ticket-Status' | 'Ticket-Assigned' | 'New-Ticket-Message' | 'Robot-Status';
 export interface Notification {
     id: string,
     timestamp: Date,
     title: string;
-    body: string;
+    topic: NotificationTopic;
+    body?: string;
     icon?: string;
     tag?: string;
     data?: {
         page?: string;
+        ticket_id?: number;
     };
 }
 

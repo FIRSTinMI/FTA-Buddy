@@ -5,13 +5,16 @@ import { pushSubscriptions, tickets, users, events, messages } from "../db/schem
 import type { User } from "../db/schema";
 import { and, asc, desc, eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
-import { Ticket, Profile, TicketUpdateEventData, TicketPushEventData, TicketUpdateEvents, TicketPushEvents } from "../../shared/types";
+import { Ticket, Profile, TicketUpdateEventData, TicketPushEventData, TicketUpdateEvents, TicketPushEvents, NotificationEvents } from "../../shared/types";
 import { getEvent, getListenerCount } from "../util/get-event";
 import { observable } from "@trpc/server/observable";
 import { messagesRouter } from "./messages";
 import { AwsRequestSigner } from "google-auth-library";
 import { dataSourceToNumber } from "@the-orange-alliance/api/lib/esm/models/types/DataSource";
-import { sendNotification } from "../util/push-notifications";
+import { createNotification, sendWebPushNotification } from "../util/push-notifications";
+import { randomUUID } from "crypto";
+import { notificationEmitter } from "..";
+import type { Notification } from "../../shared/types";
 
 const messageRouter = messagesRouter;
 
@@ -43,7 +46,7 @@ export const ticketsRouter = router({
         team_number: z.number().optional(),
         assigned_to_id: z.number().optional(),
         is_open: z.boolean().optional(),
-    })).query(async ({ctx, input}) => {
+    })).query(async ({ ctx, input }) => {
         let query = [];
 
         if (input.event_code) {
@@ -94,7 +97,7 @@ export const ticketsRouter = router({
                 },
             }
         });
-        
+
         if (!ticket) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
         }
@@ -152,7 +155,7 @@ export const ticketsRouter = router({
                 match_id: undefined,
             }).returning();
         }
-        
+
 
         if (!insert[0]) {
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Ticket" });
@@ -164,10 +167,16 @@ export const ticketsRouter = router({
             ticket: insert[0] as Ticket,
         });
 
-        event.ticketPushEmitter.emit("create", {
-            kind: "create",
-            ticket_id: insert[0].id,
-            ticket: insert[0] as Ticket
+        createNotification(event.users.map((user) => user.id), {
+            id: randomUUID(),
+            timestamp: new Date(),
+            topic: "Ticket-Created",
+            title: "New Ticket",
+            body: `New Ticket created by ${authorProfile.username}`,
+            data: {
+                page: "ticket",
+                ticket_id: insert[0].id,
+            },
         });
 
         getListenerCount(ctx.eventToken as string);
@@ -188,7 +197,7 @@ export const ticketsRouter = router({
                 eq(tickets.id, input.id)
             )
         });
-        
+
         if (!ticket) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
         }
@@ -205,7 +214,7 @@ export const ticketsRouter = router({
         } else {
             throw new TRPCError({ code: "BAD_REQUEST", message: "User token not provided in context object" });
         }
-        
+
         if (!currentUserProfile[0]) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Current User not found by provided token" });
         }
@@ -223,14 +232,17 @@ export const ticketsRouter = router({
             is_open: update[0].is_open
         });
 
-        event.ticketPushEmitter.emit("status", {
-            kind: "status",
-            ticket_id: update[0].id,
-            is_open: update[0].is_open,
-            user: currentUserProfile[0],
-            followers: update[0].followers,
+        createNotification(ticket.followers, {
+            id: randomUUID(),
+            timestamp: new Date(),
+            topic: "Ticket-Status",
+            title: "Ticket Status Update",
+            body: `Ticket status updated by ${currentUserProfile[0].username}`,
+            data: {
+                page: "ticket",
+                ticket_id: update[0].id,
+            },
         });
-
 
         return update[0] as Ticket;
     }),
@@ -248,7 +260,7 @@ export const ticketsRouter = router({
                 eq(tickets.event_code, input.event_code),
             )
         });
-        
+
         if (!ticket) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
         }
@@ -308,7 +320,7 @@ export const ticketsRouter = router({
                 eq(tickets.event_code, input.event_code),
             )
         });
-        
+
         if (!ticket) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
         }
@@ -331,7 +343,7 @@ export const ticketsRouter = router({
         } else if (ticket.assigned_to_id !== null && ticket.assigned_to !== null) {
             profile.push(ticket.assigned_to);
         }
-        
+
         if (!profile[0]) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Unable to find User currently assigned to Ticket" });
         }
@@ -371,14 +383,14 @@ export const ticketsRouter = router({
         event_code: z.string(),
     })).query(async ({ ctx, input }) => {
         const event = await getEvent(ctx.eventToken as string);
-        
+
         const ticket = await db.query.tickets.findFirst({
             where: and(
                 eq(tickets.id, input.id),
                 eq(tickets.event_code, input.event_code),
             )
         });
-        
+
         if (!ticket) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
         }
@@ -395,7 +407,7 @@ export const ticketsRouter = router({
         } else {
             throw new TRPCError({ code: "BAD_REQUEST", message: "User token not provided in context object" });
         }
-        
+
         if (!currentUserProfile[0]) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Current User not found by token" });
         }
@@ -434,7 +446,7 @@ export const ticketsRouter = router({
                 eq(tickets.event_code, input.event_code),
             )
         });
-        
+
         if (!ticket) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
         }
@@ -451,7 +463,7 @@ export const ticketsRouter = router({
         } else {
             throw new TRPCError({ code: "BAD_REQUEST", message: "User token not provided in context object" });
         }
-        
+
         if (!currentUserProfile[0]) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Current User not found by token" });
         }
@@ -472,11 +484,11 @@ export const ticketsRouter = router({
         } else if (!followers.includes(ctx.user.id) && input.follow === false) {
 
             throw new TRPCError({ code: "BAD_REQUEST", message: "Current User is not following provided Ticket" });
-        
-        } else if (followers.includes(ctx.user.id) && input.follow === true){
+
+        } else if (followers.includes(ctx.user.id) && input.follow === true) {
 
             throw new TRPCError({ code: "BAD_REQUEST", message: "Current User is already following provided Ticket" });
-        
+
         } else if (followers.includes(ctx.user.id) && input.follow === false) {
 
             updatedFollowers = followers.filter(() => !ctx.user.id);
@@ -484,7 +496,7 @@ export const ticketsRouter = router({
             update = await db.update(tickets).set({
                 followers: updatedFollowers,
             }).where(eq(tickets.id, input.id)).returning() as Ticket[];
-        } 
+        }
 
         if (!update || (Array.isArray(update) && update.length === 0)) {
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Ticket followers" });
@@ -511,7 +523,7 @@ export const ticketsRouter = router({
                 eq(tickets.event_code, input.event_code),
             )
         });
-        
+
         if (!ticket) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
         }
@@ -528,7 +540,7 @@ export const ticketsRouter = router({
         } else {
             throw new TRPCError({ code: "BAD_REQUEST", message: "User token not provided in context object" });
         }
-        
+
         if (!currentUserProfile[0]) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Current User not found by token" });
         }
@@ -577,9 +589,9 @@ export const ticketsRouter = router({
         const event = await getEvent(input.eventToken);
 
         return observable<TicketUpdateEventData>((emitter) => {
-            const createHandler: TicketUpdateEvents["create"] = ( data ) => {
+            const createHandler: TicketUpdateEvents["create"] = (data) => {
                 if (data.kind === "create" && input.ticket_id) {
-                    if(data.ticket.id === input.ticket_id) {
+                    if (data.ticket.id === input.ticket_id) {
                         emitter.next(data);
                     }
                 } else if (data.kind === "create") {
@@ -587,9 +599,9 @@ export const ticketsRouter = router({
                 }
             };
 
-            const assignHandler: TicketUpdateEvents["assign"] = ( data ) => {
+            const assignHandler: TicketUpdateEvents["assign"] = (data) => {
                 if (data.kind === "assign" && input.ticket_id) {
-                    if(data.ticket_id === input.ticket_id) {
+                    if (data.ticket_id === input.ticket_id) {
                         emitter.next(data);
                     }
                 } else if (data.kind === "assign") {
@@ -597,9 +609,9 @@ export const ticketsRouter = router({
                 }
             };
 
-            const statusHandler: TicketUpdateEvents["status"] = ( data ) => {
+            const statusHandler: TicketUpdateEvents["status"] = (data) => {
                 if (data.kind === "status" && input.ticket_id) {
-                    if(data.ticket_id === input.ticket_id) {
+                    if (data.ticket_id === input.ticket_id) {
                         emitter.next(data);
                     }
                 } else if (data.kind === "status") {
@@ -607,9 +619,9 @@ export const ticketsRouter = router({
                 }
             };
 
-            const followHandler: TicketUpdateEvents["follow"] = ( data ) => {
+            const followHandler: TicketUpdateEvents["follow"] = (data) => {
                 if (data.kind === "follow" && input.ticket_id) {
-                    if(data.ticket_id === input.ticket_id) {
+                    if (data.ticket_id === input.ticket_id) {
                         emitter.next(data);
                     }
                 } else if (data.kind === "follow") {
@@ -617,9 +629,9 @@ export const ticketsRouter = router({
                 }
             };
 
-            const deleteTicketHandler: TicketUpdateEvents["delete_ticket"] = ( data ) => {
+            const deleteTicketHandler: TicketUpdateEvents["delete_ticket"] = (data) => {
                 if (data.kind === "delete_ticket" && input.ticket_id) {
-                    if(data.ticket_id === input.ticket_id) {
+                    if (data.ticket_id === input.ticket_id) {
                         emitter.next(data);
                     }
                 } else if (data.kind === "delete_ticket") {
@@ -629,7 +641,7 @@ export const ticketsRouter = router({
 
             const editHandler: TicketUpdateEvents["edit"] = (data) => {
                 if (data.kind === "edit" && input.ticket_id) {
-                    if(data.ticket_id === input.ticket_id) {
+                    if (data.ticket_id === input.ticket_id) {
                         emitter.next(data);
                     }
                 } else if (data.kind === "edit") {
@@ -637,9 +649,9 @@ export const ticketsRouter = router({
                 }
             };
 
-            const addMessageHandler: TicketUpdateEvents["add_message"] = ( data ) => {
+            const addMessageHandler: TicketUpdateEvents["add_message"] = (data) => {
                 if (data.kind === "add_message" && input.ticket_id) {
-                    if(data.message.ticket_id === input.ticket_id) {
+                    if (data.message.ticket_id === input.ticket_id) {
                         emitter.next(data);
                     }
                 } else if (data.kind === "add_message") {
@@ -647,9 +659,9 @@ export const ticketsRouter = router({
                 }
             };
 
-            const editMessageHandler: TicketUpdateEvents["edit_message"] = ( data ) => {
+            const editMessageHandler: TicketUpdateEvents["edit_message"] = (data) => {
                 if (data.kind === "edit_message" && input.ticket_id) {
-                    if(data.message.ticket_id === input.ticket_id) {
+                    if (data.message.ticket_id === input.ticket_id) {
                         emitter.next(data);
                     }
                 } else if (data.kind === "edit_message") {
@@ -657,9 +669,9 @@ export const ticketsRouter = router({
                 }
             };
 
-            const deleteMessageHandler: TicketUpdateEvents["delete_message"] = ( data ) => {
+            const deleteMessageHandler: TicketUpdateEvents["delete_message"] = (data) => {
                 if (data.kind === "delete_message" && input.ticket_id) {
-                    if(data.ticket_id === input.ticket_id) {
+                    if (data.ticket_id === input.ticket_id) {
                         emitter.next(data);
                     }
                 } else if (data.kind === "delete_message") {
@@ -713,114 +725,36 @@ export const ticketsRouter = router({
                 event.ticketUpdateEmitter.off("add_message", addMessageHandler);
                 event.ticketUpdateEmitter.off("edit_message", editMessageHandler);
                 event.ticketUpdateEmitter.off("delete_message", deleteMessageHandler);
-			};
+            };
         });
     }),
 
     pushSubscription: publicProcedure.input(z.object({
-        eventToken: z.string(),
-        userToken: z.string(),
-        ticket_id: z.number().optional(),
-        eventOptions: z.object({
-            create: z.boolean().optional(),
-            assign: z.boolean().optional(),
-            status: z.boolean().optional(),
-            add_message: z.boolean().optional(),
-        }),
+        token: z.string(),
     })).subscription(async ({ input }) => {
-        const event = await getEvent(input.eventToken);
+        const user = await db.query.users.findFirst({ where: eq(users.token, input.token) });
 
-        if (!event) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Event not found or invalid event token." });
+        if (!user) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
         }
 
-        let currentUserProfile: Profile[] | undefined;
+        console.log(user.id + " has subscribed to WS notifications");
 
-        if (input.userToken) {
-            currentUserProfile = await db.select({
-                id: users.id,
-                username: users.username,
-                role: users.role,
-                admin: users.admin,
-            }).from(users).where(eq(users.token, input.userToken));
-        } else {
-            throw new TRPCError({ code: "BAD_REQUEST", message: "User token not provided in input object" });
-        }
-        
-        if (!currentUserProfile[0]) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Current User not found by token" });
-        }
+        return observable<Notification>((emitter) => {
 
-        return observable<TicketPushEventData>((emitter) => {
-            const createHandler: TicketPushEvents["create"] = ( data ) => {
-                if (data.kind === "create" && input.ticket_id) {
-                    if(data.ticket.id === input.ticket_id) {
-                        emitter.next(data);
-                    }
-                } else if (data.kind === "create") {
-                    emitter.next(data);
+            const notificationHandler: NotificationEvents['send'] = (data) => {
+                console.log(data);
+                if (data.users.includes(user.id)) {
+                    emitter.next(data.notification);
                 }
             };
 
-            const assignHandler: TicketPushEvents["assign"] = ( data ) => {
-                if (data.followers && data.followers?.includes(currentUserProfile[0].id)) {
-                    if (data.kind === "assign" && input.ticket_id) {
-                        if(data.ticket_id === input.ticket_id) {
-                            emitter.next(data);
-                        }
-                    } else if (data.kind === "assign") {
-                        emitter.next(data);
-                    }
-                }
-            };
-
-            const statusHandler: TicketPushEvents["status"] = ( data ) => {
-                if (data.followers && data.followers?.includes(currentUserProfile[0].id)) {
-                    if (data.kind === "status" && input.ticket_id) {
-                        if(data.ticket_id === input.ticket_id) {
-                            emitter.next(data);
-                        }
-                    } else if (data.kind === "status") {
-                        emitter.next(data);
-                    }
-                }
-            };
-
-            const addMessageHandler: TicketPushEvents["add_message"] = ( data ) => {
-                if (data.followers && data.followers?.includes(currentUserProfile[0].id)) {
-                    if (data.kind === "add_message" && input.ticket_id) {
-                        if(data.message.ticket_id === input.ticket_id) {
-                            emitter.next(data);
-                        }
-                    } else if (data.kind === "add_message") {
-                        emitter.next(data);
-                    }
-                }
-            };
-
-            if (input.eventOptions.create === true) {
-                event.ticketPushEmitter.on("create", createHandler);
-            }
-
-            if (input.eventOptions.assign === true) {
-                event.ticketPushEmitter.on("assign", assignHandler);
-            }
-
-            if (input.eventOptions.status === true) {
-                event.ticketPushEmitter.on("status", statusHandler);
-            }
-
-            if (input.eventOptions.add_message === true) {
-                event.ticketPushEmitter.on("add_message", addMessageHandler);
-            }
+            notificationEmitter.on("send", notificationHandler);
 
             return () => {
                 console.log("Cleaning up listeners");
-                event.ticketPushEmitter.off("create", createHandler);
-                event.ticketPushEmitter.off("assign", assignHandler);
-                event.ticketPushEmitter.off("status", statusHandler);
-                event.ticketPushEmitter.off("add_message", addMessageHandler);
-			};
+                notificationEmitter.off("send", notificationHandler);
+            };
         });
     }),
 

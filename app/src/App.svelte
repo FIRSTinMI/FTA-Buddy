@@ -35,11 +35,11 @@
 	import ComponentManuals from "./pages/references/ComponentManuals.svelte";
 	import WiringDiagrams from "./pages/references/WiringDiagrams.svelte";
 	import SoftwareDocs from "./pages/references/SoftwareDocs.svelte";
-    import TicketList from "./pages/tickets-notes/TicketList.svelte";
-    import NoteList from "./pages/tickets-notes/NoteList.svelte";
-    import NotificationList from "./pages/tickets-notes/NotificationList.svelte";
-    import { notificationsStore } from "./stores/notifications";
-    import { startBackgroundCreateTicketSubscription, stopBackgroundCreateTicketSubscription } from "./util/notifications";
+	import TicketList from "./pages/tickets-notes/TicketList.svelte";
+	import NoteList from "./pages/tickets-notes/NoteList.svelte";
+	import NotificationList from "./pages/tickets-notes/NotificationList.svelte";
+	import { notificationsStore } from "./stores/notifications";
+	import { startNotificationSubscription, stopBackgroundCreateTicketSubscription } from "./util/notifications";
 
 	// Checking userentication
 	let user = get(userStore);
@@ -216,7 +216,7 @@
 			},
 		});
 		if (settings.ticketCreateAlerts) {
-			startBackgroundCreateTicketSubscription();
+			startNotificationSubscription();
 		}
 	});
 	onDestroy(() => {
@@ -610,11 +610,11 @@
 							<Monitor {fullscreen} {frameHandler} />
 						</Route>
 						<Route path="/tickets">
-							<TicketList/>
+							<TicketList />
 						</Route>
 					{:else if user?.role === "CSA" || user?.role === "RI"}
 						<Route path="/">
-							<TicketList/>
+							<TicketList />
 						</Route>
 						<Route path="/monitor">
 							<Monitor {fullscreen} {frameHandler} />
@@ -622,13 +622,13 @@
 					{/if}
 				{:else}
 					<Route path="/">
-						<TicketList/>
+						<TicketList />
 					</Route>
 					<Route path="/monitor">
 						<Monitor {fullscreen} {frameHandler} />
 					</Route>
 				{/if}
-				
+
 				<Route path="/notifications" component={NotificationList} />
 				<Route path="/flashcards" component={Flashcard} />
 				<Route path="/notes" component={NoteList} />

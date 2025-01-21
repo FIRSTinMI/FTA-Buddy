@@ -4,7 +4,7 @@
 	import { settingsStore } from "../stores/settings";
 	import Spinner from "./Spinner.svelte";
 	import { toast } from "../../../shared/toast";
-	import { startBackgroundCreateTicketSubscription, stopBackgroundCreateTicketSubscription, subscribeToPush } from "../util/notifications";
+	import { stopBackgroundCreateTicketSubscription, subscribeToPush } from "../util/notifications";
 	import { audioQueuer } from "../field-monitor";
 	import { trpc } from "../main";
 	import { userStore } from "../stores/user";
@@ -123,7 +123,6 @@
 			updateSettings();
 		}
 	}
-
 </script>
 
 {#if loading}
@@ -137,11 +136,13 @@
 			<div class="grid grid-cols-subgrid gap-2 row-span-5">
 				<p class="text-gray-700 dark:text-gray-400">General</p>
 				<Toggle class="toggle" bind:checked={settings.vibrations} on:change={updateSettings}>Vibrations</Toggle>
-				<Toggle class="toggle" bind:checked={settings.notifications} on:change={requestNotificationPermissions}>Ticket Notifications</Toggle>
-				<Toggle class="toggle" bind:checked={settings.ticketCreateAlerts} on:change={enableCreateTicketAlerts}>Ticket Creation Alerts</Toggle>
-				<Toggle class="toggle" bind:checked={settings.robotNotifications} on:change={requestNotificationPermissions}
-					>Robot Connection Notifications</Toggle
+				<Toggle class="toggle" bind:checked={settings.notifications} on:change={requestNotificationPermissions}>Notifications</Toggle>
+				<Toggle class="toggle" bind:checked={settings.notificationCategories.create} on:change={enableCreateTicketAlerts}>New Tickets</Toggle>
+				<Toggle class="toggle" bind:checked={settings.notificationCategories.follow} on:change={enableCreateTicketAlerts}
+					>Followed Ticket Updates</Toggle
 				>
+				<Toggle class="toggle" bind:checked={settings.notificationCategories.assign} on:change={enableCreateTicketAlerts}>Assigned Ticket</Toggle>
+				<Toggle class="toggle" bind:checked={settings.notificationCategories.robot} on:change={requestNotificationPermissions}>Robot Status</Toggle>
 				<Toggle class="toggle" bind:checked={settings.fimSpecifics} on:change={updateSettings}>FIM Specific Field Manuals</Toggle>
 			</div>
 			<div class="grid grid-cols-subgrid gap-2 row-span-3">

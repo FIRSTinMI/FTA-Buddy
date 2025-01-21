@@ -6,7 +6,7 @@ import express from 'express';
 const pjson = require('../package.json');
 import { readFileSync, readdirSync } from 'fs';
 import ws from 'ws';
-import { FMSLogFrame, ROBOT, ServerEvent, TournamentLevel } from '../shared/types';
+import { FMSLogFrame, NotificationEvents, ROBOT, ServerEvent, TournamentLevel } from '../shared/types';
 import { connect, db } from './db/db';
 import { checklistRouter } from './router/checklist';
 import { eventRouter } from './router/event';
@@ -36,6 +36,7 @@ import { observable } from '@trpc/server/observable';
 import { logAnalysisLoop } from './util/log-analysis';
 import { ftcRouter } from './router/ftc';
 import { notesRouter } from './router/notes';
+import { TypedEmitter } from 'tiny-typed-emitter';
 
 const port = parseInt(process.env.PORT || '3001');
 
@@ -43,6 +44,8 @@ export const events: { [key: string]: ServerEvent; } = {};
 export const eventCodes: { [key: string]: string; } = {};
 
 //initializePushNotifications();
+// event emitter for all notifications
+export const notificationEmitter = new TypedEmitter<NotificationEvents>();
 
 // TRPC Server
 const appRouter = router({

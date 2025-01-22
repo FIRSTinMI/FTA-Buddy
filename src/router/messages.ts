@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { adminProcedure, eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
 import { db } from "../db/db";
-import { tickets, messages, users} from "../db/schema";
+import { tickets, messages, users } from "../db/schema";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { Message, Profile } from "../../shared/types";
@@ -15,12 +15,12 @@ export const messagesRouter = router({
         event_code: z.string(),
     })).query(async ({ input }) => {
         const eventMessages = await db.query.messages.findMany({
-            where:eq(messages.event_code, input.event_code),
+            where: eq(messages.event_code, input.event_code),
             orderBy: [asc(messages.created_at)],
-            
+
         });
-        
-        return eventMessages as Message[];    
+
+        return eventMessages as Message[];
     }),
 
     getById: eventProcedure.input(z.object({
@@ -29,7 +29,7 @@ export const messagesRouter = router({
         const message = await db.query.messages.findFirst({
             where: eq(messages.id, input.id),
         });
-        
+
         if (!message) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Message not found" });
         }
@@ -50,7 +50,7 @@ export const messagesRouter = router({
                 eq(tickets.event_code, input.event_code),
             )
         });
-        
+
         if (!ticket) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
         }
@@ -76,6 +76,10 @@ export const messagesRouter = router({
             created_at: new Date(),
             updated_at: new Date(),
         }).returning();
+
+        await db.update(tickets).set({
+            updated_at: new Date()
+        }).where(eq(tickets.id, ticket.id));
 
         if (!insert[0]) {
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Message on this Ticket" });
@@ -115,7 +119,7 @@ export const messagesRouter = router({
                 eq(tickets.event_code, event.code),
             )
         });
-        
+
         if (!ticket) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
         }
@@ -123,13 +127,13 @@ export const messagesRouter = router({
         const message = await db.query.messages.findFirst({
             where: eq(messages.id, input.message_id),
         });
-        
+
         if (!message) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Message not found" });
         }
 
         let currentUserProfile: Profile[] | undefined;
-        
+
         if (ctx.token) {
             currentUserProfile = await db.select({
                 id: users.id,
@@ -140,7 +144,7 @@ export const messagesRouter = router({
         } else {
             throw new TRPCError({ code: "BAD_REQUEST", message: "User token not provided in context object" });
         }
-        
+
         if (!currentUserProfile[0]) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Current User not found by provided token" });
         }
@@ -149,6 +153,10 @@ export const messagesRouter = router({
             text: input.new_text,
             updated_at: new Date()
         }).where(eq(messages.id, input.message_id)).returning();
+
+        await db.update(tickets).set({
+            updated_at: new Date()
+        }).where(eq(tickets.id, ticket.id));
 
         if (!update[0]) {
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Message text" });
@@ -172,13 +180,13 @@ export const messagesRouter = router({
         const message = await db.query.messages.findFirst({
             where: eq(messages.id, input.message_id),
         });
-        
+
         if (!message) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Message not found" });
         }
 
         let currentUserProfile: Profile[] | undefined;
-        
+
         if (ctx.token) {
             currentUserProfile = await db.select({
                 id: users.id,
@@ -189,7 +197,7 @@ export const messagesRouter = router({
         } else {
             throw new TRPCError({ code: "BAD_REQUEST", message: "User token not provided in context object" });
         }
-        
+
         if (!currentUserProfile[0]) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Current User not found by provided token" });
         }
@@ -214,7 +222,7 @@ export async function getEventMessages(event_code: string) {
     const eventMessages = await db.query.messages.findMany({
         where: eq(messages.event_code, event_code),
         orderBy: [asc(messages.created_at)],
-    })
+    });
 
     if (!eventMessages) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Unable to find Messages for this event" });

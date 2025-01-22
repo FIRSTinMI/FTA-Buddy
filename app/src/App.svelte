@@ -43,7 +43,6 @@
 
 	// Checking userentication
 	let user = get(userStore);
-	let notifications = get(notificationsStore);
 
 	// On mount check if the user's permissions have changed
 	onMount(async () => {
@@ -423,11 +422,11 @@
 						<svelte:fragment slot="icon">
 							<Icon icon="fluent:alert-on-16-filled" class="w-8 h-8" />
 						</svelte:fragment>
-						{#if notifications.length > 0}
+						{#if $notificationsStore.length > 0}
 							<Indicator color="red" border size="xl" placement="top-left">
 								<span
 									class="text-white
-								text-xs">{notifications.length}</span
+								text-xs">{$notificationsStore.length}</span
 								>
 							</Indicator>
 						{/if}
@@ -701,9 +700,9 @@
 					<Link to="/app/notifications">
 						<Button class="!p-2 relative" color="none">
 							<Icon icon="fluent:alert-on-16-filled" class="w-8 h-8" />
-							{#if notifications.length > 0}
+							{#if $notificationsStore.length > 0}
 								<Indicator color="red" border size="xl" placement="top-left">
-									<span class="text-white text-xs">{notifications.length}</span>
+									<span class="text-white text-xs">{$notificationsStore.length}</span>
 								</Indicator>
 							{/if}
 						</Button>

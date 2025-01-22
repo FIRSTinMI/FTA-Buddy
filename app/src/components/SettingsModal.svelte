@@ -4,7 +4,7 @@
 	import { settingsStore } from "../stores/settings";
 	import Spinner from "./Spinner.svelte";
 	import { toast } from "../../../shared/toast";
-	import { subscribeToPush } from "../util/notifications";
+	import { startNotificationSubscription, subscribeToPush } from "../util/notifications";
 	import { audioQueuer } from "../field-monitor";
 	import { trpc } from "../main";
 	import { userStore } from "../stores/user";
@@ -71,6 +71,7 @@
 					updateSettings();
 					await subscribeToPush();
 				}
+				startNotificationSubscription();
 			} else {
 				// unsubscribe from push notifications
 			}

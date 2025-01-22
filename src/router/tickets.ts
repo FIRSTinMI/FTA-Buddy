@@ -219,7 +219,8 @@ export const ticketsRouter = router({
 
         const update = await db.update(tickets).set({
             is_open: input.new_status,
-            closed_at: !input.new_status ? new Date() : null
+            closed_at: !input.new_status ? new Date() : null,
+            updated_at: new Date(),
         }).where(eq(tickets.id, input.id)).returning();
 
         event.ticketUpdateEmitter.emit("status", {
@@ -279,6 +280,7 @@ export const ticketsRouter = router({
         const update = await db.update(tickets).set({
             assigned_to_id: input.user_id,
             assigned_to: profile[0] as Profile,
+            updated_at: new Date(),
         }).where(eq(tickets.id, input.id)).returning();
 
 
@@ -363,6 +365,7 @@ export const ticketsRouter = router({
         const update = await db.update(tickets).set({
             assigned_to_id: null,
             assigned_to: null,
+            updated_at: new Date(),
         }).where(eq(tickets.id, input.ticket_id)).returning();
 
 
@@ -612,7 +615,7 @@ export const ticketsRouter = router({
             add_message: z.boolean().optional(),
             edit_message: z.boolean().optional(),
             delete_message: z.boolean().optional(),
-        }),
+        }).optional(),
     })).subscription(async ({ input }) => {
         const event = await getEvent(input.eventToken);
 
@@ -709,6 +712,20 @@ export const ticketsRouter = router({
                     emitter.next(data);
                 }
             };
+
+            if (!input.eventOptions) {
+                input.eventOptions = {
+                    create: true,
+                    assign: true,
+                    status: true,
+                    follow: true,
+                    delete_ticket: true,
+                    edit: true,
+                    add_message: true,
+                    edit_message: true,
+                    delete_message: true,
+                };
+            }
 
             if (input.eventOptions.create === true) {
                 event.ticketUpdateEmitter.on("create", createHandler);

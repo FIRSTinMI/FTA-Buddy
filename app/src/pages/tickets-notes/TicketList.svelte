@@ -1,77 +1,72 @@
 <script lang="ts">
-	import { Alert, Button, Label, Select, Textarea, ToolbarButton, Modal, type SelectOptionType } from "flowbite-svelte";
-	import { onDestroy, onMount } from "svelte";
-	import { get } from "svelte/store";
+	import { Button, Input, Label, Modal, Select, Textarea, type SelectOptionType } from "flowbite-svelte";
+	import { SearchOutline } from "flowbite-svelte-icons";
+	import { onMount } from "svelte";
+	import { navigate } from "svelte-routing";
+	import { toast } from "../../../../shared/toast";
+	import type { Ticket } from "../../../../shared/types";
+	import NotesPolicy from "../../components/NotesPolicy.svelte";
+	import Spinner from "../../components/Spinner.svelte";
 	import TicketCard from "../../components/TicketCard.svelte";
 	import { trpc } from "../../main";
-	import { eventStore, type Event } from "../../stores/event";
-	import Icon from "@iconify/svelte";
-	import { userStore } from "../../stores/user";
-	import { toast } from "../../../../shared/toast";
-	import NotesPolicy from "../../components/NotesPolicy.svelte";
 	import { settingsStore } from "../../stores/settings";
-	import Spinner from "../../components/Spinner.svelte";
-    import type { TeamList, Ticket } from "../../../../shared/types";
-	import { navigate } from "svelte-routing";
-    import { ZodString } from "zod";
-
+	import { eventStore } from "../../stores/event";
+	import { userStore } from "../../stores/user";
 
 	let createModalOpen = false;
 
-	let filterSelected = '';
+	const teamNames = Object.fromEntries($eventStore.teams.map((team) => [team.number, team.name]));
+
+	let teamOptions = $eventStore.teams
+		.sort((a, b) => parseInt(a.number) - parseInt(b.number))
+		.map((team) => ({ value: team.number, name: `${team.number} - ${team.name}` }));
+
+	let search: string = "";
+	let filterSelected = "all";
 	let filterOptions = [
-		{ value: 'none', name: 'None' },
-		{ value: 'team', name: 'Team Number' },
-		{ value: 'open', name: 'Open' },
-		{ value: 'closed', name: 'Closed' },
-		{ value: 'unassigned', name: 'Unassigned' },
-		{ value: 'assigned_to', name: 'Assigned to' },
+		{ value: "all", name: "All" },
+		{ value: "open", name: "Open" },
+		{ value: "closed", name: "Closed" },
+		{ value: "unassigned", name: "Unassigned" },
 	];
 
-	let teamSelected = -1; 
-
-	let teams: TeamList = get(eventStore).teams || [];
-
-	let teamOptions = teams
-		.sort((a, b) => parseInt(a.number) - parseInt(b.number))
-		.map((v) => ({ value: parseInt(v.number), name: `${v.number} - ${v.name}` }));
-
-	let userSelected = -1;
-
-	let users: Event["users"] = get(eventStore).users || []; 
-	
-	let userOptions = users
-		.sort((a, b) => a.username.localeCompare(b.username))
-		.map((v) => ({ value: v.id, name: `${v.username}` }));
-
-	let filteredTickets: Ticket[] | null;
+	let filteredTickets: Ticket[] = [];
 
 	let tickets: Awaited<ReturnType<typeof trpc.tickets.getAllWithMessages.query>> = [] as Ticket[];
 
 	let ticketsPromise: Promise<any> | undefined;
 
-	function filterTickets() {
-		console.log("Option " + filterSelected + " Team Selected " + teamSelected);
-		if (filterSelected === "team" && teamSelected !== -1) {
-			filteredTickets = tickets.filter(ticket => ticket.team === teamSelected);
-		} else if (filterSelected === "team" && teamSelected === -1) {
-			filteredTickets = null;
-		} else if (filterSelected === "open") {
-			filteredTickets = tickets.filter(ticket => ticket.is_open === true);
-		} else if (filterSelected === "closed") {
-			filteredTickets = tickets.filter(ticket => ticket.is_open === false);
-		} else if (filterSelected === "unassigned") {
-			filteredTickets = tickets.filter(ticket => ticket.assigned_to_id === null);
-		} else if (filterSelected === "assigned_to" && userSelected !== null) {
-			filteredTickets = tickets.filter(ticket => ticket.assigned_to_id === userSelected);
-		} else if (filterSelected === "assigned_to" && userSelected === null) {
-			filteredTickets = null;
-		} else if (filterSelected === "none") {
-			filteredTickets = tickets;
-		} else {
-			filteredTickets = tickets;
+	function filterAndSearchTickets(tickets: Ticket[], filterSelected: string, search: string) {
+		if (filterSelected !== "all") {
+			tickets = tickets.filter((ticket) => {
+				if (filterSelected === "open") {
+					return ticket.is_open;
+				} else if (filterSelected === "closed") {
+					return !ticket.is_open;
+				} else if (filterSelected === "unassigned") {
+					return !ticket.assigned_to_id;
+				}
+			});
 		}
+
+		if (search.length > 0) {
+			const tokenized = search.toLowerCase().split(" ");
+
+			tickets = tickets.filter((ticket) => {
+				return tokenized.every(
+					(token) =>
+						ticket.team.toString().includes(token) ||
+						teamNames[ticket.team].toLowerCase().includes(token) ||
+						ticket.subject.toLowerCase().includes(token) ||
+						(ticket.assigned_to && ticket.assigned_to.username.toLowerCase().includes(token))
+				);
+			});
+		}
+
+		filteredTickets = tickets.sort((a, b) => b.updated_at.getTime() - a.updated_at.getTime());
 	}
+
+	$: filterAndSearchTickets(tickets, filterSelected, search);
 
 	async function getTickets() {
 		ticketsPromise = trpc.tickets.getAllWithMessages.query();
@@ -80,13 +75,12 @@
 
 	onMount(() => {
 		getTickets();
+		ticketUpdateSubscription();
 	});
 
 	let notesPolicyElm: NotesPolicy;
-	let open = false;
 
 	let team: number | undefined;
-	const event = get(eventStore);
 
 	let matchesPromise: ReturnType<typeof trpc.match.getMatchNumbers.query>;
 	let matches: SelectOptionType<string>[] = [];
@@ -144,13 +138,90 @@
 			return;
 		}
 	}
+
+	let subscription: ReturnType<typeof trpc.tickets.updateSubscription.subscribe>;
+
+	function ticketUpdateSubscription() {
+		if (subscription) subscription.unsubscribe();
+
+		subscription = trpc.tickets.updateSubscription.subscribe(
+			{
+				eventToken: $userStore.eventToken,
+			},
+			{
+				onError: console.error,
+				onData: (data) => {
+					console.log(data);
+					// Want to avoid having to refetch everything if we can
+					//getTickets();
+					const ticket = tickets.find((t) => t.id === data.ticket_id);
+					switch (data.kind) {
+						case "status":
+							if (ticket) {
+								ticket.is_open = data.is_open;
+								ticket.updated_at = new Date();
+							}
+							break;
+						case "create":
+							tickets.push(data.ticket);
+							tickets = tickets;
+							break;
+						case "edit":
+							if (ticket) {
+								ticket.subject = data.ticket_subject;
+								ticket.text = data.ticket_text;
+								ticket.updated_at = data.ticket_updated_at;
+							}
+							break;
+						case "assign":
+							if (ticket) {
+								ticket.assigned_to = data.assigned_to;
+								ticket.assigned_to_id = data.assigned_to_id;
+								ticket.updated_at = new Date();
+							}
+							break;
+						case "follow":
+							break;
+						case "delete_ticket":
+							tickets = tickets.filter((t) => t.id !== data.ticket_id);
+							break;
+						case "add_message":
+							if (ticket) {
+								if (!ticket.messages) ticket.messages = [];
+								ticket.messages?.push(data.message);
+								ticket.updated_at = new Date();
+							}
+							break;
+						case "edit_message":
+							if (ticket && ticket.messages) {
+								const message = ticket.messages.find((m) => m.id === data.message.id);
+								if (message) {
+									message.text = data.message.text;
+									message.updated_at = data.message.updated_at;
+								}
+								ticket.updated_at = new Date();
+							}
+							break;
+						case "delete_message":
+							if (ticket && ticket.messages) {
+								ticket.messages = ticket.messages.filter((m) => m.id !== data.message_id);
+								ticket.updated_at = ticket.messages.length > 0 ? ticket.messages[ticket.messages.length - 1].updated_at : new Date();
+							}
+							break;
+					}
+					tickets = tickets;
+					console.log(tickets);
+				},
+			}
+		);
+	}
 </script>
 
-<NotesPolicy bind:this={notesPolicyElm} /> 
+<NotesPolicy bind:this={notesPolicyElm} />
 
 <Modal bind:open={createModalOpen} size="lg" outsideclose dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
-    <div slot="header"><h1 class="text-3xl font-bold text-black dark:text-white">Create a Ticket</h1></div>
-    <form class="text-left flex flex-col gap-4" on:submit|preventDefault={createTicket}>
+	<div slot="header"><h1 class="text-3xl font-bold text-black dark:text-white">Create a Ticket</h1></div>
+	<form class="text-left flex flex-col gap-4" on:submit|preventDefault={createTicket}>
 		<Label class="w-full text-left">
 			Select Team
 			<Select class="mt-2" items={teamOptions} bind:value={team} on:change={() => getMatchesForTeam(team)} />
@@ -170,58 +241,37 @@
 				</Label>
 			{/if}
 		{/await}
-		
+
 		<Button type="submit" disabled={disableSubmit}>Create Ticket</Button>
 	</form>
 </Modal>
 
 <div class="container max-w-6xl mx-auto px-2 pt-2 h-full flex flex-col gap-2">
-	<div class="flex flex-col overflow-y-auto h-dvh">
-		<div class="flex flex-col grow gap-2">
-			<h1 class="text-3xl mt-2" style="font-weight: bold">Event Tickets</h1>
-			<Button class="m-3" on:click={() => (createModalOpen = true)}>Create a New Ticket</Button>
-			<Label>
-				Select a Filter (optional):
-				<Select class="mt-2" items={filterOptions} bind:value={filterSelected} />
+	<div class="flex flex-col overflow-y-auto h-dvh gap-2">
+		<h1 class="text-3xl mt-2" style="font-weight: bold">Event Tickets</h1>
+		<Button class="max-w-3xl mx-auto w-full" on:click={() => (createModalOpen = true)}>Create a New Ticket</Button>
+		<div class="flex items-center gap-2 max-w-3xl w-full mx-auto">
+			<Label class="w-full text-left">
+				<span class="ml-2">Search</span>
+				<Input class="w-full" placeholder="Search Team #, Team Name, Topic, Assigned User" bind:value={search}>
+					<SearchOutline slot="left" class="size-5 text-gray-500 dark:text-gray-400" />
+				</Input>
 			</Label>
-			{#if filterSelected === 'team'}
-				<Label>
-					Select a Team
-					<Select class="mt-2" items={teamOptions} bind:value={teamSelected}/>
-				</Label>
-			{:else if filterSelected === 'assigned_to'}
-				<Label>
-					Select a User
-					<Select class="mt-2" items={userOptions} bind:value={userSelected}/>
-				</Label>
-			{/if}
-			<div class="flex flex-row space-x-2">
-				<Button class="w-1/2" on:click={() => filterTickets()}>Apply Filters</Button>
-				<Button class="w-1/2" on:click={() => (filterSelected = "")}>Clear Filters</Button>
-			</div>
+			<Label class="text-left">
+				<span class="ml-2">Filter</span>
+				<Select class="w-fit" items={filterOptions} bind:value={filterSelected} />
+			</Label>
 		</div>
 		<div class="flex flex-col grow gap-2 mt-4">
 			{#await ticketsPromise}
 				<Spinner />
 			{:then}
-				{#if filterSelected !== '' && filterSelected !== 'none'}
-					{#if !filteredTickets || filteredTickets.length < 1}
-						<p class="text-center">No Tickets Matching Filters</p>
-					{:else}
-						<p class="text-center">Tickets Matching Filters</p>
-
-						{#each filteredTickets as ticket}
-							<TicketCard {ticket} />
-						{/each}
-					{/if}
-				{:else if filterSelected === 'none' || filterSelected === ''}
-					{#if !tickets || tickets.length < 1}
-						<p class="text-center">No Tickets</p>
-					{:else}
-						{#each tickets as ticket}
-							<TicketCard {ticket} />
-						{/each}
-					{/if}
+				{#if !filteredTickets || filteredTickets.length < 1}
+					<p class="text-center">No Tickets</p>
+				{:else}
+					{#each filteredTickets as ticket}
+						<TicketCard {ticket} />
+					{/each}
 				{/if}
 			{/await}
 		</div>

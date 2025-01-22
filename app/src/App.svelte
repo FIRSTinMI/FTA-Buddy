@@ -595,7 +595,7 @@
 			<Button class="!py-0 !px-0 text-white" color="none" on:click={openMenu}>
 				<Icon icon="mdi:menu" class="w-8 h-10" />
 			</Button>
-			<div class="flex-grow">
+			<div class="flex-grow mr-12">
 				{#if user.token && user.eventToken}
 					<h1 class="text-white text-lg place-content-center pt-1 font-bold">{event.code}</h1>
 				{/if}

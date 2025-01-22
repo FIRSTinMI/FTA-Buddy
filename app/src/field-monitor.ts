@@ -1,6 +1,6 @@
 import { get } from "svelte/store";
 import { trpc } from "./main";
-import { authStore } from "./stores/auth";
+import { userStore } from "./stores/user";
 import { DSState, FieldState, MatchState, MatchStateMap, ROBOT, type MonitorFrame } from "../../shared/types";
 import { AudioQueuer } from "./util/audioAlerts";
 import { MonitorFrameHandler, type MonitorEvent } from "./util/monitorFrameHandler";
@@ -61,12 +61,12 @@ export async function subscribeToFieldMonitor() {
     fieldStateSubscription?.unsubscribe();
     robotStateSubscription?.unsubscribe();
 
-    if (!get(authStore).eventToken) return;
+    if (!get(userStore).eventToken) return;
 
     frameHandler.setHistory(await trpc.field.history.query());
 
     subscription = trpc.field.robots.subscribe({
-        eventToken: get(authStore).eventToken
+        eventToken: get(userStore).eventToken
     }, {
         onData: (data) => {
             frameHandler.feed(data);
@@ -74,7 +74,7 @@ export async function subscribeToFieldMonitor() {
     });
 
     fieldStateSubscription = trpc.field.fieldStatus.subscribe({
-        eventToken: get(authStore).eventToken
+        eventToken: get(userStore).eventToken
     }, {
         onData: (data) => {
             frameHandler.fieldStatusChange(data);
@@ -82,7 +82,7 @@ export async function subscribeToFieldMonitor() {
     });
 
     robotStateSubscription = trpc.field.robotStatus.subscribe({
-        eventToken: get(authStore).eventToken
+        eventToken: get(userStore).eventToken
     }, {
         onData: (data) => {
             frameHandler.robotStatusChange(data);
@@ -106,7 +106,7 @@ for (let type of ['radio', 'rio', 'code']) {
         if (evt.detail.match === MatchState.RUNNING && evt.detail.frame[evt.detail.robot].ds !== DSState.BYPASS) {
             if (settings.vibrations) navigator.vibrate(VIBRATION_PATTERNS[type as 'radio' | 'rio' | 'code']);
             if (settings.soundAlerts) audioQueuer.addRobotClip(evt.detail.robot, type as 'radio' | 'rio' | 'code');
-            if (settings.robotNotifications) robotNotification(type, evt.detail);
+            if (settings.notificationCategories.robot) robotNotification(type, evt.detail);
         }
     });
 }
@@ -124,7 +124,7 @@ frameHandler.addEventListener(`ds-drop`, (e) => {
         } else {
             if (settings.vibrations) navigator.vibrate(VIBRATION_PATTERNS.ds);
             if (settings.soundAlerts) audioQueuer.addRobotClip(evt.detail.robot, 'ds');
-            if (settings.robotNotifications) robotNotification('DS', evt.detail);
+            if (settings.notificationCategories.robot) robotNotification('DS', evt.detail);
         }
     }
 });

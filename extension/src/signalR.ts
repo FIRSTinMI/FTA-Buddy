@@ -1,6 +1,6 @@
 import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
-import { DSState, EnableState, FMSEnums, FieldState, MatchState, PartialMonitorFrame, ROBOT, type SignalRMonitorFrame } from '@shared/types';
-import { DEFAULT_MONITOR } from '@shared/constants';
+import { DSState, EnableState, FMSEnums, FieldState, MatchState, PartialMonitorFrame, ROBOT, type SignalRMonitorFrame } from '../../shared/types';
+import { DEFAULT_MONITOR } from '../../shared/constants';
 import { uploadMatchLogs } from './trpc';
 
 export class SignalR {

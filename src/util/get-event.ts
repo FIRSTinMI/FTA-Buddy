@@ -1,13 +1,18 @@
 import { eq } from "drizzle-orm";
 import { EventEmitter } from "events";
+import { TypedEmitter } from 'tiny-typed-emitter';
 import { eventCodes, events } from "..";
 import { DEFAULT_MONITOR } from "../../shared/constants";
-import { TeamList, EventChecklist, ScheduleDetails, ServerEvent } from "../../shared/types";
+import { TeamList, EventChecklist, ScheduleDetails, ServerEvent, Profile, TicketUpdateEvents, Ticket, Note } from "../../shared/types";
 import { db } from "../db/db";
 import schema from "../db/schema";
-import { getTickets } from "../router/messages";
+import { getEventTickets } from "../router/tickets";
+import { getEventNotes } from "../router/notes";
+import { getEventMessages } from "../router/messages";
+
 
 let loadingEvents: { [key: string]: Promise<ServerEvent>; } = {};
+
 
 /**
  * Get the event object from either the event token or the event code
@@ -38,6 +43,8 @@ export async function getEvent(eventToken: string, eventCode?: string) {
         return await loadingEvents[eventCode];
     }
 
+    const ticketUpdateEmitter = new TypedEmitter<TicketUpdateEvents>();
+
     loadingEvents[eventCode] = new Promise(async (resolve) => {
         const eventInMemory = events[eventCode];
 
@@ -55,11 +62,12 @@ export async function getEvent(eventToken: string, eventCode?: string) {
             }
 
             events[eventCode] = {
+                year: event.year,
                 code: eventCode,
                 token: eventToken,
                 teams: event.teams as TeamList,
                 checklist: event.checklist as EventChecklist,
-                users: event.users as number[],
+                users: event.users as Profile[],
                 monitorFrame: DEFAULT_MONITOR,
                 history: [DEFAULT_MONITOR],
                 lastMatchStart: null,
@@ -69,30 +77,17 @@ export async function getEvent(eventToken: string, eventCode?: string) {
                 robotStateChangeEmitter: new EventEmitter(),
                 fieldStatusEmitter: new EventEmitter(),
                 checklistEmitter: new EventEmitter(),
-                ticketEmitter: new EventEmitter(),
+                ticketUpdateEmitter: ticketUpdateEmitter,
                 cycleEmitter: new EventEmitter(),
                 scheduleDetails: event.scheduleDetails as ScheduleDetails,
                 lastPrestartDone: null,
                 lastMatchEnd: null,
-                teamCycleTracking: {},
-                tickets: await getTickets({ eventCode }),
+                robotCycleTracking: {},
+                tickets: await getEventTickets( eventCode ) as Ticket[],
+                notes: await getEventNotes( eventCode ) as Note[],
             };
 
-            // Keep tickets in memory so it loads faster
-            events[eventCode].ticketEmitter.on('create', async () => {
-                events[eventCode].tickets = await getTickets({ eventCode });
-            });
-            events[eventCode].ticketEmitter.on('assign', async () => {
-                events[eventCode].tickets = await getTickets({ eventCode });
-            });
-            events[eventCode].ticketEmitter.on('status', async () => {
-                events[eventCode].tickets = await getTickets({ eventCode });
-            });
-            events[eventCode].ticketEmitter.on('ticketReply', async () => {
-                events[eventCode].tickets = await getTickets({ eventCode });
-            });
-
-            console.log('Event loaded into memory: ', eventCode);
+            //console.log('Event loaded into memory: ', eventCode);
         }
 
         resolve(events[eventCode]);
@@ -101,4 +96,9 @@ export async function getEvent(eventToken: string, eventCode?: string) {
     await loadingEvents[eventCode];
     delete loadingEvents[eventCode];
     return events[eventCode];
+}
+
+export async function getListenerCount(event_token: string) {
+    const event = await getEvent(event_token);
+    console.log(`Update Listener Count - ${event.ticketUpdateEmitter.listenerCount('status')}`);
 }

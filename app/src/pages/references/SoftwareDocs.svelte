@@ -95,8 +95,8 @@
 				<Accordion class="text-left">
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">Main Documentation</span>
-						<a href="https://api.ctr-electronics.com/phoenix6/release/java/" target="_blank">
-							<QrCode value="https://api.ctr-electronics.com/phoenix6/release/java/" padding={5} />
+						<a href="https://v6.docs.ctr-electronics.com/en/stable/index.html" target="_blank">
+							<QrCode value="https://v6.docs.ctr-electronics.com/en/stable/index.html" padding={5} />
 						</a>
 					</AccordionItem>
 					<AccordionItem class="text-black dark:text-white">

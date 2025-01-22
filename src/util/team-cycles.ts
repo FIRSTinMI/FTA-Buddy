@@ -1,22 +1,22 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "../db/db";
-import { teamCycleLogs } from "../db/schema";
+import { robotCycleLogs } from "../db/schema";
 import { randomUUID } from "crypto";
 import { FieldState, MonitorFrame, ServerEvent, StateChange } from "../../shared/types";
 
 export async function getTeamCycle(eventCode: string, teamNumber: number, matchNumber: number, playNumber: number, level: 'None' | 'Practice' | 'Qualification' | 'Playoff') {
-    let cycle = await db.query.teamCycleLogs.findFirst({
+    let cycle = await db.query.robotCycleLogs.findFirst({
         where: and(
-            eq(teamCycleLogs.event, eventCode),
-            eq(teamCycleLogs.match_number, matchNumber),
-            eq(teamCycleLogs.play_number, playNumber),
-            eq(teamCycleLogs.level, level),
-            eq(teamCycleLogs.team, teamNumber)
+            eq(robotCycleLogs.event, eventCode),
+            eq(robotCycleLogs.match_number, matchNumber),
+            eq(robotCycleLogs.play_number, playNumber),
+            eq(robotCycleLogs.level, level),
+            eq(robotCycleLogs.team, teamNumber)
         )
     });
 
     if (!cycle) {
-        await db.insert(teamCycleLogs).values({
+        await db.insert(robotCycleLogs).values({
             id: randomUUID(),
             event: eventCode,
             match_number: matchNumber,
@@ -25,13 +25,13 @@ export async function getTeamCycle(eventCode: string, teamNumber: number, matchN
             team: teamNumber
         }).returning();
 
-        cycle = await db.query.teamCycleLogs.findFirst({
+        cycle = await db.query.robotCycleLogs.findFirst({
             where: and(
-                eq(teamCycleLogs.event, eventCode),
-                eq(teamCycleLogs.match_number, matchNumber),
-                eq(teamCycleLogs.play_number, playNumber),
-                eq(teamCycleLogs.level, level),
-                eq(teamCycleLogs.team, teamNumber)
+                eq(robotCycleLogs.event, eventCode),
+                eq(robotCycleLogs.match_number, matchNumber),
+                eq(robotCycleLogs.play_number, playNumber),
+                eq(robotCycleLogs.level, level),
+                eq(robotCycleLogs.team, teamNumber)
             )
         });
     }
@@ -42,11 +42,11 @@ export async function getTeamCycle(eventCode: string, teamNumber: number, matchN
 }
 
 export async function getTeamAverageCycle(team: number, eventCode?: string) {
-    const teamCycles = await db.query.teamCycleLogs.findMany({
+    const teamCycles = await db.query.robotCycleLogs.findMany({
         where:
             (eventCode ?
-                and(eq(teamCycleLogs.event, eventCode), eq(teamCycleLogs.team, team))
-                : eq(teamCycleLogs.team, team)),
+                and(eq(robotCycleLogs.event, eventCode), eq(robotCycleLogs.team, team))
+                : eq(robotCycleLogs.team, team)),
     });
 
     if (teamCycles.length === 0) return null;

@@ -1,5 +1,6 @@
 import { boolean, integer, jsonb, pgEnum, pgTable, serial, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
-
+import { Profile, Message } from "../../shared/types";
+import { relations } from "drizzle-orm";
 export const roleEnum = pgEnum('role', ['FTA', 'FTAA', 'CSA', 'RI']);
 
 export const users = pgTable('users', {
@@ -31,23 +32,61 @@ export const events = pgTable('events', {
 
 export const Event = typeof events.$inferInsert;
 
-export const messages = pgTable('messages', {
+export const tickets = pgTable('tickets', {
     id: serial('id').primaryKey(),
-    summary: varchar('summary'),
-    message: varchar('message').notNull(),
-    created_at: timestamp('created_at').notNull().defaultNow(),
-    user_id: serial('user_id').references(() => users.id).notNull(),
-    team: varchar('team').notNull(),
+    team: integer('team').notNull().default(-1),
+    subject: varchar('subject').notNull().default(''),
+    author_id: integer('author_id').references(() => users.id).notNull(),
+    author: jsonb('author').$type<Profile>(),
+    assigned_to_id: integer('assigned_to_id').references(() => users.id),
+    assigned_to: jsonb('assigned_to').$type<Profile>(),
     event_code: varchar('event_code').references(() => events.code).notNull(),
-    thread_id: serial('thread'),
-    is_ticket: boolean('is_ticket').notNull().default(false),
     is_open: boolean('is_open').notNull().default(true),
-    assigned_to: jsonb('assigned_to').notNull().default('[]'),
+    text: varchar('text').notNull().default(''),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+    updated_at: timestamp('updated_at').notNull().defaultNow(),
     closed_at: timestamp('closed_at'),
     match_id: uuid('match_id').references(() => matchLogs.id),
+    followers: jsonb('followers').$type<number[]>().default([]).notNull(),
 });
 
-export const Message = typeof messages.$inferInsert;
+export const eventTicketsRelations = relations(events, ({ many }) => ({
+    tickets: many(tickets),
+}));
+
+export const ticketEventRelations = relations(tickets, ({ one }) => ({
+    event: one(events, { fields: [tickets.event_code], references: [events.code] }),
+}));
+
+export const messages = pgTable('messages', {
+    id: uuid('id').primaryKey(),
+    ticket_id: integer('ticket_id').references(() => tickets.id).notNull(),
+    text: varchar('text').notNull().default(''),
+    author_id: integer('author_id').references(() => users.id).notNull(),
+    author: jsonb('author').$type<Profile>(),
+    event_code: varchar('event_code').references(() => events.code).notNull(),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+    updated_at: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const ticketMessagesRelations = relations(tickets, ({ many }) => ({
+    messages: many(messages),
+}));
+
+export const messageTicketRelations = relations(messages, ({ one }) => ({
+    ticket: one(tickets, { fields: [messages.ticket_id], references: [tickets.id] }),
+}));
+
+export const notes = pgTable('notes', {
+    id: uuid('id').primaryKey(),
+    text: varchar('text').notNull().default(''),
+    author_id: integer('author_id').references(() => users.id).notNull(),
+    author: jsonb('author').$type<Profile>(),
+    team: integer('team').notNull().default(-1),
+    event_code: varchar('event_code').references(() => events.code).notNull(),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+    updated_at: timestamp('updated_at').notNull().defaultNow(),
+});
 
 export const levelEnum = pgEnum('level', ['None', 'Practice', 'Qualification', 'Playoff']);
 
@@ -120,7 +159,7 @@ export const logPublishing = pgTable('log_publishing', {
     expire_time: timestamp('expire_time').notNull()
 });
 
-export const teamCycleLogs = pgTable('team_cycle_logs', {
+export const robotCycleLogs = pgTable('team_cycle_logs', {
     id: uuid('id').primaryKey(),
     event: varchar('event').notNull(),
     match_number: integer('match_number').notNull(),
@@ -142,7 +181,7 @@ export const teamCycleLogs = pgTable('team_cycle_logs', {
     time_code: integer('time_code'),
 });
 
-export const TeamCycleLog = typeof teamCycleLogs.$inferInsert;
+export const RobotCycleLog = typeof robotCycleLogs.$inferInsert;
 
 export const pushSubscriptions = pgTable('push_subscriptions', {
     id: serial('id').primaryKey(),

@@ -1,5 +1,9 @@
 import { writable } from "svelte/store";
+import { createInstance } from "localforage";
 
+export const localforage = createInstance({
+    name: "ftabuddy-settings"
+});
 export interface Settings {
     version: string;
     developerMode: boolean;
@@ -12,11 +16,16 @@ export interface Settings {
     notifications: boolean;
     darkMode: boolean;
     inspectionAlerts: boolean;
-    robotNotifications: boolean;
     roundGreen: boolean;
     musicVolume: number;
     musicType: 'none' | 'jazz' | 'lofi';
     acknowledgedNotesPolicy: boolean;
+    notificationCategories: {
+        create: boolean;
+        follow: boolean;
+        assign: boolean;
+        robot: boolean;
+    };
 }
 
 let initialSettings = localStorage.getItem('settings');
@@ -33,11 +42,16 @@ const defaultSettings: Settings = {
     notifications: false,
     darkMode: true,
     inspectionAlerts: true,
-    robotNotifications: false,
     roundGreen: true,
     musicVolume: 12,
     musicType: 'none',
-    acknowledgedNotesPolicy: false
+    acknowledgedNotesPolicy: false,
+    notificationCategories: {
+        create: true,
+        follow: true,
+        assign: true,
+        robot: true
+    }
 };
 
 if (!initialSettings) {
@@ -53,9 +67,10 @@ if (!initialSettings) {
 }
 
 export const settingsStore = writable<Settings>(JSON.parse(initialSettings));
-settingsStore.subscribe((value: Settings) => {
+settingsStore.subscribe(async (value: Settings) => {
     if (value === undefined) {
         value = defaultSettings;
     }
     localStorage.setItem('settings', JSON.stringify(value));
+    await localforage.setItem('settings', JSON.stringify(value));
 });

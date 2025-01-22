@@ -3,6 +3,7 @@
         "./src/**/*.ts",
         "./shared/**/*.ts",
         "./extension/**/*.ts",
+        "../app/node_modules/svelte/*"
     ],
     "compilerOptions": {
         "target": "es2016",

@@ -1,5 +1,5 @@
 import { get } from "svelte/store";
-import { authStore } from "../stores/auth";
+import { userStore } from "../stores/user";
 import { eventStore } from "../stores/event";
 import { settingsStore } from "../stores/settings";
 
@@ -50,7 +50,7 @@ export const VERSIONS: { [key: string]: Version; } = {
         </ul>`,
         update: () => {
             settingsStore.update(s => {
-                s.robotNotifications = false;
+                s.notificationCategories.robot = false;
                 s.notifications = false;
                 return s;
             });
@@ -98,8 +98,8 @@ export const VERSIONS: { [key: string]: Version; } = {
         <li>Share button in match log will generate QR code to share that station's log with the team</li>
         </ul>`,
         update: () => {
-            eventStore.set({ code: "", pin: "", teams: [] });
-            authStore.set({ ...get(authStore), eventToken: "" });
+            eventStore.set({ code: "", pin: "", teams: [], users: [] });
+            userStore.set({ ...get(userStore), eventToken: "" });
         }
     },
     '2.4.5': {

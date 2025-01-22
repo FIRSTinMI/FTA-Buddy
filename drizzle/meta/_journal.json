@@ -162,6 +162,90 @@
       "when": 1735316862000,
       "tag": "0022_clean_blue_blade",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "5",
+      "when": 1735597459678,
+      "tag": "0023_unique_triathlon",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "5",
+      "when": 1735597872029,
+      "tag": "0024_parallel_titania",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "5",
+      "when": 1735597895431,
+      "tag": "0025_dizzy_triathlon",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "5",
+      "when": 1736278863821,
+      "tag": "0026_glorious_quentin_quire",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "5",
+      "when": 1736354195990,
+      "tag": "0027_shiny_mad_thinker",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "5",
+      "when": 1736359538586,
+      "tag": "0028_yielding_black_bird",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "5",
+      "when": 1736359657710,
+      "tag": "0029_numerous_carmella_unuscione",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "5",
+      "when": 1736361909172,
+      "tag": "0030_whole_mad_thinker",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "5",
+      "when": 1736362732971,
+      "tag": "0031_happy_shotgun",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "5",
+      "when": 1736363709374,
+      "tag": "0032_real_red_hulk",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "5",
+      "when": 1736783080832,
+      "tag": "0033_certain_overlord",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "5",
+      "when": 1736783225448,
+      "tag": "0034_outgoing_franklin_storm",
+      "breakpoints": true
     }
   ]
 }

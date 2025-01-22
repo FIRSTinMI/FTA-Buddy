@@ -1,4 +1,5 @@
 import { EventEmitter } from "events";
+import { TypedEmitter } from "tiny-typed-emitter";
 
 export interface MonitorFrame {
     field: FieldState;
@@ -8,29 +9,29 @@ export interface MonitorFrame {
     time: string;
     version: string;
     frameTime: number;
-    blue1: TeamInfo;
-    blue2: TeamInfo;
-    blue3: TeamInfo;
-    red1: TeamInfo;
-    red2: TeamInfo;
-    red3: TeamInfo;
+    blue1: RobotInfo;
+    blue2: RobotInfo;
+    blue3: RobotInfo;
+    red1: RobotInfo;
+    red2: RobotInfo;
+    red3: RobotInfo;
     lastCycleTime: string;
 }
 
 type PartialBy<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>> & Partial<Pick<T, K>>;
 
 export interface PartialMonitorFrame extends Omit<MonitorFrame, 'blue1' | 'blue2' | 'blue3' | 'red1' | 'red2' | 'red3'> {
-    blue1: PartialTeamInfo;
-    blue2: PartialTeamInfo;
-    blue3: PartialTeamInfo;
-    red1: PartialTeamInfo;
-    red2: PartialTeamInfo;
-    red3: PartialTeamInfo;
+    blue1: PartialRobotInfo;
+    blue2: PartialRobotInfo;
+    blue3: PartialRobotInfo;
+    red1: PartialRobotInfo;
+    red2: PartialRobotInfo;
+    red3: PartialRobotInfo;
 }
 
-export type PartialTeamInfo = PartialBy<TeamInfo, 'lastChange' | 'improved' | 'warnings'>
+export type PartialRobotInfo = PartialBy<RobotInfo, 'lastChange' | 'improved' | 'warnings'>;
 
-export interface TeamInfo {
+export interface RobotInfo {
     number: number;
     ds: DSState;
     radio: boolean;
@@ -52,10 +53,10 @@ export interface TeamInfo {
     versionmm: boolean;
     lastChange: Date | null;
     improved: boolean;
-    warnings: TeamWarnings[];
+    warnings: RobotWarnings[];
 }
 
-export enum TeamWarnings {
+export enum RobotWarnings {
     NOT_INSPECTED,
     RADIO_NOT_FLASHED,
     SLOW,
@@ -130,7 +131,7 @@ export enum EnableState {
     ASTOP
 }
 
-export type MonitoredRobotParts = Omit<keyof TeamInfo, 'number' | 'bwu' | 'battery' | 'ping' | 'packets' | 'MAC' | 'RX' | 'RXMCS' | 'TX' | 'TXMCS' | 'SNR' | 'noise' | 'signal' | 'versionmm'>;
+export type MonitoredRobotParts = Omit<keyof RobotInfo, 'number' | 'bwu' | 'battery' | 'ping' | 'packets' | 'MAC' | 'RX' | 'RXMCS' | 'TX' | 'TXMCS' | 'SNR' | 'noise' | 'signal' | 'versionmm'>;
 
 export enum StateChangeType {
     FallingEdge,
@@ -139,7 +140,7 @@ export enum StateChangeType {
 
 export interface StateChange {
     station: ROBOT,
-    robot: TeamInfo,
+    robot: RobotInfo,
     key: MonitoredRobotParts,
     oldValue: boolean | DSState | EnableState,
     newValue: boolean | DSState | EnableState;
@@ -219,7 +220,7 @@ export interface FMSLogFrame {
     txMCS: number | null,
     rxRate: number | null,
     rxMCS: number | null,
-    dataRateTotal: number
+    dataRateTotal: number;
 }
 
 export interface MatchLog {
@@ -324,24 +325,25 @@ export const FMSLevelMap: { [key in FMSEnums.Level]: "None" | "Practice" | "Qual
     [FMSEnums.Level.Practice]: "Practice",
     [FMSEnums.Level.Qualification]: "Qualification",
     [FMSEnums.Level.Playoff]: "Playoff"
-}
+};
 
-export interface TeamChecklist { present: boolean, weighed: boolean, inspected: boolean, radioProgrammed: boolean, connectionTested: boolean }
-export type EventChecklist = { [key: string]: TeamChecklist }
-export type TeamList = ({ number: string, name: string, inspected: boolean })[]
+export interface TeamChecklist { present: boolean, weighed: boolean, inspected: boolean, radioProgrammed: boolean, connectionTested: boolean; }
+export type EventChecklist = { [key: string]: TeamChecklist; };
+export type TeamList = ({ number: string, name: string, inspected: boolean; })[];
 
 export interface ServerEvent {
     code: string,
     token: string,
+    year: number,
     fieldMonitorEmitter: EventEmitter,
     robotStateChangeEmitter: EventEmitter,
     fieldStatusEmitter: EventEmitter,
     checklistEmitter: EventEmitter,
-    ticketEmitter: EventEmitter,
+    ticketUpdateEmitter: TypedEmitter<TicketUpdateEvents>,
     cycleEmitter: EventEmitter,
     teams: TeamList,
     checklist: EventChecklist,
-    users: number[],
+    users: Profile[],
     monitorFrame: MonitorFrame,
     history: MonitorFrame[],
     scheduleDetails: ScheduleDetails,
@@ -350,19 +352,164 @@ export interface ServerEvent {
     lastMatchEnd: Date | null,
     lastMatchRefDone: Date | null,
     lastMatchScoresPosted: Date | null;
-    teamCycleTracking: {
+    robotCycleTracking: {
         prestart?: Date,
-        blue1?: TeamCycleTracking,
-        blue2?: TeamCycleTracking,
-        blue3?: TeamCycleTracking,
-        red1?: TeamCycleTracking,
-        red2?: TeamCycleTracking,
-        red3?: TeamCycleTracking;
+        blue1?: RobotCycleTracking,
+        blue2?: RobotCycleTracking,
+        blue3?: RobotCycleTracking,
+        red1?: RobotCycleTracking,
+        red2?: RobotCycleTracking,
+        red3?: RobotCycleTracking;
     };
-    tickets: Ticket[];
+    tickets: Ticket[],
+    notes: Note[],
 }
 
-export interface TeamCycleTracking {
+export type TicketUpdateEvents = {
+    create: (
+        data: {
+            kind: "create",
+            ticket_id: number,
+            ticket: Ticket;
+        }
+    ) => void;
+    assign: (
+        data: {
+            kind: "assign",
+            ticket_id: number,
+            assigned_to_id: number | null,
+            assigned_to: Profile | null,
+        }
+    ) => void;
+    status: (
+        data: {
+            kind: "status",
+            ticket_id: number,
+            is_open: boolean;
+        }
+    ) => void;
+    follow: (
+        data: {
+            kind: "follow",
+            ticket_id: number,
+            followers: number[],
+        }
+    ) => void;
+    delete_ticket: (
+        data: {
+            kind: "delete_ticket",
+            ticket_id: number;
+        }
+    ) => void;
+    edit: (
+        data: {
+            kind: "edit",
+            ticket_id: number,
+            ticket_subject: string,
+            ticket_text: string,
+            ticket_updated_at: Date,
+        }
+    ) => void;
+    add_message: (
+        data: {
+            kind: "add_message",
+            ticket_id: number,
+            message: Message;
+        }
+    ) => void;
+    edit_message: (
+        data: {
+            kind: "edit_message",
+            ticket_id: number,
+            message: Message,
+        }
+    ) => void;
+    delete_message: (
+        data: {
+            kind: "delete_message",
+            ticket_id: number,
+            message_id: string,
+        }
+    ) => void;
+};
+
+type AssignUpdateTicketEvent = {
+    kind: "assign";
+    ticket_id: number;
+    assigned_to_id: number | null;
+    assigned_to: Profile | null;
+};
+
+type StatusUpdateTicketEvent = {
+    kind: "status";
+    ticket_id: number;
+    is_open: boolean;
+};
+
+type FollowUpdateTicketEvent = {
+    kind: "follow";
+    ticket_id: number;
+    followers: number[];
+};
+
+type CreateUpdateTicketEvent = {
+    kind: "create";
+    ticket_id: number,
+    ticket: Ticket;
+};
+
+type DeleteTicketUpdateTicketEvent = {
+    kind: "delete_ticket";
+    ticket_id: number;
+};
+
+type EditUpdateTicketEvent = {
+    kind: "edit";
+    ticket_id: number;
+    ticket_subject: string;
+    ticket_text: string;
+    ticket_updated_at: Date;
+};
+
+type AddMessageUpdateTicketEvent = {
+    kind: "add_message";
+    ticket_id: number;
+    message: Message;
+};
+
+type EditMessageUpdateTicketEvent = {
+    kind: "edit_message";
+    ticket_id: number;
+    message: Message;
+};
+
+type DeleteMessageUpdateTicketEvent = {
+    kind: "delete_message";
+    ticket_id: number;
+    message_id: string;
+};
+
+export type TicketUpdateEventData =
+    | AssignUpdateTicketEvent
+    | StatusUpdateTicketEvent
+    | FollowUpdateTicketEvent
+    | CreateUpdateTicketEvent
+    | DeleteTicketUpdateTicketEvent
+    | EditUpdateTicketEvent
+    | AddMessageUpdateTicketEvent
+    | EditMessageUpdateTicketEvent
+    | DeleteMessageUpdateTicketEvent;
+
+export type NotificationEvents = {
+    send: (
+        data: {
+            users: number[],
+            notification: Notification;
+        }
+    ) => void;
+};
+
+export interface RobotCycleTracking {
     team: number,
     firstDS?: Date,
     lastDS?: Date,
@@ -393,56 +540,71 @@ export interface CycleData {
 export interface Profile {
     id: number,
     username: string,
-    role: "ADMIN" | "FTAA" | "FTA" | "CSA" | "RI";
+    role: "FTAA" | "FTA" | "CSA" | "RI";
+    admin: boolean,
 }
 
 export interface Ticket {
     id: number,
-    team: string,
-    teamName?: string,
-    summary: string,
-    user_id: number,
-    user?: Profile,
-    assigned_to: Profile[],
+    team: number,
+    subject: string,
+    author_id: number,
+    author: Profile,
+    assigned_to_id: number | null,
+    assigned_to: Profile | null,
     event_code: string,
-    is_ticket: true,
     is_open: boolean,
-    matchId?: string,
-    message: string,
+    text: string,
     created_at: Date,
+    updated_at: Date,
     closed_at?: Date | null,
-    messages: TicketMessage[];
-    match?: {
-        id: string,
-        match_number: number,
-        play_number: number,
-        level: TournamentLevel,
-        stations: {
-            blue1: number,
-            blue2: number,
-            blue3: number,
-            red1: number,
-            red2: number,
-            red3: number;
-        };
-    };
+    match_id?: string | null,
+    followers: number[],
+    messages?: Message[],
 }
 
-export interface TicketMessage extends Message {
+export interface Note {
+    id: string,
+    text: string,
+    author_id: number,
+    author: Profile,
+    team: number,
+    event_code: string,
+    created_at: Date,
+    updated_at: Date,
 }
 
 export interface Message {
-    id: number,
-    message: string,
-    user_id: number,
-    team: string,
+    id: string,
+    ticket_id: number,
+    text: string,
+    author_id: number,
+    author: Profile,
     event_code: string,
-    thread_id: number,
-    is_ticket: false,
-    is_open: boolean,
-    match_id: string | null,
     created_at: Date,
-    user?: Profile;
+    updated_at: Date,
+}
+
+export type NotificationTopic = 
+    | 'Ticket-Created'
+    | 'Ticket-Status' 
+    | 'Ticket-Assigned' 
+    | 'New-Ticket-Message' 
+    | "Ticket-Follow" 
+    | 'Robot-Status';
+    
+export interface Notification {
+    id: string,
+    timestamp: Date,
+    title: string;
+    topic: NotificationTopic;
+    body?: string;
+    icon?: string;
+    tag?: string;
+    data?: {
+        page?: string;
+        ticket_id?: number;
+    };
 }
 
 export type ScheduleBreakdown = {

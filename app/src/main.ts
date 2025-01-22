@@ -2,13 +2,13 @@ import "./app.pcss";
 import App from "./App.svelte";
 import { createTRPCClient, createWSClient, httpBatchLink, splitLink, wsLink } from '@trpc/client';
 import type { AppRouter } from '../../src/index';
-import { authStore } from "./stores/auth";
+import { userStore } from "./stores/user";
 import { get } from "svelte/store";
 import { settingsStore } from "./stores/settings";
 import SuperJSON from "superjson";
 
-let token = get(authStore).token;
-let eventToken = get(authStore).eventToken;
+let token = get(userStore).token;
+let eventToken = get(userStore).eventToken;
 
 export let server = (get(settingsStore).forceCloud) ? 'https://ftabuddy.com' : window.location.protocol + '//' + window.location.hostname;
 let localServer = server !== 'https://ftabuddy.com';
@@ -39,7 +39,7 @@ export let trpc = createTRPCClient<AppRouter>({
     ]
 });
 
-authStore.subscribe((value) => {
+userStore.subscribe((value) => {
     token = value.token;
     eventToken = value.eventToken;
     trpc = createTRPCClient<AppRouter>({
@@ -65,8 +65,13 @@ authStore.subscribe((value) => {
     });
 });
 
+const target = document.getElementById("app");
+if (!target) {
+    throw new Error("App target element not found");
+}
+
 const app = new App({
-    target: document.getElementById("app"),
+    target: target,
 });
 
 export default app;

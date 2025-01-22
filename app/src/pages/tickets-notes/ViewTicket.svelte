@@ -2,84 +2,127 @@
 	import { get } from "svelte/store";
 	import Spinner from "../../components/Spinner.svelte";
 	import { trpc } from "../../main";
-	import { formatTime } from "../../../../shared/formatTime";
-	import { toast } from "../../util/toast";
+	import { formatTimeNoAgoHourMins } from "../../../../shared/formatTime";
+	import { toast } from "../../../../shared/toast";
 	import { eventStore } from "../../stores/event";
-	import { ROBOT } from "../../../../shared/types";
-	import { Alert, Button, Textarea, ToolbarButton } from "flowbite-svelte";
+	import { ROBOT, type Message, type Profile, type TicketUpdateEvents, type TicketUpdateEventData } from "../../../../shared/types";
+	import { Alert, Button, Textarea, ToolbarButton, Modal, Label } from "flowbite-svelte";
+	import { EditOutline, ExclamationCircleOutline, TrashBinOutline, ArrowLeftOutline } from "flowbite-svelte-icons";
 	import { navigate } from "svelte-routing";
 	import { userStore } from "../../stores/user";
 	import Icon from "@iconify/svelte";
-	import Message from "../../components/Message.svelte";
 	import { onDestroy, onMount, tick } from "svelte";
-	import { startBackgroundSubscription, stopBackgroundSubscription } from "../../util/notifications";
 	import { settingsStore } from "../../stores/settings";
 	import NotesPolicy from "../../components/NotesPolicy.svelte";
+	import MessageCard from "../../components/MessageCard.svelte";
 
 	export let id: string;
 
-	let promise = trpc.messages.getTicket.query({ id: parseInt(id) });
-	let ticket: Awaited<ReturnType<typeof trpc.messages.getTicket.query>> | undefined = undefined;
-	let time: string = "";
-	let station: ROBOT | undefined = undefined;
+	let ticket_id = parseInt(id);
+
+	let event = get(eventStore);
 	let user = get(userStore);
+
+	let ticket: Awaited<ReturnType<typeof trpc.tickets.getByIdWithMessages.query>>;
+
+	let ticketPromise: Promise<any> | undefined;
+
+	let match_id: string | undefined | null;
+
+	let matchPromise: Promise<any> | undefined;
+
+	let match: Awaited<ReturnType<typeof trpc.match.getMatch.query>>;
+
+	let time: string = "";
+
+	let station: ROBOT | undefined = undefined;
+
 	let assignedToUser = false;
 
-	let subscription: ReturnType<typeof trpc.messages.ticketSubscription.subscribe> | undefined;
+	let sortedMessages: Message[] | undefined;
 
-	$: if (ticket && user) {
-		assignedToUser = ticket.assigned_to.map((u) => u?.id).includes(user.id);
-	}
+	let deleteTicketPopup = false;
 
-	promise
-		.then(async (res) => {
-			res.messages = res.messages.reverse();
-			ticket = res;
-			time = formatTime(ticket?.created_at);
-			if (ticket.match) {
+	let editTicketView = false;
+	let editTicketText: string;
+	let editTicketSubject: string;
+
+	async function getTicketAndMatch() {
+		ticketPromise = trpc.tickets.getByIdWithMessages.query({
+			id: ticket_id,
+			event_code: event.code,
+		});
+		ticket = await ticketPromise;
+
+		if (ticket) {
+			if (ticket.match_id) {
+				match_id = ticket.match_id;
+				matchPromise = trpc.match.getMatch.query({ id: match_id });
+				match = await matchPromise;
+
 				switch (ticket.team) {
-					case ticket.match.stations.red1:
+					case match.red1:
 						station = ROBOT.red1;
 						break;
-					case ticket.match.stations.red2:
+					case match.red2:
 						station = ROBOT.red2;
 						break;
-					case ticket.match.stations.red3:
+					case match.red3:
 						station = ROBOT.red3;
 						break;
-					case ticket.match.stations.blue1:
+					case match.blue1:
 						station = ROBOT.blue1;
 						break;
-					case ticket.match.stations.blue2:
+					case match.blue2:
 						station = ROBOT.blue2;
 						break;
-					case ticket.match.stations.blue3:
+					case match.blue3:
 						station = ROBOT.blue3;
 						break;
+					default:
+						console.log("Unable to assign match station");
+						break;
 				}
+			} else {
+				match_id = null;
 			}
+			time = formatTimeNoAgoHourMins(ticket.created_at);
 
-			await tick();
-			scrollToBottom();
-		})
-		.catch((err) => {
-			console.error(err);
-			toast("An error occurred while fetching the ticket", err.message);
-		});
+			assignedToUser = ticket.assigned_to_id === user.id ? true : false;
+			editTicketText = ticket.text;
+			editTicketSubject = ticket.subject;
+		}
+	}
+
+	$: sortedMessages = ticket && ticket.messages ? ticket.messages?.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) : [];
+
+	onMount(async () => {
+		getTicketAndMatch();
+		foregroundUpdate();
+	});
 
 	setInterval(
 		() => {
 			if (!ticket) return;
-			time = formatTime(ticket?.created_at);
+			time = formatTimeNoAgoHourMins(ticket?.created_at);
 		},
 		time.includes("s ") ? 1000 : 60000
 	);
 
-	async function closeOpenTicket() {
+	async function changeOpenStatus() {
+		let update;
 		if (!ticket) return;
 		try {
-			const update = await trpc.messages.updateTicketStatus.query({ id: ticket.id, status: !ticket.is_open });
-			ticket.is_open = update.is_open;
+			if (ticket.messages && ticket.messages?.length > 0) {
+				if (ticket.is_open === true) {
+					update = await trpc.tickets.updateStatus.query({ id: ticket.id, new_status: false, event_code: event.code });
+				} else {
+					update = await trpc.tickets.updateStatus.query({ id: ticket.id, new_status: true, event_code: event.code });
+				}
+				ticket.is_open = update.is_open;
+			} else {
+				toast("Ticket must have at least 1 Added Message to be Closed", "");
+			}
 		} catch (err: any) {
 			toast("An error occurred while updating the ticket", err.message);
 			console.error(err);
@@ -88,10 +131,17 @@
 	}
 
 	async function assignSelf() {
+		let update;
 		if (!ticket) return;
+		assignedToUser = ticket.assigned_to_id === user.id ? true : false;
 		try {
-			const update = await trpc.messages.assignTicket.query({ id: ticket.id, user: user?.id ?? 0, assign: !assignedToUser });
-			ticket.assigned_to = update;
+			if (ticket.assigned_to_id === user.id) {
+				update = await trpc.tickets.unAssign.query({ ticket_id: ticket.id, event_code: event.code });
+				assignedToUser = false;
+			} else {
+				update = await trpc.tickets.assign.query({ id: ticket.id, user_id: user.id, event_code: event.code });
+				assignedToUser = true;
+			}
 		} catch (err: any) {
 			toast("An error occurred while updating the ticket", err.message);
 			console.error(err);
@@ -100,13 +150,17 @@
 	}
 
 	function viewLog() {
-		if (!ticket || !ticket.match || !station) return;
-		navigate(`/app/logs/${ticket.match.id}/${station}`);
+		if (!ticket || !ticket.match_id || !station) return;
+		navigate(`/app/logs/${ticket.match_id}/${station}`);
 	}
 
 	function back() {
 		if (window.history.state === null) {
-			navigate("/app/messages");
+			if (user.role === "CSA" || user.role === "RI") {
+				navigate("/app/");
+			} else {
+				navigate("/app/tickets/");
+			}
 		} else {
 			window.history.back();
 		}
@@ -115,14 +169,14 @@
 	function sendKey(event: KeyboardEvent) {
 		if (event.key === "Enter" && !event.shiftKey) {
 			event.preventDefault();
-			sendMessage(new SubmitEvent("submit"));
+			postMessage(new SubmitEvent("submit"));
 		}
 	}
 
-	let message: string = "";
+	let message_text: string = "";
 
-	async function sendMessage(evt: SubmitEvent) {
-		if (message.trim().length < 1) {
+	async function postMessage(evt: SubmitEvent) {
+		if (message_text.trim().length < 1) {
 			toast("Error Sending Message", "Message cannot be empty");
 		}
 
@@ -133,34 +187,13 @@
 				await notesPolicyElm.confirmPolicy();
 			}
 
-			await trpc.messages.addMessage.query({
-				message: message.trim(),
-				team: ticket.team,
-				ticketId: ticket.id,
-				eventToken: get(userStore).eventToken,
+			const message = await trpc.tickets.messages.create.query({
+				text: message_text.trim(),
+				ticket_id: ticket.id,
+				event_code: event.code,
 			});
 
-			console.log({
-				id: 0,
-				message: message.trim(),
-				team: ticket.team.toString(),
-				user: user,
-				user_id: user.id,
-				event_code: get(eventStore).code,
-				created_at: new Date(),
-			});
-
-			ticket.messages.push({
-				id: 0,
-				message: message.trim(),
-				team: ticket.team.toString(),
-				user: user,
-				user_id: user.id,
-				event_code: get(eventStore).code,
-				created_at: new Date(),
-			});
-
-			message = "";
+			message_text = "";
 
 			ticket = { ...ticket };
 		} catch (err: any) {
@@ -178,53 +211,223 @@
 		}
 	}
 
-	onMount(() => {
-		stopBackgroundSubscription();
-		if (subscription) subscription.unsubscribe();
-		if (ticket) {
-			subscription = trpc.messages.ticketSubscription.subscribe(
-				{ id: ticket.id, eventToken: $userStore.eventToken },
-				{
-					onData: (data) => {
-						console.log(data);
-						if (!ticket) return;
-						if (data.data.is_ticket) {
-							if (data.data.id !== ticket.id) return;
-						} else {
-							if (data.data.thread_id !== ticket.id) return;
-						}
-
-						if (data.type === "status") {
-							ticket.is_open = data.data.is_open;
-						} else if (data.type === "assign" && data.data.is_ticket) {
-							ticket.assigned_to = data.data.assigned_to;
-						} else if (data.type === "ticketReply" && !data.data.is_ticket) {
-							ticket.messages.push(data.data);
-						}
-					},
-				}
-			);
+	async function editTicket() {
+		try {
+			if (editTicketText !== ticket.text && editTicketSubject !== ticket.subject) {
+				const res = await trpc.tickets.edit.query({
+					id: ticket_id,
+					new_text: editTicketText,
+					new_subject: editTicketSubject,
+					event_code: event.code,
+				});
+				toast("Ticket edited successfully", "success", "green-500");
+			} else if (editTicketText !== ticket.text) {
+				const res = await trpc.tickets.edit.query({
+					id: ticket_id,
+					new_text: editTicketText,
+					event_code: event.code,
+				});
+				toast("Ticket edited successfully", "success", "green-500");
+			} else if (editTicketSubject !== ticket.subject) {
+				const res = await trpc.tickets.edit.query({
+					id: ticket_id,
+					new_subject: editTicketSubject,
+					event_code: event.code,
+				});
+				toast("Ticket edited successfully", "success", "green-500");
+			}
+		} catch (err: any) {
+			toast("An error occurred while editing the Ticket", err.message);
+			console.error(err);
+			return;
 		}
-	});
+	}
 
-	onDestroy(() => {
-		startBackgroundSubscription();
-	});
+	async function deleteTicket() {
+		try {
+			if (!ticket.messages || ticket.is_open || !ticket.followers) {
+				const res = await trpc.tickets.delete.query({
+					id: ticket_id,
+					event_code: event.code,
+				});
+				toast("Ticket deleted successfully", "success", "green-500");
+			} else {
+				toast("Ticket has messages or followers or is closed", "");
+			}
+			back();
+		} catch (err: any) {
+			toast("An error occurred while deleting the Ticket", err.message);
+			console.error(err);
+			return;
+		}
+	}
+
+	async function toggleFollowTicket() {
+		try {
+			if (!ticket.followers.includes(user.id)) {
+				const res = await trpc.tickets.follow.query({
+					id: ticket_id,
+					follow: true,
+					event_code: event.code,
+				});
+				// startBackgroundTicketSubscription(ticket_id);
+			} else {
+				const res = await trpc.tickets.follow.query({
+					id: ticket_id,
+					follow: false,
+					event_code: event.code,
+				});
+			}
+		} catch (err: any) {
+			toast("An error occurred while following the Ticket", err.message);
+			console.error(err);
+			return;
+		}
+	}
+
+	let foregroundUpdater: ReturnType<typeof trpc.tickets.pushSubscription.subscribe>;
+
+	function foregroundUpdate() {
+		if (foregroundUpdater && typeof foregroundUpdater.unsubscribe === "function") foregroundUpdater.unsubscribe();
+		foregroundUpdater = trpc.tickets.updateSubscription.subscribe(
+			{
+				eventToken: get(userStore).eventToken,
+				ticket_id: ticket_id,
+				eventOptions: {
+					assign: true,
+					status: true,
+					follow: true,
+					add_message: true,
+					edit_message: true,
+					delete_message: true,
+				},
+			},
+			{
+				onData: (data) => {
+					console.log(data);
+					if (data.ticket_id === ticket.id) {
+						switch (data.kind) {
+							case "assign":
+								ticket.assigned_to_id = data.assigned_to_id;
+								ticket.assigned_to = data.assigned_to;
+								break;
+							case "status":
+								ticket.is_open = data.is_open;
+								break;
+							case "follow":
+								ticket.followers = data.followers;
+								break;
+							case "add_message":
+								if (ticket.messages) {
+									ticket.messages.push(data.message);
+								} else {
+									ticket.messages = [data.message];
+								}
+								ticket = ticket;
+								break;
+							case "edit_message":
+								if (ticket.messages) {
+									let updatedMessages = ticket.messages.map((message) => {
+										if (message.id === data.message.id) {
+											return { ...message, text: data.message.text };
+										}
+										return message;
+									});
+									ticket.messages = updatedMessages;
+								}
+								break;
+							case "delete_message":
+								if (ticket.messages) {
+									let updatedMessages = ticket.messages.filter((message) => (message.id !== data.message_id));
+									ticket.messages = updatedMessages;
+								}
+								break;
+							default:
+								console.warn(`Unhandled event kind: ${data.kind}`);
+								break;
+						}
+					}
+				},
+			}
+		);
+	}
+
 	let notesPolicyElm: NotesPolicy;
 </script>
 
+<Modal bind:open={editTicketView} size="lg" dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
+	<div slot="header">
+		<h1 class="text-2xl font-bold text-black dark:text-white place-content-center">Edit Ticket #{ticket_id}</h1>
+	</div>
+	<form class="text-left flex flex-col gap-4" on:submit={editTicket}>
+		<Label for="subject">Edit Subject:</Label>
+		<Textarea id="subject" class="w-full" rows="1" bind:value={editTicketSubject} />
+		<Label for="text">Edit Text:</Label>
+		<Textarea id="text" class="w-full" rows="5" bind:value={editTicketText} />
+		<Button type="submit">Save Changes</Button>
+	</form>
+</Modal>
+
+<Modal bind:open={deleteTicketPopup} size="sm" outsideclose dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
+	<div class="text-center">
+		<h3 class="mb-5 text-lg">Are you sure you want to delete this Ticket?</h3>
+		<h2 class="mb-5 text-sm">Unable to delete Tickets that have attached Messages or followers, or those that have been closed.</h2>
+		<Button on:click={deleteTicket} color="red" class="me-2">Yes, I'm sure</Button>
+		<Button on:click={() => (deleteTicketPopup = false)}>No, cancel</Button>
+	</div>
+</Modal>
+
 <NotesPolicy bind:this={notesPolicyElm} />
 
-<div class="container mx-auto px-2 pt-2 h-full flex flex-col gap-2 max-w-5xl">
-	<Button on:click={back} class="w-fit">Back</Button>
-	{#await promise}
+<div class="mx-auto px-2 pt-2 flex flex-col gap-2 max-w-5xl">
+	{#await ticketPromise}
 		<Spinner />
 	{:then}
-		{#if ticket === undefined}
+		{#if !ticket}
 			<p class="text-red-500">Ticket not found</p>
 		{:else}
-			<h1 class="text-2xl font-bold">
-				Ticket #{id} -
+			{#if user.id === ticket.author_id}
+				<div class="flex flex-row justify-between h-10 gap-1">
+					<div class="flex flex-row gap-1">
+						<Button on:click={back} class=""><ArrowLeftOutline class="" style="height: 13px; width: 13px;" /></Button>
+						{#if !ticket.followers.includes(user.id)}
+							<Button on:click={toggleFollowTicket} class=""
+								><Icon icon="simple-line-icons:user-following" style="height: 13px; width: 18px; padding-right: 4px;" /> Follow</Button
+							>
+						{:else}
+							<Button on:click={toggleFollowTicket} class=""
+								><Icon icon="simple-line-icons:user-unfollow" style="height: 13px; width: 18px; padding-right: 4px;" /> Unfollow</Button
+							>
+						{/if}
+					</div>
+					<div class="flex flex-row gap-1">
+						<Button on:click={() => location.reload()} class=""><Icon icon="charm:refresh" style="height: 13px; width: 13px;" /></Button>
+						<Button on:click={() => (editTicketView = true)} class=""><EditOutline class="" style="height: 13px; width: 13px;" /></Button>
+						<Button on:click={() => (deleteTicketPopup = true)} class=""><TrashBinOutline class="" style="height: 13px; width: 13px;" /></Button
+						>
+					</div>
+				</div>
+			{:else}
+			<div class="flex flex-row justify-between h-10 gap-1">
+				<div class="flex flex-row gap-1">
+					<Button on:click={back} class=""><ArrowLeftOutline class="" style="height: 13px; width: 13px;" /></Button>
+					{#if !ticket.followers.includes(user.id)}
+						<Button on:click={toggleFollowTicket} class=""
+							><Icon icon="simple-line-icons:user-following" style="height: 13px; width: 18px; padding-right: 4px;" /> Follow</Button
+						>
+					{:else}
+						<Button on:click={toggleFollowTicket} class=""
+							><Icon icon="simple-line-icons:user-unfollow" style="height: 13px; width: 18px; padding-right: 4px;" /> Unfollow</Button
+						>
+					{/if}
+				</div>
+				<div class="flex flex-row gap-1">
+					<Button on:click={() => location.reload()} class=""><Icon icon="charm:refresh" style="height: 13px; width: 13px;" /></Button>
+				</div>
+			</div>
+			{/if}
+			<h1 class="text-3xl font-bold p-2">
+				Ticket #{ticket_id} -
 				{#if ticket.is_open}
 					<span class="text-green-500 font-bold">Open</span>
 				{:else}
@@ -232,50 +435,64 @@
 				{/if}
 			</h1>
 			<div class="text-left">
-				<p class="text-lg">Team: {ticket.team} - {get(eventStore).teams.find((t) => t.number == ticket?.team)?.name}</p>
-				<p class="text-lg">Created: {time}</p>
-				<p class="text-lg">
-					Assigned To:
-					{#if ticket.assigned_to && ticket.assigned_to.length > 0}
-						{ticket.assigned_to.map((p) => p?.username).join(", ")}
-					{:else}
+				<p><b>Team:</b> {ticket.team} - {get(eventStore).teams?.find((team) => parseInt(team.number) === ticket.team)?.name ?? "Unknown"}</p>
+				<p><b>Created:</b> {time} by {ticket.author.username}</p>
+				<p>
+					<b>Assigned To:</b>
+					{#if !ticket.assigned_to_id}
 						Unassigned
+					{:else}
+						{ticket.assigned_to?.username} - {ticket.assigned_to?.role}
 					{/if}
 				</p>
-				{#if ticket.match}
-					<p class="text-lg">
-						Match: {ticket.match.level.replace("None", "Test")}
-						{ticket.match.match_number}/{ticket.match.play_number}
+				{#if match}
+					<p>
+						<b>Match:</b>
+						{match.level.replace("None", "Test")}
+						Match #{match.match_number}/Play #{match.play_number}
 						{station}
 					</p>
 				{/if}
 			</div>
-			<div class="flex gap-2">
-				<Button size="sm" on:click={() => closeOpenTicket()}>{ticket.is_open ? "Close Ticket" : "Reopen Ticket"}</Button>
+			<div class="flex gap-2 place-content-center sm:place-content-start">
+				<Button size="sm" on:click={() => changeOpenStatus()}>{ticket.is_open ? "Close Ticket" : "Reopen Ticket"}</Button>
 				{#if user}
 					<Button size="sm" on:click={() => assignSelf()}>
-						{assignedToUser ? "Unassign" : "👀 Claim Ticket"}
+						{#if ticket.assigned_to_id === user.id}
+							Unassign
+						{:else if ticket.assigned_to_id === null || ticket.assigned_to_id === undefined}
+							👀 Claim Ticket
+						{:else}
+							❌ Already Assigned
+						{/if}
 					</Button>
 				{/if}
-				{#if ticket.match}
+				{#if match}
 					<Button size="sm" on:click={() => viewLog()}>View Log</Button>
 				{/if}
 			</div>
-			<div class="flex flex-col overflow-y-auto h-full" id="chat">
+			<div class="text-left text-2xl pt-4 pl-4">
+				<p class="font-bold">{ticket.subject}</p>
+			</div>
+			<div class="text-left p-4">
+				<p>{ticket.text}</p>
+			</div>
+			<div class="flex flex-col h-full" id="chat">
 				<div class="flex flex-col grow gap-2 justify-end">
-					{#if ticket.messages.length < 1}
+					{#if !sortedMessages}
 						<div class="text-center">No messages</div>
+					{:else}
+						{#each sortedMessages as message}
+							<MessageCard {message} />
+						{/each}
 					{/if}
-					{#each ticket.messages as message}
-						<Message {message} team={ticket.team} />
-					{/each}
 				</div>
 			</div>
-			<form on:submit|preventDefault={sendMessage}>
-				<label for="chat" class="sr-only">Your message</label>
+			<form class="w-full" on:submit|preventDefault={postMessage}>
+				<label for="chat" class="sr-only">Add a Message:</label>
 				<Alert color="dark" class="px-0 py-2">
 					<svelte:fragment slot="icon">
-						<Textarea id="chat" class="ml-3" rows="1" placeholder="Your message..." on:keydown={sendKey} bind:value={message} />
+						<Textarea id="chat" class="ml-3" rows="1" placeholder="Your message..." on:keydown={sendKey} bind:value={message_text} />
 						<ToolbarButton type="submit" color="blue" class="rounded-full text-primary-600 dark:text-primary-500">
 							<Icon icon="mdi:send" class="w-6 h-8" />
 							<span class="sr-only">Send message</span>

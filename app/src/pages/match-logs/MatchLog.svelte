@@ -23,12 +23,12 @@
 		processLog(matchdata.red3_log as FMSLogFrame[], ROBOT.red3, log);
 
 		data = {
-			blue1: matchdata.blue1,
-			blue2: matchdata.blue2,
-			blue3: matchdata.blue3,
-			red1: matchdata.red1,
-			red2: matchdata.red2,
-			red3: matchdata.red3,
+			blue1: matchdata.blue1 ?? 0,
+			blue2: matchdata.blue2 ?? 0,
+			blue3: matchdata.blue3 ?? 0,
+			red1: matchdata.red1 ?? 0,
+			red2: matchdata.red2 ?? 0,
+			red3: matchdata.red3 ?? 0,
 			level: matchdata.level,
 			match_number: matchdata.match_number,
 			play_number: matchdata.play_number,
@@ -47,7 +47,7 @@
 					existingFrame.auto = true;
 				}
 			} else {
-				const newFrame = {
+				const newFrame: MatchLog["log"][number] = {
 					matchTime: teamLog[i].matchTime,
 					matchTimeBase: teamLog[i].matchTimeBase,
 					timeStamp: new Date(teamLog[i].timeStamp),

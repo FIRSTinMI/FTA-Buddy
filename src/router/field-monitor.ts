@@ -9,7 +9,7 @@ export interface Post {
     type: 'test';
 }
 
-export const teamInfo = z.object({
+export const robotInfo = z.object({
     number: z.number(),
     ds: z.nativeEnum(DSState),
     radio: z.boolean(),
@@ -45,12 +45,12 @@ export const fieldMonitorRouter = router({
         version: z.string(),
         frameTime: z.number(),
         lastCycleTime: z.string(),
-        red1: teamInfo,
-        red2: teamInfo,
-        red3: teamInfo,
-        blue1: teamInfo,
-        blue2: teamInfo,
-        blue3: teamInfo,
+        red1: robotInfo,
+        red2: robotInfo,
+        red3: robotInfo,
+        blue1: robotInfo,
+        blue2: robotInfo,
+        blue3: robotInfo,
     })).mutation(async ({ input }) => {
         if (!input.eventToken && !input.eventCode) {
             throw new Error('Event token or code required');

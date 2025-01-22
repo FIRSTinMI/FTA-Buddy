@@ -7,12 +7,12 @@
     export let data: MatchLog;
     export let log: MatchLog['log'];
     export let stat: keyof FMSLogFrame;
-    export let graphConfig: Record<keyof FMSLogFrame, {
+    export let graphConfig: Partial<Record<keyof FMSLogFrame, {
         label: string,
         min: number,
         max: number,
         type?: 'logarithmic' | 'linear',
-    }> = {
+    }>> = {
         'battery': {
             label: 'Voltage',
             min: 6,
@@ -204,7 +204,7 @@
                                     let scaleAxis = CHART.options.scales[y_axis_id];
                                     if (scaleAxis) {
                                         // Hide all except clicked if shift
-                                        if (event.native.shiftKey) {
+                                        if ((event.native as MouseEvent)?.shiftKey) {
                                             for (let [index, dataset] of CHART.data.datasets.entries()) {
                                                 if (index !== legendItem.datasetIndex && index < 6) {
                                                     dataset.hidden = !dataset.hidden;
@@ -229,14 +229,14 @@
                     },
                     scales: {
                         y: {
-                            type: graphConfig[stat].type || 'linear',
+                            type: graphConfig[stat]?.type || 'linear',
                             display: true,
                             position: 'left',
-                            suggestedMax: graphConfig[stat].max,
-                            suggestedMin: graphConfig[stat].min,
+                            suggestedMax: graphConfig[stat]?.max,
+                            suggestedMin: graphConfig[stat]?.min,
                             title: {
                                 display: true,
-                                text: graphConfig[stat].label,
+                                text: graphConfig[stat]?.label,
                             },
                         },
                         y5: {

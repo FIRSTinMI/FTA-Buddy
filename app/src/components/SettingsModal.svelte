@@ -1,14 +1,13 @@
 <script lang="ts">
-	import { Button, Label, Modal, Select, Toggle, Range } from "flowbite-svelte";
+	import { Button, Label, Modal, Select, Toggle, Range, type SelectOptionType } from "flowbite-svelte";
 	import { get, derived } from "svelte/store";
 	import { settingsStore } from "../stores/settings";
 	import Spinner from "./Spinner.svelte";
-	import { toast } from "../util/toast";
-	import { subscribeToPush } from "../util/notifications";
+	import { toast } from "../../../shared/toast";
+	import { startNotificationSubscription, subscribeToPush } from "../util/notifications";
 	import { audioQueuer } from "../field-monitor";
 	import { trpc } from "../main";
 	import { userStore } from "../stores/user";
-	import { navigate } from "svelte-routing";
 
 	export let settingsOpen = false;
 	export const userRole = derived(userStore, ($userStore) => $userStore.role);
@@ -17,32 +16,26 @@
 	let settings = get(settingsStore);
 	let user = get(userStore);
 	let loading = false;
-	let role: string;
-	//$: role = $userRole;
+
+	const roleOptions: SelectOptionType<string>[] = [
+		{ value: "FTA", name: "FTA" },
+		{ value: "FTAA", name: "FTAA" },
+		{ value: "CSA", name: "CSA" },
+		{ value: "RI", name: "RI" },
+	];
 
 	function updateSettings() {
 		settingsStore.set(settings);
 	}
 
-	async function updateUser(event: Event) {
-		const selectedRole = (event.target as HTMLSelectElement).value;
-		const validRoles: ["FTA", "FTAA", "CSA", "RI"] = ["FTA", "FTAA", "CSA", "RI"];
-
-		if (!validRoles.includes(selectedRole as "FTA" | "FTAA" | "CSA" | "RI")) {
-			console.error("Invalid role selected");
-			toast("Error", "Invalid role selected", "red-500");
-			return;
-		}
-
+	async function updateUser() {
 		try {
-			const res = await trpc.user.changeRole.mutate({
-				token: user.token,
-				newRole: selectedRole as "FTA" | "FTAA" | "CSA" | "RI",
+			await trpc.user.changeRole.mutate({
+				newRole: user.role,
 			});
 
-			userStore.update((user) => {
-				//navigate("/app/")
-				return { ...user, role: selectedRole }; // Update the role in userStore
+			userStore.update((u) => {
+				return { ...u, role: user.role }; // Update the role in userStore
 			});
 
 			toast("Success", "Role changed successfully", "green-500");
@@ -66,16 +59,21 @@
 
 	async function requestNotificationPermissions() {
 		try {
-			if (Notification.permission !== "granted") {
-				Notification.requestPermission().then(async (permission) => {
-					if (permission === "granted") {
-						updateSettings();
-						await subscribeToPush();
-					}
-				});
+			if (settings.notifications) {
+				if (Notification.permission !== "granted") {
+					Notification.requestPermission().then(async (permission) => {
+						if (permission === "granted") {
+							updateSettings();
+							await subscribeToPush();
+						}
+					});
+				} else {
+					updateSettings();
+					await subscribeToPush();
+				}
+				startNotificationSubscription();
 			} else {
-				updateSettings();
-				await subscribeToPush();
+				// unsubscribe from push notifications
 			}
 		} catch (e) {
 			console.error(e);
@@ -128,31 +126,33 @@
 			<div class="grid grid-cols-subgrid gap-2 row-span-5">
 				<p class="text-gray-700 dark:text-gray-400">General</p>
 				<Toggle class="toggle" bind:checked={settings.vibrations} on:change={updateSettings}>Vibrations</Toggle>
-				<Toggle class="toggle" bind:checked={settings.notifications} on:change={requestNotificationPermissions}>Ticket Notifications</Toggle>
-				<Toggle class="toggle" bind:checked={settings.robotNotifications} on:change={requestNotificationPermissions}
-					>Robot Connection Notifications</Toggle
-				>
 				<Toggle class="toggle" bind:checked={settings.fimSpecifics} on:change={updateSettings}>FIM Specific Field Manuals</Toggle>
+				<Toggle class="toggle" bind:checked={settings.notifications} on:change={requestNotificationPermissions}>Enable Notifications</Toggle>
+				<div class="pl-4 grid grid-cols-subgrid gap-2 row-span-5">
+					<Toggle class="toggle" bind:checked={settings.notificationCategories.create} on:change={updateSettings}>New Tickets</Toggle>
+					<Toggle class="toggle" bind:checked={settings.notificationCategories.follow} on:change={updateSettings}>Followed Ticket Updates</Toggle>
+					<Toggle class="toggle" bind:checked={settings.notificationCategories.assign} on:change={updateSettings}>Assigned Ticket</Toggle>
+					<Toggle class="toggle" bind:checked={settings.notificationCategories.robot} on:change={updateSettings}>Robot Status</Toggle>
+				</div>
 			</div>
 			<div class="grid grid-cols-subgrid gap-2 row-span-3">
 				<p class="text-gray-700 dark:text-gray-400">Change My Role</p>
-				<Select bind:value={user.role} on:change={updateUser}>
-					<option value="FTA">FTA</option>
-					<option value="FTAA">FTAA</option>
-					<option value="CSA">CSA</option>
-					<option value="RI">RI</option>
-				</Select>
+				<Select items={roleOptions} bind:value={user.role} on:change={updateUser} />
 				<p class="text-gray-700 dark:text-gray-400">Audio Alerts</p>
 				<Toggle class="toggle" bind:checked={settings.soundAlerts} on:change={updateSettings}>Robot Connection</Toggle>
 				<Toggle class="toggle" bind:checked={settings.fieldGreen} on:change={updateSettings}>Field Green</Toggle>
 			</div>
 			<div class="grid grid-cols-subgrid gap-2 row-span-6">
 				<p class="text-gray-700 dark:text-gray-400">Music</p>
-				<Select bind:value={settings.musicType} on:change={updateSettings}>
-					<option value="none">None</option>
-					<option value="jazz">Jazz</option>
-					<option value="lofi">Lofi</option>
-				</Select>
+				<Select
+					items={[
+						{ value: "none", name: "None" },
+						{ value: "jazz", name: "Jazz" },
+						{ value: "lofi", name: "Lofi" },
+					]}
+					bind:value={settings.musicType}
+					on:change={updateSettings}
+				/>
 				<Label>Volume</Label>
 				<div class="flex">
 					<Range
@@ -185,7 +185,7 @@
 				<Button
 					class={!settings.developerMode && "hidden"}
 					on:click={() => {
-						trpc.event.notification.query({ eventToken: user.eventToken });
+						//trpc.event.notification.query({ eventToken: user.eventToken });
 					}}
 					size="xs">Notification Test</Button
 				>

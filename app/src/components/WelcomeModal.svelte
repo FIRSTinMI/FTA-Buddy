@@ -4,7 +4,7 @@
 	import { gestureEvents } from "../util/gestureDetection";
 	import { onMount } from "svelte";
 	import { settingsStore } from "../stores/settings";
-	import { toast } from "../util/toast";
+	import { toast } from "../../../shared/toast";
 	import { subscribeToPush } from "../util/notifications";
 	import { trpc } from "../main";
 

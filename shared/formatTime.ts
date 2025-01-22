@@ -110,6 +110,34 @@ export function formatTimeNoAgo(time: Date, compare: Date = new Date()) {
     }
 }
 
+export function formatTimeNoAgoHourMins(time: Date, compare: Date = new Date()) {
+    if (typeof time === 'string') time = new Date(time);
+    let diff = (compare).getTime() - time.getTime();
+
+    const past = diff > 0;
+    diff = Math.abs(diff);
+
+    if (diff < 1e3) {
+        return (past) ? 'Just now' : 'Now';
+    } else if (diff < 60e3) {
+        const seconds = Math.floor(diff / 1e3);
+        return `${past ? '' : 'In '}${seconds}s${past ? ' ago' : ''}`;
+    } else if (diff < 60 * 60e3) {
+        const minutes = Math.floor(diff / 60e3);
+        return `${past ? '' : 'In '}${minutes}m`;
+    } else if (diff < 24 * 60 * 60e3) {
+        const hours = Math.floor(diff / 3600e3);
+        const minutes = Math.floor((diff / 60e3) - (hours * 60));
+        return `${past ? '' : 'In '}${hours}h${minutes}m`;
+    } else if (diff < 48 * 60 * 60e3) {
+        return `${past ? 'Yesterday' : 'Tomorrow'} at ${time.toLocaleTimeString()}`;
+    } else if (diff < 7 * 24 * 60 * 60e3 && past) {
+        return `${DAYS[time.getDay()]} at ${time.toLocaleTimeString()}`;
+    } else {
+        return `${time.toLocaleDateString()} at ${time.toLocaleTimeString()}`;
+    }
+}
+
 export function formatTimeShortNoAgoSecondsOnly(time: Date, compare: Date = new Date()) {
     if (typeof time === 'string') time = new Date(time);
     let diff = compare.getTime() - time.getTime();

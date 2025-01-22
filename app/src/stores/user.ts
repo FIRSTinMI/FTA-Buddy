@@ -6,12 +6,12 @@ export interface User {
     id: number;
     token: string;
     eventToken: string;
-    role: string;
+    role: "FTA" | "FTAA" | "CSA" | "RI";
     admin: boolean;
     googleToken?: string;
 }
 
-let initialUser = localStorage.getItem('user');
+let initialUser = typeof window !== 'undefined' && window.localStorage ? localStorage.getItem('user') : null;
 
 if (!initialUser) {
     initialUser = JSON.stringify({
@@ -36,5 +36,7 @@ userStore.subscribe((value: User) => {
         eventToken: '',
     };
 
-    localStorage.setItem('user', JSON.stringify(userData));
+    if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem('user', JSON.stringify(userData));
+    }
 });

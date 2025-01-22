@@ -5,7 +5,7 @@
 	import { eventStore } from "../../stores/event";
 	import { navigate } from "svelte-routing";
 	import Spinner from "../../components/Spinner.svelte";
-	import type { TeamList } from "../../../../shared/types";
+	import type { Profile, TeamList } from "../../../../shared/types";
 
 	export let toast: (title: string, text: string, color?: string) => void;
 
@@ -19,8 +19,6 @@
 		event.pin = "";
 		event.teams = [];
 	}
-
-	console.log(user.admin);
 
 	let email = "";
 	let username = "";
@@ -139,7 +137,7 @@
 	async function adminSelectEvent() {
 		if (event.code === "none") {
 			userStore.set({ ...user, eventToken: "" });
-			eventStore.set({ code: "", pin: "", teams: [] });
+			eventStore.set({ code: "", pin: "", teams: [], users: []});
 			return;
 		}
 		try {
@@ -152,6 +150,7 @@
 				code: event.code,
 				pin: res.pin,
 				teams: res.teams as TeamList,
+				users: res.users as Profile[],
 			});
 			eventCode = event.code;
 			eventPin = res.pin;
@@ -174,6 +173,7 @@
 				code: eventCode,
 				pin: eventPin,
 				teams: (res.teams as any) || [],
+				users: res.users as Profile[],
 			});
 			toast("Success", "Event joined successfully", "green-500");
 			setTimeout(() => navigate("/app"), 700);
@@ -386,7 +386,7 @@
 			<div class="flex flex-col border-t border-neutral-500 pt-10 space-y-2">
 				<h1 class="text-xl" style="font-weight:bold;">The Event Currently Selected Is: {event.code}</h1>
 				<Button href="/" on:click={() => navigate("/")}>Go to App</Button>
-				<Button outline on:click={() => (eventStore.set({ code: "", pin: "", teams: [] }), userStore.set({ ...user, eventToken: "" }))}
+				<Button outline on:click={() => (eventStore.set({ code: "", pin: "", teams: [], users: [] }), userStore.set({ ...user, eventToken: "" }))}
 					>Leave Event</Button
 				>
 				<Button outline on:click={() => navigate("/app/event-created")}>See Event Pin</Button>

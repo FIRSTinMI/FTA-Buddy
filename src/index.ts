@@ -6,7 +6,7 @@ import express from 'express';
 const pjson = require('../package.json');
 import { readFileSync, readdirSync } from 'fs';
 import ws from 'ws';
-import { FMSLogFrame, ROBOT, ServerEvent, TournamentLevel } from '../shared/types';
+import { FMSLogFrame, NotificationEvents, ROBOT, ServerEvent, TournamentLevel } from '../shared/types';
 import { connect, db } from './db/db';
 import { checklistRouter } from './router/checklist';
 import { eventRouter } from './router/event';
@@ -22,6 +22,7 @@ import { createProxyServer } from 'http-proxy';
 import proxy from 'express-http-proxy';
 import { createServer } from 'http';
 import { messagesRouter } from './router/messages';
+import { ticketsRouter } from './router/tickets';
 import { json2csv } from 'json-2-csv';
 import { Marked } from 'marked';
 import { join } from 'path';
@@ -31,16 +32,20 @@ import hljs from 'highlight.js';
 import json from 'highlight.js/lib/languages/json';
 import { gfmHeadingId } from 'marked-gfm-heading-id';
 import { observable } from '@trpc/server/observable';
-import { initializePushNotifications } from './util/push-notifications';
+//import { initializePushNotifications } from '../app/src/util/push-notifications';
 import { logAnalysisLoop } from './util/log-analysis';
 import { ftcRouter } from './router/ftc';
+import { notesRouter } from './router/notes';
+import { TypedEmitter } from 'tiny-typed-emitter';
 
 const port = parseInt(process.env.PORT || '3001');
 
 export const events: { [key: string]: ServerEvent; } = {};
 export const eventCodes: { [key: string]: string; } = {};
 
-initializePushNotifications();
+//initializePushNotifications();
+// event emitter for all notifications
+export const notificationEmitter = new TypedEmitter<NotificationEvents>();
 
 // TRPC Server
 const appRouter = router({
@@ -51,6 +56,8 @@ const appRouter = router({
     field: fieldMonitorRouter,
     cycles: cycleRouter,
     messages: messagesRouter,
+    tickets: ticketsRouter,
+    notes: notesRouter,
     app: router({
         version: publicProcedure.subscription(async () => {
             return observable<string>((emitter) => {

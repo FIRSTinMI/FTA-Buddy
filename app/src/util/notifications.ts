@@ -1,17 +1,16 @@
 import { get } from "svelte/store";
 import { trpc } from "../main";
-import { authStore } from "../stores/auth";
+import { userStore } from "../stores/user";
 import type { MonitorEvent } from "./monitorFrameHandler";
 import { settingsStore } from "../stores/settings";
-import { toast } from "./toast";
+import { toast } from "../../../shared/toast";
+import type { Notification } from "../../../shared/types";
+import { addNotification, checkIfNotificationExists } from "../stores/notifications";
 
-export interface NotificationOptions {
-    title: string;
-    body?: string;
-    icon?: string;
-}
+let user = get(userStore);
 
-export function createNotification(options?: NotificationOptions) {
+export function createNotification(data: Notification) {
+    console.log('Creating notification:', data);
     if (!("Notification" in window)) {
         throw new Error("This browser does not support desktop notifications");
     }
@@ -19,51 +18,111 @@ export function createNotification(options?: NotificationOptions) {
         throw new Error("You need to grant permission to show notifications");
     }
 
-    options = options ?? { title: "Default title" };
-
-    const notification = new Notification(options.title, options);
+    const notification = new Notification(data.title, {
+        body: data.body,
+        icon: data.icon ?? "/app/icon192_rounded.png",
+        tag: data.tag,
+        data: {
+            path: `${data.data?.page ?? ""}`
+        }
+    });
 
     notification.onclick = () => {
         console.log('Notification clicked');
     };
 }
 
+// TODO: Wtf does this do?
 export function robotNotification(type: string, event: MonitorEvent["detail"]) {
     const robot = event.frame[event.robot];
+    let path: string;
+
+    if (user.role === 'FTA' || user.role === "FTAA") {
+        path = "/app/";
+    } else {
+        path = "/app/monitor/";
+    }
+
     createNotification({
+        id: crypto.randomUUID(),
+        timestamp: new Date(),
+        topic: 'Robot-Status',
         title: `${robot.number} Lost ${type.toLocaleUpperCase()}`,
         body: `${event.robot} lost ${type} at ${event.frame.time} in ${event.frame.match}.`,
-    });
-}
-
-let backgroundSubscription: ReturnType<typeof trpc.messages.backgroundSubscription.subscribe>;
-
-export function startBackgroundSubscription() {
-    if (backgroundSubscription) backgroundSubscription.unsubscribe();
-
-    backgroundSubscription = trpc.messages.backgroundSubscription.subscribe({
-        eventToken: get(authStore).eventToken
-    }, {
-        onData: (data) => {
-            if (get(settingsStore).notifications === false) return;
-
-            if (data.type === "create" && data.data.is_ticket) {
-                createNotification({
-                    title: `New Ticket: ${data.data.team} ${data.data.summary}`,
-                    body: `${data.data.message}`,
-                });
-            } else if (data.type === "ticketReply") {
-                createNotification({
-                    title: `${data.data.user?.username}: ${data.data.team}`,
-                    body: `${data.data.message}`,
-                });
-            }
+        icon: "/app/icon192_rounded.png",
+        data: {
+            page: ``
         }
     });
 }
 
-export function stopBackgroundSubscription() {
-    backgroundSubscription?.unsubscribe();
+let backgroundNotificationSubscription: ReturnType<typeof trpc.tickets.pushSubscription.subscribe>;
+
+export function startNotificationSubscription() {
+    if (backgroundNotificationSubscription && typeof backgroundNotificationSubscription.unsubscribe === "function") backgroundNotificationSubscription.unsubscribe();
+
+    try {
+        backgroundNotificationSubscription = trpc.tickets.pushSubscription.subscribe(
+            {
+                token: user.token
+            },
+            {
+                onError: console.error,
+                onData: (data) => {
+                    console.log(Notification.permission);
+                    console.log("in data reciever 1");
+
+                    let sendNotification = false;
+
+                    switch (data.topic) {
+                        case 'Ticket-Created': {
+                            sendNotification = (get(settingsStore).notificationCategories.create);
+                            break;
+                        }
+                        case 'Ticket-Assigned': {
+                            sendNotification = (get(settingsStore).notificationCategories.assign);
+                            break;
+                        }
+                        case 'Ticket-Status': {
+                            sendNotification = (get(settingsStore).notificationCategories.follow);
+                            break;
+                        }
+                        case 'New-Ticket-Message': {
+                            sendNotification = (get(settingsStore).notificationCategories.follow);
+                            break;
+                        }
+                        case 'Robot-Status': {
+                            sendNotification = (get(settingsStore).notificationCategories.robot);
+                            break;
+                        }
+                        default: {
+                            sendNotification = false;
+                            break;
+                        }
+                    }
+
+                    if (sendNotification) {
+                        if (checkIfNotificationExists(data.id)) return;
+
+                        // Add to notification store
+                        addNotification(data);
+
+                        // Send notification to browser
+                        createNotification(data);
+                    }
+                }
+            },
+        );
+    } catch (err: any) {
+        console.error("Subscription setup error:", err);
+    }
+    //console.log(`Listeners ${event.ticketPushEmitter.listenerCount()}`);
+}
+
+export function stopBackgroundCreateTicketSubscription() {
+    if (!backgroundNotificationSubscription) return;
+
+    backgroundNotificationSubscription?.unsubscribe();
 }
 
 const publicVapidKey = 'BFTN7PqbkHaSPpmQBbMANVP7NSJg2qGkSEisDlTborp3FMIlZAwvMVcEbCOS11JqPgDQLuk42DY5AU_mHQdyibs';
@@ -102,7 +161,7 @@ export async function subscribeToPush() {
         const keys = subscription.toJSON().keys ?? {};
 
         // Send push subscription to server
-        await trpc.messages.registerPush.query({
+        await trpc.tickets.registerPush.query({
             endpoint: subscription.endpoint,
             expirationTime: new Date(subscription.expirationTime ?? 0),
             keys: {
@@ -110,7 +169,7 @@ export async function subscribeToPush() {
                 auth: keys.auth,
             },
         });
-    } catch (e) {
+    } catch (e: any) {
         console.error(e);
         toast('Failed to subscribe to push notifications', e.message);
     }

@@ -21,6 +21,6 @@
     "src/**/*.svelte",
     "../shared/formatTime.ts",
     "../shared/formatTime.ts"
-],
+, "../shared/toast.ts", "../shared/toast.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

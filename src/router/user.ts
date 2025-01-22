@@ -54,30 +54,21 @@ export const userRouter = router({
     changeRole: protectedProcedure
         .input(
             z.object({
-                token: z.string(),
                 newRole: z.enum(['FTA', 'FTAA', 'CSA', 'RI'])
             })
         )
-        .mutation(async ({ ctx, input}) => {
-            const user_token = ctx.user.token;
-            const user_current_role = ctx.user.role;
-
-            if (!user_token) throw new TRPCError({code: "BAD_REQUEST", message: 'No user token provided.'});            ;
-
-            if (user_current_role === input.newRole) {
-                throw new TRPCError({code: "BAD_REQUEST", message: 'Role is already the same. No update needed.'});
-            } else if (!['FTA', 'FTAA', 'CSA', 'RI'].includes(input.newRole)) {
-                throw new TRPCError({code: "BAD_REQUEST", message: "Entered Role is invalid. Ensure value is 'FTA', 'FTAA', 'CSA', or 'RI'"});
-            } else {
-                await db.update(users).set({ role: input.newRole }).where(eq(users.token, input.token));
+        .mutation(async ({ ctx, input }) => {
+            if (!['FTA', 'FTAA', 'CSA', 'RI'].includes(input.newRole)) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: "Entered Role is invalid. Ensure value is 'FTA', 'FTAA', 'CSA', or 'RI'" });
             }
-            
+
+            await db.update(users).set({ role: input.newRole }).where(eq(users.token, ctx.user.token));
+
             return {
-                newRole: input.newRole,
-                oldRole: user_current_role
-            }; 
+                newRole: input.newRole
+            };
         }
-    ),
+        ),
 
     createAccount: publicProcedure.input(z.object({
         email: z.string().email({ message: "Invalid email address" }),

@@ -16,6 +16,7 @@
     "dependencies": {
         "@google-cloud/local-auth": "^3.0.1",
         "@googleapis/youtube": "^20.0.0",
+        "@microsoft/signalr": "^8.0.7",
         "@the-orange-alliance/api": "^0.24.0",
         "@trpc/client": "^11.0.0-rc.566",
         "@trpc/server": "^11.0.0-rc.566",
@@ -40,6 +41,9 @@
         "pg": "^8.13.0",
         "sanitize-html": "^2.13.1",
         "superjson": "^2.2.1",
+        "svelte-qrcode": "^1.0.1",
+        "tiny-typed-emitter": "^2.1.0",
+        "uuid": "^11.0.5",
         "web-push": "^3.6.7",
         "ws": "^8.18.0",
         "zod": "^3.23.8"

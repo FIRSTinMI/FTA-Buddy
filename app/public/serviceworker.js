@@ -38,9 +38,6 @@ let contentToCache = [
 	"/app/music/jass4.mp3",
 	"/app/music/jass5.mp3",
 	"/app/music/jass6.mp3",
-	"/app/FIM_Case_23_24.pdf",
-	"/app/FIM_Case_31.pdf",
-	"/app/FIM_Case_32.pdf",
 	"/app/frc-control-system-layout-ctre.svg",
 	"/app/frc-control-system-layout-rev.svg",
 ];

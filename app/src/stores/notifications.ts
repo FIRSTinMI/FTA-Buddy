@@ -1,6 +1,11 @@
 import { writable } from 'svelte/store';
 import type { Notification } from '../../../shared/types';
 import { get } from 'svelte/store';
+import { createInstance } from "localforage";
+
+export const localforage = createInstance({
+    name: "ftabuddy-notifications"
+});
 
 const initialNotifications = localStorage.getItem('notifications');
 
@@ -25,6 +30,13 @@ export function clearNotifications() {
     notificationsStore.set([]);
 }
 
-notificationsStore.subscribe((notifications: Notification[]) => {
+notificationsStore.subscribe(async (notifications: Notification[]) => {
     localStorage.setItem('notifications', JSON.stringify(notifications));
+    await localforage.setItem('notifications', JSON.stringify(notifications));
+});
+
+localforage.getItem('notifications').then((value) => {
+    if (value) {
+        notificationsStore.set(JSON.parse(value as string));
+    }
 });

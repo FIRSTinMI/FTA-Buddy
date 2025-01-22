@@ -1,5 +1,9 @@
 import { writable } from "svelte/store";
+import { createInstance } from "localforage";
 
+export const localforage = createInstance({
+    name: "ftabuddy-settings"
+});
 export interface Settings {
     version: string;
     developerMode: boolean;
@@ -63,9 +67,10 @@ if (!initialSettings) {
 }
 
 export const settingsStore = writable<Settings>(JSON.parse(initialSettings));
-settingsStore.subscribe((value: Settings) => {
+settingsStore.subscribe(async (value: Settings) => {
     if (value === undefined) {
         value = defaultSettings;
     }
     localStorage.setItem('settings', JSON.stringify(value));
+    await localforage.setItem('settings', JSON.stringify(value));
 });

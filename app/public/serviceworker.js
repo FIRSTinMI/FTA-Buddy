@@ -45,6 +45,15 @@ let contentToCache = [
 	"/app/frc-control-system-layout-rev.svg",
 ];
 
+self.importScripts("localforage.js");
+
+const localforageNotifications = localforage_js.createInstance({
+	name: "ftabuddy-notifications",
+});
+const localforageSettings = localforage_js.createInstance({
+	name: "ftabuddy-settings",
+});
+
 self.addEventListener("install", (evt) => {
 	console.log("Service worker installed");
 	evt.waitUntil(
@@ -59,15 +68,15 @@ self.addEventListener("activate", (evt) => {
 	console.log("Service worker activated");
 });
 
-function getSettingsStore() {
-	const settings = localStorage.getItem("settingsStore");
+async function getSettingsStore() {
+	const settings = await localforageSettings.getItem("settings");
 	if (settings) {
 		return JSON.parse(settings);
 	}
 }
 
-function checkIfNotificationExists(id) {
-	const notifications = localStorage.getItem("notifications");
+async function checkIfNotificationExists(id) {
+	const notifications = await localforageNotifications.getItem("notifications");
 	if (notifications) {
 		const parsed = JSON.parse(notifications);
 		return parsed.some((n) => n.id === id);
@@ -75,14 +84,14 @@ function checkIfNotificationExists(id) {
 	return false;
 }
 
-function addNotification(notification) {
-	const notifications = localStorage.getItem("notifications");
+async function addNotification(notification) {
+	const notifications = await localforageNotifications.getItem("notifications");
 	if (notifications) {
 		const parsed = JSON.parse(notifications);
 		parsed.push(notification);
-		localStorage.setItem("notifications", JSON.stringify(parsed));
+		await localforageNotifications.setItem("notifications", JSON.stringify(parsed));
 	} else {
-		localStorage.setItem("notifications", JSON.stringify([notification]));
+		await localforageNotifications.setItem("notifications", JSON.stringify([notification]));
 	}
 }
 
@@ -95,23 +104,23 @@ self.addEventListener("push", async (evt) => {
 
 	switch (data.topic) {
 		case "Ticket-Created": {
-			sendNotification = getSettingsStore().notificationCategories.create;
+			sendNotification = (await getSettingsStore()).notificationCategories.create;
 			break;
 		}
 		case "Ticket-Assigned": {
-			sendNotification = getSettingsStore().notificationCategories.assign;
+			sendNotification = (await getSettingsStore()).notificationCategories.assign;
 			break;
 		}
 		case "Ticket-Status": {
-			sendNotification = getSettingsStore().notificationCategories.follow;
+			sendNotification = (await getSettingsStore()).notificationCategories.follow;
 			break;
 		}
 		case "New-Ticket-Message": {
-			sendNotification = getSettingsStore().notificationCategories.follow;
+			sendNotification = (await getSettingsStore()).notificationCategories.follow;
 			break;
 		}
 		case "Robot-Status": {
-			sendNotification = getSettingsStore().notificationCategories.robot;
+			sendNotification = (await getSettingsStore()).notificationCategories.robot;
 			break;
 		}
 		default: {
@@ -123,8 +132,8 @@ self.addEventListener("push", async (evt) => {
 	if (sendNotification) {
 		// Add to notification store if not robot alert
 		if (data.topic !== "Robot-Status") {
-			if (checkIfNotificationExists(data.id)) return;
-			addNotification(data);
+			if (await checkIfNotificationExists(data.id)) return;
+			await addNotification(data);
 		}
 
 		// Send notification to browser

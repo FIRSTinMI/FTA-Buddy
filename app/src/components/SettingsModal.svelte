@@ -59,16 +59,20 @@
 
 	async function requestNotificationPermissions() {
 		try {
-			if (Notification.permission !== "granted") {
-				Notification.requestPermission().then(async (permission) => {
-					if (permission === "granted") {
-						updateSettings();
-						await subscribeToPush();
-					}
-				});
+			if (settings.notifications) {
+				if (Notification.permission !== "granted") {
+					Notification.requestPermission().then(async (permission) => {
+						if (permission === "granted") {
+							updateSettings();
+							await subscribeToPush();
+						}
+					});
+				} else {
+					updateSettings();
+					await subscribeToPush();
+				}
 			} else {
-				updateSettings();
-				await subscribeToPush();
+				// unsubscribe from push notifications
 			}
 		} catch (e) {
 			console.error(e);
@@ -108,46 +112,6 @@
 		audioQueuer.stopMusic();
 		clearTimeout(musicTestTimeout);
 	}
-
-	function toggleTicketCreateAlerts() {
-		if (settings.notificationCategories.create) {
-			settings.notificationCategories.create = true;
-			updateSettings();
-		} else {
-			settings.notificationCategories.create = false;
-			updateSettings();
-		}
-	}
-
-	function toggleTicketFollowAlerts() {
-		if (settings.notificationCategories.follow) {
-			settings.notificationCategories.follow = true;
-			updateSettings();
-		} else {
-			settings.notificationCategories.follow = false;
-			updateSettings();
-		}
-	}
-
-	function toggleRobotAlerts() {
-		if (settings.notificationCategories.robot) {
-			settings.notificationCategories.robot = true;
-			updateSettings();
-		} else {
-			settings.notificationCategories.robot = false;
-			updateSettings();
-		}
-	}
-
-	function toggleTicketAssignAlerts() {
-		if (settings.notificationCategories.assign) {
-			settings.notificationCategories.assign = true;
-			updateSettings();
-		} else {
-			settings.notificationCategories.assign = false;
-			updateSettings();
-		}
-	}
 </script>
 
 {#if loading}
@@ -164,10 +128,10 @@
 				<Toggle class="toggle" bind:checked={settings.fimSpecifics} on:change={updateSettings}>FIM Specific Field Manuals</Toggle>
 				<Toggle class="toggle" bind:checked={settings.notifications} on:change={requestNotificationPermissions}>Enable Notifications</Toggle>
 				<div class="pl-4 grid grid-cols-subgrid gap-2 row-span-5">
-					<Toggle class="toggle" bind:checked={settings.notificationCategories.create} on:change={toggleTicketCreateAlerts}>New Tickets</Toggle>
-					<Toggle class="toggle" bind:checked={settings.notificationCategories.follow} on:change={toggleTicketFollowAlerts}>Followed Ticket Updates</Toggle>
-					<Toggle class="toggle" bind:checked={settings.notificationCategories.assign} on:change={toggleTicketAssignAlerts}>Assigned Ticket</Toggle>
-					<Toggle class="toggle" bind:checked={settings.notificationCategories.robot} on:change={toggleRobotAlerts}>Robot Status</Toggle>
+					<Toggle class="toggle" bind:checked={settings.notificationCategories.create} on:change={updateSettings}>New Tickets</Toggle>
+					<Toggle class="toggle" bind:checked={settings.notificationCategories.follow} on:change={updateSettings}>Followed Ticket Updates</Toggle>
+					<Toggle class="toggle" bind:checked={settings.notificationCategories.assign} on:change={updateSettings}>Assigned Ticket</Toggle>
+					<Toggle class="toggle" bind:checked={settings.notificationCategories.robot} on:change={updateSettings}>Robot Status</Toggle>
 				</div>
 			</div>
 			<div class="grid grid-cols-subgrid gap-2 row-span-3">

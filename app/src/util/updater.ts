@@ -9,6 +9,32 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version; } = {
+    '2.6.0': {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.6.0</h1>
+        <ul>
+        <li>Welcome to 2025 Reefscape!</li>
+        <li>Complete overhaul of the ticket system</li>
+        <li>Added ability to change your role in the settings menu</li>
+        <li>Created different layout of the app for CSAs</li>
+        <li>Added a notifications page</li>
+        <li>Added way more information to the references page</li>
+        <li>Made reference pages public</li>
+        <li>FTC event status tracker</li>
+        </ul>`,
+        update: () => {
+            eventStore.set({ code: "", pin: "", teams: [], users: [] });
+            userStore.set({
+                email: "",
+                username: '',
+                id: 0,
+                token: '',
+                eventToken: '',
+                role: 'FTA',
+                admin: false,
+            });
+        }
+    },
     '2.5.6': {
         changelog: `
         <h1 class="text-lg font-bold">v2.5.6</h1>

@@ -45,7 +45,7 @@ let contentToCache = [
 	"/app/frc-control-system-layout-rev.svg",
 ];
 
-self.importScripts("localforage.js");
+self.importScripts("/app/localforage.js");
 
 const localforageNotifications = localforage_js.createInstance({
 	name: "ftabuddy-notifications",

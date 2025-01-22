@@ -680,6 +680,16 @@
 								<Icon icon="mdi:file-document-outline" class="w-8 h-8" />
 							</Button>
 						</Link>
+						<Link to="/app/tickets">
+							<Button class="!p-2 relative" color="none">
+								<Icon icon="mdi:message-text" class="w-8 h-8" />
+								{#if $notificationsStore.length > 0}
+									<Indicator color="red" border size="xl" placement="top-left">
+										<span class="text-white text-xs">{$notificationsStore.length}</span>
+									</Indicator>
+								{/if}
+							</Button>
+						</Link>
 					{:else if user?.role === "CSA" || user?.role === "RI"}
 						<Link to="/app/">
 							<Button class="!p-2" color="none">
@@ -696,17 +706,17 @@
 								<Icon icon="mdi:file-document-outline" class="w-8 h-8" />
 							</Button>
 						</Link>
+						<Link to="/app/notifications">
+							<Button class="!p-2 relative" color="none">
+								<Icon icon="fluent:alert-on-16-filled" class="w-8 h-8" />
+								{#if $notificationsStore.length > 0}
+									<Indicator color="red" border size="xl" placement="top-left">
+										<span class="text-white text-xs">{$notificationsStore.length}</span>
+									</Indicator>
+								{/if}
+							</Button>
+						</Link>
 					{/if}
-					<Link to="/app/notifications">
-						<Button class="!p-2 relative" color="none">
-							<Icon icon="fluent:alert-on-16-filled" class="w-8 h-8" />
-							{#if $notificationsStore.length > 0}
-								<Indicator color="red" border size="xl" placement="top-left">
-									<span class="text-white text-xs">{$notificationsStore.length}</span>
-								</Indicator>
-							{/if}
-						</Button>
-					</Link>
 				</div>
 			{/if}
 		</Router>

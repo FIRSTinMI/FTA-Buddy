@@ -12,6 +12,7 @@
 	import { settingsStore } from "../../stores/settings";
 	import { eventStore } from "../../stores/event";
 	import { userStore } from "../../stores/user";
+	import { clearNotifications } from "../../stores/notifications";
 
 	let createModalOpen = false;
 
@@ -76,6 +77,7 @@
 	onMount(() => {
 		getTickets();
 		ticketUpdateSubscription();
+		if ($userStore.role === "FTA" || $userStore.role === "FTAA") clearNotifications();
 	});
 
 	let notesPolicyElm: NotesPolicy;

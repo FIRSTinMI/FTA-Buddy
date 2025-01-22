@@ -47,10 +47,10 @@ let contentToCache = [
 
 self.importScripts("/app/localforage.js");
 
-const localforageNotifications = localforage_js.createInstance({
+const localforageNotifications = localforage.createInstance({
 	name: "ftabuddy-notifications",
 });
-const localforageSettings = localforage_js.createInstance({
+const localforageSettings = localforage.createInstance({
 	name: "ftabuddy-settings",
 });
 

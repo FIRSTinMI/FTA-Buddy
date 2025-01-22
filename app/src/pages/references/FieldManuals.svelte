@@ -49,10 +49,10 @@
 			{#if openState.one === true || loadedState.one === true}
 				{#if $settingsStore.fimSpecifics}
 					<a href="/app/pdf/FIM_Case_23_24.pdf" target="_blank"
-						><QrCode value="https://ftabuddy.com/app/pdf/FIM_Case_23_24.pdf" padding={5}></QrCode></a
+						><QrCode value="https://ftabuddy.com/app/pdf/FIM_Case_23_24.pdf" padding={12}></QrCode></a
 					>
 				{:else}
-					<a href="https://roadcase.frc.tools/23" target="_blank"><QrCode value="https://roadcase.frc.tools/23" padding={5} /></a>
+					<a href="https://roadcase.frc.tools/23" target="_blank"><QrCode value="https://roadcase.frc.tools/23" padding={12} /></a>
 				{/if}
 			{/if}
 		</AccordionItem>
@@ -61,9 +61,9 @@
 			<span slot="header">Pack Case 31 Speaker</span>
 			{#if openState.two === true || loadedState.two === true}
 				{#if $settingsStore.fimSpecifics}
-					<a href="/app/pdf/FIM_Case_31.pdf" target="_blank"><QrCode value="https://ftabuddy.com/app/pdf/FIM_Case_31.pdf" padding={5}></QrCode></a>
+					<a href="/app/pdf/FIM_Case_31.pdf" target="_blank"><QrCode value="https://ftabuddy.com/app/pdf/FIM_Case_31.pdf" padding={12}></QrCode></a>
 				{:else}
-					<a href="https://roadcase.frc.tools/31" target="_blank"><QrCode value="https://roadcase.frc.tools/31" padding={5} /></a>
+					<a href="https://roadcase.frc.tools/31" target="_blank"><QrCode value="https://roadcase.frc.tools/31" padding={12} /></a>
 				{/if}
 			{/if}
 		</AccordionItem>
@@ -74,9 +74,9 @@
 			>
 			{#if openState.three === true || loadedState.three === true}
 				{#if $settingsStore.fimSpecifics}
-					<a href="/app/pdf/FIM_Case_32.pdf" target="_blank"><QrCode value="https://ftabuddy.com/app/pdf/FIM_Case_32.pdf" padding={5}></QrCode></a>
+					<a href="/app/pdf/FIM_Case_32.pdf" target="_blank"><QrCode value="https://ftabuddy.com/app/pdf/FIM_Case_32.pdf" padding={12}></QrCode></a>
 				{:else}
-					<a href="https://roadcase.frc.tools/32" target="_blank"><QrCode value="https://roadcase.frc.tools/32" padding={5} /></a>
+					<a href="https://roadcase.frc.tools/32" target="_blank"><QrCode value="https://roadcase.frc.tools/32" padding={12} /></a>
 				{/if}
 			{/if}
 		</AccordionItem>
@@ -85,7 +85,7 @@
 			<span slot="header">Build Stage</span>
 			{#if openState.four === true || loadedState.four === true}
 				<a href="https://usfirst.box.com/s/we7ufqu61k303jnjfmm6o8wg3jp2lkso" target="_blank"
-					><QrCode value="https://usfirst.box.com/s/we7ufqu61k303jnjfmm6o8wg3jp2lkso" padding={5} /></a
+					><QrCode value="https://usfirst.box.com/s/we7ufqu61k303jnjfmm6o8wg3jp2lkso" padding={12} /></a
 				>
 			{/if}
 		</AccordionItem>
@@ -94,7 +94,7 @@
 			<span slot="header">Build Speaker</span>
 			{#if openState.five === true || loadedState.five === true}
 				<a href="https://usfirst.box.com/s/dybf27uuqtskqpkljy37jkezgludm3f0" target="_blank"
-					><QrCode value="https://usfirst.box.com/s/dybf27uuqtskqpkljy37jkezgludm3f0" padding={5} /></a
+					><QrCode value="https://usfirst.box.com/s/dybf27uuqtskqpkljy37jkezgludm3f0" padding={12} /></a
 				>
 			{/if}
 		</AccordionItem>
@@ -103,7 +103,7 @@
 			<span slot="header">Build Amp</span>
 			{#if openState.six === true || loadedState.six === true}
 				<a href="https://usfirst.box.com/s/3oilb7ji2ehr1sd7fg2tb31snwxs64kw" target="_blank"
-					><QrCode value="https://usfirst.box.com/s/3oilb7ji2ehr1sd7fg2tb31snwxs64kw" padding={5} /></a
+					><QrCode value="https://usfirst.box.com/s/3oilb7ji2ehr1sd7fg2tb31snwxs64kw" padding={12} /></a
 				>
 			{/if}
 		</AccordionItem>
@@ -112,7 +112,7 @@
 			<span slot="header">Build Source</span>
 			{#if openState.seven === true || loadedState.seven === true}
 				<a href="https://usfirst.box.com/s/ah6oy40oqy07wfi3dldjfecx7hteoeg1" target="_blank"
-					><QrCode value="https://usfirst.box.com/s/ah6oy40oqy07wfi3dldjfecx7hteoeg1" padding={5} /></a
+					><QrCode value="https://usfirst.box.com/s/ah6oy40oqy07wfi3dldjfecx7hteoeg1" padding={12} /></a
 				>
 			{/if}
 		</AccordionItem>

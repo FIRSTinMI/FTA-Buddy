@@ -542,23 +542,6 @@
 					</svelte:fragment>
 				</SidebarItem>
 				<SidebarItem
-					label="Fullscreen"
-					class="hidden md:flex text-sm"
-					on:click={(evt) => {
-						evt.preventDefault();
-						fullscreen = !fullscreen;
-						if (fullscreen) {
-							document.documentElement.requestFullscreen();
-						} else {
-							document.exitFullscreen();
-						}
-					}}
-				>
-					<svelte:fragment slot="icon">
-						<Icon icon="mdi:fullscreen" class="w-8 h-8" />
-					</svelte:fragment>
-				</SidebarItem>
-				<SidebarItem
 					label="Settings"
 					class="text-sm"
 					on:click={(evt) => {
@@ -606,7 +589,7 @@
 				{#if user.token}
 					{#if user?.role === "FTA" || user?.role === "FTAA"}
 						<Route path="/">
-							<Monitor {fullscreen} {frameHandler} />
+							<Monitor bind:fullscreen {frameHandler} />
 						</Route>
 						<Route path="/tickets">
 							<TicketList />

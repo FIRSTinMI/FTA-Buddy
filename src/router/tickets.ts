@@ -113,11 +113,14 @@ export const ticketsRouter = router({
     })).query(async ({ ctx, input }) => {
         const event = await getEvent(ctx.eventToken as string);
 
-        const authorProfile = await db.query.users.findFirst({
-            where: eq(users.token, ctx.token ?? "")
-        });
+        const author = await db.select({
+            id: users.id,
+            username: users.username,
+            role: users.role,
+            admin: users.admin,
+        }).from(users).where(eq(users.token, ctx.token as string));
 
-        if (!authorProfile) {
+        if (!author[0]) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
         }
 
@@ -126,8 +129,8 @@ export const ticketsRouter = router({
             insert = await db.insert(tickets).values({
                 team: input.team,
                 subject: input.subject,
-                author_id: authorProfile.id,
-                author: authorProfile as Profile, // Ensure author is not null
+                author_id: author[0].id,
+                author: author[0] as Profile, // Ensure author is not null
                 assigned_to_id: null,
                 assigned_to: null,
                 is_open: true,
@@ -135,15 +138,15 @@ export const ticketsRouter = router({
                 created_at: new Date(),
                 updated_at: new Date(),
                 event_code: event.code,
-                followers: [authorProfile.id],
+                followers: [author[0].id],
                 match_id: input.match_id,
             }).returning();
         } else {
             insert = await db.insert(tickets).values({
                 team: input.team,
                 subject: input.subject,
-                author_id: authorProfile.id,
-                author: authorProfile as Profile, // Ensure author is not null
+                author_id: author[0].id,
+                author: author[0] as Profile, // Ensure author is not null
                 assigned_to_id: null,
                 assigned_to: null,
                 is_open: true,
@@ -151,7 +154,7 @@ export const ticketsRouter = router({
                 created_at: new Date(),
                 updated_at: new Date(),
                 event_code: event.code,
-                followers: [authorProfile.id],
+                followers: [author[0].id],
                 match_id: undefined,
             }).returning();
         }
@@ -172,7 +175,7 @@ export const ticketsRouter = router({
             timestamp: new Date(),
             topic: "Ticket-Created",
             title: `New Ticket for Team #${insert[0].team}`,
-            body: `New Ticket created by ${authorProfile.username}`,
+            body: `New Ticket created by ${author[0].username}`,
             data: {
                 page: "ticket/" + insert[0].id,
                 ticket_id: insert[0].id,

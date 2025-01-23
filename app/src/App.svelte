@@ -542,23 +542,6 @@
 					</svelte:fragment>
 				</SidebarItem>
 				<SidebarItem
-					label="Fullscreen"
-					class="hidden md:flex text-sm"
-					on:click={(evt) => {
-						evt.preventDefault();
-						fullscreen = !fullscreen;
-						if (fullscreen) {
-							document.documentElement.requestFullscreen();
-						} else {
-							document.exitFullscreen();
-						}
-					}}
-				>
-					<svelte:fragment slot="icon">
-						<Icon icon="mdi:fullscreen" class="w-8 h-8" />
-					</svelte:fragment>
-				</SidebarItem>
-				<SidebarItem
 					label="Settings"
 					class="text-sm"
 					on:click={(evt) => {
@@ -595,7 +578,7 @@
 			<Button class="!py-0 !px-0 text-white" color="none" on:click={openMenu}>
 				<Icon icon="mdi:menu" class="w-8 h-10" />
 			</Button>
-			<div class="flex-grow">
+			<div class="flex-grow mr-12">
 				{#if user.token && user.eventToken}
 					<h1 class="text-white text-lg place-content-center pt-1 font-bold">{event.code}</h1>
 				{/if}
@@ -606,7 +589,7 @@
 				{#if user.token}
 					{#if user?.role === "FTA" || user?.role === "FTAA"}
 						<Route path="/">
-							<Monitor {fullscreen} {frameHandler} />
+							<Monitor bind:fullscreen {frameHandler} />
 						</Route>
 						<Route path="/tickets">
 							<TicketList />
@@ -631,6 +614,7 @@
 				<Route path="/notifications" component={NotificationList} />
 				<Route path="/flashcards" component={Flashcard} />
 				<Route path="/notes" component={NoteList} />
+				<Route path="/notes/:teamNumber" component={NoteList} />
 				<Route path="/references" component={Reference} />
 				<Route path="/statuslights" component={StatusLights} />
 				<Route path="/fieldmanuals" component={FieldManuals} />

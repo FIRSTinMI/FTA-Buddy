@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Icon from "@iconify/svelte";
 	import { Accordion, AccordionItem, Button } from "flowbite-svelte";
+	import { settingsStore } from "../../stores/settings";
 </script>
 
 <div class="container mx-auto p-2 pr-3 w-full">
@@ -26,9 +27,11 @@
 		</div>
 	</div>
 
-	<div class="mt-2">
-		FIM AV: <a href="https://docs.fimav.us/" target="_blank" class="underline">docs.fimav.us</a>
-	</div>
+	{#if $settingsStore.fimSpecifics}
+		<div class="mt-2">
+			FIM AV: <a href="https://docs.fimav.us/" target="_blank" class="underline">docs.fimav.us</a>
+		</div>
+	{/if}
 
 	<Accordion flush class="text-left">
 		<AccordionItem class="text-black dark:text-white">

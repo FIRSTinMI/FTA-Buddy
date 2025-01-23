@@ -46,13 +46,13 @@
 {/await}
 
 <div class="flex flex-col h-full lg:ml-2">
-	<div class="grid grid-cols-2 lg:flex grow justify-center gap-2 pt-2 px-2">
+	<div class="grid {events.length > 0 && 'grid-cols-2'} lg:flex grow justify-center gap-2 pt-2 px-2">
 		{#each events as eventCode}
 			<EventStatus {eventCode} remove={removeEvent} />
 		{/each}
 
 		{#if events.length < 4 && (window.innerWidth >= 640 || events.length === 0)}
-			<div class="relative flex items-center justify-end {events.length > 0 && "w-0 left-28"}">
+			<div class="relative flex items-center justify-end {events.length > 0 && 'w-0 left-28'}">
 				<Button
 					on:click={() => {
 						eventSelectorOpen = true;

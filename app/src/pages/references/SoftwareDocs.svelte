@@ -48,19 +48,19 @@
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">Java API Documentation</span>
 						<a href="https://github.wpilib.org/allwpilib/docs/release/java/index.html" target="_blank">
-							<QrCode value="https://github.wpilib.org/allwpilib/docs/release/java/index.html" padding={5} />
+							<QrCode value="https://github.wpilib.org/allwpilib/docs/release/java/index.html" padding={12} />
 						</a>
 					</AccordionItem>
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">C++ API Documentation</span>
 						<a href="https://github.wpilib.org/allwpilib/docs/release/cpp/index.html" target="_blank">
-							<QrCode value="https://github.wpilib.org/allwpilib/docs/release/cpp/index.html" padding={5} />
+							<QrCode value="https://github.wpilib.org/allwpilib/docs/release/cpp/index.html" padding={12} />
 						</a>
 					</AccordionItem>
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">Python API Documentation</span>
 						<a href="https://robotpy.readthedocs.io/projects/robotpy/en/stable/" target="_blank">
-							<QrCode value="https://robotpy.readthedocs.io/projects/robotpy/en/stable/" padding={5} />
+							<QrCode value="https://robotpy.readthedocs.io/projects/robotpy/en/stable/" padding={12} />
 						</a>
 					</AccordionItem>
 				</Accordion>
@@ -75,13 +75,13 @@
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">Main Documentation</span>
 						<a href="https://docs.wpilib.org/en/stable/docs/software/commandbased/index.html" target="_blank">
-							<QrCode value="https://docs.wpilib.org/en/stable/docs/software/commandbased/index.html" padding={5} />
+							<QrCode value="https://docs.wpilib.org/en/stable/docs/software/commandbased/index.html" padding={12} />
 						</a>
 					</AccordionItem>
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">Java API Documentation</span>
 						<a href="https://docs.wpilib.org/en/stable/docs/software/commandbased/index.html" target="_blank">
-							<QrCode value="https://docs.wpilib.org/en/stable/docs/software/commandbased/index.html" padding={5} />
+							<QrCode value="https://docs.wpilib.org/en/stable/docs/software/commandbased/index.html" padding={12} />
 						</a>
 					</AccordionItem>
 				</Accordion>
@@ -96,25 +96,25 @@
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">Main Documentation</span>
 						<a href="https://v6.docs.ctr-electronics.com/en/stable/index.html" target="_blank">
-							<QrCode value="https://v6.docs.ctr-electronics.com/en/stable/index.html" padding={5} />
+							<QrCode value="https://v6.docs.ctr-electronics.com/en/stable/index.html" padding={12} />
 						</a>
 					</AccordionItem>
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">Java API Documentation</span>
 						<a href="https://api.ctr-electronics.com/phoenix6/release/java/" target="_blank">
-							<QrCode value="https://api.ctr-electronics.com/phoenix6/release/java/" padding={5} />
+							<QrCode value="https://api.ctr-electronics.com/phoenix6/release/java/" padding={12} />
 						</a>
 					</AccordionItem>
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">C++ API Documentation</span>
 						<a href="https://api.ctr-electronics.com/phoenix6/release/cpp/" target="_blank">
-							<QrCode value="https://api.ctr-electronics.com/phoenix6/release/cpp/" padding={5} />
+							<QrCode value="https://api.ctr-electronics.com/phoenix6/release/cpp/" padding={12} />
 						</a>
 					</AccordionItem>
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">Python API Documentation</span>
 						<a href="https://api.ctr-electronics.com/phoenix6/release/python/" target="_blank">
-							<QrCode value="https://api.ctr-electronics.com/phoenix6/release/python/" padding={5} />
+							<QrCode value="https://api.ctr-electronics.com/phoenix6/release/python/" padding={12} />
 						</a>
 					</AccordionItem>
 				</Accordion>
@@ -129,19 +129,19 @@
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">Main Documentation</span>
 						<a href="https://v5.docs.ctr-electronics.com/en/stable/" target="_blank">
-							<QrCode value="https://v5.docs.ctr-electronics.com/en/stable/" padding={5} />
+							<QrCode value="https://v5.docs.ctr-electronics.com/en/stable/" padding={12} />
 						</a>
 					</AccordionItem>
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">Java API Documentation</span>
 						<a href="https://api.ctr-electronics.com/phoenix/release/java/" target="_blank">
-							<QrCode value="https://api.ctr-electronics.com/phoenix/release/java/" padding={5} />
+							<QrCode value="https://api.ctr-electronics.com/phoenix/release/java/" padding={12} />
 						</a>
 					</AccordionItem>
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">C++ API Documentation</span>
 						<a href="https://api.ctr-electronics.com/phoenix/release/cpp/" target="_blank">
-							<QrCode value="https://api.ctr-electronics.com/phoenix/release/cpp/" padding={5} />
+							<QrCode value="https://api.ctr-electronics.com/phoenix/release/cpp/" padding={12} />
 						</a>
 					</AccordionItem>
 				</Accordion>
@@ -156,19 +156,19 @@
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">Main Documentation</span>
 						<a href="https://docs.reduxrobotics.com/reduxlib" target="_blank">
-							<QrCode value="https://docs.reduxrobotics.com/reduxlib" padding={5} />
+							<QrCode value="https://docs.reduxrobotics.com/reduxlib" padding={12} />
 						</a>
 					</AccordionItem>
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">Java API Documentation</span>
 						<a href="https://apidocs.reduxrobotics.com/current/java/" target="_blank">
-							<QrCode value="https://apidocs.reduxrobotics.com/current/java/" padding={5} />
+							<QrCode value="https://apidocs.reduxrobotics.com/current/java/" padding={12} />
 						</a>
 					</AccordionItem>
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">C++ API Documentation</span>
 						<a href="https://apidocs.reduxrobotics.com/current/cpp/" target="_blank">
-							<QrCode value="https://apidocs.reduxrobotics.com/current/cpp/" padding={5} />
+							<QrCode value="https://apidocs.reduxrobotics.com/current/cpp/" padding={12} />
 						</a>
 					</AccordionItem>
 				</Accordion>
@@ -183,13 +183,13 @@
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">Java API Documentation</span>
 						<a href="https://www.playingwithfusion.com/frc/2022/javadoc/com/playingwithfusion/package-summary.html" target="_blank">
-							<QrCode value="https://www.playingwithfusion.com/frc/2022/javadoc/com/playingwithfusion/package-summary.html" padding={5} />
+							<QrCode value="https://www.playingwithfusion.com/frc/2022/javadoc/com/playingwithfusion/package-summary.html" padding={12} />
 						</a>
 					</AccordionItem>
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">C++ API Documentation</span>
 						<a href="https://www.playingwithfusion.com/frc/2022/cppdoc/html/annotated.html" target="_blank">
-							<QrCode value="https://www.playingwithfusion.com/frc/2022/cppdoc/html/annotated.html" padding={5} />
+							<QrCode value="https://www.playingwithfusion.com/frc/2022/cppdoc/html/annotated.html" padding={12} />
 						</a>
 					</AccordionItem>
 				</Accordion>
@@ -206,20 +206,20 @@
 						<a href="https://www.kauailabs.com/public_files/navx-mxp/apidocs/java/com/kauailabs/navx/frc/package-summary.html" target="_blank">
 							<QrCode
 								value="https://www.kauailabs.com/public_files/navx-mxp/apidocs/java/com/kauailabs/navx/frc/package-summary.html"
-								padding={5}
+								padding={12}
 							/>
 						</a>
 					</AccordionItem>
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">C++ API Documentation</span>
 						<a href="https://www.kauailabs.com/public_files/navx-mxp/apidocs/c++/" target="_blank">
-							<QrCode value="https://www.kauailabs.com/public_files/navx-mxp/apidocs/c++/" padding={5} />
+							<QrCode value="https://www.kauailabs.com/public_files/navx-mxp/apidocs/c++/" padding={12} />
 						</a>
 					</AccordionItem>
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">LabVIEW Documentation</span>
 						<a href="https://www.kauailabs.com/public_files/navx-mxp/apidocs/labview/index.html" target="_blank">
-							<QrCode value="https://www.kauailabs.com/public_files/navx-mxp/apidocs/labview/index.html" padding={5} />
+							<QrCode value="https://www.kauailabs.com/public_files/navx-mxp/apidocs/labview/index.html" padding={12} />
 						</a>
 					</AccordionItem>
 				</Accordion>
@@ -234,19 +234,19 @@
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">Main Documentation</span>
 						<a href="https://docs.revrobotics.com/docs/software-resources" target="_blank">
-							<QrCode value="https://docs.revrobotics.com/docs/software-resources" padding={5} />
+							<QrCode value="https://docs.revrobotics.com/docs/software-resources" padding={12} />
 						</a>
 					</AccordionItem>
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">Java API Documentation</span>
 						<a href="https://codedocs.revrobotics.com/java/com/revrobotics/package-summary.html" target="_blank">
-							<QrCode value="https://codedocs.revrobotics.com/java/com/revrobotics/package-summary.html" padding={5} />
+							<QrCode value="https://codedocs.revrobotics.com/java/com/revrobotics/package-summary.html" padding={12} />
 						</a>
 					</AccordionItem>
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">C++ API Documentation</span>
 						<a href="https://codedocs.revrobotics.com/cpp/namespacerev.html" target="_blank">
-							<QrCode value="https://codedocs.revrobotics.com/cpp/namespacerev.html" padding={5} />
+							<QrCode value="https://codedocs.revrobotics.com/cpp/namespacerev.html" padding={12} />
 						</a>
 					</AccordionItem>
 				</Accordion>
@@ -261,19 +261,19 @@
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">Main Documentation</span>
 						<a href="https://docs.photonvision.org/en/latest/docs/description.html" target="_blank">
-							<QrCode value="https://docs.photonvision.org/en/latest/docs/description.html" padding={5} />
+							<QrCode value="https://docs.photonvision.org/en/latest/docs/description.html" padding={12} />
 						</a>
 					</AccordionItem>
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">Java API Documentation</span>
 						<a href="https://javadocs.photonvision.org/" target="_blank">
-							<QrCode value="https://javadocs.photonvision.org/" padding={5} />
+							<QrCode value="https://javadocs.photonvision.org/" padding={12} />
 						</a>
 					</AccordionItem>
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">C++ API Documentation</span>
 						<a href="https://cppdocs.photonvision.org/" target="_blank">
-							<QrCode value="https://cppdocs.photonvision.org/" padding={5} />
+							<QrCode value="https://cppdocs.photonvision.org/" padding={12} />
 						</a>
 					</AccordionItem>
 				</Accordion>
@@ -288,25 +288,25 @@
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">Main Documentation</span>
 						<a href="https://pathplanner.dev/home.html" target="_blank">
-							<QrCode value="https://pathplanner.dev/home.html" padding={5} />
+							<QrCode value="https://pathplanner.dev/home.html" padding={12} />
 						</a>
 					</AccordionItem>
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">Java API Documentation</span>
 						<a href="https://pathplanner.dev/api/java/" target="_blank">
-							<QrCode value="https://pathplanner.dev/api/java/" padding={5} />
+							<QrCode value="https://pathplanner.dev/api/java/" padding={12} />
 						</a>
 					</AccordionItem>
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">C++ API Documentation</span>
 						<a href="https://pathplanner.dev/api/cpp/" target="_blank">
-							<QrCode value="https://pathplanner.dev/api/cpp/" padding={5} />
+							<QrCode value="https://pathplanner.dev/api/cpp/" padding={12} />
 						</a>
 					</AccordionItem>
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">Python API Documentation</span>
 						<a href="https://pathplanner.dev/api/python/" target="_blank">
-							<QrCode value="https://pathplanner.dev/api/python/" padding={5} />
+							<QrCode value="https://pathplanner.dev/api/python/" padding={12} />
 						</a>
 					</AccordionItem>
 				</Accordion>
@@ -321,19 +321,19 @@
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">Main Documentation</span>
 						<a href="https://choreo.autos/" target="_blank">
-							<QrCode value="https://choreo.autos/" padding={5} />
+							<QrCode value="https://choreo.autos/" padding={12} />
 						</a>
 					</AccordionItem>
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">Java API Documentation</span>
 						<a href="https://choreo.autos/api/choreolib/java/index.html" target="_blank">
-							<QrCode value="https://choreo.autos/api/choreolib/java/index.html" padding={5} />
+							<QrCode value="https://choreo.autos/api/choreolib/java/index.html" padding={12} />
 						</a>
 					</AccordionItem>
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">C++ API Documentation</span>
 						<a href="https://choreo.autos/api/choreolib/cpp/index.html" target="_blank">
-							<QrCode value="https://choreo.autos/api/choreolib/cpp/index.html" padding={5} />
+							<QrCode value="https://choreo.autos/api/choreolib/cpp/index.html" padding={12} />
 						</a>
 					</AccordionItem>
 				</Accordion>
@@ -348,13 +348,13 @@
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">Main Documentation</span>
 						<a href="https://docs.yagsl.com/" target="_blank">
-							<QrCode value="https://docs.yagsl.com/" padding={5} />
+							<QrCode value="https://docs.yagsl.com/" padding={12} />
 						</a>
 					</AccordionItem>
 					<AccordionItem class="text-black dark:text-white">
 						<span slot="header">Java API Documentation</span>
 						<a href="https://broncbotz3481.github.io/YAGSL-Lib/docs/" target="_blank">
-							<QrCode value="https://broncbotz3481.github.io/YAGSL-Lib/docs/" padding={5} />
+							<QrCode value="https://broncbotz3481.github.io/YAGSL-Lib/docs/" padding={12} />
 						</a>
 					</AccordionItem>
 				</Accordion>

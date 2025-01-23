@@ -11,13 +11,17 @@
 	import NotesPolicy from "../../components/NotesPolicy.svelte";
 	import { settingsStore } from "../../stores/settings";
 	import Spinner from "../../components/Spinner.svelte";
-    import type { Note, Ticket } from "../../../../shared/types";
-    import NoteCard from "../../components/NoteCard.svelte";
+	import type { Note, Ticket } from "../../../../shared/types";
+	import NoteCard from "../../components/NoteCard.svelte";
 	import { navigate } from "svelte-routing";
 
 	let createModalOpen = false;
 
-	let teamSelected = -1; 
+	export let teamNumber: string | undefined;
+
+	let teamSelected = -1;
+
+	if (teamNumber) teamSelected = parseInt(teamNumber);
 
 	let teams: Event["teams"] = get(eventStore).teams || [];
 
@@ -25,7 +29,7 @@
 		.sort((a, b) => parseInt(a.number) - parseInt(b.number))
 		.map((v) => ({ value: parseInt(v.number), name: `${v.number} - ${v.name}` }));
 
-	teamOptions.unshift({value: -1, name: "No Selected Team"})
+	teamOptions.unshift({ value: -1, name: "No Selected Team" });
 
 	let filteredNotes: Note[] | null;
 
@@ -36,11 +40,12 @@
 	async function getNotes() {
 		notesPromise = trpc.notes.getAll.query();
 		notes = await notesPromise;
+		filterNotes(teamSelected);
 	}
 
-	function filterNotes() {
+	function filterNotes(teamSelected: number | undefined) {
 		if (teamSelected !== -1) {
-			filteredNotes = notes.filter(note => note.team === teamSelected)
+			filteredNotes = notes.filter((note) => note.team === teamSelected);
 		}
 	}
 
@@ -53,7 +58,6 @@
 
 	let team: number | undefined;
 	const event = get(eventStore);
-
 
 	let matchId: string | undefined = undefined;
 
@@ -83,20 +87,32 @@
 			return;
 		}
 	}
+
+	function updateUrl(teamSelected: number | undefined) {
+		if (teamSelected === -1) teamSelected = undefined;
+		const url = window.location.origin + "/app/notes" + (teamSelected ? `/${teamSelected}` : "");
+		console.log(url);
+		window.history.pushState({}, "", url);
+	}
+
+	$: {
+		updateUrl(teamSelected);
+		filterNotes(teamSelected);
+	}
 </script>
 
-<NotesPolicy bind:this={notesPolicyElm} /> 
+<NotesPolicy bind:this={notesPolicyElm} />
 
 <Modal bind:open={createModalOpen} size="lg" outsideclose dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
 	<div slot="header"><h1 class="text-2xl font-bold text-black dark:text-white">Create a Note</h1></div>
 	<form class="text-left flex flex-col gap-4" on:submit={createNote}>
 		<Label class="w-full text-left">
 			Select Team:
-			<Select class="mt-2" items={teamOptions} bind:value={team}/>
+			<Select class="mt-2" items={teamOptions} bind:value={team} />
 		</Label>
 		<Label for="text">Text:</Label>
 		<Textarea id="text" class="w-full" rows="5" bind:value={noteText} />
-		
+
 		<Button type="submit" disabled={disableSubmit}>Create Note</Button>
 	</form>
 </Modal>
@@ -107,35 +123,29 @@
 			<h1 class="text-3xl" style="font-weight: bold">Event Team Notes</h1>
 			<Button class="m-3" on:click={() => (createModalOpen = true)}>Create a New Note</Button>
 			<Label>
-                Select a Team (optional):
-                <Select class="mt-2" items={teamOptions} bind:value={teamSelected} />
-            </Label>
-			<div class="flex flex-row space-x-2 mb-8">
-				<Button class="w-1/2" on:click={() => filterNotes()}>Apply Filters</Button>
-				<Button class="w-1/2" on:click={() => (teamSelected = -1)}>Clear Filters</Button>
-			</div>
+				Select a Team (optional):
+				<Select class="mt-2" items={teamOptions} bind:value={teamSelected} />
+			</Label>
 		</div>
 		<div class="flex flex-col grow gap-2">
 			{#await notesPromise}
 				<Spinner />
 			{:then}
 				{#if teamSelected !== -1}
-                    {#if !filteredNotes || filteredNotes.length < 1}
-                        <div class="text-center">No Notes Found for Selected Team</div>
-                    {:else}
-                        {#each filteredNotes as note}
-                            <NoteCard {note} />
-                        {/each}
-                    {/if}
+					{#if !filteredNotes || filteredNotes.length < 1}
+						<div class="text-center">No Notes Found for Selected Team</div>
+					{:else}
+						{#each filteredNotes as note}
+							<NoteCard {note} />
+						{/each}
+					{/if}
+				{:else if !notes || notes.length < 1}
+					<div class="text-center">No Notes Yet</div>
 				{:else}
-                    {#if !notes || notes.length < 1}
-                        <div class="text-center">No Notes Yet</div>
-                    {:else}
-                        {#each notes as note}
-                            <NoteCard {note} />
-                        {/each}
-                    {/if}
-                        {/if}
+					{#each notes as note}
+						<NoteCard {note} />
+					{/each}
+				{/if}
 			{/await}
 		</div>
 	</div>

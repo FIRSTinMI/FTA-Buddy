@@ -133,8 +133,8 @@
 			<Tabs
 				tabStyle="none"
 				defaultClass="flex"
-				activeClasses="p-4 w-full flex-grow text-primary-500 border-b-2 border-primary-500"
-				inactiveClasses="p-4 w-full text-gray-500 dark:text-gray-400 hover:text-gray-700 focus:ring-4 focus:ring-primary-300 focus:outline-none dark:hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+				activeClasses="p-1 md:p-4 w-full flex-grow text-primary-500 border-b-2 border-primary-500"
+				inactiveClasses="p-1 md:p-4 w-full text-gray-500 dark:text-gray-400 hover:text-gray-700 focus:ring-4 focus:ring-primary-300 focus:outline-none dark:hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
 				contentClass="mt-4"
 			>
 				<TabItem open={averageTripTimeOpen} class="w-full" on:click={() => tabClick("averageTripTime")}>
@@ -178,6 +178,15 @@
 					<MatchGraph {data} log={data.log} stat="rxMCS" />
 				</TabItem>
 			</Tabs>
+			<h2>View a Team's Specific Log</h2>
+			<div class="grid grid-cols-2 gap-1">
+				<Button color="none" class="bg-blue-400 dark:bg-blue-500" href="/app/logs/{matchid}/blue1">{data?.blue1}</Button>
+				<Button color="none" class="bg-red-400 dark:bg-red-500" href="/app/logs/{matchid}/red1">{data?.red1}</Button>
+				<Button color="none" class="bg-blue-400 dark:bg-blue-500" href="/app/logs/{matchid}/blue2">{data?.blue2}</Button>
+				<Button color="none" class="bg-red-400 dark:bg-red-500" href="/app/logs/{matchid}/red2">{data?.red2}</Button>
+				<Button color="none" class="bg-blue-400 dark:bg-blue-500" href="/app/logs/{matchid}/blue3">{data?.blue3}</Button>
+				<Button color="none" class="bg-red-400 dark:bg-red-500" href="/app/logs/{matchid}/red3">{data?.red3}</Button>
+			</div>
 		{/if}
 	{/await}
 </div>

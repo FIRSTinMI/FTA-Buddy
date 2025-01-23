@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { EventEmitter } from "events";
 import { TypedEmitter } from 'tiny-typed-emitter';
 import { eventCodes, events } from "..";
@@ -61,13 +61,29 @@ export async function getEvent(eventToken: string, eventCode?: string) {
                 throw new Error('Event not found');
             }
 
+            let usersToGet = event.users as number[];
+
+            if (event.meshedEvent) {
+                const subEvents = await db.query.events.findMany({ where: inArray(schema.events.code, event.meshedEvent) });
+                for (const subEvent of subEvents) {
+                    usersToGet = usersToGet.concat(subEvent.users as number[]);
+                }
+            }
+
+            const users = (event.users.length > 0) ? await db.select({
+                id: schema.users.id,
+                username: schema.users.username,
+                role: schema.users.role,
+                admin: schema.users.admin
+            }).from(schema.users).where(inArray(schema.users.id, Array.from(new Set([...usersToGet])))) : [];
+
             events[eventCode] = {
                 year: event.year,
                 code: eventCode,
                 token: eventToken,
                 teams: event.teams as TeamList,
                 checklist: event.checklist as EventChecklist,
-                users: event.users as Profile[],
+                users: users,
                 monitorFrame: DEFAULT_MONITOR,
                 history: [DEFAULT_MONITOR],
                 lastMatchStart: null,
@@ -83,8 +99,10 @@ export async function getEvent(eventToken: string, eventCode?: string) {
                 lastPrestartDone: null,
                 lastMatchEnd: null,
                 robotCycleTracking: {},
-                tickets: await getEventTickets( eventCode ) as Ticket[],
-                notes: await getEventNotes( eventCode ) as Note[],
+                tickets: await getEventTickets(eventCode) as Ticket[],
+                notes: await getEventNotes(eventCode) as Note[],
+                meshedEvent: event.meshedEvent !== null,
+                subEvents: event.meshedEvent ? event.meshedEvent : undefined,
             };
 
             //console.log('Event loaded into memory: ', eventCode);

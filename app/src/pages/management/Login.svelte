@@ -137,21 +137,31 @@
 	async function adminSelectEvent() {
 		if (event.code === "none") {
 			userStore.set({ ...user, eventToken: "" });
-			eventStore.set({ code: "", pin: "", teams: [], users: []});
+			eventStore.set({ code: "", pin: "", teams: [], users: [] });
 			return;
 		}
 		try {
 			const res = await trpc.event.get.query({ code: event.code });
-
-			//console.log(res.teams);
-
-			userStore.set({ ...user, eventToken: res.token });
-			eventStore.set({
-				code: event.code,
-				pin: res.pin,
-				teams: res.teams as TeamList,
-				users: res.users as Profile[],
-			});
+			console.log(res);
+			if (res.subEvents) {
+				userStore.set({ ...user, eventToken: res.token, meshedEventToken: res.token });
+				eventStore.set({
+					code: event.code,
+					pin: res.pin,
+					teams: res.teams as TeamList,
+					users: res.users as Profile[],
+					subEvents: res.subEvents,
+					meshedEventCode: res.code,
+				});
+			} else {
+				userStore.set({ ...user, eventToken: res.token });
+				eventStore.set({
+					code: event.code,
+					pin: res.pin,
+					teams: res.teams as TeamList,
+					users: res.users as Profile[],
+				});
+			}
 			eventCode = event.code;
 			eventPin = res.pin;
 		} catch (err: any) {
@@ -379,6 +389,7 @@
 				<Select id="event-selector" bind:value={event.code} items={eventList} placeholder="Select Event" on:change={adminSelectEvent} />
 				<Button href="/" on:click={() => navigate("/")}>Go to App</Button>
 				<Button outline on:click={() => navigate("/app/event-created")}>See Event Pin</Button>
+				<Button outline href="/app/meshed-event">Create Meshed Event</Button>
 			</div>
 
 			<!-- Currently have an event selected -->

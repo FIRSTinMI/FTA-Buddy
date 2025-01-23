@@ -1,7 +1,7 @@
 <script lang="ts">
 	import FTCStatus from "./pages/ftc/FTCStatus.svelte";
 	import Icon from "@iconify/svelte";
-	import { Button, CloseButton, Drawer, Indicator, Modal, Sidebar, SidebarGroup, SidebarItem, SidebarWrapper, Toast } from "flowbite-svelte";
+	import { Button, CloseButton, Drawer, Indicator, Label, Modal, Select, Sidebar, SidebarGroup, SidebarItem, SidebarWrapper, Toast } from "flowbite-svelte";
 	import { Link, Route, Router, navigate } from "svelte-routing";
 	import { get } from "svelte/store";
 	import { frameHandler, subscribeToFieldMonitor } from "./field-monitor";
@@ -40,6 +40,7 @@
 	import NotificationList from "./pages/tickets-notes/NotificationList.svelte";
 	import { notificationsStore } from "./stores/notifications";
 	import { startNotificationSubscription, stopBackgroundCreateTicketSubscription } from "./util/notifications";
+	import MeshedEvent from "./pages/management/MeshedEvent.svelte";
 
 	// Checking userentication
 	let user = get(userStore);
@@ -56,6 +57,7 @@
 				...checkAuth.user,
 				token: user.token,
 				eventToken: user.eventToken,
+				meshedEventToken: user.meshedEventToken,
 			});
 		} else {
 			// No user found then reset
@@ -257,6 +259,8 @@
 	setInterval(() => {
 		if (window.outerWidth > 1900) fullscreen = window.innerHeight === 1080;
 	}, 200);
+
+	let multiEventSelection = "combined";
 </script>
 
 {#if showToast}
@@ -303,6 +307,32 @@
 		<h5 id="drawer-navigation-label-3" class="text-base font-semibold text-black uppercase dark:text-gray-400">Menu</h5>
 		<CloseButton on:click={() => (hideMenu = true)} class="mb-4 text-black dark:text-white" />
 	</div>
+	{#if user.meshedEventToken && event.subEvents}
+		<Label class="text-left">
+			Event Selection
+			<Select
+				label="Event"
+				bind:value={multiEventSelection}
+				items={[{ value: "combined", name: "Combined" }, ...event.subEvents.map((e) => ({ value: e.code, name: e.label }))]}
+				class="w-full"
+				on:change={() => {
+					if (multiEventSelection === "combined") {
+						userStore.set({
+							...user,
+							eventToken: user.meshedEventToken ?? "",
+						});
+						eventStore.set({ ...event, code: event.meshedEventCode ?? "", label: "Combined" });
+					} else {
+						userStore.set({
+							...user,
+							eventToken: event.subEvents?.find((e) => e.code === multiEventSelection)?.token ?? "",
+						});
+						eventStore.set({ ...event, ...event.subEvents?.find((e) => e.code === multiEventSelection) });
+					}
+				}}
+			/>
+		</Label>
+	{/if}
 	<Sidebar>
 		<SidebarWrapper divClass="overflow-y-auto py-4 px-3 rounded dark:bg-gray-800">
 			{#if user.token && user.eventToken}
@@ -597,7 +627,7 @@
 			</Button>
 			<div class="flex-grow">
 				{#if user.token && user.eventToken}
-					<h1 class="text-white text-lg place-content-center pt-1 font-bold">{event.code}</h1>
+					<h1 class="text-white text-lg place-content-center pt-1 font-bold">{event.label ?? event.code}</h1>
 				{/if}
 			</div>
 		</div>
@@ -660,6 +690,7 @@
 				<Route path="/google-signup">
 					<CompleteGoogleSignup {toast} />
 				</Route>
+				<Route path="/meshed-event" component={MeshedEvent} />
 			</div>
 
 			{#if user.token && user.eventToken && !fullscreen}

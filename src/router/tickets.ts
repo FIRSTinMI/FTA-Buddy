@@ -15,8 +15,19 @@ import { createNotification, sendWebPushNotification } from "../util/push-notifi
 import { randomUUID } from "crypto";
 import { notificationEmitter } from "..";
 import type { Notification } from "../../shared/types";
+import { generateReport } from "../util/report-generator";
+import { formatTimeShortNoAgoMinutes } from "../../shared/formatTime";
 
 const messageRouter = messagesRouter;
+
+export type TeamTicketsInfo = {
+    team: number,
+    avgOpenTime: number,
+    tickets: Ticket[],
+    ticketLinks: string,
+    longestTicket: Ticket,
+    shortestTicket: Ticket,
+}
 
 export const ticketsRouter = router({
 
@@ -823,6 +834,33 @@ export const ticketsRouter = router({
 
         return true;
     }),
+
+    generateEventTicketReport: eventProcedure.query(async ({ctx}) => {
+        const event = await getEvent(ctx.eventToken as string);
+
+        const totalAvgOpenTime = await getAllAvgOpenTime(event.code);
+
+        const teamNumbers = event.teams.map((team) => parseInt(team.number));
+
+        const allTeamsTicketInfo = await getAllTeamTicketsInfo(event.code, teamNumbers);
+
+
+        const path = await generateReport({
+            title: `Ticket Report for ${event.code}`,
+            description: `Average Cycle Time: ${formatTimeShortNoAgoMinutes(totalAvgOpenTime)}`,
+            headers: ['Team Number', 'Avg Ticket Open Time', 'Number of Tickets', 'Longest Ticket', 'Shortest Ticket', 'All Ticket Links'],
+            fileName: 'TicketReport'
+        }, allTeamsTicketInfo.map((teamInfo) => [
+            teamInfo.team,
+            teamInfo.avgOpenTime,
+            teamInfo.tickets.length,
+            teamInfo.longestTicket.subject,
+            teamInfo.shortestTicket.subject,
+            teamInfo.ticketLinks,
+        ]), event.code);
+
+        return { path };
+    }),
 });
 
 export async function getEventTickets(event_code: string) {
@@ -839,4 +877,115 @@ export async function getEventTickets(event_code: string) {
     }
 
     return eventTickets;
+}
+
+export async function getAllAvgOpenTime(event_code: string) {
+    const eventTickets = await db.query.tickets.findMany({
+        where: eq(tickets.event_code, event_code),
+        orderBy: [desc(tickets.created_at)],
+    });
+
+    if (!eventTickets) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Unable to find tickets for this event" });
+    }
+
+    if (eventTickets.length < 1) {
+        return 0;
+    }
+
+    const totalOpenTime = eventTickets.reduce((totalDuration, ticket) => {
+        if (ticket.created_at && ticket.closed_at) {
+            const created_at = new Date(ticket.created_at).getTime();
+            const closed_at = new Date(ticket.closed_at).getTime();
+            return totalDuration + (closed_at - created_at);
+        }
+        return totalDuration;
+    }, 0);
+
+    const totalOpenTimeMinutes = totalOpenTime / (1000 * 60);
+
+    const avgOpenTimeMinutes = totalOpenTimeMinutes / eventTickets.length;
+
+    return avgOpenTimeMinutes;
+}
+
+export function getAvgOpenTimeByTickets(ticketArray: Ticket[]) {
+    const totalOpenTime = ticketArray.reduce((totalDuration, ticket) => {
+        if (ticket.created_at && ticket.closed_at) {
+            const created_at = new Date(ticket.created_at).getTime();
+            const closed_at = new Date(ticket.closed_at).getTime();
+            return totalDuration + (closed_at - created_at);
+        }
+        return totalDuration;
+    }, 0);
+
+    const totalOpenTimeMinutes = totalOpenTime / (1000 * 60);
+
+    const avgOpenTimeMinutes = totalOpenTimeMinutes / ticketArray.length;
+
+    return avgOpenTimeMinutes;
+}
+
+export async function getTeamTicketsInfo(event_code: string, team: number) {
+    let teamTicketArray = await db.query.tickets.findMany({
+        where: and(
+            eq(tickets.event_code, event_code),
+            eq(tickets.team, team)
+        ),
+        orderBy: [desc(tickets.created_at)],
+    }) as Ticket[];
+
+    if (!teamTicketArray) {
+        teamTicketArray = [];
+    }
+
+    const { shortestTicket, longestTicket } = teamTicketArray.reduce(
+        (acc, ticket) => {
+            if ((ticket.closed_at && acc.shortestTicket.closed_at) 
+                && ((ticket.closed_at.getTime() - ticket.created_at.getTime()) < (acc.shortestTicket.closed_at.getTime() - acc.shortestTicket.created_at.getTime()))) 
+            {
+                acc.shortestTicket = ticket;
+            }
+      
+            if ((ticket.closed_at && acc.longestTicket.closed_at) 
+                && ((ticket.closed_at.getTime() - ticket.created_at.getTime()) < (acc.longestTicket.closed_at.getTime() - acc.longestTicket.created_at.getTime()))) 
+            {
+                acc.longestTicket = ticket;
+            }
+      
+            return acc;
+        },
+        {
+            shortestTicket: teamTicketArray[0] as Ticket, // Initialize with the first ticket as the shortest
+            longestTicket: teamTicketArray[0] as Ticket,  // Initialize with the first ticket as the longest
+        }
+      );
+
+    const avgOpenTime = getAvgOpenTimeByTickets(teamTicketArray);
+
+    const ticketLinks: string[] = teamTicketArray.map((ticket) => `https://www.ftabuddy.com/app/ticket/${ticket.id}`);
+
+    const ticketLinksCombined: string = ticketLinks.join(", ")
+
+    const teamTicketsInfo: TeamTicketsInfo = {
+        team: team,
+        tickets: teamTicketArray,
+        avgOpenTime: avgOpenTime,
+        ticketLinks: ticketLinksCombined,
+        shortestTicket: shortestTicket,
+        longestTicket: longestTicket,
+    }
+
+    return teamTicketsInfo;
+}
+
+export async function getAllTeamTicketsInfo(event_code: string, teamNumbers: number[]) {
+    const allTeamsTicketInfo: TeamTicketsInfo[] = await Promise.all(
+        teamNumbers.map(async (teamNumber) => {
+            const teamInfo = await getTeamTicketsInfo(event_code, teamNumber);
+            return teamInfo;
+        })
+    );
+
+    return allTeamsTicketInfo;
 }

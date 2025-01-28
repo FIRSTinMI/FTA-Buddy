@@ -363,6 +363,8 @@ export interface ServerEvent {
     };
     tickets: Ticket[],
     notes: Note[],
+    meshedEvent: boolean,
+    subEvents?: { code: string, label: string, token: string, teams: TeamList, pin: string, users: Profile[]; }[];
 }
 
 export type TicketUpdateEvents = {
@@ -585,14 +587,14 @@ export interface Message {
     updated_at: Date,
 }
 
-export type NotificationTopic = 
+export type NotificationTopic =
     | 'Ticket-Created'
-    | 'Ticket-Status' 
-    | 'Ticket-Assigned' 
-    | 'New-Ticket-Message' 
-    | "Ticket-Follow" 
+    | 'Ticket-Status'
+    | 'Ticket-Assigned'
+    | 'New-Ticket-Message'
+    | "Ticket-Follow"
     | 'Robot-Status';
-    
+
 export interface Notification {
     id: string,
     timestamp: Date,

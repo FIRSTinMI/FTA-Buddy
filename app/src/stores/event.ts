@@ -1,11 +1,14 @@
 import { writable } from 'svelte/store';
-import type { Profile } from '../../../shared/types';
+import type { Profile, TeamList } from '../../../shared/types';
 
 export interface Event {
     code: string;
     pin: string;
-    teams: ({ number: string, name: string, inspected: boolean })[];
+    teams: ({ number: string, name: string, inspected: boolean; })[];
     users: Profile[];
+    subEvents?: { code: string, label: string, token: string, pin: string, teams: TeamList; }[];
+    meshedEventCode?: string;
+    label?: string;
 }
 
 let initialEvent = localStorage.getItem('event');

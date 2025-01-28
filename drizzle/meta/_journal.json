@@ -246,6 +246,20 @@
       "when": 1736783225448,
       "tag": "0034_outgoing_franklin_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "5",
+      "when": 1737599198534,
+      "tag": "0035_absurd_magneto",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "5",
+      "when": 1737599641410,
+      "tag": "0036_bent_eternity",
+      "breakpoints": true
     }
   ]
 }

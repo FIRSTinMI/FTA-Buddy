@@ -9,6 +9,7 @@ export interface User {
     role: "FTA" | "FTAA" | "CSA" | "RI";
     admin: boolean;
     googleToken?: string;
+    meshedEventToken?: string;
 }
 
 let initialUser = typeof window !== 'undefined' && window.localStorage ? localStorage.getItem('user') : null;

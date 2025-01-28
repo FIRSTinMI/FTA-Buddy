@@ -1,11 +1,11 @@
 import { TRPCError } from "@trpc/server";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db/db";
 import { events, users } from "../db/schema";
 import { adminProcedure, eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
 import { generateToken } from "./user";
-import { EventChecklist, TeamList, TournamentLevel } from '../../shared/types';
+import { EventChecklist, Profile, TeamList, TournamentLevel } from '../../shared/types';
 import { createHash } from 'crypto';
 import { getEvent } from "../util/get-event";
 //import { sendNotification } from "../../app/src/util/push-notifications";
@@ -46,18 +46,17 @@ export const eventRouter = router({
 
         const event = await getEvent(eventDB?.token ?? '');
 
-        const checklist = event.checklist as EventChecklist;
-
-        for (let team of (event.teams) as TeamList) {
-            team.inspected = checklist[team.number].inspected && checklist[team.number].weighed;
-        }
-
         const eventList = ctx.user.events as string[];
 
-        event.users = Array.from(new Set([...event.users.filter(user => typeof user !== 'number'), ctx.user]));
+        event.users = Array.from(new Set([...event.users, {
+            id: ctx.user.id,
+            username: ctx.user.username,
+            role: ctx.user.role,
+            admin: ctx.user.admin,
+        }]));
 
         await db.update(users).set({ events: Array.from(new Set([...eventList, event.code])) }).where(eq(users.id, ctx.user.id));
-        await db.update(events).set({ users: event.users }).where(eq(events.code, event.code));
+        await db.update(events).set({ users: Array.from(new Set(event.users.map(u => u.id))) }).where(eq(events.code, event.code));
 
         return event;
     }),
@@ -74,7 +73,8 @@ export const eventRouter = router({
             teams: events.teams,
             checklist: events.checklist,
             users: events.users,
-            archived: events.archived
+            archived: events.archived,
+            subEvents: events.meshedEvent
         }).from(events).where(eq(events.code, input.code)))[0];
 
         if (eventDB.archived) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Event has been archived' });
@@ -83,20 +83,22 @@ export const eventRouter = router({
 
         if (!event) throw new TRPCError({ code: 'NOT_FOUND', message: 'Event not found' });
 
-        const checklist = event.checklist as EventChecklist;
-
-        for (let team of (event.teams) as TeamList) {
-            team.inspected = checklist[team.number].inspected && checklist[team.number].weighed;
-        }
-
         const eventList = ctx.user.events as string[];
 
-        event.users = Array.from(new Set([...event.users.filter(user => typeof user !== 'number'), ctx.user]));
+        event.users = Array.from(new Set([...event.users, {
+            id: ctx.user.id,
+            username: ctx.user.username,
+            role: ctx.user.role,
+            admin: ctx.user.admin,
+        }]));
 
         await db.update(users).set({ events: Array.from(new Set([...eventList, event.code])) }).where(eq(users.id, ctx.user.id));
-        await db.update(events).set({ users: event.users }).where(eq(events.code, event.code));
+        await db.update(events).set({ users: Array.from(new Set(event.users.map(u => u.id))) }).where(eq(events.code, event.code));
 
-        return eventDB;
+        return {
+            ...eventDB,
+            subEvents: eventDB.subEvents as { code: string, label: string, token: string, teams: TeamList, pin: string, users: Profile[]; }[] ?? undefined,
+        };
     }),
 
     create: publicProcedure.input(z.object({
@@ -189,4 +191,69 @@ export const eventRouter = router({
         const musicOrder = hash.toString('hex').split('');
         return musicOrder.map(s => parseInt(s, 16));
     }),
+
+    createMeshedEvent: adminProcedure.input(z.object({
+        code: z.string().min(4),
+        pin: z.string().min(4),
+        events: z.array(z.object({
+            code: z.string().min(4),
+            label: z.string()
+        })).min(2)
+    })).mutation(async ({ input, ctx }) => {
+        input.code = input.code.trim().toLowerCase();
+        const token = generateToken();
+
+        if (await db.query.events.findFirst({ where: eq(events.code, input.code) })) {
+            throw new TRPCError({ code: 'CONFLICT', message: 'Event already exists' });
+        }
+
+        const eventsData = await db.select().from(events).where(inArray(events.code, input.events.map(e => e.code)));
+
+        if (eventsData.length !== input.events.length) {
+            let missingEvents = input.events.filter(e => !eventsData.find(s => s.code === e.code));
+            throw new TRPCError({ code: 'NOT_FOUND', message: `Events not found: ${missingEvents.map(e => e.code).join(', ')}` });
+        }
+
+        const teams: TeamList = eventsData.flatMap(e => (e.teams as TeamList));
+
+        let subEvents: { code: string, label: string, token: string, teams: TeamList, pin: string; }[] = [];
+
+        let usersToGet = Array.from(new Set([...eventsData.flatMap(e => e.users as number[]), ctx.user.id]));
+
+        for (let event of input.events) {
+            subEvents.push({
+                code: event.code,
+                label: event.label,
+                token: eventsData.find(e => e.code === event.code)?.token ?? '',
+                teams: eventsData.find(e => e.code === event.code)?.teams as TeamList,
+                pin: eventsData.find(e => e.code === event.code)?.pin ?? '',
+            });
+        }
+
+        const meshedEvent = await db.insert(events).values({
+            code: input.code,
+            pin: input.pin,
+            token,
+            teams,
+            users: [ctx.user.id],
+            meshedEvent: subEvents,
+            checklist: {}
+        }).returning();
+
+
+        const eventList = ctx.user.events as string[];
+        await db.update(users).set({ events: Array.from(new Set([...eventList, input.code])) }).where(eq(users.id, ctx.user.id));
+
+        return {
+            ...meshedEvent[0],
+            teams: meshedEvent[0].teams as TeamList,
+            users: await db.select({
+                id: users.id,
+                username: users.username,
+                role: users.role,
+                admin: users.admin
+            }).from(users).where(inArray(users.id, usersToGet)),
+            subEvents
+        };
+    })
 });

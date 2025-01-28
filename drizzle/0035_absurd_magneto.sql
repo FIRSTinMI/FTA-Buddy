@@ -1,0 +1,1 @@
+ALTER TABLE "events" ADD COLUMN "meshedEvent" jsonb DEFAULT '[]' NOT NULL;

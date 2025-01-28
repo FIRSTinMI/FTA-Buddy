@@ -28,6 +28,7 @@ export const events = pgTable('events', {
     users: jsonb('users').notNull().default('[]'),
     scheduleDetails: jsonb('scheduleDetails').notNull().default('{}'),
     archived: boolean('archived').notNull().default(false),
+    meshedEvent: jsonb('meshedEvent')
 });
 
 export const Event = typeof events.$inferInsert;

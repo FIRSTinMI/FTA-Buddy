@@ -298,7 +298,7 @@ export const ticketsRouter = router({
             assigned_to: profile[0] as Profile,
         });
 
-        createNotification(ticket.followers, {
+        createNotification(ticket.followers.filter((id) => id !== profile[0].id), {
             id: randomUUID(),
             timestamp: new Date(),
             topic: "Ticket-Assigned",

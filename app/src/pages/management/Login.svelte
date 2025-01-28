@@ -1,16 +1,19 @@
 <script lang="ts">
-	import { Button, Input, Label, Select, type SelectOptionType } from "flowbite-svelte";
+	import { Button, Input, Label, Select, Modal, type SelectOptionType } from "flowbite-svelte";
 	import { trpc } from "../../main";
 	import { userStore } from "../../stores/user";
 	import { eventStore } from "../../stores/event";
 	import { navigate } from "svelte-routing";
 	import Spinner from "../../components/Spinner.svelte";
 	import type { Profile, TeamList } from "../../../../shared/types";
+    import { settingsStore } from "../../stores/settings";
+    import { subscribeToPush } from "../../util/notifications";
 
 	export let toast: (title: string, text: string, color?: string) => void;
 
 	let event = $eventStore;
 	let user = $userStore;
+	let settings = $settingsStore;
 
 	// If event token is missing, reset the event
 	// This prevents the admin event selector from showing that an event is selected when it's not
@@ -94,6 +97,10 @@
 		} catch (err: any) {
 			toast("Error Logging In", err.message);
 			console.error(err);
+		}
+
+		if (!settings.notificationsDoNotAsk) {
+			notificationModalOpen = true;
 		}
 
 		loading = false;
@@ -232,11 +239,64 @@
 			}
 		}
 	};
+
+	let notificationModalOpen = false;
+
+	$: {
+		if ((user.token)) {
+			console.log("I have a token");
+			console.log(user);
+			console.log(Notification.permission);
+			if ((!(Notification.permission === "granted")) && !settings.notificationsDoNotAsk) {
+				console.log("here 1")
+				notificationModalOpen = true;
+			} else if ((!(Notification.permission === "granted") && settings.notificationsDoNotAsk) || Notification.permission === "granted") {
+				console.log("here 2")
+				notificationModalOpen = false;
+			}
+		} else {
+			console.log("here 3")
+			notificationModalOpen = false;
+		}
+	}
 </script>
 
 <svelte:head>
 	<script src="https://accounts.google.com/gsi/client" async></script>
 </svelte:head>
+
+<Modal bind:open={notificationModalOpen} size="sm" dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
+	<h1 class="font-bold text-xl">Enable Notifications</h1>
+	<h2>Enable to get notifications for Tickets, and/or when a robot loses connection during a match</h2>
+	<Button
+		color="primary"
+		class="w-fit"
+		size="sm"
+		on:click={() => {
+			try {
+				Notification.requestPermission().then((result) => {
+					if (result === "granted") {
+						$settingsStore.notifications = true;
+						subscribeToPush();
+					}
+				});
+				notificationModalOpen = false;
+			} catch (e) {
+				console.error(e);
+				toast("Error", "Error requesting notification permissions");
+			}
+		}}>Grant Notification Permissions</Button
+	>
+	<Button color="primary" class="w-fit" size="sm" on:click={() => {
+		notificationModalOpen = false;
+	}}>No, Thank You</Button>
+	<Button color="primary" class="w-fit" size="sm" on:click={() => {
+		settings.notificationsDoNotAsk = true;
+		notificationModalOpen = false;
+	}}>Do Not Ask Again</Button>
+	<p class="text-sm">You can change which types of notifications you are subscribed to from the Settings screen</p>
+	<p class="text-sm">***You cannot close this window without selecting an option***</p>
+</Modal>
 
 {#if loading}
 	<Spinner />

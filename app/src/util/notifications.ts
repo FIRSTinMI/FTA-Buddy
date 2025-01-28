@@ -69,8 +69,8 @@ export function startNotificationSubscription() {
             {
                 onError: console.error,
                 onData: (data) => {
-                    console.log(Notification.permission);
-                    console.log("in data reciever 1");
+                    // console.log(Notification.permission);
+                    // console.log("in data reciever 1");
 
                     let sendNotification = false;
 
@@ -119,10 +119,12 @@ export function startNotificationSubscription() {
     //console.log(`Listeners ${event.ticketPushEmitter.listenerCount()}`);
 }
 
-export function stopBackgroundCreateTicketSubscription() {
+export function stopNotificationSubscription() {
     if (!backgroundNotificationSubscription) return;
 
     backgroundNotificationSubscription?.unsubscribe();
+
+    console.log("Stopped Notification Subscription");
 }
 
 const publicVapidKey = 'BFTN7PqbkHaSPpmQBbMANVP7NSJg2qGkSEisDlTborp3FMIlZAwvMVcEbCOS11JqPgDQLuk42DY5AU_mHQdyibs';

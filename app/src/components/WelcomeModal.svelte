@@ -76,31 +76,6 @@
 				{:else}
 					<p>App installed ✅</p>
 				{/if}
-				{#if !notificationsGranted}
-					<h2 class="font-bold">Enable Notifications</h2>
-					<p>Enable to get notifications for new ticket/notes, and/or when a robot loses connection during a match.</p>
-					<Button
-						color="primary"
-						class="w-fit"
-						size="sm"
-						on:click={() => {
-							try {
-								Notification.requestPermission().then((result) => {
-									if (result === "granted") {
-										$settingsStore.notifications = true;
-										notificationsGranted = true;
-										subscribeToPush();
-									}
-								});
-							} catch (e) {
-								console.error(e);
-								toast("Error", "Error requesting notification permissions");
-							}
-						}}>Grant Notification Permissions</Button
-					>
-				{:else}
-					<p>Notifications enabled ✅</p>
-				{/if}
 			</div>
 			{#if matchCount}<span class="font-bold">{matchCount.events} events have used FTA Buddy, playing {matchCount.matches} matches!</span>{/if}
 		{:else if step === 1}

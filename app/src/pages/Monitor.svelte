@@ -172,7 +172,7 @@
 
 	const stations: ROBOT[] = Object.values(ROBOT);
 
-	export let fullscreen = false;
+	export let fullscreen = window.outerWidth > 1900 ? window.innerHeight === 1080 : false;
 
 	let loading = true;
 </script>
@@ -185,22 +185,6 @@
 	<Spinner />
 </div>
 
-<Button
-	color="none"
-	class="hidden {fullscreen ? '' : 'md:block'} md:fixed text-sm top-12 left-0 z-50"
-	on:click={(evt) => {
-		evt.preventDefault();
-		fullscreen = !fullscreen;
-		if (fullscreen) {
-			document.documentElement.requestFullscreen();
-		} else {
-			document.exitFullscreen();
-		}
-	}}
->
-	<Icon icon="mdi:fullscreen" class="w-8 h-8" />
-</Button>
-
 <div
 	class="grid grid-cols-fieldmonitor lg:grid-cols-fieldmonitor-large gap-0.5 md:gap-1 lg:gap-2 mx-auto justify-center {fullscreen && 'fullscreen'}"
 	class:hidden={loading}
@@ -211,6 +195,25 @@
 				<div class="px-2">M: {monitorFrame.match}</div>
 				<div class="flex-1 px-2 text-center">{FieldStates[monitorFrame.field]}</div>
 				<div class="px-2">{monitorFrame.time}</div>
+				<Button
+					color="none"
+					class="text-sm {!fullscreen && 'fixed top-12 right-0 z-50'}"
+					on:click={(evt) => {
+						evt.preventDefault();
+						fullscreen = !fullscreen;
+						if (fullscreen) {
+							document.documentElement.requestFullscreen();
+						} else {
+							document.exitFullscreen();
+						}
+					}}
+				>
+					{#if fullscreen}
+						<Icon icon="mdi:fullscreen-exit" class="w-8 h-8" />
+					{:else}
+						<Icon icon="mdi:fullscreen" class="w-8 h-8" />
+					{/if}
+				</Button>
 			</div>
 			<p>Team</p>
 			<p>DS</p>

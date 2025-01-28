@@ -94,8 +94,8 @@ async function addNotification(notification) {
 
 self.addEventListener("push", async (evt) => {
 	const data = evt.data.json();
-	console.log(evt);
-	console.log(evt.data);
+	// console.log(evt);
+	// console.log(evt.data);
 
 	let sendNotification = false;
 

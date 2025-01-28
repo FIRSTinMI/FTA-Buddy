@@ -249,8 +249,8 @@
 </Modal>
 
 <div class="container max-w-6xl mx-auto px-2 pt-2 h-full flex flex-col gap-2">
-	<div class="flex flex-col overflow-y-auto h-dvh gap-2">
-		<h1 class="text-3xl mt-2" style="font-weight: bold">Event Tickets</h1>
+	<div class="flex flex-col overflow-hidden h-full gap-2">
+		<h1 class="text-3xl mt-2 font-bold pt-2">Event Tickets</h1>
 		<Button class="max-w-3xl mx-auto w-full" on:click={() => (createModalOpen = true)}>Create a New Ticket</Button>
 		<div class="flex items-center gap-2 max-w-3xl w-full mx-auto">
 			<Label class="w-full text-left">
@@ -264,7 +264,7 @@
 				<Select class="w-fit" items={filterOptions} bind:value={filterSelected} />
 			</Label>
 		</div>
-		<div class="flex flex-col grow gap-2 mt-4">
+		<div class="flex flex-col gap-2 overflow-y-auto mt-4 pb-2">
 			{#await ticketsPromise}
 				<Spinner />
 			{:then}

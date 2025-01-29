@@ -182,7 +182,6 @@ export function formatTimeShortNoAgoSeconds(diff: number) {
 
 export function formatTimeShortNoAgoMinutes(diff: number) {
     if (diff) {
-        const past = diff > 0;
         diff = Math.abs(diff);
     
         if (diff < 1e3) {
@@ -193,14 +192,15 @@ export function formatTimeShortNoAgoMinutes(diff: number) {
         } else if (diff < 24 * 60 * 60e3) {
             const hours = Math.floor(diff / 3600e3);
             const minutes = Math.floor((diff % 3600e3) / 60e3);
-            return `${hours}h${minutes}m`;
+            return `${hours}h ${minutes}m`;
         } else {
+            const days = Math.floor(diff / (24 * 60 * 60e3)); // Extract days
             const hours = Math.floor((diff % (24 * 60 * 60e3)) / 3600e3);
             const minutes = Math.floor((diff % 3600e3) / 60e3);
-            return `${hours}h${minutes}m`;
+            return `${days}d ${hours}h ${minutes}m`;
         }
     } else {
-        return null;
+        return '0m';
     }
     
 }

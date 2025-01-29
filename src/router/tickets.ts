@@ -22,11 +22,13 @@ const messageRouter = messagesRouter;
 
 export type TeamTicketsInfo = {
     team: number,
+    totalOpenTime: number,
     avgOpenTime: number | null,
     tickets: Ticket[],
+    ticketSubjects: string,
     ticketLinks: string,
+    longestTicketOpenTime: number,
     longestTicket: Ticket | null,
-    shortestTicket: Ticket | null,
 }
 
 export const ticketsRouter = router({
@@ -846,16 +848,17 @@ export const ticketsRouter = router({
 
         const path = await generateReport({
             title: `Ticket Report for ${event.code}`,
-            description: `Average Cycle Time: ${formatTimeShortNoAgoMinutes(totalAvgOpenTime)}`,
-            headers: ['Team Number', 'Avg Ticket Open Time', '# of Tickets', '# of Closed Tickets', 'Longest Ticket', 'Shortest Ticket', 'All Ticket Links'],
+            description: `Average Total Ticket Open Time: ${formatTimeShortNoAgoMinutes(totalAvgOpenTime)}`,
+            headers: ['Team #', 'Total Open Time', '# of Tickets', 'Avg Open Time', 'Longest Open Time', 'Longest Subject', 'All Subjects', 'All Ticket Links'],
             fileName: 'TicketReport'
         }, allTeamsTicketInfo.map((teamInfo) => [
             teamInfo.team,
-            (teamInfo.avgOpenTime !== null ? formatTimeShortNoAgoMinutes(teamInfo.avgOpenTime) : "None") ?? "None",
+            formatTimeShortNoAgoMinutes(teamInfo.totalOpenTime) ?? "None",
             teamInfo.tickets.length,
-            getClosedTicketsNumber(teamInfo.tickets),
-            teamInfo.longestTicket?.subject ?? "None",
-            teamInfo.shortestTicket?.subject ?? "None",
+            (teamInfo.avgOpenTime !== null ? formatTimeShortNoAgoMinutes(teamInfo.avgOpenTime) : "None") ?? "None",
+            formatTimeShortNoAgoMinutes(teamInfo.longestTicketOpenTime) ?? "None",
+            (teamInfo.longestTicket !== null) ? `#${teamInfo.longestTicket.id} - ${teamInfo.longestTicket.subject}` : "",
+            teamInfo.ticketSubjects,
             teamInfo.ticketLinks ?? "None",
         ]), event.code);
 
@@ -877,6 +880,19 @@ export async function getEventTickets(event_code: string) {
     }
 
     return eventTickets;
+}
+
+export function getTotalOpenTime(ticketArray: Ticket[]) {
+    const totalOpenTime = ticketArray.reduce((totalDuration, ticket) => {
+        if (ticket.created_at && ticket.closed_at) {
+            const created_at = new Date(ticket.created_at).getTime();
+            const closed_at = new Date(ticket.closed_at).getTime();
+            return totalDuration + (closed_at - created_at);
+        }
+        return totalDuration;
+    }, 0);
+    
+    return totalOpenTime;
 }
 
 export async function getAllAvgOpenTime(event_code: string) {
@@ -942,7 +958,7 @@ export async function getTeamTicketsInfo(event_code: string, team: number) {
         teamTicketArray = [];
     }
 
-    const shortestTicket = getShortestTicket(teamTicketArray);
+    const longestTicketOpenTime = getLongestTicketOpenTime(teamTicketArray);
     const longestTicket = getLongestTicket(teamTicketArray);
 
     const avgOpenTime = getAvgOpenTimeByTickets(teamTicketArray);
@@ -951,12 +967,20 @@ export async function getTeamTicketsInfo(event_code: string, team: number) {
 
     const ticketLinksCombined: string = ticketLinks.join(", ")
 
+    const ticketSubjects: string[] = teamTicketArray.map((ticket) => ticket.subject);
+
+    const ticketSubjectsCombined: string = ticketSubjects.join(", ")
+
+    const totalOpenTime = getTotalOpenTime(teamTicketArray);
+
     const teamTicketsInfo: TeamTicketsInfo = {
         team: team,
         tickets: teamTicketArray,
+        totalOpenTime: totalOpenTime,
         avgOpenTime: avgOpenTime,
+        ticketSubjects: ticketSubjectsCombined,
         ticketLinks: ticketLinksCombined,
-        shortestTicket: shortestTicket,
+        longestTicketOpenTime: longestTicketOpenTime,
         longestTicket: longestTicket,
     }
 
@@ -971,35 +995,18 @@ export async function getAllTeamTicketsInfo(event_code: string, teamNumbers: num
         })
     );
 
-    const sortedAllTeamsTicketInfo = allTeamsTicketInfo.slice().sort((a, b) => b.tickets.length - a.tickets.length);
+    const sortedAllTeamsTicketInfo = allTeamsTicketInfo.slice().sort((a, b) => b.totalOpenTime - a.totalOpenTime);
+
+    console.log(sortedAllTeamsTicketInfo);
 
     return sortedAllTeamsTicketInfo;
 }
 
-export function getShortestTicket(tickets: Ticket[]) {
+export function getLongestTicketOpenTime(tickets: Ticket[]) {
     const closedTickets = tickets.filter(ticket => ticket.closed_at !== null);
 
     if (closedTickets.length <= 1) {
-        return null;
-    } else {
-        const shortestTicket = closedTickets.reduce((minTicket, ticket) => {
-            if (ticket.closed_at && minTicket.closed_at) {
-                const openTime = ticket.closed_at.getTime() - ticket.created_at.getTime();
-                const minOpenTime = minTicket.closed_at.getTime() - minTicket.created_at.getTime();
-                return openTime < minOpenTime ? ticket : minTicket;
-            }
-            return minTicket;
-        }, closedTickets[0]);
-
-        return shortestTicket;
-    }
-}
-
-export function getLongestTicket(tickets: Ticket[]) {
-    const closedTickets = tickets.filter(ticket => ticket.closed_at !== null);
-
-    if (closedTickets.length <= 1) {
-        return null;
+        return 0;
     } else {
         const longestTicket = closedTickets.reduce((maxTicket, ticket) => {
             if (ticket.closed_at && maxTicket.closed_at) {
@@ -1010,12 +1017,39 @@ export function getLongestTicket(tickets: Ticket[]) {
             return maxTicket;
         }, closedTickets[0]);
 
+        const openTime = (longestTicket.closed_at && longestTicket.created_at) ? longestTicket.closed_at.getTime() - longestTicket.created_at.getTime() : 0;
+
+        return openTime;
+    }
+}
+
+export function getLongestTicket(tickets: Ticket[]) {
+    const closedTickets = tickets.filter(ticket => ticket.closed_at !== null);
+
+    if (closedTickets.length <= 1) {
+        if (tickets.length > 0) {
+            return tickets[0];
+        } else {
+            return null;
+        }
+    } else {
+        const longestTicket = closedTickets.reduce((maxTicket, ticket) => {
+            if (ticket.closed_at && maxTicket.closed_at) {
+                const openTime = ticket.closed_at.getTime() - ticket.created_at.getTime();
+                const minOpenTime = maxTicket.closed_at.getTime() - maxTicket.created_at.getTime();
+                return openTime > minOpenTime ? ticket : maxTicket;
+            }
+            return maxTicket;
+        }, closedTickets[0]);
+
+
         return longestTicket;
     }
 }
 
-export function getClosedTicketsNumber(ticketArray: Ticket[]) {
-    const closedTickets = ticketArray.filter(ticket => ticket.closed_at !== null);
-
-    return closedTickets.length;
+export function getTicketOpenTime(ticket: Ticket) {
+    if (ticket.closed_at) {
+        const openTime = ticket.closed_at.getTime() - ticket.created_at.getTime();
+        return openTime;
+    }
 }

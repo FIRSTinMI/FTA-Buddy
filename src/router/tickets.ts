@@ -971,7 +971,9 @@ export async function getAllTeamTicketsInfo(event_code: string, teamNumbers: num
         })
     );
 
-    return allTeamsTicketInfo;
+    const sortedAllTeamsTicketInfo = allTeamsTicketInfo.slice().sort((a, b) => b.tickets.length - a.tickets.length);
+
+    return sortedAllTeamsTicketInfo;
 }
 
 export function getShortestTicket(tickets: Ticket[]) {

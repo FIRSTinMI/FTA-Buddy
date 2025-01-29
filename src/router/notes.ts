@@ -12,10 +12,7 @@ import { randomUUID } from "crypto";
 export const notesRouter = router({
 
     getAll: eventProcedure.query(async ({ ctx }) => {
-        const event = await getEvent(ctx.eventToken as string);
-
         const eventNotes = await db.query.notes.findMany({
-            where: eq(notes.event_code, event.code), 
             orderBy: [asc(notes.created_at)],
         });
 
@@ -28,13 +25,9 @@ export const notesRouter = router({
 
     getAllByAuthor: eventProcedure.input(z.object({
         author_id: z.number(),
-        event_code: z.string(),
     })).query(async ({ctx, input}) => {
-        const event = await getEvent(ctx.eventToken as string);
-
         const notesByAuthor = await db.query.notes.findMany({
             where: and(
-                eq(notes.event_code, event.code),
                 eq(notes.author_id, input.author_id),
             ),
             orderBy: [asc(notes.created_at)],
@@ -50,11 +43,8 @@ export const notesRouter = router({
     getAllByTeam: eventProcedure.input(z.object({
         team_number: z.number()
     })).query(async ({ctx, input}) => {
-        const event = await getEvent(ctx.eventToken as string);
-
         const notesByTeam = await db.query.notes.findMany({
             where: and(
-                eq(notes.event_code, event.code), 
                 eq(notes.team, input.team_number)
             ),
             orderBy: [asc(notes.created_at)],

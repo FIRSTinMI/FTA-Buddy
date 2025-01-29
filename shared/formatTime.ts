@@ -181,21 +181,26 @@ export function formatTimeShortNoAgoSeconds(diff: number) {
 }
 
 export function formatTimeShortNoAgoMinutes(diff: number) {
-    const past = diff > 0;
-    diff = Math.abs(diff);
-
-    if (diff < 1e3) {
-        return '0';
-    } else if (diff < 60 * 60e3) {
-        const minutes = Math.floor(diff / 60e3);
-        return `${minutes}m`;
-    } else if (diff < 24 * 60 * 60e3) {
-        const hours = Math.floor(diff / 3600e3);
-        const minutes = Math.floor((diff % 3600e3) / 60e3);
-        return `${hours}h${minutes}m`;
+    if (diff) {
+        const past = diff > 0;
+        diff = Math.abs(diff);
+    
+        if (diff < 1e3) {
+            return '0';
+        } else if (diff < 60 * 60e3) {
+            const minutes = Math.floor(diff / 60e3);
+            return `${minutes}m`;
+        } else if (diff < 24 * 60 * 60e3) {
+            const hours = Math.floor(diff / 3600e3);
+            const minutes = Math.floor((diff % 3600e3) / 60e3);
+            return `${hours}h${minutes}m`;
+        } else {
+            const hours = Math.floor((diff % (24 * 60 * 60e3)) / 3600e3);
+            const minutes = Math.floor((diff % 3600e3) / 60e3);
+            return `${hours}h${minutes}m`;
+        }
     } else {
-        const hours = Math.floor((diff % (24 * 60 * 60e3)) / 3600e3);
-        const minutes = Math.floor((diff % 3600e3) / 60e3);
-        return `${hours}h${minutes}m`;
+        return null;
     }
+    
 }

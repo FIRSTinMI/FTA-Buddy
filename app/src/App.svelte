@@ -431,10 +431,10 @@
 						</svelte:fragment>
 					</SidebarItem>
 					<SidebarItem
-						label="Event Report"
+						label="Event Reports"
 						on:click={() => {
 							hideMenu = true;
-							navigate("/app/event-report");
+							navigate("/app/event-reports");
 						}}
 					>
 						<svelte:fragment slot="icon">
@@ -657,7 +657,7 @@
 			<Route path="/logs/:matchid/:station" component={StationLog} />
 			<Route path="/checklist" component={Checklist} />
 			<Route path="/dashboard" component={EventDashboard} />
-			<Route path="/event-report" component={EventReport} />
+			<Route path="/event-reports" component={EventReport} />
 			<Route path="/ftc-status" component={FTCStatus} />
 			<Route path="/login">
 				<Login {toast} />

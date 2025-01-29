@@ -38,7 +38,7 @@ export async function sendWebPushNotification(users: number[], data: Notificatio
     const subscriptionsToDelete: number[] = [];
 
     for (let subscription of subscriptions) {
-        console.log('Sending notification to', subscription.user_id);
+        //console.log('Sending notification to', subscription.user_id);
 
         const parsedUrl = new URL(subscription.endpoint);
         const audience = `${parsedUrl.protocol}//${parsedUrl.hostname}`;

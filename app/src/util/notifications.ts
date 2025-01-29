@@ -10,7 +10,7 @@ import { addNotification, checkIfNotificationExists } from "../stores/notificati
 let user = get(userStore);
 
 export function createNotification(data: Notification) {
-    console.log('Creating notification:', data);
+    //console.log('Creating notification:', data);
     if (!("Notification" in window)) {
         throw new Error("This browser does not support desktop notifications");
     }
@@ -152,7 +152,7 @@ export async function subscribeToPush() {
         console.log('Registering service worker');
         const registration = await navigator.serviceWorker.ready;
 
-        console.log(registration);
+        //console.log(registration);
 
         // Subscribe to push notifications
         const subscription = await registration.pushManager.subscribe({

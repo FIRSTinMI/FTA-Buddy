@@ -304,7 +304,7 @@
 			},
 			{
 				onData: (data) => {
-					console.log(data);
+					//console.log(data);
 					if (data.ticket_id === ticket.id) {
 						switch (data.kind) {
 							case "assign":

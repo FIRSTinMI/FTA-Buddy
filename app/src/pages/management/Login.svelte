@@ -244,18 +244,18 @@
 
 	$: {
 		if ((user.token)) {
-			console.log("I have a token");
-			console.log(user);
-			console.log(Notification.permission);
+			//console.log("I have a token");
+			//console.log(user);
+			//console.log(Notification.permission);
 			if ((!(Notification.permission === "granted")) && !settings.notificationsDoNotAsk) {
-				console.log("here 1")
+				//console.log("here 1")
 				notificationModalOpen = true;
 			} else if ((!(Notification.permission === "granted") && settings.notificationsDoNotAsk) || Notification.permission === "granted") {
-				console.log("here 2")
+				//console.log("here 2")
 				notificationModalOpen = false;
 			}
 		} else {
-			console.log("here 3")
+			//console.log("here 3")
 			notificationModalOpen = false;
 		}
 	}

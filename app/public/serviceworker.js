@@ -140,7 +140,7 @@ self.addEventListener("push", async (evt) => {
 			data: data.data,
 			icon: "https://ftabuddy.com" + (data.icon ?? "/app/icon512_rounded.png"),
 		});
-		console.log(await clients.matchAll());
+		//console.log(await clients.matchAll());
 	}
 });
 

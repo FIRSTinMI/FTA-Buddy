@@ -153,7 +153,7 @@
 			{
 				onError: console.error,
 				onData: (data) => {
-					console.log(data);
+					//console.log(data);
 					// Want to avoid having to refetch everything if we can
 					//getTickets();
 					const ticket = tickets.find((t) => t.id === data.ticket_id);

@@ -40,6 +40,7 @@
 	import NotificationList from "./pages/tickets-notes/NotificationList.svelte";
 	import { notificationsStore } from "./stores/notifications";
 	import { startNotificationSubscription } from "./util/notifications";
+	import MeshedEvent from "./pages/management/MeshedEvent.svelte";
 
 	// Checking userentication
 	let user = get(userStore);
@@ -81,6 +82,7 @@
 		"/app/google-signup",
 		"/app/host",
 		"/app/event-created",
+		"/app/meshed-event",
 		"/app/ftc-status",
 		"/app/references",
 		"/app/statuslights",
@@ -671,6 +673,7 @@
 			<Route path="/google-signup">
 				<CompleteGoogleSignup {toast} />
 			</Route>
+			<Route path="/meshed-event" component={MeshedEvent} />
 		</div>
 
 		<div class="flex justify-around py-2 bg-neutral-900 dark:bg-neutral-700 text-white {fullscreen && 'bg-white dark:bg-neutral-800'}">
@@ -732,4 +735,3 @@
 		</div>
 	</main>
 </Router>
-

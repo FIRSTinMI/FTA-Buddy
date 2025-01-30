@@ -3,8 +3,17 @@
 	import { Button, Modal, Select, type SelectOptionType } from "flowbite-svelte";
 	import Icon from "@iconify/svelte";
 	import { trpc } from "../main";
+	import { onMount } from "svelte";
 
 	const urlParams = new URLSearchParams(window.location.search);
+
+	export let defaultEvents: null | string[] = null;
+
+	onMount(() => {
+		if (defaultEvents) {
+			events = defaultEvents;
+		}
+	});
 
 	let events: string[] =
 		urlParams
@@ -45,13 +54,13 @@
 	</Modal>
 {/await}
 
-<div class="flex flex-col h-full lg:ml-2">
+<div class="flex flex-col h-full lg:ml-2 pb-2">
 	<div class="grid {events.length > 0 && 'grid-cols-2'} lg:flex grow justify-center gap-2 pt-2 px-2">
 		{#each events as eventCode}
-			<EventStatus {eventCode} remove={removeEvent} />
+			<EventStatus {eventCode} remove={removeEvent} removable={false} />
 		{/each}
 
-		{#if events.length < 4 && (window.innerWidth >= 640 || events.length === 0)}
+		{#if events.length < 4 && (window.innerWidth >= 640 || events.length === 0) && !defaultEvents}
 			<div class="relative flex items-center justify-end {events.length > 0 && 'w-0 left-28'}">
 				<Button
 					on:click={() => {
@@ -61,7 +70,7 @@
 			</div>
 		{/if}
 	</div>
-	{#if window.innerWidth < 640 && events.length < 4 && events.length > 0}
+	{#if window.innerWidth < 640 && events.length < 4 && events.length > 0 && !defaultEvents}
 		<div class="flex justify-center">
 			<Button
 				on:click={() => {

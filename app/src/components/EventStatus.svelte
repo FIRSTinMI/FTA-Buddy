@@ -11,6 +11,7 @@
 
 	export let eventCode: string;
 	export let remove: (eventCode: string) => void;
+	export let removable: boolean = true;
 
 	let cycleSubscription: ReturnType<typeof trpc.cycles.subscription.subscribe>;
 
@@ -109,14 +110,19 @@
 
 	<div class="flex">
 		<h1 class="text-lg lg:text-2xl font-bold flex-1">{eventCode}</h1>
-		<Button on:click={() => remove(eventCode)} color="none" class="p-0"><Icon icon="mdi:close" class="size-6" /></Button>
+		{#if removable}
+			<Button on:click={() => remove(eventCode)} color="none" class="p-0"><Icon icon="mdi:close" class="size-6" /></Button>
+		{/if}
 	</div>
 
 	<div class:blur={loading}>
 		<h2 class="text-lg lg:mt-2">Match: {match}</h2>
 		<h4 class="text-lg font-bold lg:text-xl">{aheadBehind}</h4>
 
-		<div class="lg:text-lg lg:mt-2" style="color: rgba({75 * currentCycleTimeRedness + 180}, {180 * (1 - currentCycleTimeRedness)}, {180 * (1 - currentCycleTimeRedness)}, 1)">
+		<div
+			class="lg:text-lg lg:mt-2"
+			style="color: rgba({75 * currentCycleTimeRedness + 180}, {180 * (1 - currentCycleTimeRedness)}, {180 * (1 - currentCycleTimeRedness)}, 1)"
+		>
 			T: {currentCycleTime}
 		</div>
 

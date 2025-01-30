@@ -997,9 +997,9 @@ export async function getAllTeamTicketsInfo(event_code: string, teamNumbers: num
 
     const sortedAllTeamsTicketInfo = allTeamsTicketInfo.slice().sort((a, b) => b.totalOpenTime - a.totalOpenTime);
 
-    console.log(sortedAllTeamsTicketInfo);
+    const filteredAllTeamsTicketInfo = sortedAllTeamsTicketInfo.filter(teamTicketInfo => teamTicketInfo.tickets.length !== 0); 
 
-    return sortedAllTeamsTicketInfo;
+    return filteredAllTeamsTicketInfo;
 }
 
 export function getLongestTicketOpenTime(tickets: Ticket[]) {

@@ -265,7 +265,7 @@
 	<script src="https://accounts.google.com/gsi/client" async></script>
 </svelte:head>
 
-<Modal bind:open={notificationModalOpen} size="sm" dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
+<Modal bind:open={notificationModalOpen} outsideclose size="sm" dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
 	<h1 class="font-bold text-xl">Enable Notifications</h1>
 	<h2>Enable to get notifications for Tickets, and/or when a robot loses connection during a match</h2>
 	<Button
@@ -278,6 +278,7 @@
 					if (result === "granted") {
 						$settingsStore.notifications = true;
 						subscribeToPush();
+						settingsStore.set(settings);
 					}
 				});
 				notificationModalOpen = false;
@@ -292,10 +293,10 @@
 	}}>No, Thank You</Button>
 	<Button color="primary" class="w-fit" size="sm" on:click={() => {
 		settings.notificationsDoNotAsk = true;
+		settingsStore.set(settings);
 		notificationModalOpen = false;
 	}}>Do Not Ask Again</Button>
 	<p class="text-sm">You can change which types of notifications you are subscribed to from the Settings screen</p>
-	<p class="text-sm">***You cannot close this window without selecting an option***</p>
 </Modal>
 
 {#if loading}

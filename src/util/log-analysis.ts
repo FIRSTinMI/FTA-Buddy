@@ -210,11 +210,11 @@ export function analyzeLog(log: FMSLogFrame[]): DisconnectionEvent[] {
     });
 }
 
-export async function logAnalysisLoop() {
+export async function logAnalysisLoop(limit: number) {
     const logsToAnalyze = await db.select().from(matchLogs)
         .where(eq(matchLogs.analyzed, false))
         .orderBy(asc(matchLogs.start_time))
-        .limit(10)
+        .limit(limit)
         .execute();
 
     if (logsToAnalyze.length === 0) return;

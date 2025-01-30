@@ -251,8 +251,8 @@ connect().then(() => {
         // Log analysis loop
         new Promise(async () => {
             while (true) {
-                await logAnalysisLoop();
-                await new Promise((resolve) => setTimeout(resolve, 20e3));
+                await logAnalysisLoop(3);
+                await new Promise((resolve) => setTimeout(resolve, 3e3));
             }
         });
     }

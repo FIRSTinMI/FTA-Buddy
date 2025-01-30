@@ -197,7 +197,7 @@
 				<div class="px-2">{monitorFrame.time}</div>
 				<Button
 					color="none"
-					class="text-sm {!fullscreen && 'fixed top-12 right-0 z-50'}"
+					class="hidden text-sm {!fullscreen && 'md:block fixed top-12 right-0 z-50'}"
 					on:click={(evt) => {
 						evt.preventDefault();
 						fullscreen = !fullscreen;

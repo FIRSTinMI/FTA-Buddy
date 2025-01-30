@@ -70,9 +70,20 @@
 	$: filterAndSearchTickets(tickets, filterSelected, search);
 
 	async function getTickets() {
+		console.log($userStore.eventToken);
 		ticketsPromise = trpc.tickets.getAllWithMessages.query();
 		tickets = await ticketsPromise;
 	}
+
+	// If the eventToken changes, we need to refetch the tickets and update the subscription
+	let eventToken = $userStore.eventToken;
+	userStore.subscribe((value) => {
+		if (value.eventToken !== eventToken) {
+			eventToken = value.eventToken;
+			getTickets();
+			ticketUpdateSubscription();
+		}
+	});
 
 	onMount(() => {
 		getTickets();

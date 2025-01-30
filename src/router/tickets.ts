@@ -3,7 +3,7 @@ import { eventProcedure, protectedProcedure, publicProcedure, router } from "../
 import { db } from "../db/db";
 import { pushSubscriptions, tickets, users, events, messages } from "../db/schema";
 import type { User } from "../db/schema";
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { Ticket, Profile, TicketUpdateEventData, TicketUpdateEvents, NotificationEvents } from "../../shared/types";
 import { getEvent, getListenerCount } from "../util/get-event";
@@ -29,15 +29,21 @@ export type TeamTicketsInfo = {
     ticketLinks: string,
     longestTicketOpenTime: number,
     longestTicket: Ticket | null,
-}
+};
 
 export const ticketsRouter = router({
 
     getAllWithMessages: eventProcedure.query(async ({ ctx }) => {
         const event = await getEvent(ctx.eventToken as string);
 
+        let eventCodes = [event.code];
+
+        if (event.meshedEvent && event.subEvents) {
+            eventCodes = eventCodes.concat(event.subEvents.map((subEvent) => subEvent.code));
+        }
+
         const eventTickets = await db.query.tickets.findMany({
-            where: eq(tickets.event_code, event.code),
+            where: inArray(tickets.event_code, eventCodes),
             orderBy: [asc(tickets.created_at)],
             with: {
                 messages: {
@@ -63,7 +69,12 @@ export const ticketsRouter = router({
         let query = [];
 
         if (input.event_code) {
-            query.push(eq(tickets.event_code, input.event_code));
+            const event = await getEvent('', input.event_code);
+            if (event.meshedEvent && event.subEvents) {
+                query.push(inArray(tickets.event_code, [event.code, ...event.subEvents.map((subEvent) => subEvent.code)]));
+            } else {
+                query.push(eq(tickets.event_code, input.event_code));
+            }
         }
         if (input.team_number) {
             query.push(eq(tickets.team, input.team_number));
@@ -99,10 +110,18 @@ export const ticketsRouter = router({
         id: z.number(),
         event_code: z.string(),
     })).query(async ({ ctx, input }) => {
+        const event = await getEvent('', input.event_code);
+
+        let eventCodes = [event.code];
+
+        if (event.meshedEvent && event.subEvents) {
+            eventCodes = eventCodes.concat(event.subEvents.map((subEvent) => subEvent.code));
+        }
+
         const ticket = await db.query.tickets.findFirst({
             where: and(
                 eq(tickets.id, input.id),
-                eq(tickets.event_code, input.event_code),
+                inArray(tickets.event_code, eventCodes),
             ),
             with: {
                 messages: {
@@ -837,7 +856,7 @@ export const ticketsRouter = router({
         return true;
     }),
 
-    generateTicketReport: eventProcedure.query(async ({ctx}) => {
+    generateTicketReport: eventProcedure.query(async ({ ctx }) => {
         const event = await getEvent(ctx.eventToken as string);
 
         const totalAvgOpenTime = await getAllAvgOpenTime(event.code);
@@ -891,7 +910,7 @@ export function getTotalOpenTime(ticketArray: Ticket[]) {
         }
         return totalDuration;
     }, 0);
-    
+
     return totalOpenTime;
 }
 
@@ -965,11 +984,11 @@ export async function getTeamTicketsInfo(event_code: string, team: number) {
 
     const ticketLinks: string[] = teamTicketArray.map((ticket) => `https://www.ftabuddy.com/app/ticket/${ticket.id}`);
 
-    const ticketLinksCombined: string = ticketLinks.join(", ")
+    const ticketLinksCombined: string = ticketLinks.join(", ");
 
     const ticketSubjects: string[] = teamTicketArray.map((ticket) => ticket.subject);
 
-    const ticketSubjectsCombined: string = ticketSubjects.join(", ")
+    const ticketSubjectsCombined: string = ticketSubjects.join(", ");
 
     const totalOpenTime = getTotalOpenTime(teamTicketArray);
 
@@ -982,7 +1001,7 @@ export async function getTeamTicketsInfo(event_code: string, team: number) {
         ticketLinks: ticketLinksCombined,
         longestTicketOpenTime: longestTicketOpenTime,
         longestTicket: longestTicket,
-    }
+    };
 
     return teamTicketsInfo;
 }
@@ -997,7 +1016,7 @@ export async function getAllTeamTicketsInfo(event_code: string, teamNumbers: num
 
     const sortedAllTeamsTicketInfo = allTeamsTicketInfo.slice().sort((a, b) => b.totalOpenTime - a.totalOpenTime);
 
-    const filteredAllTeamsTicketInfo = sortedAllTeamsTicketInfo.filter(teamTicketInfo => teamTicketInfo.tickets.length !== 0); 
+    const filteredAllTeamsTicketInfo = sortedAllTeamsTicketInfo.filter(teamTicketInfo => teamTicketInfo.tickets.length !== 0);
 
     return filteredAllTeamsTicketInfo;
 }

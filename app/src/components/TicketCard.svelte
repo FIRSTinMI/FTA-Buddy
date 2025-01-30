@@ -3,6 +3,8 @@
 	import { formatTimeNoAgoHourMins } from "../../../shared/formatTime";
 	import type { Ticket } from "../../../shared/types";
 	import MessageCard from "./MessageCard.svelte";
+	import { userStore } from "../stores/user";
+	import { eventStore } from "../stores/event";
 
 	export let ticket: Ticket;
 
@@ -33,6 +35,9 @@
 	<div class="flex flex-col sm:grid sm:grid-cols-[.1fr_auto_.1fr] max-sm:divide-y sm:divide-x divide-gray-500 pt-2 px-4 min-h-32 w-full">
 		<div class="flex flex-row sm:flex-col place-content-between sm:place-content-center p-2 sm:w-40">
 			<p class="font-bold sm:text-center">
+				{#if $userStore.meshedEventToken && $eventStore.subEvents}
+					{$eventStore.subEvents.find((e) => e.code === ticket.event_code)?.label ?? ticket.event_code}
+				{/if}
 				#{ticket.id}:
 				{#if ticket.is_open}
 					<span class="text-green-500 dark:text-green-500 font-bold text-left sm:text-center"> Open</span>

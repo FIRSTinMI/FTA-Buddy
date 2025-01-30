@@ -39,8 +39,7 @@
 	import NoteList from "./pages/tickets-notes/NoteList.svelte";
 	import NotificationList from "./pages/tickets-notes/NotificationList.svelte";
 	import { notificationsStore } from "./stores/notifications";
-	import { startNotificationSubscription, stopBackgroundCreateTicketSubscription } from "./util/notifications";
-	import MeshedEvent from "./pages/management/MeshedEvent.svelte";
+	import { startNotificationSubscription } from "./util/notifications";
 
 	// Checking userentication
 	let user = get(userStore);
@@ -432,10 +431,10 @@
 						</svelte:fragment>
 					</SidebarItem>
 					<SidebarItem
-						label="Event Report"
+						label="Event Reports"
 						on:click={() => {
 							hideMenu = true;
-							navigate("/app/event-report");
+							navigate("/app/event-reports");
 						}}
 					>
 						<svelte:fragment slot="icon">
@@ -601,9 +600,8 @@
 		</SidebarWrapper>
 	</Sidebar>
 </Drawer>
-
-<main>
-	<div style="padding-bottom: 64px" class="bg-white dark:bg-neutral-800 w-screen h-dvh flex flex-col fixed top-0 left-0 w-full">
+<Router basepath="/app/">
+	<main class="bg-white dark:bg-neutral-800 w-screen h-dvh flex flex-col">
 		<div class="bg-primary-700 dark:bg-primary-500 flex w-full justify-between px-2">
 			<Button class="!py-0 !px-0 text-white" color="none" on:click={openMenu}>
 				<Icon icon="mdi:menu" class="w-8 h-10" />
@@ -614,25 +612,16 @@
 				{/if}
 			</div>
 		</div>
-		<Router basepath="/app/">
-			<div class="overflow-y-auto flex-grow pb-2">
-				{#if user.token}
-					{#if user?.role === "FTA" || user?.role === "FTAA"}
-						<Route path="/">
-							<Monitor bind:fullscreen {frameHandler} />
-						</Route>
-						<Route path="/tickets">
-							<TicketList />
-						</Route>
-					{:else if user?.role === "CSA" || user?.role === "RI"}
-						<Route path="/">
-							<TicketList />
-						</Route>
-						<Route path="/monitor">
-							<Monitor {fullscreen} {frameHandler} />
-						</Route>
-					{/if}
-				{:else}
+		<div class="flex-1 overflow-y-auto">
+			{#if user.token}
+				{#if user?.role === "FTA" || user?.role === "FTAA"}
+					<Route path="/">
+						<Monitor bind:fullscreen {frameHandler} />
+					</Route>
+					<Route path="/tickets">
+						<TicketList />
+					</Route>
+				{:else if user?.role === "CSA" || user?.role === "RI"}
 					<Route path="/">
 						<TicketList />
 					</Route>
@@ -640,100 +629,107 @@
 						<Monitor {fullscreen} {frameHandler} />
 					</Route>
 				{/if}
-
-				<Route path="/notifications" component={NotificationList} />
-				<Route path="/flashcards" component={Flashcard} />
-				<Route path="/notes" component={NoteList} />
-				<Route path="/notes/:teamNumber" component={NoteList} />
-				<Route path="/references" component={Reference} />
-				<Route path="/statuslights" component={StatusLights} />
-				<Route path="/fieldmanuals" component={FieldManuals} />
-				<Route path="/componentmanuals" component={ComponentManuals} />
-				<Route path="/softwaredocs" component={SoftwareDocs} />
-				<Route path="/wiringdiagrams" component={WiringDiagrams} />
-				<Route path="/messages/:team" component={Messages} />
-				<Route path="/ticket/:id" component={ViewTicket} />
-				<Route path="/logs">
-					<MatchLogsList {toast} />
+			{:else}
+				<Route path="/">
+					<TicketList />
 				</Route>
-				<Route path="/logs/:matchid" component={MatchLog} />
-				<Route path="/logs/:matchid/:station" component={StationLog} />
-				<Route path="/checklist" component={Checklist} />
-				<Route path="/dashboard" component={EventDashboard} />
-				<Route path="/event-report" component={EventReport} />
-				<Route path="/ftc-status" component={FTCStatus} />
-				<Route path="/login">
-					<Login {toast} />
+				<Route path="/monitor">
+					<Monitor {fullscreen} {frameHandler} />
 				</Route>
-				<Route path="/host">
-					<Host {toast} />
-				</Route>
-				<Route path="/event-created">
-					<PostEventCreation {toast} />
-				</Route>
-				<Route path="/google-signup">
-					<CompleteGoogleSignup {toast} />
-				</Route>
-				<Route path="/meshed-event" component={MeshedEvent} />
-			</div>
-
-			{#if user.token && user.eventToken && !fullscreen}
-				<div class="fixed bottom-0 left-0 w-full flex justify-around py-2 bg-neutral-900 dark:bg-neutral-700 text-white">
-					{#if user?.role === "FTA" || user?.role === "FTAA"}
-						<Link to="/app/">
-							<Button class="!p-2" color="none">
-								<Icon icon="mdi:television" class="w-8 h-8" />
-							</Button>
-						</Link>
-						<Link to="/app/flashcards">
-							<Button class="!p-2" color="none">
-								<Icon icon="mdi:message-alert" class="w-8 h-8" />
-							</Button>
-						</Link>
-						<Link to="/app/references">
-							<Button class="!p-2" color="none">
-								<Icon icon="mdi:file-document-outline" class="w-8 h-8" />
-							</Button>
-						</Link>
-						<Link to="/app/tickets">
-							<Button class="!p-2 relative" color="none">
-								<Icon icon="mdi:message-text" class="w-8 h-8" />
-								{#if $notificationsStore.length > 0}
-									<Indicator color="red" border size="xl" placement="top-left">
-										<span class="text-white text-xs">{$notificationsStore.length}</span>
-									</Indicator>
-								{/if}
-							</Button>
-						</Link>
-					{:else if user?.role === "CSA" || user?.role === "RI"}
-						<Link to="/app/">
-							<Button class="!p-2" color="none">
-								<Icon icon="mdi:message-alert" class="w-8 h-8" />
-							</Button>
-						</Link>
-						<Link to="/app/statuslights">
-							<Button class="!p-2" color="none">
-								<Icon icon="heroicons:sun-16-solid" class="w-8 h-8" />
-							</Button>
-						</Link>
-						<Link to="/app/softwaredocs">
-							<Button class="!p-2" color="none">
-								<Icon icon="mdi:file-document-outline" class="w-8 h-8" />
-							</Button>
-						</Link>
-						<Link to="/app/notifications">
-							<Button class="!p-2 relative" color="none">
-								<Icon icon="fluent:alert-on-16-filled" class="w-8 h-8" />
-								{#if $notificationsStore.length > 0}
-									<Indicator color="red" border size="xl" placement="top-left">
-										<span class="text-white text-xs">{$notificationsStore.length}</span>
-									</Indicator>
-								{/if}
-							</Button>
-						</Link>
-					{/if}
-				</div>
 			{/if}
-		</Router>
-	</div>
-</main>
+
+			<Route path="/notifications" component={NotificationList} />
+			<Route path="/flashcards" component={Flashcard} />
+			<Route path="/notes" component={NoteList} />
+			<Route path="/notes/:teamNumber" component={NoteList} />
+			<Route path="/references" component={Reference} />
+			<Route path="/statuslights" component={StatusLights} />
+			<Route path="/fieldmanuals" component={FieldManuals} />
+			<Route path="/componentmanuals" component={ComponentManuals} />
+			<Route path="/softwaredocs" component={SoftwareDocs} />
+			<Route path="/wiringdiagrams" component={WiringDiagrams} />
+			<Route path="/messages/:team" component={Messages} />
+			<Route path="/ticket/:id" component={ViewTicket} />
+			<Route path="/logs">
+				<MatchLogsList {toast} />
+			</Route>
+			<Route path="/logs/:matchid" component={MatchLog} />
+			<Route path="/logs/:matchid/:station" component={StationLog} />
+			<Route path="/checklist" component={Checklist} />
+			<Route path="/dashboard" component={EventDashboard} />
+			<Route path="/event-reports" component={EventReport} />
+			<Route path="/ftc-status" component={FTCStatus} />
+			<Route path="/login">
+				<Login {toast} />
+			</Route>
+			<Route path="/host">
+				<Host {toast} />
+			</Route>
+			<Route path="/event-created">
+				<PostEventCreation {toast} />
+			</Route>
+			<Route path="/google-signup">
+				<CompleteGoogleSignup {toast} />
+			</Route>
+		</div>
+
+		<div class="flex justify-around py-2 bg-neutral-900 dark:bg-neutral-700 text-white {fullscreen && 'bg-white dark:bg-neutral-800'}">
+			{#if user.token && user.eventToken && !fullscreen}
+				{#if user?.role === "FTA" || user?.role === "FTAA"}
+					<Link to="/app/">
+						<Button class="!p-2" color="none">
+							<Icon icon="mdi:television" class="w-8 h-8" />
+						</Button>
+					</Link>
+					<Link to="/app/flashcards">
+						<Button class="!p-2" color="none">
+							<Icon icon="mdi:message-alert" class="w-8 h-8" />
+						</Button>
+					</Link>
+					<Link to="/app/references">
+						<Button class="!p-2" color="none">
+							<Icon icon="mdi:file-document-outline" class="w-8 h-8" />
+						</Button>
+					</Link>
+					<Link to="/app/notifications">
+						<Button class="!p-2 relative" color="none">
+							<Icon icon="fluent:alert-on-16-filled" class="w-8 h-8" />
+							{#if $notificationsStore.length > 0}
+								<Indicator color="red" border size="xl" placement="top-left">
+									<span class="text-white text-xs">{$notificationsStore.length}</span>
+								</Indicator>
+							{/if}
+						</Button>
+					</Link>
+				{:else if user?.role === "CSA" || user?.role === "RI"}
+					<Link to="/app/">
+						<Button class="!p-2" color="none">
+							<Icon icon="mdi:message-alert" class="w-8 h-8" />
+						</Button>
+					</Link>
+					<Link to="/app/statuslights">
+						<Button class="!p-2" color="none">
+							<Icon icon="heroicons:sun-16-solid" class="w-8 h-8" />
+						</Button>
+					</Link>
+					<Link to="/app/softwaredocs">
+						<Button class="!p-2" color="none">
+							<Icon icon="mdi:file-document-outline" class="w-8 h-8" />
+						</Button>
+					</Link>
+					<Link to="/app/notifications">
+						<Button class="!p-2 relative" color="none">
+							<Icon icon="fluent:alert-on-16-filled" class="w-8 h-8" />
+							{#if $notificationsStore.length > 0}
+								<Indicator color="red" border size="xl" placement="top-left">
+									<span class="text-white text-xs">{$notificationsStore.length}</span>
+								</Indicator>
+							{/if}
+						</Button>
+					</Link>
+				{/if}
+			{/if}
+		</div>
+	</main>
+</Router>
+

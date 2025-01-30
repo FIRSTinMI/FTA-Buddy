@@ -4,7 +4,7 @@
 	import { settingsStore } from "../stores/settings";
 	import Spinner from "./Spinner.svelte";
 	import { toast } from "../../../shared/toast";
-	import { startNotificationSubscription, subscribeToPush } from "../util/notifications";
+	import { startNotificationSubscription, stopNotificationSubscription, subscribeToPush } from "../util/notifications";
 	import { audioQueuer } from "../field-monitor";
 	import { trpc } from "../main";
 	import { userStore } from "../stores/user";
@@ -73,7 +73,8 @@
 				}
 				startNotificationSubscription();
 			} else {
-				// unsubscribe from push notifications
+				stopNotificationSubscription();
+				updateSettings();
 			}
 		} catch (e) {
 			console.error(e);
@@ -127,6 +128,7 @@
 				<p class="text-gray-700 dark:text-gray-400">General</p>
 				<Toggle class="toggle" bind:checked={settings.vibrations} on:change={updateSettings}>Vibrations</Toggle>
 				<Toggle class="toggle" bind:checked={settings.fimSpecifics} on:change={updateSettings}>FIM Specific Field Manuals</Toggle>
+				<Toggle class="toggle" bind:checked={settings.notificationsDoNotAsk} on:change={updateSettings}>Do Not Ask About Notifications</Toggle>
 				<Toggle class="toggle" bind:checked={settings.notifications} on:change={requestNotificationPermissions}>Enable Notifications</Toggle>
 				<div class="pl-4 grid grid-cols-subgrid gap-2 row-span-5">
 					<Toggle class="toggle" bind:checked={settings.notificationCategories.create} on:change={updateSettings}>New Tickets</Toggle>

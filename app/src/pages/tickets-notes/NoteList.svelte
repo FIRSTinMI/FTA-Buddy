@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Alert, Button, Label, Select, Textarea, ToolbarButton, Modal } from "flowbite-svelte";
+	import { Alert, Button, Label, Select, Textarea, ToolbarButton, Modal, Input } from "flowbite-svelte";
 	import { onDestroy, onMount } from "svelte";
 	import { get } from "svelte/store";
 	import TicketCard from "../../components/TicketCard.svelte";
@@ -14,22 +14,17 @@
 	import type { Note, Ticket } from "../../../../shared/types";
 	import NoteCard from "../../components/NoteCard.svelte";
 	import { navigate } from "svelte-routing";
+    import { SearchOutline } from "flowbite-svelte-icons";
 
 	let createModalOpen = false;
 
-	export let teamNumber: string | undefined;
+	const teamNames = Object.fromEntries($eventStore.teams.map((team) => [team.number, team.name]));
 
-	let teamSelected = -1;
-
-	if (teamNumber) teamSelected = parseInt(teamNumber);
-
-	let teams: Event["teams"] = get(eventStore).teams || [];
-
-	let teamOptions = teams
+	let teamOptions = $eventStore.teams
 		.sort((a, b) => parseInt(a.number) - parseInt(b.number))
 		.map((v) => ({ value: parseInt(v.number), name: `${v.number} - ${v.name}` }));
 
-	teamOptions.unshift({ value: -1, name: "No Selected Team" });
+	let search: string = "";
 
 	let filteredNotes: Note[] | null;
 
@@ -40,14 +35,24 @@
 	async function getNotes() {
 		notesPromise = trpc.notes.getAll.query();
 		notes = await notesPromise;
-		filterNotes(teamSelected);
 	}
 
-	function filterNotes(teamSelected: number | undefined) {
-		if (teamSelected !== -1) {
-			filteredNotes = notes.filter((note) => note.team === teamSelected);
+	function filterNotes(notes: Note[], search: string) {
+		if (search.length > 0) {
+			const tokenized = search.toLowerCase().split(" ");
+
+			notes = notes.filter((note) => {
+				return tokenized.every(
+					(token) =>
+					note.team.toString().includes(token) ||
+					teamNames[note.team].toLowerCase().includes(token)
+				);
+			});
 		}
+		filteredNotes = notes.sort((a, b) =>  b.updated_at.getTime() - a.updated_at.getTime());
 	}
+
+	$: filterNotes(notes, search);
 
 	onMount(() => {
 		getNotes();
@@ -57,9 +62,6 @@
 	let open = false;
 
 	let team: number | undefined;
-	const event = get(eventStore);
-
-	let matchId: string | undefined = undefined;
 
 	let disableSubmit = false;
 
@@ -87,18 +89,6 @@
 			return;
 		}
 	}
-
-	function updateUrl(teamSelected: number | undefined) {
-		if (teamSelected === -1) teamSelected = undefined;
-		const url = window.location.origin + "/app/notes" + (teamSelected ? `/${teamSelected}` : "");
-		console.log(url);
-		window.history.pushState({}, "", url);
-	}
-
-	$: {
-		updateUrl(teamSelected);
-		filterNotes(teamSelected);
-	}
 </script>
 
 <NotesPolicy bind:this={notesPolicyElm} />
@@ -118,31 +108,25 @@
 </Modal>
 
 <div class="container max-w-6xl mx-auto px-2 pt-2 h-full flex flex-col gap-2">
-	<div class="flex flex-col overflow-y-auto h-dvh">
-		<div class="flex flex-col grow gap-2">
-			<h1 class="text-3xl" style="font-weight: bold">Event Team Notes</h1>
-			<Button class="m-3" on:click={() => (createModalOpen = true)}>Create a New Note</Button>
-			<Label>
-				Select a Team (optional):
-				<Select class="mt-2" items={teamOptions} bind:value={teamSelected} />
+	<div class="flex flex-col overflow-y-auto h-full gap-2">
+		<h1 class="text-3xl mt-2 font-bold pt-2">Team Notes</h1>
+		<Button class="max-w-3xl mx-auto w-full" on:click={() => (createModalOpen = true)}>Create New Note</Button>
+		<div class="flex items-center gap-2 max-w-3xl w-full mx-auto">
+			<Label class="w-full text-left">
+				<span class="ml-2">Search</span>
+				<Input class="w-full" placeholder="Search Team #, Team Name" bind:value={search}>
+					<SearchOutline slot="left" class="size-5 text-gray-500 dark:text-gray-400" />
+				</Input>
 			</Label>
 		</div>
-		<div class="flex flex-col grow gap-2">
+		<div class="flex flex-col grow gap-2 overflow-y-auto mt-4 pb-2">
 			{#await notesPromise}
 				<Spinner />
 			{:then}
-				{#if teamSelected !== -1}
-					{#if !filteredNotes || filteredNotes.length < 1}
-						<div class="text-center">No Notes Found for Selected Team</div>
-					{:else}
-						{#each filteredNotes as note}
-							<NoteCard {note} />
-						{/each}
-					{/if}
-				{:else if !notes || notes.length < 1}
-					<div class="text-center">No Notes Yet</div>
+				{#if !filteredNotes || filteredNotes.length < 1}
+					<div class="text-center">No Notes Found</div>
 				{:else}
-					{#each notes as note}
+					{#each filteredNotes as note}
 						<NoteCard {note} />
 					{/each}
 				{/if}

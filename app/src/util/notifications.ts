@@ -10,7 +10,7 @@ import { addNotification, checkIfNotificationExists } from "../stores/notificati
 let user = get(userStore);
 
 export function createNotification(data: Notification) {
-    console.log('Creating notification:', data);
+    //console.log('Creating notification:', data);
     if (!("Notification" in window)) {
         throw new Error("This browser does not support desktop notifications");
     }
@@ -69,8 +69,8 @@ export function startNotificationSubscription() {
             {
                 onError: console.error,
                 onData: (data) => {
-                    console.log(Notification.permission);
-                    console.log("in data reciever 1");
+                    // console.log(Notification.permission);
+                    // console.log("in data reciever 1");
 
                     let sendNotification = false;
 
@@ -119,10 +119,12 @@ export function startNotificationSubscription() {
     //console.log(`Listeners ${event.ticketPushEmitter.listenerCount()}`);
 }
 
-export function stopBackgroundCreateTicketSubscription() {
+export function stopNotificationSubscription() {
     if (!backgroundNotificationSubscription) return;
 
     backgroundNotificationSubscription?.unsubscribe();
+
+    console.log("Stopped Notification Subscription");
 }
 
 const publicVapidKey = 'BFTN7PqbkHaSPpmQBbMANVP7NSJg2qGkSEisDlTborp3FMIlZAwvMVcEbCOS11JqPgDQLuk42DY5AU_mHQdyibs';
@@ -150,7 +152,7 @@ export async function subscribeToPush() {
         console.log('Registering service worker');
         const registration = await navigator.serviceWorker.ready;
 
-        console.log(registration);
+        //console.log(registration);
 
         // Subscribe to push notifications
         const subscription = await registration.pushManager.subscribe({

@@ -94,8 +94,8 @@ async function addNotification(notification) {
 
 self.addEventListener("push", async (evt) => {
 	const data = evt.data.json();
-	console.log(evt);
-	console.log(evt.data);
+	// console.log(evt);
+	// console.log(evt.data);
 
 	let sendNotification = false;
 
@@ -140,7 +140,7 @@ self.addEventListener("push", async (evt) => {
 			data: data.data,
 			icon: "https://ftabuddy.com" + (data.icon ?? "/app/icon512_rounded.png"),
 		});
-		console.log(await clients.matchAll());
+		//console.log(await clients.matchAll());
 	}
 });
 

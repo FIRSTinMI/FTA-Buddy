@@ -45,7 +45,7 @@
 			{/if}
 		</div>
 		<div class="p-2 place-content-center text-left">
-			<p class="font-bold text-lg pl-4">{ticket.subject}</p>
+			<p class="font-bold text-lg pl-4 pb-2">{ticket.subject}</p>
 			{#if ticket.messages && ticket.messages.length > 0}
 				<MessageCard message={ticket.messages[ticket.messages.length - 1]} simple />
 			{:else}

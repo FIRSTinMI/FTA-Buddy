@@ -88,11 +88,13 @@
             {/if}
         </div>
         <div class="p-4 grow text-left">
-            <p class="font-bold underline underline-offset-2 text-xl">{note.team}</p>
+            <p class="font-bold text-xl">Team #: {note.team}</p>
             <p class="text-wrap">{note.text}</p>
         </div>
-        <div class="text-right sm:text-center sm:place-content-center">
-            <p class="sm:w-20 text-wrap italic mb-2 p-2">{time}</p>
+        <div class="flex flex-row sm:place-content-center sm:flex-col justify-between sm:w-min">
+            <p class="text-wrap italic font-bold mb-2 p-2">{note.event_code}</p>
+            <p class="text-wrap italic mb-2 p-2">{time}</p>
         </div>
+        
     </div>
 </Card>

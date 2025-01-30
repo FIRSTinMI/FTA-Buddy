@@ -14,6 +14,7 @@ export interface Settings {
     susRobots: boolean;
     fimSpecifics: boolean;
     notifications: boolean;
+    notificationsDoNotAsk: boolean;
     darkMode: boolean;
     inspectionAlerts: boolean;
     roundGreen: boolean;
@@ -40,6 +41,7 @@ const defaultSettings: Settings = {
     susRobots: false,
     fimSpecifics: true,
     notifications: false,
+    notificationsDoNotAsk: false,
     darkMode: true,
     inspectionAlerts: true,
     roundGreen: true,

@@ -304,7 +304,7 @@
 			},
 			{
 				onData: (data) => {
-					console.log(data);
+					//console.log(data);
 					if (data.ticket_id === ticket.id) {
 						switch (data.kind) {
 							case "assign":
@@ -379,127 +379,139 @@
 
 <NotesPolicy bind:this={notesPolicyElm} />
 
-<div class="mx-auto px-2 pt-2 flex flex-col gap-2 max-w-5xl">
-	{#await ticketPromise}
-		<Spinner />
-	{:then}
-		{#if !ticket}
-			<p class="text-red-500">Ticket not found</p>
-		{:else}
-			{#if user.id === ticket.author_id}
-				<div class="flex flex-row justify-between h-10 gap-1">
-					<div class="flex flex-row gap-1">
-						<Button on:click={back} class=""><ArrowLeftOutline class="" style="height: 13px; width: 13px;" /></Button>
-						{#if !ticket.followers.includes(user.id)}
-							<Button on:click={toggleFollowTicket} class=""
-								><Icon icon="simple-line-icons:user-following" style="height: 13px; width: 18px; padding-right: 4px;" /> Follow</Button
-							>
-						{:else}
-							<Button on:click={toggleFollowTicket} class=""
-								><Icon icon="simple-line-icons:user-unfollow" style="height: 13px; width: 18px; padding-right: 4px;" /> Unfollow</Button
-							>
-						{/if}
-					</div>
-					<div class="flex flex-row gap-1">
-						<Button on:click={() => location.reload()} class=""><Icon icon="charm:refresh" style="height: 13px; width: 13px;" /></Button>
-						<Button on:click={() => (editTicketView = true)} class=""><EditOutline class="" style="height: 13px; width: 13px;" /></Button>
-						<Button on:click={() => (deleteTicketPopup = true)} class=""><TrashBinOutline class="" style="height: 13px; width: 13px;" /></Button
-						>
-					</div>
-				</div>
+<div class="container max-w-6xl mx-auto px-2 pt-2 h-full flex flex-col gap-2">
+	<div class="flex flex-col overflow-hidden gap-2">
+		{#await ticketPromise}
+			<Spinner />
+		{:then}
+			{#if !ticket}
+				<p class="text-red-500">Ticket not found</p>
 			{:else}
-			<div class="flex flex-row justify-between h-10 gap-1">
-				<div class="flex flex-row gap-1">
-					<Button on:click={back} class=""><ArrowLeftOutline class="" style="height: 13px; width: 13px;" /></Button>
-					{#if !ticket.followers.includes(user.id)}
-						<Button on:click={toggleFollowTicket} class=""
-							><Icon icon="simple-line-icons:user-following" style="height: 13px; width: 18px; padding-right: 4px;" /> Follow</Button
-						>
-					{:else}
-						<Button on:click={toggleFollowTicket} class=""
-							><Icon icon="simple-line-icons:user-unfollow" style="height: 13px; width: 18px; padding-right: 4px;" /> Unfollow</Button
-						>
-					{/if}
-				</div>
-				<div class="flex flex-row gap-1">
-					<Button on:click={() => location.reload()} class=""><Icon icon="charm:refresh" style="height: 13px; width: 13px;" /></Button>
-				</div>
-			</div>
-			{/if}
-			<h1 class="text-3xl font-bold p-2">
-				Ticket #{ticket_id} -
-				{#if ticket.is_open}
-					<span class="text-green-500 font-bold">Open</span>
+				{#if user.id === ticket.author_id}
+					<div class="flex flex-row justify-between h-10 gap-1">
+						<div class="flex flex-row gap-1">
+							<Button on:click={back} class=""><ArrowLeftOutline class="" style="height: 13px; width: 13px;" /></Button>
+							{#if !ticket.followers.includes(user.id)}
+								<Button on:click={toggleFollowTicket} class=""
+									><Icon icon="simple-line-icons:user-following" style="height: 13px; width: 18px; padding-right: 4px;" /> Follow</Button
+								>
+							{:else}
+								<Button on:click={toggleFollowTicket} class=""
+									><Icon icon="simple-line-icons:user-unfollow" style="height: 13px; width: 18px; padding-right: 4px;" /> Unfollow</Button
+								>
+							{/if}
+						</div>
+						<div class="flex flex-row gap-1">
+							<Button on:click={() => location.reload()} class=""><Icon icon="charm:refresh" style="height: 13px; width: 13px;" /></Button>
+							<Button on:click={() => (editTicketView = true)} class=""><EditOutline class="" style="height: 13px; width: 13px;" /></Button>
+							<Button on:click={() => (deleteTicketPopup = true)} class=""><TrashBinOutline class="" style="height: 13px; width: 13px;" /></Button
+							>
+						</div>
+					</div>
 				{:else}
-					<span class="font-bold">Closed</span>
+					<div class="flex flex-row justify-between gap-1">
+						<div class="flex flex-row h-10 gap-1">
+							<Button on:click={back} class=""><ArrowLeftOutline class="" style="height: 13px; width: 13px;" /></Button>
+							{#if !ticket.followers.includes(user.id)}
+								<Button on:click={toggleFollowTicket} class=""
+									><Icon icon="simple-line-icons:user-following" style="height: 13px; width: 18px; padding-right: 4px;" /> Follow</Button
+								>
+							{:else}
+								<Button on:click={toggleFollowTicket} class=""
+									><Icon icon="simple-line-icons:user-unfollow" style="height: 13px; width: 18px; padding-right: 4px;" /> Unfollow</Button
+								>
+							{/if}
+						</div>
+						<div class="flex flex-row gap-1">
+							<Button on:click={() => location.reload()} class=""><Icon icon="charm:refresh" style="height: 13px; width: 13px;" /></Button>
+						</div>
+					</div>
 				{/if}
-			</h1>
-			<div class="text-left">
-				<p><b>Team:</b> {ticket.team} - {get(eventStore).teams?.find((team) => parseInt(team.number) === ticket.team)?.name ?? "Unknown"}</p>
-				<p><b>Created:</b> {time} by {ticket.author.username}</p>
-				<p>
-					<b>Assigned To:</b>
-					{#if !ticket.assigned_to_id}
-						Unassigned
-					{:else}
-						{ticket.assigned_to?.username} - {ticket.assigned_to?.role}
-					{/if}
-				</p>
-				{#if match}
-					<p>
-						<b>Match:</b>
-						{match.level.replace("None", "Test")}
-						Match #{match.match_number}/Play #{match.play_number}
-						{station}
-					</p>
-				{/if}
-			</div>
-			<div class="flex gap-2 place-content-center sm:place-content-start">
-				<Button size="sm" on:click={() => changeOpenStatus()}>{ticket.is_open ? "Close Ticket" : "Reopen Ticket"}</Button>
-				{#if user}
-					<Button size="sm" on:click={() => assignSelf()}>
-						{#if ticket.assigned_to_id === user.id}
-							Unassign
-						{:else if ticket.assigned_to_id === null || ticket.assigned_to_id === undefined}
-							👀 Claim Ticket
-						{:else}
-							❌ Already Assigned
+				<div class="flex flex-col w-full h-full">
+					<div>
+						<h1 class="text-3xl font-bold p-2">
+							Ticket #{ticket_id} -
+							{#if ticket.is_open}
+								<span class="text-green-500 font-bold">Open</span>
+							{:else}
+								<span class="font-bold">Closed</span>
+							{/if}
+						</h1>
+					</div>
+					<div class="text-left">
+						<p><b>Team:</b> {ticket.team} - {get(eventStore).teams?.find((team) => parseInt(team.number) === ticket.team)?.name ?? "Unknown"}</p>
+						<p><b>Created:</b> {time} by {ticket.author.username}</p>
+						<p>
+							<b>Assigned To:</b>
+							{#if !ticket.assigned_to_id}
+								Unassigned
+							{:else}
+								{ticket.assigned_to?.username} - {ticket.assigned_to?.role}
+							{/if}
+						</p>
+						{#if match}
+							<p>
+								<b>Match:</b>
+								{match.level.replace("None", "Test")}
+								Match #{match.match_number}/Play #{match.play_number}
+								{station}
+							</p>
 						{/if}
-					</Button>
-				{/if}
-				{#if match}
-					<Button size="sm" on:click={() => viewLog()}>View Log</Button>
-				{/if}
-			</div>
-			<div class="text-left text-2xl pt-4 pl-4">
-				<p class="font-bold">{ticket.subject}</p>
-			</div>
-			<div class="text-left p-4">
-				<p>{ticket.text}</p>
-			</div>
-			<div class="flex flex-col h-full" id="chat">
-				<div class="flex flex-col grow gap-2 justify-end">
-					{#if !sortedMessages}
-						<div class="text-center">No messages</div>
-					{:else}
-						{#each sortedMessages as message}
-							<MessageCard {message} />
-						{/each}
-					{/if}
+					</div>	
+					<div class="flex flex-row gap-2 justify-between pt-2 sm:place-content-start">
+						<Button size="sm" on:click={() => changeOpenStatus()}>{ticket.is_open ? "Close Ticket" : "Reopen Ticket"}</Button>
+						{#if user}
+							<Button size="sm" on:click={() => assignSelf()}>
+								{#if ticket.assigned_to_id === user.id}
+									Unassign
+								{:else if ticket.assigned_to_id === null || ticket.assigned_to_id === undefined}
+									👀 Claim Ticket
+								{:else}
+									❌ Already Assigned
+								{/if}
+							</Button>
+						{/if}
+						{#if match}
+							<Button size="sm" on:click={() => viewLog()}>View Log</Button>
+						{/if}
+					</div>
+					<div class="flex flex-col gap-2 overscroll-contain overflow-y-auto mt-4 pb-2">
+						<div class="text-left text-2xl pt-4 pl-4">
+							<p class="font-bold">{ticket.subject}</p>
+						</div>
+						<div class="text-left p-4">
+							<p>{ticket.text}</p>
+						</div>
+						<div class="flex flex-col pb-12">
+							<div class="flex flex-col pb-2" id="chat">
+								<div class="flex flex-col gap-2 justify-end">
+									{#if !sortedMessages}
+										<div class="text-center">No messages</div>
+									{:else}
+										{#each sortedMessages as message}
+											<MessageCard {message} />
+										{/each}
+									{/if}
+								</div>
+							</div>
+							<div>
+								<form class="w-full" on:submit|preventDefault={postMessage}>
+									<label for="chat" class="sr-only">Add a Message:</label>
+									<Alert color="dark" class="px-0 py-2">
+										<svelte:fragment slot="icon">
+											<Textarea id="chat" class="ml-3" rows="1" placeholder="Your message..." on:keydown={sendKey} bind:value={message_text} />
+											<ToolbarButton type="submit" color="blue" class="rounded-full text-primary-600 dark:text-primary-500">
+												<Icon icon="mdi:send" class="w-6 h-8" />
+												<span class="sr-only">Send message</span>
+											</ToolbarButton>
+										</svelte:fragment>
+									</Alert>
+								</form>
+							</div>
+						</div>
+					</div>
 				</div>
-			</div>
-			<form class="w-full" on:submit|preventDefault={postMessage}>
-				<label for="chat" class="sr-only">Add a Message:</label>
-				<Alert color="dark" class="px-0 py-2">
-					<svelte:fragment slot="icon">
-						<Textarea id="chat" class="ml-3" rows="1" placeholder="Your message..." on:keydown={sendKey} bind:value={message_text} />
-						<ToolbarButton type="submit" color="blue" class="rounded-full text-primary-600 dark:text-primary-500">
-							<Icon icon="mdi:send" class="w-6 h-8" />
-							<span class="sr-only">Send message</span>
-						</ToolbarButton>
-					</svelte:fragment>
-				</Alert>
-			</form>
-		{/if}
-	{/await}
+			{/if}
+		{/await}
+	</div>
 </div>

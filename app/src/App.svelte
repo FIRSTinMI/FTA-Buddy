@@ -262,6 +262,11 @@
 	}, 200);
 
 	let multiEventSelection = "combined";
+	if (user.meshedEventToken === user.eventToken) {
+		multiEventSelection = "combined";
+	} else {
+		multiEventSelection = event.code;
+	}
 </script>
 
 {#if showToast}
@@ -617,9 +622,15 @@
 		<div class="flex-1 overflow-y-auto">
 			{#if user.token}
 				{#if user?.role === "FTA" || user?.role === "FTAA"}
-					<Route path="/">
-						<Monitor bind:fullscreen {frameHandler} />
-					</Route>
+					{#if user.meshedEventToken && event.subEvents && user.eventToken === user.meshedEventToken}
+						<Route path="/">
+							<EventDashboard defaultEvents={event.subEvents?.map((e) => e.code)} />
+						</Route>
+					{:else}
+						<Route path="/">
+							<Monitor bind:fullscreen {frameHandler} />
+						</Route>
+					{/if}
 					<Route path="/tickets">
 						<TicketList />
 					</Route>

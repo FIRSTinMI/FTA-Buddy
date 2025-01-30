@@ -3,7 +3,7 @@ import { eventProcedure, protectedProcedure, publicProcedure, router } from "../
 import { db } from "../db/db";
 import { pushSubscriptions, tickets, users, events, notes } from "../db/schema";
 import { observable } from "@trpc/server/observable";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { Note, Profile } from "../../shared/types";
 import { getEvent } from "../util/get-event";
@@ -12,7 +12,16 @@ import { randomUUID } from "crypto";
 export const notesRouter = router({
 
     getAll: eventProcedure.query(async ({ ctx }) => {
+        const event = await getEvent(ctx.eventToken as string);
+
+        let eventCodes = [event.code];
+
+        if (event.meshedEvent && event.subEvents) {
+            eventCodes = eventCodes.concat(event.subEvents.map((subEvent) => subEvent.code));
+        }
+
         const eventNotes = await db.query.notes.findMany({
+            where: inArray(notes.event_code, eventCodes),
             orderBy: [asc(notes.created_at)],
         });
 
@@ -25,7 +34,7 @@ export const notesRouter = router({
 
     getAllByAuthor: eventProcedure.input(z.object({
         author_id: z.number(),
-    })).query(async ({ctx, input}) => {
+    })).query(async ({ ctx, input }) => {
         const notesByAuthor = await db.query.notes.findMany({
             where: and(
                 eq(notes.author_id, input.author_id),
@@ -37,12 +46,12 @@ export const notesRouter = router({
             throw new TRPCError({ code: "NOT_FOUND", message: "No Notes found by provided user" });
         }
 
-        return notesByAuthor as Note[];    
+        return notesByAuthor as Note[];
     }),
 
     getAllByTeam: eventProcedure.input(z.object({
         team_number: z.number()
-    })).query(async ({ctx, input}) => {
+    })).query(async ({ ctx, input }) => {
         const notesByTeam = await db.query.notes.findMany({
             where: and(
                 eq(notes.team, input.team_number)
@@ -54,7 +63,7 @@ export const notesRouter = router({
             throw new TRPCError({ code: "NOT_FOUND", message: "No Notes found for provided team" });
         }
 
-        return notesByTeam as Note[];    
+        return notesByTeam as Note[];
     }),
 
     getById: eventProcedure.input(z.object({
@@ -67,7 +76,7 @@ export const notesRouter = router({
                 eq(notes.event_code, input.event_code),
             )
         });
-        
+
         if (!note) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
         }
@@ -123,13 +132,13 @@ export const notesRouter = router({
                 eq(notes.event_code, input.event_code),
             )
         });
-        
+
         if (!note) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
         }
 
         let currentUserProfile: Profile[] | undefined;
-                
+
         if (ctx.token) {
             currentUserProfile = await db.select({
                 id: users.id,
@@ -140,7 +149,7 @@ export const notesRouter = router({
         } else {
             throw new TRPCError({ code: "BAD_REQUEST", message: "User token not provided in context object" });
         }
-        
+
         if (!currentUserProfile[0]) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Current User not found by provided token" });
         }
@@ -164,13 +173,13 @@ export const notesRouter = router({
         const note = await db.query.notes.findFirst({
             where: eq(notes.id, input.id),
         });
-        
+
         if (!note) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
         }
 
         let currentUserProfile: Profile[] | undefined;
-                
+
         if (ctx.token) {
             currentUserProfile = await db.select({
                 id: users.id,
@@ -181,7 +190,7 @@ export const notesRouter = router({
         } else {
             throw new TRPCError({ code: "BAD_REQUEST", message: "User token not provided in context object" });
         }
-        
+
         if (!currentUserProfile[0]) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Current User not found by provided token" });
         }
@@ -216,7 +225,7 @@ export const notesRouter = router({
     //                 } else {
     //                     emitter.next(data);
     //                 }
-                    
+
     //             });
     //         }
 
@@ -251,7 +260,7 @@ export async function getEventNotes(event_code: string) {
     const eventNotes = await db.query.notes.findMany({
         where: eq(notes.event_code, event_code),
         orderBy: [asc(notes.created_at)],
-    })
+    });
 
     if (!eventNotes) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Unable to find notes for this event" });

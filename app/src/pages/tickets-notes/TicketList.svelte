@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, Input, Label, Modal, Select, Textarea, type SelectOptionType } from "flowbite-svelte";
+	import { Button, Input, Label, Modal, Select, Textarea, Toggle, type SelectOptionType } from "flowbite-svelte";
 	import { SearchOutline } from "flowbite-svelte-icons";
 	import { onMount } from "svelte";
 	import { navigate } from "svelte-routing";
@@ -74,9 +74,33 @@
 		tickets = await ticketsPromise;
 	}
 
+	let publicTicketsModalOpen = false;
+
+	let publicTicketSubmitState: boolean;
+
+	let eventPromise: ReturnType<typeof trpc.event.getPublicTicketSubmit.query>;
+
+	async function getPublicTicketCreationState() {
+		eventPromise = trpc.event.getPublicTicketSubmit.query();
+		publicTicketSubmitState = await eventPromise;
+	}
+
+	async function setPublicTicketCreationState() {
+		let res: ReturnType<typeof trpc.event.togglePublicTicketSubmit.query>;
+		try {
+			res = trpc.event.togglePublicTicketSubmit.query({ state: publicTicketSubmitState });
+			toast("Status updated successfully", "success", "green-500");
+		} catch (err: any) {
+			toast("An error occurred while updating the Public Ticket Submit State", err.message);
+			console.error(err);
+			return;
+		}
+	}
+
 	onMount(() => {
 		getTickets();
 		ticketUpdateSubscription();
+		getPublicTicketCreationState();
 		if ($userStore.role === "FTA" || $userStore.role === "FTAA") clearNotifications();
 	});
 
@@ -217,6 +241,7 @@
 			}
 		);
 	}
+
 </script>
 
 <NotesPolicy bind:this={notesPolicyElm} />
@@ -248,10 +273,21 @@
 	</form>
 </Modal>
 
-<div class="container max-w-6xl mx-auto px-2 pt-2 h-full flex flex-col gap-2">
+<Modal bind:open={publicTicketsModalOpen} size="sm" outsideclose dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
+	<h1 class="text-2xl font-bold">Toggle Public Ticket Creation for Event</h1>
+	<p>
+		If the Public Ticket Creation page is being abused or spammed, please turn this setting off and inform your event FTA that you have done so.
+	</p>
+	<Toggle class="toggle place-content-center" bind:checked={publicTicketSubmitState} on:change={setPublicTicketCreationState}>Public Ticket Creation: {publicTicketSubmitState ? "ON" : "OFF"}</Toggle>
+</Modal>
+
+<div class="container max-w-6xl mx-auto px-2 h-full flex flex-col gap-2">
 	<div class="flex flex-col overflow-hidden h-full gap-2">
-		<h1 class="text-3xl mt-2 font-bold pt-2">Event Tickets</h1>
-		<Button class="max-w-3xl mx-auto w-full" on:click={() => (createModalOpen = true)}>Create a New Ticket</Button>
+		<h1 class="text-3xl mt-2 font-bold p-2">Event Tickets</h1>
+		<div class="flex gap-2 max-w-3xl w-full items-center mx-auto">
+			<Button class="mx-auto w-full" on:click={() => (createModalOpen = true)}>Create a New Ticket</Button>
+			<Button class="mx-auto w-full" on:click={() => (publicTicketsModalOpen = true)}>Public Tickets ON/OFF</Button>
+		</div>
 		<div class="flex items-center gap-2 max-w-3xl w-full mx-auto">
 			<Label class="w-full text-left">
 				<span class="ml-2">Search</span>

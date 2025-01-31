@@ -16,7 +16,7 @@ export const userRouter = router({
     })).query(async ({ input }) => {
         const user = await db.query.users.findFirst({ where: eq(users.email, input.email) });
 
-        console.log(user);
+        //console.log(user);
 
         if (!user) throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
 

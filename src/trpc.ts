@@ -1,6 +1,6 @@
 import { TRPCError, initTRPC } from '@trpc/server';
 import { db } from './db/db';
-import { eq } from 'drizzle-orm';
+import { and, eq, gt } from 'drizzle-orm';
 import { events, users } from './db/schema';
 import { CreateWSSContextFnOptions } from '@trpc/server/adapters/ws';
 import { CreateHTTPContextOptions } from '@trpc/server/adapters/standalone';
@@ -23,7 +23,12 @@ export const protectedProcedure = t.procedure.use(async (opts) => {
     const { ctx } = opts;
     if (!ctx.token) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Missing Authorization Header' });
 
-    const user = await db.query.users.findFirst({ where: eq(users.token, ctx.token) });
+    const user = await db.query.users.findFirst({ 
+        where: and(
+            eq(users.token, ctx.token),
+            gt(users.id, -1)
+
+    )});
     if (!user) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Unauthorized' });
 
     return opts.next({
@@ -53,7 +58,11 @@ export const adminProcedure = t.procedure.use(async (opts) => {
     const { ctx } = opts;
     if (!ctx.token) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Unauthorized' });
 
-    const user = await db.query.users.findFirst({ where: eq(users.token, ctx.token) });
+    const user = await db.query.users.findFirst({ 
+        where: and(
+            eq(users.token, ctx.token),
+            gt(users.id, -1)
+        )});
     if (!user || user.admin !== true) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Unauthorized' });
 
     return opts.next({

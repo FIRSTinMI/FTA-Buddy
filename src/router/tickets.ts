@@ -118,6 +118,71 @@ export const ticketsRouter = router({
         return ticket as Ticket;
     }),
 
+    publicCreate: publicProcedure.input(z.object({
+        event_code: z.string(),
+        team: z.number(),
+        subject: z.string(),
+        text: z.string(),
+    })).query(async ({ input }) => {
+        const event = await getEvent("", input.event_code);
+
+        const author = await db.select({
+            id: users.id,
+            username: users.username,
+            role: users.role,
+            admin: users.admin,
+        }).from(users).where(eq(users.id, -1));
+
+        if (!author[0]) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
+        }
+
+        if (event.teams.filter(teamInfo => parseInt(teamInfo.number) === input.team).length !== 1) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Provided Team number is not associated with this Event" });
+        }
+
+        const insert = await db.insert(tickets).values({
+            team: input.team,
+            subject: input.subject,
+            author_id: author[0].id,
+            author: author[0] as Profile, // Ensure author is not null
+            assigned_to_id: null,
+            assigned_to: null,
+            is_open: true,
+            text: input.text,
+            created_at: new Date(),
+            updated_at: new Date(),
+            event_code: event.code,
+            followers: [author[0].id],
+            match_id: undefined,
+        }).returning();
+
+
+        if (!insert[0]) {
+            throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Ticket" });
+        }
+
+        event.ticketUpdateEmitter.emit("create", {
+            kind: "create",
+            ticket_id: insert[0].id,
+            ticket: insert[0] as Ticket,
+        });
+
+        createNotification(event.users.map((user) => user.id), {
+            id: randomUUID(),
+            timestamp: new Date(),
+            topic: "Ticket-Created",
+            title: `New Ticket for Team #${insert[0].team}`,
+            body: `New Ticket created by Team #:${insert[0].team}`,
+            data: {
+                page: "ticket/" + insert[0].id,
+                ticket_id: insert[0].id,
+            },
+        });
+
+        return insert[0] as Ticket;
+    }),
+
     create: eventProcedure.input(z.object({
         team: z.number(),
         subject: z.string(),

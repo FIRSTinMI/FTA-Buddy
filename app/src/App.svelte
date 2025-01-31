@@ -40,7 +40,8 @@
 	import NotificationList from "./pages/tickets-notes/NotificationList.svelte";
 	import { notificationsStore } from "./stores/notifications";
 	import { startNotificationSubscription } from "./util/notifications";
-    import PublicTicketCreate from "./pages/tickets-notes/PublicTicketCreate.svelte";
+	import MeshedEvent from "./pages/management/MeshedEvent.svelte";
+	import PublicTicketCreate from "./pages/tickets-notes/PublicTicketCreate.svelte";
 
 	// Checking userentication
 	let user = get(userStore);
@@ -82,6 +83,7 @@
 		"/app/google-signup",
 		"/app/host",
 		"/app/event-created",
+		"/app/meshed-event",
 		"/app/ftc-status",
 		"/app/references",
 		"/app/statuslights",
@@ -262,6 +264,11 @@
 	}, 200);
 
 	let multiEventSelection = "combined";
+	if (user.meshedEventToken === user.eventToken) {
+		multiEventSelection = "combined";
+	} else {
+		multiEventSelection = event.code;
+	}
 </script>
 
 {#if showToast}
@@ -617,9 +624,15 @@
 		<div class="flex-1 overflow-y-auto">
 			{#if user.token}
 				{#if user?.role === "FTA" || user?.role === "FTAA"}
-					<Route path="/">
-						<Monitor bind:fullscreen {frameHandler} />
-					</Route>
+					{#if user.meshedEventToken && event.subEvents && user.eventToken === user.meshedEventToken}
+						<Route path="/">
+							<EventDashboard defaultEvents={event.subEvents?.map((e) => e.code)} />
+						</Route>
+					{:else}
+						<Route path="/">
+							<Monitor bind:fullscreen {frameHandler} />
+						</Route>
+					{/if}
 					<Route path="/tickets">
 						<TicketList />
 					</Route>
@@ -674,6 +687,7 @@
 			<Route path="/google-signup">
 				<CompleteGoogleSignup {toast} />
 			</Route>
+			<Route path="/meshed-event" component={MeshedEvent} />
 		</div>
 
 		<div class="flex justify-around py-2 bg-neutral-900 dark:bg-neutral-700 text-white {fullscreen && 'bg-white dark:bg-neutral-800'}">
@@ -735,4 +749,3 @@
 		</div>
 	</main>
 </Router>
-

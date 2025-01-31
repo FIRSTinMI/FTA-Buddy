@@ -14,7 +14,7 @@
 	import type { Note, Ticket } from "../../../../shared/types";
 	import NoteCard from "../../components/NoteCard.svelte";
 	import { navigate } from "svelte-routing";
-    import { SearchOutline } from "flowbite-svelte-icons";
+	import { SearchOutline } from "flowbite-svelte-icons";
 
 	let createModalOpen = false;
 
@@ -37,19 +37,24 @@
 		notes = await notesPromise;
 	}
 
+	// If the eventToken changes, we need to refetch the tickets and update the subscription
+	let eventToken = $userStore.eventToken;
+	userStore.subscribe((value) => {
+		if (value.eventToken !== eventToken) {
+			eventToken = value.eventToken;
+			getNotes();
+		}
+	});
+
 	function filterNotes(notes: Note[], search: string) {
 		if (search.length > 0) {
 			const tokenized = search.toLowerCase().split(" ");
 
 			notes = notes.filter((note) => {
-				return tokenized.every(
-					(token) =>
-					note.team.toString().includes(token) ||
-					teamNames[note.team].toLowerCase().includes(token)
-				);
+				return tokenized.every((token) => note.team.toString().includes(token) || teamNames[note.team].toLowerCase().includes(token));
 			});
 		}
-		filteredNotes = notes.sort((a, b) =>  b.updated_at.getTime() - a.updated_at.getTime());
+		filteredNotes = notes.sort((a, b) => b.updated_at.getTime() - a.updated_at.getTime());
 	}
 
 	$: filterNotes(notes, search);

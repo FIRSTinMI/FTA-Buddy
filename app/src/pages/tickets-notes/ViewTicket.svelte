@@ -338,7 +338,7 @@
 								break;
 							case "delete_message":
 								if (ticket.messages) {
-									let updatedMessages = ticket.messages.filter((message) => (message.id !== data.message_id));
+									let updatedMessages = ticket.messages.filter((message) => message.id !== data.message_id);
 									ticket.messages = updatedMessages;
 								}
 								break;
@@ -439,6 +439,9 @@
 						</h1>
 					</div>
 					<div class="text-left">
+						{#if $userStore.meshedEventToken && $eventStore.subEvents}
+							<p><b>Field:</b> {$eventStore.subEvents.find((e) => e.code === ticket.event_code)?.label ?? ticket.event_code}</p>
+						{/if}
 						<p><b>Team:</b> {ticket.team} - {get(eventStore).teams?.find((team) => parseInt(team.number) === ticket.team)?.name ?? "Unknown"}</p>
 						<p><b>Created:</b> {time} by {ticket.author.username}</p>
 						<p>
@@ -457,7 +460,7 @@
 								{station}
 							</p>
 						{/if}
-					</div>	
+					</div>
 					<div class="flex flex-row gap-2 justify-between pt-2 sm:place-content-start">
 						<Button size="sm" on:click={() => changeOpenStatus()}>{ticket.is_open ? "Close Ticket" : "Reopen Ticket"}</Button>
 						{#if user}
@@ -499,7 +502,14 @@
 									<label for="chat" class="sr-only">Add a Message:</label>
 									<Alert color="dark" class="px-0 py-2">
 										<svelte:fragment slot="icon">
-											<Textarea id="chat" class="ml-3" rows="1" placeholder="Your message..." on:keydown={sendKey} bind:value={message_text} />
+											<Textarea
+												id="chat"
+												class="ml-3"
+												rows="1"
+												placeholder="Your message..."
+												on:keydown={sendKey}
+												bind:value={message_text}
+											/>
 											<ToolbarButton type="submit" color="blue" class="rounded-full text-primary-600 dark:text-primary-500">
 												<Icon icon="mdi:send" class="w-6 h-8" />
 												<span class="sr-only">Send message</span>

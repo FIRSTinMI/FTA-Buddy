@@ -41,6 +41,7 @@
 	import { notificationsStore } from "./stores/notifications";
 	import { startNotificationSubscription } from "./util/notifications";
 	import MeshedEvent from "./pages/management/MeshedEvent.svelte";
+	import PublicTicketCreate from "./pages/tickets-notes/PublicTicketCreate.svelte";
 
 	// Checking userentication
 	let user = get(userStore);
@@ -92,18 +93,19 @@
 		"/app/softwaredocs",
 	];
 	const pageIsPublicLog = window.location.pathname.startsWith("/app/logs/") && window.location.pathname.split("/")[3].length == 36;
+	const pageIsPublicTicketCreate = window.location.pathname.startsWith("/app/public-ticket-create/");
 
 	function redirectForAuth(a: typeof user) {
 		if (!publicPaths.includes(window.location.pathname)) {
 			//user trying to acces protected page
-			if (!pageIsPublicLog) {
-				//page is not public log
+			if (!pageIsPublicLog && !pageIsPublicTicketCreate) {
+				//page is not public log or public ticket creation page
 				if (!a.token || !a.eventToken) {
 					navigate("/app/login"); //user is either not logged in or does not have event token
 				}
 				//user is logged in and has event token -- no redirect
 			}
-			//page is public log -- no tokens needed
+			//page is public log/public ticket creation page -- no tokens needed
 		} else if (window.location.pathname == "/app" || window.location.pathname == "/app/") {
 			//user is accessing public path that is /app or /app/
 			if (!a.token || !a.eventToken) {
@@ -651,6 +653,7 @@
 				</Route>
 			{/if}
 
+			<Route path="/public-ticket-create/:eventCode" component={PublicTicketCreate} />
 			<Route path="/notifications" component={NotificationList} />
 			<Route path="/flashcards" component={Flashcard} />
 			<Route path="/notes" component={NoteList} />

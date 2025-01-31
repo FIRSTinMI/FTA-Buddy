@@ -8,6 +8,7 @@ import { generateToken } from "./user";
 import { EventChecklist, Profile, TeamList, TournamentLevel } from '../../shared/types';
 import { createHash } from 'crypto';
 import { getEvent } from "../util/get-event";
+import { stackOffsetExpand } from "d3";
 //import { sendNotification } from "../../app/src/util/push-notifications";
 
 export const eventRouter = router({
@@ -255,5 +256,29 @@ export const eventRouter = router({
             }).from(users).where(inArray(users.id, usersToGet)),
             subEvents
         };
-    })
+    }),
+
+    togglePublicTicketSubmit: eventProcedure.input(z.object({
+        state: z.boolean()
+    })).query(async ({ ctx, input }) => {
+        const updatedValue = await db.update(events).set({publicTicketSubmit: input.state})
+            .where(eq(events.token, ctx.eventToken as string))
+            .returning({publicTicketSubmit: events.publicTicketSubmit});
+
+        if (!updatedValue) {
+            throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to update public ticket submit status' });
+        }
+
+        return updatedValue;
+    }),
+
+    getPublicTicketSubmit: eventProcedure.query(async ({ ctx }) => {
+        const event = await db.query.events.findFirst({ where: eq(events.token, ctx.eventToken as string) });
+
+        if (!event) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'Unable to get event from user event token' });
+        }
+
+        return event.publicTicketSubmit;
+    }),
 });

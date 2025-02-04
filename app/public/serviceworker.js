@@ -145,13 +145,13 @@ self.addEventListener("push", async (evt) => {
 });
 
 self.addEventListener("notificationclick", (evt) => {
-	console.log(evt);
+	//console.log(evt);
 	const rootUrl = new URL("/app/", location).href;
 	const pageToOpen = evt.notification.data?.page ?? "";
 	evt.notification.close();
 	evt.waitUntil(
 		clients.matchAll().then((matchedClients) => {
-			console.log("Clients: ", matchedClients);
+			//console.log("Clients: ", matchedClients);
 			try {
 				for (let client of matchedClients) {
 					if (client.url.indexOf(rootUrl + pageToOpen) >= 0) {

@@ -133,8 +133,8 @@
 				<div class="pl-4 grid grid-cols-subgrid gap-2 row-span-5">
 					<Toggle class="toggle" bind:checked={settings.notificationCategories.create} on:change={updateSettings}>New Tickets</Toggle>
 					<Toggle class="toggle" bind:checked={settings.notificationCategories.follow} on:change={updateSettings}>Followed Ticket Updates</Toggle>
-					<Toggle class="toggle" bind:checked={settings.notificationCategories.assign} on:change={updateSettings}>Assigned Ticket</Toggle>
-					<Toggle class="toggle" bind:checked={settings.notificationCategories.robot} on:change={updateSettings}>Robot Status</Toggle>
+					<Toggle class="toggle" bind:checked={settings.notificationCategories.assign} on:change={updateSettings}>Assigned Ticket Updates</Toggle>
+					<Toggle class="toggle" bind:checked={settings.notificationCategories.robot} on:change={updateSettings}>Robot Status Updates</Toggle>
 				</div>
 			</div>
 			<div class="grid grid-cols-subgrid gap-2 row-span-3">

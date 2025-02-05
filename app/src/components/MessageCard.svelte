@@ -83,7 +83,7 @@
 		class="flex flex-col sm:grid sm:grid-cols-[.1fr_auto_.1fr] max-sm:divide-y sm:divide-x divide-gray-500 {simple ? 'min-h-20 p-1' : 'min-h-28 pt-2 px-4'}"
 	>
 		<div class="flex flex-row justify-between text-left sm:block sm:text-center sm:place-content-center">
-			<p class="sm:w-28 text-wrap italic font-bold">{message.author.username} - {message.author.role}</p>
+			<p class="sm:w-28 text-wrap italic font-bold pt-3">{message.author.username} - {message.author.role}</p>
 			{#if user.id === message.author_id && !simple}
 				<div>
 					<Button class="pt-2 pb-2 pl-3 pr-2 mb-5" on:click={() => (editMessageView = true)}><EditOutline class="w-5" /></Button>

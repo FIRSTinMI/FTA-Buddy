@@ -781,8 +781,8 @@ export const ticketsRouter = router({
             };
 
             const addMessageHandler: TicketUpdateEvents["add_message"] = (data) => {
-                console.log(data);
-                console.log(input.ticket_id, data.message.ticket_id);
+                //console.log(data);
+                //console.log(input.ticket_id, data.message.ticket_id);
                 if (data.kind === "add_message" && input.ticket_id) {
                     if (data.message.ticket_id === input.ticket_id) {
                         console.log("emitting");
@@ -889,7 +889,7 @@ export const ticketsRouter = router({
         return observable<Notification>((emitter) => {
 
             const notificationHandler: NotificationEvents['send'] = (data) => {
-                console.log(data);
+                //console.log(data);
                 if (data.users.includes(user.id)) {
                     emitter.next(data.notification);
                 }

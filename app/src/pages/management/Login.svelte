@@ -149,7 +149,7 @@
 		}
 		try {
 			const res = await trpc.event.get.query({ code: event.code });
-			console.log(res);
+			//console.log(res);
 			if (res.subEvents) {
 				userStore.set({ ...user, eventToken: res.token, meshedEventToken: res.token });
 				eventStore.set({

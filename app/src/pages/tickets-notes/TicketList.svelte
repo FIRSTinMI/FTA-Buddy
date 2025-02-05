@@ -13,6 +13,7 @@
 	import { eventStore } from "../../stores/event";
 	import { userStore } from "../../stores/user";
 	import { clearNotifications } from "../../stores/notifications";
+    import Icon from "@iconify/svelte";
 
 	let createModalOpen = false;
 
@@ -70,7 +71,7 @@
 	$: filterAndSearchTickets(tickets, filterSelected, search);
 
 	async function getTickets() {
-		console.log($userStore.eventToken);
+		//console.log($userStore.eventToken);
 		ticketsPromise = trpc.tickets.getAllWithMessages.query();
 		tickets = await ticketsPromise;
 	}
@@ -108,7 +109,7 @@
 		}
 	}
 
-	function printPublicTicketSubmissionQRCode() {
+	function printPublicTicketSubmissionQRCode(event_code: string) {
 		// Open a new blank tab
 		const newTab = window.open("", "_blank");
 		if (!newTab) {
@@ -135,7 +136,7 @@
 		heading.style.fontFamily = "Arial, sans-serif";
 
 		const subHeading = doc.createElement("h2");
-		subHeading.textContent = `For Event: ${$eventStore.code}`;
+		subHeading.textContent = `For Event: ${event_code}`;
 		subHeading.style.fontSize = "2rem";
 		subHeading.style.marginTop = "0";
 		subHeading.style.marginBottom = "20px";
@@ -302,7 +303,7 @@
 							break;
 					}
 					tickets = tickets;
-					console.log(tickets);
+					//console.log(tickets);
 				},
 			}
 		);
@@ -312,7 +313,7 @@
 <NotesPolicy bind:this={notesPolicyElm} />
 
 <Modal bind:open={createModalOpen} size="lg" outsideclose dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
-	<div slot="header"><h1 class="text-3xl font-bold text-black dark:text-white">Create a Ticket</h1></div>
+	<div slot="header"><h1 class="text-3xl p-2 font-bold text-black dark:text-white">Create a Ticket</h1></div>
 	<form class="text-left flex flex-col gap-4" on:submit|preventDefault={createTicket}>
 		<Label class="w-full text-left">
 			Select Team
@@ -339,7 +340,7 @@
 </Modal>
 
 <Modal bind:open={publicTicketsModalOpen} size="sm" outsideclose dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
-	<h1 class="text-2xl font-bold">Toggle Public Ticket Creation for Event</h1>
+	<h1 class="text-2xl font-bold">Public Ticket Creation</h1>
 	<Button on:click={() => printPublicTicketSubmissionQRCode($eventStore.code)}>Print QR Code</Button>
 	<p>If the Public Ticket Creation page is being abused or spammed, please turn this setting off and inform your event FTA that you have done so.</p>
 	<Toggle class="toggle place-content-center" bind:checked={publicTicketSubmitState} on:change={setPublicTicketCreationState}
@@ -348,16 +349,19 @@
 </Modal>
 
 <div class="container max-w-6xl mx-auto px-2 h-full flex flex-col gap-2">
+	<div class="fixed top-12 right-2">
+		<Button on:click={() => location.reload()} class=""><Icon icon="charm:refresh" style="height: 13px; width: 13px;" /></Button>
+	</div>
 	<div class="flex flex-col overflow-hidden h-full gap-2">
 		<h1 class="text-3xl mt-2 font-bold p-2">Event Tickets</h1>
-		<div class="flex gap-2 max-w-3xl w-full items-center mx-auto">
-			<Button class="mx-auto w-full" on:click={() => (createModalOpen = true)}>Create a New Ticket</Button>
-			<Button class="mx-auto w-fit text-nowrap" on:click={() => (publicTicketsModalOpen = true)}>Public Ticket Submission</Button>
+		<div class="flex flex-row gap-2 max-w-3xl w-full items-center mx-auto">
+			<Button class="mx-auto grow" on:click={() => (createModalOpen = true)}>Create a New Ticket</Button>
+			<Button class="mx-auto w-fit text-nowrap" on:click={() => (publicTicketsModalOpen = true)}><Icon icon="ic:baseline-settings" class="h-5" /></Button>
 		</div>
 		<div class="flex items-center gap-2 max-w-3xl w-full mx-auto">
 			<Label class="w-full text-left">
 				<span class="ml-2">Search</span>
-				<Input class="w-full" placeholder="Search Team #, Team Name, Topic, Assigned User" bind:value={search}>
+				<Input class="w-full" placeholder="Search Team #, Team Name, Subject, Assigned User" bind:value={search}>
 					<SearchOutline slot="left" class="size-5 text-gray-500 dark:text-gray-400" />
 				</Input>
 			</Label>

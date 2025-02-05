@@ -99,7 +99,7 @@
 <NotesPolicy bind:this={notesPolicyElm} />
 
 <Modal bind:open={createModalOpen} size="lg" outsideclose dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
-	<div slot="header"><h1 class="text-2xl font-bold text-black dark:text-white">Create a Note</h1></div>
+	<div slot="header"><h1 class="text-2xl p-2 font-bold text-black dark:text-white">Create a Note</h1></div>
 	<form class="text-left flex flex-col gap-4" on:submit={createNote}>
 		<Label class="w-full text-left">
 			Select Team:

@@ -14,7 +14,6 @@ chrome.storage.local.get(['url', 'cloud', 'event', 'changed', 'enabled', 'signal
     }
 
     const script = document.createElement('script');
-    script.src = chrome.runtime.getURL('injected.js');
     script.dataset.host = item.url;
     script.dataset.cloud = item.cloud;
     script.dataset.event = item.event;

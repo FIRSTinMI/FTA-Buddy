@@ -45,7 +45,7 @@ export class SignalR {
                         message.startsWith('Failed to start the connection') ||
                         message.startsWith('Error from HTTP request')
                     ) return console.log(`[SignalR ${logLevel}] ${message}`);
-                    
+
                     [console.debug, console.debug, console.log, console.warn, console.error][logLevel](`[SignalR ${logLevel}] ${message}`);
                 },
             })
@@ -160,7 +160,7 @@ export class SignalR {
                         this.frame.field = FieldState.UNKNOWN;
                         break;
                     case 'MatchAuto':
-                        this.frame.field = FieldState.MATCH_RUNNING_AUTO
+                        this.frame.field = FieldState.MATCH_RUNNING_AUTO;
                         this.cycleTimeCallback('start', '');
                         break;
                     case 'MatchTransition':
@@ -216,8 +216,10 @@ export class SignalR {
                     noise: data[i].Noise,
                     signal: data[i].Signal,
                     versionmm: this.frame[team].versionmm ?? false,
-                    enabled: this.enableState(data[i])
-                }
+                    enabled: this.enableState(data[i]),
+                    radioConnected: data[i].RadioConnectedToAp ?? null,
+                    radioConnectionQuality: data[i].RadioConnectionQuality ?? null,
+                };
             }
 
             this.frame.frameTime = Date.now();
@@ -320,7 +322,7 @@ export class SignalR {
 
         this.infrastructureConnection.on('matchstatusinfochanged', (data) => {
             console.log('matchstatusinfochanged: ', data);
-        }); 
+        });
 
         this.infrastructureConnection.on('fieldnetworkstatus', (data) => {
             //console.log('fieldnetworkstatus: ', data);
@@ -409,7 +411,7 @@ export class SignalR {
             const listener = (response: t) => {
                 this.infrastructureConnection?.off(eventResponse, listener);
                 resolve(response);
-            }
+            };
             this.infrastructureConnection.on(eventResponse, listener);
 
             this.infrastructureConnection.invoke(eventName, ...args).catch((err) => {

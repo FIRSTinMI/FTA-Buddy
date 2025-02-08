@@ -54,6 +54,8 @@ export interface RobotInfo {
     lastChange: Date | null;
     improved: boolean;
     warnings: RobotWarnings[];
+    radioConnectionQuality: number | null;
+    radioConnected: boolean | null;
 }
 
 export enum RobotWarnings {
@@ -194,6 +196,8 @@ export interface SignalRMonitorFrame {
     IsAStopPressed: boolean;
     IsAStopped: boolean;
     MoveToStation: string | null;
+    RadioConnectionQuality: number | null;
+    RadioConnectedToAp: boolean | null;
 }
 
 export interface FMSLogFrame {

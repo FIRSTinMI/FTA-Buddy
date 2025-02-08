@@ -18,6 +18,20 @@ async function start() {
         chrome.storage.local.get(['url', 'cloud', 'event', 'changed', 'enabled', 'signalR', 'id', 'eventToken'], item => {
             console.log(item);
             if (!item.id) chrome.storage.local.set({ id: crypto.randomUUID() });
+
+            if (item.url == undefined || item.cloud == undefined || item.event == undefined || item.changed == undefined || item.enabled == undefined || item.signalR == undefined || item.eventToken == undefined) {
+                item = {
+                    url: item.url || 'ws://localhost:3001/ws/',
+                    cloud: item.cloud ?? true,
+                    event: item.event || '2024event',
+                    changed: item.changed || new Date().getTime(),
+                    enabled: item.enabled ?? false,
+                    signalR: item.signalR ?? false,
+                    eventToken: item.eventToken || ''
+                };
+                chrome.storage.local.set(item);
+            }
+
             url = item.url;
             cloud = item.cloud;
             eventCode = item.event;
@@ -82,8 +96,8 @@ async function start() {
 
 async function pingFMS() {
     try {
-        const controller = new AbortController()
-        setTimeout(() => controller.abort(), 500)
+        const controller = new AbortController();
+        setTimeout(() => controller.abort(), 500);
         const res = await fetch(`http://${FMS}/FieldMonitor`, {
             signal: controller.signal
         });
@@ -110,6 +124,7 @@ async function sendScheduleDetails() {
 }
 
 chrome.storage.local.onChanged.addListener((changes) => {
+    console.log(changes);
     for (const key of Object.keys(changes)) {
         if (key === 'changed') continue;
         return start();

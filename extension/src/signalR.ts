@@ -217,8 +217,8 @@ export class SignalR {
                     signal: data[i].Signal,
                     versionmm: this.frame[team].versionmm ?? false,
                     enabled: this.enableState(data[i]),
-                    radioConnected: data[i].RadioConnectedToAp ?? null,
-                    radioConnectionQuality: data[i].RadioConnectionQuality ?? null,
+                    radioConnected: data[i].RadioConnectedToAp || null,
+                    radioConnectionQuality: data[i].RadioConnectionQuality || null,
                 };
             }
 

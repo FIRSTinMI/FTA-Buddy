@@ -372,7 +372,7 @@ async function updateEventStatus(event: FTCEvent) {
     event.currentLevel = lastCompletedMatchLevel;
     event.totalMatches = Math.max(event.schedule.length + extraMatches, newMatches.length);
     event.completedMatches = newMatches.filter((match) => match.completed).length;
-    event.averageCycleTime = getAverageCycleTime(newMatches.map(match => match.cycleTime).filter(time => time !== null));
+    event.averageCycleTime = getAverageCycleTime(newMatches.map(match => (match.cycleTime ?? 0)).filter(time => time !== null));
     event.aheadBehind = event.currentMatch?.scheduledStartTime ? event.currentMatch.actualStartTime.getTime() - event.currentMatch.scheduledStartTime.getTime() : null;
 }
 

@@ -31,7 +31,9 @@ export const DEFAULT_MONITOR: MonitorFrame = {
         enabled: EnableState.RED,
         lastChange: null,
         improved: false,
-        warnings: []
+        warnings: [],
+        radioConnected: false,
+        radioConnectionQuality: 0,
     },
     blue2: {
         number: 9998,
@@ -55,7 +57,9 @@ export const DEFAULT_MONITOR: MonitorFrame = {
         enabled: EnableState.RED,
         lastChange: null,
         improved: false,
-        warnings: []
+        warnings: [],
+        radioConnected: false,
+        radioConnectionQuality: 0,
     },
     blue3: {
         number: 9997,
@@ -79,7 +83,9 @@ export const DEFAULT_MONITOR: MonitorFrame = {
         enabled: EnableState.RED,
         lastChange: null,
         improved: false,
-        warnings: []
+        warnings: [],
+        radioConnected: false,
+        radioConnectionQuality: 0,
     },
     red1: {
         number: 9996,
@@ -103,7 +109,9 @@ export const DEFAULT_MONITOR: MonitorFrame = {
         enabled: EnableState.RED,
         lastChange: null,
         improved: false,
-        warnings: []
+        warnings: [],
+        radioConnected: false,
+        radioConnectionQuality: 0,
     },
     red2: {
         number: 9995,
@@ -127,7 +135,9 @@ export const DEFAULT_MONITOR: MonitorFrame = {
         enabled: EnableState.RED,
         lastChange: null,
         improved: false,
-        warnings: []
+        warnings: [],
+        radioConnected: false,
+        radioConnectionQuality: 0,
     },
     red3: {
         number: 9994,
@@ -151,7 +161,9 @@ export const DEFAULT_MONITOR: MonitorFrame = {
         enabled: EnableState.RED,
         lastChange: null,
         improved: false,
-        warnings: []
+        warnings: [],
+        radioConnected: false,
+        radioConnectionQuality: 0,
     }
 };
 export const MCS_LOOKUP_TABLE: { [k: number]: number; } = {

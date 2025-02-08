@@ -30,7 +30,7 @@ export const robotInfo = z.object({
     versionmm: z.boolean(),
     enabled: z.nativeEnum(EnableState),
     radioConnected: z.boolean().nullable(),
-    radioConnectionQuality: z.number().nullable(),
+    radioConnectionQuality: z.string().nullable(),
 });
 
 export const fieldMonitorRouter = router({

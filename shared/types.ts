@@ -54,7 +54,7 @@ export interface RobotInfo {
     lastChange: Date | null;
     improved: boolean;
     warnings: RobotWarnings[];
-    radioConnectionQuality: number | null;
+    radioConnectionQuality: 'Warning' | 'Caution' | 'Good' | 'Excellent' | null;
     radioConnected: boolean | null;
 }
 
@@ -196,7 +196,7 @@ export interface SignalRMonitorFrame {
     IsAStopPressed: boolean;
     IsAStopped: boolean;
     MoveToStation: string | null;
-    RadioConnectionQuality: number | null;
+    RadioConnectionQuality: 'Warning' | 'Caution' | 'Good' | 'Excellent' | null;
     RadioConnectedToAp: boolean | null;
 }
 

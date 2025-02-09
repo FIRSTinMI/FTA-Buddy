@@ -21,6 +21,10 @@ export const VERSIONS: { [key: string]: Version; } = {
         <li>Added way more information to the references page</li>
         <li>Made reference pages public</li>
         <li>FTC event status tracker</li>
+        </ul>
+        <h2 class="font-bold">Extension v1.13</h2>
+        <ul>
+        <li>2025 support</li>
         </ul>`,
         update: () => {
             eventStore.set({ code: "", pin: "", teams: [], users: [] });

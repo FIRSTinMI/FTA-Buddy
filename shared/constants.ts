@@ -63,7 +63,7 @@ export const DEFAULT_MONITOR: MonitorFrame = {
     },
     blue3: {
         number: 9997,
-        ds: 4,
+        ds: 0,
         radio: false,
         rio: false,
         code: false,
@@ -84,7 +84,7 @@ export const DEFAULT_MONITOR: MonitorFrame = {
         lastChange: null,
         improved: false,
         warnings: [],
-        radioConnected: false,
+        radioConnected: true,
         radioConnectionQuality: "Good",
     },
     red1: {
@@ -110,7 +110,7 @@ export const DEFAULT_MONITOR: MonitorFrame = {
         lastChange: null,
         improved: false,
         warnings: [],
-        radioConnected: false,
+        radioConnected: true,
         radioConnectionQuality: "Good",
     },
     red2: {

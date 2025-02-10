@@ -106,7 +106,7 @@
 		{/if}
 	</button>
 	<button
-		class="{Status_Colors[robot.radio || robot.radioConnected ? 1 : 0]} fieldmonitor-square-height md:aspect-square flex"
+		class="{Status_Colors[robot.radio || robot.radioConnected ? 1 : 0]} fieldmonitor-square-height md:aspect-square flex items-center justify-center font-mono text-4xl lg:text-8xl text-black"
 		on:click={detailView}
 		id="{getKey(robot)}-radio"
 	>

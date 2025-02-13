@@ -108,10 +108,10 @@
 			//page is public log/public ticket creation page -- no tokens needed
 		} else if (window.location.pathname == "/app" || window.location.pathname == "/app/") {
 			//user is accessing public path that is /app or /app/
-			if (!a.token || !a.eventToken) {
-				navigate("/app/login"); //user is missing user token or event token
+			if (!a.eventToken) {
+				navigate("/app/login"); //user is missing event token
 			}
-			//user has user and event token -- no redirect
+			//user has event token -- no redirect
 		}
 	}
 
@@ -470,6 +470,20 @@
 						{/if}
 					</SidebarItem>
 				</SidebarGroup>
+			{:else if user.eventToken}
+				<SidebarGroup>
+					<SidebarItem
+							label="Monitor"
+							on:click={() => {
+								hideMenu = true;
+								navigate("/app/");
+							}}
+						>
+							<svelte:fragment slot="icon">
+								<Icon icon="mdi:television" class="w-8 h-8" />
+							</svelte:fragment>
+						</SidebarItem>
+				</SidebarGroup>
 			{/if}
 			<SidebarGroup class="border-t-2 mt-2 pt-2 border-neutral-400">
 				<SidebarItem
@@ -646,10 +660,10 @@
 				{/if}
 			{:else}
 				<Route path="/">
-					<TicketList />
-				</Route>
-				<Route path="/monitor">
 					<Monitor {fullscreen} {frameHandler} />
+				</Route>
+				<Route path="/tickets">
+					<TicketList />
 				</Route>
 			{/if}
 

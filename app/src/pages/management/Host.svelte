@@ -3,16 +3,18 @@
 	import { onMount } from "svelte";
 	import { userStore } from "../../stores/user";
 	import { eventStore } from "../../stores/event";
-	import type { Event } from "../../stores/event";
 	import { trpc } from "../../main";
 	import { navigate } from "svelte-routing";
 	import Spinner from "../../components/Spinner.svelte";
-    import type { Profile } from "../../../../shared/types";
+	import type { Profile } from "../../../../shared/types";
 
 	export let toast: (title: string, text: string, color?: string) => void;
 
+	const latestExtensionVersion = "1.13";
+
 	let extensionDetected = false;
 	let extensionEnabled = false;
+	let extensionUpdate = false;
 	let signalREnabled = false;
 	let extensionVersion = "unknown version";
 	let fmsDetected = false;
@@ -23,6 +25,11 @@
 			waitingForFirstConnectionTest = false;
 			extensionDetected = true;
 			extensionVersion = "v" + event.data.version;
+			if (event.data.version < latestExtensionVersion) {
+				extensionUpdate = true;
+			} else {
+				extensionUpdate = false;
+			}
 			extensionEnabled = event.data.enabled;
 			signalREnabled = event.data.signalR;
 			fmsDetected = event.data.fms;
@@ -83,7 +90,7 @@
 			eventStore.set({
 				code: eventCode,
 				pin: eventPin,
-				teams: res.teams as { number: string; name: string; inspected: boolean; }[],
+				teams: res.teams as { number: string; name: string; inspected: boolean }[],
 				users: res.users as Profile[],
 			});
 
@@ -139,7 +146,15 @@
 	<div>
 		<div class="inline-flex gap-2 font-bold mx-auto">
 			{#if extensionDetected}
-				{#if extensionEnabled}
+				{#if extensionUpdate}
+					<Indicator color="yellow" class="my-auto" />
+					<span class="text-yellow-300">Extension Update Available ({extensionVersion} &rarr; {latestExtensionVersion})</span>
+					<a
+						href="https://chromewebstore.google.com/detail/fta-buddy/kddnhihfpfnehnnhbkfajdldlgigohjc"
+						class="text-blue-400 hover:underline"
+						target="_blank">Update</a
+					>
+				{:else if extensionEnabled}
 					<Indicator color="green" class="my-auto" />
 					<span class="text-green text-green-500">Extension Enabled ({extensionVersion})</span>
 				{:else}

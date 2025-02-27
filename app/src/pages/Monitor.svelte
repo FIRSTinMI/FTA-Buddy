@@ -186,12 +186,12 @@
 </div>
 
 <div
-	class="grid grid-cols-fieldmonitor lg:grid-cols-fieldmonitor-large gap-0.5 md:gap-1 lg:gap-2 mx-auto justify-center {fullscreen && 'fullscreen'}"
+	class="grid grid-cols-fieldmonitor 2xl:grid-cols-fieldmonitor-large gap-0.5 md:gap-1 2xl:gap-2 mx-auto justify-center {fullscreen && 'fullscreen'}"
 	class:hidden={loading}
 >
 	{#key monitorFrame}
 		{#if monitorFrame}
-			<div class="col-span-6 lg:col-span-9 flex text-lg md:text-2xl font-semibold {fullscreen && 'lg:text-6xl'}">
+			<div class="col-span-6 lg:col-span-9 flex text-lg md:text-2xl font-semibold {fullscreen && 'lg:text-5xl'}">
 				<div class="px-2">M: {monitorFrame.match}</div>
 				<div class="flex-1 px-2 text-center">{FieldStates[monitorFrame.field]}</div>
 				<div class="px-2">{monitorFrame.time}</div>

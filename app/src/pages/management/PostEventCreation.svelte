@@ -74,8 +74,8 @@
 		<code class="bg-neutral-900 px-2 py-.75 rounded-xl">10.0.100.5</code>
 		You can use FTA Buddy as your primary field monitor by enabling the SignalR option, or use the FTA Buddy extension with the regular FMS field monitor.
 	</p>
-	<div class="grid md:grid-cols-2 border-t border-neutral-500 pt-5 gap-4">
-		<div class="col-span-2 border-b border-neutral-500 pb-5">
+	<div class="flex flex-col border-t border-neutral-500 pt-5 gap-4">
+		<div class="border-b border-neutral-500 pb-5">
 			<div>
 				<p>Use this information to connect your app.</p>
 				<h2 class="text-lg">Event Code: <code class="bg-neutral-900 px-2 py-.75 rounded-xl">{$eventStore.code}</code></h2>
@@ -114,20 +114,6 @@
 				<p class="font-bold text-red-500">Please use the same event code as the extension.</p>
 			{/if}
 		</div>
-		<div class="flex flex-col gap-4">
-			<h2 class="text-xl font-bold">Use the FTA Buddy extension with the regular FMS field monitor</h2>
-
-			{#if !fmsDetected}
-				<p class="font-bold text-red-500">Please ensure that FMS is detected.</p>
-			{:else if !extensionDetected}
-				<p class="font-bold text-red-500">Please install the FTA Buddy extension.</p>
-			{:else if !extensionEnabled}
-				<p class="font-bold text-red-500">Please enable the FTA Buddy extension.</p>
-			{:else if extensionEventCode !== $eventStore.code}
-				<p class="font-bold text-red-500">Please use the same event code as the extension.</p>
-			{/if}
-		</div>
 		<Button on:click={() => navigate("/app")}>Go to FTA Buddy</Button>
-		<Button href="http://10.0.100.5/FieldMonitor">Go to Field Monitor</Button>
 	</div>
 </div>

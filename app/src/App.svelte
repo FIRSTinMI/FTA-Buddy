@@ -473,16 +473,16 @@
 			{:else if user.eventToken}
 				<SidebarGroup>
 					<SidebarItem
-							label="Monitor"
-							on:click={() => {
-								hideMenu = true;
-								navigate("/app/");
-							}}
-						>
-							<svelte:fragment slot="icon">
-								<Icon icon="mdi:television" class="w-8 h-8" />
-							</svelte:fragment>
-						</SidebarItem>
+						label="Monitor"
+						on:click={() => {
+							hideMenu = true;
+							navigate("/app/");
+						}}
+					>
+						<svelte:fragment slot="icon">
+							<Icon icon="mdi:television" class="w-8 h-8" />
+						</svelte:fragment>
+					</SidebarItem>
 				</SidebarGroup>
 			{/if}
 			<SidebarGroup class="border-t-2 mt-2 pt-2 border-neutral-400">
@@ -625,7 +625,7 @@
 </Drawer>
 <Router basepath="/app/">
 	<main class="bg-white dark:bg-neutral-800 w-screen h-dvh flex flex-col">
-		<div class="bg-primary-700 dark:bg-primary-500 flex w-full justify-between px-2">
+		<div class="bg-primary-700 dark:bg-primary-500 flex w-full justify-between px-2 {fullscreen && 'hidden collapse'}">
 			<Button class="!py-0 !px-0 text-white" color="none" on:click={openMenu}>
 				<Icon icon="mdi:menu" class="w-8 h-10" />
 			</Button>

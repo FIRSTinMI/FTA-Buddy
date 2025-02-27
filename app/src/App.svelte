@@ -67,7 +67,7 @@
 				username: "",
 				id: -1,
 				token: "",
-				eventToken: "",
+				eventToken: user.eventToken,
 				role: "FTA",
 				admin: false,
 			});

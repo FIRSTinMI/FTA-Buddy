@@ -93,7 +93,7 @@
 		"/app/softwaredocs",
 	];
 	const pageIsPublicLog = window.location.pathname.startsWith("/app/logs/") && window.location.pathname.split("/")[3].length == 36;
-	const pageIsPublicTicketCreate = window.location.pathname.startsWith("/app/public-ticket-create/");
+	const pageIsPublicTicketCreate = window.location.pathname.startsWith("/app/submit-ticket/");
 
 	function redirectForAuth(a: typeof user) {
 		if (!publicPaths.includes(window.location.pathname)) {
@@ -667,7 +667,7 @@
 				</Route>
 			{/if}
 
-			<Route path="/public-ticket-create/:eventCode" component={PublicTicketCreate} />
+			<Route path="/submit-ticket/:eventCode" component={PublicTicketCreate} />
 			<Route path="/notifications" component={NotificationList} />
 			<Route path="/flashcards" component={Flashcard} />
 			<Route path="/notes" component={NoteList} />

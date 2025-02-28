@@ -184,7 +184,7 @@
 
 	// Update checking
 
-	update(settings.version, version, openWelcome, openChangelog, pageIsPublicLog);
+	update(settings.version, version, openWelcome, openChangelog, pageIsPublicLog || pageIsPublicTicketCreate);
 
 	// Toast manager
 

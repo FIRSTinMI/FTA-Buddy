@@ -1,22 +1,19 @@
-import { z } from "zod";
-import { eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
-import { db } from "../db/db";
-import { pushSubscriptions, tickets, users, events, messages } from "../db/schema";
-import type { User } from "../db/schema";
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
-import { Ticket, Profile, TicketUpdateEventData, TicketUpdateEvents, NotificationEvents } from "../../shared/types";
-import { getEvent, getListenerCount } from "../util/get-event";
 import { observable } from "@trpc/server/observable";
-import { messagesRouter } from "./messages";
-import { AwsRequestSigner } from "google-auth-library";
-import { dataSourceToNumber } from "@the-orange-alliance/api/lib/esm/models/types/DataSource";
-import { createNotification, sendWebPushNotification } from "../util/push-notifications";
 import { randomUUID } from "crypto";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { z } from "zod";
 import { notificationEmitter } from "..";
-import type { Notification } from "../../shared/types";
-import { generateReport } from "../util/report-generator";
 import { formatTimeShortNoAgoMinutes } from "../../shared/formatTime";
+import type { Notification } from "../../shared/types";
+import { NotificationEvents, Profile, Ticket, TicketUpdateEventData, TicketUpdateEvents } from "../../shared/types";
+import { db } from "../db/db";
+import { messages, pushSubscriptions, tickets, users } from "../db/schema";
+import { eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
+import { getEvent } from "../util/get-event";
+import { createNotification } from "../util/push-notifications";
+import { generateReport } from "../util/report-generator";
+import { messagesRouter } from "./messages";
 
 const messageRouter = messagesRouter;
 
@@ -156,7 +153,7 @@ export const ticketsRouter = router({
             throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
         }
 
-        if (event.teams.filter(teamInfo => parseInt(teamInfo.number) === input.team).length !== 1) {
+        if (!event.teams.find(teamInfo => parseInt(teamInfo.number) === input.team)) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Provided Team number is not associated with this Event" });
         }
 

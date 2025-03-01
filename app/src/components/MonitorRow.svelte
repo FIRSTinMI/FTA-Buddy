@@ -106,7 +106,9 @@
 		{/if}
 	</button>
 	<button
-		class="{Status_Colors[robot.radio || robot.radioConnected ? 1 : 0]} fieldmonitor-square-height md:aspect-square flex items-center justify-center font-mono text-4xl lg:text-8xl text-black"
+		class="{Status_Colors[
+			robot.radio || robot.radioConnected ? 1 : 0
+		]} fieldmonitor-square-height md:aspect-square flex items-center justify-center font-mono text-4xl lg:text-8xl text-black"
 		on:click={detailView}
 		id="{getKey(robot)}-radio"
 	>
@@ -166,13 +168,13 @@
 	>
 		{robot.signal ?? ""}
 		{#if (robot.signal ?? -100) > -60 && robot.signal !== 0}
-			<Icon icon="mdi:signal-cellular-3" class="size-12 lg:size-20" />
+			<Icon icon="mdi:signal-cellular-3" class="size-12 lg:size-20 2xl:size-24 text-green-600" />
 		{:else if (robot.signal ?? -100) > -70 && robot.signal !== 0}
-			<Icon icon="mdi:signal-cellular-2" class="size-12 lg:size-20" />
+			<Icon icon="mdi:signal-cellular-2" class="size-12 lg:size-20 2xl:size-24 text-yellow-600" />
 		{:else if (robot.signal ?? -100) > -80 && robot.signal !== 0}
-			<Icon icon="mdi:signal-cellular-1" class="size-12 lg:size-20" />
+			<Icon icon="mdi:signal-cellular-1" class="size-12 lg:size-20  2xl:size-24 text-red-600" />
 		{:else}
-			<Icon icon="mdi:signal-cellular-outline" class="size-12 lg:size-20" />
+			<Icon icon="mdi:signal-cellular-outline" class="size-12 lg:size-20 2xl:size-24" />
 		{/if}
 	</button>
 	<button

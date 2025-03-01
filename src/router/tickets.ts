@@ -656,35 +656,8 @@ export const ticketsRouter = router({
             throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
         }
 
-        let currentUserProfile: Profile[] | undefined;
-
-        if (ctx.token) {
-            currentUserProfile = await db.select({
-                id: users.id,
-                username: users.username,
-                role: users.role,
-                admin: users.admin,
-            }).from(users).where(eq(users.token, ctx.token));
-        } else {
-            throw new TRPCError({ code: "BAD_REQUEST", message: "User token not provided in context object" });
-        }
-
-        if (!currentUserProfile[0]) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "Current User not found by token" });
-        }
-
-        const ticketMessages = db.query.messages.findMany({
-            where: eq(messages.ticket_id, input.id)
-        });
-
-        let result;
-
-        if (!ticketMessages || !ticket.followers || !ticket.is_open) {
-            result = await db.delete(tickets).where(eq(tickets.id, input.id));
-        } else {
-            throw new TRPCError({ code: "BAD_REQUEST", message: "Unable to delete Ticket that has linked Messages or followers or is closed" });
-        }
-
+        let result = await db.delete(tickets).where(eq(tickets.id, input.id));
+       
         if (!result) {
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to delete Ticket" });
         }

@@ -211,6 +211,8 @@ export function analyzeLog(log: FMSLogFrame[]): DisconnectionEvent[] {
 }
 
 export async function logAnalysisLoop(limit: number) {
+    if (!db) return;
+
     const logsToAnalyze = await db.select().from(matchLogs)
         .where(eq(matchLogs.analyzed, false))
         .orderBy(asc(matchLogs.start_time))

@@ -142,8 +142,11 @@ export class SignalR {
                         this.frame.match = data.MatchNumber;
                         this.frame.play = data.PlayNumber;
                         this.frame.level = data.Level;
-
-                        this.cycleTimeCallback('prestart', '');
+                        try {
+                            this.cycleTimeCallback('prestart', '');
+                        } catch (e) {
+                            console.error(e);
+                        }
                         break;
                     case 'WaitingForMatchReady':
                         this.frame.field = FieldState.MATCH_NOT_READY;
@@ -161,7 +164,11 @@ export class SignalR {
                         break;
                     case 'MatchAuto':
                         this.frame.field = FieldState.MATCH_RUNNING_AUTO;
-                        this.cycleTimeCallback('start', '');
+                        try {
+                            this.cycleTimeCallback('start', '');
+                        } catch (e) {
+                            console.error(e);
+                        }
                         break;
                     case 'MatchTransition':
                         this.frame.field = FieldState.MATCH_TRANSITIONING;
@@ -171,11 +178,19 @@ export class SignalR {
                         break;
                     case 'WaitingForCommit':
                         this.frame.field = FieldState.MATCH_OVER;
-                        this.cycleTimeCallback('end', '');
+                        try {
+                            this.cycleTimeCallback('end', '');
+                        } catch (e) {
+                            console.error(e);
+                        }
                         break;
                     case 'WaitingForPostResults':
                         this.frame.field = FieldState.READY_FOR_POST_RESULT;
-                        this.cycleTimeCallback('scoresPosted', '');
+                        try {
+                            this.cycleTimeCallback('scoresPosted', '');
+                        } catch (e) {
+                            console.error(e);
+                        }
                         await uploadMatchLogs();
                         break;
                     case 'TournamentLevelComplete':
@@ -248,6 +263,11 @@ export class SignalR {
 
             // if (data.p3) this.frame[team].versionmm = data.p3.length > 0;
             // else this.frame[team].versionmm = false;
+        });
+
+        this.infrastructureConnection.on('robotversiondatachanged', (data) => {
+            const team: ROBOT = (((data.Alliance === "Red") ? 'red' : 'blue') + data.Station.replace("Station", "")) as ROBOT;
+            this.frame[team].versionData = data.Versions;
         });
 
         // Any settings changed in FMS
@@ -426,7 +446,6 @@ export class SignalR {
         if (data.IsEStopped) return DSState.ESTOP;
         if (data.IsAStopped && this.frame.field == FieldState.MATCH_RUNNING_AUTO) return DSState.ASTOP;
         if (data.Connection) {
-            console.log(data.StationStatus);
             if (data.DSLinkActive) return DSState.GREEN;
             if (data.StationStatus === 'WrongStation') return DSState.MOVE_STATION;
             if (data.StationStatus === 'Waiting') return DSState.WAITING;

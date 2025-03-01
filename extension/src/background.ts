@@ -108,11 +108,13 @@ async function pingFMS() {
 }
 
 async function sendFrame(data: any) {
+    console.debug(data);
     await trpc.field.post.mutate((eventToken) ? { eventToken, ...data } : { eventCode, ...data });
 }
 
 async function sendCycletime(type: 'lastCycleTime' | 'prestart' | 'start' | 'end' | 'refsDone' | 'scoresPosted', data: string) {
     const { matchNumber, playNumber, level } = await getCurrentMatch();
+    console.log({ eventToken, type, lastCycleTime: data, matchNumber, playNumber, level });
     await trpc.cycles.postCycleTime.mutate({ eventToken, type, lastCycleTime: data, matchNumber, playNumber, level });
 }
 

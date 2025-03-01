@@ -56,6 +56,11 @@ export interface RobotInfo {
     warnings: RobotWarnings[];
     radioConnectionQuality: 'Warning' | 'Caution' | 'Good' | 'Excellent' | null;
     radioConnected: boolean | null;
+    versionData?: {
+        VersionTag: 'DSVersion' | 'WPILibVersion' | 'RIOVersion',
+        Version: string,
+        Status: 'preferred' | 'unknown';
+    };
 }
 
 export enum RobotWarnings {

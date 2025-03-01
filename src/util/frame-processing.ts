@@ -132,7 +132,8 @@ export async function processTeamWarnings(eventCode: string, frame: MonitorFrame
                     .limit(1);
 
                 const recentlyClosedTickets = teamTickets.filter(ticket => !ticket.is_open);
-                const previousMatchStart = previousMatch[0].prestart;
+                let previousMatchStart = new Date();
+                if (previousMatch[0] && previousMatch[0].prestart) previousMatchStart = previousMatch[0].prestart;
 
                 for (let ticket of recentlyClosedTickets) {
                     // If ticket is closed and there either is no previous match or the previous match start time was before the ticket closed time
@@ -189,6 +190,8 @@ export async function processTeamCycles(eventCode: string, frame: MonitorFrame, 
         }
 
         console.log(insert);
+
+        if (insert.length < 1) return;
 
         await db.insert(robotCycleLogs).values(insert);
         event.robotCycleTracking = {};

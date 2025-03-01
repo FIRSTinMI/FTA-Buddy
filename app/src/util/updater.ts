@@ -9,6 +9,16 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version; } = {
+    '2.6.1': {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.6.1</h1>
+        <ul>
+        <li>Fixed the bug where the field monitor didn't work until the match preview was gone</li>
+        <li>Made signal strength larger and colored</li>
+        <li>Other assorted bug fixes</li>
+        </ul>`,
+        update: () => { }
+    },
     '2.6.0': {
         changelog: `
         <h1 class="text-lg font-bold">v2.6.0</h1>

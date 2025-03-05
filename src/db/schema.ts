@@ -32,7 +32,7 @@ export const events = pgTable('events', {
     meshedEvent: jsonb('meshedEvent'),
     publicTicketSubmit: boolean('publicTicketSubmit').notNull().default(true),
     slackChannel: varchar('slackChannel'),
-    slackToken: varchar('slackToken'),
+    slackTeam: varchar('slackTeam'),
 });
 
 export const Event = typeof events.$inferInsert;

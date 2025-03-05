@@ -37,7 +37,8 @@ import { decompressStationLog, logAnalysisLoop } from './util/log-analysis';
 import { ftcRouter } from './router/ftc';
 import { notesRouter } from './router/notes';
 import { TypedEmitter } from 'tiny-typed-emitter';
-import { slackCommand, slackOAuth } from './util/slack';
+import { linkChannel, slackOAuth } from './util/slack';
+import bodyParser from 'body-parser';
 
 const port = parseInt(process.env.PORT || '3001');
 
@@ -110,6 +111,8 @@ server.on('upgrade', function (req, socket, head) {
 });
 
 app.use(cors());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use('/trpc', proxy('http://localhost:' + (port + 1) + '/trpc'));
 
@@ -151,8 +154,40 @@ app.get('/slack/oauth', async (req, res) => {
     }
 });
 app.post('/slack/command', async (req, res) => {
-    const { text, channel_id, response_url } = req.body;
-    res.send(await slackCommand(text, channel_id, response_url));
+    const {
+        command,
+        text,
+        response_url,
+        trigger_id,
+        user_id,
+        user_name,
+        team_id,
+        channel_id,
+        api_app_id
+    } = req.body;
+
+    const args = text.split(" ");
+
+    try {
+        switch (args[0]) {
+            case "link":
+                res.send(await linkChannel(args, channel_id, team_id));
+            default:
+                throw new Error("Invalid command");
+        }
+    } catch (err) {
+        if (err instanceof Error) {
+            res.send({
+                "response_type": "ephemeral",
+                text: err.message
+            });
+        } else {
+            res.send({
+                "response_type": "ephemeral",
+                text: "An unknown error occurred"
+            });
+        }
+    }
 });
 
 // Public api

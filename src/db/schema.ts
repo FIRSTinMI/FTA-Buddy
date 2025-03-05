@@ -1,6 +1,7 @@
 import { boolean, customType, integer, jsonb, pgEnum, pgTable, serial, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import { Profile, Message } from "../../shared/types";
 import { relations } from "drizzle-orm";
+import { access } from "fs";
 export const roleEnum = pgEnum('role', ['FTA', 'FTAA', 'CSA', 'RI']);
 
 export const users = pgTable('users', {
@@ -204,6 +205,14 @@ export const pushSubscriptions = pgTable('push_subscriptions', {
     endpoint: text('endpoint').notNull(),
     expirationTime: timestamp('expirationTime'),
     keys: jsonb('keys').notNull()
+});
+
+export const slackServers = pgTable('slack_servers', {
+    id: serial('id').primaryKey(),
+    team_id: varchar('team_id').notNull(),
+    team_name: varchar('team_name').notNull(),
+    access_token: varchar('access_token').notNull(),
+    webhook_url: varchar('webhook_url')
 });
 
 export default { events, users, messages, matchLogs, cycleLogs, logPublishing };

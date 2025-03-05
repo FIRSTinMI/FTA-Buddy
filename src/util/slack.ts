@@ -1,3 +1,6 @@
+import { db } from "../db/db";
+import { slackServers } from "../db/schema";
+
 export async function slackOAuth(code: string) {
     const url = new URL('https://slack.com/api/oauth.v2.access');
     url.searchParams.append('client_id', process.env.SLACK_CLIENT_ID ?? "");
@@ -15,12 +18,14 @@ export async function slackOAuth(code: string) {
         throw new Error(data.error);
     }
 
-    const { access_token, team, incoming_webhook } = data;
+    console.log(data);
 
-    // Store the access token in a database for future API calls
-    console.log("Access Token:", access_token);
-    console.log("Team:", team);
-    console.log("Webhook Info:", incoming_webhook);
+    await db.insert(slackServers).values({
+        team_id: data.team.id,
+        team_name: data.team.name,
+        access_token: data.access_token,
+        webhook_url: data.incoming_webhook
+    }).execute();
 
     return true;
 }

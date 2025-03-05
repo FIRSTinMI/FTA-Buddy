@@ -203,6 +203,28 @@ export const ticketsRouter = router({
         });
 
         if (event.slackChannel && event.slackTeam) {
+            const buttons = [];
+            buttons.push({
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "View Ticket",
+                    "emoji": true
+                },
+                "url": `https://ftabuddy.com/app/ticket/${insert[0].id}`
+            });
+            if (insert[0].match_id) {
+                buttons.push({
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "View Match Log",
+                        "emoji": true
+                    },
+                    "url": `https://ftabuddy.com/app/logs/${insert[0].match_id}`
+                });
+            }
+
             let messageTS = await sendSlackMessage(event.slackChannel, event.slackTeam, {
                 "blocks": [
                     {
@@ -253,6 +275,10 @@ export const ticketsRouter = router({
                                 ]
                             }
                         ]
+                    },
+                    {
+                        "type": "actions",
+                        "elements": buttons
                     }
                 ]
             });
@@ -340,6 +366,28 @@ export const ticketsRouter = router({
         });
 
         if (event.slackChannel && event.slackTeam) {
+            const buttons = [];
+            buttons.push({
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "View Ticket",
+                    "emoji": true
+                },
+                "url": `https://ftabuddy.com/app/ticket/${insert[0].id}`
+            });
+            if (insert[0].match_id) {
+                buttons.push({
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "View Match Log",
+                        "emoji": true
+                    },
+                    "url": `https://ftabuddy.com/app/logs/${insert[0].match_id}`
+                });
+            }
+
             let messageTS = await sendSlackMessage(event.slackChannel, event.slackTeam, {
                 "blocks": [
                     {
@@ -390,6 +438,10 @@ export const ticketsRouter = router({
                                 ]
                             }
                         ]
+                    },
+                    {
+                        "type": "actions",
+                        "elements": buttons
                     }
                 ]
             });

@@ -168,12 +168,24 @@ app.post('/slack/command', async (req, res) => {
 
     const args = text.split(" ");
 
+    console.log({
+        command,
+        text,
+        response_url,
+        trigger_id,
+        user_id,
+        user_name,
+        team_id,
+        channel_id,
+        api_app_id,
+        args
+    });
+
     try {
-        switch (args[0]) {
-            case "link":
-                res.send(await linkChannel(args, channel_id, team_id));
-            default:
-                throw new Error("Invalid command");
+        if (command === "/ftabuddy") {
+            res.send(await linkChannel(args, channel_id, team_id));
+        } else {
+            throw new Error("Invalid command");
         }
     } catch (err) {
         if (err instanceof Error) {

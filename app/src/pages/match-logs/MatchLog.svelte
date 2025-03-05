@@ -6,6 +6,7 @@
 	import { ROBOT, type FMSLogFrame, type MatchLog } from "../../../../shared/types";
 	import MatchGraph from "../../components/MatchGraph.svelte";
 	import { formatTimeNoAgo } from "../../../../shared/formatTime";
+	import { decompressStationLog } from "../../util/log-compression";
 
 	export let matchid: string;
 
@@ -15,12 +16,12 @@
 	match.then((matchdata) => {
 		const log: MatchLog["log"] = [];
 
-		processLog(matchdata.blue1_log as FMSLogFrame[], ROBOT.blue1, log);
-		processLog(matchdata.blue2_log as FMSLogFrame[], ROBOT.blue2, log);
-		processLog(matchdata.blue3_log as FMSLogFrame[], ROBOT.blue3, log);
-		processLog(matchdata.red1_log as FMSLogFrame[], ROBOT.red1, log);
-		processLog(matchdata.red2_log as FMSLogFrame[], ROBOT.red2, log);
-		processLog(matchdata.red3_log as FMSLogFrame[], ROBOT.red3, log);
+		if (matchdata.blue1_log) processLog(decompressStationLog(matchdata.blue1_log), ROBOT.blue1, log);
+		if (matchdata.blue2_log) processLog(decompressStationLog(matchdata.blue2_log), ROBOT.blue2, log);
+		if (matchdata.blue3_log) processLog(decompressStationLog(matchdata.blue3_log), ROBOT.blue3, log);
+		if (matchdata.red1_log) processLog(decompressStationLog(matchdata.red1_log), ROBOT.red1, log);
+		if (matchdata.red2_log) processLog(decompressStationLog(matchdata.red2_log), ROBOT.red2, log);
+		if (matchdata.red3_log) processLog(decompressStationLog(matchdata.red3_log), ROBOT.red3, log);
 
 		data = {
 			blue1: matchdata.blue1 ?? 0,

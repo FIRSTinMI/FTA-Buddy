@@ -2,6 +2,7 @@ import { createTRPCClient, createWSClient, httpBatchLink, splitLink, wsLink } fr
 import type { AppRouter } from '../../src/index';
 import { getAllLogsForMatch, getCurrentMatch, getMatch } from './fmsapi';
 import SuperJSON from 'superjson';
+import { compressSync } from 'fflate';
 
 let cloud: boolean = true;
 let id: string = '';
@@ -68,8 +69,37 @@ export async function uploadMatchLogs() {
     const matchNumber = await getCurrentMatch();
     const match = await getMatch(matchNumber.matchNumber, matchNumber.playNumber, matchNumber.level);
     const logs = await getAllLogsForMatch(match.fmsMatchId);
-    console.log(`Uploading logs for match ${matchNumber.matchNumber} play ${matchNumber.playNumber} id ${match.fmsMatchId}`);
-    const upload = { event: eventCode, level: match.tournamentLevel, ...match, logs };
-    console.debug(upload);
-    await trpc.match.putMatchLogs.query(upload);
+    console.log(`Trying to compress logs for match ${matchNumber.matchNumber} play ${matchNumber.playNumber} id ${match.fmsMatchId}`);
+    try {
+        const upload = {
+            event: eventCode,
+            level: match.tournamentLevel,
+            ...match,
+            logs: {
+                red1: compressStationLog(logs.red1),
+                red2: compressStationLog(logs.red2),
+                red3: compressStationLog(logs.red3),
+                blue1: compressStationLog(logs.blue1),
+                blue2: compressStationLog(logs.blue2),
+                blue3: compressStationLog(logs.blue3),
+            }
+        };
+
+        console.debug(upload);
+        await trpc.match.putCompressedMatchLogs.query(upload);
+    } catch (err) {
+        console.error(err);
+        console.log(`Uploading logs uncompressed`);
+        const upload = { event: eventCode, level: match.tournamentLevel, ...match, logs };
+        console.debug(upload);
+        await trpc.match.putMatchLogs.query(upload);
+    }
+    console.log('done');
+}
+
+export function compressStationLog(log: any[]) {
+    const enc = new TextEncoder();
+    const buf = enc.encode(JSON.stringify(log));
+    const compressed = compressSync(buf, { level: 6, mem: 6 });
+    return btoa(String.fromCharCode(...compressed));
 }

@@ -1,7 +1,8 @@
+import { compress, compressSync, decompressSync, zlib } from "fflate";
 import { DisconnectionEvent, FMSLogFrame, MatchLog, ROBOT } from "../../shared/types";
 import { db } from "../db/db";
 import { analyzedLogs, matchLogs } from "../db/schema";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, and, isNull } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 
 export function analyzeLog(log: FMSLogFrame[]): DisconnectionEvent[] {
@@ -227,7 +228,7 @@ export async function logAnalysisLoop(limit: number) {
             //@ts-ignore
             const teamNumber: number = log[station];
             //@ts-ignore
-            const logData = log[`${station}_log`] as FMSLogFrame[];
+            const logData = decompressStationLog(log[`${station}_log`]);
 
             // Skip bypassed teams in test match
             if (log.level === "None" && logData.length < 1) continue;
@@ -249,3 +250,63 @@ export async function logAnalysisLoop(limit: number) {
         await db.update(matchLogs).set({ analyzed: true }).where(eq(matchLogs.id, log.id)).execute();
     }
 }
+
+export function compressStationLog(log: FMSLogFrame[]) {
+    const enc = new TextEncoder();
+    const buf = enc.encode(JSON.stringify(log));
+
+    // The default compression method is gzip
+    // Increasing mem may increase performance at the cost of memory
+    // The mem ranges from 0 to 12, where 4 is the default
+    const compressed = Buffer.from(compressSync(buf, { level: 6, mem: 6 }));
+    return compressed.toString('base64');
+}
+
+export function decompressStationLog(compressed: string) {
+    const dec = new TextDecoder();
+    const buf = Uint8Array.from(Buffer.from(compressed, 'base64'));
+    const decompressed = decompressSync(buf);
+    return JSON.parse(dec.decode(decompressed)) as FMSLogFrame[];
+}
+
+// This was used to migrate to compressed logs
+// export async function compressLogs(limit: number) {
+//     const logsToCompress = await db.select().from(matchLogs)
+//         .where(and(eq(matchLogs.blue1_log_compressed, ""), eq(matchLogs.blue2_log_compressed, ""), eq(matchLogs.blue3_log_compressed, ""), eq(matchLogs.red1_log_compressed, ""), eq(matchLogs.red2_log_compressed, ""), eq(matchLogs.red3_log_compressed, "")))
+//         .orderBy(asc(matchLogs.start_time))
+//         .limit(limit);
+
+//     if (logsToCompress.length === 0) return;
+
+//     for (const log of logsToCompress) {
+//         let originalSize = 0;
+//         let compressedSize = 0;
+
+//         for (const station in ROBOT) {
+//             const enc = new TextEncoder();
+
+//             // @ts-ignore
+//             const buf = enc.encode(JSON.stringify(log[`${station}_log`]));
+//             originalSize += buf.byteLength;
+
+//             // The default compression method is gzip
+//             // Increasing mem may increase performance at the cost of memory
+//             // The mem ranges from 0 to 12, where 4 is the default
+//             const compressed = Buffer.from(compressSync(buf, { level: 6, mem: 6 }));
+//             compressedSize += compressed.byteLength;
+
+//             log[`${station}_log_compressed`] = compressed.toString('base64');
+//         }
+
+//         await db.update(matchLogs).set({
+//             blue1_log_compressed: log.blue1_log_compressed,
+//             blue2_log_compressed: log.blue2_log_compressed,
+//             blue3_log_compressed: log.blue3_log_compressed,
+//             red1_log_compressed: log.red1_log_compressed,
+//             red2_log_compressed: log.red2_log_compressed,
+//             red3_log_compressed: log.red3_log_compressed,
+//         }).where(eq(matchLogs.id, log.id)).execute();
+
+//         console.log(`${log.event} ${log.match_number} compressed ${Math.round(originalSize / 102.4) / 10} -> ${Math.round(compressedSize / 102.4) / 10} KB`);
+//     }
+// }

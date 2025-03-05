@@ -1,4 +1,4 @@
-import { boolean, integer, jsonb, pgEnum, pgTable, serial, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { boolean, customType, integer, jsonb, pgEnum, pgTable, serial, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import { Profile, Message } from "../../shared/types";
 import { relations } from "drizzle-orm";
 export const roleEnum = pgEnum('role', ['FTA', 'FTAA', 'CSA', 'RI']);
@@ -92,6 +92,19 @@ export const notes = pgTable('notes', {
 
 export const levelEnum = pgEnum('level', ['None', 'Practice', 'Qualification', 'Playoff']);
 
+const bytea = customType<{ data: string; notNull: false; default: false; }>({
+    dataType() {
+        return "bytea";
+    },
+    toDriver(val) {
+        return Buffer.from(val, "base64");
+    },
+    fromDriver(val) {
+        return (val as Buffer).toString("base64");
+    },
+});
+
+
 export const matchLogs = pgTable('match_logs', {
     id: uuid('id').primaryKey(),
     event: varchar('event').notNull(),
@@ -106,12 +119,12 @@ export const matchLogs = pgTable('match_logs', {
     red1: integer('red1'),
     red2: integer('red2'),
     red3: integer('red3'),
-    blue1_log: jsonb('blue1_log').notNull().default('[]'),
-    blue2_log: jsonb('blue2_log').notNull().default('[]'),
-    blue3_log: jsonb('blue3_log').notNull().default('[]'),
-    red1_log: jsonb('red1_log').notNull().default('[]'),
-    red2_log: jsonb('red2_log').notNull().default('[]'),
-    red3_log: jsonb('red3_log').notNull().default('[]'),
+    blue1_log: bytea('blue1_log'),
+    blue2_log: bytea('blue2_log'),
+    blue3_log: bytea('blue3_log'),
+    red1_log: bytea('red1_log'),
+    red2_log: bytea('red2_log'),
+    red3_log: bytea('red3_log'),
     analyzed: boolean('analyzed').notNull().default(false),
 });
 

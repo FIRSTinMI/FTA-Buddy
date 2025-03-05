@@ -7,6 +7,7 @@ import { inferRouterOutputs } from '@trpc/server';
 import { randomUUID } from 'crypto';
 import { FMSLogFrame, ROBOT, DisconnectionEvent } from '../../shared/types';
 import { generateReport } from "../util/report-generator";
+import { compressStationLog } from "../util/log-analysis";
 
 export type MatchRouterOutputs = inferRouterOutputs<typeof matchRouter>;
 
@@ -48,12 +49,58 @@ export const matchRouter = router({
             red1: input.teamNumberRed1,
             red2: input.teamNumberRed2,
             red3: input.teamNumberRed3,
+            blue1_log: compressStationLog(input.logs.blue1 as FMSLogFrame[]),
+            blue2_log: compressStationLog(input.logs.blue2 as FMSLogFrame[]),
+            blue3_log: compressStationLog(input.logs.blue3 as FMSLogFrame[]),
+            red1_log: compressStationLog(input.logs.red1 as FMSLogFrame[]),
+            red2_log: compressStationLog(input.logs.red2 as FMSLogFrame[]),
+            red3_log: compressStationLog(input.logs.red3 as FMSLogFrame[]),
+        }).execute();
+    }),
+
+    putCompressedMatchLogs: publicProcedure.input(z.object({
+        event: z.string(),
+        fmsMatchId: z.string(),
+        fmsEventId: z.string(),
+        matchNumber: z.number(),
+        playNumber: z.number(),
+        level: z.enum(['None', 'Practice', 'Qualification', 'Playoff']),
+        actualStartTime: z.string(),
+        teamNumberBlue1: z.number().optional(),
+        teamNumberBlue2: z.number().optional(),
+        teamNumberBlue3: z.number().optional(),
+        teamNumberRed1: z.number().optional(),
+        teamNumberRed2: z.number().optional(),
+        teamNumberRed3: z.number().optional(),
+        logs: z.object({
+            blue1: z.string().optional(),
+            blue2: z.string().optional(),
+            blue3: z.string().optional(),
+            red1: z.string().optional(),
+            red2: z.string().optional(),
+            red3: z.string().optional(),
+        })
+    })).query(async ({ input }) => {
+        await db.insert(matchLogs).values({
+            id: input.fmsMatchId,
+            event: input.event.trim().toLowerCase(),
+            event_id: input.fmsEventId,
+            match_number: input.matchNumber,
+            play_number: input.playNumber,
+            level: input.level,
+            start_time: new Date(input.actualStartTime),
+            blue1: input.teamNumberBlue1,
+            blue2: input.teamNumberBlue2,
+            blue3: input.teamNumberBlue3,
+            red1: input.teamNumberRed1,
+            red2: input.teamNumberRed2,
+            red3: input.teamNumberRed3,
             blue1_log: input.logs.blue1,
             blue2_log: input.logs.blue2,
             blue3_log: input.logs.blue3,
             red1_log: input.logs.red1,
             red2_log: input.logs.red2,
-            red3_log: input.logs.red3
+            red3_log: input.logs.red3,
         }).execute();
     }),
 
@@ -173,7 +220,7 @@ export const matchRouter = router({
             start_time: match.start_time,
             team: match[station] ?? 0,
             station: station,
-            log: match[`${station}_log`] as FMSLogFrame[],
+            log: match[`${station}_log`] as string,
             analysis: (analysis?.events ?? []) as DisconnectionEvent[],
             bypassed: analysis?.bypassed ?? false
         };
@@ -224,7 +271,7 @@ export const matchRouter = router({
             start_time: match.start_time,
             team: match[station] ?? 0,
             station: station,
-            log: match[`${station}_log`] as FMSLogFrame[],
+            log: match[`${station}_log`] as string,
             analysis: analysis?.events,
             bypassed: analysis?.bypassed ?? false
         };

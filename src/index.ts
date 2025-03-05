@@ -33,7 +33,7 @@ import json from 'highlight.js/lib/languages/json';
 import { gfmHeadingId } from 'marked-gfm-heading-id';
 import { observable } from '@trpc/server/observable';
 //import { initializePushNotifications } from '../app/src/util/push-notifications';
-import { logAnalysisLoop } from './util/log-analysis';
+import { decompressStationLog, logAnalysisLoop } from './util/log-analysis';
 import { ftcRouter } from './router/ftc';
 import { notesRouter } from './router/notes';
 import { TypedEmitter } from 'tiny-typed-emitter';
@@ -158,6 +158,8 @@ app.get('/api/logs/:shareCode', async (req, res) => {
 
     const station = share.station as ROBOT;
 
+    const compressedLog = log[`${station}_log`];
+
     const returnObj = {
         team: share.team,
         matchID: share.match_id,
@@ -168,7 +170,7 @@ app.get('/api/logs/:shareCode', async (req, res) => {
         station: share.station,
         expires: share.expire_time.toISOString(),
         matchStartTime: log.start_time.toISOString(),
-        log: log[`${station}_log`] as FMSLogFrame[]
+        log: compressedLog ? decompressStationLog(compressedLog) : []
     };
 
     if (req.query.format === 'json') {

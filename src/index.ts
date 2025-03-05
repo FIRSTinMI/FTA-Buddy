@@ -22,7 +22,7 @@ import { createProxyServer } from 'http-proxy';
 import proxy from 'express-http-proxy';
 import { createServer } from 'http';
 import { messagesRouter } from './router/messages';
-import { ticketsRouter } from './router/tickets';
+import { ticketsRouter, updateTicketAssignmentFromSlack, updateTicketStatusFromSlack } from './router/tickets';
 import { json2csv } from 'json-2-csv';
 import { Marked } from 'marked';
 import { join } from 'path';
@@ -188,6 +188,27 @@ app.post('/slack/command', async (req, res) => {
             });
         }
     }
+});
+
+app.post("/slack/events", async (req, res) => {
+    const { event, challenge } = req.body;
+
+    // Slack Verification Challenge
+    if (challenge) {
+        return res.json({ challenge });
+    }
+
+    // Check if event is a reaction_added event
+    if (event) {
+        console.log(event);
+        if (event.reaction === "white_check_mark") {
+            await updateTicketStatusFromSlack(event.item.ts, event.type !== "reaction_added");
+        } else if (event.reaction === "eyes") {
+            await updateTicketAssignmentFromSlack(event.item.ts, event.type === "reaction_added", event.user);
+        }
+    }
+
+    res.sendStatus(200);
 });
 
 // Public api

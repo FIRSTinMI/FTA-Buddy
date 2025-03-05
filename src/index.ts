@@ -21,7 +21,7 @@ import { cycleLogs, logPublishing, matchLogs } from './db/schema';
 import { createProxyServer } from 'http-proxy';
 import proxy from 'express-http-proxy';
 import { createServer } from 'http';
-import { messagesRouter } from './router/messages';
+import { addTicketMessageFromSlack, messagesRouter } from './router/messages';
 import { ticketsRouter, updateTicketAssignmentFromSlack, updateTicketStatusFromSlack } from './router/tickets';
 import { json2csv } from 'json-2-csv';
 import { Marked } from 'marked';
@@ -205,6 +205,8 @@ app.post("/slack/events", async (req, res) => {
             await updateTicketStatusFromSlack(event.item.ts, event.type !== "reaction_added");
         } else if (event.reaction === "eyes") {
             await updateTicketAssignmentFromSlack(event.item.ts, event.type === "reaction_added", event.user);
+        } else if (event.type === "message" && event.thread_ts) {
+            await addTicketMessageFromSlack(event.channel, event.ts, event.thread_ts, event.text, event.user);
         }
     }
 

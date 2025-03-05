@@ -309,6 +309,13 @@
       "when": 1741202839879,
       "tag": "0043_stale_magma",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "5",
+      "when": 1741205022765,
+      "tag": "0044_furry_earthquake",
+      "breakpoints": true
     }
   ]
 }

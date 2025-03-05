@@ -1231,6 +1231,10 @@ export async function updateTicketStatusFromSlack(message_ts: string, status: bo
         },
     });
 
+    if (status && ticket.slack_channel && event.slackTeam && ticket.slack_ts) {
+        removeSlackReaction(ticket.slack_channel, event.slackTeam, ticket.slack_ts, "white_check_mark");
+    }
+
     return update[0] as Ticket;
 }
 
@@ -1293,6 +1297,10 @@ export async function updateTicketAssignmentFromSlack(message_ts: string, add: b
                 ticket_id: ticket.id,
             },
         });
+
+        if (ticket.slack_channel && event.slackTeam && ticket.slack_ts) {
+            removeSlackReaction(ticket.slack_channel, event.slackTeam, ticket.slack_ts, "eyes");
+        }
     }
 
     return update[0] as Ticket;

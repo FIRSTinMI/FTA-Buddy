@@ -24,6 +24,7 @@
 	import { json2csv } from "json-2-csv";
 	import { MCS_LOOKUP_TABLE } from "../../../../shared/constants";
 	import e from "cors";
+	import { decompressStationLog } from "../../util/log-compression";
 
 	export let matchid: string;
 	export let station: ROBOT | string;
@@ -43,7 +44,7 @@
 
 	matchPromise.then((m) => {
 		match = m;
-		log = m.log;
+		log = decompressStationLog(m.log);
 		for (let frame of log) {
 			if (!frame.txMCS && frame.txRate) frame.txMCS = MCS_LOOKUP_TABLE[frame.txRate];
 			if (!frame.rxMCS && frame.rxRate) frame.rxMCS = MCS_LOOKUP_TABLE[frame.rxRate];

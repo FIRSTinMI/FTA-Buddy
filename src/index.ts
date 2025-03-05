@@ -37,6 +37,7 @@ import { decompressStationLog, logAnalysisLoop } from './util/log-analysis';
 import { ftcRouter } from './router/ftc';
 import { notesRouter } from './router/notes';
 import { TypedEmitter } from 'tiny-typed-emitter';
+import { slackOAuth } from './util/slack';
 
 const port = parseInt(process.env.PORT || '3001');
 
@@ -131,6 +132,24 @@ if (process.env.NODE_ENV === 'dev') {
 
 app.use('/report', express.static('reports'));
 
+app.get('/slack/oauth', async (req, res) => {
+    const code = req.query.code as string;
+
+    if (!code) {
+        return res.status(400).send("Missing code parameter");
+    }
+
+    try {
+        await slackOAuth(code);
+        res.send("Success! You can close this window now.");
+    } catch (err) {
+        if (err instanceof Error) {
+            res.status(500).send(err.message);
+        } else {
+            res.status(500).send("An unknown error occurred");
+        }
+    }
+});
 // Public api
 
 app.get('/api/cycles/:eventCode/:level/:match/:play', async (req, res) => {

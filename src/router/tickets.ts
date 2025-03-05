@@ -512,9 +512,9 @@ export const ticketsRouter = router({
 
         if (event.slackChannel && event.slackTeam && ticket.slack_ts) {
             if (update[0].is_open) {
-                await addSlackReaction(event.slackChannel, event.slackTeam, ticket.slack_ts, "white_check_mark");
-            } else {
                 await removeSlackReaction(event.slackChannel, event.slackTeam, ticket.slack_ts, "white_check_mark");
+            } else {
+                await addSlackReaction(event.slackChannel, event.slackTeam, ticket.slack_ts, "white_check_mark");
             }
         }
 
@@ -595,6 +595,10 @@ export const ticketsRouter = router({
                 ticket_id: ticket.id,
             },
         });
+
+        if (event.slackChannel && event.slackTeam && ticket.slack_ts) {
+            await addSlackReaction(event.slackChannel, event.slackTeam, ticket.slack_ts, "eyes");
+        }
 
         return update[0] as Ticket;
     }),
@@ -680,6 +684,10 @@ export const ticketsRouter = router({
                 ticket_id: ticket.id,
             },
         });
+
+        if (event.slackChannel && event.slackTeam && ticket.slack_ts) {
+            await removeSlackReaction(event.slackChannel, event.slackTeam, ticket.slack_ts, "eyes");
+        }
 
         return update[0] as Ticket;
     }),
@@ -1295,4 +1303,108 @@ export function getTicketOpenTime(ticket: Ticket) {
         const openTime = ticket.closed_at.getTime() - ticket.created_at.getTime();
         return openTime;
     }
+}
+
+export async function updateTicketStatusFromSlack(message_ts: string, status: boolean) {
+    const ticket = await db.query.tickets.findFirst({
+        where: and(
+            eq(tickets.slack_ts, message_ts)
+        )
+    });
+
+    if (!ticket) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
+    }
+
+    const update = await db.update(tickets).set({
+        is_open: status,
+        closed_at: status ? new Date() : null,
+        updated_at: new Date(),
+    }).where(eq(tickets.id, ticket.id)).returning();
+
+    const event = await getEvent("", ticket.event_code);
+
+    event.ticketUpdateEmitter.emit("status", {
+        kind: "status",
+        ticket_id: update[0].id,
+        is_open: update[0].is_open
+    });
+
+    createNotification(ticket.followers, {
+        id: randomUUID(),
+        timestamp: new Date(),
+        topic: "Ticket-Status",
+        title: `Ticket Status Updated to ${(update[0].is_open) ? "OPEN" : "CLOSED"}`,
+        body: `Ticket status updated and is now ${(update[0].is_open) ? "OPEN" : "CLOSED"}`,
+        data: {
+            page: "ticket/" + update[0].id,
+            ticket_id: update[0].id,
+        },
+    });
+
+    return update[0] as Ticket;
+}
+
+export async function updateTicketAssignmentFromSlack(message_ts: string, add: boolean, user: string) {
+    const ticket = await db.query.tickets.findFirst({
+        where: and(
+            eq(tickets.slack_ts, message_ts)
+        )
+    });
+
+    if (!ticket) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
+    }
+
+    let slackUser: Profile = { id: -1, role: "CSA", admin: false, username: "Slack User" };
+
+    const update = await db.update(tickets).set({
+        assigned_to_id: add ? slackUser.id : null,
+        assigned_to: add ? slackUser : null,
+        updated_at: new Date(),
+    }).where(eq(tickets.id, ticket.id)).returning();
+
+    const event = await getEvent("", ticket.event_code);
+
+    if (add) {
+        event.ticketUpdateEmitter.emit("assign", {
+            kind: "assign",
+            ticket_id: update[0].id,
+            assigned_to_id: update[0].assigned_to_id,
+            assigned_to: slackUser,
+        });
+
+        createNotification(ticket.followers, {
+            id: randomUUID(),
+            timestamp: new Date(),
+            topic: "Ticket-Assigned",
+            title: `Ticket #${ticket.id} Has Been Assigned`,
+            body: `Ticket #${ticket.id} assigned to ${slackUser.username}`,
+            data: {
+                page: "ticket/" + ticket.id,
+                ticket_id: ticket.id,
+            },
+        });
+    } else {
+        event.ticketUpdateEmitter.emit("assign", {
+            kind: "assign",
+            ticket_id: update[0].id,
+            assigned_to_id: update[0].assigned_to_id,
+            assigned_to: null,
+        });
+
+        createNotification(ticket.followers, {
+            id: randomUUID(),
+            timestamp: new Date(),
+            topic: "Ticket-Assigned",
+            title: `Ticket #${ticket.id} Has Been Set to Unassigned`,
+            body: `Ticket #${ticket.id} has been set to unassigned`,
+            data: {
+                page: "ticket/" + ticket.id,
+                ticket_id: ticket.id,
+            },
+        });
+    }
+
+    return update[0] as Ticket;
 }

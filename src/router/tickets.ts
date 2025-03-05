@@ -14,6 +14,7 @@ import { getEvent } from "../util/get-event";
 import { createNotification } from "../util/push-notifications";
 import { generateReport } from "../util/report-generator";
 import { messagesRouter } from "./messages";
+import { sendMessageToEventChannel, sendSlackMessage } from "../util/slack";
 
 const messageRouter = messagesRouter;
 
@@ -157,6 +158,10 @@ export const ticketsRouter = router({
             throw new TRPCError({ code: "NOT_FOUND", message: "Provided Team number is not associated with this Event" });
         }
 
+        if (!event.publicTicketSubmit) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Public Ticket submission is disabled for this Event" });
+        }
+
         const insert = await db.insert(tickets).values({
             team: input.team,
             subject: input.subject,
@@ -171,6 +176,7 @@ export const ticketsRouter = router({
             event_code: event.code,
             followers: [author[0].id],
             match_id: undefined,
+            slack_channel: event.slackChannel
         }).returning();
 
 
@@ -195,6 +201,63 @@ export const ticketsRouter = router({
                 ticket_id: insert[0].id,
             },
         });
+
+        if (event.slackChannel && event.slackTeam) {
+            let messageTS = await sendSlackMessage(event.slackChannel, event.slackTeam, {
+                "blocks": [
+                    {
+                        "type": "header",
+                        "text": {
+                            "type": "plain_text",
+                            "text": `New Ticket #${insert[0].id} For Team ${insert[0].team}`,
+                            "emoji": true
+                        }
+                    },
+                    {
+                        "type": "context",
+                        "elements": [
+                            {
+                                "type": "plain_text",
+                                "text": `Created by: ${insert[0].author}`,
+                                "emoji": true
+                            }
+                        ]
+                    },
+                    {
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "text",
+                                        "text": `${insert[0].subject}`,
+                                        "style": {
+                                            "bold": true
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "text",
+                                        "text": `${insert[0].text}`,
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            });
+            await db.update(tickets).set({ slack_ts: messageTS }).where(eq(tickets.id, insert[0].id)).execute();
+        }
 
         return insert[0] as Ticket;
     }),
@@ -275,6 +338,63 @@ export const ticketsRouter = router({
                 ticket_id: insert[0].id,
             },
         });
+
+        if (event.slackChannel && event.slackTeam) {
+            let messageTS = await sendSlackMessage(event.slackChannel, event.slackTeam, {
+                "blocks": [
+                    {
+                        "type": "header",
+                        "text": {
+                            "type": "plain_text",
+                            "text": `New Ticket #${insert[0].id} For Team ${insert[0].team}`,
+                            "emoji": true
+                        }
+                    },
+                    {
+                        "type": "context",
+                        "elements": [
+                            {
+                                "type": "plain_text",
+                                "text": `Created by: ${insert[0].author}`,
+                                "emoji": true
+                            }
+                        ]
+                    },
+                    {
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "text",
+                                        "text": `${insert[0].subject}`,
+                                        "style": {
+                                            "bold": true
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "text",
+                                        "text": `${insert[0].text}`,
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            });
+            await db.update(tickets).set({ slack_ts: messageTS }).where(eq(tickets.id, insert[0].id)).execute();
+        }
 
         return insert[0] as Ticket;
     }),

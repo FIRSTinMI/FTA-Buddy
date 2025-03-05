@@ -374,6 +374,9 @@ export interface ServerEvent {
     notes: Note[],
     meshedEvent: boolean,
     subEvents?: { code: string, label: string, token: string, teams: TeamList, pin: string, users: Profile[]; }[];
+    slackChannel?: string;
+    slackTeam?: string;
+    publicTicketSubmit: boolean;
 }
 
 export type TicketUpdateEvents = {

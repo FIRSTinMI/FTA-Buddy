@@ -36,7 +36,8 @@ export async function linkChannel(args: string[], channel_id: string, team_id: s
         throw new Error("Usage: `/ftabuddy link [event code]`");
     }
 
-    const eventCode = args[1];
+    const eventCode = args[0];
+    const eventPin = args[1];
 
     // Check if the event exists
     const event = (await db.select({ code: events.code, pin: events.pin })
@@ -44,7 +45,7 @@ export async function linkChannel(args: string[], channel_id: string, team_id: s
         .where(eq(events.code, eventCode))
         .execute())[0];
 
-    if (!event) {
+    if (!event || event.pin !== eventPin) {
         throw new Error("Event not found");
     }
 

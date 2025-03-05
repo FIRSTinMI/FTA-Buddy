@@ -104,7 +104,7 @@
 			<span class="text-large">
 				Add the Slack bot to your CSA channel to have tickets syncronized between FTA Buddy and the Slack channel.
 				<h2 class="text-lg"><code class="bg-neutral-900 px-2 py-.75 rounded-xl">/invite @FTA Buddy</code></h2>
-				<h2 class="text-lg"><code class="bg-neutral-900 px-2 py-.75 rounded-xl">/ftabuddy link {$eventStore.code}</code></h2>
+				<h2 class="text-lg"><code class="bg-neutral-900 px-2 py-.75 rounded-xl">/ftabuddy {$eventStore.code} {$eventStore.pin}</code></h2>
 			</span>
 		</div>
 		<Button on:click={() => navigate("/app")}>Go to FTA Buddy</Button>

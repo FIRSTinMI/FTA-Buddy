@@ -295,6 +295,13 @@
       "when": 1741192611101,
       "tag": "0041_brown_excalibur",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "5",
+      "when": 1741197301635,
+      "tag": "0042_supreme_black_panther",
+      "breakpoints": true
     }
   ]
 }

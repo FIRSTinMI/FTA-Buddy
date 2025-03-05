@@ -113,16 +113,12 @@
 		let update;
 		if (!ticket) return;
 		try {
-			if (ticket.messages && ticket.messages?.length > 0) {
-				if (ticket.is_open === true) {
-					update = await trpc.tickets.updateStatus.query({ id: ticket.id, new_status: false, event_code: event.code });
-				} else {
-					update = await trpc.tickets.updateStatus.query({ id: ticket.id, new_status: true, event_code: event.code });
-				}
-				ticket.is_open = update.is_open;
+			if (ticket.is_open === true) {
+				update = await trpc.tickets.updateStatus.query({ id: ticket.id, new_status: false, event_code: event.code });
 			} else {
-				toast("Ticket must have at least 1 Added Message to be Closed", "");
+				update = await trpc.tickets.updateStatus.query({ id: ticket.id, new_status: true, event_code: event.code });
 			}
+			ticket.is_open = update.is_open;
 		} catch (err: any) {
 			toast("An error occurred while updating the ticket", err.message);
 			console.error(err);

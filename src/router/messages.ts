@@ -131,7 +131,8 @@ export const messagesRouter = router({
                             }
                         ]
                     }
-                ]
+                ],
+                username: insert[0].author?.username,
             }, ticket.slack_ts);
             await db.update(messages).set({ slack_ts: messageTS, slack_channel: event.slackChannel }).where(eq(messages.id, insert[0].id)).execute();
         }
@@ -228,7 +229,8 @@ export const messagesRouter = router({
                             }
                         ]
                     }
-                ]
+                ],
+                username: update[0].author?.username
             });
         }
 

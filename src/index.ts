@@ -210,9 +210,9 @@ app.post("/slack/events", async (req, res) => {
         return res.json({ challenge });
     }
 
-    // Check if event is a reaction_added event
-    if (event) {
-        console.log(event);
+    console.log(event);
+    // Ignore events from the bot
+    if (event && event.user !== "U08FVV94LPR") {
         if (event.reaction === "white_check_mark") {
             await updateTicketStatusFromSlack(event.item.ts, event.type !== "reaction_added");
         } else if (event.reaction === "eyes") {

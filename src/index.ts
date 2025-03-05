@@ -37,7 +37,7 @@ import { decompressStationLog, logAnalysisLoop } from './util/log-analysis';
 import { ftcRouter } from './router/ftc';
 import { notesRouter } from './router/notes';
 import { TypedEmitter } from 'tiny-typed-emitter';
-import { slackOAuth } from './util/slack';
+import { slackCommand, slackOAuth } from './util/slack';
 
 const port = parseInt(process.env.PORT || '3001');
 
@@ -150,6 +150,11 @@ app.get('/slack/oauth', async (req, res) => {
         }
     }
 });
+app.post('/slack/command', async (req, res) => {
+    const { text, channel_id, response_url } = req.body;
+    res.send(await slackCommand(text, channel_id, response_url));
+});
+
 // Public api
 
 app.get('/api/cycles/:eventCode/:level/:match/:play', async (req, res) => {

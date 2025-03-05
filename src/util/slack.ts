@@ -1,5 +1,6 @@
+import { eq } from "drizzle-orm";
 import { db } from "../db/db";
-import { slackServers } from "../db/schema";
+import { events, slackServers } from "../db/schema";
 
 export async function slackOAuth(code: string) {
     const url = new URL('https://slack.com/api/oauth.v2.access');
@@ -28,4 +29,33 @@ export async function slackOAuth(code: string) {
     }).execute();
 
     return true;
+}
+
+export async function slackCommand(text: string, channel_id: string, response_url: string) {
+    const args = text.split(" ");
+
+    switch (args[0]) {
+        case "link":
+            return linkChannel(args, channel_id, response_url);
+        default:
+            return { text: "Invalid command" };
+    }
+}
+
+async function linkChannel(args: string[], channel_id: string, response_url: string) {
+    if (!args[1]) {
+        return { text: "Usage: `/ftabuddy link [event code]`" };
+    }
+
+    const eventCode = args[1];
+
+    const event = (await db.select({ code: events.code, pin: events.pin }).from(events).where(eq(events.code, eventCode)).execute())[0];
+
+    if (!event) {
+        return { text: "Event not found" };
+    }
+
+    await db.update(events).set({ slackChannel: channel_id }).where(eq(events.code, eventCode)).execute();
+
+    return { text: `Linked event ${eventCode} to this channel, use pin ${event.pin} to join the event in the app!` };
 }

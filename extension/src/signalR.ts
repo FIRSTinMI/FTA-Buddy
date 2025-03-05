@@ -192,6 +192,7 @@ export class SignalR {
                         } catch (e) {
                             console.error(e);
                         }
+                        await uploadMatchLogs();
                         break;
                     case 'TournamentLevelComplete':
                         this.frame.field = FieldState.UNKNOWN;

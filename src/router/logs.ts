@@ -35,6 +35,9 @@ export const matchRouter = router({
             red3: z.array(z.any().optional())
         })
     })).query(async ({ input }) => {
+        const existing = await db.select({ id: matchLogs.id }).from(matchLogs).where(eq(matchLogs.id, input.fmsMatchId)).execute();
+        if (existing.length > 0) return;
+
         await db.insert(matchLogs).values({
             id: input.fmsMatchId,
             event: input.event.trim().toLowerCase(),
@@ -81,6 +84,9 @@ export const matchRouter = router({
             red3: z.string().optional(),
         })
     })).query(async ({ input }) => {
+        const existing = await db.select({ id: matchLogs.id }).from(matchLogs).where(eq(matchLogs.id, input.fmsMatchId)).execute();
+        if (existing.length > 0) return;
+
         await db.insert(matchLogs).values({
             id: input.fmsMatchId,
             event: input.event.trim().toLowerCase(),

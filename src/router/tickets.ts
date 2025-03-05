@@ -14,7 +14,7 @@ import { getEvent } from "../util/get-event";
 import { createNotification } from "../util/push-notifications";
 import { generateReport } from "../util/report-generator";
 import { messagesRouter } from "./messages";
-import { sendMessageToEventChannel, sendSlackMessage } from "../util/slack";
+import { addSlackReaction, removeSlackReaction, sendMessageToEventChannel, sendSlackMessage } from "../util/slack";
 
 const messageRouter = messagesRouter;
 
@@ -240,7 +240,7 @@ export const ticketsRouter = router({
                         "elements": [
                             {
                                 "type": "plain_text",
-                                "text": `Created by: ${insert[0].author}`,
+                                "text": `Created by: ${insert[0].author?.username}`,
                                 "emoji": true
                             }
                         ]
@@ -403,7 +403,7 @@ export const ticketsRouter = router({
                         "elements": [
                             {
                                 "type": "plain_text",
-                                "text": `Created by: ${insert[0].author}`,
+                                "text": `Created by: ${insert[0].author?.username}`,
                                 "emoji": true
                             }
                         ]
@@ -509,6 +509,14 @@ export const ticketsRouter = router({
                 ticket_id: update[0].id,
             },
         });
+
+        if (event.slackChannel && event.slackTeam && ticket.slack_ts) {
+            if (update[0].is_open) {
+                await addSlackReaction(event.slackChannel, event.slackTeam, ticket.slack_ts, "white_check_mark");
+            } else {
+                await removeSlackReaction(event.slackChannel, event.slackTeam, ticket.slack_ts, "white_check_mark");
+            }
+        }
 
         return update[0] as Ticket;
     }),

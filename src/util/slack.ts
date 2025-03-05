@@ -146,3 +146,25 @@ export interface SlackMessage {
     blocks?: any[];
     text?: string;
 }
+
+export async function addSlackReaction(channel_id: string, team_id: string, message_ts: string, reaction: 'thumbsup' | 'thumbsdown' | 'white_check_mark' | 'x' | 'eyes') {
+    const response = await fetch("https://slack.com/api/reactions.add", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${await getTokenByTeam(team_id)}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ channel: channel_id, timestamp: message_ts, name: reaction })
+    });
+}
+
+export async function removeSlackReaction(channel_id: string, team_id: string, message_ts: string, reaction: 'thumbsup' | 'thumbsdown' | 'white_check_mark' | 'x' | 'eyes') {
+    const response = await fetch("https://slack.com/api/reactions.remove", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${await getTokenByTeam(team_id)}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ channel: channel_id, timestamp: message_ts, name: reaction })
+    });
+}

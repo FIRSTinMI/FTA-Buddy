@@ -139,6 +139,7 @@ export async function sendSlackMessage(channel_id: string, team_id: string, mess
 export interface SlackMessage {
     blocks?: any[];
     text?: string;
+    username?: string;
 }
 
 export async function updateSlackMessage(channel_id: string, team_id: string, message_ts: string, message: SlackMessage) {

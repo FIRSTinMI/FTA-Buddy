@@ -657,7 +657,7 @@ export const ticketsRouter = router({
         }
 
         let result = await db.delete(tickets).where(eq(tickets.id, input.id));
-       
+
         if (!result) {
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to delete Ticket" });
         }
@@ -918,6 +918,15 @@ export const ticketsRouter = router({
 
         return { path };
     }),
+
+    attachMatchLog: eventProcedure.input(z.object({
+        matchId: z.string(),
+        ticketId: z.number(),
+    })).mutation(({ ctx, input }) => {
+        return db.update(tickets).set({
+            match_id: input.matchId,
+        }).where(eq(tickets.id, input.ticketId)).returning();
+    })
 });
 
 export async function getEventTickets(event_code: string) {

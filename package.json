@@ -23,6 +23,7 @@
     "@types/bcrypt": "^5.0.2",
     "@types/localforage": "^0.0.33",
     "bcrypt": "^5.1.1",
+    "body-parser": "^1.20.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.29.5",

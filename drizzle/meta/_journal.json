@@ -302,6 +302,13 @@
       "when": 1741197301635,
       "tag": "0042_supreme_black_panther",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "5",
+      "when": 1741202839879,
+      "tag": "0043_stale_magma",
+      "breakpoints": true
     }
   ]
 }

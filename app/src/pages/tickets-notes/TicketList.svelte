@@ -13,7 +13,7 @@
 	import { eventStore } from "../../stores/event";
 	import { userStore } from "../../stores/user";
 	import { clearNotifications } from "../../stores/notifications";
-    import Icon from "@iconify/svelte";
+	import Icon from "@iconify/svelte";
 
 	let createModalOpen = false;
 
@@ -183,10 +183,25 @@
 	async function getMatchesForTeam(team: number | undefined) {
 		if (team) {
 			matchesPromise = trpc.match.getMatchNumbers.query({ team });
-			matches = (await matchesPromise).map((match) => ({
-				value: match.id,
-				name: `${match.level} ${match.match_number}/${match.play_number}`,
-			}));
+			matches = (await matchesPromise)
+				.sort((a, b) => levelToSort(b.level) - levelToSort(a.level) || b.match_number - a.match_number || b.play_number - a.play_number)
+				.map((match) => ({
+					value: match.id,
+					name: `${match.level} ${match.match_number}/${match.play_number}`,
+				}));
+		}
+	}
+
+	function levelToSort(level: "None" | "Practice" | "Qualification" | "Playoff") {
+		switch (level) {
+			case "Practice":
+				return 1;
+			case "Qualification":
+				return 2;
+			case "Playoff":
+				return 3;
+			default:
+				return 0;
 		}
 	}
 

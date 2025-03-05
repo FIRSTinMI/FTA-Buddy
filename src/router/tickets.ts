@@ -14,7 +14,7 @@ import { getEvent } from "../util/get-event";
 import { createNotification } from "../util/push-notifications";
 import { generateReport } from "../util/report-generator";
 import { messagesRouter } from "./messages";
-import { addSlackReaction, removeSlackReaction, sendMessageToEventChannel, sendSlackMessage } from "../util/slack";
+import { addSlackReaction, updateSlackMessage, removeSlackReaction, sendMessageToEventChannel, sendSlackMessage, deleteSlackMessage } from "../util/slack";
 
 const messageRouter = messagesRouter;
 
@@ -225,64 +225,8 @@ export const ticketsRouter = router({
                 });
             }
 
-            let messageTS = await sendSlackMessage(event.slackChannel, event.slackTeam, {
-                "blocks": [
-                    {
-                        "type": "header",
-                        "text": {
-                            "type": "plain_text",
-                            "text": `New Ticket #${insert[0].id} For Team ${insert[0].team}`,
-                            "emoji": true
-                        }
-                    },
-                    {
-                        "type": "context",
-                        "elements": [
-                            {
-                                "type": "plain_text",
-                                "text": `Created by: ${insert[0].author?.username}`,
-                                "emoji": true
-                            }
-                        ]
-                    },
-                    {
-                        "type": "rich_text",
-                        "elements": [
-                            {
-                                "type": "rich_text_section",
-                                "elements": [
-                                    {
-                                        "type": "text",
-                                        "text": `${insert[0].subject}`,
-                                        "style": {
-                                            "bold": true
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        "type": "rich_text",
-                        "elements": [
-                            {
-                                "type": "rich_text_section",
-                                "elements": [
-                                    {
-                                        "type": "text",
-                                        "text": `${insert[0].text}`,
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        "type": "actions",
-                        "elements": buttons
-                    }
-                ]
-            });
-            await db.update(tickets).set({ slack_ts: messageTS }).where(eq(tickets.id, insert[0].id)).execute();
+            let messageTS = await sendSlackMessage(event.slackChannel, event.slackTeam, createSlackTicketMessage(insert[0].id, insert[0].team, "Team Submission", insert[0].subject, insert[0].text, insert[0].match_id ?? undefined));
+            await db.update(tickets).set({ slack_ts: messageTS, slack_channel: event.slackChannel }).where(eq(tickets.id, insert[0].id)).execute();
         }
 
         return insert[0] as Ticket;
@@ -366,86 +310,8 @@ export const ticketsRouter = router({
         });
 
         if (event.slackChannel && event.slackTeam) {
-            const buttons = [];
-            buttons.push({
-                "type": "button",
-                "text": {
-                    "type": "plain_text",
-                    "text": "View Ticket",
-                    "emoji": true
-                },
-                "url": `https://ftabuddy.com/app/ticket/${insert[0].id}`
-            });
-            if (insert[0].match_id) {
-                buttons.push({
-                    "type": "button",
-                    "text": {
-                        "type": "plain_text",
-                        "text": "View Match Log",
-                        "emoji": true
-                    },
-                    "url": `https://ftabuddy.com/app/logs/${insert[0].match_id}`
-                });
-            }
-
-            let messageTS = await sendSlackMessage(event.slackChannel, event.slackTeam, {
-                "blocks": [
-                    {
-                        "type": "header",
-                        "text": {
-                            "type": "plain_text",
-                            "text": `New Ticket #${insert[0].id} For Team ${insert[0].team}`,
-                            "emoji": true
-                        }
-                    },
-                    {
-                        "type": "context",
-                        "elements": [
-                            {
-                                "type": "plain_text",
-                                "text": `Created by: ${insert[0].author?.username}`,
-                                "emoji": true
-                            }
-                        ]
-                    },
-                    {
-                        "type": "rich_text",
-                        "elements": [
-                            {
-                                "type": "rich_text_section",
-                                "elements": [
-                                    {
-                                        "type": "text",
-                                        "text": `${insert[0].subject}`,
-                                        "style": {
-                                            "bold": true
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        "type": "rich_text",
-                        "elements": [
-                            {
-                                "type": "rich_text_section",
-                                "elements": [
-                                    {
-                                        "type": "text",
-                                        "text": `${insert[0].text}`,
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        "type": "actions",
-                        "elements": buttons
-                    }
-                ]
-            });
-            await db.update(tickets).set({ slack_ts: messageTS }).where(eq(tickets.id, insert[0].id)).execute();
+            let messageTS = await sendSlackMessage(event.slackChannel, event.slackTeam, createSlackTicketMessage(insert[0].id, insert[0].team, insert[0].author?.username ?? "Unknown", insert[0].subject, insert[0].text, insert[0].match_id ?? undefined));
+            await db.update(tickets).set({ slack_ts: messageTS, slack_channel: event.slackChannel }).where(eq(tickets.id, insert[0].id)).execute();
         }
 
         return insert[0] as Ticket;
@@ -510,11 +376,11 @@ export const ticketsRouter = router({
             },
         });
 
-        if (event.slackChannel && event.slackTeam && ticket.slack_ts) {
+        if (event.slackTeam && ticket.slack_ts && ticket.slack_channel) {
             if (update[0].is_open) {
-                await removeSlackReaction(event.slackChannel, event.slackTeam, ticket.slack_ts, "white_check_mark");
+                await removeSlackReaction(ticket.slack_channel, event.slackTeam, ticket.slack_ts, "white_check_mark");
             } else {
-                await addSlackReaction(event.slackChannel, event.slackTeam, ticket.slack_ts, "white_check_mark");
+                await addSlackReaction(ticket.slack_channel, event.slackTeam, ticket.slack_ts, "white_check_mark");
             }
         }
 
@@ -596,8 +462,8 @@ export const ticketsRouter = router({
             },
         });
 
-        if (event.slackChannel && event.slackTeam && ticket.slack_ts) {
-            await addSlackReaction(event.slackChannel, event.slackTeam, ticket.slack_ts, "eyes");
+        if (event.slackTeam && ticket.slack_ts && ticket.slack_channel) {
+            await addSlackReaction(ticket.slack_channel, event.slackTeam, ticket.slack_ts, "eyes");
         }
 
         return update[0] as Ticket;
@@ -685,8 +551,8 @@ export const ticketsRouter = router({
             },
         });
 
-        if (event.slackChannel && event.slackTeam && ticket.slack_ts) {
-            await removeSlackReaction(event.slackChannel, event.slackTeam, ticket.slack_ts, "eyes");
+        if (event.slackTeam && ticket.slack_ts && ticket.slack_channel) {
+            await removeSlackReaction(ticket.slack_channel, event.slackTeam, ticket.slack_ts, "eyes");
         }
 
         return update[0] as Ticket;
@@ -745,6 +611,10 @@ export const ticketsRouter = router({
             ticket_text: update[0].text,
             ticket_updated_at: update[0].updated_at,
         });
+
+        if (event.slackTeam && ticket.slack_ts && ticket.slack_channel) {
+            await updateSlackMessage(ticket.slack_channel, event.slackTeam, ticket.slack_ts, createSlackTicketMessage(update[0].id, update[0].team, update[0].author?.username ?? "Unknown", update[0].subject, update[0].text, update[0].match_id ?? undefined));
+        }
 
         return update[0] as Ticket;
     }),
@@ -854,6 +724,10 @@ export const ticketsRouter = router({
             kind: "delete_ticket",
             ticket_id: ticket.id,
         });
+
+        if (event.slackTeam && ticket.slack_ts && ticket.slack_channel) {
+            await deleteSlackMessage(ticket.slack_channel, event.slackTeam, ticket.slack_ts);
+        }
 
         return ticket.id;
     }),
@@ -1110,10 +984,25 @@ export const ticketsRouter = router({
     attachMatchLog: eventProcedure.input(z.object({
         matchId: z.string(),
         ticketId: z.number(),
-    })).mutation(({ ctx, input }) => {
-        return db.update(tickets).set({
+    })).mutation(async ({ ctx, input }) => {
+        const ticket = await db.query.tickets.findFirst({
+            where: eq(tickets.id, input.ticketId)
+        });
+
+        if (!ticket) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
+        }
+
+        const event = await getEvent(ctx.eventToken as string);
+
+        await db.update(tickets).set({
             match_id: input.matchId,
-        }).where(eq(tickets.id, input.ticketId)).returning();
+        }).where(eq(tickets.id, input.ticketId));
+
+
+        if (event.slackTeam && ticket.slack_ts && ticket.slack_channel) {
+            await updateSlackMessage(ticket.slack_channel, event.slackTeam, ticket.slack_ts, createSlackTicketMessage(ticket.id, ticket.team, ticket.author?.username ?? "Unknown", ticket.subject, ticket.text, input.matchId ?? undefined));
+        }
     })
 });
 
@@ -1407,4 +1296,86 @@ export async function updateTicketAssignmentFromSlack(message_ts: string, add: b
     }
 
     return update[0] as Ticket;
+}
+
+export function createSlackTicketMessage(ticket_id: number, team_number: number, author: string, subject: string, body: string, match_id?: string) {
+    const buttons = [];
+    buttons.push({
+        "type": "button",
+        "text": {
+            "type": "plain_text",
+            "text": "View Ticket",
+            "emoji": true
+        },
+        "url": `https://ftabuddy.com/app/ticket/${ticket_id}`
+    });
+    if (match_id) {
+        buttons.push({
+            "type": "button",
+            "text": {
+                "type": "plain_text",
+                "text": "View Match Log",
+                "emoji": true
+            },
+            "url": `https://ftabuddy.com/app/logs/${match_id}`
+        });
+    }
+
+    return {
+        "blocks": [
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": `New Ticket #${ticket_id} For Team ${team_number}`,
+                    "emoji": true
+                }
+            },
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "plain_text",
+                        "text": `Created by: ${author}`,
+                        "emoji": true
+                    }
+                ]
+            },
+            {
+                "type": "rich_text",
+                "elements": [
+                    {
+                        "type": "rich_text_section",
+                        "elements": [
+                            {
+                                "type": "text",
+                                "text": `${subject}`,
+                                "style": {
+                                    "bold": true
+                                }
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "type": "rich_text",
+                "elements": [
+                    {
+                        "type": "rich_text_section",
+                        "elements": [
+                            {
+                                "type": "text",
+                                "text": `${body}`,
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "type": "actions",
+                "elements": buttons
+            }
+        ]
+    };
 }

@@ -74,6 +74,8 @@ export const messages = pgTable('messages', {
     event_code: varchar('event_code').references(() => events.code).notNull(),
     created_at: timestamp('created_at').notNull().defaultNow(),
     updated_at: timestamp('updated_at').notNull().defaultNow(),
+    slack_ts: varchar('slack_ts'),
+    slack_channel: varchar('slack_channel'),
 });
 
 export const ticketMessagesRelations = relations(tickets, ({ many }) => ({

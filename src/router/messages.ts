@@ -8,6 +8,7 @@ import { Message, Profile } from "../../shared/types";
 import { getEvent } from "../util/get-event";
 import { randomUUID } from "crypto";
 import { createNotification } from "../util/push-notifications";
+import { deleteSlackMessage, sendSlackMessage, updateSlackMessage } from "../util/slack";
 
 export const messagesRouter = router({
 
@@ -103,6 +104,38 @@ export const messagesRouter = router({
             },
         });
 
+        if (event.slackTeam && ticket.slack_channel && ticket.slack_ts) {
+            let messageTS = await sendSlackMessage(ticket.slack_channel, event.slackTeam, {
+                "blocks": [
+                    {
+                        "type": "context",
+                        "elements": [
+                            {
+                                "type": "plain_text",
+                                "text": `From: ${insert[0].author?.username}`,
+                                "emoji": true
+                            }
+                        ]
+                    },
+                    {
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "text",
+                                        "text": `${insert[0].text}`
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }, ticket.slack_ts);
+            await db.update(messages).set({ slack_ts: messageTS, slack_channel: event.slackChannel }).where(eq(messages.id, insert[0].id)).execute();
+        }
+
         return insert[0] as Message;
     }),
 
@@ -168,6 +201,37 @@ export const messagesRouter = router({
             message: update[0] as Message,
         });
 
+        if (event.slackTeam && message.slack_ts && ticket.slack_channel) {
+            await updateSlackMessage(ticket.slack_channel, event.slackTeam, message.slack_ts, {
+                "blocks": [
+                    {
+                        "type": "context",
+                        "elements": [
+                            {
+                                "type": "plain_text",
+                                "text": `From: ${update[0].author?.username}`,
+                                "emoji": true
+                            }
+                        ]
+                    },
+                    {
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "text",
+                                        "text": `${update[0].text}`
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            });
+        }
+
         return update[0] as Message;
     }),
 
@@ -213,6 +277,10 @@ export const messagesRouter = router({
             ticket_id: message.ticket_id,
             message_id: message.id,
         });
+
+        if (event.slackTeam && message.slack_ts && message.slack_channel) {
+            await deleteSlackMessage(message.slack_channel, event.slackTeam, message.slack_ts);
+        }
 
         return message.id;
     }),

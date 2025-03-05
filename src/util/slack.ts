@@ -117,14 +117,14 @@ async function getChannelByEvent(eventCode: string) {
     return result as { slackChannel: string, slackTeam: string; };
 }
 
-export async function sendSlackMessage(channel_id: string, team_id: string, message: SlackMessage) {
+export async function sendSlackMessage(channel_id: string, team_id: string, message: SlackMessage, thread_ts?: string) {
     const response = await fetch("https://slack.com/api/chat.postMessage", {
         method: "POST",
         headers: {
             Authorization: `Bearer ${await getTokenByTeam(team_id)}`,
             "Content-Type": "application/json"
         },
-        body: JSON.stringify({ channel: channel_id, ...message })
+        body: JSON.stringify({ channel: channel_id, ...message, thread_ts })
     });
 
     const data = await response.json();
@@ -136,15 +136,35 @@ export async function sendSlackMessage(channel_id: string, team_id: string, mess
     return data.ts;
 }
 
-export async function sendMessageToEventChannel(eventCode: string, message: SlackMessage) {
-    const { slackChannel, slackTeam } = await getChannelByEvent(eventCode);
-
-    await sendSlackMessage(slackChannel, slackTeam, message);
-}
-
 export interface SlackMessage {
     blocks?: any[];
     text?: string;
+}
+
+export async function updateSlackMessage(channel_id: string, team_id: string, message_ts: string, message: SlackMessage) {
+    const response = await fetch("https://slack.com/api/chat.update", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${await getTokenByTeam(team_id)}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ channel: channel_id, ts: message_ts, ...message })
+    });
+
+    return message_ts;
+}
+
+export async function deleteSlackMessage(channel_id: string, team_id: string, message_ts: string) {
+    const response = await fetch("https://slack.com/api/chat.delete", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${await getTokenByTeam(team_id)}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ channel: channel_id, ts: message_ts })
+    });
+
+    return message_ts;
 }
 
 export async function addSlackReaction(channel_id: string, team_id: string, message_ts: string, reaction: 'thumbsup' | 'thumbsdown' | 'white_check_mark' | 'x' | 'eyes') {

@@ -94,7 +94,13 @@ async function isBotInChannel(channel_id: string, team_id: string): Promise<bool
 }
 
 async function getTokenByTeam(team_id: string) {
-    return await db.select({ access_token: slackServers.access_token }).from(slackServers).where(eq(slackServers.team_id, team_id)).execute();
+    const token = (await db.select({ access_token: slackServers.access_token }).from(slackServers).where(eq(slackServers.team_id, team_id)).execute())[0].access_token;
+
+    if (!token) {
+        throw new Error("Slack acces token not found for team " + team_id);
+    }
+
+    return token;
 }
 
 async function getChannelByEvent(eventCode: string) {

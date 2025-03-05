@@ -300,3 +300,49 @@ export async function getEventMessages(event_code: string) {
 
     return eventMessages;
 }
+
+export async function addTicketMessageFromSlack(channel_id: string, message_ts: string, thread_ts: string, text: string, author_id: string) {
+    const ticket = await db.query.tickets.findFirst({
+        where: eq(tickets.slack_ts, thread_ts),
+    });
+
+    if (!ticket) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
+    }
+
+    let user: Profile = { id: -1, role: "CSA", admin: false, username: "Slack User" };
+
+    const insert = await db.insert(messages).values({
+        id: randomUUID(),
+        ticket_id: ticket.id,
+        author_id: user.id,
+        author: user,
+        text: text,
+        event_code: ticket.event_code,
+        created_at: new Date(),
+        updated_at: new Date(),
+        slack_ts: message_ts,
+        slack_channel: channel_id,
+    }).returning();
+
+    const event = await getEvent("", ticket.event_code);
+
+    event.ticketUpdateEmitter.emit("add_message", {
+        kind: "add_message",
+        ticket_id: ticket.id,
+        message: insert[0] as Message,
+    });
+
+    createNotification(ticket.followers, {
+        id: randomUUID(),
+        timestamp: new Date(),
+        topic: "New-Ticket-Message",
+        title: `New Message Added to Ticket #${ticket.id}`,
+        body: `A new message has been added to Ticket #${ticket.id} by ${user.username}`,
+        data: {
+            page: "ticket/" + ticket.id,
+            ticket_id: ticket.id,
+        },
+    });
+
+}

@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "FTA Buddy",
     "description": "Enable the field monitor and notes sync for FTA Buddy app",
-    "version": "1.14",
+    "version": "1.15",
     "permissions": [
         "storage",
         "scripting"
@@ -29,6 +29,25 @@
             ],
             "js": [
                 "app.js"
+            ]
+        },
+        {
+            "run_at": "document_end",
+            "matches": [
+                "https://frc.nexus/*"
+            ],
+            "js": [
+                "nexus.js"
+            ]
+        }
+    ],
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "injected-nexus.js"
+            ],
+            "matches": [
+                "https://frc.nexus/*"
             ]
         }
     ],

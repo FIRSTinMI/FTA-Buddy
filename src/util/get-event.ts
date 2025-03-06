@@ -103,6 +103,9 @@ export async function getEvent(eventToken: string, eventCode?: string) {
                 notes: await getEventNotes(eventCode) as Note[],
                 meshedEvent: event.meshedEvent !== null,
                 subEvents: event.meshedEvent ? event.meshedEvent : undefined,
+                slackChannel: event.slackChannel,
+                slackTeam: event.slackTeam,
+                publicTicketSubmit: event.publicTicketSubmit,
             };
 
             //console.log('Event loaded into memory: ', eventCode);

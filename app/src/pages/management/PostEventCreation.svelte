@@ -46,12 +46,26 @@
 	<span class="inline-flex gap-2 font-bold mx-auto">
 		{#if extensionDetected}
 			{#if extensionEnabled}
-				<Indicator color="green" class="my-auto" />
-				<span class="text-green text-green-500">Extension Enabled ({extensionVersion})</span>
+				{#if signalREnabled}
+					<Indicator color="green" class="my-auto" />
+					<span class="text-green text-green-500">Extension Enabled ({extensionVersion})</span>
+				{:else}
+					<Indicator color="red" class="my-auto" />
+					<span class="text-red-500">SignalR Not Enabled</span>
+					<button class="text-blue-400 hover:underline" on:click={() => window.postMessage({ source: "page", type: "enableSignalR" }, "*")}
+						>Enable</button
+					>
+				{/if}
 			{:else}
 				<Indicator color="yellow" class="my-auto" />
 				<span class="text-yellow-300">Extension Not Enabled</span>
-				<button class="text-blue-400 hover:underline" on:click={() => window.postMessage({ source: "page", type: "enable" }, "*")}>Enable</button>
+				<button
+					class="text-blue-400 hover:underline"
+					on:click={() => {
+						window.postMessage({ source: "page", type: "enable" }, "*");
+						window.postMessage({ source: "page", type: "enableSignalR" }, "*");
+					}}>Enable</button
+				>
 			{/if}
 		{:else}
 			<Indicator color="red" class="my-auto" />
@@ -72,7 +86,6 @@
 	<p class="text-lg">
 		FTA Buddy needs a host to send data to it from FMS. The extension must be installed and be able to communicate with FMS at
 		<code class="bg-neutral-900 px-2 py-.75 rounded-xl">10.0.100.5</code>
-		You can use FTA Buddy as your primary field monitor by enabling the SignalR option, or use the FTA Buddy extension with the regular FMS field monitor.
 	</p>
 	<div class="flex flex-col border-t border-neutral-500 pt-5 gap-4">
 		<div class="border-b border-neutral-500 pb-5">
@@ -86,33 +99,13 @@
 			</div>
 		</div>
 		<div class="flex flex-col gap-4">
-			<h2 class="text-xl font-bold">Use FTA Buddy as your primary field monitor</h2>
+			<h2 class="text-xl font-bold">Slack Bot</h2>
 
-			<span class="inline-flex gap-2 font-bold mx-auto">
-				{#if signalREnabled}
-					<Indicator color="green" class="my-auto" />
-					<span class="text-green-500">SignalR Enabled</span>
-				{:else}
-					<Indicator color="red" class="my-auto" />
-					<span class="text-red-500">SignalR Not Enabled</span>
-					<button class="text-blue-400 hover:underline" on:click={() => window.postMessage({ source: "page", type: "enableSignalR" }, "*")}
-						>Enable</button
-					>
-				{/if}
+			<span class="text-large">
+				Add the Slack bot to your CSA channel to have tickets syncronized between FTA Buddy and the Slack channel.
+				<h2 class="text-lg"><code class="bg-neutral-900 px-2 py-.75 rounded-xl">/invite @FTA Buddy</code></h2>
+				<h2 class="text-lg"><code class="bg-neutral-900 px-2 py-.75 rounded-xl">/ftabuddy {$eventStore.code} {$eventStore.pin}</code></h2>
 			</span>
-			{#if !fmsDetected}
-				<p class="font-bold text-red-500">Please ensure that FMS is detected.</p>
-			{:else if !extensionDetected}
-				<p class="font-bold text-red-500">Please install the FTA Buddy extension.</p>
-			{:else if extensionVersion < "1.8"}
-				<p class="font-bold text-red-500">Please update the FTA Buddy extension to the latest version.</p>
-			{:else if !extensionEnabled}
-				<p class="font-bold text-red-500">Please enable the FTA Buddy extension.</p>
-			{:else if !signalREnabled}
-				<p class="font-bold text-red-500">Please enable SignalR to use FTA Buddy as your primary field monitor.</p>
-			{:else if extensionEventCode !== $eventStore.code}
-				<p class="font-bold text-red-500">Please use the same event code as the extension.</p>
-			{/if}
 		</div>
 		<Button on:click={() => navigate("/app")}>Go to FTA Buddy</Button>
 	</div>

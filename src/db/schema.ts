@@ -1,6 +1,7 @@
-import { boolean, integer, jsonb, pgEnum, pgTable, serial, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { boolean, customType, integer, jsonb, pgEnum, pgTable, serial, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import { Profile, Message } from "../../shared/types";
 import { relations } from "drizzle-orm";
+import { access } from "fs";
 export const roleEnum = pgEnum('role', ['FTA', 'FTAA', 'CSA', 'RI']);
 
 export const users = pgTable('users', {
@@ -30,6 +31,8 @@ export const events = pgTable('events', {
     archived: boolean('archived').notNull().default(false),
     meshedEvent: jsonb('meshedEvent'),
     publicTicketSubmit: boolean('publicTicketSubmit').notNull().default(true),
+    slackChannel: varchar('slackChannel'),
+    slackTeam: varchar('slackTeam'),
 });
 
 export const Event = typeof events.$inferInsert;
@@ -50,6 +53,8 @@ export const tickets = pgTable('tickets', {
     closed_at: timestamp('closed_at'),
     match_id: uuid('match_id').references(() => matchLogs.id),
     followers: jsonb('followers').$type<number[]>().default([]).notNull(),
+    slack_ts: varchar('slack_ts'),
+    slack_channel: varchar('slack_channel'),
 });
 
 export const eventTicketsRelations = relations(events, ({ many }) => ({
@@ -69,6 +74,8 @@ export const messages = pgTable('messages', {
     event_code: varchar('event_code').references(() => events.code).notNull(),
     created_at: timestamp('created_at').notNull().defaultNow(),
     updated_at: timestamp('updated_at').notNull().defaultNow(),
+    slack_ts: varchar('slack_ts'),
+    slack_channel: varchar('slack_channel'),
 });
 
 export const ticketMessagesRelations = relations(tickets, ({ many }) => ({
@@ -92,6 +99,19 @@ export const notes = pgTable('notes', {
 
 export const levelEnum = pgEnum('level', ['None', 'Practice', 'Qualification', 'Playoff']);
 
+const bytea = customType<{ data: string; notNull: false; default: false; }>({
+    dataType() {
+        return "bytea";
+    },
+    toDriver(val) {
+        return Buffer.from(val, "base64");
+    },
+    fromDriver(val) {
+        return (val as Buffer).toString("base64");
+    },
+});
+
+
 export const matchLogs = pgTable('match_logs', {
     id: uuid('id').primaryKey(),
     event: varchar('event').notNull(),
@@ -106,12 +126,12 @@ export const matchLogs = pgTable('match_logs', {
     red1: integer('red1'),
     red2: integer('red2'),
     red3: integer('red3'),
-    blue1_log: jsonb('blue1_log').notNull().default('[]'),
-    blue2_log: jsonb('blue2_log').notNull().default('[]'),
-    blue3_log: jsonb('blue3_log').notNull().default('[]'),
-    red1_log: jsonb('red1_log').notNull().default('[]'),
-    red2_log: jsonb('red2_log').notNull().default('[]'),
-    red3_log: jsonb('red3_log').notNull().default('[]'),
+    blue1_log: bytea('blue1_log'),
+    blue2_log: bytea('blue2_log'),
+    blue3_log: bytea('blue3_log'),
+    red1_log: bytea('red1_log'),
+    red2_log: bytea('red2_log'),
+    red3_log: bytea('red3_log'),
     analyzed: boolean('analyzed').notNull().default(false),
 });
 
@@ -191,6 +211,14 @@ export const pushSubscriptions = pgTable('push_subscriptions', {
     endpoint: text('endpoint').notNull(),
     expirationTime: timestamp('expirationTime'),
     keys: jsonb('keys').notNull()
+});
+
+export const slackServers = pgTable('slack_servers', {
+    id: serial('id').primaryKey(),
+    team_id: varchar('team_id').notNull(),
+    team_name: varchar('team_name').notNull(),
+    access_token: varchar('access_token').notNull(),
+    webhook_url: varchar('webhook_url')
 });
 
 export default { events, users, messages, matchLogs, cycleLogs, logPublishing };

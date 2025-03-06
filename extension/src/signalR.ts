@@ -183,6 +183,7 @@ export class SignalR {
                         } catch (e) {
                             console.error(e);
                         }
+                        await uploadMatchLogs();
                         break;
                     case 'WaitingForPostResults':
                         this.frame.field = FieldState.READY_FOR_POST_RESULT;

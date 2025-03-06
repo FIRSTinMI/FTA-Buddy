@@ -138,7 +138,7 @@ export const eventRouter = router({
         const promises = [];
 
         for (let team of input.teams ?? []) {
-            if (teams.find(t => t.number === team.toString())) continue;
+            if (teams.find(t => t.number == team.toString())) continue;
 
             const teamData = fetch(`https://www.thebluealliance.com/api/v3/team/frc${team}/simple`, {
                 headers: {
@@ -160,13 +160,17 @@ export const eventRouter = router({
 
         await Promise.all(promises);
 
+        // Remove duplicate teams
+        const uniqueTeams = Array.from(new Set(teams.map(team => team.number)))
+            .map(number => teams.find(team => team.number === number));
+
         const user = await db.query.users.findFirst({ where: eq(users.token, ctx.token ?? "") });
 
         const event = await db.insert(events).values({
             code: input.code,
             pin: input.pin,
             token,
-            teams,
+            teams: uniqueTeams,
             checklist,
             users: [user?.id]
         }).returning();
@@ -261,9 +265,9 @@ export const eventRouter = router({
     togglePublicTicketSubmit: eventProcedure.input(z.object({
         state: z.boolean()
     })).query(async ({ ctx, input }) => {
-        const updatedValue = await db.update(events).set({publicTicketSubmit: input.state})
+        const updatedValue = await db.update(events).set({ publicTicketSubmit: input.state })
             .where(eq(events.token, ctx.eventToken as string))
-            .returning({publicTicketSubmit: events.publicTicketSubmit});
+            .returning({ publicTicketSubmit: events.publicTicketSubmit });
 
         if (!updatedValue) {
             throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to update public ticket submit status' });

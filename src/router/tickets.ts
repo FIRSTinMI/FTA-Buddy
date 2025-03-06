@@ -14,6 +14,7 @@ import { getEvent } from "../util/get-event";
 import { createNotification } from "../util/push-notifications";
 import { generateReport } from "../util/report-generator";
 import { messagesRouter } from "./messages";
+import { addSlackReaction, updateSlackMessage, removeSlackReaction, sendMessageToEventChannel, sendSlackMessage, deleteSlackMessage } from "../util/slack";
 
 const messageRouter = messagesRouter;
 
@@ -157,6 +158,10 @@ export const ticketsRouter = router({
             throw new TRPCError({ code: "NOT_FOUND", message: "Provided Team number is not associated with this Event" });
         }
 
+        if (!event.publicTicketSubmit) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Public Ticket submission is disabled for this Event" });
+        }
+
         const insert = await db.insert(tickets).values({
             team: input.team,
             subject: input.subject,
@@ -171,6 +176,7 @@ export const ticketsRouter = router({
             event_code: event.code,
             followers: [author[0].id],
             match_id: undefined,
+            slack_channel: event.slackChannel
         }).returning();
 
 
@@ -195,6 +201,33 @@ export const ticketsRouter = router({
                 ticket_id: insert[0].id,
             },
         });
+
+        if (event.slackChannel && event.slackTeam) {
+            const buttons = [];
+            buttons.push({
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "View Ticket",
+                    "emoji": true
+                },
+                "url": `https://ftabuddy.com/app/ticket/${insert[0].id}`
+            });
+            if (insert[0].match_id) {
+                buttons.push({
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "View Match Log",
+                        "emoji": true
+                    },
+                    "url": `https://ftabuddy.com/app/logs/${insert[0].match_id}`
+                });
+            }
+
+            let messageTS = await sendSlackMessage(event.slackChannel, event.slackTeam, createSlackTicketMessage(insert[0].id, insert[0].team, "Team Submission", insert[0].subject, insert[0].text, insert[0].match_id ?? undefined));
+            await db.update(tickets).set({ slack_ts: messageTS, slack_channel: event.slackChannel }).where(eq(tickets.id, insert[0].id)).execute();
+        }
 
         return insert[0] as Ticket;
     }),
@@ -276,6 +309,11 @@ export const ticketsRouter = router({
             },
         });
 
+        if (event.slackChannel && event.slackTeam) {
+            let messageTS = await sendSlackMessage(event.slackChannel, event.slackTeam, createSlackTicketMessage(insert[0].id, insert[0].team, insert[0].author?.username ?? "Unknown", insert[0].subject, insert[0].text, insert[0].match_id ?? undefined));
+            await db.update(tickets).set({ slack_ts: messageTS, slack_channel: event.slackChannel }).where(eq(tickets.id, insert[0].id)).execute();
+        }
+
         return insert[0] as Ticket;
     }),
 
@@ -337,6 +375,14 @@ export const ticketsRouter = router({
                 ticket_id: update[0].id,
             },
         });
+
+        if (event.slackTeam && ticket.slack_ts && ticket.slack_channel) {
+            if (update[0].is_open) {
+                await removeSlackReaction(ticket.slack_channel, event.slackTeam, ticket.slack_ts, "white_check_mark");
+            } else {
+                await addSlackReaction(ticket.slack_channel, event.slackTeam, ticket.slack_ts, "white_check_mark");
+            }
+        }
 
         return update[0] as Ticket;
     }),
@@ -415,6 +461,10 @@ export const ticketsRouter = router({
                 ticket_id: ticket.id,
             },
         });
+
+        if (event.slackTeam && ticket.slack_ts && ticket.slack_channel) {
+            await addSlackReaction(ticket.slack_channel, event.slackTeam, ticket.slack_ts, "eyes");
+        }
 
         return update[0] as Ticket;
     }),
@@ -501,6 +551,10 @@ export const ticketsRouter = router({
             },
         });
 
+        if (event.slackTeam && ticket.slack_ts && ticket.slack_channel) {
+            await removeSlackReaction(ticket.slack_channel, event.slackTeam, ticket.slack_ts, "eyes");
+        }
+
         return update[0] as Ticket;
     }),
 
@@ -557,6 +611,10 @@ export const ticketsRouter = router({
             ticket_text: update[0].text,
             ticket_updated_at: update[0].updated_at,
         });
+
+        if (event.slackTeam && ticket.slack_ts && ticket.slack_channel) {
+            await updateSlackMessage(ticket.slack_channel, event.slackTeam, ticket.slack_ts, createSlackTicketMessage(update[0].id, update[0].team, update[0].author?.username ?? "Unknown", update[0].subject, update[0].text, update[0].match_id ?? undefined));
+        }
 
         return update[0] as Ticket;
     }),
@@ -657,7 +715,7 @@ export const ticketsRouter = router({
         }
 
         let result = await db.delete(tickets).where(eq(tickets.id, input.id));
-       
+
         if (!result) {
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to delete Ticket" });
         }
@@ -666,6 +724,10 @@ export const ticketsRouter = router({
             kind: "delete_ticket",
             ticket_id: ticket.id,
         });
+
+        if (event.slackTeam && ticket.slack_ts && ticket.slack_channel) {
+            await deleteSlackMessage(ticket.slack_channel, event.slackTeam, ticket.slack_ts);
+        }
 
         return ticket.id;
     }),
@@ -918,6 +980,30 @@ export const ticketsRouter = router({
 
         return { path };
     }),
+
+    attachMatchLog: eventProcedure.input(z.object({
+        matchId: z.string(),
+        ticketId: z.number(),
+    })).mutation(async ({ ctx, input }) => {
+        const ticket = await db.query.tickets.findFirst({
+            where: eq(tickets.id, input.ticketId)
+        });
+
+        if (!ticket) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
+        }
+
+        const event = await getEvent(ctx.eventToken as string);
+
+        await db.update(tickets).set({
+            match_id: input.matchId,
+        }).where(eq(tickets.id, input.ticketId));
+
+
+        if (event.slackTeam && ticket.slack_ts && ticket.slack_channel) {
+            await updateSlackMessage(ticket.slack_channel, event.slackTeam, ticket.slack_ts, createSlackTicketMessage(ticket.id, ticket.team, ticket.author?.username ?? "Unknown", ticket.subject, ticket.text, input.matchId ?? undefined));
+        }
+    })
 });
 
 export async function getEventTickets(event_code: string) {
@@ -1106,4 +1192,198 @@ export function getTicketOpenTime(ticket: Ticket) {
         const openTime = ticket.closed_at.getTime() - ticket.created_at.getTime();
         return openTime;
     }
+}
+
+export async function updateTicketStatusFromSlack(message_ts: string, status: boolean) {
+    const ticket = await db.query.tickets.findFirst({
+        where: and(
+            eq(tickets.slack_ts, message_ts)
+        )
+    });
+
+    if (!ticket) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
+    }
+
+    const update = await db.update(tickets).set({
+        is_open: status,
+        closed_at: status ? new Date() : null,
+        updated_at: new Date(),
+    }).where(eq(tickets.id, ticket.id)).returning();
+
+    const event = await getEvent("", ticket.event_code);
+
+    event.ticketUpdateEmitter.emit("status", {
+        kind: "status",
+        ticket_id: update[0].id,
+        is_open: update[0].is_open
+    });
+
+    createNotification(ticket.followers, {
+        id: randomUUID(),
+        timestamp: new Date(),
+        topic: "Ticket-Status",
+        title: `Ticket Status Updated to ${(update[0].is_open) ? "OPEN" : "CLOSED"}`,
+        body: `Ticket status updated and is now ${(update[0].is_open) ? "OPEN" : "CLOSED"}`,
+        data: {
+            page: "ticket/" + update[0].id,
+            ticket_id: update[0].id,
+        },
+    });
+
+    if (status && ticket.slack_channel && event.slackTeam && ticket.slack_ts) {
+        removeSlackReaction(ticket.slack_channel, event.slackTeam, ticket.slack_ts, "white_check_mark");
+    }
+
+    return update[0] as Ticket;
+}
+
+export async function updateTicketAssignmentFromSlack(message_ts: string, add: boolean, user: string) {
+    const ticket = await db.query.tickets.findFirst({
+        where: and(
+            eq(tickets.slack_ts, message_ts)
+        )
+    });
+
+    if (!ticket) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
+    }
+
+    let slackUser: Profile = { id: -1, role: "CSA", admin: false, username: "Slack User" };
+
+    const update = await db.update(tickets).set({
+        assigned_to_id: add ? slackUser.id : null,
+        assigned_to: add ? slackUser : null,
+        updated_at: new Date(),
+    }).where(eq(tickets.id, ticket.id)).returning();
+
+    const event = await getEvent("", ticket.event_code);
+
+    if (add) {
+        event.ticketUpdateEmitter.emit("assign", {
+            kind: "assign",
+            ticket_id: update[0].id,
+            assigned_to_id: update[0].assigned_to_id,
+            assigned_to: slackUser,
+        });
+
+        createNotification(ticket.followers, {
+            id: randomUUID(),
+            timestamp: new Date(),
+            topic: "Ticket-Assigned",
+            title: `Ticket #${ticket.id} Has Been Assigned`,
+            body: `Ticket #${ticket.id} assigned to ${slackUser.username}`,
+            data: {
+                page: "ticket/" + ticket.id,
+                ticket_id: ticket.id,
+            },
+        });
+    } else {
+        event.ticketUpdateEmitter.emit("assign", {
+            kind: "assign",
+            ticket_id: update[0].id,
+            assigned_to_id: update[0].assigned_to_id,
+            assigned_to: null,
+        });
+
+        createNotification(ticket.followers, {
+            id: randomUUID(),
+            timestamp: new Date(),
+            topic: "Ticket-Assigned",
+            title: `Ticket #${ticket.id} Has Been Set to Unassigned`,
+            body: `Ticket #${ticket.id} has been set to unassigned`,
+            data: {
+                page: "ticket/" + ticket.id,
+                ticket_id: ticket.id,
+            },
+        });
+
+        if (ticket.slack_channel && event.slackTeam && ticket.slack_ts) {
+            removeSlackReaction(ticket.slack_channel, event.slackTeam, ticket.slack_ts, "eyes");
+        }
+    }
+
+    return update[0] as Ticket;
+}
+
+export function createSlackTicketMessage(ticket_id: number, team_number: number, author: string, subject: string, body: string, match_id?: string) {
+    const buttons = [];
+    buttons.push({
+        "type": "button",
+        "text": {
+            "type": "plain_text",
+            "text": "View Ticket",
+            "emoji": true
+        },
+        "url": `https://ftabuddy.com/app/ticket/${ticket_id}`
+    });
+    if (match_id) {
+        buttons.push({
+            "type": "button",
+            "text": {
+                "type": "plain_text",
+                "text": "View Match Log",
+                "emoji": true
+            },
+            "url": `https://ftabuddy.com/app/logs/${match_id}`
+        });
+    }
+
+    return {
+        "blocks": [
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": `New Ticket #${ticket_id} For Team ${team_number}`,
+                    "emoji": true
+                }
+            },
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "plain_text",
+                        "text": `Created by: ${author}`,
+                        "emoji": true
+                    }
+                ]
+            },
+            {
+                "type": "rich_text",
+                "elements": [
+                    {
+                        "type": "rich_text_section",
+                        "elements": [
+                            {
+                                "type": "text",
+                                "text": `${subject}`,
+                                "style": {
+                                    "bold": true
+                                }
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "type": "rich_text",
+                "elements": [
+                    {
+                        "type": "rich_text_section",
+                        "elements": [
+                            {
+                                "type": "text",
+                                "text": `${body}`,
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "type": "actions",
+                "elements": buttons
+            }
+        ]
+    };
 }

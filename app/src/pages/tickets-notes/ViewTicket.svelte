@@ -6,7 +6,7 @@
 	import { toast } from "../../../../shared/toast";
 	import { eventStore } from "../../stores/event";
 	import { ROBOT, type Message, type Profile, type TicketUpdateEvents, type TicketUpdateEventData } from "../../../../shared/types";
-	import { Alert, Button, Textarea, ToolbarButton, Modal, Label } from "flowbite-svelte";
+	import { Alert, Button, Textarea, ToolbarButton, Modal, Label, type SelectOptionType, Select } from "flowbite-svelte";
 	import { EditOutline, ExclamationCircleOutline, TrashBinOutline, ArrowLeftOutline } from "flowbite-svelte-icons";
 	import { navigate } from "svelte-routing";
 	import { userStore } from "../../stores/user";
@@ -113,16 +113,12 @@
 		let update;
 		if (!ticket) return;
 		try {
-			if (ticket.messages && ticket.messages?.length > 0) {
-				if (ticket.is_open === true) {
-					update = await trpc.tickets.updateStatus.query({ id: ticket.id, new_status: false, event_code: event.code });
-				} else {
-					update = await trpc.tickets.updateStatus.query({ id: ticket.id, new_status: true, event_code: event.code });
-				}
-				ticket.is_open = update.is_open;
+			if (ticket.is_open === true) {
+				update = await trpc.tickets.updateStatus.query({ id: ticket.id, new_status: false, event_code: event.code });
 			} else {
-				toast("Ticket must have at least 1 Added Message to be Closed", "");
+				update = await trpc.tickets.updateStatus.query({ id: ticket.id, new_status: true, event_code: event.code });
 			}
+			ticket.is_open = update.is_open;
 		} catch (err: any) {
 			toast("An error occurred while updating the ticket", err.message);
 			console.error(err);
@@ -353,6 +349,51 @@
 	}
 
 	let notesPolicyElm: NotesPolicy;
+
+	let matchesPromise: ReturnType<typeof trpc.match.getMatchNumbers.query>;
+	let matches: SelectOptionType<string>[] = [];
+
+	let matchId: string | undefined = undefined;
+
+	async function getMatchesForTeam(team: number | undefined) {
+		if (team) {
+			matchesPromise = trpc.match.getMatchNumbers.query({ team });
+			matches = (await matchesPromise)
+				.sort((a, b) => levelToSort(b.level) - levelToSort(a.level) || b.match_number - a.match_number || b.play_number - a.play_number)
+				.map((match) => ({
+					value: match.id,
+					name: `${match.level} ${match.match_number}/${match.play_number}`,
+				}));
+		}
+	}
+
+	function levelToSort(level: "None" | "Practice" | "Qualification" | "Playoff") {
+		switch (level) {
+			case "Practice":
+				return 1;
+			case "Qualification":
+				return 2;
+			case "Playoff":
+				return 3;
+			default:
+				return 0;
+		}
+	}
+
+	let matchLogModalOpen = false;
+
+	function openMatchLogSelector() {
+		matchLogModalOpen = true;
+		getMatchesForTeam(ticket.team);
+	}
+
+	function attachMatchLog() {
+		if (matchId) {
+			trpc.tickets.attachMatchLog.mutate({ ticketId: ticket_id, matchId });
+			ticket.match_id = matchId;
+			matchLogModalOpen = false;
+		}
+	}
 </script>
 
 <Modal bind:open={editTicketView} size="lg" dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
@@ -375,6 +416,22 @@
 		<Button on:click={deleteTicket} color="red" class="me-2">Yes, I'm sure</Button>
 		<Button on:click={() => (deleteTicketPopup = false)}>No, cancel</Button>
 	</div>
+</Modal>
+
+<Modal bind:open={matchLogModalOpen} size="sm" outsideclose dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
+	<div slot="header"><h1 class="text-3xl p-2 font-bold text-black dark:text-white">Create a Ticket</h1></div>
+	<form class="text-left flex flex-col gap-4" on:submit|preventDefault={attachMatchLog}>
+		{#await matchesPromise then}
+			{#if matches.length > 0}
+				<Label class="w-full text-left">
+					Attach a Match: <span class="text-xs text-gray-600">(optional)</span>
+					<Select class="mt-2" items={matches} bind:value={matchId} />
+				</Label>
+			{/if}
+		{/await}
+
+		<Button type="submit">Attach Match Log</Button>
+	</form>
 </Modal>
 
 <NotesPolicy bind:this={notesPolicyElm} />
@@ -400,6 +457,9 @@
 									><Icon icon="simple-line-icons:user-unfollow" style="height: 13px; width: 18px; padding-right: 4px;" /> Unfollow</Button
 								>
 							{/if}
+							<Button on:click={() => openMatchLogSelector()}
+								>{#if ticket.match_id}Change Match Log{:else}Attach Match Log{/if}</Button
+							>
 						</div>
 						<div class="flex flex-row gap-1">
 							<Button on:click={() => location.reload()} class=""><Icon icon="charm:refresh" style="height: 13px; width: 13px;" /></Button>
@@ -421,6 +481,9 @@
 									><Icon icon="simple-line-icons:user-unfollow" style="height: 13px; width: 18px; padding-right: 4px;" /> Unfollow</Button
 								>
 							{/if}
+							<Button on:click={() => openMatchLogSelector()}
+								>{#if ticket.match_id}Change Match Log{:else}Attach Match Log{/if}</Button
+							>
 						</div>
 						<div class="flex flex-row gap-1">
 							<Button on:click={() => location.reload()} class=""><Icon icon="charm:refresh" style="height: 13px; width: 13px;" /></Button>

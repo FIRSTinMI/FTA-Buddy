@@ -21,8 +21,8 @@ import { cycleLogs, logPublishing, matchLogs } from './db/schema';
 import { createProxyServer } from 'http-proxy';
 import proxy from 'express-http-proxy';
 import { createServer } from 'http';
-import { messagesRouter } from './router/messages';
-import { ticketsRouter } from './router/tickets';
+import { addTicketMessageFromSlack, messagesRouter } from './router/messages';
+import { ticketsRouter, updateTicketAssignmentFromSlack, updateTicketStatusFromSlack } from './router/tickets';
 import { json2csv } from 'json-2-csv';
 import { Marked } from 'marked';
 import { join } from 'path';
@@ -33,10 +33,12 @@ import json from 'highlight.js/lib/languages/json';
 import { gfmHeadingId } from 'marked-gfm-heading-id';
 import { observable } from '@trpc/server/observable';
 //import { initializePushNotifications } from '../app/src/util/push-notifications';
-import { logAnalysisLoop } from './util/log-analysis';
+import { decompressStationLog, logAnalysisLoop } from './util/log-analysis';
 import { ftcRouter } from './router/ftc';
 import { notesRouter } from './router/notes';
 import { TypedEmitter } from 'tiny-typed-emitter';
+import { linkChannel, slackOAuth } from './util/slack';
+import bodyParser from 'body-parser';
 
 const port = parseInt(process.env.PORT || '3001');
 
@@ -109,6 +111,8 @@ server.on('upgrade', function (req, socket, head) {
 });
 
 app.use(cors());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use('/trpc', proxy('http://localhost:' + (port + 1) + '/trpc'));
 
@@ -130,6 +134,96 @@ if (process.env.NODE_ENV === 'dev') {
 }
 
 app.use('/report', express.static('reports'));
+
+app.get('/slack/oauth', async (req, res) => {
+    const code = req.query.code as string;
+
+    if (!code) {
+        return res.status(400).send("Missing code parameter");
+    }
+
+    try {
+        await slackOAuth(code);
+        res.send("Success! You can close this window now.");
+    } catch (err) {
+        if (err instanceof Error) {
+            res.status(500).send(err.message);
+        } else {
+            res.status(500).send("An unknown error occurred");
+        }
+    }
+});
+app.post('/slack/command', async (req, res) => {
+    const {
+        command,
+        text,
+        response_url,
+        trigger_id,
+        user_id,
+        user_name,
+        team_id,
+        channel_id,
+        api_app_id
+    } = req.body;
+
+    const args = text.split(" ");
+
+    console.log({
+        command,
+        text,
+        response_url,
+        trigger_id,
+        user_id,
+        user_name,
+        team_id,
+        channel_id,
+        api_app_id,
+        args
+    });
+
+    try {
+        if (command === "/ftabuddy") {
+            res.send(await linkChannel(args, channel_id, team_id));
+        } else {
+            throw new Error("Invalid command");
+        }
+    } catch (err) {
+        if (err instanceof Error) {
+            res.send({
+                "response_type": "ephemeral",
+                text: err.message
+            });
+        } else {
+            res.send({
+                "response_type": "ephemeral",
+                text: "An unknown error occurred"
+            });
+        }
+    }
+});
+
+app.post("/slack/events", async (req, res) => {
+    const { event, challenge } = req.body;
+
+    // Slack Verification Challenge
+    if (challenge) {
+        return res.json({ challenge });
+    }
+
+    console.log(event);
+    // Ignore events from the bot
+    if (event && event.user !== "U08FVV94LPR") {
+        if (event.reaction === "white_check_mark") {
+            await updateTicketStatusFromSlack(event.item.ts, event.type !== "reaction_added");
+        } else if (event.reaction === "eyes") {
+            await updateTicketAssignmentFromSlack(event.item.ts, event.type === "reaction_added", event.user);
+        } else if (event.type === "message" && event.thread_ts) {
+            await addTicketMessageFromSlack(event.channel, event.ts, event.thread_ts, event.text, event.user);
+        }
+    }
+
+    res.sendStatus(200);
+});
 
 // Public api
 
@@ -158,6 +252,8 @@ app.get('/api/logs/:shareCode', async (req, res) => {
 
     const station = share.station as ROBOT;
 
+    const compressedLog = log[`${station}_log`];
+
     const returnObj = {
         team: share.team,
         matchID: share.match_id,
@@ -168,7 +264,7 @@ app.get('/api/logs/:shareCode', async (req, res) => {
         station: share.station,
         expires: share.expire_time.toISOString(),
         matchStartTime: log.start_time.toISOString(),
-        log: log[`${station}_log`] as FMSLogFrame[]
+        log: compressedLog ? decompressStationLog(compressedLog) : []
     };
 
     if (req.query.format === 'json') {

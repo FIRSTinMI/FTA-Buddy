@@ -14,7 +14,7 @@ import { getEvent } from "../util/get-event";
 import { createNotification } from "../util/push-notifications";
 import { generateReport } from "../util/report-generator";
 import { messagesRouter } from "./messages";
-import { addSlackReaction, updateSlackMessage, removeSlackReaction, sendMessageToEventChannel, sendSlackMessage, deleteSlackMessage } from "../util/slack";
+import { addSlackReaction, updateSlackMessage, removeSlackReaction, sendSlackMessage, deleteSlackMessage } from "../util/slack";
 
 const messageRouter = messagesRouter;
 

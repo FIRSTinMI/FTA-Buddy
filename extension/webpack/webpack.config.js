@@ -8,6 +8,9 @@ module.exports = {
 		injector: path.resolve(__dirname, "..", "src", "injector.ts"),
 		menu: path.resolve(__dirname, "..", "src", "menu.ts"),
 		app: path.resolve(__dirname, "..", "src", "app.ts"),
+		nexus: path.resolve(__dirname, "..", "src", "nexus.ts"),
+		"injected-nexus": path.resolve(__dirname, "..", "src", "injected-nexus.ts"),
+		"injected-trpc": path.resolve(__dirname, "..", "src", "injected-trpc.ts"),
 	},
 	output: {
 		path: path.join(__dirname, "../dist"),

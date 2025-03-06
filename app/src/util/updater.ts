@@ -9,6 +9,16 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version; } = {
+    '2.6.2': {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.6.2</h1>
+        <ul>
+        <li>Made the average cycle time now a rolling average of 10 matches</li>
+        <li>New Slack integration for tickets</li>
+        <li>Ability to attach match log to existing ticket</li>
+        </ul>`,
+        update: () => { }
+    },
     '2.6.1': {
         changelog: `
         <h1 class="text-lg font-bold">v2.6.1</h1>

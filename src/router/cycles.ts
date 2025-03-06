@@ -302,7 +302,7 @@ export const cycleRouter = router({
     }),
 });
 
-async function getAverageCycleTime(eventCode: string, rollingAverage: number = 6) {
+async function getAverageCycleTime(eventCode: string, rollingAverage: number = 10) {
     const cycles = await db.query.cycleLogs.findMany({ where: eq(cycleLogs.event, eventCode), limit: rollingAverage < 0 ? 10000 : rollingAverage * 3, orderBy: desc(cycleLogs.start_time) });
 
     // Extract the cycle times in milliseconds

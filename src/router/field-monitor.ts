@@ -4,6 +4,7 @@ import { eventProcedure, publicProcedure, router } from "../trpc";
 import { getEvent } from "../util/get-event";
 import { observable } from "@trpc/server/observable";
 import { detectRadioNoDs, detectStatusChange, processFrameForTeamData, processTeamCycles, processTeamWarnings } from "../util/frame-processing";
+import { events } from "..";
 
 export interface Post {
     type: 'test';
@@ -60,11 +61,8 @@ export const fieldMonitorRouter = router({
 
         const event = await getEvent(input.eventToken || '', input.eventCode);
 
-        // Detect radio even if no DS
-        const detectedRadio = detectRadioNoDs(input, event.history);
-
         // Detects raising and falling edges
-        const processed = detectStatusChange(detectedRadio, event.monitorFrame);
+        const processed = detectStatusChange(input, event.monitorFrame);
 
         // Add emoji warnings
         processed.currentFrame = await processTeamWarnings(event.code, processed.currentFrame, event.monitorFrame);
@@ -143,6 +141,7 @@ export const fieldMonitorRouter = router({
             event.robotStateChangeEmitter.on('change', listener);
 
             return () => {
+                console.log('Unsubscribed');
                 event.robotStateChangeEmitter.off('change', listener);
             };
         });

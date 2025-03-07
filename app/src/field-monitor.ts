@@ -65,7 +65,7 @@ export async function subscribeToFieldMonitor() {
 
     frameHandler.setHistory(await trpc.field.history.query());
 
-    subscription = trpc.field.robots.subscribe({
+    subscription = await trpc.field.robots.subscribe({
         eventToken: get(userStore).eventToken
     }, {
         onData: (data) => {
@@ -73,7 +73,7 @@ export async function subscribeToFieldMonitor() {
         }
     });
 
-    fieldStateSubscription = trpc.field.fieldStatus.subscribe({
+    fieldStateSubscription = await trpc.field.fieldStatus.subscribe({
         eventToken: get(userStore).eventToken
     }, {
         onData: (data) => {
@@ -81,7 +81,7 @@ export async function subscribeToFieldMonitor() {
         }
     });
 
-    robotStateSubscription = trpc.field.robotStatus.subscribe({
+    robotStateSubscription = await trpc.field.robotStatus.subscribe({
         eventToken: get(userStore).eventToken
     }, {
         onData: (data) => {

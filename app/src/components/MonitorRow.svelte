@@ -35,7 +35,7 @@
 		4: "bg-yellow-400" + ($settingsStore.roundGreen ? " rounded-full" : ""),
 		5: "bg-red-800",
 		6: "bg-red-800",
-		7: "bg-red-800",
+		7: "bg-green-600",
 	};
 
 	const Status_Colors: { [key: number]: string } = {

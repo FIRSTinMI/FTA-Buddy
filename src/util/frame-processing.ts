@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { DSState, FieldState, MatchState, MatchStateMap, MonitorFrame, PartialMonitorFrame, ROBOT, StateChange, StateChangeType, RobotInfo, RobotWarnings } from "../../shared/types";
 import { db } from "../db/db";
 import { events, tickets, robotCycleLogs } from "../db/schema";
@@ -128,7 +128,7 @@ export async function processTeamWarnings(eventCode: string, frame: MonitorFrame
                         eq(robotCycleLogs.team, robot.number),
                         eq(robotCycleLogs.event, event.code)
                     ))
-                    .orderBy(robotCycleLogs.prestart)
+                    .orderBy(desc(robotCycleLogs.prestart))
                     .limit(1);
 
                 const recentlyClosedTickets = teamTickets.filter(ticket => !ticket.is_open);

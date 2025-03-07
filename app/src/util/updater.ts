@@ -16,6 +16,8 @@ export const VERSIONS: { [key: string]: Version; } = {
         <li>Made the average cycle time now a rolling average of 10 matches</li>
         <li>New Slack integration for tickets</li>
         <li>Ability to attach match log to existing ticket</li>
+        <li>Extension can scrape Nexus inspection page and automatically check off teams as they get inspected</li>
+        <li>Changed A stop to be A with green background</li>
         </ul>`,
         update: () => { }
     },

@@ -9,6 +9,16 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version; } = {
+    '2.6.3': {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.6.3</h1>
+        <ul>
+        <li>Fixed the audio alerts not working</li>
+        <li>Changed A stop to be A with green background</li>
+        <li>Extension <strong>v1.15</strong> can scrape Nexus inspection page and automatically check off teams as they get inspected</li>
+        </ul>`,
+        update: () => { }
+    },
     '2.6.2': {
         changelog: `
         <h1 class="text-lg font-bold">v2.6.2</h1>
@@ -16,8 +26,6 @@ export const VERSIONS: { [key: string]: Version; } = {
         <li>Made the average cycle time now a rolling average of 10 matches</li>
         <li>New Slack integration for tickets</li>
         <li>Ability to attach match log to existing ticket</li>
-        <li>Extension can scrape Nexus inspection page and automatically check off teams as they get inspected</li>
-        <li>Changed A stop to be A with green background</li>
         </ul>`,
         update: () => { }
     },

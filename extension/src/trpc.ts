@@ -45,7 +45,7 @@ function createTRPCConnection() {
         links: [
             splitLink({
                 condition(op) {
-                    return op.type === 'subscription' || op.path === 'field.post' || op.path === 'match.putMatchLogs';
+                    return op.type === 'subscription' || op.path === 'field.post' || op.path === 'match.putMatchLogs' || op.path === 'match.putCompressedMatchLogs';
                 },
                 true: wsLink({
                     client: wsClient,

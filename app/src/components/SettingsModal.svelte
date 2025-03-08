@@ -151,6 +151,7 @@
 						{ value: "none", name: "None" },
 						{ value: "jazz", name: "Jazz" },
 						{ value: "lofi", name: "Lofi" },
+						{ value: "minecraft", name: "C418 - Minecraft" },
 					]}
 					bind:value={settings.musicType}
 					on:change={updateSettings}

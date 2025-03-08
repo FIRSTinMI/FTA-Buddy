@@ -86,6 +86,21 @@ const musicClips: MusicClips = {
         'music-lofi7.ogg',
         'music-lofi8.ogg'
     ],
+    minecraft: [
+        'music-minecraft0.ogg',
+        'music-minecraft1.ogg',
+        'music-minecraft2.ogg',
+        'music-minecraft3.ogg',
+        'music-minecraft4.ogg',
+        'music-minecraft5.ogg',
+        'music-minecraft6.ogg',
+        'music-minecraft7.ogg',
+        'music-minecraft8.ogg',
+        'music-minecraft9.ogg',
+        'music-minecraft10.ogg',
+        'music-minecraft11.ogg',
+        'music-minecraft12.ogg',
+    ]
 };
 
 interface AudioClips {
@@ -97,6 +112,7 @@ interface AudioClips {
 interface MusicClips {
     jazz: string[];
     lofi: string[];
+    minecraft: string[];
 }
 
 export class AudioQueuer {

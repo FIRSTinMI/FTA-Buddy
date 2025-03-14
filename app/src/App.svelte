@@ -91,11 +91,20 @@
 		"/app/componentmanuals",
 		"/app/wiringdiagrams",
 		"/app/softwaredocs",
+		"/app/dashboard",
 	];
+
+	const eventTokenPaths = ["/app/monitor", "/app/checklist", "/app/logs"];
+
 	const pageIsPublicLog = window.location.pathname.startsWith("/app/logs/") && window.location.pathname.split("/")[3].length == 36;
 	const pageIsPublicTicketCreate = window.location.pathname.startsWith("/app/submit-ticket/");
 
 	function redirectForAuth(a: typeof user) {
+		// if user has event token and is trying to access a page that requires an event token
+		if (user.eventToken && (eventTokenPaths.includes(window.location.pathname) || window.location.pathname.startsWith("/app/logs"))) {
+			return;
+		}
+
 		if (!publicPaths.includes(window.location.pathname)) {
 			//user trying to acces protected page
 			if (!pageIsPublicLog && !pageIsPublicTicketCreate) {
@@ -481,6 +490,28 @@
 					>
 						<svelte:fragment slot="icon">
 							<Icon icon="mdi:television" class="w-8 h-8" />
+						</svelte:fragment>
+					</SidebarItem>
+					<SidebarItem
+						label="Match Logs"
+						on:click={() => {
+							hideMenu = true;
+							navigate("/app/logs");
+						}}
+					>
+						<svelte:fragment slot="icon">
+							<Icon icon="uil:file-graph" class="w-8 h-8" />
+						</svelte:fragment>
+					</SidebarItem>
+					<SidebarItem
+						label="Checklist"
+						on:click={() => {
+							hideMenu = true;
+							navigate("/app/checklist");
+						}}
+					>
+						<svelte:fragment slot="icon">
+							<Icon icon="mdi:clipboard-outline" class="w-8 h-8" />
 						</svelte:fragment>
 					</SidebarItem>
 				</SidebarGroup>

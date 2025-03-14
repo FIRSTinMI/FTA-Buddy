@@ -381,7 +381,7 @@
 			<Button
 				on:click={() => {
 					userStore.set({ ...user, eventToken: user.eventToken });
-					navigate("/app/");
+					setTimeout(() => navigate("/app"), 500);
 				}}
 				bind:disabled={loading}>Join Event</Button
 			>

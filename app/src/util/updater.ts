@@ -9,6 +9,17 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version; } = {
+    '2.6.4': {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.6.4</h1>
+        <ul>
+        <li>Added 98th percentile min voltage for battery</li>
+        <li>Added abiity to join event with event token and not have to login</li>
+        <li>Extension <strong>v1.18</strong> can scrape Nexus team list page and sync inspection status, physically here, and radio programming if you create a custom column for that</li>
+        </ul>
+        `,
+        update: () => { }
+    },
     '2.6.3': {
         changelog: `
         <h1 class="text-lg font-bold">v2.6.3</h1>
@@ -16,7 +27,6 @@ export const VERSIONS: { [key: string]: Version; } = {
         <li>Fixed the audio alerts not working</li>
         <li>Changed A stop to be A with green background</li>
         <li>Extension <strong>v1.15</strong> can scrape Nexus inspection page and automatically check off teams as they get inspected</li>
-        <li>Added abiity to join event with event token and not have to login</li>
         </ul>`,
         update: () => { }
     },

@@ -19,6 +19,7 @@
 		parsedData = frameHandler.getHistory(station, "battery", 20).map((d, i) => ({ time: i, data: d as number }));
 		parsedPingData = frameHandler.getHistory(station, "ping", 20).map((d, i) => ({ time: i, data: d as number }));
 		signalData = processSignalStrengthForGraph(frameHandler.getHistory(station, "signal", 20) as number[]);
+		percentileVoltage = getPercentileVoltage();
 	}
 
 	export let detailView: (evt: Event) => void;
@@ -47,6 +48,20 @@
 	let parsedData = frameHandler.getHistory(station, "battery", 20).map((d, i) => ({ time: i, data: d as number }));
 	let parsedPingData = frameHandler.getHistory(station, "ping", 20).map((d, i) => ({ time: i, data: d as number }));
 	let signalData = processSignalStrengthForGraph(frameHandler.getHistory(station, "signal", 20) as number[]);
+
+	let percentileVoltage = 0;
+
+	function getPercentileVoltage() {
+		const frames = (new Date().getTime() - matchStart.getTime()) / 500;
+		const voltages = (frameHandler.getHistory(station, "battery", frames) as number[]).filter((v) => v > 0).sort((a, b) => a - b);
+		return voltages[Math.floor(voltages.length * 0.02)] || 0;
+	}
+
+	let matchStart = new Date();
+
+	frameHandler.addEventListener("match-start", () => {
+		matchStart = new Date();
+	});
 </script>
 
 {#key robot}
@@ -136,9 +151,12 @@
 		<div class="h-full text-center top-0 px-0.5 aspect-square">
 			<Graph data={parsedData} min={6} max={14} time={20} />
 		</div>
-		<div class="absolute w-full bottom-0 p-2 monitor-battery text-md sm:text-xl lg:text-4xl {fullscreen && 'lg:text-5xl'} tabular-nums">
+		<div class="absolute w-full bottom-2 p-2 monitor-battery text-md sm:text-xl lg:text-4xl {fullscreen && 'lg:text-5xl'} tabular-nums">
 			{robot.battery?.toFixed(1)}v
 		</div>
+		<p class="absolute bottom-0 px-2 py-0.5 text-xs {percentileVoltage < 7.8 && percentileVoltage > 0 ? 'text-red-600' : 'text-gray-500'}">
+			Min: {percentileVoltage.toFixed(1)}v
+		</p>
 	</button>
 	<button
 		class="fieldmonitor-square-height hidden lg:flex p-0 relative aspect-square max-w-8 lg:max-w-32"

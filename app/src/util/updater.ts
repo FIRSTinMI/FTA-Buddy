@@ -16,6 +16,7 @@ export const VERSIONS: { [key: string]: Version; } = {
         <li>Fixed the audio alerts not working</li>
         <li>Changed A stop to be A with green background</li>
         <li>Extension <strong>v1.15</strong> can scrape Nexus inspection page and automatically check off teams as they get inspected</li>
+        <li>Added abiity to join event with event token and not have to login</li>
         </ul>`,
         update: () => { }
     },

@@ -6,8 +6,8 @@
 	import { navigate } from "svelte-routing";
 	import Spinner from "../../components/Spinner.svelte";
 	import type { Profile, TeamList } from "../../../../shared/types";
-    import { settingsStore } from "../../stores/settings";
-    import { subscribeToPush } from "../../util/notifications";
+	import { settingsStore } from "../../stores/settings";
+	import { subscribeToPush } from "../../util/notifications";
 
 	export let toast: (title: string, text: string, color?: string) => void;
 
@@ -243,11 +243,11 @@
 	let notificationModalOpen = false;
 
 	$: {
-		if ((user.token)) {
+		if (user.token) {
 			//console.log("I have a token");
 			//console.log(user);
 			//console.log(Notification.permission);
-			if ((!(Notification.permission === "granted")) && !settings.notificationsDoNotAsk) {
+			if (!(Notification.permission === "granted") && !settings.notificationsDoNotAsk) {
 				//console.log("here 1")
 				notificationModalOpen = true;
 			} else if ((!(Notification.permission === "granted") && settings.notificationsDoNotAsk) || Notification.permission === "granted") {
@@ -288,14 +288,24 @@
 			}
 		}}>Grant Notification Permissions</Button
 	>
-	<Button color="primary" class="w-fit" size="sm" on:click={() => {
-		notificationModalOpen = false;
-	}}>No, Thank You</Button>
-	<Button color="primary" class="w-fit" size="sm" on:click={() => {
-		settings.notificationsDoNotAsk = true;
-		settingsStore.set(settings);
-		notificationModalOpen = false;
-	}}>Do Not Ask Again</Button>
+	<Button
+		color="primary"
+		class="w-fit"
+		size="sm"
+		on:click={() => {
+			notificationModalOpen = false;
+		}}>No, Thank You</Button
+	>
+	<Button
+		color="primary"
+		class="w-fit"
+		size="sm"
+		on:click={() => {
+			settings.notificationsDoNotAsk = true;
+			settingsStore.set(settings);
+			notificationModalOpen = false;
+		}}>Do Not Ask Again</Button
+	>
 	<p class="text-sm">You can change which types of notifications you are subscribed to from the Settings screen</p>
 </Modal>
 
@@ -362,6 +372,19 @@
 				<Button type="submit" bind:disabled={loading}>Log In</Button>
 			</form>
 			<Button on:click={() => (view = "create")} bind:disabled={loading} outline>Create Account</Button>
+
+			<p>Or</p>
+			<div>
+				<Label for="event-token">Event Token</Label>
+				<Input id="event-token" bind:value={user.eventToken} placeholder="Event Token" bind:disabled={loading} />
+			</div>
+			<Button
+				on:click={() => {
+					userStore.set({ ...user, eventToken: user.eventToken });
+					navigate("/app/");
+				}}
+				bind:disabled={loading}>Join Event</Button
+			>
 
 			<!-- Login Prompt -->
 		{:else}

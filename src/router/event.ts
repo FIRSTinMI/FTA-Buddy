@@ -116,6 +116,12 @@ export const eventRouter = router({
             throw new TRPCError({ code: 'CONFLICT', message: 'Event already exists' });
         }
 
+        const eventData = await (await fetch(`https://www.thebluealliance.com/api/v3/event/${input.code}/simple`, {
+            headers: {
+                'X-TBA-Auth-Key': process.env.TBA_API_KEY ?? ''
+            }
+        })).json();
+
         const teamsData = await fetch(`https://www.thebluealliance.com/api/v3/event/${input.code}/teams/simple`, {
             headers: {
                 'X-TBA-Auth-Key': process.env.TBA_API_KEY ?? ''
@@ -166,8 +172,18 @@ export const eventRouter = router({
 
         const user = await db.query.users.findFirst({ where: eq(users.token, ctx.token ?? "") });
 
+        let name = eventData.name;
+
+        if (eventData.name.includes('District')) {
+            name = eventData.name.split('District')[1];
+        }
+        if (eventData.name.includes('Event')) {
+            name = eventData.name.split('Event')[0];
+        }
+
         const event = await db.insert(events).values({
             code: input.code,
+            name: name.trim(),
             pin: input.pin,
             token,
             teams: uniqueTeams,
@@ -181,6 +197,7 @@ export const eventRouter = router({
     getAll: publicProcedure.query(async () => {
         return await db.select({
             code: events.code,
+            name: events.name,
             created_at: events.created_at
         }).from(events).where(eq(events.archived, false)).orderBy(desc(events.created_at));
     }),
@@ -221,13 +238,14 @@ export const eventRouter = router({
 
         const teams: TeamList = eventsData.flatMap(e => (e.teams as TeamList));
 
-        let subEvents: { code: string, label: string, token: string, teams: TeamList, pin: string; }[] = [];
+        let subEvents: { code: string, name: string, label: string, token: string, teams: TeamList, pin: string; }[] = [];
 
         let usersToGet = Array.from(new Set([...eventsData.flatMap(e => e.users as number[]), ctx.user.id]));
 
         for (let event of input.events) {
             subEvents.push({
                 code: event.code,
+                name: eventsData.find(e => e.code === event.code)?.name ?? '',
                 label: event.label,
                 token: eventsData.find(e => e.code === event.code)?.token ?? '',
                 teams: eventsData.find(e => e.code === event.code)?.teams as TeamList,
@@ -237,6 +255,7 @@ export const eventRouter = router({
 
         const meshedEvent = await db.insert(events).values({
             code: input.code,
+            name: "Meshed Event: " + subEvents.map(e => e.label).join(', '),
             pin: input.pin,
             token,
             teams,
@@ -284,5 +303,17 @@ export const eventRouter = router({
         }
 
         return event.publicTicketSubmit;
+    }),
+
+    getName: publicProcedure.input(z.object({
+        code: z.string()
+    })).query(async ({ input }) => {
+        const event = await db.query.events.findFirst({ where: eq(events.code, input.code) });
+
+        if (!event) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'Event not found' });
+        }
+
+        return event.name;
     }),
 });

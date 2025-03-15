@@ -24,7 +24,14 @@
 	let eventList = getEventList();
 
 	function getEventList() {
-		return trpc.event.getAll.query().then((res) => res.map((e) => ({ value: e.code, name: e.code })).filter((e) => !events.includes(e.value)));
+		return trpc.event.getAll.query().then((res) =>
+			res
+				.filter((e) => {
+					return e.created_at > new Date(new Date().getTime() - 1000 * 60 * 60 * 24 * 5);
+				})
+				.map((e) => ({ value: e.code, name: e.name }))
+				.filter((e) => !events.includes(e.value))
+		);
 	}
 
 	let eventSelectorOpen = false;

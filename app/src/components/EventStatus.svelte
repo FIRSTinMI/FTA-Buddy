@@ -27,6 +27,7 @@
 	let match = 0;
 	let level = "";
 	let aheadBehind = "";
+	let eventName = "";
 
 	let loading = true;
 
@@ -35,6 +36,8 @@
 
 	onMount(async () => {
 		console.log("EventStatus mounted", eventCode);
+
+		eventName = await trpc.event.getName.query({ code: eventCode });
 
 		const cycleData = await trpc.cycles.getCycleData.query({ eventCode });
 
@@ -109,7 +112,7 @@
 	{/if}
 
 	<div class="flex">
-		<h1 class="text-lg lg:text-2xl font-bold flex-1">{eventCode}</h1>
+		<h1 class="text-lg lg:text-2xl font-bold flex-1">{eventName}</h1>
 		{#if removable}
 			<Button on:click={() => remove(eventCode)} color="none" class="p-0"><Icon icon="mdi:close" class="size-6" /></Button>
 		{/if}

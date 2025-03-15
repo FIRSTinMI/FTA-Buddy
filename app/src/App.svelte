@@ -721,7 +721,7 @@
 			<Route path="/event-reports" component={EventReport} />
 			<Route path="/ftc-status" component={FTCStatus} />
 			<Route path="/login">
-				<Login {toast} />
+				<Login {toast} {installPrompt} />
 			</Route>
 			<Route path="/host">
 				<Host {toast} />

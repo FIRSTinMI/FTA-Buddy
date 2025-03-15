@@ -102,9 +102,11 @@ export const cycleRouter = router({
             };
 
             event.cycleEmitter.on('update', listener);
+            event.fieldStatusEmitter.on('change', listener);
 
             return () => {
                 event.cycleEmitter.off('update', listener);
+                event.fieldStatusEmitter.off('change', listener);
             };
         });
     }),
@@ -242,7 +244,8 @@ export const cycleRouter = router({
                 scheduleDetails: event.scheduleDetails,
                 match: event.monitorFrame.match,
                 level: event.monitorFrame.level,
-                aheadBehind: event.monitorFrame.time
+                aheadBehind: event.monitorFrame.time,
+                state: event.monitorFrame.field
             };
         }),
 

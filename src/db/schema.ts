@@ -21,6 +21,7 @@ export const User = typeof users.$inferInsert;
 
 export const events = pgTable('events', {
     code: varchar('code').primaryKey(),
+    name: varchar('name').notNull(),
     pin: varchar('pin').notNull(),
     teams: jsonb('teams').notNull().default('[]'),
     created_at: timestamp('created_at').notNull().defaultNow(),

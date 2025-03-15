@@ -287,6 +287,13 @@
 			console.error(e);
 		}
 	}
+
+	const ios = () => {
+		if (typeof window === `undefined` || typeof navigator === `undefined`) return false;
+
+		return /iPhone|iPad|iPod/i.test(navigator.userAgent || navigator.vendor);
+	};
+	export let installPrompt: Event | null;
 </script>
 
 <svelte:head>
@@ -296,7 +303,25 @@
 <Modal bind:open={notificationModalOpen} outsideclose size="sm" dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
 	<h1 class="font-bold text-xl">Enable Notifications</h1>
 	<h2>Enable to get notifications for Tickets, and/or when a robot loses connection during a match</h2>
-	<h2>Use the "Add to homepage" option to install this as an app and have push notifications</h2>
+	{#if installPrompt}
+		<h2 class="font-bold">Install this App to get push notifications</h2>
+		<p class="py-1">Recommended for the best experience.</p>
+		<Button
+			color="primary"
+			class="w-fit"
+			size="sm"
+			on:click={() => {
+				// @ts-ignore
+				if (installPrompt) installPrompt.prompt();
+			}}>Install</Button
+		>
+	{:else if ios()}
+		<h2 class="font-bold">Install this App to get push notifications</h2>
+		<p>Recommended for the best experience.</p>
+		<p>On iOS you can do this by clicking the share button and then "Add to Home Screen".</p>
+	{:else}
+		<p>App installed ✅, push notifications available</p>
+	{/if}
 	<Button
 		color="primary"
 		class="w-fit"

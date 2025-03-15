@@ -2,7 +2,7 @@
 	import Icon from "@iconify/svelte";
 	import { Card, Button } from "flowbite-svelte";
 	import { trpc } from "../main";
-	import type { ScheduleDetails } from "../../../shared/types";
+	import type { FieldState, ScheduleDetails } from "../../../shared/types";
 	import { onDestroy, onMount } from "svelte";
 	import { cycleTimeToMS } from "../../../shared/cycleTimeToMS";
 	import { formatTimeShortNoAgo, formatTimeShortNoAgoMinutesOnly, formatTimeShortNoAgoSeconds } from "../../../shared/formatTime";
@@ -28,6 +28,25 @@
 	let level = "";
 	let aheadBehind = "";
 	let eventName = "";
+	let state: FieldState;
+	let fieldState = "";
+
+	const FieldStates = {
+		0: "Unknown",
+		1: "Match Running Teleop",
+		2: "Match Transistioning",
+		3: "Match Running Auto",
+		4: "Match Ready",
+		5: "Prestart Completed",
+		6: "Prestart Initiated",
+		7: "Ready to Prestart",
+		8: "Match Aborted",
+		9: "Match Over",
+		10: "Ready for Post Result",
+		11: "Match Not Ready",
+	};
+
+	$: fieldState = FieldStates[state];
 
 	let loading = true;
 
@@ -74,21 +93,22 @@
 					calculatedCycleTime = data.lastCycleTime ? cycleTimeToMS(data.lastCycleTime) : 0;
 					matchStartTime = data.startTime ? new Date(data.startTime) : new Date();
 
-					lastCycleTimeMS = cycleTimeToMS(cycleData.lastCycleTime ?? "");
+					lastCycleTimeMS = cycleTimeToMS(data.lastCycleTime ?? "");
 					lastCycleTime = formatTimeShortNoAgo(new Date(new Date().getTime() - lastCycleTimeMS));
-
-					bestCycleTimeMS = cycleTimeToMS(cycleData.bestCycleTime ?? "");
 
 					if (lastCycleTimeMS < bestCycleTimeMS) {
 						bestCycleTimeMS = lastCycleTimeMS;
 						currentCycleIsBest = true;
+					} else {
+						currentCycleIsBest = false;
 					}
 
-					averageCycleTimeMS = cycleData.averageCycleTime ?? 8 * 60 * 1000;
-					scheduleDetails = cycleData.scheduleDetails;
-					match = cycleData.matchNumber;
-					level = cycleData.level;
-					aheadBehind = cycleData.aheadBehind;
+					averageCycleTimeMS = data.averageCycleTime ?? 8 * 60 * 1000;
+					scheduleDetails = data.scheduleDetails;
+					match = data.matchNumber;
+					level = data.level;
+					aheadBehind = data.aheadBehind;
+					state = data.state;
 
 					scheduleText = updateScheduleText(match, scheduleDetails, level, averageCycleTimeMS);
 				},
@@ -141,6 +161,7 @@
 
 	<div class:blur={loading}>
 		<h2 class="text-lg lg:mt-2">Match: {match}</h2>
+		<p class="text-lg">{fieldState}</p>
 		<h4 class="text-lg font-bold lg:text-xl">{aheadBehind}</h4>
 
 		<div

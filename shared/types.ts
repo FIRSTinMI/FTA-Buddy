@@ -551,6 +551,8 @@ export interface CycleData {
     averageCycleTime: number | null;
     level: TournamentLevel;
     aheadBehind: string;
+    state: FieldState;
+    scheduleDetails: ScheduleDetails;
 }
 
 export interface Profile {

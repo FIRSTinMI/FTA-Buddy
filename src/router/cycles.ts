@@ -96,6 +96,8 @@ export const cycleRouter = router({
                     averageCycleTime: await getAverageCycleTime(event.code),
                     level: event.monitorFrame.level,
                     aheadBehind: event.monitorFrame.time,
+                    state: event.monitorFrame.field,
+                    scheduleDetails: event.scheduleDetails
                 });
             };
 

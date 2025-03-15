@@ -549,6 +549,7 @@ export interface CycleData {
     scoresPostedTime: Date | null,
     lastCycleTime: string | null;
     averageCycleTime: number | null;
+    level?: TournamentLevel;
 }
 
 export interface Profile {

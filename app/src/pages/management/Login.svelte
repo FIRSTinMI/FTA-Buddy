@@ -82,7 +82,10 @@
 		loading = true;
 
 		try {
+			console.log({ email, password });
 			const res = await trpc.user.login.query({ email, password });
+
+			console.log(res);
 
 			userStore.set({
 				token: res.token,
@@ -93,15 +96,30 @@
 				id: res.id,
 				admin: res.admin,
 			});
+
+			console.log({
+				token: res.token,
+				eventToken: "",
+				username: res.username,
+				email: res.email,
+				role: res.role,
+				id: res.id,
+				admin: res.admin,
+			});
+
 			toast("Success", "Logged in successfully", "green-500");
 		} catch (err: any) {
 			toast("Error Logging In", err.message);
 			console.error(err);
 		}
 
+		console.log(settings.notificationsDoNotAsk);
+
 		if (!settings.notificationsDoNotAsk) {
 			notificationModalOpen = true;
 		}
+
+		console.log(notificationModalOpen);
 
 		loading = false;
 	}
@@ -209,6 +227,9 @@
 			const res = await trpc.user.googleLogin.query({
 				token: googleUser.credential,
 			});
+
+			console.log(res);
+
 			userStore.set({
 				token: res.token,
 				eventToken: "",
@@ -219,6 +240,9 @@
 				admin: res.admin,
 				googleToken: googleUser.credential,
 			});
+
+			console.log($userStore);
+
 			toast("Success", "Logged in successfully", "green-500");
 		} catch (err: any) {
 			if (err.code === 404 || err.message.startsWith("User not found")) {
@@ -243,20 +267,24 @@
 	let notificationModalOpen = false;
 
 	$: {
-		if (user.token) {
-			//console.log("I have a token");
-			//console.log(user);
-			//console.log(Notification.permission);
-			if (!(Notification.permission === "granted") && !settings.notificationsDoNotAsk) {
-				//console.log("here 1")
-				notificationModalOpen = true;
-			} else if ((!(Notification.permission === "granted") && settings.notificationsDoNotAsk) || Notification.permission === "granted") {
-				//console.log("here 2")
+		try {
+			if (user.token) {
+				//console.log("I have a token");
+				//console.log(user);
+				//console.log(Notification.permission);
+				if (!(Notification.permission === "granted") && !settings.notificationsDoNotAsk) {
+					//console.log("here 1")
+					notificationModalOpen = true;
+				} else if ((!(Notification.permission === "granted") && settings.notificationsDoNotAsk) || Notification.permission === "granted") {
+					//console.log("here 2")
+					notificationModalOpen = false;
+				}
+			} else {
+				//console.log("here 3")
 				notificationModalOpen = false;
 			}
-		} else {
-			//console.log("here 3")
-			notificationModalOpen = false;
+		} catch (e) {
+			console.error(e);
 		}
 	}
 </script>
@@ -268,6 +296,7 @@
 <Modal bind:open={notificationModalOpen} outsideclose size="sm" dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
 	<h1 class="font-bold text-xl">Enable Notifications</h1>
 	<h2>Enable to get notifications for Tickets, and/or when a robot loses connection during a match</h2>
+	<h2>Use the "Add to homepage" option to install this as an app and have push notifications</h2>
 	<Button
 		color="primary"
 		class="w-fit"

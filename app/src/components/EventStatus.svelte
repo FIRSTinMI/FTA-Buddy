@@ -41,6 +41,8 @@
 
 		const cycleData = await trpc.cycles.getCycleData.query({ eventCode });
 
+		matchStartTime = cycleData.startTime ? new Date(cycleData.startTime) : new Date();
+
 		console.log("Cycle Data for " + eventCode, cycleData);
 
 		if (cycleData) {
@@ -70,6 +72,25 @@
 				onData: (data) => {
 					averageCycleTimeMS = data.averageCycleTime ?? 8 * 60 * 1000;
 					calculatedCycleTime = data.lastCycleTime ? cycleTimeToMS(data.lastCycleTime) : 0;
+					matchStartTime = data.startTime ? new Date(data.startTime) : new Date();
+
+					lastCycleTimeMS = cycleTimeToMS(cycleData.lastCycleTime ?? "");
+					lastCycleTime = formatTimeShortNoAgo(new Date(new Date().getTime() - lastCycleTimeMS));
+
+					bestCycleTimeMS = cycleTimeToMS(cycleData.bestCycleTime ?? "");
+
+					if (lastCycleTimeMS < bestCycleTimeMS) {
+						bestCycleTimeMS = lastCycleTimeMS;
+						currentCycleIsBest = true;
+					}
+
+					averageCycleTimeMS = cycleData.averageCycleTime ?? 8 * 60 * 1000;
+					scheduleDetails = cycleData.scheduleDetails;
+					match = cycleData.matchNumber;
+					level = cycleData.level;
+					aheadBehind = cycleData.aheadBehind;
+
+					scheduleText = updateScheduleText(match, scheduleDetails, level, averageCycleTimeMS);
 				},
 			}
 		);

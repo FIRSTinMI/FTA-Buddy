@@ -93,7 +93,8 @@ export const cycleRouter = router({
                     endTime: event.lastMatchEnd,
                     matchNumber: event.monitorFrame.match,
                     lastCycleTime: event.monitorFrame.lastCycleTime,
-                    averageCycleTime: await getAverageCycleTime(event.code)
+                    averageCycleTime: await getAverageCycleTime(event.code),
+                    level: event.monitorFrame.level,
                 });
             };
 

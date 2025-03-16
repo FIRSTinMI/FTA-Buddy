@@ -30,6 +30,22 @@ function scrapeTeamList() {
     return programmedTeams;
 }
 
+function scrapeProgrammingPage() {
+    const statusDiv = document.querySelector("div.p-6.pt-0.flex.flex-col.gap-y-4 > div:nth-child(2) > p.text-sm.text-muted-foreground") as HTMLParagraphElement;
+    const titleDiv = document.querySelector("body > main > div:nth-child(1) > div > div > div > p") as HTMLParagraphElement;
+    if (!statusDiv || !titleDiv) return;
+    if (statusDiv.innerText === 'ACTIVE') {
+        titleDiv.style.marginTop = '0.5rem';
+        titleDiv.style.fontSize = '3rem';
+        titleDiv.style.fontWeight = 'bold';
+        titleDiv.innerText = 'Success!';
+        titleDiv.style.color = 'green';
+        const team = window.location.search.split('=')[1];
+
+        return team;
+    }
+}
+
 setInterval(async () => {
     const teamsToSend: {
         team: string;
@@ -48,8 +64,17 @@ setInterval(async () => {
             }
         }
     } else if (window.location.pathname === '/status') {
-        const team = window.location.search.split('=')[1];
+        const team = scrapeProgrammingPage();
+        if (team) {
+            teamsToSend.push({ team, key: 'radioProgrammed', value: true });
+        }
     }
 
     if (teamsToSend.length > 0) await trpc.checklist.update.query(teamsToSend);
 }, 1000);
+
+setInterval(async () => {
+    if (window.location.pathname === '/status') {
+        scrapeProgrammingPage();
+    }
+}, 200); // More frequent to make the interface update faster

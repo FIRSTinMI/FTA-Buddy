@@ -4,7 +4,7 @@ import { FMSEnums, FMSLogFrame, FMSMatch, ROBOT, ScheduleBreakdown, TournamentLe
 export async function getEventCode() {
     const eventCode = await (await fetch(`http://${FMS}/api/v1.0/systembase/get/get_CurrentlyActiveEventCode`)).text();
     const year = new Date().getFullYear(); // Just assume it's the current year, no point to ping the API just for that
-    return year.toString() + eventCode.substring(1, eventCode.length-1); // Substring to remove quotes around the string
+    return year.toString() + eventCode.substring(1, eventCode.length - 1); // Substring to remove quotes around the string
 }
 
 export async function getMatches(level: FMSEnums.Level) {
@@ -25,7 +25,7 @@ export async function getCurrentMatch() {
         level: response.item1 as TournamentLevel,
         matchNumber: response.item2,
         playNumber: response.item3
-    }
+    };
 }
 
 export async function getAllLogsForMatch(matchId: string) {
@@ -38,8 +38,8 @@ export async function getAllLogsForMatch(matchId: string) {
         red3: []
     };
     for (let i = 1; i <= 3; i++) {
-        logs['red'+i as ROBOT] = await getLog(matchId, "Red", i);
-        logs['blue'+i as ROBOT] = await getLog(matchId, "Blue", i);
+        logs['red' + i as ROBOT] = await getLog(matchId, "Red", i);
+        logs['blue' + i as ROBOT] = await getLog(matchId, "Blue", i);
     }
     return logs;
 }
@@ -77,6 +77,8 @@ export async function getScheduleBreakdown() {
     let lastPlayed = 0;
     let day = -1;
 
+    const matches = [];
+
     for (let i = 0; i < schedule.length; i++) {
         const match = schedule[i];
         const previousMatch = (i > 0) && schedule[i - 1];
@@ -85,6 +87,12 @@ export async function getScheduleBreakdown() {
         let today = (day in days) && days[day];
         let previousDay = (day - 1 in days) && days[day - 1];
         let todayIsNew = (!today || today.date.getDate() !== startTime.getDate());
+
+        matches.push({
+            scheduledStartTime: startTime,
+            match: match.matchNumber,
+            level: match.tournamentLevel,
+        });
 
         const cycleTime = Math.abs(Math.round(
             (previousMatch && !todayIsNew)
@@ -157,5 +165,5 @@ export async function getScheduleBreakdown() {
         if (match.matchStatus === 'Played') lastPlayed = match.matchNumber;
     }
 
-    return { days, lastPlayed };
+    return { days, lastPlayed, matches };
 }

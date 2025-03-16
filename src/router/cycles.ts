@@ -97,7 +97,8 @@ export const cycleRouter = router({
                     level: event.monitorFrame.level,
                     aheadBehind: event.monitorFrame.time,
                     state: event.monitorFrame.field,
-                    scheduleDetails: event.scheduleDetails
+                    scheduleDetails: event.scheduleDetails,
+                    exactAheadBehind: event.monitorFrame.exactAheadBehind
                 });
             };
 
@@ -245,6 +246,7 @@ export const cycleRouter = router({
                 match: event.monitorFrame.match,
                 level: event.monitorFrame.level,
                 aheadBehind: event.monitorFrame.time,
+                exactAheadBehind: event.monitorFrame.exactAheadBehind,
                 state: event.monitorFrame.field
             };
         }),
@@ -263,13 +265,18 @@ export const cycleRouter = router({
                 minutes: z.number()
             }))
         })),
-        lastPlayed: z.number()
+        lastPlayed: z.number(),
+        matches: z.array(z.object({
+            match: z.number(),
+            level: z.enum(['None', 'Practice', 'Qualification', 'Playoff']),
+            scheduledStartTime: z.date()
+        })).optional()
     })).mutation(async ({ input }) => {
         const event = await getEvent(input.eventToken);
 
-        await db.update(events).set({ scheduleDetails: { days: input.days, lastPlayed: input.lastPlayed } }).where(eq(events.code, event.code)).execute();
+        await db.update(events).set({ scheduleDetails: { days: input.days, lastPlayed: input.lastPlayed, matches: input.matches } }).where(eq(events.code, event.code)).execute();
 
-        event.scheduleDetails = { days: input.days, lastPlayed: input.lastPlayed };
+        event.scheduleDetails = { days: input.days, lastPlayed: input.lastPlayed, matches: input.matches };
 
         event.cycleEmitter.emit('update');
     }),

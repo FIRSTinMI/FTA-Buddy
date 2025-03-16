@@ -79,7 +79,7 @@
 			scheduleDetails = cycleData.scheduleDetails;
 			match = cycleData.match;
 			level = cycleData.level;
-			aheadBehind = cycleData.aheadBehind;
+			aheadBehind = cycleData.exactAheadBehind || cycleData.aheadBehind;
 		}
 
 		if (cycleSubscription) cycleSubscription.unsubscribe();
@@ -107,7 +107,7 @@
 					scheduleDetails = data.scheduleDetails;
 					match = data.matchNumber;
 					level = data.level;
-					aheadBehind = data.aheadBehind;
+					aheadBehind = data.exactAheadBehind || data.aheadBehind;
 					state = data.state;
 
 					scheduleText = updateScheduleText(match, scheduleDetails, level, averageCycleTimeMS);

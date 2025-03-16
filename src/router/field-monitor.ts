@@ -5,6 +5,7 @@ import { getEvent } from "../util/get-event";
 import { observable } from "@trpc/server/observable";
 import { detectRadioNoDs, detectStatusChange, processFrameForTeamData, processTeamCycles, processTeamWarnings } from "../util/frame-processing";
 import { events } from "..";
+import { formatTimeShortNoAgoSeconds } from "../../shared/formatTime";
 
 export interface Post {
     type: 'test';
@@ -100,6 +101,16 @@ export const fieldMonitorRouter = router({
         }
 
         processTeamCycles(event.code, processed.currentFrame, processed.changes);
+
+        let exactAheadBehind = event.monitorFrame.time;
+        if (event.scheduleDetails.matches) {
+            event.monitorFrame.matchScheduledStartTime = event.scheduleDetails.matches.find(m => (m.match === event.monitorFrame.match && m.level === event.monitorFrame.level))?.scheduledStartTime;
+            if (event.monitorFrame.matchScheduledStartTime) {
+                let timeDelta = event.monitorFrame.matchScheduledStartTime.getTime() - new Date().getTime();
+                exactAheadBehind = formatTimeShortNoAgoSeconds(timeDelta) + (timeDelta > 0 ? ' ahead' : ' behind');
+            }
+        }
+        event.monitorFrame.exactAheadBehind = exactAheadBehind;
 
         return;
     }),

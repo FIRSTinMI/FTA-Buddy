@@ -98,7 +98,7 @@ export const cycleRouter = router({
                     aheadBehind: event.monitorFrame.time,
                     state: event.monitorFrame.field,
                     scheduleDetails: event.scheduleDetails,
-                    exactAheadBehind: event.monitorFrame.exactAheadBehind
+                    exactAheadBehind: event.monitorFrame.exactAheadBehind || event.monitorFrame.time
                 });
             };
 

@@ -73,6 +73,17 @@ export const fieldMonitorRouter = router({
                 event.lastPrestartDone = new Date();
             } else if (processed.currentFrame.field === FieldState.MATCH_RUNNING_AUTO) {
                 event.lastMatchStart = new Date();
+
+                let exactAheadBehind = event.monitorFrame.time;
+                if (event.scheduleDetails.matches) {
+                    event.monitorFrame.matchScheduledStartTime = event.scheduleDetails.matches.find(m => (m.match === event.monitorFrame.match && m.level === event.monitorFrame.level))?.scheduledStartTime;
+                    if (event.monitorFrame.matchScheduledStartTime && event.lastMatchStart) {
+                        let timeDelta = event.monitorFrame.matchScheduledStartTime.getTime() - event.lastMatchStart.getTime();
+                        exactAheadBehind = formatTimeShortNoAgoSeconds(timeDelta) + (timeDelta > 0 ? ' ahead' : ' behind');
+                    }
+                }
+                event.monitorFrame.exactAheadBehind = exactAheadBehind;
+
             } else if (processed.currentFrame.field === FieldState.MATCH_OVER) {
                 event.lastMatchEnd = new Date();
             } else if (event.monitorFrame.field === FieldState.READY_FOR_POST_RESULT) {
@@ -101,16 +112,6 @@ export const fieldMonitorRouter = router({
         }
 
         processTeamCycles(event.code, processed.currentFrame, processed.changes);
-
-        let exactAheadBehind = event.monitorFrame.time;
-        if (event.scheduleDetails.matches) {
-            event.monitorFrame.matchScheduledStartTime = event.scheduleDetails.matches.find(m => (m.match === event.monitorFrame.match && m.level === event.monitorFrame.level))?.scheduledStartTime;
-            if (event.monitorFrame.matchScheduledStartTime) {
-                let timeDelta = event.monitorFrame.matchScheduledStartTime.getTime() - new Date().getTime();
-                exactAheadBehind = formatTimeShortNoAgoSeconds(timeDelta) + (timeDelta > 0 ? ' ahead' : ' behind');
-            }
-        }
-        event.monitorFrame.exactAheadBehind = exactAheadBehind;
 
         return;
     }),

@@ -11,6 +11,8 @@ module.exports = {
 		nexus: path.resolve(__dirname, "..", "src", "nexus.ts"),
 		"injected-nexus": path.resolve(__dirname, "..", "src", "injected-nexus.ts"),
 		"injected-trpc": path.resolve(__dirname, "..", "src", "injected-trpc.ts"),
+		vivid: path.resolve(__dirname, "..", "src", "vivid.ts"),
+		"injected-vivid": path.resolve(__dirname, "..", "src", "injected-vivid.ts"),
 	},
 	output: {
 		path: path.join(__dirname, "../dist"),

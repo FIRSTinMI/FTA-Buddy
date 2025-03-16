@@ -99,6 +99,14 @@
 			</div>
 		</div>
 		<div class="flex flex-col gap-4">
+			<h2 class="text-xl font-bold">WPA Kiosk Tool</h2>
+
+			<span class="text-large">
+				Connect your WPA Kiosk to WiFi and visit <code class="bg-neutral-900 px-2 py-.75 rounded-xl">ftabuddy.com/app/kiosk</code> to setup the extension
+				on the kiosk. Then radio programming status will be automatically updated on the checklist!
+			</span>
+		</div>
+		<div class="flex flex-col gap-4">
 			<h2 class="text-xl font-bold">Slack Bot</h2>
 
 			<span class="text-large">

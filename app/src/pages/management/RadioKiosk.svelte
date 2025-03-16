@@ -38,7 +38,7 @@
 			if (fmsDetected) window.postMessage({ source: "page", type: "getEventCode" }, "*");
 		} else if (event.data.type === "eventCode") {
 			if (eventCode.length < 1) {
-				eventCode = event.data.code;
+				eventCode = event.data.code.toLowerCase();
 			}
 		}
 	});
@@ -77,15 +77,16 @@
 
 		try {
 			loading = true;
-			const eventData = await trpc.event.join.query({
+			const eventToken = await trpc.event.getEventToken.query({
 				code: eventCode,
 				pin: eventPin,
 			});
 
-			window.postMessage({ source: "page", type: "eventCode", code: eventData.code, token: eventData.token }, "*");
+			window.postMessage({ source: "page", type: "eventCode", code: eventCode, token: eventToken }, "*");
+			toast("Success", "Extension setup successfully", "green-500");
 		} catch (err) {
 			console.error(err);
-			if (err instanceof Error) toast("Error", err.message, "red");
+			if (err instanceof Error) toast("Error", err.message, "red-500");
 		} finally {
 			loading = false;
 		}
@@ -115,7 +116,9 @@
 				{:else}
 					<Indicator color="yellow" class="my-auto" />
 					<span class="text-yellow-300">Extension Not Enabled</span>
-					<button class="text-blue-400 hover:underline" on:click={() => window.postMessage({ source: "page", type: "enable" }, "*")}>Enable</button>
+					<button class="text-blue-400 hover:underline" on:click={() => window.postMessage({ source: "page", type: "enableNoSignalR" }, "*")}
+						>Enable</button
+					>
 				{/if}
 			{:else}
 				<Indicator color="red" class="my-auto" />

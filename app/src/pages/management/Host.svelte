@@ -20,7 +20,7 @@
 	let fmsDetected = false;
 	let teams: number[] = [];
 
-	window.addEventListener("message", (event) => {
+	window.addEventListener("message", async (event) => {
 		if (event.data.type === "pong") {
 			waitingForFirstConnectionTest = false;
 			extensionDetected = true;
@@ -38,10 +38,10 @@
 			if (fmsDetected) window.postMessage({ source: "page", type: "getEventCode" }, "*");
 		} else if (event.data.type === "eventCode") {
 			if (eventCode.length < 1) {
-				eventCode = event.data.code;
+				eventCode = event.data.code.toLowerCase();
 			}
 			teams = event.data.teams;
-			checkEventCode();
+			await checkEventCode();
 		}
 	});
 

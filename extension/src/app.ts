@@ -48,6 +48,19 @@ const appExtensionData = chrome.runtime.getManifest();
                 signalR,
                 fms: await pingFMS()
             });
+        } else if (evt.data.type === "enableNoSignalR") {
+            enabled = true;
+            chrome.storage.local.set({ enabled: enabled, signalR: enabled });
+            window.postMessage({
+                source: 'ext',
+                version: appExtensionData.version,
+                type: "pong",
+                cloud,
+                eventCode,
+                enabled,
+                signalR,
+                fms: await pingFMS()
+            });
         } else if (evt.data.type === "eventCode") {
             eventCode = evt.data.code;
             eventToken = evt.data.token;

@@ -316,4 +316,21 @@ export const eventRouter = router({
 
         return event.name;
     }),
+
+    getEventToken: publicProcedure.input(z.object({
+        code: z.string(),
+        pin: z.string()
+    })).query(async ({ input }) => {
+        const event = await db.query.events.findFirst({ where: eq(events.code, input.code) });
+
+        if (!event) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'Event not found' });
+        }
+
+        if (event.pin !== input.pin) {
+            throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Incorrect pin' });
+        }
+
+        return event.token;
+    }),
 });

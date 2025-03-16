@@ -64,7 +64,7 @@
                 "injected-vivid.js"
             ],
             "matches": [
-                "https://localhost/*"
+                "http://localhost/*"
             ]
         }
     ],

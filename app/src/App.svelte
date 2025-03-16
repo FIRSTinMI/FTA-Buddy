@@ -42,6 +42,7 @@
 	import { startNotificationSubscription } from "./util/notifications";
 	import MeshedEvent from "./pages/management/MeshedEvent.svelte";
 	import PublicTicketCreate from "./pages/tickets-notes/PublicTicketCreate.svelte";
+	import RadioKiosk from "./pages/management/RadioKiosk.svelte";
 
 	// Checking userentication
 	let user = get(userStore);
@@ -92,6 +93,7 @@
 		"/app/wiringdiagrams",
 		"/app/softwaredocs",
 		"/app/dashboard",
+		"/app/kiosk",
 	];
 
 	const eventTokenPaths = ["/app/monitor", "/app/checklist", "/app/logs"];
@@ -725,6 +727,9 @@
 			</Route>
 			<Route path="/host">
 				<Host {toast} />
+			</Route>
+			<Route path="/kiosk">
+				<RadioKiosk {toast} />
 			</Route>
 			<Route path="/event-created">
 				<PostEventCreation {toast} />

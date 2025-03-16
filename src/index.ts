@@ -210,18 +210,23 @@ app.post("/slack/events", async (req, res) => {
         return res.json({ challenge });
     }
 
-    console.log(event);
-    // Ignore events from the bot
-    if (event && event.user !== "U08FVV94LPR") {
-        if (event.reaction === "white_check_mark") {
-            await updateTicketStatusFromSlack(event.item.ts, event.type !== "reaction_added");
-        } else if (event.reaction === "eyes") {
-            await updateTicketAssignmentFromSlack(event.item.ts, event.type === "reaction_added", event.user);
-        } else if (event.type === "message" && event.thread_ts) {
-            await addTicketMessageFromSlack(event.channel, event.ts, event.thread_ts, event.text, event.user);
-        }
-    }
+    try {
+        // Ignore events from the bot
+        if (event && event.user !== "U08FVV94LPR") {
+            console.log(event);
+            // Only listen to reactions on messages from the bot
+            if (event.reaction === "white_check_mark" && event.item.user === "U08FVV94LPR") {
+                await updateTicketStatusFromSlack(event.item.ts, event.type !== "reaction_added");
+            } else if (event.reaction === "eyes" && event.item.user === "U08FVV94LPR") {
+                await updateTicketAssignmentFromSlack(event.item.ts, event.type === "reaction_added", event.user);
 
+            } else if (event.type === "message" && event.thread_ts) {
+                await addTicketMessageFromSlack(event.channel, event.ts, event.thread_ts, event.text, event.user);
+            }
+        }
+    } catch (err) {
+        console.error(err);
+    }
     res.sendStatus(200);
 });
 

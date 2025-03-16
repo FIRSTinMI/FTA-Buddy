@@ -1,0 +1,22 @@
+console.log('Loaded injector');
+chrome.storage.local.get(['url', 'cloud', 'event', 'changed', 'eventToken', 'enabled', 'signalR'], item => {
+    console.log(item);
+    if (!item.enabled) {
+        console.log('Not enabled');
+        return;
+    } else if (item.changed + (1000 * 60 * 60 * 24 * 4) < new Date().getTime()) {
+        console.log('Expired');
+        return;
+    }
+
+    const script = document.createElement('script');
+    script.dataset.host = item.url;
+    script.dataset.cloud = item.cloud;
+    script.dataset.event = item.event;
+    script.dataset.eventToken = item.eventToken;
+    script.id = 'fta-buddy';
+
+    script.src = chrome.runtime.getURL('injected-vivid.js');
+
+    document.body.appendChild(script);
+});

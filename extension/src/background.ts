@@ -76,14 +76,13 @@ async function start() {
     } else if (changed && changed + (1000 * 60 * 60 * 24 * 4) < new Date().getTime()) {
         console.log('Expired');
         return;
-    } else if (!signalR) {
-        console.log('Not using signalR so I won\'t start the service');
-        return;
     }
 
     if (signalR) {
         console.log('Starting SignalR');
         signalRConnection.start();
+    } else {
+        console.log('SignalR is disabled');
     }
 
     console.log(cloud, url, eventCode, eventToken);

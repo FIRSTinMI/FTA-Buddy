@@ -194,7 +194,7 @@
 			<div class="col-span-6 lg:col-span-9 flex text-lg md:text-2xl font-semibold {fullscreen && 'lg:text-5xl'}">
 				<div class="px-2">M: {monitorFrame.match}</div>
 				<div class="flex-1 px-2 text-center">{FieldStates[monitorFrame.field]}</div>
-				<div class="px-2">{monitorFrame.time}</div>
+				<div class="px-2">{monitorFrame.exactAheadBehind || monitorFrame.time}</div>
 				<Button
 					color="none"
 					class="hidden text-sm {!fullscreen && 'md:block fixed top-12 right-0 z-50'}"

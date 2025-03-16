@@ -16,6 +16,8 @@ export interface MonitorFrame {
     red2: RobotInfo;
     red3: RobotInfo;
     lastCycleTime: string;
+    matchScheduledStartTime?: Date;
+    exactAheadBehind?: string;
 }
 
 type PartialBy<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>> & Partial<Pick<T, K>>;
@@ -553,6 +555,7 @@ export interface CycleData {
     aheadBehind: string;
     state: FieldState;
     scheduleDetails: ScheduleDetails;
+    exactAheadBehind: string;
 }
 
 export interface Profile {
@@ -639,8 +642,13 @@ export type ScheduleBreakdown = {
 }[];
 
 export interface ScheduleDetails {
-    days: ScheduleBreakdown,
+    days: ScheduleBreakdown;
     lastPlayed: number;
+    matches?: {
+        match: number;
+        level: TournamentLevel;
+        scheduledStartTime: Date;
+    }[];
 }
 
 export interface DisconnectionEvent {

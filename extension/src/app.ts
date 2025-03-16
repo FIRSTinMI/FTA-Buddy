@@ -16,7 +16,7 @@ const appExtensionData = chrome.runtime.getManifest();
             resolve(void 0);
         });
     });
-    
+
     window.addEventListener('message', async (evt) => {
         console.log(evt.data);
 
@@ -36,7 +36,8 @@ const appExtensionData = chrome.runtime.getManifest();
             });
         } else if (evt.data.type === "enable") {
             enabled = true;
-            chrome.storage.local.set({ enabled: enabled });
+            signalR = true;
+            chrome.storage.local.set({ enabled: enabled, signalR: enabled });
             window.postMessage({
                 source: 'ext',
                 version: appExtensionData.version,
@@ -61,6 +62,8 @@ const appExtensionData = chrome.runtime.getManifest();
                 signalR,
                 fms: await pingFMS()
             });
+            // Restart the extension after configuration changes
+            chrome.extension.getBackgroundPage()?.location.reload();
         } else if (evt.data.type === "enableSignalR") {
             signalR = true;
             chrome.storage.local.set({ signalR: signalR });

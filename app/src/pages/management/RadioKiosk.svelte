@@ -10,7 +10,7 @@
 
 	export let toast: (title: string, text: string, color?: string) => void;
 
-	const latestExtensionVersion = "1.15";
+	const latestExtensionVersion = "1.19";
 
 	let extensionDetected = false;
 	let extensionEnabled = false;

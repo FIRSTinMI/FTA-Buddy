@@ -151,11 +151,11 @@
 		<div class="h-full text-center top-0 px-0.5 aspect-square">
 			<Graph data={parsedData} min={6} max={14} time={20} />
 		</div>
-		<div class="absolute w-full bottom-2 p-2 monitor-battery text-md sm:text-xl lg:text-4xl {fullscreen && 'lg:text-5xl'} tabular-nums">
+		<div class="absolute w-full bottom-2 xl:bottom-3 p-2 monitor-battery text-md sm:text-xl lg:text-4xl {fullscreen && 'lg:text-5xl'} tabular-nums">
 			{robot.battery?.toFixed(1)}v
 		</div>
-		<p class="absolute bottom-0 px-2 py-0.5 text-xs {percentileVoltage < 7.8 && percentileVoltage > 0 ? 'text-red-600' : 'text-gray-500'}">
-			Min: {percentileVoltage.toFixed(1)}v
+		<p class="absolute bottom-0 px-2 py-0.5 text-xs xl:text-sm {percentileVoltage < 7.8 && percentileVoltage > 0 ? 'text-red-600' : 'text-gray-500'}">
+			{percentileVoltage.toFixed(1)}v
 		</p>
 	</button>
 	<button

@@ -9,6 +9,15 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version; } = {
+    '2.6.5': {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.6.5</h1>
+        <ul>
+        <li>Fixed iOS Login</li>
+        <li>Extension <strong>v1.19</strong> can be installed on WPA kiosk to automatically check off teams when they program their radio</li>
+        </ul>`,
+        update: () => { }
+    },
     '2.6.4': {
         changelog: `
         <h1 class="text-lg font-bold">v2.6.4</h1>

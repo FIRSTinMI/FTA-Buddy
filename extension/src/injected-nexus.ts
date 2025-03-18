@@ -33,17 +33,31 @@ function scrapeInspectionStatus() {
 }
 
 function scrapeTeamList() {
+    const headerDiv = document.querySelector("nexus-teams > div > div > table > thead > tr");
     const div = document.querySelector("nexus-teams > div > div > table > tbody");
 
-    if (!div) throw new Error("Could not find div element");
+    if (!div || !headerDiv) throw new Error("Could not find div element");
 
     const teamStatus = [];
     for (let row of Array.from(div.children)) {
         const teamNumber = row.children[0].textContent?.split(' ')[0] as string;
-        const inspected = row.children[3].children[0].classList.contains('bi-check-lg');
-        const here = !row.children[5].children[0].classList.contains('btn-primary');
+
+        let inspected = false;
+        let here = false;
         let radio = false;
-        if (row.children[8]) radio = !row.children[8].children[0].classList.contains('btn-primary');
+
+        if (headerDiv.children[3] && row.children[3] && headerDiv.children[3].textContent?.toLowerCase().includes('inspect')) {
+            inspected = row.children[3].children[0].classList.contains('bi-check-lg');
+        }
+
+        if (headerDiv.children[5] && row.children[5] && headerDiv.children[5].textContent?.toLowerCase().includes('here')) {
+            here = !row.children[5].children[0].classList.contains('btn-primary');
+        }
+
+        if (headerDiv.children[8] && row.children[8] && headerDiv.children[8].textContent?.toLowerCase().includes('radio')) {
+            radio = !row.children[8].children[0].classList.contains('btn-primary');
+        }
+
         teamStatus.push({ team: teamNumber, inspected, radio, here });
     }
     return teamStatus;
@@ -105,5 +119,5 @@ setInterval(() => {
     }
 
 
-    trpc.checklist.update.query(teamsToSend);
+    if (teamsToSend.length > 0) trpc.checklist.update.query(teamsToSend);
 }, 1000);

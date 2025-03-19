@@ -22,7 +22,8 @@ export const cycleRouter = router({
         lastCycleTime: z.string().optional(),
         matchNumber: z.number(),
         playNumber: z.number(),
-        level: z.enum(['None', 'Practice', 'Qualification', 'Playoff'])
+        level: z.enum(['None', 'Practice', 'Qualification', 'Playoff']),
+        extensionId: z.string().optional()
     })).mutation(async ({ input }) => {
         const event = await getEvent(input.eventToken);
 
@@ -270,7 +271,8 @@ export const cycleRouter = router({
             match: z.number(),
             level: z.enum(['None', 'Practice', 'Qualification', 'Playoff']),
             scheduledStartTime: z.date()
-        })).optional()
+        })).optional(),
+        extensionId: z.string().optional()
     })).mutation(async ({ input }) => {
         const event = await getEvent(input.eventToken);
 

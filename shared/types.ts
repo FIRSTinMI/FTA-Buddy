@@ -344,6 +344,8 @@ export type TeamList = ({ number: string, name: string, inspected: boolean; })[]
 
 export interface ServerEvent {
     code: string,
+    name: string,
+    pin: string,
     token: string,
     year: number,
     fieldMonitorEmitter: EventEmitter,
@@ -379,6 +381,23 @@ export interface ServerEvent {
     slackChannel?: string;
     slackTeam?: string;
     publicTicketSubmit: boolean;
+    stats: {
+        extensions: {
+            id: string,
+            lastFrame: Date,
+            frames: number,
+            checklistUpdates: number,
+            ip?: string;
+            userAgent?: string;
+            connected: Date;
+        }[],
+        clients: {
+            id: string;
+            userAgent?: string;
+            ip?: string;
+            connected: Date;
+        }[];
+    };
 }
 
 export type TicketUpdateEvents = {

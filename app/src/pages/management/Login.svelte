@@ -528,6 +528,7 @@
 				<Button href="/" on:click={() => navigate("/")}>Go to App</Button>
 				<Button outline on:click={() => navigate("/app/event-created")}>See Event Pin</Button>
 				<Button outline href="/app/meshed-event">Create Meshed Event</Button>
+				<Button outline href="/app/manage">App Management</Button>
 			</div>
 
 			<!-- Currently have an event selected -->

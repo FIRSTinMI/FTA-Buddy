@@ -43,6 +43,7 @@
 	import MeshedEvent from "./pages/management/MeshedEvent.svelte";
 	import PublicTicketCreate from "./pages/tickets-notes/PublicTicketCreate.svelte";
 	import RadioKiosk from "./pages/management/RadioKiosk.svelte";
+	import Management from "./pages/management/Management.svelte";
 
 	// Checking userentication
 	let user = get(userStore);
@@ -738,6 +739,7 @@
 				<CompleteGoogleSignup {toast} />
 			</Route>
 			<Route path="/meshed-event" component={MeshedEvent} />
+			<Route path="/manage" component={Management} />
 		</div>
 
 		<div class="flex justify-around py-2 bg-neutral-900 dark:bg-neutral-700 text-white {fullscreen && 'bg-white dark:bg-neutral-800'}">

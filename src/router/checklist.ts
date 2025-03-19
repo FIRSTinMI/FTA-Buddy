@@ -28,6 +28,25 @@ export const checklistRouter = router({
         event.checklist = checklist;
         event.checklistEmitter.emit('update', checklist);
 
+        let extensionId = ctx.extensionId;
+        if (extensionId) {
+            let connection = event.stats.extensions.find(e => e.id === extensionId);
+            if (!connection) {
+                connection = {
+                    id: extensionId,
+                    connected: new Date(),
+                    userAgent: ctx.userAgent,
+                    ip: ctx.ip,
+                    lastFrame: new Date(),
+                    frames: 0,
+                    checklistUpdates: 0,
+                };
+                event.stats.extensions.push(connection);
+            }
+
+            connection.checklistUpdates += input.length;
+        }
+
         return checklist;
     }),
 

@@ -7,6 +7,7 @@ let id: string = '';
 let eventCode: string = '';
 let url: string = '';
 let eventToken: string = '';
+let extensionId: string = '';
 
 let linkURL = (cloud ? 'wss://ftabuddy.com/ws' : (url.replace('http', 'ws') + '/ws'));
 console.log(linkURL);
@@ -15,12 +16,13 @@ let wsClient = createWSClient({
     url: linkURL,
 });
 
-export async function updateValues(item: { cloud: boolean, id: string, event: string, url: string, eventToken: string; }) {
+export async function updateValues(item: { cloud: boolean, id: string, event: string, url: string, eventToken: string, extensionId?: string; }) {
     cloud = item.cloud;
     id = item.id;
     eventCode = item.event;
     url = item.url;
     eventToken = item.eventToken;
+    extensionId = item.extensionId || '';
 
     linkURL = (cloud ? 'wss://ftabuddy.com/ws' : (url.replace('http', 'ws') + '/ws'));
     console.log(linkURL);
@@ -48,6 +50,7 @@ function createTRPCConnection() {
                     transformer: SuperJSON,
                     headers: {
                         'Event-Token': eventToken ?? '',
+                        'Extension-Id': extensionId ?? '',
                     }
                 }),
             })

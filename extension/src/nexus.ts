@@ -1,5 +1,5 @@
 console.log('Loaded injector');
-chrome.storage.local.get(['url', 'cloud', 'event', 'changed', 'eventToken', 'enabled', 'signalR'], item => {
+chrome.storage.local.get(['url', 'cloud', 'event', 'changed', 'eventToken', 'enabled', 'signalR', 'id'], item => {
     console.log(item);
     if (!item.enabled) {
         console.log('Not enabled');
@@ -14,6 +14,7 @@ chrome.storage.local.get(['url', 'cloud', 'event', 'changed', 'eventToken', 'ena
     script.dataset.cloud = item.cloud;
     script.dataset.event = item.event;
     script.dataset.eventToken = item.eventToken;
+    script.dataset.extensionId = item.id;
     script.id = 'fta-buddy';
 
     script.src = chrome.runtime.getURL('injected-nexus.js');

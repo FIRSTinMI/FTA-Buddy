@@ -8,7 +8,6 @@ import { generateToken } from "./user";
 import { EventChecklist, Profile, TeamList, TournamentLevel } from '../../shared/types';
 import { createHash } from 'crypto';
 import { getEvent } from "../util/get-event";
-import { stackOffsetExpand } from "d3";
 //import { sendNotification } from "../../app/src/util/push-notifications";
 
 export const eventRouter = router({

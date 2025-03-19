@@ -10,6 +10,7 @@ export let signalRConnection = new SignalR(FMS, manifestData.version, sendFrame,
 let eventCode: string;
 let eventToken: string;
 let url: string;
+let id: string;
 
 async function start() {
     let cloud, changed, enabled, signalR;
@@ -39,6 +40,7 @@ async function start() {
             enabled = item.enabled;
             signalR = item.signalR;
             eventToken = item.eventToken;
+            id = item.id;
             resolve(void 0);
         });
     });
@@ -51,7 +53,8 @@ async function start() {
                     source: 'ext',
                     version: manifestData.version,
                     type: "pong",
-                    fms
+                    fms,
+                    id
                 });
             });
         } else if (msg.type === "getEventCode") {
@@ -62,7 +65,8 @@ async function start() {
                         version: manifestData.version,
                         type: "eventCode",
                         code,
-                        teams
+                        teams,
+                        id
                     });
                 });
             });
@@ -108,20 +112,20 @@ async function pingFMS() {
 
 async function sendFrame(data: any) {
     console.debug(data);
-    await trpc.field.post.mutate((eventToken) ? { eventToken, ...data } : { eventCode, ...data });
+    await trpc.field.post.mutate((eventToken) ? { eventToken, ...data, extensionId: id } : { eventCode, ...data, extensionId: id });
 }
 
 async function sendCycletime(type: 'lastCycleTime' | 'prestart' | 'start' | 'end' | 'refsDone' | 'scoresPosted', data: string) {
     const { matchNumber, playNumber, level } = await getCurrentMatch();
     console.log({ eventToken, type, lastCycleTime: data, matchNumber, playNumber, level });
-    await trpc.cycles.postCycleTime.mutate({ eventToken, type, lastCycleTime: data, matchNumber, playNumber, level });
+    await trpc.cycles.postCycleTime.mutate({ eventToken, type, lastCycleTime: data, matchNumber, playNumber, level, extensionId: id });
 }
 
 async function sendScheduleDetails() {
     const schedule = await getScheduleBreakdown();
     console.log(schedule);
     if (schedule.days.length === 0) return;
-    await trpc.cycles.postScheduleDetails.mutate({ eventToken, ...schedule });
+    await trpc.cycles.postScheduleDetails.mutate({ eventToken, ...schedule, extensionId: id });
 }
 
 chrome.storage.local.onChanged.addListener((changes) => {

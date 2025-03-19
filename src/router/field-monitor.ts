@@ -1,11 +1,14 @@
 import { z } from "zod";
-import { DSState, EnableState, FieldState, MonitorFrame, StateChange } from "../../shared/types";
+import { DSState, EnableState, FieldState, MonitorFrame, StateChange, TournamentLevel } from "../../shared/types";
 import { eventProcedure, publicProcedure, router } from "../trpc";
 import { getEvent } from "../util/get-event";
 import { observable } from "@trpc/server/observable";
 import { detectRadioNoDs, detectStatusChange, processFrameForTeamData, processTeamCycles, processTeamWarnings } from "../util/frame-processing";
-import { events } from "..";
+import { events, newEventEmitter } from "..";
 import { formatTimeShortNoAgoSeconds } from "../../shared/formatTime";
+import { users } from "../db/schema";
+import { and, eq, gt } from "drizzle-orm";
+import { db } from "../db/db";
 
 export interface Post {
     type: 'test';
@@ -55,12 +58,33 @@ export const fieldMonitorRouter = router({
         blue1: robotInfo,
         blue2: robotInfo,
         blue3: robotInfo,
-    })).mutation(async ({ input }) => {
+        extensionId: z.string().optional(),
+    })).mutation(async ({ input, ctx }) => {
         if (!input.eventToken && !input.eventCode) {
             throw new Error('Event token or code required');
         }
 
         const event = await getEvent(input.eventToken || '', input.eventCode);
+
+        let extensionId = input.extensionId || ctx.extensionId;
+        if (extensionId) {
+            let connection = event.stats.extensions.find(e => e.id === extensionId);
+            if (!connection) {
+                connection = {
+                    id: extensionId,
+                    connected: new Date(),
+                    userAgent: ctx.userAgent,
+                    ip: ctx.ip,
+                    lastFrame: new Date(),
+                    frames: 0,
+                    checklistUpdates: 0,
+                };
+                event.stats.extensions.push(connection);
+            }
+
+            connection.lastFrame = new Date();
+            connection.frames++;
+        }
 
         // Detects raising and falling edges
         const processed = detectStatusChange(input, event.monitorFrame);
@@ -93,8 +117,6 @@ export const fieldMonitorRouter = router({
             event.fieldStatusEmitter.emit('change', processed.currentFrame.field);
         }
 
-
-
         event.monitorFrame = processed.currentFrame;
 
         event.history.push(processed.currentFrame);
@@ -124,7 +146,7 @@ export const fieldMonitorRouter = router({
 
     robots: publicProcedure.input(z.object({
         eventToken: z.string()
-    })).subscription(async ({ input }) => {
+    })).subscription(async ({ input, ctx }) => {
         const event = await getEvent(input.eventToken);
 
         return observable<MonitorFrame>((emitter) => {
@@ -134,8 +156,17 @@ export const fieldMonitorRouter = router({
 
             event.fieldMonitorEmitter.on('update', listener);
 
+            const connectionId = crypto.randomUUID();
+            event.stats.clients.push({
+                userAgent: ctx.userAgent,
+                ip: ctx.ip,
+                id: connectionId,
+                connected: new Date(),
+            });
+
             return () => {
                 event.fieldMonitorEmitter.off('update', listener);
+                event.stats.clients = event.stats.clients.filter(c => c.id !== connectionId);
             };
         });
     }),
@@ -153,7 +184,6 @@ export const fieldMonitorRouter = router({
             event.robotStateChangeEmitter.on('change', listener);
 
             return () => {
-                console.log('Unsubscribed');
                 event.robotStateChangeEmitter.off('change', listener);
             };
         });
@@ -176,4 +206,102 @@ export const fieldMonitorRouter = router({
             };
         });
     }),
+
+    management: publicProcedure.input(z.object({
+        token: z.string()
+    })).subscription(async ({ input }) => {
+        const user = await db.query.users.findFirst({
+            where: and(
+                eq(users.token, input.token),
+                gt(users.id, -1),
+                eq(users.admin, true)
+            )
+        });
+
+        if (!user) {
+            throw new Error('Unauthorized');
+        }
+
+        return observable<EventState>((emitter) => {
+            let listeners: (() => void)[] = [];
+
+            const addNewEvent = (eventCode: string) => {
+                console.log('new event', eventCode);
+                const event = events[eventCode];
+                const listener = (frame: MonitorFrame) => {
+                    console.log('update', frame);
+                    emitter.next({
+                        code: event.code,
+                        name: event.name,
+                        token: event.token,
+                        pin: event.pin,
+                        field: frame.field,
+                        match: frame.match,
+                        level: frame.level,
+                        aheadBehind: frame.time,
+                        exactAheadBehind: frame.exactAheadBehind,
+                        clients: event.stats.clients,
+                        extensions: event.stats.extensions
+                    });
+                };
+
+                event.fieldMonitorEmitter.on('update', listener);
+                listeners.push(() => event.fieldMonitorEmitter.off('update', listener));
+
+                emitter.next({
+                    code: event.code,
+                    name: event.name,
+                    token: event.token,
+                    pin: event.pin,
+                    field: event.monitorFrame.field,
+                    match: event.monitorFrame.match,
+                    level: event.monitorFrame.level,
+                    aheadBehind: event.monitorFrame.time,
+                    exactAheadBehind: event.monitorFrame.exactAheadBehind,
+                    clients: event.stats.clients,
+                    extensions: event.stats.extensions
+                });
+            };
+
+            for (let eventCode of Object.keys(events)) {
+                addNewEvent(eventCode);
+            }
+
+            newEventEmitter.on('new', addNewEvent);
+
+            return () => {
+                newEventEmitter.off('new', addNewEvent);
+                for (const l of listeners) {
+                    l();
+                }
+            };
+        });
+    }),
 });
+
+export interface EventState {
+    code: string;
+    name: string;
+    token: string;
+    pin: string;
+    field: FieldState;
+    match: number;
+    level: TournamentLevel;
+    aheadBehind: string;
+    exactAheadBehind?: string;
+    clients: {
+        userAgent?: string;
+        ip?: string;
+        id: string;
+        connected: Date;
+    }[];
+    extensions: {
+        id: string;
+        connected: Date;
+        userAgent?: string;
+        ip?: string;
+        lastFrame: Date;
+        frames: number;
+        checklistUpdates: number;
+    }[];
+}

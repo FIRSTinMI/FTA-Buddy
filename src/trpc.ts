@@ -8,7 +8,10 @@ import SuperJSON from 'superjson';
 
 export const createContext = (opts: CreateHTTPContextOptions | CreateWSSContextFnOptions) => ({
     token: opts.req.headers.authorization?.split(' ')[1],
-    eventToken: (opts.req.headers['Event-Token'] || opts.req.headers['event-token'])?.toString()
+    eventToken: (opts.req.headers['Event-Token'] || opts.req.headers['event-token'])?.toString(),
+    extensionId: opts.req.headers['Extension-Id']?.toString(),
+    userAgent: opts.req.headers['User-Agent']?.toString(),
+    ip: opts.req.headers['X-Forwarded-For']?.toString() || opts.req.connection.remoteAddress
 });
 
 type Context = Awaited<ReturnType<typeof createContext>>;
@@ -23,12 +26,13 @@ export const protectedProcedure = t.procedure.use(async (opts) => {
     const { ctx } = opts;
     if (!ctx.token) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Missing Authorization Header' });
 
-    const user = await db.query.users.findFirst({ 
+    const user = await db.query.users.findFirst({
         where: and(
             eq(users.token, ctx.token),
             gt(users.id, -1)
 
-    )});
+        )
+    });
     if (!user) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Unauthorized' });
 
     return opts.next({
@@ -36,7 +40,7 @@ export const protectedProcedure = t.procedure.use(async (opts) => {
             ...ctx,
             user
         }
-    })
+    });
 });
 
 export const eventProcedure = t.procedure.use(async (opts) => {
@@ -51,18 +55,19 @@ export const eventProcedure = t.procedure.use(async (opts) => {
             ...ctx,
             event
         }
-    })
+    });
 });
 
 export const adminProcedure = t.procedure.use(async (opts) => {
     const { ctx } = opts;
     if (!ctx.token) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Unauthorized' });
 
-    const user = await db.query.users.findFirst({ 
+    const user = await db.query.users.findFirst({
         where: and(
             eq(users.token, ctx.token),
             gt(users.id, -1)
-        )});
+        )
+    });
     if (!user || user.admin !== true) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Unauthorized' });
 
     return opts.next({
@@ -70,5 +75,5 @@ export const adminProcedure = t.procedure.use(async (opts) => {
             ...ctx,
             user
         }
-    })
+    });
 });

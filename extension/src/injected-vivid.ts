@@ -4,11 +4,12 @@ let url = document.getElementById('fta-buddy')?.dataset.host;
 let cloud = document.getElementById('fta-buddy')?.dataset.cloud;
 let eventCode = document.getElementById('fta-buddy')?.dataset.event;
 let eventToken = document.getElementById('fta-buddy')?.dataset.eventToken;
+let extensionId = document.getElementById('fta-buddy')?.dataset.extensionId;
 
 if (!url || !cloud || !eventCode || !eventToken) {
     throw new Error('Missing data');
 } else {
-    updateValues({ cloud: cloud === 'true', id: '', event: eventCode, url: url, eventToken: eventToken });
+    updateValues({ cloud: cloud === 'true', id: '', event: eventCode, url: url, eventToken: eventToken, extensionId });
 }
 
 const completedTeams: string[] = [];

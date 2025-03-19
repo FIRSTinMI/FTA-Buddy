@@ -1,10 +1,10 @@
 const appExtensionData = chrome.runtime.getManifest();
 
 (async () => {
-    let url: string, cloud: boolean, changed: number, enabled: boolean, signalR: boolean, eventCode: string, eventToken: string;
+    let url: string, cloud: boolean, changed: number, enabled: boolean, signalR: boolean, eventCode: string, eventToken: string, id: string;
 
     await new Promise((resolve) => {
-        chrome.storage.local.get(['url', 'cloud', 'event', 'changed', 'enabled', 'signalR', 'eventToken'], item => {
+        chrome.storage.local.get(['url', 'cloud', 'event', 'changed', 'enabled', 'signalR', 'eventToken', 'id'], item => {
             console.log(item);
             url = item.url;
             cloud = item.cloud;
@@ -13,6 +13,7 @@ const appExtensionData = chrome.runtime.getManifest();
             enabled = item.enabled;
             signalR = item.signalR;
             eventToken = item.eventToken;
+            id = item.id;
             resolve(void 0);
         });
     });
@@ -32,7 +33,8 @@ const appExtensionData = chrome.runtime.getManifest();
                 eventCode,
                 enabled,
                 signalR,
-                fms: fms.fms
+                fms: fms.fms,
+                id
             });
         } else if (evt.data.type === "enable") {
             enabled = true;
@@ -46,7 +48,8 @@ const appExtensionData = chrome.runtime.getManifest();
                 eventCode,
                 enabled,
                 signalR,
-                fms: await pingFMS()
+                fms: await pingFMS(),
+                id
             });
         } else if (evt.data.type === "enableNoSignalR") {
             enabled = true;
@@ -59,7 +62,8 @@ const appExtensionData = chrome.runtime.getManifest();
                 eventCode,
                 enabled,
                 signalR,
-                fms: await pingFMS()
+                fms: await pingFMS(),
+                id
             });
         } else if (evt.data.type === "eventCode") {
             eventCode = evt.data.code;
@@ -73,7 +77,8 @@ const appExtensionData = chrome.runtime.getManifest();
                 eventCode,
                 enabled,
                 signalR,
-                fms: await pingFMS()
+                fms: await pingFMS(),
+                id
             });
             // Restart the extension after configuration changes
             chrome.extension.getBackgroundPage()?.location.reload();
@@ -88,7 +93,8 @@ const appExtensionData = chrome.runtime.getManifest();
                 eventCode,
                 enabled,
                 signalR,
-                fms: await pingFMS()
+                fms: await pingFMS(),
+                id
             });
         } else if (evt.data.type === "getEventCode") {
             window.postMessage(await getEventCode());

@@ -1,14 +1,13 @@
 import { eq, inArray } from "drizzle-orm";
 import { EventEmitter } from "events";
 import { TypedEmitter } from 'tiny-typed-emitter';
-import { eventCodes, events } from "..";
+import { eventCodes, events, newEventEmitter } from "..";
 import { DEFAULT_MONITOR } from "../../shared/constants";
 import { TeamList, EventChecklist, ScheduleDetails, ServerEvent, Profile, TicketUpdateEvents, Ticket, Note } from "../../shared/types";
 import { db } from "../db/db";
 import schema from "../db/schema";
 import { getEventTickets } from "../router/tickets";
 import { getEventNotes } from "../router/notes";
-import { getEventMessages } from "../router/messages";
 
 
 let loadingEvents: { [key: string]: Promise<ServerEvent>; } = {};
@@ -79,6 +78,8 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 
             events[eventCode] = {
                 year: event.year,
+                name: event.name,
+                pin: event.pin,
                 code: eventCode,
                 token: eventToken,
                 teams: event.teams as TeamList,
@@ -106,7 +107,13 @@ export async function getEvent(eventToken: string, eventCode?: string) {
                 slackChannel: event.slackChannel,
                 slackTeam: event.slackTeam,
                 publicTicketSubmit: event.publicTicketSubmit,
+                stats: {
+                    extensions: [],
+                    clients: [],
+                }
             };
+
+            newEventEmitter.emit('new', eventCode);
 
             //console.log('Event loaded into memory: ', eventCode);
         }

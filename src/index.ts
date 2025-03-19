@@ -39,6 +39,7 @@ import { notesRouter } from './router/notes';
 import { TypedEmitter } from 'tiny-typed-emitter';
 import { linkChannel, slackOAuth } from './util/slack';
 import bodyParser from 'body-parser';
+import { EventEmitter } from 'events';
 
 const port = parseInt(process.env.PORT || '3001');
 
@@ -48,6 +49,7 @@ export const eventCodes: { [key: string]: string; } = {};
 //initializePushNotifications();
 // event emitter for all notifications
 export const notificationEmitter = new TypedEmitter<NotificationEvents>();
+export const newEventEmitter = new EventEmitter();
 
 // TRPC Server
 const appRouter = router({

@@ -39,6 +39,22 @@ function scrapeTeamList() {
 
     if (!div || !headerDiv) throw new Error("Could not find div element");
 
+    let inspectionCol = -1;
+    let hereCol = -1;
+    let radioCol = -1;
+
+    for (let i = 0; i < headerDiv.children.length; i++) {
+        const text = headerDiv.children[i].textContent?.toLowerCase();
+        if (text?.includes('inspect')) {
+            inspectionCol = i;
+        } else if (text?.includes('here')) {
+            hereCol = i;
+        } else if (text?.includes('radio')) {
+            radioCol = i;
+        }
+    }
+
+
     const teamStatus = [];
     for (let row of Array.from(div.children)) {
         const teamNumber = row.children[0].textContent?.split(' ')[0] as string;
@@ -47,20 +63,21 @@ function scrapeTeamList() {
         let here = false;
         let radio = false;
 
-        if (headerDiv.children[3] && row.children[3] && headerDiv.children[3].textContent?.toLowerCase().includes('inspect')) {
-            inspected = row.children[3].children[0].classList.contains('bi-check-lg');
+        if (row.children[inspectionCol]) {
+            inspected = row.children[inspectionCol].children[0].classList.contains('bi-check-lg');
         }
 
-        if (headerDiv.children[5] && row.children[5] && headerDiv.children[5].textContent?.toLowerCase().includes('here')) {
-            here = !row.children[5].children[0].classList.contains('btn-primary');
+        if (headerDiv.children[hereCol]) {
+            here = !row.children[hereCol].children[0].classList.contains('btn-primary');
         }
 
-        if (headerDiv.children[8] && row.children[8] && headerDiv.children[8].textContent?.toLowerCase().includes('radio')) {
-            radio = !row.children[8].children[0].classList.contains('btn-primary');
+        if (headerDiv.children[radioCol]) {
+            radio = !row.children[radioCol].children[0].classList.contains('btn-primary');
         }
 
         teamStatus.push({ team: teamNumber, inspected, radio, here });
     }
+    console.log(teamStatus);
     return teamStatus;
 }
 

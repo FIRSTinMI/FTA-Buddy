@@ -156,17 +156,17 @@ export const fieldMonitorRouter = router({
 
             event.fieldMonitorEmitter.on('update', listener);
 
-            const connectionId = crypto.randomUUID();
-            event.stats.clients.push({
-                userAgent: ctx.userAgent,
-                ip: ctx.ip,
-                id: connectionId,
-                connected: new Date(),
-            });
+            // const connectionId = crypto.randomUUID();
+            // event.stats.clients.push({
+            //     userAgent: ctx.userAgent,
+            //     ip: ctx.ip,
+            //     id: connectionId,
+            //     connected: new Date(),
+            // });
 
             return () => {
                 event.fieldMonitorEmitter.off('update', listener);
-                event.stats.clients = event.stats.clients.filter(c => c.id !== connectionId);
+                // event.stats.clients = event.stats.clients.filter(c => c.id !== connectionId);
             };
         });
     }),

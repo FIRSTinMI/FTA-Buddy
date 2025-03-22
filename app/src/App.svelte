@@ -705,7 +705,9 @@
 			<Route path="/notifications" component={NotificationList} />
 			<Route path="/flashcards" component={Flashcard} />
 			<Route path="/notes" component={NoteList} />
-			<Route path="/notes/:teamNumber" component={NoteList} />
+			<Route path="/notes/:teamNumber" let:params>
+				<NoteList teamNumber={params.teamNumber} />
+			</Route>
 			<Route path="/references" component={Reference} />
 			<Route path="/statuslights" component={StatusLights} />
 			<Route path="/fieldmanuals" component={FieldManuals} />

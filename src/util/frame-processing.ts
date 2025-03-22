@@ -189,7 +189,7 @@ export async function processTeamCycles(eventCode: string, frame: MonitorFrame, 
             });
         }
 
-        console.log(insert);
+        // console.log(insert);
 
         if (insert.length < 1) return;
 

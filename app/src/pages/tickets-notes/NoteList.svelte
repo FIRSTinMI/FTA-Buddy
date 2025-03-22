@@ -67,6 +67,7 @@
 	let open = false;
 
 	let team: number | undefined;
+	export let teamNumber: string | undefined;
 
 	let disableSubmit = false;
 
@@ -94,6 +95,17 @@
 			return;
 		}
 	}
+
+	onMount(() => {
+		if (teamNumber) {
+			try {
+				team = parseInt(teamNumber);
+				search = teamNumber;
+			} catch (err) {
+				console.error(err);
+			}
+		}
+	});
 </script>
 
 <NotesPolicy bind:this={notesPolicyElm} />

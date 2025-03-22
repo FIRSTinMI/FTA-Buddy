@@ -21,6 +21,7 @@
 	frameHandler.addEventListener("frame", (evt) => {
 		loading = false;
 		monitorFrame = (evt as MonitorEvent).detail.frame;
+		console.log(monitorFrame.exactAheadBehind);
 	});
 
 	let lastCycleTime = "";

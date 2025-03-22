@@ -9,6 +9,16 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version; } = {
+    '2.6.6': {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.6.6</h1>
+        <ul>
+        <li>Added exact ahead/behind time</li>
+        <li>Notes page actually filters to the team in the url (like when you click on the team in the field monitor)</li>
+        <li>Extension <strong>v1.20</strong> fixes a problem with Nexus checklist syncing</li>
+        </ul>`,
+        update: () => { }
+    },
     '2.6.5': {
         changelog: `
         <h1 class="text-lg font-bold">v2.6.5</h1>

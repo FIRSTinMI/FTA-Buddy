@@ -98,15 +98,20 @@ export const fieldMonitorRouter = router({
             } else if (processed.currentFrame.field === FieldState.MATCH_RUNNING_AUTO) {
                 event.lastMatchStart = new Date();
 
-                let exactAheadBehind = event.monitorFrame.time;
+                let exactAheadBehind = undefined;
                 if (event.scheduleDetails.matches) {
-                    event.monitorFrame.matchScheduledStartTime = event.scheduleDetails.matches.find(m => (m.match === event.monitorFrame.match && m.level === event.monitorFrame.level))?.scheduledStartTime;
-                    if (event.monitorFrame.matchScheduledStartTime && event.lastMatchStart) {
-                        let timeDelta = event.monitorFrame.matchScheduledStartTime.getTime() - event.lastMatchStart.getTime();
-                        exactAheadBehind = formatTimeShortNoAgoSeconds(timeDelta) + (timeDelta > 0 ? ' ahead' : ' behind');
+                    processed.currentFrame.matchScheduledStartTime = event.scheduleDetails.matches.find(m => (m.match === event.monitorFrame.match && m.level === event.monitorFrame.level))?.scheduledStartTime;
+                    console.log(processed.currentFrame.matchScheduledStartTime);
+                    if (processed.currentFrame.matchScheduledStartTime !== undefined) {
+                        if (typeof processed.currentFrame.matchScheduledStartTime === 'string') {
+                            processed.currentFrame.matchScheduledStartTime = new Date(processed.currentFrame.matchScheduledStartTime);
+                        }
+                        let timeDelta = processed.currentFrame.matchScheduledStartTime.getTime() - event.lastMatchStart.getTime();
+                        exactAheadBehind = formatTimeShortNoAgoSeconds(timeDelta) + (timeDelta >= 0 ? ' ahead' : ' behind');
+                        console.log(processed.currentFrame.matchScheduledStartTime, event.lastMatchStart, exactAheadBehind);
                     }
                 }
-                event.monitorFrame.exactAheadBehind = exactAheadBehind;
+                processed.currentFrame.exactAheadBehind = exactAheadBehind;
 
             } else if (processed.currentFrame.field === FieldState.MATCH_OVER) {
                 event.lastMatchEnd = new Date();
@@ -116,6 +121,8 @@ export const fieldMonitorRouter = router({
 
             event.fieldStatusEmitter.emit('change', processed.currentFrame.field);
         }
+
+        if (!processed.currentFrame.exactAheadBehind) processed.currentFrame.exactAheadBehind = event.monitorFrame.exactAheadBehind;
 
         event.monitorFrame = processed.currentFrame;
 

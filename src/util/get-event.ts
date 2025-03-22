@@ -8,6 +8,7 @@ import { db } from "../db/db";
 import schema from "../db/schema";
 import { getEventTickets } from "../router/tickets";
 import { getEventNotes } from "../router/notes";
+import { TRPCError } from "@trpc/server";
 
 
 let loadingEvents: { [key: string]: Promise<ServerEvent>; } = {};
@@ -30,7 +31,10 @@ export async function getEvent(eventToken: string, eventCode?: string) {
     if (!eventCode) {
         event = await db.query.events.findFirst({ where: eq(schema.events.token, eventToken) });
         if (!event) {
-            throw new Error('Event not found');
+            throw new TRPCError({
+                code: 'NOT_FOUND',
+                message: 'Event not found',
+            });
         }
         eventCodes[eventToken] = event.code;
         eventCode = event.code;
@@ -57,7 +61,10 @@ export async function getEvent(eventToken: string, eventCode?: string) {
             }
 
             if (!event) {
-                throw new Error('Event not found');
+                throw new TRPCError({
+                    code: 'NOT_FOUND',
+                    message: 'Event not found',
+                });
             }
 
             let usersToGet = event.users as number[];

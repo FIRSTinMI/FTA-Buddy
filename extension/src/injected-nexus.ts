@@ -77,11 +77,10 @@ function scrapeTeamList() {
 
         teamStatus.push({ team: teamNumber, inspected, radio, here });
     }
-    console.log(teamStatus);
     return teamStatus;
 }
 
-setInterval(() => {
+setInterval(async () => {
     const teamsToSend: {
         team: string;
         key: 'inspected' | 'present' | 'radioProgrammed';
@@ -111,8 +110,6 @@ setInterval(() => {
                     key: "present",
                     value: true
                 });
-                hereTeams.push(team.team);
-                console.log(`Team ${team.team} is here`);
             }
             if (team.radio && !radioTeams.includes(team.team)) {
                 teamsToSend.push({
@@ -120,8 +117,6 @@ setInterval(() => {
                     key: "radioProgrammed",
                     value: true
                 });
-                radioTeams.push(team.team);
-                console.log(`Team ${team.team} has a radio`);
             }
             if (team.inspected && !completedTeams.includes(team.team)) {
                 teamsToSend.push({
@@ -129,13 +124,35 @@ setInterval(() => {
                     key: "inspected",
                     value: true
                 });
-                completedTeams.push(team.team);
-                console.log(`Team ${team.team} has been inspected`);
             }
         }
 
     }
 
 
-    if (teamsToSend.length > 0) trpc.checklist.update.query(teamsToSend);
+    try {
+        if (teamsToSend.length > 0) {
+
+            // Send a maximum of 30 updates at a time to prevent exceeding the query length limit
+            while (teamsToSend.length > 0) {
+                let chunk = teamsToSend.splice(0, 30);
+                await trpc.checklist.update.query(chunk);
+
+                for (let team of chunk) {
+                    if (team.key === 'inspected') {
+                        completedTeams.push(team.team);
+                        console.log(`Team ${team.team} has been inspected`);
+                    } else if (team.key === 'present') {
+                        hereTeams.push(team.team);
+                        console.log(`Team ${team.team} is here`);
+                    } else if (team.key === 'radioProgrammed') {
+                        radioTeams.push(team.team);
+                        console.log(`Team ${team.team} has been programmed`);
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.error(e);
+    }
 }, 1000);

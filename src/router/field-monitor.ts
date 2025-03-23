@@ -122,7 +122,7 @@ export const fieldMonitorRouter = router({
             event.fieldStatusEmitter.emit('change', processed.currentFrame.field);
         }
 
-        if (!processed.currentFrame.exactAheadBehind) processed.currentFrame.exactAheadBehind = event.monitorFrame.exactAheadBehind;
+        if (!processed.currentFrame.exactAheadBehind && processed.currentFrame.level === "Qualification") processed.currentFrame.exactAheadBehind = event.monitorFrame.exactAheadBehind;
 
         event.monitorFrame = processed.currentFrame;
 

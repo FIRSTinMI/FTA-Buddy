@@ -3,6 +3,7 @@ import type { AppRouter } from '../../src/index';
 import { getAllLogsForMatch, getCurrentMatch, getMatch } from './fmsapi';
 import SuperJSON from 'superjson';
 import { compressSync } from 'fflate';
+import { TournamentLevel } from '@shared/types';
 
 let cloud: boolean = true;
 let id: string = '';
@@ -102,4 +103,35 @@ export function compressStationLog(log: any[]) {
     const buf = enc.encode(JSON.stringify(log));
     const compressed = compressSync(buf, { level: 6, mem: 6 });
     return btoa(String.fromCharCode(...compressed));
+}
+
+export async function uploadMatchLogsForMatch(matchNumber: number, playNumber: number, level: TournamentLevel) {
+    const match = await getMatch(matchNumber, playNumber, level);
+    const logs = await getAllLogsForMatch(match.fmsMatchId);
+    console.log(`Trying to compress logs for match ${matchNumber} play ${playNumber} id ${match.fmsMatchId}`);
+    try {
+        const upload = {
+            event: eventCode,
+            level: match.tournamentLevel,
+            ...match,
+            logs: {
+                red1: compressStationLog(logs.red1),
+                red2: compressStationLog(logs.red2),
+                red3: compressStationLog(logs.red3),
+                blue1: compressStationLog(logs.blue1),
+                blue2: compressStationLog(logs.blue2),
+                blue3: compressStationLog(logs.blue3),
+            }
+        };
+
+        console.debug(upload);
+        await trpc.match.putCompressedMatchLogs.query(upload);
+    } catch (err) {
+        console.error(err);
+        console.log(`Uploading logs uncompressed`);
+        const upload = { event: eventCode, level: match.tournamentLevel, ...match, logs };
+        console.debug(upload);
+        await trpc.match.putMatchLogs.query(upload);
+    }
+    console.log('done');
 }

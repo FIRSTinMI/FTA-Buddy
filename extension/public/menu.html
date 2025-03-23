@@ -1,105 +1,110 @@
 <html>
-    <head>
-        <style>
-            .switch {
-                position: relative;
-                display: inline-block;
-                width: 30px;
-                height: 16px;
-            }
+	<head>
+		<style>
+			.switch {
+				position: relative;
+				display: inline-block;
+				width: 30px;
+				height: 16px;
+			}
 
-            .switch input {
-                opacity: 0;
-                width: 0;
-                height: 0;
-            }
+			.switch input {
+				opacity: 0;
+				width: 0;
+				height: 0;
+			}
 
-            .slider {
-                position: absolute;
-                cursor: pointer;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background-color: #ccc;
-                -webkit-transition: .4s;
-                transition: .4s;
-            }
+			.slider {
+				position: absolute;
+				cursor: pointer;
+				top: 0;
+				left: 0;
+				right: 0;
+				bottom: 0;
+				background-color: #ccc;
+				-webkit-transition: 0.4s;
+				transition: 0.4s;
+			}
 
-            .slider:before {
-                position: absolute;
-                content: "";
-                height: 13px;
-                width: 13px;
-                left: 2px;
-                bottom: 1.6px;
-                background-color: white;
-                -webkit-transition: .4s;
-                transition: .4s;
-            }
+			.slider:before {
+				position: absolute;
+				content: "";
+				height: 13px;
+				width: 13px;
+				left: 2px;
+				bottom: 1.6px;
+				background-color: white;
+				-webkit-transition: 0.4s;
+				transition: 0.4s;
+			}
 
-            input:checked+.slider {
-                background-color: #2196F3;
-            }
+			input:checked + .slider {
+				background-color: #2196f3;
+			}
 
-            input:focus+.slider {
-                box-shadow: 0 0 1px #2196F3;
-            }
+			input:focus + .slider {
+				box-shadow: 0 0 1px #2196f3;
+			}
 
-            input:checked+.slider:before {
-                -webkit-transform: translateX(13px);
-                -ms-transform: translateX(13px);
-                transform: translateX(13px);
-            }
+			input:checked + .slider:before {
+				-webkit-transform: translateX(13px);
+				-ms-transform: translateX(13px);
+				transform: translateX(13px);
+			}
 
-            .slider.round {
-                border-radius: 16px;
-            }
+			.slider.round {
+				border-radius: 16px;
+			}
 
-            .slider.round:before {
-                border-radius: 50%;
-            }
-        </style>
-    </head>
+			.slider.round:before {
+				border-radius: 50%;
+			}
+		</style>
+	</head>
 
-    <body style="width: 300px">
-        <h1>FTA Buddy</h1>
-        <p>
-            To use this extension, use the web app <a href="https://ftabuddy.com/app/">ftabuddy.com</a>
-        </p>
-        <div style="margin-bottom: 10px; display: flex; gap: 4px;">
-            Enabled
-            <label class="switch">
-                <input type="checkbox" id="enabled">
-                <span class="slider round"></span>
-            </label>
-        </div>
-        <div style="margin-bottom: 10px; display: flex; gap: 4px;">
-            Use Cloud Server
-            <label class="switch">
-                <input type="checkbox" id="cloud" checked>
-                <span class="slider round"></span>
-            </label>
-        </div>
-        <div style="margin-bottom: 10px; display: flex; gap: 4px;">
-            Use SignalR instead of page scraping
-            <label class="switch">
-                <input type="checkbox" id="signalR" checked>
-                <span class="slider round"></span>
-            </label>
-        </div>
-        <div id="event-container">
-            <label for="event">Event Code</label>
-            <input id="event" type="text">
-        </div>
-        <div>
-            <label for="eventToken">Event Token</label>
-            <input id="eventToken" type="text">
-        </div>
-        <div id="url-container" style="display: none;">
-            <label for="url">Server Host</label>
-            <input id="url" type="url">
-        </div>
-        <script src="menu.js"></script>
-    </body>
+	<body style="width: 300px">
+		<h1>FTA Buddy</h1>
+		<p>To use this extension, use the web app <a href="https://ftabuddy.com/app/">ftabuddy.com</a></p>
+		<div style="margin-bottom: 10px; display: flex; gap: 4px">
+			Enabled
+			<label class="switch">
+				<input type="checkbox" id="enabled" />
+				<span class="slider round"></span>
+			</label>
+		</div>
+		<div style="margin-bottom: 10px; display: flex; gap: 4px">
+			Use Cloud Server
+			<label class="switch">
+				<input type="checkbox" id="cloud" checked />
+				<span class="slider round"></span>
+			</label>
+		</div>
+		<div style="margin-bottom: 10px; display: flex; gap: 4px">
+			Use SignalR instead of page scraping
+			<label class="switch">
+				<input type="checkbox" id="signalR" checked />
+				<span class="slider round"></span>
+			</label>
+		</div>
+		<div id="event-container">
+			<label for="event">Event Code</label>
+			<input id="event" type="text" />
+		</div>
+		<div>
+			<label for="eventToken">Event Token</label>
+			<input id="eventToken" type="text" />
+		</div>
+		<div id="url-container" style="display: none">
+			<label for="url">Server Host</label>
+			<input id="url" type="url" />
+		</div>
+		<div>
+			<label for="match-number">Manually Import Match Logs</label>
+			<input id="match-level" value="Qualification" />
+			<input id="match-number" type="number" placeholder="1" />
+			<input id="match-play" type="number" placeholder="1" />
+			<button id="import">Import</button>
+		</div>
+		<script src="menu.js"></script>
+	</body>
 </html>

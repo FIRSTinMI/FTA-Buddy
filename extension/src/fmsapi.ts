@@ -1,5 +1,6 @@
 import { FMS } from "./background";
 import { FMSEnums, FMSLogFrame, FMSMatch, ROBOT, ScheduleBreakdown, TournamentLevel } from "../../shared/types";
+import { response } from "express";
 
 export async function getEventCode() {
     const eventCode = await (await fetch(`http://${FMS}/api/v1.0/systembase/get/get_CurrentlyActiveEventCode`)).text();
@@ -26,6 +27,26 @@ export async function getCurrentMatch() {
         matchNumber: response.item2,
         playNumber: response.item3
     };
+}
+
+export async function getCompletedMatches() {
+    const response = await (await fetch(`http://${FMS}/api/v1.0/match/get/GetCurrentResults`)).json();
+
+    return response.map((match: any) => ({
+        matchId: match.matchId as string,
+        matchNumber: match.matchNumber as number,
+        playNumber: match.playNumber as number,
+        level: match.tournamentLevel as TournamentLevel,
+        fmsEventId: match.fmsEventId as string,
+        actualStartTime: new Date(match.actualStartTime),
+        description: match.description as string,
+        blueAutoScore: match.blueAutoScore as number,
+        bluePenalty: match.bluePenalty as number,
+        blueScore: match.blueScore as number,
+        redAutoScore: match.redAutoScore as number,
+        redPenalty: match.redPenalty as number,
+        redScore: match.redScore as number
+    }));
 }
 
 export async function getAllLogsForMatch(matchId: string) {

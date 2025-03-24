@@ -20,7 +20,6 @@
 		pigeon: false,
 		cancoder: false,
 		powerDistruibutionHub: false,
-		powerDistruibutionPanel: false,
 	};
 
 	let loadedState = {
@@ -35,7 +34,6 @@
 		pigeon: false,
 		cancoder: false,
 		powerDistruibutionHub: false,
-		powerDistruibutionPanel: false,
 	};
 
 	$: {
@@ -70,9 +68,6 @@
 	}
 	$: {
 		if (openState.powerDistruibutionHub) loadedState.powerDistruibutionHub = true;
-	}
-	$: {
-		if (openState.powerDistruibutionPanel) loadedState.powerDistruibutionPanel = true;
 	}
 
 	function toggleLED() {
@@ -1318,6 +1313,30 @@
 									<td class="blue led"> </td>
 									<td>No communication established</td>
 								</tr>
+								<tr>
+									<td class="cyan led"> </td>
+									<td>Connected to REV Hardware Client</td>
+								</tr>
+								<tr>
+									<td class="magenta blink led"> </td>
+									<td>Keep Alive Timeout</td>
+								</tr>
+								<tr>
+									<td class={LEDFastToggleState === true ? "orange led" : "blue led"}> </td>
+									<td>Low Battery</td>
+								</tr>
+								<tr>
+									<td class={LEDFastToggleState === true ? "orange led" : "yellow led"}> </td>
+									<td>CAN Fault</td>
+								</tr>
+								<tr>
+									<td class={LEDFastToggleState === true ? "orange led" : "cyan led"}> </td>
+									<td>Hardware Fault</td>
+								</tr>
+								<tr>
+									<td class={LEDFastToggleState === true ? "orange led" : "magenta led"}> </td>
+									<td>Device Over Current</td>
+								</tr>
 							</table>
 						</td>
 					</tr>
@@ -1330,19 +1349,15 @@
 								</tr>
 								<tr>
 									<td class="black led"> </td>
-									<td>Booting</td>
+									<td>Has voltage and normal operation</td>
 								</tr>
 								<tr>
-									<td class="green blink led"> </td>
-									<td>Unable to ping field</td>
+									<td class="red led"> </td>
+									<td>No voltage and active fault</td>
 								</tr>
 								<tr>
-									<td class="green hz-20-fast led"> </td>
-									<td>Firmware being flashed</td>
-								</tr>
-								<tr>
-									<td class="green led"> </td>
-									<td>Connected to field</td>
+									<td class="red blink led"> </td>
+									<td>Sticky fault</td>
 								</tr>
 							</table>
 						</td>
@@ -1356,19 +1371,15 @@
 								</tr>
 								<tr>
 									<td class="black led"> </td>
-									<td>Booting</td>
+									<td>Has voltage and normal operation</td>
 								</tr>
 								<tr>
-									<td class="green blink led"> </td>
-									<td>Unable to ping field</td>
+									<td class="red led"> </td>
+									<td>No voltage and active fault</td>
 								</tr>
 								<tr>
-									<td class="green hz-20-fast led"> </td>
-									<td>Firmware being flashed</td>
-								</tr>
-								<tr>
-									<td class="green led"> </td>
-									<td>Connected to field</td>
+									<td class="red blink led"> </td>
+									<td>Sticky fault</td>
 								</tr>
 							</table>
 						</td>
@@ -1377,10 +1388,6 @@
 					
 				</table>
 			{/if}
-		</AccordionItem>
-
-		<AccordionItem class="text-black dark:text-white" bind:open={openState.powerDistruibutionPanel}>
-			<!-- Power Distribution Panel -->
 		</AccordionItem>
 
 	</Accordion>

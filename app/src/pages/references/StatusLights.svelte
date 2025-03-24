@@ -18,6 +18,8 @@
 		victorspx: false,
 		canivore: false,
 		pigeon: false,
+		cancoder: false,
+		powerDistruibutionHub: false,
 	};
 
 	let loadedState = {
@@ -30,6 +32,8 @@
 		victorspx: false,
 		canivore: false,
 		pigeon: false,
+		cancoder: false,
+		powerDistruibutionHub: false,
 	};
 
 	$: {
@@ -58,6 +62,12 @@
 	}
 	$: {
 		if (openState.pigeon) loadedState.pigeon = true;
+	}
+	$: {
+		if (openState.cancoder) loadedState.cancoder = true;
+	}
+	$: {
+		if (openState.powerDistruibutionHub) loadedState.powerDistruibutionHub = true;
 	}
 
 	function toggleLED() {
@@ -1199,44 +1209,19 @@
 						<td>
 							<table class="section-table">
 								<tr>
-									<td class="black led"> </td>
-									<td class="black led"> </td>
-									<td>No Power</td>
+									<td colspan="2" class="bold">General Status LED</td>
 								</tr>
 								<tr>
-									<td class="black led"> </td>
-									<td class={LEDToggleState === true ? "green led" : "yellow led"}> </td>
-									<td>Bootloader Mode</td>
+									<td class="blue led"> </td>
+									<td>Device on; No communications</td>
 								</tr>
 								<tr>
-									<td class={LEDToggleState === true ? "red led" : "yellow led"}> </td>
-									<td class={LEDToggleState === true ? "yellow led" : "red led"}> </td>
-									<td>Damaged Hardware</td>
+									<td class="green led"> </td>
+									<td>Communication with RoboRIO established</td>
 								</tr>
 								<tr>
-									<td class={LEDToggleState === true ? "red led" : "green led"}> </td>
-									<td class={LEDToggleState === true ? "green led" : "red led"}> </td>
-									<td>Unlicensed Phoenix Pro</td>
-								</tr>
-								<tr>
-									<td class="red blink led"> </td>
-									<td class="red blink led"> </td>
-									<td>Poor CAN Health/No Connection</td>
-								</tr>
-								<tr>
-									<td class={LEDToggleState === true ? "yellow led" : "black led"}> </td>
-									<td class={LEDToggleState === true ? "black led" : "yellow led"}> </td>
-									<td>CAN Detected, No Software</td>
-								</tr>
-								<tr>
-									<td class="yellow blink led"> </td>
-									<td class="yellow blink led"> </td>
-									<td>CAN Detected, Robot Disabled</td>
-								</tr>
-								<tr>
-									<td class="green blink led"> </td>
-									<td class="green blink led"> </td>
-									<td>CAN Detected, Robot Enabled</td>
+									<td class="cyan led"> </td>
+									<td>Device on; No communications</td>
 								</tr>
 							</table>
 						</td>
@@ -1244,6 +1229,167 @@
 				</table>
 			{/if}
 		</AccordionItem>
+
+		<AccordionItem class="text-black dark:text-white" bind:open={openState.cancoder}>
+			<span slot="header">CANcoder</span>
+
+			{#if openState.cancoder === true || loadedState.cancoder === true}
+				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td class="black led"> </td>
+									<td>No Power</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState === true ? "green led" : "yellow led"}> </td>
+									<td>Bootloader</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState === true ? "green led" : "red led"}> </td>
+									<td>Unlicensed Phoenix Pro</td>
+								</tr>
+								<tr>
+									<td class={LEDLongToggleState === true ? "black led" : "red led"}> </td>
+									<td>CAN bus has been lost</td>
+								</tr>
+								<tr>
+									<td class={LEDFastToggleState === true ? "black led" : "red led"}> </td>
+									<td>(dim) No CAN and magnet out of range</td>
+								</tr>
+								<tr>
+									<td class={LEDFastToggleState === true ? "black led" : "yellow led"}> </td>
+									<td>(dim) No CAN and reduced magnet accuracy</td>
+								</tr>
+								<tr>
+									<td class={LEDFastToggleState === true ? "black led" : "green led"}> </td>
+									<td>(dim) No CAN and magnet present</td>
+								</tr>
+								<tr>
+									<td class={LEDFastToggleState === true ? "black led" : "red led"}> </td>
+									<td>(bright) CAN and magnet out of range</td>
+								</tr>
+								<tr>
+									<td class={LEDFastToggleState === true ? "black led" : "yellow led"}> </td>
+									<td>(bright) CAN and reduced magnet accuracy</td>
+								</tr>
+								<tr>
+									<td class={LEDFastToggleState === true ? "black led" : "green led"}> </td>
+									<td>(bright) CAN and magnet present</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							If CAN bus is detected at any time, CANCoder will leave and never re-enter the dim LED mode without a full power cycle.
+						</td>
+					</tr>
+				</table>
+			{/if}
+		</AccordionItem>
+
+		<AccordionItem class="text-black dark:text-white" bind:open={openState.powerDistruibutionHub}>
+			<span slot="header">REV PDH</span>
+
+			{#if openState.powerDistruibutionHub === true || loadedState.powerDistruibutionHub === true}
+				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td colspan="2" class="bold">General Status LED</td>
+								</tr>
+								<tr>
+									<td class="blue led"> </td>
+									<td>No communication established</td>
+								</tr>
+								<tr>
+									<td class="green led"> </td>
+									<td>RoboRIO communication established</td>
+								</tr>
+								<tr>
+									<td class="blue led"> </td>
+									<td>No communication established</td>
+								</tr>
+								<tr>
+									<td class="cyan led"> </td>
+									<td>Connected to REV Hardware Client</td>
+								</tr>
+								<tr>
+									<td class="magenta blink led"> </td>
+									<td>Keep Alive Timeout</td>
+								</tr>
+								<tr>
+									<td class={LEDFastToggleState === true ? "orange led" : "blue led"}> </td>
+									<td>Low Battery</td>
+								</tr>
+								<tr>
+									<td class={LEDFastToggleState === true ? "orange led" : "yellow led"}> </td>
+									<td>CAN Fault</td>
+								</tr>
+								<tr>
+									<td class={LEDFastToggleState === true ? "orange led" : "cyan led"}> </td>
+									<td>Hardware Fault</td>
+								</tr>
+								<tr>
+									<td class={LEDFastToggleState === true ? "orange led" : "magenta led"}> </td>
+									<td>Device Over Current</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td colspan="2" class="bold">Channel Status LED</td>
+								</tr>
+								<tr>
+									<td class="black led"> </td>
+									<td>Has voltage and normal operation</td>
+								</tr>
+								<tr>
+									<td class="red led"> </td>
+									<td>No voltage and active fault</td>
+								</tr>
+								<tr>
+									<td class="red blink led"> </td>
+									<td>Sticky fault</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td colspan="2" class="bold">Switched Channel LED</td>
+								</tr>
+								<tr>
+									<td class="black led"> </td>
+									<td>Has voltage and normal operation</td>
+								</tr>
+								<tr>
+									<td class="red led"> </td>
+									<td>No voltage and active fault</td>
+								</tr>
+								<tr>
+									<td class="red blink led"> </td>
+									<td>Sticky fault</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+
+					
+				</table>
+			{/if}
+		</AccordionItem>
+
 	</Accordion>
 </div>
 

@@ -1209,19 +1209,42 @@
 						<td>
 							<table class="section-table">
 								<tr>
-									<td colspan="2" class="bold">General Status LED</td>
+									<td colspan="2" class="bold">Blink Codes</td>
 								</tr>
 								<tr>
-									<td class="blue led"> </td>
-									<td>Device on; No communications</td>
+									<td class="black led"> </td>
+									<td class="black led"> </td>
+									<td>No Power</td>
 								</tr>
 								<tr>
-									<td class="green led"> </td>
-									<td>Communication with RoboRIO established</td>
+									<td class={LEDToggleState === true ? "red led" : "black led"}> </td>
+									<td class={LEDToggleState === false ? "red led" : "black led"}> </td>
+									<td>Invalid CAN Signal</td>
 								</tr>
 								<tr>
-									<td class="cyan led"> </td>
-									<td>Device on; No communications</td>
+									<td class={LEDToggleState === true ? "orange led" : "black led"}> </td>
+									<td class={LEDToggleState === false ? "orange led" : "black led"}> </td>
+									<td>Valid CAN, Phoenix is NOT Detected</td>
+								</tr>
+								<tr>
+									<td class="orange blink led"> </td>
+									<td class="orange blink led"> </td>
+									<td>Valid CAN + Phoenix Detected + Robot Disabled</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState === true ? "green led" : "black led"}> </td>
+									<td class={LEDToggleState === false ? "green led" : "black led"}> </td>
+									<td>Valid CAN + Phoenix Detected + Robot Enabled</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState === true ? "red led" : "orange led"}> </td>
+									<td class={LEDToggleState === false ? "red led" : "orange led"}> </td>
+									<td>Hardware Fault Detected; Confirm with TunerX Self Test</td>
+								</tr>
+								<tr>
+									<td class="black led"> </td>
+									<td class={LEDToggleState === false ? "green led" : "orange led"}> </td>
+									<td>Device in Bootloader; Field-upgrade device in TunerX</td>
 								</tr>
 							</table>
 						</td>

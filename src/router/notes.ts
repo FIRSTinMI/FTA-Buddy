@@ -3,11 +3,12 @@ import { eventProcedure, protectedProcedure, publicProcedure, router } from "../
 import { db } from "../db/db";
 import { pushSubscriptions, tickets, users, events, notes } from "../db/schema";
 import { observable } from "@trpc/server/observable";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { Note, Profile } from "../../shared/types";
 import { getEvent } from "../util/get-event";
 import { randomUUID } from "crypto";
+import { generateReport } from "../util/report-generator";
 
 export const notesRouter = router({
 
@@ -204,6 +205,27 @@ export const notesRouter = router({
         return note.id;
     }),
 
+    generateNotesReport: eventProcedure.query(async ({ ctx }) => {
+        const event = await getEvent(ctx.eventToken as string);
+
+        const teamNumbers = event.teams.map((team) => parseInt(team.number));
+
+        const allNotes = await getEventNotes(event.code);
+        
+        const path = await generateReport({
+            title: `Notes Report for ${event.code}`,
+            description: `Total # of Notes Made At Event: ${allNotes.length}`,
+            headers: ['Team #', 'Note Text', "Author"],
+            fileName: 'NotesReport'
+        }, allNotes.map((note) => [
+            note.team,
+            note.text,
+            note.author?.username ?? "Unknown"
+        ]), event.code);
+
+        return { path };
+    }),
+
     // updateSubscription: publicProcedure.input(z.object({
     //     eventToken: z.string(),
     //     note_id: z.string().uuid().optional(),
@@ -259,12 +281,12 @@ export const notesRouter = router({
 export async function getEventNotes(event_code: string) {
     const eventNotes = await db.query.notes.findMany({
         where: eq(notes.event_code, event_code),
-        orderBy: [asc(notes.created_at)],
+        orderBy: [desc(notes.team)],
     });
 
     if (!eventNotes) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Unable to find notes for this event" });
     }
 
-    return eventNotes;
+    return eventNotes as Note[];
 }

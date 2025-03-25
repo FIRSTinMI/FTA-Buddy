@@ -98,7 +98,7 @@
 
 			await new Promise((resolve) => setTimeout(resolve, 500));
 
-			navigate("/app/event-created");
+			navigate("/app/manage/event-created");
 		} catch (err: any) {
 			toast("Error Creating Event", err.message);
 			console.error(err);

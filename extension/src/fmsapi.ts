@@ -1,6 +1,5 @@
-import { FMS } from "./background";
 import { FMSEnums, FMSLogFrame, FMSMatch, ROBOT, ScheduleBreakdown, TournamentLevel } from "../../shared/types";
-import { response } from "express";
+import { FMS } from "./background";
 
 export async function getEventCode() {
     const eventCode = await (await fetch(`http://${FMS}/api/v1.0/systembase/get/get_CurrentlyActiveEventCode`)).text();

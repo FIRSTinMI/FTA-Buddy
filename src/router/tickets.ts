@@ -211,7 +211,7 @@ export const ticketsRouter = router({
                     "text": "View Ticket",
                     "emoji": true
                 },
-                "url": `https://ftabuddy.com/app/ticket/${insert[0].id}`
+                "url": `https://ftabuddy.com/app/tickets/view/${insert[0].id}`
             });
             if (insert[0].match_id) {
                 buttons.push({
@@ -1103,7 +1103,7 @@ export async function getTeamTicketsInfo(event_code: string, team: number) {
 
     const avgOpenTime = getAvgOpenTimeByTickets(teamTicketArray);
 
-    const ticketLinks: string[] = teamTicketArray.map((ticket) => `https://www.ftabuddy.com/app/ticket/${ticket.id}`);
+    const ticketLinks: string[] = teamTicketArray.map((ticket) => `https://www.ftabuddy.com/app/tickets/view/${ticket.id}`);
 
     const ticketLinksCombined: string = ticketLinks.join(", ");
 
@@ -1315,7 +1315,7 @@ export function createSlackTicketMessage(ticket_id: number, team_number: number,
             "text": "View Ticket",
             "emoji": true
         },
-        "url": `https://ftabuddy.com/app/ticket/${ticket_id}`
+        "url": `https://ftabuddy.com/app/tickets/view/${ticket_id}`
     });
     if (match_id) {
         buttons.push({

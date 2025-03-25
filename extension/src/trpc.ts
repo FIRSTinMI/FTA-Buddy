@@ -1,9 +1,9 @@
+import { TournamentLevel } from '@shared/types';
 import { createTRPCClient, createWSClient, httpBatchLink, splitLink, wsLink } from '@trpc/client';
+import { compressSync } from 'fflate';
+import SuperJSON from 'superjson';
 import type { AppRouter } from '../../src/index';
 import { getAllLogsForMatch, getCurrentMatch, getMatch } from './fmsapi';
-import SuperJSON from 'superjson';
-import { compressSync } from 'fflate';
-import { TournamentLevel } from '@shared/types';
 
 let cloud: boolean = true;
 let id: string = '';

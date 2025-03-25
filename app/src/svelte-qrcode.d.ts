@@ -6,8 +6,8 @@ declare module 'svelte-qrcode' {
         background?: string,
         errorCorrection?: "L" | "M" | "Q" | "H",
         padding?: number,
-        size?: number
+        size?: number;
     }
 
-    export default class QRCode extends SvelteComponentTyped<QRCodeProps> {}
+    export default class QRCode extends SvelteComponentTyped<QRCodeProps> { }
 }

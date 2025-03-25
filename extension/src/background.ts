@@ -1,5 +1,5 @@
-import { SignalR } from "./signalR";
 import { getCurrentMatch, getEventCode, getScheduleBreakdown, getTeamNumbers } from "./fmsapi";
+import { SignalR } from "./signalR";
 import { trpc, updateValues } from "./trpc";
 
 const manifestData = chrome.runtime.getManifest();

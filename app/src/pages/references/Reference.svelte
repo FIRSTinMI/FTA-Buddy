@@ -2,26 +2,32 @@
 	import Icon from "@iconify/svelte";
 	import { Accordion, AccordionItem, Button } from "flowbite-svelte";
 	import { settingsStore } from "../../stores/settings";
+	import { Route, Router } from "svelte-routing";
+	import StatusLights from "./StatusLights.svelte";
+	import SoftwareDocs from "./SoftwareDocs.svelte";
+	import WiringDiagrams from "./WiringDiagrams.svelte";
+	import ComponentManuals from "./ComponentManuals.svelte";
+	import FieldManuals from "./FieldManuals.svelte";
 </script>
 
 <div class="container mx-auto p-2 pr-3 w-full">
 	<h1 class="text-3xl" style="font-weight: bold">References</h1>
 
 	<div class="grid grid-cols-3 gap-2 mt-2">
-		<Button href="/app/statuslights" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
+		<Button href="/app/references/statuslights" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
 			><Icon icon="heroicons:sun-16-solid" class="size-6 md:size-8" /> Status Lights</Button
 		>
-		<Button href="/app/softwaredocs" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
+		<Button href="/app/references/softwaredocs" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
 			><Icon icon="ion:library" class="size-6 md:size-8" /> Software Docs</Button
 		>
-		<Button href="/app/wiringdiagrams" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
+		<Button href="/app/references/wiringdiagrams" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
 			><Icon icon="fa6-solid:chart-diagram" class="size-6 md:size-8" /> Wiring Diagrams</Button
 		>
 		<div class="grid grid-cols-2 gap-2 col-span-3">
-			<Button href="/app/componentmanuals" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
+			<Button href="/app/references/componentmanuals" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
 				><Icon icon="streamline:manual-book-solid" class="size-6 md:size-8" /> Component Manuals</Button
 			>
-			<Button href="/app/fieldmanuals" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
+			<Button href="/app/references/fieldmanuals" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
 				><Icon icon="tabler:soccer-field" class="size-6 md:size-8" /> Field Manuals</Button
 			>
 		</div>

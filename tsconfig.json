@@ -2,7 +2,6 @@
     "include": [
         "./src/**/*.ts",
         "./shared/**/*.ts",
-        "./extension/**/*.ts",
         "../app/node_modules/svelte/*"
     ],
     "compilerOptions": {

@@ -1,11 +1,11 @@
+import { createTRPCClient, createWSClient, httpBatchLink, splitLink, wsLink } from '@trpc/client';
+import SuperJSON from "superjson";
+import { get } from "svelte/store";
+import type { AppRouter } from '../../src/index';
 import "./app.pcss";
 import App from "./App.svelte";
-import { createTRPCClient, createWSClient, httpBatchLink, splitLink, wsLink } from '@trpc/client';
-import type { AppRouter } from '../../src/index';
-import { userStore } from "./stores/user";
-import { get } from "svelte/store";
 import { settingsStore } from "./stores/settings";
-import SuperJSON from "superjson";
+import { userStore } from "./stores/user";
 
 let token = get(userStore).token;
 let eventToken = get(userStore).eventToken;

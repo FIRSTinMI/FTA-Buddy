@@ -1,6 +1,6 @@
-import { createTRPCClient, createWSClient, httpBatchLink, splitLink, wsLink } from '@trpc/client';
-import type { AppRouter } from '../../src/index';
+import { createTRPCClient, httpBatchLink } from '@trpc/client';
 import SuperJSON from 'superjson';
+import type { AppRouter } from '../../src/index';
 
 let cloud: boolean = true;
 let id: string = '';

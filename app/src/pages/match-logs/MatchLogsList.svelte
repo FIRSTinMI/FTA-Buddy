@@ -5,8 +5,6 @@
 	import type { MatchRouterOutputs } from "../../../../src/router/logs";
 	import Spinner from "../../components/Spinner.svelte";
 
-	export let toast: (title: string, text: string, color?: string) => void;
-
 	const matches = trpc.match.getMatches.query({});
 
 	const testMatches: MatchRouterOutputs["getMatches"] = [];

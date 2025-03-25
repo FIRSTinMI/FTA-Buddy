@@ -256,7 +256,7 @@
 					admin: false,
 					googleToken: googleUser.credential,
 				});
-				navigate("/app/google-signup");
+				navigate("/app/manage/google-signup");
 			} else {
 				toast("Error Logging In", err.message);
 				console.error(err);
@@ -449,10 +449,10 @@
 							<h2 class="text-xl">Run FTA Buddy from this computer</h2>
 							{#if user.eventToken}
 								<Button on:click={() => navigate("/app")} class="w-full mt-4">Open Field Monitor</Button>
-								<Button on:click={() => navigate("/app/event-created")} class="w-full mt-4">See Event Pin</Button>
-								<Button on:click={() => navigate("/app/host")} class="w-full mt-4">Host New Event</Button>
+								<Button on:click={() => navigate("/app/manage/event-created")} class="w-full mt-4">See Event Pin</Button>
+								<Button on:click={() => navigate("/app/manage/host")} class="w-full mt-4">Host New Event</Button>
 							{:else}
-								<Button on:click={() => navigate("/app/host")} class="w-full mt-4">Host</Button>
+								<Button on:click={() => navigate("/app/manage/host")} class="w-full mt-4">Host</Button>
 							{/if}
 							<p class="text-gray-700 mt-2">Requires this computer to be on the field network</p>
 						</div>
@@ -512,7 +512,7 @@
 				<div class="flex border-t border-neutral-500 pt-4">
 					<div class="my-auto w-full">
 						<h2 class="text-2xl" style="font-weight: bold;">Run FTA Buddy from this computer</h2>
-						<Button on:click={() => navigate("/app/host")} class="w-full mt-4">Host</Button>
+						<Button on:click={() => navigate("/app/manage/host")} class="w-full mt-4">Host</Button>
 						<p class="text-gray-700 mt-2">Requires this computer to be on the field network</p>
 					</div>
 				</div>
@@ -526,9 +526,9 @@
 				<Label for="event-selector">Admin Event Selector</Label>
 				<Select id="event-selector" bind:value={event.code} items={eventList} placeholder="Select Event" on:change={adminSelectEvent} />
 				<Button href="/" on:click={() => navigate("/")}>Go to App</Button>
-				<Button outline on:click={() => navigate("/app/event-created")}>See Event Pin</Button>
-				<Button outline href="/app/meshed-event">Create Meshed Event</Button>
-				<Button outline href="/app/manage">App Management</Button>
+				<Button outline on:click={() => navigate("/app/manage/event-created")}>See Event Pin</Button>
+				<Button outline href="/app/manage/meshed-event">Create Meshed Event</Button>
+				<Button outline href="/app/manage/manage">App Management</Button>
 			</div>
 
 			<!-- Currently have an event selected -->
@@ -539,7 +539,7 @@
 				<Button outline on:click={() => (eventStore.set({ code: "", pin: "", teams: [], users: [] }), userStore.set({ ...user, eventToken: "" }))}
 					>Leave Event</Button
 				>
-				<Button outline on:click={() => navigate("/app/event-created")}>See Event Pin</Button>
+				<Button outline on:click={() => navigate("/app/manage/event-created")}>See Event Pin</Button>
 			</div>
 
 			<!-- No event selected -->
@@ -563,7 +563,7 @@
 				<div class="flex border-t border-neutral-500 pt-4">
 					<div class="my-auto w-full">
 						<h2 class="text-xl">Run FTA Buddy from this computer</h2>
-						<Button on:click={() => navigate("/app/host")} class="w-full mt-4">Host</Button>
+						<Button on:click={() => navigate("/app/manage/host")} class="w-full mt-4">Host</Button>
 						<p class="text-gray-700 mt-2">Requires this computer to be on the field network</p>
 					</div>
 				</div>

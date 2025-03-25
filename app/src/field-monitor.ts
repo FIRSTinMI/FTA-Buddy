@@ -1,10 +1,10 @@
 import { get } from "svelte/store";
+import { DSState, FieldState, MatchState, MatchStateMap, ROBOT } from "../../shared/types";
 import { trpc } from "./main";
+import { settingsStore } from "./stores/settings";
 import { userStore } from "./stores/user";
-import { DSState, FieldState, MatchState, MatchStateMap, ROBOT, type MonitorFrame } from "../../shared/types";
 import { AudioQueuer } from "./util/audioAlerts";
 import { MonitorFrameHandler, type MonitorEvent } from "./util/monitorFrameHandler";
-import { settingsStore } from "./stores/settings";
 import { robotNotification } from "./util/notifications";
 
 // Initialize frame handler and audio queue

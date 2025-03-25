@@ -1,49 +1,32 @@
 <script lang="ts">
-	import FTCStatus from "./pages/ftc/FTCStatus.svelte";
 	import Icon from "@iconify/svelte";
 	import { Button, CloseButton, Drawer, Indicator, Label, Modal, Select, Sidebar, SidebarGroup, SidebarItem, SidebarWrapper, Toast } from "flowbite-svelte";
-	import { Link, Route, Router, navigate } from "svelte-routing";
-	import { get } from "svelte/store";
-	import { frameHandler, subscribeToFieldMonitor } from "./field-monitor";
-	import SettingsModal from "./components/SettingsModal.svelte";
-	import WelcomeModal from "./components/WelcomeModal.svelte";
-	import Flashcard from "./pages/Flashcards.svelte";
-	import Monitor from "./pages/Monitor.svelte";
-	import Login from "./pages/management/Login.svelte";
-	import Messages from "./pages/tickets-notes/TicketList.svelte";
-	import Reference from "./pages/references/Reference.svelte";
-	import { userStore } from "./stores/user";
-	import { settingsStore } from "./stores/settings";
-	import { VERSIONS, update } from "./util/updater";
-	import { sineIn } from "svelte/easing";
-	import CompleteGoogleSignup from "./pages/management/CompleteGoogleSignup.svelte";
-	import { eventStore } from "./stores/event";
-	import Host from "./pages/management/Host.svelte";
-	import PostEventCreation from "./pages/management/PostEventCreation.svelte";
-	import MatchLog from "./pages/match-logs/MatchLog.svelte";
-	import StationLog from "./pages/match-logs/StationLog.svelte";
-	import MatchLogsList from "./pages/match-logs/MatchLogsList.svelte";
-	import Checklist from "./pages/Checklist.svelte";
 	import { onDestroy, onMount } from "svelte";
-	import ViewTicket from "./pages/tickets-notes/ViewTicket.svelte";
-	import { trpc } from "./main";
+	import { Link, Route, Router, navigate } from "svelte-routing";
+	import { sineIn } from "svelte/easing";
+	import { get } from "svelte/store";
+	import SettingsModal from "./components/SettingsModal.svelte";
 	import UpdateToast from "./components/UpdateToast.svelte";
+	import WelcomeModal from "./components/WelcomeModal.svelte";
+	import { trpc } from "./main";
+	import Checklist from "./pages/Checklist.svelte";
 	import EventDashboard from "./pages/EventDashboard.svelte";
 	import EventReport from "./pages/EventReport.svelte";
-	import StatusLights from "./pages/references/StatusLights.svelte";
-	import FieldManuals from "./pages/references/FieldManuals.svelte";
-	import ComponentManuals from "./pages/references/ComponentManuals.svelte";
-	import WiringDiagrams from "./pages/references/WiringDiagrams.svelte";
-	import SoftwareDocs from "./pages/references/SoftwareDocs.svelte";
-	import TicketList from "./pages/tickets-notes/TicketList.svelte";
-	import NoteList from "./pages/tickets-notes/NoteList.svelte";
+	import Flashcard from "./pages/Flashcards.svelte";
+	import MonitorRouter from "./pages/MonitorRouter.svelte";
+	import FtcRouter from "./pages/ftc/FTCRouter.svelte";
+	import ManagementRouter from "./pages/management/ManagementRouter.svelte";
+	import MatchLogRouter from "./pages/match-logs/MatchLogRouter.svelte";
+	import ReferencesRouter from "./pages/references/ReferencesRouter.svelte";
+	import NotesRouter from "./pages/tickets-notes/NotesRouter.svelte";
 	import NotificationList from "./pages/tickets-notes/NotificationList.svelte";
+	import TicketRouter from "./pages/tickets-notes/TicketRouter.svelte";
+	import { eventStore } from "./stores/event";
 	import { notificationsStore } from "./stores/notifications";
+	import { settingsStore } from "./stores/settings";
+	import { userStore } from "./stores/user";
 	import { startNotificationSubscription } from "./util/notifications";
-	import MeshedEvent from "./pages/management/MeshedEvent.svelte";
-	import PublicTicketCreate from "./pages/tickets-notes/PublicTicketCreate.svelte";
-	import RadioKiosk from "./pages/management/RadioKiosk.svelte";
-	import Management from "./pages/management/Management.svelte";
+	import { VERSIONS, update } from "./util/updater";
 
 	// Checking userentication
 	let user = get(userStore);
@@ -81,26 +64,26 @@
 	const publicPaths = [
 		"/app",
 		"/app/",
-		"/app/login",
-		"/app/google-signup",
-		"/app/host",
-		"/app/event-created",
-		"/app/meshed-event",
-		"/app/ftc-status",
+		"/app/manage/login",
+		"/app/manage/google-signup",
+		"/app/manage/host",
+		"/app/manage/event-created",
+		"/app/manage/meshed-event",
+		"/app/ftc",
 		"/app/references",
-		"/app/statuslights",
-		"/app/fieldmanuals",
-		"/app/componentmanuals",
-		"/app/wiringdiagrams",
-		"/app/softwaredocs",
+		"/app/references/statuslights",
+		"/app/references/fieldmanuals",
+		"/app/references/componentmanuals",
+		"/app/references/wiringdiagrams",
+		"/app/references/softwaredocs",
 		"/app/dashboard",
-		"/app/kiosk",
+		"/app/manage/kiosk",
 	];
 
 	const eventTokenPaths = ["/app/monitor", "/app/checklist", "/app/logs"];
 
 	const pageIsPublicLog = window.location.pathname.startsWith("/app/logs/") && window.location.pathname.split("/")[3].length == 36;
-	const pageIsPublicTicketCreate = window.location.pathname.startsWith("/app/submit-ticket/");
+	const pageIsPublicTicketCreate = window.location.pathname.startsWith("/app/tickets/submit/");
 
 	function redirectForAuth(a: typeof user) {
 		// if user has event token and is trying to access a page that requires an event token
@@ -113,7 +96,7 @@
 			if (!pageIsPublicLog && !pageIsPublicTicketCreate) {
 				//page is not public log or public ticket creation page
 				if (!a.token || !a.eventToken) {
-					navigate("/app/login"); //user is either not logged in or does not have event token
+					navigate("/app/manage/login"); //user is either not logged in or does not have event token
 				}
 				//user is logged in and has event token -- no redirect
 			}
@@ -121,7 +104,7 @@
 		} else if (window.location.pathname == "/app" || window.location.pathname == "/app/") {
 			//user is accessing public path that is /app or /app/
 			if (!a.eventToken) {
-				navigate("/app/login"); //user is missing event token
+				navigate("/app/manage/login"); //user is missing event token
 			}
 			//user has event token -- no redirect
 		}
@@ -131,19 +114,7 @@
 
 	userStore.subscribe((value) => {
 		redirectForAuth(value);
-
-		if (user.eventToken !== value.eventToken) {
-			user = value;
-			// If the event has changed we want to reconnect with the new event token
-			subscribeToFieldMonitor();
-		} else {
-			user = value;
-		}
-	});
-
-	// Subscribe to field monitor
-	onMount(() => {
-		subscribeToFieldMonitor();
+		user = value;
 	});
 
 	// Load settings
@@ -280,6 +251,18 @@
 		multiEventSelection = "combined";
 	} else {
 		multiEventSelection = event.code;
+	}
+
+	if (user.token && window.location.pathname === "/app/") {
+		if (user.role === "FTA" || user.role === "FTAA") {
+			if (user.meshedEventToken && event && event.subEvents && user.eventToken === user.meshedEventToken) {
+				navigate("/app/dashboard");
+			} else {
+				navigate("/app/monitor");
+			}
+		} else if (user.role === "CSA" || user.role === "RI") {
+			navigate("/app/tickets");
+		}
 	}
 </script>
 
@@ -525,7 +508,7 @@
 					class="text-sm"
 					on:click={() => {
 						hideMenu = true;
-						navigate("/app/login");
+						navigate("/app/manage/login");
 					}}
 				>
 					<svelte:fragment slot="icon">
@@ -547,7 +530,7 @@
 					label="Status Lights"
 					on:click={() => {
 						hideMenu = true;
-						navigate("/app/statuslights");
+						navigate("/app/references/statuslights");
 					}}
 					class="text-xs ml-8 pt-1 pb-1"
 				>
@@ -559,7 +542,7 @@
 					label="Component Manuals"
 					on:click={() => {
 						hideMenu = true;
-						navigate("/app/componentmanuals");
+						navigate("/app/references/componentmanuals");
 					}}
 					class="text-xs ml-8 pt-1 pb-1"
 				>
@@ -571,7 +554,7 @@
 					label="Wiring Diagrams"
 					on:click={() => {
 						hideMenu = true;
-						navigate("/app/wiringdiagrams");
+						navigate("/app/references/wiringdiagrams");
 					}}
 					class="text-xs ml-8 pt-1 pb-1"
 				>
@@ -583,7 +566,7 @@
 					label="Software Docs"
 					on:click={() => {
 						hideMenu = true;
-						navigate("/app/softwaredocs");
+						navigate("/app/references/softwaredocs");
 					}}
 					class="text-xs ml-8 pt-1 pb-1"
 				>
@@ -595,7 +578,7 @@
 					label="Field Manuals"
 					on:click={() => {
 						hideMenu = true;
-						navigate("/app/fieldmanuals");
+						navigate("/app/references/fieldmanuals");
 					}}
 					class="text-xs ml-8 pt-1 pb-1"
 				>
@@ -620,7 +603,7 @@
 					class="text-sm"
 					on:click={() => {
 						hideMenu = true;
-						navigate("/app/ftc-status");
+						navigate("/app/ftc");
 					}}
 				>
 					<svelte:fragment slot="icon">
@@ -670,78 +653,22 @@
 			</div>
 		</div>
 		<div class="flex-1 overflow-y-auto">
-			{#if user.token}
-				{#if user?.role === "FTA" || user?.role === "FTAA"}
-					{#if user.meshedEventToken && event.subEvents && user.eventToken === user.meshedEventToken}
-						<Route path="/">
-							<EventDashboard defaultEvents={event.subEvents?.map((e) => e.code)} />
-						</Route>
-					{:else}
-						<Route path="/">
-							<Monitor bind:fullscreen {frameHandler} />
-						</Route>
-					{/if}
-					<Route path="/tickets">
-						<TicketList />
-					</Route>
-				{:else if user?.role === "CSA" || user?.role === "RI"}
-					<Route path="/">
-						<TicketList />
-					</Route>
-					<Route path="/monitor">
-						<Monitor {fullscreen} {frameHandler} />
-					</Route>
-				{/if}
-			{:else}
-				<Route path="/">
-					<Monitor {fullscreen} {frameHandler} />
-				</Route>
-				<Route path="/tickets">
-					<TicketList />
-				</Route>
-			{/if}
-
-			<Route path="/submit-ticket/:eventCode" component={PublicTicketCreate} />
+			<Route path="/manage/*">
+				<ManagementRouter {toast} {installPrompt} />
+			</Route>
+			<Route path="/monitor">
+				<MonitorRouter {fullscreen} />
+			</Route>
+			<Route path="/tickets/*" component={TicketRouter} />
 			<Route path="/notifications" component={NotificationList} />
 			<Route path="/flashcards" component={Flashcard} />
-			<Route path="/notes" component={NoteList} />
-			<Route path="/notes/:teamNumber" let:params>
-				<NoteList teamNumber={params.teamNumber} />
-			</Route>
-			<Route path="/references" component={Reference} />
-			<Route path="/statuslights" component={StatusLights} />
-			<Route path="/fieldmanuals" component={FieldManuals} />
-			<Route path="/componentmanuals" component={ComponentManuals} />
-			<Route path="/softwaredocs" component={SoftwareDocs} />
-			<Route path="/wiringdiagrams" component={WiringDiagrams} />
-			<Route path="/messages/:team" component={Messages} />
-			<Route path="/ticket/:id" component={ViewTicket} />
-			<Route path="/logs">
-				<MatchLogsList {toast} />
-			</Route>
-			<Route path="/logs/:matchid" component={MatchLog} />
-			<Route path="/logs/:matchid/:station" component={StationLog} />
+			<Route path="/notes/*" component={NotesRouter} />
+			<Route path="/references/*" component={ReferencesRouter} />
+			<Route path="/logs/*" component={MatchLogRouter} />
 			<Route path="/checklist" component={Checklist} />
 			<Route path="/dashboard" component={EventDashboard} />
 			<Route path="/event-reports" component={EventReport} />
-			<Route path="/ftc-status" component={FTCStatus} />
-			<Route path="/login">
-				<Login {toast} {installPrompt} />
-			</Route>
-			<Route path="/host">
-				<Host {toast} />
-			</Route>
-			<Route path="/kiosk">
-				<RadioKiosk {toast} />
-			</Route>
-			<Route path="/event-created">
-				<PostEventCreation {toast} />
-			</Route>
-			<Route path="/google-signup">
-				<CompleteGoogleSignup {toast} />
-			</Route>
-			<Route path="/meshed-event" component={MeshedEvent} />
-			<Route path="/manage" component={Management} />
+			<Route path="/ftc" component={FtcRouter} />
 		</div>
 
 		<div class="flex justify-around py-2 bg-neutral-900 dark:bg-neutral-700 text-white {fullscreen && 'bg-white dark:bg-neutral-800'}">
@@ -778,12 +705,12 @@
 							<Icon icon="mdi:message-alert" class="w-8 h-8" />
 						</Button>
 					</Link>
-					<Link to="/app/statuslights">
+					<Link to="/app/references/statuslights">
 						<Button class="!p-2" color="none">
 							<Icon icon="heroicons:sun-16-solid" class="w-8 h-8" />
 						</Button>
 					</Link>
-					<Link to="/app/softwaredocs">
+					<Link to="/app/references/softwaredocs">
 						<Button class="!p-2" color="none">
 							<Icon icon="mdi:file-document-outline" class="w-8 h-8" />
 						</Button>

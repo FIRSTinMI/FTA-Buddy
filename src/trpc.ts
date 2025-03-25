@@ -1,10 +1,10 @@
 import { TRPCError, initTRPC } from '@trpc/server';
-import { db } from './db/db';
-import { and, eq, gt } from 'drizzle-orm';
-import { events, users } from './db/schema';
-import { CreateWSSContextFnOptions } from '@trpc/server/adapters/ws';
 import { CreateHTTPContextOptions } from '@trpc/server/adapters/standalone';
+import { CreateWSSContextFnOptions } from '@trpc/server/adapters/ws';
+import { and, eq, gt } from 'drizzle-orm';
 import SuperJSON from 'superjson';
+import { db } from './db/db';
+import { events, users } from './db/schema';
 
 export const createContext = (opts: CreateHTTPContextOptions | CreateWSSContextFnOptions) => ({
     token: opts.req.headers.authorization?.split(' ')[1],

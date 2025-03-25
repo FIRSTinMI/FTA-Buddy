@@ -31,7 +31,7 @@
 	$: ticket.messages = ticket.messages?.sort((a, b) => a.created_at.getTime() - b.created_at.getTime());
 </script>
 
-<Card href="/app/ticket/{ticket.id}" padding="none" size="none" class="w-full text-black dark:text-white dark:bg-neutral-800">
+<Card href="/app/tickets/view/{ticket.id}" padding="none" size="none" class="w-full text-black dark:text-white dark:bg-neutral-800">
 	<div class="flex flex-col sm:grid sm:grid-cols-[.1fr_auto_.1fr] max-sm:divide-y sm:divide-x divide-gray-500 pt-2 px-4 min-h-32 w-full">
 		<div class="flex flex-row sm:flex-col place-content-between sm:place-content-center p-2 sm:w-40">
 			<p class="font-bold sm:text-center">

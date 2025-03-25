@@ -5,8 +5,6 @@
 	import { eventStore } from "../../stores/event";
 	import { navigate } from "svelte-routing";
 
-	export let toast: (title: string, text: string, color?: string) => void;
-
 	let extensionDetected = false;
 	let extensionEnabled = false;
 	let signalREnabled = false;
@@ -102,7 +100,7 @@
 			<h2 class="text-xl font-bold">WPA Kiosk Tool</h2>
 
 			<span class="text-large">
-				Connect your WPA Kiosk to WiFi and visit <code class="bg-neutral-900 px-2 py-.75 rounded-xl">ftabuddy.com/app/kiosk</code> to setup the extension
+				Connect your WPA Kiosk to WiFi and visit <code class="bg-neutral-900 px-2 py-.75 rounded-xl">ftabuddy.com/app/manage/kiosk</code> to setup the extension
 				on the kiosk. Then radio programming status will be automatically updated on the checklist!
 			</span>
 		</div>

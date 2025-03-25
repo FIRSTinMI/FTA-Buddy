@@ -1,6 +1,5 @@
 import { TournamentLevel } from "@shared/types";
-import { getMatch } from "./fmsapi";
-import { uploadMatchLogs, uploadMatchLogsForMatch } from "./trpc";
+import { uploadMatchLogsForMatch } from "./trpc";
 
 const cloudCheckbox = document.getElementById('cloud') as HTMLInputElement;
 const urlInput = document.getElementById('url') as HTMLInputElement;
@@ -14,7 +13,7 @@ const tokenInput = document.getElementById('eventToken') as HTMLInputElement;
 const matchLevelInput = document.getElementById('match-level') as HTMLInputElement;
 const matchNumberInput = document.getElementById('match-number') as HTMLInputElement;
 const matchPlayInput = document.getElementById('match-play') as HTMLInputElement;
-const matchImportButton = document.getElementById('import') as HTMLButtonElement;
+const matchimportButton = document.getElementById('import') as HTMLButtonElement;
 
 function load() {
     chrome.storage.local.get(['url', 'cloud', 'event', 'eventToken', 'changed', 'enabled', 'signalR'], item => {
@@ -54,7 +53,7 @@ function load() {
         signalREnabled.addEventListener('input', handleUpdate);
         tokenInput.addEventListener('input', handleUpdate);
 
-        matchImportButton.addEventListener('click', async () => {
+        matchimportButton.addEventListener('click', async () => {
             const level = matchLevelInput.value as TournamentLevel;
             const matchNumber = parseInt(matchNumberInput.value);
             const playNumber = parseInt(matchPlayInput.value);

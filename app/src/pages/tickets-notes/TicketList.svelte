@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from "@iconify/svelte";
 	import { Button, Input, Label, Modal, Select, Textarea, Toggle, type SelectOptionType } from "flowbite-svelte";
 	import { SearchOutline } from "flowbite-svelte-icons";
 	import { onMount } from "svelte";
@@ -9,13 +10,14 @@
 	import Spinner from "../../components/Spinner.svelte";
 	import TicketCard from "../../components/TicketCard.svelte";
 	import { trpc } from "../../main";
-	import { settingsStore } from "../../stores/settings";
 	import { eventStore } from "../../stores/event";
-	import { userStore } from "../../stores/user";
 	import { clearNotifications } from "../../stores/notifications";
-	import Icon from "@iconify/svelte";
+	import { settingsStore } from "../../stores/settings";
+	import { userStore } from "../../stores/user";
 
 	let createModalOpen = false;
+
+	export let team: string | undefined;
 
 	const teamNames = Object.fromEntries($eventStore.teams.map((team) => [team.number, team.name]));
 
@@ -144,7 +146,7 @@
 
 		// Create the QR code image
 		const qrCodeImg = doc.createElement("img");
-		qrCodeImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=http://ftabuddy.com/app/submit-ticket/${$eventStore.code}`;
+		qrCodeImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=http://ftabuddy.com/app/tickets/submit/${$eventStore.code}`;
 		qrCodeImg.style.width = "200px";
 		qrCodeImg.style.height = "200px";
 		qrCodeImg.style.border = "2px solid black";
@@ -165,6 +167,8 @@
 	}
 
 	onMount(() => {
+		if (team) search = team;
+
 		getTickets();
 		ticketUpdateSubscription();
 		getPublicTicketCreationState();
@@ -172,8 +176,6 @@
 	});
 
 	let notesPolicyElm: NotesPolicy;
-
-	let team: number | undefined;
 
 	let matchesPromise: ReturnType<typeof trpc.match.getMatchNumbers.query>;
 	let matches: SelectOptionType<string>[] = [];
@@ -211,11 +213,11 @@
 	let ticketText: string = "";
 
 	$: {
-		disableSubmit = team === undefined || typeof team === "string" || ticketText.length === 0 || ticketSubject.length === 0;
+		disableSubmit = team === undefined || ticketText.length === 0 || ticketSubject.length === 0;
 	}
 
 	async function createTicket(evt: SubmitEvent) {
-		if (team === undefined || typeof team === "string" || ticketText.length === 0 || ticketSubject.length === 0) return;
+		if (team === undefined || ticketText.length === 0 || ticketSubject.length === 0) return;
 
 		try {
 			if (!$settingsStore.acknowledgedNotesPolicy) {
@@ -225,21 +227,21 @@
 			let res;
 			if (matchId) {
 				res = await trpc.tickets.create.query({
-					team: team,
+					team: parseInt(team),
 					subject: ticketSubject,
 					text: ticketText,
 					match_id: matchId,
 				});
 			} else {
 				res = await trpc.tickets.create.query({
-					team: team,
+					team: parseInt(team),
 					subject: ticketSubject,
 					text: ticketText,
 					match_id: undefined,
 				});
 			}
 			toast("Ticket created successfully", "success", "green-500");
-			navigate("/app/ticket/" + res.id);
+			navigate("/app/tickets/view/" + res.id);
 		} catch (err: any) {
 			toast("An error occurred while creating the ticket", err.message);
 			console.error(err);
@@ -332,7 +334,7 @@
 	<form class="text-left flex flex-col gap-4" on:submit|preventDefault={createTicket}>
 		<Label class="w-full text-left">
 			Select Team
-			<Select class="mt-2" items={teamOptions} bind:value={team} on:change={() => getMatchesForTeam(team)} />
+			<Select class="mt-2" items={teamOptions} bind:value={team} on:change={() => getMatchesForTeam(parseInt(team ?? "0"))} />
 		</Label>
 
 		<Label for="subject">Ticket Subject:</Label>

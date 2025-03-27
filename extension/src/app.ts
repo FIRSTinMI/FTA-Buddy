@@ -39,7 +39,8 @@ const appExtensionData = chrome.runtime.getManifest();
         } else if (evt.data.type === "enable") {
             enabled = true;
             signalR = true;
-            chrome.storage.local.set({ enabled: enabled, signalR: enabled });
+            await chrome.storage.local.set({ enabled: enabled, signalR: enabled });
+            await enable();
             window.postMessage({
                 source: 'ext',
                 version: appExtensionData.version,
@@ -53,7 +54,8 @@ const appExtensionData = chrome.runtime.getManifest();
             });
         } else if (evt.data.type === "enableNoSignalR") {
             enabled = true;
-            chrome.storage.local.set({ enabled: enabled, signalR: enabled });
+            await chrome.storage.local.set({ enabled: enabled, signalR: enabled });
+            await enableNoSignalR();
             window.postMessage({
                 source: 'ext',
                 version: appExtensionData.version,
@@ -68,7 +70,7 @@ const appExtensionData = chrome.runtime.getManifest();
         } else if (evt.data.type === "eventCode") {
             eventCode = evt.data.code;
             eventToken = evt.data.token;
-            chrome.storage.local.set({ event: eventCode, eventToken });
+            await chrome.storage.local.set({ event: eventCode, eventToken });
             window.postMessage({
                 source: 'ext',
                 version: appExtensionData.version,
@@ -81,10 +83,10 @@ const appExtensionData = chrome.runtime.getManifest();
                 id
             });
             // Restart the extension after configuration changes
-            chrome.extension.getBackgroundPage()?.location.reload();
+            await restart();
         } else if (evt.data.type === "enableSignalR") {
             signalR = true;
-            chrome.storage.local.set({ signalR: signalR });
+            await chrome.storage.local.set({ signalR: signalR });
             window.postMessage({
                 source: 'ext',
                 version: appExtensionData.version,
@@ -96,8 +98,11 @@ const appExtensionData = chrome.runtime.getManifest();
                 fms: await pingFMS(),
                 id
             });
+            await restart();
         } else if (evt.data.type === "getEventCode") {
             window.postMessage(await getEventCode());
+        } else if (evt.data.type === "restart") {
+            await restart();
         }
     });
 })();
@@ -108,4 +113,16 @@ async function pingFMS() {
 
 async function getEventCode() {
     return await chrome.runtime.sendMessage({ type: "getEventCode" });
+}
+
+async function enable() {
+    return await chrome.runtime.sendMessage({ type: "enable" });
+}
+
+async function enableNoSignalR() {
+    return await chrome.runtime.sendMessage({ type: "enableNoSignalR" });
+}
+
+async function restart() {
+    return await chrome.runtime.sendMessage({ type: "restart" });
 }

@@ -70,6 +70,11 @@ async function start() {
                     });
                 });
             });
+        } else if (msg.type === "restart") {
+            chrome.runtime.reload();
+        } else if (msg.type === "enable") {
+            enabled = true;
+            chrome.storage.local.set({ enabled });
         }
         return true;
     });

@@ -1,14 +1,14 @@
+import { TRPCError } from "@trpc/server";
 import { eq, inArray } from "drizzle-orm";
 import { EventEmitter } from "events";
 import { TypedEmitter } from 'tiny-typed-emitter';
 import { eventCodes, events, newEventEmitter } from "..";
 import { DEFAULT_MONITOR } from "../../shared/constants";
-import { TeamList, EventChecklist, ScheduleDetails, ServerEvent, Profile, TicketUpdateEvents, Ticket, Note } from "../../shared/types";
+import { EventChecklist, Note, ScheduleDetails, ServerEvent, TeamList, Ticket, TicketUpdateEvents } from "../../shared/types";
 import { db } from "../db/db";
 import schema from "../db/schema";
-import { getEventTickets } from "../router/tickets";
 import { getEventNotes } from "../router/notes";
-import { TRPCError } from "@trpc/server";
+import { getEventTickets } from "../router/tickets";
 
 
 let loadingEvents: { [key: string]: Promise<ServerEvent>; } = {};
@@ -23,6 +23,13 @@ let loadingEvents: { [key: string]: Promise<ServerEvent>; } = {};
  */
 export async function getEvent(eventToken: string, eventCode?: string) {
     let event: any;
+
+    if (!eventToken && !eventCode) {
+        throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Event token or code must be provided',
+        });
+    }
 
     if (!eventCode) {
         eventCode = eventCodes[eventToken];
@@ -44,6 +51,17 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 
     if (loadingEvents.hasOwnProperty(eventCode)) {
         return await loadingEvents[eventCode];
+    }
+
+    if (!eventToken) {
+        eventToken = (await db.query.events.findFirst({ where: eq(schema.events.code, eventCode) }).then((event) => event?.token)) || '';
+    }
+
+    if (!eventToken) {
+        throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Event not found',
+        });
     }
 
     const ticketUpdateEmitter = new TypedEmitter<TicketUpdateEvents>();

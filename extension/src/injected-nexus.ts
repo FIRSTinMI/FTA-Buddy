@@ -47,7 +47,7 @@ function scrapeTeamList() {
         const text = headerDiv.children[i].textContent?.toLowerCase();
         if (text?.includes('inspect')) {
             inspectionCol = i;
-        } else if (text?.includes('here')) {
+        } else if (text?.includes('here') || text?.includes('on site')) {
             hereCol = i;
         } else if (text?.includes('radio')) {
             radioCol = i;

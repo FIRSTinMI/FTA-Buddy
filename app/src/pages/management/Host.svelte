@@ -1,16 +1,16 @@
 <script lang="ts">
 	import { Button, Helper, Indicator, Input, Label } from "flowbite-svelte";
 	import { onMount } from "svelte";
-	import { userStore } from "../../stores/user";
-	import { eventStore } from "../../stores/event";
-	import { trpc } from "../../main";
 	import { navigate } from "svelte-routing";
-	import Spinner from "../../components/Spinner.svelte";
 	import type { Profile } from "../../../../shared/types";
+	import Spinner from "../../components/Spinner.svelte";
+	import { trpc } from "../../main";
+	import { eventStore } from "../../stores/event";
+	import { userStore } from "../../stores/user";
 
 	export let toast: (title: string, text: string, color?: string) => void;
 
-	const latestExtensionVersion = "1.19";
+	const latestExtensionVersion = "1.22";
 
 	let extensionDetected = false;
 	let extensionEnabled = false;

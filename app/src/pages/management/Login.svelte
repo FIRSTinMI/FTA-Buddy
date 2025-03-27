@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { Button, Input, Label, Select, Modal, type SelectOptionType } from "flowbite-svelte";
-	import { trpc } from "../../main";
-	import { userStore } from "../../stores/user";
-	import { eventStore } from "../../stores/event";
+	import { Button, Input, Label, Modal, Select, type SelectOptionType } from "flowbite-svelte";
 	import { navigate } from "svelte-routing";
-	import Spinner from "../../components/Spinner.svelte";
 	import type { Profile, TeamList } from "../../../../shared/types";
+	import Spinner from "../../components/Spinner.svelte";
+	import { trpc } from "../../main";
+	import { eventStore } from "../../stores/event";
 	import { settingsStore } from "../../stores/settings";
+	import { userStore } from "../../stores/user";
 	import { subscribeToPush } from "../../util/notifications";
 
 	export let toast: (title: string, text: string, color?: string) => void;
@@ -435,7 +435,8 @@
 			<Button
 				on:click={() => {
 					userStore.set({ ...user, eventToken: user.eventToken });
-					setTimeout(() => navigate("/app"), 500);
+					if (user.role === "FTA" || user.role === "FTAA") setTimeout(() => navigate("/app/monitor"), 500);
+					else setTimeout(() => navigate("/app/tickets"), 500);
 				}}
 				bind:disabled={loading}>Join Event</Button
 			>

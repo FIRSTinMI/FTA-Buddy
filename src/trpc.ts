@@ -9,7 +9,7 @@ import { events, users } from './db/schema';
 export const createContext = (opts: CreateHTTPContextOptions | CreateWSSContextFnOptions) => ({
     token: opts.req.headers.authorization?.split(' ')[1],
     eventToken: (opts.req.headers['Event-Token'] || opts.req.headers['event-token'])?.toString(),
-    extensionId: opts.req.headers['Extension-Id']?.toString(),
+    extensionId: (opts.req.headers['Extension-Id']?.toString() || opts.req.headers['extension-id']?.toString()) || undefined,
     userAgent: opts.req.headers['User-Agent']?.toString(),
     ip: opts.req.headers['X-Forwarded-For']?.toString() || opts.req.connection.remoteAddress
 });

@@ -348,6 +348,9 @@ app.get('/', (req, res) => {
     res.redirect('/app/');
 });
 
+app.get('/kiosk', (req, res) => {
+    res.redirect('/app/manage/kiosk');
+});
 
 connect().then(() => {
     if (process.env.NODE_ENV !== 'dev') {

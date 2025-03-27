@@ -28,7 +28,8 @@ async function start() {
                     changed: item.changed || new Date().getTime(),
                     enabled: item.enabled ?? false,
                     signalR: item.signalR ?? false,
-                    eventToken: item.eventToken || ''
+                    eventToken: item.eventToken || '',
+                    id: item.id || crypto.randomUUID()
                 };
                 chrome.storage.local.set(item);
             }
@@ -40,7 +41,8 @@ async function start() {
             enabled = item.enabled;
             signalR = item.signalR;
             eventToken = item.eventToken;
-            id = item.id;
+            id = item.id || crypto.randomUUID();
+            if (id !== item.id) chrome.storage.local.set({ id });
             resolve(void 0);
         });
     });

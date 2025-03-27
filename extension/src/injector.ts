@@ -13,6 +13,11 @@ chrome.storage.local.get(['url', 'cloud', 'event', 'changed', 'enabled', 'signal
         return;
     }
 
+    if (!item.id) {
+        item.id = crypto.randomUUID();
+        chrome.storage.local.set({ id: item.id });
+    }
+
     const script = document.createElement('script');
     script.dataset.host = item.url;
     script.dataset.cloud = item.cloud;

@@ -1,9 +1,10 @@
 <script lang="ts">
+	import Icon from "@iconify/svelte";
 	import { onMount } from "svelte";
+	import { formatTime } from "../../../../shared/formatTime";
+	import type { EventState } from "../../../../src/router/field-monitor";
 	import { trpc } from "../../main";
 	import { userStore } from "../../stores/user";
-	import type { EventState } from "../../../../src/router/field-monitor";
-	import Icon from "@iconify/svelte";
 
 	let subscription: ReturnType<typeof trpc.field.management.subscribe> | null = null;
 
@@ -32,6 +33,18 @@
 					} else {
 						events.push(data);
 					}
+					events = events.sort((a, b) => {
+						if (a.extensions.length === b.extensions.length) {
+							if (a.extensions.length === 0) {
+								return a.code.localeCompare(b.code);
+							} else {
+								const aDate = a.extensions[0].lastFrame;
+								const bDate = b.extensions[0].lastFrame;
+								return bDate.toISOString().split("T")[1].localeCompare(aDate.toISOString().split("T")[1]);
+							}
+						}
+						return b.extensions.length - a.extensions.length;
+					});
 				},
 			}
 		);
@@ -79,9 +92,9 @@
 			{#each event.extensions as extension}
 				<div class="flex items-center gap-2">
 					<p>{extension.ip}</p>
-					<p>{extension.connected}</p>
+					<p>{formatTime(extension.connected)}</p>
 					<p>{extension.frames}</p>
-					<p>{extension.lastFrame}</p>
+					<p>{formatTime(extension.lastFrame)}</p>
 					<p>{extension.checklistUpdates}</p>
 				</div>
 			{/each}

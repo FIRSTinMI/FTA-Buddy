@@ -1,11 +1,11 @@
+import { observable } from "@trpc/server/observable";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { EventChecklist } from "../../shared/types";
-import { eventProcedure, publicProcedure, router } from "../trpc";
 import { db } from "../db/db";
 import { events } from "../db/schema";
-import { eq } from "drizzle-orm";
+import { eventProcedure, publicProcedure, router } from "../trpc";
 import { getEvent } from "../util/get-event";
-import { observable } from "@trpc/server/observable";
 
 export const checklistRouter = router({
     get: eventProcedure.query(async ({ input, ctx }) => {
@@ -29,6 +29,7 @@ export const checklistRouter = router({
         event.checklistEmitter.emit('update', checklist);
 
         let extensionId = ctx.extensionId;
+        console.log('extensionId', extensionId, input.length);
         if (extensionId) {
             let connection = event.stats.extensions.find(e => e.id === extensionId);
             if (!connection) {

@@ -657,7 +657,7 @@
 				<ManagementRouter {toast} {installPrompt} />
 			</Route>
 			<Route path="/monitor">
-				<MonitorRouter {fullscreen} />
+				<MonitorRouter bind:fullscreen />
 			</Route>
 			<Route path="/tickets/*" component={TicketRouter} />
 			<Route path="/notifications" component={NotificationList} />

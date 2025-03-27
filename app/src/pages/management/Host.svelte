@@ -160,7 +160,12 @@
 				{:else}
 					<Indicator color="yellow" class="my-auto" />
 					<span class="text-yellow-300">Extension Not Enabled</span>
-					<button class="text-blue-400 hover:underline" on:click={() => window.postMessage({ source: "page", type: "enable" }, "*")}>Enable</button>
+					<button
+						class="text-blue-400 hover:underline"
+						on:click={async () => {
+							await window.postMessage({ source: "page", type: "enable" }, "*");
+						}}>Enable</button
+					>
 				{/if}
 			{:else}
 				<Indicator color="red" class="my-auto" />

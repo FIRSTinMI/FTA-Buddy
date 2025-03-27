@@ -5,7 +5,7 @@
 	import { frameHandler, subscribeToFieldMonitor } from "../field-monitor";
 	import { userStore } from "../stores/user";
 
-	export let fullscreen;
+	export let fullscreen: boolean;
 
 	let Monitor: any;
 
@@ -30,7 +30,7 @@
 <Router basepath="/monitor">
 	<Route path="/">
 		{#if Monitor}
-			<svelte:component this={Monitor} {frameHandler} {fullscreen} />
+			<svelte:component this={Monitor} {frameHandler} bind:fullscreen />
 		{:else}
 			<div>Loading...</div>
 		{/if}

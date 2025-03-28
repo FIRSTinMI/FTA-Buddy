@@ -33,15 +33,14 @@ function scrapeInspectionStatus() {
     return teams;
 }
 
-function scrapeTeamList() {
+function getColumnIndex() {
     const headerDiv = document.querySelector("nexus-teams > div > div > table > thead > tr");
-    const div = document.querySelector("nexus-teams > div > div > table > tbody");
-
-    if (!div || !headerDiv) throw new Error("Could not find div element");
 
     let inspectionCol = -1;
     let hereCol = -1;
     let radioCol = -1;
+
+    if (!headerDiv) throw new Error("Could not find header div element");
 
     for (let i = 0; i < headerDiv.children.length; i++) {
         const text = headerDiv.children[i].textContent?.toLowerCase();
@@ -54,6 +53,15 @@ function scrapeTeamList() {
         }
     }
 
+    return { inspectionCol, hereCol, radioCol };
+}
+
+function scrapeTeamList() {
+    const div = document.querySelector("nexus-teams > div > div > table > tbody");
+
+    if (!div) throw new Error("Could not find div element");
+
+    const { inspectionCol, hereCol, radioCol } = getColumnIndex();
 
     const teamStatus = [];
     for (let row of Array.from(div.children)) {
@@ -67,17 +75,58 @@ function scrapeTeamList() {
             inspected = row.children[inspectionCol].children[0].classList.contains('bi-check-lg');
         }
 
-        if (headerDiv.children[hereCol]) {
+        if (row.children[hereCol]) {
             here = !row.children[hereCol].children[0].classList.contains('btn-primary');
         }
 
-        if (headerDiv.children[radioCol]) {
+        if (row.children[radioCol]) {
             radio = !row.children[radioCol].children[0].classList.contains('btn-primary');
         }
 
         teamStatus.push({ team: teamNumber, inspected, radio, here });
     }
     return teamStatus;
+}
+
+function updateNexusFromChecklist(checklist: Awaited<ReturnType<typeof trpc.checklist.update.query>>) {
+    const { inspectionCol, hereCol, radioCol } = getColumnIndex();
+    const div = document.querySelector("nexus-teams > div > div > table > tbody");
+    if (!div) throw new Error("Could not find div element");
+
+    const rows = Array.from(div.children);
+    for (let row of rows) {
+        const teamNumber = row.children[0].textContent?.split(' ')[0] as string;
+        const team = checklist[teamNumber];
+        if (team) {
+            if (row.children[radioCol]) {
+                if (!row.children[radioCol].children[0].classList.contains('btn-primary')) {
+                    // Team is checked in nexus
+                } else {
+                    // Team is unchecked in nexus
+                    if (team.radioProgrammed) {
+                        (row.children[radioCol].children[0] as HTMLButtonElement).click();
+                        if (!radioTeams.includes(teamNumber)) {
+                            radioTeams.push(teamNumber);
+                        }
+                    }
+                }
+            }
+
+            if (row.children[hereCol]) {
+                if (row.children[hereCol].children[0].classList.contains('btn-primary')) {
+                    // Team is unchecked in nexus
+                    if (team.present) {
+                        (row.children[hereCol].children[0] as HTMLButtonElement).click();
+                        if (!hereTeams.includes(teamNumber)) {
+                            hereTeams.push(teamNumber);
+                        }
+                    }
+                } else {
+                    // Team is checked in nexus
+                }
+            }
+        }
+    }
 }
 
 setInterval(async () => {
@@ -131,12 +180,14 @@ setInterval(async () => {
 
 
     try {
+        let lastResponse;
+
         if (teamsToSend.length > 0) {
 
             // Send a maximum of 30 updates at a time to prevent exceeding the query length limit
             while (teamsToSend.length > 0) {
                 let chunk = teamsToSend.splice(0, 30);
-                await trpc.checklist.update.query(chunk);
+                lastResponse = await trpc.checklist.update.query(chunk);
 
                 for (let team of chunk) {
                     if (team.key === 'inspected') {
@@ -151,6 +202,10 @@ setInterval(async () => {
                     }
                 }
             }
+        }
+
+        if (lastResponse) {
+            updateNexusFromChecklist(lastResponse);
         }
     } catch (e) {
         console.error(e);

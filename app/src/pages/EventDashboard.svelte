@@ -1,9 +1,9 @@
 <script lang="ts">
-	import EventStatus from "../components/EventStatus.svelte";
-	import { Button, Modal, Select, type SelectOptionType } from "flowbite-svelte";
 	import Icon from "@iconify/svelte";
-	import { trpc } from "../main";
+	import { Button, Modal, Select } from "flowbite-svelte";
 	import { onMount } from "svelte";
+	import EventStatus from "../components/EventStatus.svelte";
+	import { trpc } from "../main";
 
 	const urlParams = new URLSearchParams(window.location.search);
 
@@ -62,7 +62,7 @@
 {/await}
 
 <div class="flex flex-col h-full lg:ml-2 pb-2">
-	<div class="grid {events.length > 0 && 'grid-cols-2'} lg:flex grow justify-center gap-2 pt-2 px-2">
+	<div class="grid {events.length > 0 && (events.length > 4 ? 'grid-cols-3' : 'grid-cols-2')} lg:flex grow justify-center gap-2 pt-2 px-2">
 		{#each events as eventCode}
 			<EventStatus {eventCode} remove={removeEvent} removable={false} />
 		{/each}
@@ -75,9 +75,18 @@
 					}}><Icon icon="mdi:plus" class="size-12" /></Button
 				>
 			</div>
+		{:else if events.length < 6 && (window.innerWidth >= 640 || events.length === 0) && !defaultEvents}
+			<div class="relative flex items-end justify-end {events.length > 0 && 'w-0 right-8 bottom-8'}">
+				<Button
+					class="h-16"
+					on:click={() => {
+						eventSelectorOpen = true;
+					}}><Icon icon="mdi:plus" class="size-12" /></Button
+				>
+			</div>
 		{/if}
 	</div>
-	{#if window.innerWidth < 640 && events.length < 4 && events.length > 0 && !defaultEvents}
+	{#if window.innerWidth < 640 && events.length < 6 && events.length > 0 && !defaultEvents}
 		<div class="flex justify-center">
 			<Button
 				on:click={() => {

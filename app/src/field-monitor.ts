@@ -69,23 +69,38 @@ export async function subscribeToFieldMonitor() {
         eventToken: get(userStore).eventToken
     }, {
         onData: (data) => {
+            console.log(data);
             frameHandler.feed(data);
+        },
+        onStarted: () => {
+            console.log('Field monitor started');
         }
     });
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     fieldStateSubscription = await trpc.field.fieldStatus.subscribe({
         eventToken: get(userStore).eventToken
     }, {
         onData: (data) => {
+            console.log(data);
             frameHandler.fieldStatusChange(data);
+        },
+        onStarted: () => {
+            console.log('Field status started');
         }
     });
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     robotStateSubscription = await trpc.field.robotStatus.subscribe({
         eventToken: get(userStore).eventToken
     }, {
         onData: (data) => {
             frameHandler.robotStatusChange(data);
+        },
+        onStarted: () => {
+            console.log('Robot status started');
         }
     });
 }

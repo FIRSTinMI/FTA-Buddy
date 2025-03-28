@@ -1,14 +1,14 @@
-import { z } from "zod";
-import { DSState, EnableState, FieldState, MonitorFrame, StateChange, TournamentLevel } from "../../shared/types";
-import { eventProcedure, publicProcedure, router } from "../trpc";
-import { getEvent } from "../util/get-event";
 import { observable } from "@trpc/server/observable";
-import { detectRadioNoDs, detectStatusChange, processFrameForTeamData, processTeamCycles, processTeamWarnings } from "../util/frame-processing";
+import { and, eq, gt } from "drizzle-orm";
+import { z } from "zod";
 import { events, newEventEmitter } from "..";
 import { formatTimeShortNoAgoSeconds } from "../../shared/formatTime";
-import { users } from "../db/schema";
-import { and, eq, gt } from "drizzle-orm";
+import { DSState, EnableState, FieldState, MonitorFrame, StateChange, TournamentLevel } from "../../shared/types";
 import { db } from "../db/db";
+import { users } from "../db/schema";
+import { eventProcedure, publicProcedure, router } from "../trpc";
+import { detectStatusChange, processFrameForTeamData, processTeamCycles, processTeamWarnings } from "../util/frame-processing";
+import { getEvent } from "../util/get-event";
 
 export interface Post {
     type: 'test';
@@ -157,6 +157,7 @@ export const fieldMonitorRouter = router({
         const event = await getEvent(input.eventToken);
 
         return observable<MonitorFrame>((emitter) => {
+            console.log('robots subscription', event.code);
             const listener = (frame: MonitorFrame) => {
                 emitter.next(frame);
             };
@@ -184,6 +185,7 @@ export const fieldMonitorRouter = router({
         const event = await getEvent(input.eventToken);
 
         return observable<StateChange>((emitter) => {
+            console.log('robot status subscription', event.code);
             const listener = (change: StateChange) => {
                 emitter.next(change);
             };
@@ -202,11 +204,14 @@ export const fieldMonitorRouter = router({
         const event = await getEvent(input.eventToken);
 
         return observable<FieldState>((emitter) => {
+            console.log('field status subscription', event.code);
             const listener = (state: FieldState) => {
                 emitter.next(state);
             };
 
-            event.fieldStatusEmitter.on('change', listener);
+            event.fieldStatusEmitter.on('change', (state) => {
+                listener(state);
+            });
 
             return () => {
                 event.fieldStatusEmitter.off('change', listener);
@@ -236,7 +241,6 @@ export const fieldMonitorRouter = router({
                 console.log('new event', eventCode);
                 const event = events[eventCode];
                 const listener = (frame: MonitorFrame) => {
-                    console.log('update', frame);
                     emitter.next({
                         code: event.code,
                         name: event.name,

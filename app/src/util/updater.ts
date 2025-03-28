@@ -1,7 +1,7 @@
 import { get } from "svelte/store";
-import { userStore } from "../stores/user";
 import { eventStore } from "../stores/event";
 import { settingsStore } from "../stores/settings";
+import { userStore } from "../stores/user";
 
 interface Version {
     changelog: string;
@@ -9,6 +9,16 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version; } = {
+    '2.6.7': {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.6.7</h1>
+        <ul>
+        <li>Fixed cycle timer not resetting when match starts</li>
+        <li>App should load faster on slow connections</li>
+        <li>Extension <strong>v1.23</strong> should be more stable</li>
+        </ul>`,
+        update: () => { }
+    },
     '2.6.6': {
         changelog: `
         <h1 class="text-lg font-bold">v2.6.6</h1>

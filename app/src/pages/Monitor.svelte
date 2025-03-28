@@ -38,7 +38,9 @@
 
 	onMount(async () => {
 		const lastPrestart = await trpc.cycles.getLastPrestart.query();
+		const lastMatchStart = await trpc.cycles.getLastMatchStart.query();
 		if (lastPrestart) matchStartTime = lastPrestart;
+		if (lastMatchStart) matchStartTime = lastMatchStart;
 
 		monitorFrame = frameHandler.getFrame();
 
@@ -116,6 +118,12 @@
 		if (!calculatedCycleTime || calculatedCycleTime === lastCycleTimeMS) {
 			lastCycleTime = formatTimeShortNoAgo(matchStartTime);
 			lastCycleTimeMS = new Date().getTime() - matchStartTime.getTime();
+			setTimeout(async () => {
+				let lastCycleTimeMS = frameHandler.getLastCycleTime();
+				if (lastCycleTimeMS) {
+					lastCycleTime = formatTimeShortNoAgo(new Date(new Date().getTime() - lastCycleTimeMS));
+				}
+			}, 1000);
 		} else {
 			lastCycleTime = formatTimeShortNoAgoSeconds(calculatedCycleTime);
 		}

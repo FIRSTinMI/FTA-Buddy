@@ -1,18 +1,18 @@
 <script lang="ts">
+	import Icon from "@iconify/svelte";
+	import { Button } from "flowbite-svelte";
+	import { onDestroy, onMount } from "svelte";
+	import { cycleTimeToMS } from "../../../shared/cycleTimeToMS";
+	import { formatTimeShortNoAgo, formatTimeShortNoAgoSeconds } from "../../../shared/formatTime";
 	import { FieldState, MatchState, MatchStateMap, ROBOT, type MonitorFrame, type ScheduleDetails } from "../../../shared/types";
 	import MonitorRow from "../components/MonitorRow.svelte";
-	import TeamModal from "../components/TeamModal.svelte";
-	import { formatTimeShortNoAgo, formatTimeShortNoAgoMinutesOnly, formatTimeShortNoAgoSeconds } from "../../../shared/formatTime";
-	import type { MonitorEvent, MonitorFrameHandler } from "../util/monitorFrameHandler";
-	import { onDestroy, onMount } from "svelte";
-	import { trpc } from "../main";
-	import { cycleTimeToMS } from "../../../shared/cycleTimeToMS";
-	import { userStore } from "../stores/user";
-	import { audioQueuer } from "../field-monitor";
 	import Spinner from "../components/Spinner.svelte";
+	import TeamModal from "../components/TeamModal.svelte";
+	import { audioQueuer } from "../field-monitor";
+	import { trpc } from "../main";
+	import { userStore } from "../stores/user";
+	import type { MonitorEvent, MonitorFrameHandler } from "../util/monitorFrameHandler";
 	import { updateScheduleText } from "../util/schedule-detail-formatter";
-	import { Button } from "flowbite-svelte";
-	import Icon from "@iconify/svelte";
 
 	export let frameHandler: MonitorFrameHandler;
 	let monitorFrame: MonitorFrame | undefined = frameHandler.getFrame();
@@ -21,7 +21,6 @@
 	frameHandler.addEventListener("frame", (evt) => {
 		loading = false;
 		monitorFrame = (evt as MonitorEvent).detail.frame;
-		console.log(monitorFrame.exactAheadBehind);
 	});
 
 	let lastCycleTime = "";
@@ -110,6 +109,7 @@
 	});
 
 	frameHandler.addEventListener("match-start", async (evt) => {
+		console.log("match-start");
 		currentCycleIsBest = false;
 		calculatedCycleTime = calculatedCycleTime || frameHandler.getLastCycleTime();
 		// Doesn't always update quick enough

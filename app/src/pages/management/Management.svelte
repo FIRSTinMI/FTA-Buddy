@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Icon from "@iconify/svelte";
+	import { Button, Input } from "flowbite-svelte";
 	import { onMount } from "svelte";
 	import { formatTime } from "../../../../shared/formatTime";
 	import type { EventState } from "../../../../src/router/field-monitor";
@@ -64,7 +65,33 @@
 		10: "Ready for Post Result",
 		11: "Match Not Ready",
 	};
+
+	let message = "";
+	let effectedEvents = "";
+
+	async function startIssue(message: string, effectedEvents: string[]) {
+		console.log(
+			await trpc.app.startIssue.mutate({
+				message,
+				effectedEvents: effectedEvents.filter((e) => e !== ""),
+			})
+		);
+	}
+
+	async function endIssue() {
+		console.log(await trpc.app.endIssue.mutate());
+	}
 </script>
+
+<div class="max-w-2xl mx-auto flex flex-col gap-2 p-4">
+	<p>Start Known Issue</p>
+	<Input type="text" placeholder="Message" bind:value={message} class="mb-2" />
+	<Input type="text" placeholder="Effected Events" bind:value={effectedEvents} class="mb-2" />
+	<div class="flex gap-2">
+		<Button on:click={() => startIssue(message, effectedEvents.split(","))}>Start</Button>
+		<Button on:click={endIssue}>End Known Issue</Button>
+	</div>
+</div>
 
 <div class="grid grid-cols-6 gap-2 mx-auto max-w-5xl">
 	<p>Name</p>

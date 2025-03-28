@@ -29,13 +29,14 @@ import { matchRouter } from './router/logs';
 import { addTicketMessageFromSlack, messagesRouter } from './router/messages';
 import { ticketsRouter, updateTicketAssignmentFromSlack, updateTicketStatusFromSlack } from './router/tickets';
 import { userRouter } from './router/user';
-import { createContext, publicProcedure, router } from './trpc';
+import { adminProcedure, createContext, publicProcedure, router } from './trpc';
 import { getTeamAverageCycle } from './util/team-cycles';
 const pjson = require('../package.json');
 //import { initializePushNotifications } from '../app/src/util/push-notifications';
 import bodyParser from 'body-parser';
 import { EventEmitter } from 'events';
 import { TypedEmitter } from 'tiny-typed-emitter';
+import { z } from 'zod';
 import { ftcRouter } from './router/ftc';
 import { notesRouter } from './router/notes';
 import { decompressStationLog, logAnalysisLoop } from './util/log-analysis';
@@ -50,6 +51,19 @@ export const eventCodes: { [key: string]: string; } = {};
 // event emitter for all notifications
 export const notificationEmitter = new TypedEmitter<NotificationEvents>();
 export const newEventEmitter = new EventEmitter();
+export let knownIssue: {
+    current: boolean;
+    message: string;
+    startTime: Date | null;
+    endTime: Date | null;
+    effectedEvents: string[];
+} = {
+    current: false,
+    message: '',
+    startTime: null,
+    endTime: null,
+    effectedEvents: []
+};
 
 // TRPC Server
 const appRouter = router({
@@ -72,7 +86,41 @@ const appRouter = router({
                 emitter.next(pjson.version ?? 'dev');
                 return () => clearInterval(interval);
             });
-        })
+        }),
+        status: publicProcedure.subscription(async ({ input }) => {
+            return observable<typeof knownIssue>((emitter) => {
+                const interval = setInterval(() => {
+                    emitter.next(knownIssue);
+                }, 20000);
+
+                emitter.next(knownIssue);
+
+                return () => clearInterval(interval);
+            });
+        }),
+        startIssue: adminProcedure.input(z.object({
+            message: z.string(),
+            effectedEvents: z.array(z.string())
+        })).mutation(async ({ input }) => {
+            knownIssue = {
+                current: true,
+                message: input.message,
+                startTime: new Date(),
+                endTime: null,
+                effectedEvents: input.effectedEvents
+            };
+            return knownIssue;
+        }),
+        endIssue: adminProcedure.mutation(async () => {
+            knownIssue = {
+                current: false,
+                message: knownIssue.message,
+                startTime: knownIssue.startTime,
+                endTime: new Date(),
+                effectedEvents: knownIssue.effectedEvents
+            };
+            return knownIssue;
+        }),
     }),
     ftc: ftcRouter
 });

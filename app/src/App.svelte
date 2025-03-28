@@ -5,6 +5,7 @@
 	import { Link, Route, Router, navigate } from "svelte-routing";
 	import { sineIn } from "svelte/easing";
 	import { get } from "svelte/store";
+	import { formatTime } from "../../shared/formatTime";
 	import SettingsModal from "./components/SettingsModal.svelte";
 	import UpdateToast from "./components/UpdateToast.svelte";
 	import WelcomeModal from "./components/WelcomeModal.svelte";
@@ -175,14 +176,15 @@
 	let toastTitle = "";
 	let toastText = "";
 	let toastColor = "red-500";
-	function toast(title: string, text: string, color = "red-500") {
+	function toast(title: string, text: string, color = "red-500", timeout = 5000) {
 		toastTitle = title;
 		toastText = text;
 		toastColor = color;
 		showToast = true;
+		if (timeout < 0) return;
 		setTimeout(() => {
 			showToast = false;
-		}, 5000);
+		}, timeout);
 	}
 
 	(window as any).toast = toast;
@@ -264,6 +266,34 @@
 			navigate("/app/tickets");
 		}
 	}
+
+	let statusSubscription: ReturnType<typeof trpc.app.status.subscribe> | undefined;
+	let knownIssue = false;
+	async function subscribeToStatus() {
+		if (statusSubscription) {
+			statusSubscription.unsubscribe();
+		}
+		statusSubscription = await trpc.app.status.subscribe(undefined, {
+			onData: (data) => {
+				console.log(data);
+				if (data.current && (!event.code || data.effectedEvents.includes(event.code) || data.effectedEvents.length < 1)) {
+					if (!knownIssue) {
+						toast("Issue", data.message + " Started " + formatTime(data.startTime || new Date()), "red-500", -1);
+					}
+					knownIssue = true;
+				} else {
+					if (knownIssue) {
+						toast("Resolved", "The issue has been resolved", "green-500");
+					}
+					knownIssue = false;
+				}
+			},
+		});
+	}
+
+	onMount(async () => {
+		subscribeToStatus();
+	});
 </script>
 
 {#if showToast}

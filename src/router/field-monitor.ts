@@ -217,6 +217,29 @@ export const fieldMonitorRouter = router({
         });
     }),
 
+    combinedSubscription: publicProcedure.input(z.object({
+        eventToken: z.string()
+    })).subscription(async ({ input }) => {
+        const event = await getEvent(input.eventToken);
+
+        return observable<MonitorFrame | StateChange | FieldState>((emitter) => {
+            console.log('combined subscription', event.code);
+            const listener = (state: MonitorFrame | StateChange | FieldState) => {
+                emitter.next(state);
+            };
+
+            event.fieldMonitorEmitter.on('update', listener);
+            event.robotStateChangeEmitter.on('change', listener);
+            event.fieldStatusEmitter.on('change', listener);
+
+            return () => {
+                event.fieldMonitorEmitter.off('update', listener);
+                event.robotStateChangeEmitter.off('change', listener);
+                event.fieldStatusEmitter.off('change', listener);
+            };
+        });
+    }),
+
     management: publicProcedure.input(z.object({
         token: z.string()
     })).subscription(async ({ input }) => {

@@ -115,6 +115,7 @@
 		currentCycleIsBest = false;
 		calculatedCycleTime = calculatedCycleTime || frameHandler.getLastCycleTime();
 		// Doesn't always update quick enough
+		console.log(calculatedCycleTime, lastCycleTimeMS, frameHandler.getLastCycleTime());
 		if (!calculatedCycleTime || calculatedCycleTime === lastCycleTimeMS) {
 			lastCycleTime = formatTimeShortNoAgo(matchStartTime);
 			lastCycleTimeMS = new Date().getTime() - matchStartTime.getTime();

@@ -52,57 +52,77 @@ const stops: { [key in ROBOT]: { a: boolean, e: boolean; } } = {
     blue3: { a: false, e: false }
 };
 
-let subscription: ReturnType<typeof trpc.field.robots.subscribe>;
-let fieldStateSubscription: ReturnType<typeof trpc.field.fieldStatus.subscribe>;
-let robotStateSubscription: ReturnType<typeof trpc.field.robotStatus.subscribe>;
+// let subscription: ReturnType<typeof trpc.field.robots.subscribe>;
+// let fieldStateSubscription: ReturnType<typeof trpc.field.fieldStatus.subscribe>;
+// let robotStateSubscription: ReturnType<typeof trpc.field.robotStatus.subscribe>;
+
+let combinedSubscription: ReturnType<typeof trpc.field.combinedSubscription.subscribe>;
 
 export async function subscribeToFieldMonitor() {
-    subscription?.unsubscribe();
-    fieldStateSubscription?.unsubscribe();
-    robotStateSubscription?.unsubscribe();
+    combinedSubscription?.unsubscribe();
+    // subscription?.unsubscribe();
+    // fieldStateSubscription?.unsubscribe();
+    // robotStateSubscription?.unsubscribe();
 
     if (!get(userStore).eventToken) return;
 
     frameHandler.setHistory(await trpc.field.history.query());
 
-    subscription = await trpc.field.robots.subscribe({
+    combinedSubscription = await trpc.field.combinedSubscription.subscribe({
         eventToken: get(userStore).eventToken
     }, {
         onData: (data) => {
             console.log(data);
-            frameHandler.feed(data);
-        },
-        onStarted: () => {
-            console.log('Field monitor started');
+            if (typeof data === 'object') {
+                if ('field' in data) {
+                    frameHandler.feed(data);
+                } else if ('station' in data) {
+                    frameHandler.robotStatusChange(data);
+                }
+            } else {
+                frameHandler.fieldStatusChange(data as FieldState);
+            }
         }
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // subscription = await trpc.field.robots.subscribe({
+    //     eventToken: get(userStore).eventToken
+    // }, {
+    //     onData: (data) => {
+    //         console.log(data);
+    //         frameHandler.feed(data);
+    //     },
+    //     onStarted: () => {
+    //         console.log('Field monitor started');
+    //     }
+    // });
 
-    fieldStateSubscription = await trpc.field.fieldStatus.subscribe({
-        eventToken: get(userStore).eventToken
-    }, {
-        onData: (data) => {
-            console.log(data);
-            frameHandler.fieldStatusChange(data);
-        },
-        onStarted: () => {
-            console.log('Field status started');
-        }
-    });
+    // await new Promise((resolve) => setTimeout(resolve, 100));
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // fieldStateSubscription = await trpc.field.fieldStatus.subscribe({
+    //     eventToken: get(userStore).eventToken
+    // }, {
+    //     onData: (data) => {
+    //         console.log(data);
+    //         frameHandler.fieldStatusChange(data);
+    //     },
+    //     onStarted: () => {
+    //         console.log('Field status started');
+    //     }
+    // });
 
-    robotStateSubscription = await trpc.field.robotStatus.subscribe({
-        eventToken: get(userStore).eventToken
-    }, {
-        onData: (data) => {
-            frameHandler.robotStatusChange(data);
-        },
-        onStarted: () => {
-            console.log('Robot status started');
-        }
-    });
+    // await new Promise((resolve) => setTimeout(resolve, 100));
+
+    // robotStateSubscription = await trpc.field.robotStatus.subscribe({
+    //     eventToken: get(userStore).eventToken
+    // }, {
+    //     onData: (data) => {
+    //         frameHandler.robotStatusChange(data);
+    //     },
+    //     onStarted: () => {
+    //         console.log('Robot status started');
+    //     }
+    // });
 }
 
 // Register event listeners for various frame events

@@ -9,6 +9,15 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version; } = {
+    '2.6.8': {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.6.8</h1>
+        <ul>
+        <li>Moved to using one subscription for everything to try and fix weird issues with changes in field state not being detected</li>
+        <li>Some changes to cycle time display which should make it work better after reloading the page</li>
+        </ul>`,
+        update: () => { }
+    },
     '2.6.7': {
         changelog: `
         <h1 class="text-lg font-bold">v2.6.7</h1>

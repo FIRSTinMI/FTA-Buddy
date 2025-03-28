@@ -209,9 +209,7 @@ export const fieldMonitorRouter = router({
                 emitter.next(state);
             };
 
-            event.fieldStatusEmitter.on('change', (state) => {
-                listener(state);
-            });
+            event.fieldStatusEmitter.on('change', listener);
 
             return () => {
                 event.fieldStatusEmitter.off('change', listener);

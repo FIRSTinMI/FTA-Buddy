@@ -1,19 +1,16 @@
-import { z } from "zod";
-import { eventProcedure, publicProcedure, router } from "../trpc";
-import { getEvent } from "../util/get-event";
 import { observable } from "@trpc/server/observable";
+import { randomUUID } from "crypto";
+import { and, asc, desc, eq, isNotNull } from "drizzle-orm";
+import { z } from "zod";
+import { cycleTimeToMS } from "../../shared/cycleTimeToMS";
+import { formatTimeShortNoAgoSeconds } from "../../shared/formatTime";
 import { CycleData } from "../../shared/types";
 import { db } from "../db/db";
 import { cycleLogs, events } from "../db/schema";
-import { and, asc, eq, isNotNull, desc, exists } from "drizzle-orm";
-import { randomUUID } from "crypto";
-import { getTeamAverageCycle } from "../util/team-cycles";
-import { cycleTimeToMS } from "../../shared/cycleTimeToMS";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-import { existsSync, mkdirSync } from "fs";
-import { formatTimeShortNoAgoSeconds } from "../../shared/formatTime";
+import { eventProcedure, publicProcedure, router } from "../trpc";
+import { getEvent } from "../util/get-event";
 import { generateReport } from "../util/report-generator";
+import { getTeamAverageCycle } from "../util/team-cycles";
 
 export const cycleRouter = router({
     postCycleTime: publicProcedure.input(z.object({
@@ -157,6 +154,11 @@ export const cycleRouter = router({
             }
             return lastPrestartFromDB[0].prestart_time;
         }
+    }),
+
+    getLastMatchStart: eventProcedure.query(async ({ ctx }) => {
+        const event = await getEvent(ctx.eventToken ?? '');
+        return event.lastMatchStart ?? null;
     }),
 
     getLastCycleTime: eventProcedure.query(async ({ ctx }) => {

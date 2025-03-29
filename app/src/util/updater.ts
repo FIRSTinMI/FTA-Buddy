@@ -9,6 +9,7 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version; } = {
+    '2.6.8.2': {},
     '2.6.8.1': {},
     '2.6.8': {
         changelog: `
@@ -350,7 +351,7 @@ export function update(currentVersion: string, newVersion: string, openWelcome: 
 
         const updateIsOnlyPatch = currentVersion.split(".").slice(0, 3).join(".") === newVersion.split(".").slice(0, 3).join(".");
 
-        if (!dontShowDialogs || updateIsOnlyPatch) openChangelog(changelog);
+        if (!dontShowDialogs && !updateIsOnlyPatch && changelog !== '') openChangelog(changelog);
 
         console.log("Queued updates: " + updatesToDo.join(", "));
 

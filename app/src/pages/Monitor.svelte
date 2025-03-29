@@ -166,8 +166,10 @@
 				current: lastCycleTimeMS,
 				new: frameHandler.getLastCycleTime(),
 			});
+			lastCycleTimeMS = frameHandler.getLastCycleTime() || 0;
+			lastCycleTime = formatTimeShortNoAgoSeconds(lastCycleTimeMS);
 		}
-	}, 10000);
+	}, 1000);
 
 	const FieldStates = {
 		0: "Unknown",

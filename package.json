@@ -1,6 +1,6 @@
 {
     "name": "fta-buddy",
-    "version": "2.6.8.1",
+    "version": "2.6.8.2",
     "description": "",
     "scripts": {
         "start": "npx tsx ./src/index.ts",

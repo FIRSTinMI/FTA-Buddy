@@ -72,7 +72,6 @@ export async function subscribeToFieldMonitor() {
         eventToken: get(userStore).eventToken
     }, {
         onData: (data) => {
-            console.log(data);
             if (typeof data === 'object') {
                 if ('field' in data) {
                     frameHandler.feed(data);

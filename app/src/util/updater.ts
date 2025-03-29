@@ -9,6 +9,7 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version; } = {
+    '2.6.8.3': {},
     '2.6.8.2': {},
     '2.6.8.1': {},
     '2.6.8': {

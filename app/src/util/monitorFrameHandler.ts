@@ -1,17 +1,17 @@
 import { cycleTimeToMS } from "../../../shared/cycleTimeToMS";
-import { DSState, FieldState, MatchState, MatchStateMap, ROBOT, StateChangeType, type MonitorFrame, type StateChange, type RobotInfo } from "../../../shared/types";
+import { DSState, FieldState, MatchState, MatchStateMap, ROBOT, StateChangeType, type MonitorFrame, type RobotInfo, type StateChange } from "../../../shared/types";
 
 export interface MonitorEvent extends CustomEvent {
     detail: {
         robot: ROBOT;
         frame: MonitorFrame;
         match: MatchState;
-    }
+    };
 }
 
 export class MonitorFrameHandler extends EventTarget {
     private frames: MonitorFrame[] = [];
-    private alertsPlayed: {[key in ROBOT]: {ds: boolean, radio: boolean, rio: boolean, code: boolean}} = {
+    private alertsPlayed: { [key in ROBOT]: { ds: boolean, radio: boolean, rio: boolean, code: boolean; } } = {
         red1: { ds: false, radio: false, rio: false, code: false },
         red2: { ds: false, radio: false, rio: false, code: false },
         red3: { ds: false, radio: false, rio: false, code: false },
@@ -160,7 +160,6 @@ export class MonitorFrameHandler extends EventTarget {
     public getLastCycleTime() {
         const thisFrame = this.getFrame();
         const lastCycleTime = thisFrame?.lastCycleTime;
-        console.log(lastCycleTime);
         if (lastCycleTime) {
             return cycleTimeToMS(lastCycleTime);
         } else {

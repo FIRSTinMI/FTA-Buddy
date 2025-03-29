@@ -114,18 +114,20 @@
 		console.log("match-start");
 		currentCycleIsBest = false;
 		calculatedCycleTime = calculatedCycleTime || frameHandler.getLastCycleTime();
+
+		console.log({
+			calculatedCycleTime,
+			lastCycleTime: frameHandler.getLastCycleTime(),
+			ourCycleTime: new Date().getTime() - matchStartTime.getTime(),
+			serverCycleTime: cycleTimeToMS((await trpc.cycles.getLastCycleTime.query()) ?? "-1"),
+		});
+
 		// Doesn't always update quick enough
-		console.log(calculatedCycleTime, lastCycleTimeMS, frameHandler.getLastCycleTime());
 		if (!calculatedCycleTime || calculatedCycleTime === lastCycleTimeMS) {
 			lastCycleTime = formatTimeShortNoAgo(matchStartTime);
 			lastCycleTimeMS = new Date().getTime() - matchStartTime.getTime();
-			setTimeout(async () => {
-				let lastCycleTimeMS = frameHandler.getLastCycleTime();
-				if (lastCycleTimeMS) {
-					lastCycleTime = formatTimeShortNoAgo(new Date(new Date().getTime() - lastCycleTimeMS));
-				}
-			}, 1000);
 		} else {
+			lastCycleTimeMS = calculatedCycleTime;
 			lastCycleTime = formatTimeShortNoAgoSeconds(calculatedCycleTime);
 		}
 		if (lastCycleTimeMS < bestCycleTimeMS) {
@@ -142,6 +144,9 @@
 			monitorFrame?.level ?? "",
 			averageCycleTimeMS
 		);
+
+		// Reset the cycle time so it doesn't screw up the next match's cycle time
+		calculatedCycleTime = undefined;
 	});
 
 	setInterval(() => {
@@ -154,6 +159,15 @@
 
 		currentCycleTime = formatTimeShortNoAgo(matchStartTime);
 	}, 1000);
+
+	setInterval(() => {
+		if (lastCycleTimeMS !== frameHandler.getLastCycleTime()) {
+			console.log("Cycle time is not matching", {
+				current: lastCycleTimeMS,
+				new: frameHandler.getLastCycleTime(),
+			});
+		}
+	}, 10000);
 
 	const FieldStates = {
 		0: "Unknown",

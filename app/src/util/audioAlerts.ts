@@ -100,6 +100,24 @@ const musicClips: MusicClips = {
         'music-minecraft10.ogg',
         'music-minecraft11.ogg',
         'music-minecraft12.ogg',
+    ],
+    pokemon: [
+        'music-pokemon0.ogg',
+        'music-pokemon1.ogg',
+        'music-pokemon2.ogg',
+        'music-pokemon3.ogg',
+        'music-pokemon4.ogg',
+        'music-pokemon5.ogg',
+        'music-pokemon6.ogg',
+        'music-pokemon7.ogg',
+        'music-pokemon8.ogg',
+        'music-pokemon9.ogg',
+        'music-pokemon10.ogg',
+        'music-pokemon11.ogg',
+        'music-pokemon12.ogg',
+        'music-pokemon13.ogg',
+        'music-pokemon14.ogg',
+        'music-pokemon15.ogg',
     ]
 };
 
@@ -113,6 +131,7 @@ interface MusicClips {
     jazz: string[];
     lofi: string[];
     minecraft: string[];
+    pokemon: string[];
 }
 
 export class AudioQueuer {

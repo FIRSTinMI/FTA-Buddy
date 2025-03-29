@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { Button, Label, Modal, Select, Toggle, Range, type SelectOptionType } from "flowbite-svelte";
-	import { get, derived } from "svelte/store";
-	import { settingsStore } from "../stores/settings";
-	import Spinner from "./Spinner.svelte";
+	import { Button, Label, Modal, Range, Select, Toggle, type SelectOptionType } from "flowbite-svelte";
+	import { derived, get } from "svelte/store";
 	import { toast } from "../../../shared/toast";
-	import { startNotificationSubscription, stopNotificationSubscription, subscribeToPush } from "../util/notifications";
 	import { audioQueuer } from "../field-monitor";
 	import { trpc } from "../main";
+	import { settingsStore } from "../stores/settings";
 	import { userStore } from "../stores/user";
+	import { startNotificationSubscription, stopNotificationSubscription, subscribeToPush } from "../util/notifications";
+	import Spinner from "./Spinner.svelte";
 
 	export let settingsOpen = false;
 	export const userRole = derived(userStore, ($userStore) => $userStore.role);
@@ -152,6 +152,7 @@
 						{ value: "jazz", name: "Jazz" },
 						{ value: "lofi", name: "Lofi" },
 						{ value: "minecraft", name: "C418 - Minecraft" },
+						{ value: "pokemon", name: "Pokemon" },
 					]}
 					bind:value={settings.musicType}
 					on:change={updateSettings}

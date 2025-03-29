@@ -9,6 +9,13 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version; } = {
+    '2.6.8.4': {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.6.8.4</h1>
+        <ul>
+        <li>Added Pokemon Music Pack</li>
+        </ul>`,
+    },
     '2.6.8.3': {},
     '2.6.8.2': {},
     '2.6.8.1': {},

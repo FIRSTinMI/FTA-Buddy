@@ -7,3 +7,5 @@ dist/*
 FieldMonitor.ts
 reports/*
 oauth2.keys.json
+app/public/music/*
+app/public/audio/*

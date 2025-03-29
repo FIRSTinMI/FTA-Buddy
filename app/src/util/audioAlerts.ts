@@ -255,7 +255,7 @@ export class AudioQueuer {
     private getClip(key: string): HTMLAudioElement {
         if (loadedClips[key]) return loadedClips[key];
         const name = key.split('-');
-        const clip = new Audio(`/app/${name[0]}/${name[1]}`);
+        const clip = new Audio(`https://storage.googleapis.com/ftabuddy/${name[0]}/${name[1]}`);
         clip.load();
         loadedClips[key] = clip;
         return clip;

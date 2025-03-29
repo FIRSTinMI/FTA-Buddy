@@ -324,7 +324,7 @@ async function getAverageCycleTime(eventCode: string, rollingAverage: number = 1
     const cycles = await db.query.cycleLogs.findMany({ where: eq(cycleLogs.event, eventCode), limit: rollingAverage < 0 ? 10000 : rollingAverage * 3, orderBy: desc(cycleLogs.start_time) });
 
     // Extract the cycle times in milliseconds
-    const cycleTimes = cycles
+    let cycleTimes = cycles
         .filter(cycle => cycle.calculated_cycle_time !== null)
         .map(cycle => cycleTimeToMS(cycle.calculated_cycle_time ?? '0:00'));
 
@@ -332,8 +332,12 @@ async function getAverageCycleTime(eventCode: string, rollingAverage: number = 1
         return 8 * 60 * 1000;
     }
 
+    if (rollingAverage > 0) {
+        cycleTimes = cycleTimes.slice(0, rollingAverage);
+    }
+
     // Sort the cycle times
-    cycleTimes.sort((a, b) => (a ?? 0) - (b ?? 0));
+    cycleTimes = cycleTimes.sort((a, b) => (a ?? 0) - (b ?? 0));
 
     // Calculate Q1 (25th percentile) and Q3 (75th percentile)
     const q1 = cycleTimes[Math.floor((cycleTimes.length / 4))] ?? (5 * 60 * 1000);
@@ -346,9 +350,6 @@ async function getAverageCycleTime(eventCode: string, rollingAverage: number = 1
 
     // Filter out the outliers
     let filteredTimes = cycleTimes.filter(time => (time ? (time >= lowerBound && time <= upperBound) : false));
-    if (rollingAverage > 0) {
-        filteredTimes = filteredTimes.slice(0, rollingAverage);
-    }
 
 
     if (filteredTimes.length < 3) {

@@ -9,6 +9,14 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version; } = {
+    '2.6.8.5': {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.6.8.5</h1>
+        <ul>
+        <li>Allowed rotation in PWA</li>
+        <li>Fix event dashboard for meshed event</li>
+        </ul>`,
+    },
     '2.6.8.4': {
         changelog: `
         <h1 class="text-lg font-bold">v2.6.8.4</h1>

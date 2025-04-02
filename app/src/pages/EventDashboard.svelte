@@ -4,6 +4,8 @@
 	import { onMount } from "svelte";
 	import EventStatus from "../components/EventStatus.svelte";
 	import { trpc } from "../main";
+	import { eventStore } from "../stores/event";
+	import { userStore } from "../stores/user";
 
 	const urlParams = new URLSearchParams(window.location.search);
 
@@ -12,6 +14,10 @@
 	onMount(() => {
 		if (defaultEvents) {
 			events = defaultEvents;
+			window.history.replaceState({}, "", `?events=${events.join(",")}`);
+		} else if ($userStore.meshedEventToken) {
+			events = $eventStore.subEvents?.map((e) => e.code) || [];
+			window.history.replaceState({}, "", `?events=${events.join(",")}`);
 		}
 	});
 

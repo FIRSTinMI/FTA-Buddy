@@ -68,7 +68,7 @@
 
 		<AccordionItem class="text-black dark:text-white">
 			<span slot="header">Scoring Table</span>
-			<a href="https://roadcase.frc.tools/ScoringTableSetup"><QrCode value="https://roadcase.frc.tools/ScoringTableSetup" /></a>
+			<a href="https://roadcase.frc.tools/ScoringTableSetup"><QrCode value="https://roadcase.frc.tools/ScoringTableSetup" padding={12} /></a>
 		</AccordionItem>
 
 		<AccordionItem class="text-black dark:text-white">

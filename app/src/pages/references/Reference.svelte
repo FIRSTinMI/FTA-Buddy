@@ -8,6 +8,7 @@
 	import WiringDiagrams from "./WiringDiagrams.svelte";
 	import ComponentManuals from "./ComponentManuals.svelte";
 	import FieldManuals from "./FieldManuals.svelte";
+	import QrCode from "svelte-qrcode";
 </script>
 
 <div class="container mx-auto p-2 pr-3 w-full">
@@ -43,7 +44,7 @@
 		<AccordionItem class="text-black dark:text-white">
 			<span slot="header">Keyboard Shortcuts</span>
 
-			<h3>Driver Station</h3>
+			<h3 style="padding: 2pt;">Driver Station</h3>
 
 			<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
 				<tr>
@@ -76,7 +77,14 @@
 
 		<AccordionItem class="text-black dark:text-white">
 			<span slot="header">Team IP Addresses</span>
-			<h3>IP Address Subnets</h3>
+
+			<h3 style="padding: 2pt;">IP Config Guide Link</h3>
+			
+			<a href="https://docs.wpilib.org/en/stable/docs/networking/networking-introduction/ip-configurations.html" target="_blank">
+				<QrCode value="https://docs.wpilib.org/en/stable/docs/networking/networking-introduction/ip-configurations.html" padding={5} />
+			</a>
+
+			<h3 style="padding: 2pt;">IP Address Format</h3>
 
 			<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
 				<tr>
@@ -107,7 +115,7 @@
 				</tr>
 			</table>
 
-			<h3>IP Addresses</h3>
+			<h3 style="padding: 2pt;">Robot IP Addresses</h3>
 
 			<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
 				<tr>
@@ -129,17 +137,67 @@
 								<td>roboRIO Name</td>
 								<td>roborio-TEAM-frc.local</td>
 							</tr>
+						</table>
+					</td>
+				</tr>
+			</table>
+
+			<h3 style="padding: 2pt;">Driver Station DHCP Settings</h3>
+
+			<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
+				<tr>
+					<td>
+						<table class="section-table">
 							<tr>
-								<td>Field AP</td>
-								<td>10.TE.AM.4</td>
-							</tr>
-							<tr>
-								<td>Driver Station</td>
-								<td>10.TE.AM.5</td>
+								<td width="125">IP Address</td>
+								<td>10.TE.AM.X</td>
 							</tr>
 							<tr>
 								<td></td>
-								<td><span class="highlight">(subnet 255.0.0.0)</span></td>
+								<td class="highlight">(dynamically assigned by field)</td>
+							</tr>
+							<tr>
+								<td>Subnet Mask</td>
+								<td>255.255.255.0</td>
+							</tr>
+							<tr>
+								<td>Gateway</td>
+								<td>10.TE.AM.4</td>
+							</tr>
+						</table>
+					</td>
+				</tr>
+			</table>
+
+			<h3 style="padding: 2pt;">Driver Station Static IP Settings</h3>
+
+			<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
+				<tr>
+					<td>
+						<table class="section-table">
+							<tr>
+								<td width="125">IP Address</td>
+								<td>10.TE.AM.5</td>
+							</tr>
+							<tr>
+								<td>Subnet Mask</td>
+								<td>255.0.0.0</td>
+							</tr>
+							<tr>
+								<td></td>
+								<td class="highlight">(if no default gateway)</td>
+							</tr>
+							<tr>
+								<td>Default Gateway</td>
+								<td>10.TE.AM.4</td>
+							</tr>
+							<tr>
+								<td>Subnet Mask</td>
+								<td>255.255.255.0</td>
+							</tr>
+							<tr>
+								<td></td>
+								<td class="highlight">(if default gateway is set)</td>
 							</tr>
 						</table>
 					</td>
@@ -148,7 +206,8 @@
 		</AccordionItem>
 
 		<AccordionItem class="text-black dark:text-white">
-			<span slot="header">Helpful Commands</span>
+			<span slot="header">Helpful Commands (WINDOWS ONLY)</span>
+
 			<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
 				<tr>
 					<td>

@@ -355,12 +355,20 @@
 							eventToken: user.meshedEventToken ?? "",
 						});
 						eventStore.set({ ...event, code: event.meshedEventCode ?? "", label: "Combined" });
+						if (window.location.pathname.startsWith("/app/monitor")) {
+							navigate("/app/dashboard");
+						}
 					} else {
 						userStore.set({
 							...user,
 							eventToken: event.subEvents?.find((e) => e.code === multiEventSelection)?.token ?? "",
 						});
 						eventStore.set({ ...event, ...event.subEvents?.find((e) => e.code === multiEventSelection) });
+						if (window.location.pathname.startsWith("/app/dashboard")) {
+							navigate("/app/monitor");
+						} else if (window.location.pathname.startsWith("/app/monitor")) {
+							window.location.reload();
+						}
 					}
 				}}
 			/>

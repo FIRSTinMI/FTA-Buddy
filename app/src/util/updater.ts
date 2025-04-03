@@ -9,6 +9,13 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version; } = {
+    '2.6.8.7': {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.6.8.7</h1>
+        <ul>
+        <li>Fixed meshed events for not admin users</li>
+        </ul>`,
+    },
     '2.6.8.6': {
         changelog: `
         <h1 class="text-lg font-bold">v2.6.8.6</h1>

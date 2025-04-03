@@ -203,15 +203,31 @@
 				code: eventCode,
 				pin: eventPin,
 			});
-			userStore.set({ ...user, eventToken: res.token });
-			eventStore.set({
-				code: eventCode,
-				pin: eventPin,
-				teams: (res.teams as any) || [],
-				users: res.users as Profile[],
-			});
+			if (res.subEvents) {
+				userStore.set({ ...user, eventToken: res.token, meshedEventToken: res.token });
+				eventStore.set({
+					code: eventCode,
+					pin: res.pin,
+					teams: res.teams as TeamList,
+					users: res.users as Profile[],
+					subEvents: res.subEvents,
+					meshedEventCode: res.code,
+				});
+
+				setTimeout(() => navigate("/app/dashboard"), 700);
+			} else {
+				userStore.set({ ...user, eventToken: res.token });
+				eventStore.set({
+					code: eventCode,
+					pin: eventPin,
+					teams: res.teams as TeamList,
+					users: res.users as Profile[],
+				});
+
+				if (user.role === "FTA" || user.role === "FTAA") setTimeout(() => navigate("/app/monitor"), 700);
+				else setTimeout(() => navigate("/app/tickets"), 700);
+			}
 			toast("Success", "Event joined successfully", "green-500");
-			setTimeout(() => navigate("/app"), 700);
 		} catch (err: any) {
 			toast("Error Joining Event", err.message);
 			console.error(err);

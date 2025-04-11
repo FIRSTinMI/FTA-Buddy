@@ -19,7 +19,7 @@
 	});
 </script>
 
-<Router basepath="/app/references/">
+<Router basepath="/references/">
 	<Route path="/statuslights">
 		{#if StatusLights}
 			<svelte:component this={StatusLights} />

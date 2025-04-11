@@ -7,12 +7,12 @@
 	<Accordion flush class="text-left">
 		<AccordionItem class="text-black dark:text-white">
 			<span slot="header" class="font-bold">CTRE + POE Diagram</span>
-			<img src="/app/frc-control-system-layout-ctre.svg" class="bg-white" alt="Wiring Diagram Using CTRE Components and Power Over Ethernet" />
+			<img src="/frc-control-system-layout-ctre.svg" class="bg-white" alt="Wiring Diagram Using CTRE Components and Power Over Ethernet" />
 		</AccordionItem>
 
 		<AccordionItem class="text-black dark:text-white">
 			<span slot="header" class="font-bold">REV + RPM Diagram</span>
-			<img src="/app/frc-control-system-layout-rev.svg" alt="Wiring Diagram Using REV Components and Radio Power Module" />
+			<img src="/frc-control-system-layout-rev.svg" alt="Wiring Diagram Using REV Components and Radio Power Module" />
 		</AccordionItem>
 	</Accordion>
 </div>

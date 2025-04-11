@@ -20,7 +20,7 @@ export function createNotification(data: Notification) {
 
     const notification = new Notification(data.title, {
         body: data.body,
-        icon: data.icon ?? "/app/icon192_rounded.png",
+        icon: data.icon ?? "/icon192_rounded.png",
         tag: data.tag,
         data: {
             path: `${data.data?.page ?? ""}`
@@ -38,9 +38,9 @@ export function robotNotification(type: string, event: MonitorEvent["detail"]) {
     let path: string;
 
     if (user.role === 'FTA' || user.role === "FTAA") {
-        path = "/app/";
+        path = "/";
     } else {
-        path = "/app/monitor/";
+        path = "/monitor/";
     }
 
     createNotification({
@@ -49,7 +49,7 @@ export function robotNotification(type: string, event: MonitorEvent["detail"]) {
         topic: 'Robot-Status',
         title: `${robot.number} Lost ${type.toLocaleUpperCase()}`,
         body: `${event.robot} lost ${type} at ${event.frame.time} in ${event.frame.match}.`,
-        icon: "/app/icon192_rounded.png",
+        icon: "/icon192_rounded.png",
         data: {
             page: ``
         }

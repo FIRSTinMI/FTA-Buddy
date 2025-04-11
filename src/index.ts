@@ -178,8 +178,8 @@ app.get('/serviceworker.js', async (req, res) => {
 if (process.env.NODE_ENV === 'dev') {
     app.use('/FieldMonitor', express.static('app/src/public/FieldMonitor'));
 } else {
-    app.use('/app', express.static('app/dist'));
-    app.use('/app/*', express.static('app/dist/index.html'));
+    app.use('/', express.static('app/dist'));
+    app.use('/*', express.static('app/dist/index.html'));
     app.use('/FieldMonitor', express.static('app/dist/FieldMonitor'));
 }
 
@@ -392,12 +392,8 @@ app.get('/hljs.css', (req, res) => {
     res.sendFile(join(__dirname, '../node_modules/highlight.js/styles/atom-one-dark.css'));
 });
 
-app.get('/', (req, res) => {
-    res.redirect('/app/');
-});
-
 app.get('/kiosk', (req, res) => {
-    res.redirect('/app/manage/kiosk');
+    res.redirect('/manage/kiosk');
 });
 
 connect().then(() => {

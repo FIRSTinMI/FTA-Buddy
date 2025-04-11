@@ -1,48 +1,48 @@
 let cacheName = "ftabuddy";
 let contentToCache = [
-	"/app/assets/{{CSS_FILE}}",
-	"/app/assets/{{JS_FILE}}",
-	"/app/index.html",
-	"/app/vh103.png",
-	"/app/audio/red1_ds.ogg",
-	"/app/audio/red1_code.ogg",
-	"/app/audio/red1_rio.ogg",
-	"/app/audio/red1_radio.ogg",
-	"/app/audio/red2_ds.ogg",
-	"/app/audio/red2_code.ogg",
-	"/app/audio/red2_rio.ogg",
-	"/app/audio/red2_radio.ogg",
-	"/app/audio/red3_ds.ogg",
-	"/app/audio/red3_code.ogg",
-	"/app/audio/red3_rio.ogg",
-	"/app/audio/red3_radio.ogg",
-	"/app/audio/blue1_ds.ogg",
-	"/app/audio/blue1_code.ogg",
-	"/app/audio/blue1_rio.ogg",
-	"/app/audio/blue1_radio.ogg",
-	"/app/audio/blue2_ds.ogg",
-	"/app/audio/blue2_code.ogg",
-	"/app/audio/blue2_rio.ogg",
-	"/app/audio/blue2_radio.ogg",
-	"/app/audio/blue3_ds.ogg",
-	"/app/audio/blue3_code.ogg",
-	"/app/audio/blue3_rio.ogg",
-	"/app/audio/blue3_radio.ogg",
-	"/app/audio/green1.ogg",
-	"/app/audio/green2.ogg",
-	"/app/audio/green3.ogg",
-	"/app/audio/good_job.ogg",
-	"/app/music/jass1.mp3",
-	"/app/music/jass2.mp3",
-	"/app/music/jass3.mp3",
-	"/app/music/jass4.mp3",
-	"/app/music/jass5.mp3",
-	"/app/music/jass6.mp3",
-	"/app/frc-control-system-layout-ctre.svg",
-	"/app/frc-control-system-layout-rev.svg",
+	"/assets/{{CSS_FILE}}",
+	"/assets/{{JS_FILE}}",
+	"/index.html",
+	"/vh103.png",
+	"/audio/red1_ds.ogg",
+	"/audio/red1_code.ogg",
+	"/audio/red1_rio.ogg",
+	"/audio/red1_radio.ogg",
+	"/audio/red2_ds.ogg",
+	"/audio/red2_code.ogg",
+	"/audio/red2_rio.ogg",
+	"/audio/red2_radio.ogg",
+	"/audio/red3_ds.ogg",
+	"/audio/red3_code.ogg",
+	"/audio/red3_rio.ogg",
+	"/audio/red3_radio.ogg",
+	"/audio/blue1_ds.ogg",
+	"/audio/blue1_code.ogg",
+	"/audio/blue1_rio.ogg",
+	"/audio/blue1_radio.ogg",
+	"/audio/blue2_ds.ogg",
+	"/audio/blue2_code.ogg",
+	"/audio/blue2_rio.ogg",
+	"/audio/blue2_radio.ogg",
+	"/audio/blue3_ds.ogg",
+	"/audio/blue3_code.ogg",
+	"/audio/blue3_rio.ogg",
+	"/audio/blue3_radio.ogg",
+	"/audio/green1.ogg",
+	"/audio/green2.ogg",
+	"/audio/green3.ogg",
+	"/audio/good_job.ogg",
+	"/music/jass1.mp3",
+	"/music/jass2.mp3",
+	"/music/jass3.mp3",
+	"/music/jass4.mp3",
+	"/music/jass5.mp3",
+	"/music/jass6.mp3",
+	"/frc-control-system-layout-ctre.svg",
+	"/frc-control-system-layout-rev.svg",
 ];
 
-self.importScripts("/app/localforage.js");
+self.importScripts("/localforage.js");
 
 const localforageNotifications = localforage.createInstance({
 	name: "ftabuddy-notifications",
@@ -138,7 +138,7 @@ self.addEventListener("push", async (evt) => {
 			body: data.body ?? "",
 			tag: data.tag,
 			data: data.data,
-			icon: "https://ftabuddy.com" + (data.icon ?? "/app/icon512_rounded.png"),
+			icon: "https://ftabuddy.com" + (data.icon ?? "/icon512_rounded.png"),
 		});
 		//console.log(await clients.matchAll());
 	}
@@ -146,7 +146,7 @@ self.addEventListener("push", async (evt) => {
 
 self.addEventListener("notificationclick", (evt) => {
 	//console.log(evt);
-	const rootUrl = new URL("/app/", location).href;
+	const rootUrl = new URL("/", location).href;
 	const pageToOpen = evt.notification.data?.page ?? "";
 	evt.notification.close();
 	evt.waitUntil(

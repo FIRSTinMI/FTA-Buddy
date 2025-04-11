@@ -63,32 +63,31 @@
 	});
 
 	const publicPaths = [
-		"/app",
-		"/app/",
-		"/app/manage/login",
-		"/app/manage/google-signup",
-		"/app/manage/host",
-		"/app/manage/event-created",
-		"/app/manage/meshed-event",
-		"/app/ftc",
-		"/app/references",
-		"/app/references/statuslights",
-		"/app/references/fieldmanuals",
-		"/app/references/componentmanuals",
-		"/app/references/wiringdiagrams",
-		"/app/references/softwaredocs",
-		"/app/dashboard",
-		"/app/manage/kiosk",
+		"/",
+		"/manage/login",
+		"/manage/google-signup",
+		"/manage/host",
+		"/manage/event-created",
+		"/manage/meshed-event",
+		"/ftc",
+		"/references",
+		"/references/statuslights",
+		"/references/fieldmanuals",
+		"/references/componentmanuals",
+		"/references/wiringdiagrams",
+		"/references/softwaredocs",
+		"/dashboard",
+		"/manage/kiosk",
 	];
 
-	const eventTokenPaths = ["/app/monitor", "/app/checklist", "/app/logs"];
+	const eventTokenPaths = ["/monitor", "/checklist", "/logs"];
 
-	const pageIsPublicLog = window.location.pathname.startsWith("/app/logs/") && window.location.pathname.split("/")[3].length == 36;
-	const pageIsPublicTicketCreate = window.location.pathname.startsWith("/app/tickets/submit/");
+	const pageIsPublicLog = window.location.pathname.startsWith("/logs/") && window.location.pathname.split("/")[3].length == 36;
+	const pageIsPublicTicketCreate = window.location.pathname.startsWith("/tickets/submit/");
 
 	function redirectForAuth(a: typeof user) {
 		// if user has event token and is trying to access a page that requires an event token
-		if (user.eventToken && (eventTokenPaths.includes(window.location.pathname) || window.location.pathname.startsWith("/app/logs"))) {
+		if (user.eventToken && (eventTokenPaths.includes(window.location.pathname) || window.location.pathname.startsWith("/logs"))) {
 			return;
 		}
 
@@ -97,15 +96,15 @@
 			if (!pageIsPublicLog && !pageIsPublicTicketCreate) {
 				//page is not public log or public ticket creation page
 				if (!a.token || !a.eventToken) {
-					navigate("/app/manage/login"); //user is either not logged in or does not have event token
+					navigate("/manage/login"); //user is either not logged in or does not have event token
 				}
 				//user is logged in and has event token -- no redirect
 			}
 			//page is public log/public ticket creation page -- no tokens needed
-		} else if (window.location.pathname == "/app" || window.location.pathname == "/app/") {
-			//user is accessing public path that is /app or /app/
+		} else if (window.location.pathname == "/") {
+			//user is accessing public path that is /
 			if (!a.eventToken) {
-				navigate("/app/manage/login"); //user is missing event token
+				navigate("/manage/login"); //user is missing event token
 			}
 			//user has event token -- no redirect
 		}
@@ -255,15 +254,15 @@
 		multiEventSelection = event.code;
 	}
 
-	if (user.token && window.location.pathname === "/app/") {
+	if (user.token && window.location.pathname === "/") {
 		if (user.role === "FTA" || user.role === "FTAA") {
 			if (user.meshedEventToken && event && event.subEvents && user.eventToken === user.meshedEventToken) {
-				navigate("/app/dashboard");
+				navigate("/dashboard");
 			} else {
-				navigate("/app/monitor");
+				navigate("/monitor");
 			}
 		} else if (user.role === "CSA" || user.role === "RI") {
-			navigate("/app/tickets");
+			navigate("/tickets");
 		}
 	}
 
@@ -355,8 +354,8 @@
 							eventToken: user.meshedEventToken ?? "",
 						});
 						eventStore.set({ ...event, code: event.meshedEventCode ?? "", label: "Combined" });
-						if (window.location.pathname.startsWith("/app/monitor")) {
-							navigate("/app/dashboard");
+						if (window.location.pathname.startsWith("/monitor")) {
+							navigate("/dashboard");
 						}
 					} else {
 						userStore.set({
@@ -364,9 +363,9 @@
 							eventToken: event.subEvents?.find((e) => e.code === multiEventSelection)?.token ?? "",
 						});
 						eventStore.set({ ...event, ...event.subEvents?.find((e) => e.code === multiEventSelection) });
-						if (window.location.pathname.startsWith("/app/dashboard")) {
-							navigate("/app/monitor");
-						} else if (window.location.pathname.startsWith("/app/monitor")) {
+						if (window.location.pathname.startsWith("/dashboard")) {
+							navigate("/monitor");
+						} else if (window.location.pathname.startsWith("/monitor")) {
 							window.location.reload();
 						}
 					}
@@ -383,7 +382,7 @@
 							label="Monitor"
 							on:click={() => {
 								hideMenu = true;
-								navigate("/app/");
+								navigate("/");
 							}}
 						>
 							<svelte:fragment slot="icon">
@@ -395,7 +394,7 @@
 							label="Tickets"
 							on:click={() => {
 								hideMenu = true;
-								navigate("/app/");
+								navigate("/");
 							}}
 						>
 							<svelte:fragment slot="icon">
@@ -407,7 +406,7 @@
 						label="Flashcards"
 						on:click={() => {
 							hideMenu = true;
-							navigate("/app/flashcards");
+							navigate("/flashcards");
 						}}
 					>
 						<svelte:fragment slot="icon">
@@ -419,7 +418,7 @@
 							label="Tickets"
 							on:click={() => {
 								hideMenu = true;
-								navigate("/app/tickets");
+								navigate("/tickets");
 							}}
 						>
 							<svelte:fragment slot="icon">
@@ -431,7 +430,7 @@
 							label="Monitor"
 							on:click={() => {
 								hideMenu = true;
-								navigate("/app/monitor");
+								navigate("/monitor");
 							}}
 						>
 							<svelte:fragment slot="icon">
@@ -443,7 +442,7 @@
 						label="Match Logs"
 						on:click={() => {
 							hideMenu = true;
-							navigate("/app/logs");
+							navigate("/logs");
 						}}
 					>
 						<svelte:fragment slot="icon">
@@ -454,7 +453,7 @@
 						label="Checklist"
 						on:click={() => {
 							hideMenu = true;
-							navigate("/app/checklist");
+							navigate("/checklist");
 						}}
 					>
 						<svelte:fragment slot="icon">
@@ -465,7 +464,7 @@
 						label="Team Notes"
 						on:click={() => {
 							hideMenu = true;
-							navigate("/app/notes");
+							navigate("/notes");
 						}}
 					>
 						<svelte:fragment slot="icon">
@@ -476,7 +475,7 @@
 						label="Event Reports"
 						on:click={() => {
 							hideMenu = true;
-							navigate("/app/event-reports");
+							navigate("/event-reports");
 						}}
 					>
 						<svelte:fragment slot="icon">
@@ -487,7 +486,7 @@
 						label="My Notifications"
 						on:click={() => {
 							hideMenu = true;
-							navigate("/app/notifications");
+							navigate("/notifications");
 						}}
 					>
 						<svelte:fragment slot="icon">
@@ -509,7 +508,7 @@
 						label="Monitor"
 						on:click={() => {
 							hideMenu = true;
-							navigate("/app/");
+							navigate("/");
 						}}
 					>
 						<svelte:fragment slot="icon">
@@ -520,7 +519,7 @@
 						label="Match Logs"
 						on:click={() => {
 							hideMenu = true;
-							navigate("/app/logs");
+							navigate("/logs");
 						}}
 					>
 						<svelte:fragment slot="icon">
@@ -531,7 +530,7 @@
 						label="Checklist"
 						on:click={() => {
 							hideMenu = true;
-							navigate("/app/checklist");
+							navigate("/checklist");
 						}}
 					>
 						<svelte:fragment slot="icon">
@@ -546,7 +545,7 @@
 					class="text-sm"
 					on:click={() => {
 						hideMenu = true;
-						navigate("/app/manage/login");
+						navigate("/manage/login");
 					}}
 				>
 					<svelte:fragment slot="icon">
@@ -557,7 +556,7 @@
 					label="References"
 					on:click={() => {
 						hideMenu = true;
-						navigate("/app/references");
+						navigate("/references");
 					}}
 				>
 					<svelte:fragment slot="icon">
@@ -568,7 +567,7 @@
 					label="Status Lights"
 					on:click={() => {
 						hideMenu = true;
-						navigate("/app/references/statuslights");
+						navigate("/references/statuslights");
 					}}
 					class="text-xs ml-8 pt-1 pb-1"
 				>
@@ -580,7 +579,7 @@
 					label="Component Manuals"
 					on:click={() => {
 						hideMenu = true;
-						navigate("/app/references/componentmanuals");
+						navigate("/references/componentmanuals");
 					}}
 					class="text-xs ml-8 pt-1 pb-1"
 				>
@@ -592,7 +591,7 @@
 					label="Wiring Diagrams"
 					on:click={() => {
 						hideMenu = true;
-						navigate("/app/references/wiringdiagrams");
+						navigate("/references/wiringdiagrams");
 					}}
 					class="text-xs ml-8 pt-1 pb-1"
 				>
@@ -604,7 +603,7 @@
 					label="Software Docs"
 					on:click={() => {
 						hideMenu = true;
-						navigate("/app/references/softwaredocs");
+						navigate("/references/softwaredocs");
 					}}
 					class="text-xs ml-8 pt-1 pb-1"
 				>
@@ -616,7 +615,7 @@
 					label="Field Manuals"
 					on:click={() => {
 						hideMenu = true;
-						navigate("/app/references/fieldmanuals");
+						navigate("/references/fieldmanuals");
 					}}
 					class="text-xs ml-8 pt-1 pb-1"
 				>
@@ -629,7 +628,7 @@
 					class="text-sm"
 					on:click={() => {
 						hideMenu = true;
-						navigate("/app/dashboard");
+						navigate("/dashboard");
 					}}
 				>
 					<svelte:fragment slot="icon">
@@ -641,7 +640,7 @@
 					class="text-sm"
 					on:click={() => {
 						hideMenu = true;
-						navigate("/app/ftc");
+						navigate("/ftc");
 					}}
 				>
 					<svelte:fragment slot="icon">
@@ -678,7 +677,7 @@
 		</SidebarWrapper>
 	</Sidebar>
 </Drawer>
-<Router basepath="/app/">
+<Router basepath="/">
 	<main class="bg-white dark:bg-neutral-800 w-screen h-dvh flex flex-col">
 		<div class="bg-primary-700 dark:bg-primary-500 flex w-full justify-between px-2 {fullscreen && 'hidden collapse'}">
 			<Button class="!py-0 !px-0 text-white" color="none" on:click={openMenu}>
@@ -712,22 +711,22 @@
 		<div class="flex justify-around py-2 bg-neutral-900 dark:bg-neutral-700 text-white {fullscreen && 'bg-white dark:bg-neutral-800'}">
 			{#if user.token && user.eventToken && !fullscreen}
 				{#if user?.role === "FTA" || user?.role === "FTAA"}
-					<Link to="/app/">
+					<Link to="/">
 						<Button class="!p-2" color="none">
 							<Icon icon="mdi:television" class="w-8 h-8" />
 						</Button>
 					</Link>
-					<Link to="/app/flashcards">
+					<Link to="/flashcards">
 						<Button class="!p-2" color="none">
 							<Icon icon="mdi:message-alert" class="w-8 h-8" />
 						</Button>
 					</Link>
-					<Link to="/app/references">
+					<Link to="/references">
 						<Button class="!p-2" color="none">
 							<Icon icon="mdi:file-document-outline" class="w-8 h-8" />
 						</Button>
 					</Link>
-					<Link to="/app/notifications">
+					<Link to="/notifications">
 						<Button class="!p-2 relative" color="none">
 							<Icon icon="fluent:alert-on-16-filled" class="w-8 h-8" />
 							{#if $notificationsStore.length > 0}
@@ -738,22 +737,22 @@
 						</Button>
 					</Link>
 				{:else if user?.role === "CSA" || user?.role === "RI"}
-					<Link to="/app/">
+					<Link to="/tickets">
 						<Button class="!p-2" color="none">
 							<Icon icon="mdi:message-alert" class="w-8 h-8" />
 						</Button>
 					</Link>
-					<Link to="/app/references/statuslights">
+					<Link to="/references/statuslights">
 						<Button class="!p-2" color="none">
 							<Icon icon="heroicons:sun-16-solid" class="w-8 h-8" />
 						</Button>
 					</Link>
-					<Link to="/app/references/softwaredocs">
+					<Link to="/references/softwaredocs">
 						<Button class="!p-2" color="none">
 							<Icon icon="mdi:file-document-outline" class="w-8 h-8" />
 						</Button>
 					</Link>
-					<Link to="/app/notifications">
+					<Link to="/notifications">
 						<Button class="!p-2 relative" color="none">
 							<Icon icon="fluent:alert-on-16-filled" class="w-8 h-8" />
 							{#if $notificationsStore.length > 0}

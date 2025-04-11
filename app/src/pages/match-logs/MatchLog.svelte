@@ -73,7 +73,7 @@
 
 	function back() {
 		if (window.history.state === null) {
-			navigate("/app/logs");
+			navigate("/logs");
 		} else {
 			window.history.back();
 		}
@@ -82,7 +82,7 @@
 	let graph: MatchGraph;
 
 	function tabClick(stat: keyof FMSLogFrame) {
-		window.history.replaceState(null, "", `/app/logs/${matchid}#${stat.toLowerCase()}`);
+		window.history.replaceState(null, "", `/logs/${matchid}#${stat.toLowerCase()}`);
 	}
 
 	let batteryOpen = false;
@@ -181,12 +181,12 @@
 			</Tabs>
 			<h2>View a Team's Specific Log</h2>
 			<div class="grid grid-cols-2 gap-1">
-				<Button color="none" class="bg-blue-400 dark:bg-blue-500" href="/app/logs/{matchid}/blue1">{data?.blue1}</Button>
-				<Button color="none" class="bg-red-400 dark:bg-red-500" href="/app/logs/{matchid}/red1">{data?.red1}</Button>
-				<Button color="none" class="bg-blue-400 dark:bg-blue-500" href="/app/logs/{matchid}/blue2">{data?.blue2}</Button>
-				<Button color="none" class="bg-red-400 dark:bg-red-500" href="/app/logs/{matchid}/red2">{data?.red2}</Button>
-				<Button color="none" class="bg-blue-400 dark:bg-blue-500" href="/app/logs/{matchid}/blue3">{data?.blue3}</Button>
-				<Button color="none" class="bg-red-400 dark:bg-red-500" href="/app/logs/{matchid}/red3">{data?.red3}</Button>
+				<Button color="none" class="bg-blue-400 dark:bg-blue-500" href="/logs/{matchid}/blue1">{data?.blue1}</Button>
+				<Button color="none" class="bg-red-400 dark:bg-red-500" href="/logs/{matchid}/red1">{data?.red1}</Button>
+				<Button color="none" class="bg-blue-400 dark:bg-blue-500" href="/logs/{matchid}/blue2">{data?.blue2}</Button>
+				<Button color="none" class="bg-red-400 dark:bg-red-500" href="/logs/{matchid}/red2">{data?.red2}</Button>
+				<Button color="none" class="bg-blue-400 dark:bg-blue-500" href="/logs/{matchid}/blue3">{data?.blue3}</Button>
+				<Button color="none" class="bg-red-400 dark:bg-red-500" href="/logs/{matchid}/red3">{data?.red3}</Button>
 			</div>
 		{/if}
 	{/await}

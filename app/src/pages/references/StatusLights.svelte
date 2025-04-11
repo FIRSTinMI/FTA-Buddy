@@ -166,7 +166,7 @@
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.radio}>
 			<span slot="header" class="font-bold">Robot Radio</span>
 
-			<img src="/app/vh103.png" width="325px" alt="Radio with LEDs labeled" />
+			<img src="/vh103.png" width="325px" alt="Radio with LEDs labeled" />
 
 			{#if openState.radio === true || loadedState.radio === true}
 				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">

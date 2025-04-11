@@ -9,7 +9,7 @@ var vite_config_default = defineConfig({
       compiler: "svelte"
     })
   ],
-  base: "/app/"
+  base: "/"
 });
 export {
   vite_config_default as default

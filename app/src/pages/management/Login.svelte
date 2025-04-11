@@ -214,7 +214,7 @@
 					meshedEventCode: res.code,
 				});
 
-				setTimeout(() => navigate("/app/dashboard"), 700);
+				setTimeout(() => navigate("/dashboard"), 700);
 			} else {
 				userStore.set({ ...user, eventToken: res.token });
 				eventStore.set({
@@ -224,8 +224,8 @@
 					users: res.users as Profile[],
 				});
 
-				if (user.role === "FTA" || user.role === "FTAA") setTimeout(() => navigate("/app/monitor"), 700);
-				else setTimeout(() => navigate("/app/tickets"), 700);
+				if (user.role === "FTA" || user.role === "FTAA") setTimeout(() => navigate("/monitor"), 700);
+				else setTimeout(() => navigate("/tickets"), 700);
 			}
 			toast("Success", "Event joined successfully", "green-500");
 		} catch (err: any) {
@@ -272,7 +272,7 @@
 					admin: false,
 					googleToken: googleUser.credential,
 				});
-				navigate("/app/manage/google-signup");
+				navigate("/manage/google-signup");
 			} else {
 				toast("Error Logging In", err.message);
 				console.error(err);
@@ -451,8 +451,8 @@
 			<Button
 				on:click={() => {
 					userStore.set({ ...user, eventToken: user.eventToken });
-					if (user.role === "FTA" || user.role === "FTAA") setTimeout(() => navigate("/app/monitor"), 500);
-					else setTimeout(() => navigate("/app/tickets"), 500);
+					if (user.role === "FTA" || user.role === "FTAA") setTimeout(() => navigate("/monitor"), 500);
+					else setTimeout(() => navigate("/tickets"), 500);
 				}}
 				bind:disabled={loading}>Join Event</Button
 			>
@@ -465,11 +465,11 @@
 						<div class="my-auto w-full">
 							<h2 class="text-xl">Run FTA Buddy from this computer</h2>
 							{#if user.eventToken}
-								<Button on:click={() => navigate("/app")} class="w-full mt-4">Open Field Monitor</Button>
-								<Button on:click={() => navigate("/app/manage/event-created")} class="w-full mt-4">See Event Pin</Button>
-								<Button on:click={() => navigate("/app/manage/host")} class="w-full mt-4">Host New Event</Button>
+								<Button on:click={() => navigate("/")} class="w-full mt-4">Open Field Monitor</Button>
+								<Button on:click={() => navigate("/manage/event-created")} class="w-full mt-4">See Event Pin</Button>
+								<Button on:click={() => navigate("/manage/host")} class="w-full mt-4">Host New Event</Button>
 							{:else}
-								<Button on:click={() => navigate("/app/manage/host")} class="w-full mt-4">Host</Button>
+								<Button on:click={() => navigate("/manage/host")} class="w-full mt-4">Host</Button>
 							{/if}
 							<p class="text-gray-700 mt-2">Requires this computer to be on the field network</p>
 						</div>
@@ -529,7 +529,7 @@
 				<div class="flex border-t border-neutral-500 pt-4">
 					<div class="my-auto w-full">
 						<h2 class="text-2xl" style="font-weight: bold;">Run FTA Buddy from this computer</h2>
-						<Button on:click={() => navigate("/app/manage/host")} class="w-full mt-4">Host</Button>
+						<Button on:click={() => navigate("/manage/host")} class="w-full mt-4">Host</Button>
 						<p class="text-gray-700 mt-2">Requires this computer to be on the field network</p>
 					</div>
 				</div>
@@ -543,9 +543,9 @@
 				<Label for="event-selector">Admin Event Selector</Label>
 				<Select id="event-selector" bind:value={event.code} items={eventList} placeholder="Select Event" on:change={adminSelectEvent} />
 				<Button href="/" on:click={() => navigate("/")}>Go to App</Button>
-				<Button outline on:click={() => navigate("/app/manage/event-created")}>See Event Pin</Button>
-				<Button outline href="/app/manage/meshed-event">Create Meshed Event</Button>
-				<Button outline href="/app/manage/manage">App Management</Button>
+				<Button outline on:click={() => navigate("/manage/event-created")}>See Event Pin</Button>
+				<Button outline href="/manage/meshed-event">Create Meshed Event</Button>
+				<Button outline href="/manage/manage">App Management</Button>
 			</div>
 
 			<!-- Currently have an event selected -->
@@ -556,7 +556,7 @@
 				<Button outline on:click={() => (eventStore.set({ code: "", pin: "", teams: [], users: [] }), userStore.set({ ...user, eventToken: "" }))}
 					>Leave Event</Button
 				>
-				<Button outline on:click={() => navigate("/app/manage/event-created")}>See Event Pin</Button>
+				<Button outline on:click={() => navigate("/manage/event-created")}>See Event Pin</Button>
 			</div>
 
 			<!-- No event selected -->
@@ -580,7 +580,7 @@
 				<div class="flex border-t border-neutral-500 pt-4">
 					<div class="my-auto w-full">
 						<h2 class="text-xl">Run FTA Buddy from this computer</h2>
-						<Button on:click={() => navigate("/app/manage/host")} class="w-full mt-4">Host</Button>
+						<Button on:click={() => navigate("/manage/host")} class="w-full mt-4">Host</Button>
 						<p class="text-gray-700 mt-2">Requires this computer to be on the field network</p>
 					</div>
 				</div>
@@ -588,7 +588,7 @@
 		{/if}
 	{/if}
 	<p class="text-sm text-neutral-500">
-		<a href="/app/privacy.html" class="underline">Privacy Policy</a>
+		<a href="/privacy.html" class="underline">Privacy Policy</a>
 	</p>
 </div>
 

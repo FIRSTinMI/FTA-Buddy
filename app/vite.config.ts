@@ -10,5 +10,5 @@ export default defineConfig({
             compiler: 'svelte',
         })
     ],
-    base: "/app/",
+    base: "/",
 });

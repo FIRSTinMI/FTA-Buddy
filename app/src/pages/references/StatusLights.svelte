@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Accordion, AccordionItem } from "flowbite-svelte";
 	import { onDestroy } from "svelte";
+    import CustomIcon from "../../components/CustomIcon.svelte";
 
 	let LEDToggleState1Hz = true;
 	let LEDToggleState20Hz = true;
@@ -26,6 +27,7 @@
 		pigeon: false,
 		cancoder: false,
 		powerDistributionHub: false,
+		powerDistributionPanel: false,
 	};
 
 	let loadedState = {
@@ -40,6 +42,7 @@
 		pigeon: false,
 		cancoder: false,
 		powerDistributionHub: false,
+		powerDistributionPanel: false,
 	};
 
 	$: {
@@ -54,6 +57,7 @@
 		if (openState.pigeon) loadedState.pigeon = true;
 		if (openState.cancoder) loadedState.cancoder = true;
 		if (openState.powerDistributionHub) loadedState.powerDistributionHub = true;
+		if (openState.powerDistributionPanel) loadedState.powerDistributionPanel = true;
 	}
 
 	function toggleLED1Hz() {
@@ -164,7 +168,12 @@
 	<h1>Please Note: Blink Frequency May Not Be Exact</h1>
 	<Accordion flush class="text-left">
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.radio}>
-			<span slot="header" class="font-bold">Robot Radio</span>
+			<span slot="header" class="font-bold">
+				<div class="flex flex-row gap-x-5">
+					<CustomIcon type="/component_icons/vividhostingradio"></CustomIcon>
+					<h1 class="pt-3">VividHosting Robot Radio</h1>
+				</div>
+			</span>
 
 			<img src="/vh103.png" width="325px" alt="Radio with LEDs labeled" />
 
@@ -363,12 +372,29 @@
 							</table>
 						</td>
 					</tr>
+
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td colspan="2" class="bold">
+										<a class="underline" href="https://frc-radio.vivid-hosting.net/overview/led-status-indications">Source</a>
+									</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
 				</table>
 			{/if}
 		</AccordionItem>
 
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.roborio}>
-			<span slot="header" class="font-bold">RoboRIO</span>
+			<span slot="header" class="font-bold">
+				<div class="flex flex-row gap-x-5">
+					<CustomIcon type="/component_icons/roborio2"></CustomIcon>
+					<h1 class="pt-3">RoboRIO 2</h1>
+				</div>
+			</span>
 
 			{#if openState.roborio === true || loadedState.roborio === true}
 				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
@@ -553,13 +579,28 @@
 							</table>
 						</td>
 					</tr>
+
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td colspan="2" class="bold">
+										<a class="underline" href="https://docs.wpilib.org/en/stable/docs/hardware/hardware-basics/status-lights-ref.html#roborio">Source</a>
+									</td>								</tr>
+							</table>
+						</td>
+					</tr>
 				</table>
 			{/if}
 		</AccordionItem>
 
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.sparkmax}>
-			<span slot="header" class="font-bold">REV Spark Max</span>
-
+			<span slot="header" class="font-bold">
+				<div class="flex flex-row gap-x-5">
+					<CustomIcon type="/component_icons/revsparkmax"></CustomIcon>
+					<h1 class="pt-3">REV SparkMax</h1>
+				</div>
+			</span>
 			{#if openState.sparkmax === true || loadedState.sparkmax === true}
 				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
 					<tr>
@@ -711,13 +752,29 @@
 							</table>
 						</td>
 					</tr>
+
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td colspan="2" class="bold">
+										<a class="underline" href="https://docs.revrobotics.com/brushless/spark-max/status-led">Source</a>
+									</td>								
+								</tr>
+							</table>
+						</td>
+					</tr>
 				</table>
 			{/if}
 		</AccordionItem>
 
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.sparkflex}>
-			<span slot="header" class="font-bold">REV Spark Flex</span>
-
+			<span slot="header" class="font-bold">
+				<div class="flex flex-row gap-x-5">
+					<CustomIcon type="/component_icons/revsparkflex"></CustomIcon>
+					<h1 class="pt-3">REV SparkFlex</h1>
+				</div>
+			</span>
 			{#if openState.sparkflex === true || loadedState.sparkflex === true}
 				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
 					<tr>
@@ -861,13 +918,29 @@
 							</table>
 						</td>
 					</tr>
+
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td colspan="2" class="bold">
+										<a class="underline" href="https://docs.revrobotics.com/brushless/spark-flex/status-led">Source</a>
+									</td>								
+								</tr>
+							</table>
+						</td>
+					</tr>
 				</table>
 			{/if}
 		</AccordionItem>
 
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.talonfx}>
-			<span slot="header" class="font-bold">CTRE TalonFX</span>
-
+			<span slot="header" class="font-bold">
+				<div class="flex flex-row gap-x-5">
+					<CustomIcon type="/component_icons/ctretalonfxkraken"></CustomIcon>
+					<h1 class="pt-3">CTRE TalonFX</h1>
+				</div>
+			</span>
 			{#if openState.talonfx === true || loadedState.talonfx === true}
 				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
 					<tr>
@@ -995,13 +1068,29 @@
 							</table>
 						</td>
 					</tr>
+
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td colspan="2" class="bold">
+										<a class="underline" href="https://v6.docs.ctr-electronics.com/en/stable/docs/hardware-reference/talonfx/index.html#status-light-reference">Source</a>
+									</td>								
+								</tr>
+							</table>
+						</td>
+					</tr>
 				</table>
 			{/if}
 		</AccordionItem>
 
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.talonsrx}>
-			<span slot="header" class="font-bold">CTRE TalonSRX</span>
-
+			<span slot="header" class="font-bold">
+				<div class="flex flex-row gap-x-5">
+					<CustomIcon type="/component_icons/ctretalonsrx"></CustomIcon>
+					<h1 class="pt-3">CTRE TalonSRX</h1>
+				</div>
+			</span>
 			{#if openState.talonsrx === true || loadedState.talonsrx === true}
 				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
 					<tr>
@@ -1144,13 +1233,29 @@
 							</table>
 						</td>
 					</tr>
+
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td colspan="2" class="bold">
+										<a class="underline" href="https://ctre.download/files/user-manual/Talon%20SRX%20User's%20Guide.pdf">Source</a>
+									</td>								
+								</tr>
+							</table>
+						</td>
+					</tr>
 				</table>
 			{/if}
 		</AccordionItem>
 
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.victorspx}>
-			<span slot="header" class="font-bold">CTRE VictorSPX</span>
-
+			<span slot="header" class="font-bold">
+				<div class="flex flex-row gap-x-5">
+					<CustomIcon type="/component_icons/ctrevictorspx"></CustomIcon>
+					<h1 class="pt-3">CTRE VictorSPX</h1>
+				</div>
+			</span>
 			{#if openState.victorspx === true || loadedState.victorspx === true}
 				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
 					<tr>
@@ -1298,13 +1403,29 @@
 							</table>
 						</td>
 					</tr>
+
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td colspan="2" class="bold">
+										<a class="underline" href="https://ctre.download/files/user-manual/Victor%20SPX%20User's%20Guide.pdf">Source</a>
+									</td>								
+								</tr>
+							</table>
+						</td>
+					</tr>
 				</table>
 			{/if}
 		</AccordionItem>
 
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.canivore}>
-			<span slot="header" class="font-bold">CTRE CANivore</span>
-
+			<span slot="header" class="font-bold">
+				<div class="flex flex-row gap-x-5">
+					<CustomIcon type="/component_icons/ctrecanivore"></CustomIcon>
+					<h1 class="pt-3">CTRE CANivore</h1>
+				</div>
+			</span>
 			{#if openState.canivore === true || loadedState.canivore === true}
 				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
 					<tr>
@@ -1457,13 +1578,29 @@
 							</table>
 						</td>
 					</tr>
+
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td colspan="2" class="bold">
+										<a class="underline" href="https://ctre.download/files/user-manual/CANivore%20User's%20Guide.pdf">Source</a>
+									</td>								
+								</tr>
+							</table>
+						</td>
+					</tr>
 				</table>
 			{/if}
 		</AccordionItem>
 
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.pigeon}>
-			<span slot="header" class="font-bold">CTRE Pigeon 2.0 Lights</span>
-
+			<span slot="header" class="font-bold">
+				<div class="flex flex-row gap-x-5">
+					<CustomIcon type="/component_icons/ctrepigeon"></CustomIcon>
+					<h1 class="pt-3">CTRE Pigeon 2.0</h1>
+				</div>
+			</span>
 			{#if openState.pigeon === true || loadedState.pigeon === true}
 				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
 					<tr>
@@ -1510,12 +1647,24 @@
 							</table>
 						</td>
 					</tr>
+
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td colspan="2" class="bold">
+										<a class="underline" href="https://v6.docs.ctr-electronics.com/en/stable/docs/hardware-reference/pigeon2/index.html">Source</a>
+									</td>								
+								</tr>
+							</table>
+						</td>
+					</tr>
 				</table>
 			{/if}
 		</AccordionItem>
 
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.cancoder}>
-			<span slot="header" class="font-bold">CANcoder</span>
+			<span slot="header" class="font-bold">CTRE CANcoder</span>
 
 			{#if openState.cancoder === true || loadedState.cancoder === true}
 				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
@@ -1565,13 +1714,29 @@
 							</table>
 						</td>
 					</tr>
+
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td colspan="2" class="bold">
+										<a class="underline" href="https://v6.docs.ctr-electronics.com/en/stable/docs/hardware-reference/cancoder/index.html">Source</a>
+									</td>								
+								</tr>
+							</table>
+						</td>
+					</tr>
 				</table>
 			{/if}
 		</AccordionItem>
 
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.powerDistributionHub}>
-			<span slot="header" class="font-bold">REV PDH</span>
-
+			<span slot="header" class="font-bold">
+				<div class="flex flex-row gap-x-5">
+					<CustomIcon type="/component_icons/revpdh"></CustomIcon>
+					<h1 class="pt-3">REV PDH (Power Distribution Hub)</h1>
+				</div>
+			</span>
 			{#if openState.powerDistributionHub === true || loadedState.powerDistributionHub === true}
 				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
 					<tr>
@@ -1664,7 +1829,82 @@
 						</td>
 					</tr>
 
-					
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td colspan="2" class="bold">
+										<a class="underline" href="https://docs.revrobotics.com/ion-control-system/pdh/status-led">Source</a>
+									</td>								
+								</tr>
+							</table>
+						</td>
+					</tr>
+				</table>
+			{/if}
+		</AccordionItem>
+
+		<AccordionItem class="text-black dark:text-white" bind:open={openState.powerDistributionPanel}>
+			<span slot="header" class="font-bold">
+				<div class="flex flex-row gap-x-5">
+					<CustomIcon type="/component_icons/ctrepdp"></CustomIcon>
+					<h1 class="pt-3">CTRE PDP (Power Distribution Panel)</h1>
+				</div>
+			</span>
+			{#if openState.powerDistributionPanel === true || loadedState.powerDistributionPanel === true}
+				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td class="bold">STAT</td>
+									<td class="bold">COMM</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "green led" : "black led"}> </td>
+									<td class={LEDToggleState3Hz === true ? "green led" : "black led"}> </td>
+									<td>Robot Enabled</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState1Hz === true ? "green led" : "black led"}> </td>
+									<td class={LEDToggleState1Hz === true ? "green led" : "black led"}> </td>
+									<td>Robot Disabled</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState1Hz === true ? "orange led" : "black led"}> </td>
+									<td class={LEDToggleState1Hz === true ? "orange led" : "black led"}> </td>
+									<td>Robot Disabled - Sticky Fault Present</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState1Hz === true ? "red led" : "black led"}> </td>
+									<td class={LEDToggleState1Hz === true ? "red led" : "black led"}> </td>
+									<td>No CAN Communication</td>
+								</tr>
+								<tr>
+									<td class="black led"> </td>
+									<td class={LEDToggleState3Hz === true ? "green led" : "orange led"}> </td>
+									<td>Device in Bootloader</td>
+								</tr>
+								<tr>
+									<td class="black led"> </td>
+									<td class="black led"> </td>
+									<td>Device NOT Powered</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td colspan="2" class="bold">
+										<a class="underline" href="https://ctre.download/files/user-manual/PDP%20User's%20Guide.pdf">Source</a>
+									</td>								
+								</tr>
+							</table>
+						</td>
+					</tr>
 				</table>
 			{/if}
 		</AccordionItem>

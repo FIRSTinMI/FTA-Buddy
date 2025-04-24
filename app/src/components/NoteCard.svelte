@@ -14,13 +14,17 @@
     let event = get(eventStore);
     let user = get(userStore);
 
-    export let note: Note;
+    interface Props {
+        note: Note;
+    }
 
-    let deleteNotePopup = false;
+    let { note }: Props = $props();
+
+    let deleteNotePopup = $state(false);
 
     let time = formatTimeNoAgoHourMins(note.created_at);
-    let editNoteView = false;
-    let editNoteText = note.text;
+    let editNoteView = $state(false);
+    let editNoteText = $state(note.text);
 
     async function editNote() {
         try {
@@ -58,10 +62,12 @@
 </script>
 
 <Modal bind:open={editNoteView} size="lg" outsideclose dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
-    <div slot="header">
-        <h1 class="text-2xl font-bold text-black dark:text-white place-content-center">Edit Note</h1>
-    </div>
-    <form class="text-left flex flex-col gap-4" on:submit={editNote}>
+    {#snippet header()}
+        <div >
+            <h1 class="text-2xl font-bold text-black dark:text-white place-content-center">Edit Note</h1>
+        </div>
+    {/snippet}
+    <form class="text-left flex flex-col gap-4" onsubmit={editNote}>
         <Label for="text">Edit Text:</Label>
         <Textarea id="text" class="w-full" rows="5" bind:value={editNoteText} />
         <Button type="submit">Save Changes</Button>

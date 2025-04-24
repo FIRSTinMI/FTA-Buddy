@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import { Checkbox, Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from "flowbite-svelte";
 	import Spinner from "../components/Spinner.svelte";
 	import { trpc } from "../main";
@@ -8,9 +10,9 @@
 	import { eventStore } from "../stores/event";
 	import { get } from "svelte/store";
 
-	let checklist: EventChecklist = {};
+	let checklist: EventChecklist = $state({});
 	let checklistPromise = trpc.checklist.get.query();
-	const teamNames: { [key: string]: string } = {};
+	const teamNames: { [key: string]: string } = $state({});
 
 	for (let team of get(eventStore).teams) {
 		let name = team.name;
@@ -25,12 +27,12 @@
 		checklist = c;
 	});
 
-	let present = 0;
+	let present = $state(0);
 	let weighed = 0;
-	let inspected = 0;
-	let radioProgrammed = 0;
-	let connectionTested = 0;
-	let total = 0;
+	let inspected = $state(0);
+	let radioProgrammed = $state(0);
+	let connectionTested = $state(0);
+	let total = $state(0);
 
 	function updateTotals(c: EventChecklist) {
 		present = 0;
@@ -49,7 +51,9 @@
 		}
 	}
 
-	$: updateTotals(checklist);
+	run(() => {
+		updateTotals(checklist);
+	});
 
 	async function updateChecklist(team: string, key: "present" | "inspected" | "radioProgrammed" | "connectionTested", value: boolean) {
 		const updated = [{ team: team, key, value }];

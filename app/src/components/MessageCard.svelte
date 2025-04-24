@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { preventDefault } from 'svelte/legacy';
+
 	import { Card, Modal, Label, Textarea, Button } from "flowbite-svelte";
 	import { EditOutline, TrashBinOutline } from "flowbite-svelte-icons";
 	import type { Message } from "../../../shared/types";
@@ -14,14 +16,18 @@
 	let event = get(eventStore);
 	let user = get(userStore);
 
-	export let message: Message;
-	export let simple: boolean = false;
+	interface Props {
+		message: Message;
+		simple?: boolean;
+	}
 
-	let deleteMessagePopup = false;
+	let { message, simple = false }: Props = $props();
+
+	let deleteMessagePopup = $state(false);
 
 	let time = formatTimeNoAgoHourMins(message.created_at);
-	let editMessageView = false;
-	let editMessageText = message.text;
+	let editMessageView = $state(false);
+	let editMessageText = $state(message.text);
 
 	async function editMessage() {
 		try {
@@ -60,10 +66,12 @@
 </script>
 
 <Modal bind:open={editMessageView} size="lg" outsideclose dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
-	<div slot="header">
-		<h1 class="text-2xl font-bold text-black dark:text-white place-content-center">Edit Message</h1>
-	</div>
-	<form class="text-left flex flex-col gap-4" on:submit|preventDefault={editMessage}>
+	{#snippet header()}
+		<div >
+			<h1 class="text-2xl font-bold text-black dark:text-white place-content-center">Edit Message</h1>
+		</div>
+	{/snippet}
+	<form class="text-left flex flex-col gap-4" onsubmit={preventDefault(editMessage)}>
 		<Label for="text">Edit Text:</Label>
 		<Textarea id="text" class="w-full" rows="5" bind:value={editMessageText} />
 		<Button type="submit">Save Changes</Button>

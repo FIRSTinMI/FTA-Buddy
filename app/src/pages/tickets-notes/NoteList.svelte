@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run, preventDefault } from 'svelte/legacy';
+
 	import { Alert, Button, Label, Select, Textarea, ToolbarButton, Modal, Input } from "flowbite-svelte";
 	import { onDestroy, onMount } from "svelte";
 	import { get } from "svelte/store";
@@ -16,7 +18,7 @@
 	import { navigate } from "svelte-routing";
 	import { SearchOutline } from "flowbite-svelte-icons";
 
-	let createModalOpen = false;
+	let createModalOpen = $state(false);
 
 	const teamNames = Object.fromEntries($eventStore.teams.map((team) => [team.number, team.name]));
 
@@ -24,13 +26,13 @@
 		.sort((a, b) => parseInt(a.number) - parseInt(b.number))
 		.map((v) => ({ value: parseInt(v.number), name: `${v.number} - ${v.name}` }));
 
-	let search: string = "";
+	let search: string = $state("");
 
-	let filteredNotes: Note[] | null;
+	let filteredNotes: Note[] | null = $state();
 
-	let notes: Awaited<ReturnType<typeof trpc.notes.getAll.query>> = [] as Note[];
+	let notes: Awaited<ReturnType<typeof trpc.notes.getAll.query>> = $state([] as Note[]);
 
-	let notesPromise: Promise<any> | undefined;
+	let notesPromise: Promise<any> | undefined = $state();
 
 	async function getNotes() {
 		notesPromise = trpc.notes.getAll.query();
@@ -57,25 +59,31 @@
 		filteredNotes = notes.sort((a, b) => b.updated_at.getTime() - a.updated_at.getTime());
 	}
 
-	$: filterNotes(notes, search);
+	run(() => {
+		filterNotes(notes, search);
+	});
 
 	onMount(() => {
 		getNotes();
 	});
 
-	let notesPolicyElm: NotesPolicy;
+	let notesPolicyElm: NotesPolicy = $state();
 	let open = false;
 
-	let team: number | undefined;
-	export let teamNumber: string | undefined;
-
-	let disableSubmit = false;
-
-	let noteText: string = "";
-
-	$: {
-		disableSubmit = team === undefined || team === -1 || noteText.length < 1;
+	let team: number | undefined = $state();
+	interface Props {
+		teamNumber: string | undefined;
 	}
+
+	let { teamNumber }: Props = $props();
+
+	let disableSubmit = $state(false);
+
+	let noteText: string = $state("");
+
+	run(() => {
+		disableSubmit = team === undefined || team === -1 || noteText.length < 1;
+	});
 
 	async function createNote(evt: SubmitEvent) {
 		if (team === undefined || team === -1) return;
@@ -111,8 +119,10 @@
 <NotesPolicy bind:this={notesPolicyElm} />
 
 <Modal bind:open={createModalOpen} size="lg" outsideclose dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
-	<div slot="header"><h1 class="text-2xl p-2 font-bold text-black dark:text-white">Create a Note</h1></div>
-	<form class="text-left flex flex-col gap-4" on:submit|preventDefault={createNote}>
+	{#snippet header()}
+		<div ><h1 class="text-2xl p-2 font-bold text-black dark:text-white">Create a Note</h1></div>
+	{/snippet}
+	<form class="text-left flex flex-col gap-4" onsubmit={preventDefault(createNote)}>
 		<Label class="w-full text-left">
 			Select Team:
 			<Select class="mt-2" items={teamOptions} bind:value={team} />
@@ -132,7 +142,9 @@
 			<Label class="w-full text-left">
 				<span class="ml-2">Search</span>
 				<Input class="w-full" placeholder="Search Team #, Team Name" bind:value={search}>
-					<SearchOutline slot="left" class="size-5 text-gray-500 dark:text-gray-400" />
+					{#snippet left()}
+										<SearchOutline  class="size-5 text-gray-500 dark:text-gray-400" />
+									{/snippet}
 				</Input>
 			</Label>
 		</div>

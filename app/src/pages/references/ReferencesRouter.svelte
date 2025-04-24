@@ -2,12 +2,12 @@
 	import { onMount } from "svelte";
 	import { Route, Router } from "svelte-routing";
 
-	let StatusLights: any;
-	let SoftwareDocs: any;
-	let WiringDiagrams: any;
-	let ComponentManuals: any;
-	let FieldManuals: any;
-	let Reference: any;
+	let StatusLights: any = $state();
+	let SoftwareDocs: any = $state();
+	let WiringDiagrams: any = $state();
+	let ComponentManuals: any = $state();
+	let FieldManuals: any = $state();
+	let Reference: any = $state();
 
 	onMount(async () => {
 		StatusLights = (await import("./StatusLights.svelte")).default;
@@ -22,42 +22,42 @@
 <Router basepath="/references/">
 	<Route path="/statuslights">
 		{#if StatusLights}
-			<svelte:component this={StatusLights} />
+			<StatusLights />
 		{:else}
 			<div>Loading...</div>
 		{/if}
 	</Route>
 	<Route path="/softwaredocs">
 		{#if SoftwareDocs}
-			<svelte:component this={SoftwareDocs} />
+			<SoftwareDocs />
 		{:else}
 			<div>Loading...</div>
 		{/if}
 	</Route>
 	<Route path="/wiringdiagrams">
 		{#if WiringDiagrams}
-			<svelte:component this={WiringDiagrams} />
+			<WiringDiagrams />
 		{:else}
 			<div>Loading...</div>
 		{/if}
 	</Route>
 	<Route path="/componentmanuals">
 		{#if ComponentManuals}
-			<svelte:component this={ComponentManuals} />
+			<ComponentManuals />
 		{:else}
 			<div>Loading...</div>
 		{/if}
 	</Route>
 	<Route path="/fieldmanuals">
 		{#if FieldManuals}
-			<svelte:component this={FieldManuals} />
+			<FieldManuals />
 		{:else}
 			<div>Loading...</div>
 		{/if}
 	</Route>
 	<Route path="/">
 		{#if Reference}
-			<svelte:component this={Reference} />
+			<Reference />
 		{:else}
 			<div>Loading...</div>
 		{/if}

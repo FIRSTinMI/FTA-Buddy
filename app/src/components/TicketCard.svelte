@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run } from "svelte/legacy";
+
 	import { A, Card } from "flowbite-svelte";
 	import { formatTimeNoAgoHourMins } from "../../../shared/formatTime";
 	import type { Ticket } from "../../../shared/types";
@@ -6,29 +8,37 @@
 	import { userStore } from "../stores/user";
 	import { eventStore } from "../stores/event";
 
-	export let ticket: Ticket;
+	interface Props {
+		ticket: Ticket;
+	}
 
-	let time = formatTimeNoAgoHourMins(ticket.updated_at);
+	let { ticket = $bindable() }: Props = $props();
 
-	let interval = setInterval(
-		() => {
-			time = formatTimeNoAgoHourMins(ticket.updated_at);
-		},
-		time.includes("s ") || time.includes("ow") ? 1000 : 60000
-	);
+	let time = $state(formatTimeNoAgoHourMins(ticket.updated_at));
 
-	$: ((updated) => {
-		time = formatTimeNoAgoHourMins(updated);
-		clearInterval(interval);
-		interval = setInterval(
+	let interval = $state(
+		setInterval(
 			() => {
-				time = formatTimeNoAgoHourMins(updated);
+				time = formatTimeNoAgoHourMins(ticket.updated_at);
 			},
 			time.includes("s ") || time.includes("ow") ? 1000 : 60000
-		);
-	})(ticket.updated_at);
+		)
+	);
 
-	$: ticket.messages = ticket.messages?.sort((a, b) => a.created_at.getTime() - b.created_at.getTime());
+	run(() => {
+		((updated) => {
+			time = formatTimeNoAgoHourMins(updated);
+			clearInterval(interval);
+			interval = setInterval(
+				() => {
+					time = formatTimeNoAgoHourMins(updated);
+				},
+				time.includes("s ") || time.includes("ow") ? 1000 : 60000
+			);
+		})(ticket.updated_at);
+	});
+
+	let messages = $derived(ticket.messages?.sort((a, b) => a.created_at.getTime() - b.created_at.getTime()));
 </script>
 
 <Card href="/tickets/view/{ticket.id}" padding="none" size="none" class="w-full text-black dark:text-white dark:bg-neutral-800">
@@ -51,8 +61,8 @@
 		</div>
 		<div class="p-2 place-content-center text-left">
 			<p class="font-bold text-lg pl-4 pb-2">{ticket.subject}</p>
-			{#if ticket.messages && ticket.messages.length > 0}
-				<MessageCard message={ticket.messages[ticket.messages.length - 1]} simple />
+			{#if messages && messages.length > 0}
+				<MessageCard message={messages[messages.length - 1]} simple />
 			{:else}
 				<p class="text-gray-500 dark:text-gray-400 pl-4 max-w-3xl">{ticket.text.slice(0, 300) + (ticket.text.length > 300 ? "..." : "")}</p>
 			{/if}

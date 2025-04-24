@@ -2,7 +2,7 @@
 	import { onMount } from "svelte";
 	import { Route, Router } from "svelte-routing";
 
-	let FTCStatus: any;
+	let FTCStatus: any = $state();
 
 	onMount(async () => {
 		FTCStatus = (await import("./FTCStatus.svelte")).default;
@@ -12,7 +12,7 @@
 <Router basepath="/ftc">
 	<Route path="/">
 		{#if FTCStatus}
-			<svelte:component this={FTCStatus} />
+			<FTCStatus />
 		{:else}
 			<div>Loading...</div>
 		{/if}

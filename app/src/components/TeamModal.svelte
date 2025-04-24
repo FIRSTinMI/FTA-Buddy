@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { run } from 'svelte/legacy';
+
     import { Button, Modal } from "flowbite-svelte";
     import {
     DSState,
@@ -14,20 +16,29 @@
     import type { MonitorFrameHandler } from "../util/monitorFrameHandler";
 	import { trpc } from '../main';
 
-    export let modalOpen: boolean;
-    export let modalStation: ROBOT;
-    export let monitorFrame: MonitorFrame;
-    export let frameHandler: MonitorFrameHandler;
+    interface Props {
+        modalOpen: boolean;
+        modalStation: ROBOT;
+        monitorFrame: MonitorFrame;
+        frameHandler: MonitorFrameHandler;
+    }
 
-    let modalRobot: RobotInfo | undefined;
-    let averages: Awaited<ReturnType<typeof trpc.cycles.getTeamAverageCycle.query>> | undefined;
-    $: {
+    let {
+        modalOpen = $bindable(),
+        modalStation,
+        monitorFrame,
+        frameHandler
+    }: Props = $props();
+
+    let modalRobot: RobotInfo | undefined = $state();
+    let averages: Awaited<ReturnType<typeof trpc.cycles.getTeamAverageCycle.query>> | undefined = $state();
+    run(() => {
         modalRobot = monitorFrame[modalStation];
         timeSinceChange = modalRobot.lastChange ? formatTimeShort(modalRobot.lastChange) : "";
         (async (team: number) => { averages = await trpc.cycles.getTeamAverageCycle.query({ teamNumber: team })})(modalRobot?.number);
-    }
+    });
 
-    let timeSinceChange = modalRobot?.lastChange ? formatTimeShort(modalRobot.lastChange) : "";
+    let timeSinceChange = $state(modalRobot?.lastChange ? formatTimeShort(modalRobot.lastChange) : "");
 
     setInterval(() => {
         if (modalOpen) {
@@ -37,21 +48,23 @@
 </script>
 
 <Modal bind:open={modalOpen} size="lg" outsideclose id="team-modal" dismissable={false}>
-    <div slot="header" class="md:w-full -m-2">
-        <div class="grid grid-cols-fieldmonitor lg:grid-cols-fieldmonitor-large gap-0.5 md:gap-1 lg:gap-2 mx-auto justify-center">
-            <p>Team</p>
-            <p>DS</p>
-            <p>Radio</p>
-            <p>Rio</p>
-            <p>Battery</p>
-            <p class="hidden lg:flex">Ping (ms)</p>
-            <p class="hidden lg:flex">BWU (mbps)</p>
-            <p class="hidden lg:flex">Signal (dBm)</p>
-            <p class="lg:hidden">Net</p>
-            <p class="hidden lg:flex">Last Change</p>
-            <MonitorRow station={modalStation} {monitorFrame} detailView={() => {}} {frameHandler} />
+    {#snippet header()}
+        <div  class="md:w-full -m-2">
+            <div class="grid grid-cols-fieldmonitor lg:grid-cols-fieldmonitor-large gap-0.5 md:gap-1 lg:gap-2 mx-auto justify-center">
+                <p>Team</p>
+                <p>DS</p>
+                <p>Radio</p>
+                <p>Rio</p>
+                <p>Battery</p>
+                <p class="hidden lg:flex">Ping (ms)</p>
+                <p class="hidden lg:flex">BWU (mbps)</p>
+                <p class="hidden lg:flex">Signal (dBm)</p>
+                <p class="lg:hidden">Net</p>
+                <p class="hidden lg:flex">Last Change</p>
+                <MonitorRow station={modalStation} {monitorFrame} detailView={() => {}} {frameHandler} />
+            </div>
         </div>
-    </div>
+    {/snippet}
     {#if modalRobot}
         <div class="flex flex-col w-full items-center space-y-4 -mt-4">
             <p>
@@ -224,8 +237,10 @@
             </div>
         </div>
     {/if}
-    <div slot="footer">
-        <Button color="primary" on:click={() => navigate("/notes/" + modalRobot?.number)}>Notes</Button>
-        <Button color="primary" on:click={() => (modalOpen = false)}>Close</Button>
-    </div>
+    {#snippet footer()}
+        <div >
+            <Button color="primary" on:click={() => navigate("/notes/" + modalRobot?.number)}>Notes</Button>
+            <Button color="primary" on:click={() => (modalOpen = false)}>Close</Button>
+        </div>
+    {/snippet}
 </Modal>

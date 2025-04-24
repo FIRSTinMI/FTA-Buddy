@@ -1,31 +1,35 @@
 <script lang="ts">
+	import { preventDefault } from 'svelte/legacy';
+
 	import { Button, Input, Label, Modal, Textarea } from "flowbite-svelte";
 	import { onMount } from "svelte";
 	import { toast } from "../../../../shared/toast";
 	import { trpc } from "../../main";
 
-	export let eventCode: string;
+	interface Props {
+		eventCode: string;
+	}
 
-	let ticketCreated = false;
+	let { eventCode }: Props = $props();
 
-	let agreeTerms = false;
+	let ticketCreated = $state(false);
 
-	let termsPopupOpen = true;
+	let agreeTerms = $state(false);
+
+	let termsPopupOpen = $state(true);
 
 	let event_code = eventCode;
 
 	onMount(() => {});
 
-	let team: string | undefined;
+	let team: string | undefined = $derived(agreeTerms === false || team === undefined || ticketText.length === 0 || ticketSubject.length === 0);
 
-	let disableSubmit = false;
+	let disableSubmit = $state(false);
 
-	let ticketSubject: string = "";
-	let ticketText: string = "";
+	let ticketSubject: string = $state("");
+	let ticketText: string = $state("");
 
-	$: {
-		disableSubmit = agreeTerms === false || team === undefined || ticketText.length === 0 || ticketSubject.length === 0;
-	}
+	
 
 	async function createTicket(evt: SubmitEvent) {
 		if (agreeTerms === false || team === undefined || ticketText.length === 0 || ticketSubject.length === 0) return;
@@ -74,7 +78,7 @@
 <div class="container max-w-6xl mx-auto px-2 pt-2 h-full flex flex-col gap-2">
 	{#if ticketCreated === false}
 		<h1 class="text-3xl font-bold text-black dark:text-white">Create a Ticket</h1>
-		<form class="text-left flex flex-col gap-4" on:submit|preventDefault={createTicket}>
+		<form class="text-left flex flex-col gap-4" onsubmit={preventDefault(createTicket)}>
 			<div>
 				<Label class="w-full text-left">Team Number</Label>
 				<Input type="number" id="team" required bind:value={team}></Input>

@@ -6,6 +6,7 @@ import "./app.pcss";
 import App from "./App.svelte";
 import { settingsStore } from "./stores/settings";
 import { userStore } from "./stores/user";
+import { mount } from "svelte";
 
 let token = get(userStore).token;
 let eventToken = get(userStore).eventToken;
@@ -70,7 +71,7 @@ if (!target) {
     throw new Error("App target element not found");
 }
 
-const app = new App({
+const app = mount(App, {
     target: target,
 });
 

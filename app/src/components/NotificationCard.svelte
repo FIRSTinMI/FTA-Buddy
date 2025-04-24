@@ -6,11 +6,15 @@
     import { get } from "svelte/store";
     import icon512_rounded from "/icon512_rounded.png"
 
-    export let notification: Notification;
+    interface Props {
+        notification: Notification;
+    }
+
+    let { notification }: Props = $props();
 
     const notifications = get(notificationsStore);
 
-    let time = formatTimeShort(notification.timestamp);
+    let time = $state(formatTimeShort(notification.timestamp));
 
     setInterval(() => {
         time = formatTimeShort(notification.timestamp);

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { preventDefault } from 'svelte/legacy';
+
 	import { Label, Input, Select, Button } from "flowbite-svelte";
 	import { get } from "svelte/store";
 	import { trpc } from "../../main";
@@ -6,12 +8,16 @@
 	import Spinner from "../../components/Spinner.svelte";
 	import { navigate } from "svelte-routing";
 
-	export let toast: (title: string, text: string, color?: string) => void;
+	interface Props {
+		toast: (title: string, text: string, color?: string) => void;
+	}
 
-	let username = "";
-	let role: "FTA" | "FTAA" | "CSA" | "RI";
+	let { toast }: Props = $props();
 
-	let loading = false;
+	let username = $state("");
+	let role: "FTA" | "FTAA" | "CSA" | "RI" = $state();
+
+	let loading = $state(false);
 
 	async function createGoogleUser(evt: Event) {
 		loading = true;
@@ -60,7 +66,7 @@
 <div class="container mx-auto md:max-w-3xl flex flex-col justify-center p-4 h-full space-y-4">
 	<h1 class="text-3xl">Welcome to FTA Buddy</h1>
 	<h2 class="text-xl">Finish Creating Account</h2>
-	<form class="flex flex-col space-y-2 mt-2 text-left" on:submit|preventDefault={createGoogleUser}>
+	<form class="flex flex-col space-y-2 mt-2 text-left" onsubmit={preventDefault(createGoogleUser)}>
 		<div>
 			<Label for="username">Username</Label>
 			<Input id="username" bind:value={username} placeholder="John" bind:disabled={loading} />

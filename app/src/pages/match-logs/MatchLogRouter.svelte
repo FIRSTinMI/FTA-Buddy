@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { onMount, SvelteComponent } from "svelte";
+	import { onMount } from "svelte";
 	import { Route, Router } from "svelte-routing";
 
-	let MatchLogList: any;
-	let MatchLog: any;
-	let StationLog: any;
+	let MatchLogList: any = $state();
+	let MatchLog: any = $state();
+	let StationLog: any = $state();
 
 	onMount(async () => {
 		MatchLogList = (await import("./MatchLogsList.svelte")).default;
@@ -16,23 +16,27 @@
 <Router basepath="/logs/">
 	<Route path="/">
 		{#if MatchLogList}
-			<svelte:component this={MatchLogList} />
+			<MatchLogList />
 		{:else}
 			<div>Loading...</div>
 		{/if}
 	</Route>
-	<Route path="/:matchid" let:params>
-		{#if MatchLog}
-			<svelte:component this={MatchLog} matchid={params.matchid} />
-		{:else}
-			<div>Loading...</div>
-		{/if}
-	</Route>
-	<Route path="/:matchid/:station" let:params>
-		{#if StationLog}
-			<svelte:component this={StationLog} matchid={params.matchid} station={params.station} />
-		{:else}
-			<div>Loading...</div>
-		{/if}
-	</Route>
+	<Route path="/:matchid" >
+		{#snippet children({ params })}
+				{#if MatchLog}
+				<MatchLog matchid={params.matchid} />
+			{:else}
+				<div>Loading...</div>
+			{/if}
+					{/snippet}
+		</Route>
+	<Route path="/:matchid/:station" >
+		{#snippet children({ params })}
+				{#if StationLog}
+				<StationLog matchid={params.matchid} station={params.station} />
+			{:else}
+				<div>Loading...</div>
+			{/if}
+					{/snippet}
+		</Route>
 </Router>

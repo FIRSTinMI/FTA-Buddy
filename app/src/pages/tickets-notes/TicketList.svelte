@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run, preventDefault } from 'svelte/legacy';
+
 	import Icon from "@iconify/svelte";
 	import { Button, Input, Label, Modal, Select, Textarea, Toggle, type SelectOptionType } from "flowbite-svelte";
 	import { SearchOutline } from "flowbite-svelte-icons";
@@ -15,9 +17,13 @@
 	import { settingsStore } from "../../stores/settings";
 	import { userStore } from "../../stores/user";
 
-	let createModalOpen = false;
+	let createModalOpen = $state(false);
 
-	export let team: string | undefined;
+	interface Props {
+		team: string | undefined;
+	}
+
+	let { team = $bindable() }: Props = $props();
 
 	const teamNames = Object.fromEntries($eventStore.teams.map((team) => [team.number, team.name]));
 
@@ -25,8 +31,8 @@
 		.sort((a, b) => parseInt(a.number) - parseInt(b.number))
 		.map((team) => ({ value: team.number, name: `${team.number} - ${team.name}` }));
 
-	let search: string = "";
-	let filterSelected = "all";
+	let search: string = $state("");
+	let filterSelected = $state("all");
 	let filterOptions = [
 		{ value: "all", name: "All" },
 		{ value: "open", name: "Open" },
@@ -34,11 +40,11 @@
 		{ value: "unassigned", name: "Unassigned" },
 	];
 
-	let filteredTickets: Ticket[] = [];
+	let filteredTickets: Ticket[] = $state([]);
 
-	let tickets: Awaited<ReturnType<typeof trpc.tickets.getAllWithMessages.query>> = [] as Ticket[];
+	let tickets: Awaited<ReturnType<typeof trpc.tickets.getAllWithMessages.query>> = $state([] as Ticket[]);
 
-	let ticketsPromise: Promise<any> | undefined;
+	let ticketsPromise: Promise<any> | undefined = $state();
 
 	function filterAndSearchTickets(tickets: Ticket[], filterSelected: string, search: string) {
 		if (filterSelected !== "all") {
@@ -70,7 +76,9 @@
 		filteredTickets = tickets.sort((a, b) => b.updated_at.getTime() - a.updated_at.getTime());
 	}
 
-	$: filterAndSearchTickets(tickets, filterSelected, search);
+	run(() => {
+		filterAndSearchTickets(tickets, filterSelected, search);
+	});
 
 	async function getTickets() {
 		//console.log($userStore.eventToken);
@@ -88,9 +96,9 @@
 		}
 	});
 
-	let publicTicketsModalOpen = false;
+	let publicTicketsModalOpen = $state(false);
 
-	let publicTicketSubmitState: boolean;
+	let publicTicketSubmitState: boolean = $state();
 
 	let eventPromise: ReturnType<typeof trpc.event.getPublicTicketSubmit.query>;
 
@@ -175,12 +183,12 @@
 		if ($userStore.role === "FTA" || $userStore.role === "FTAA") clearNotifications();
 	});
 
-	let notesPolicyElm: NotesPolicy;
+	let notesPolicyElm: NotesPolicy = $state();
 
-	let matchesPromise: ReturnType<typeof trpc.match.getMatchNumbers.query>;
-	let matches: SelectOptionType<string>[] = [];
+	let matchesPromise: ReturnType<typeof trpc.match.getMatchNumbers.query> = $state();
+	let matches: SelectOptionType<string>[] = $state([]);
 
-	let matchId: string | undefined = undefined;
+	let matchId: string | undefined = $state(undefined);
 
 	async function getMatchesForTeam(team: number | undefined) {
 		if (team) {
@@ -207,14 +215,14 @@
 		}
 	}
 
-	let disableSubmit = false;
+	let disableSubmit = $state(false);
 
-	let ticketSubject: string = "";
-	let ticketText: string = "";
+	let ticketSubject: string = $state("");
+	let ticketText: string = $state("");
 
-	$: {
+	run(() => {
 		disableSubmit = team === undefined || ticketText.length === 0 || ticketSubject.length === 0;
-	}
+	});
 
 	async function createTicket(evt: SubmitEvent) {
 		if (team === undefined || ticketText.length === 0 || ticketSubject.length === 0) return;
@@ -330,8 +338,10 @@
 <NotesPolicy bind:this={notesPolicyElm} />
 
 <Modal bind:open={createModalOpen} size="lg" outsideclose dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
-	<div slot="header"><h1 class="text-3xl p-2 font-bold text-black dark:text-white">Create a Ticket</h1></div>
-	<form class="text-left flex flex-col gap-4" on:submit|preventDefault={createTicket}>
+	{#snippet header()}
+		<div ><h1 class="text-3xl p-2 font-bold text-black dark:text-white">Create a Ticket</h1></div>
+	{/snippet}
+	<form class="text-left flex flex-col gap-4" onsubmit={preventDefault(createTicket)}>
 		<Label class="w-full text-left">
 			Select Team
 			<Select class="mt-2" items={teamOptions} bind:value={team} on:change={() => getMatchesForTeam(parseInt(team ?? "0"))} />
@@ -379,7 +389,9 @@
 			<Label class="w-full text-left">
 				<span class="ml-2">Search</span>
 				<Input class="w-full" placeholder="Search Team #, Team Name, Subject, Assigned User" bind:value={search}>
-					<SearchOutline slot="left" class="size-5 text-gray-500 dark:text-gray-400" />
+					{#snippet left()}
+										<SearchOutline  class="size-5 text-gray-500 dark:text-gray-400" />
+									{/snippet}
 				</Input>
 			</Label>
 			<Label class="text-left">

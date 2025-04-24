@@ -5,12 +5,12 @@
 	import type { FTCEvent } from "../../../../src/router/ftc";
 	import { onMount } from "svelte";
 
-	let region = "FIM";
-	let events: string[] = []; //["2425-FIM-MHQ"];
-	let eventData: FTCEvent[] = [];
+	let region = $state("FIM");
+	let events: string[] = $state([]); //["2425-FIM-MHQ"];
+	let eventData: FTCEvent[] = $state([]);
 	let subscription: ReturnType<typeof trpc.ftc.dashboard.subscribe> | null = null;
 
-	let loading = true;
+	let loading = $state(true);
 
 	async function getEventsForRegion(region: string) {
 		events = (await trpc.ftc.getEventsThisWeek.query({ region })).map((event) => event.key);
@@ -47,10 +47,10 @@
 		subscribeToEvents(await getEventsForRegion(region));
 	});
 
-	let eventCurrentCycleTimes = eventData.map((event) => ({
+	let eventCurrentCycleTimes = $state(eventData.map((event) => ({
 		event: event.key,
 		time: event.currentMatch?.postResultTime ? formatTimeShortNoAgo(event.currentMatch?.postResultTime) : "Unknown",
-	}));
+	})));
 
 	setInterval(async () => {
 		eventCurrentCycleTimes = eventData.map((event) => ({

@@ -2,9 +2,9 @@
 	import { onMount } from "svelte";
 	import { Route, Router } from "svelte-routing";
 
-	let TicketList: any;
-	let ViewTicket: any;
-	let PublicTicketCreate: any;
+	let TicketList: any = $state();
+	let ViewTicket: any = $state();
+	let PublicTicketCreate: any = $state();
 
 	onMount(async () => {
 		TicketList = (await import("./TicketList.svelte")).default;
@@ -16,30 +16,36 @@
 <Router basepath="ticket">
 	<Route path="/">
 		{#if TicketList}
-			<svelte:component this={TicketList} />
+			<TicketList />
 		{:else}
 			<div>Loading...</div>
 		{/if}
 	</Route>
-	<Route path="/:team" let:params>
-		{#if TicketList}
-			<svelte:component this={TicketList} team={params.team} />
-		{:else}
-			<div>Loading...</div>
-		{/if}
-	</Route>
-	<Route path="/view/:id" let:params>
-		{#if ViewTicket}
-			<svelte:component this={ViewTicket} id={params.id} />
-		{:else}
-			<div>Loading...</div>
-		{/if}
-	</Route>
-	<Route path="/submit/:eventCode" let:params>
-		{#if PublicTicketCreate}
-			<svelte:component this={PublicTicketCreate} eventCode={params.eventCode} />
-		{:else}
-			<div>Loading...</div>
-		{/if}
-	</Route>
+	<Route path="/:team" >
+		{#snippet children({ params })}
+				{#if TicketList}
+				<TicketList team={params.team} />
+			{:else}
+				<div>Loading...</div>
+			{/if}
+					{/snippet}
+		</Route>
+	<Route path="/view/:id" >
+		{#snippet children({ params })}
+				{#if ViewTicket}
+				<ViewTicket id={params.id} />
+			{:else}
+				<div>Loading...</div>
+			{/if}
+					{/snippet}
+		</Route>
+	<Route path="/submit/:eventCode" >
+		{#snippet children({ params })}
+				{#if PublicTicketCreate}
+				<PublicTicketCreate eventCode={params.eventCode} />
+			{:else}
+				<div>Loading...</div>
+			{/if}
+					{/snippet}
+		</Route>
 </Router>

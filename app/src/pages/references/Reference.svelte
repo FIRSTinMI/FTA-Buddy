@@ -1,14 +1,8 @@
 <script lang="ts">
 	import Icon from "@iconify/svelte";
 	import { Accordion, AccordionItem, Button } from "flowbite-svelte";
-	import { settingsStore } from "../../stores/settings";
-	import { Route, Router } from "svelte-routing";
-	import StatusLights from "./StatusLights.svelte";
-	import SoftwareDocs from "./SoftwareDocs.svelte";
-	import WiringDiagrams from "./WiringDiagrams.svelte";
-	import ComponentManuals from "./ComponentManuals.svelte";
-	import FieldManuals from "./FieldManuals.svelte";
 	import QrCode from "svelte-qrcode";
+	import { settingsStore } from "../../stores/settings";
 </script>
 
 <div class="container mx-auto p-2 pr-3 w-full">
@@ -47,31 +41,35 @@
 			<h3 style="padding: 2pt;">Driver Station</h3>
 
 			<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
-				<tr>
-					<td>
-						<table class="section-table">
-							<tr>
-								<td width="125"><code>F1</code></td>
-								<td>Joystick rescan</td>
-							</tr>
-							<tr>
-								<td
-									><code>[</code> + <code>]</code> +
-									<code>\</code></td
-								>
-								<td>Enable Robot</td>
-							</tr>
-							<tr>
-								<td><code>Enter</code></td>
-								<td>Disable Robot</td>
-							</tr>
-							<tr>
-								<td><code>Space</code></td>
-								<td>E-Stop</td>
-							</tr>
-						</table>
-					</td>
-				</tr>
+				<tbody>
+					<tr>
+						<td>
+							<table class="section-table">
+								<tbody>
+									<tr>
+										<td width="125"><code>F1</code></td>
+										<td>Joystick rescan</td>
+									</tr>
+									<tr>
+										<td
+											><code>[</code> + <code>]</code> +
+											<code>\</code></td
+										>
+										<td>Enable Robot</td>
+									</tr>
+									<tr>
+										<td><code>Enter</code></td>
+										<td>Disable Robot</td>
+									</tr>
+									<tr>
+										<td><code>Space</code></td>
+										<td>E-Stop</td>
+									</tr>
+								</tbody>
+							</table>
+						</td>
+					</tr>
+				</tbody>
 			</table>
 		</AccordionItem>
 
@@ -79,7 +77,7 @@
 			<span slot="header" class="font-bold">Team IP Addresses</span>
 
 			<h3 style="padding: 2pt;">IP Config Guide Link</h3>
-			
+
 			<a href="https://docs.wpilib.org/en/stable/docs/networking/networking-introduction/ip-configurations.html" target="_blank">
 				<QrCode value="https://docs.wpilib.org/en/stable/docs/networking/networking-introduction/ip-configurations.html" padding={5} />
 			</a>
@@ -87,162 +85,126 @@
 			<h3 style="padding: 2pt;">IP Address Format</h3>
 
 			<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
-				<tr>
-					<td>
-						<table class="section-table">
-							<tr>
-								<td width="125">Team 1</td>
-								<td>10.0.1.x</td>
-							</tr>
-							<tr>
-								<td>Team 12</td>
-								<td>10.0.12.x</td>
-							</tr>
-							<tr>
-								<td>Team 123</td>
-								<td>10.1.23.x</td>
-							</tr>
-							<tr>
-								<td>Team 1234</td>
-								<td>10.12.34.x</td>
-							</tr>
-							<tr>
-								<td>Team 12345</td>
-								<td>10.123.45.x</td>
-							</tr>
-						</table>
-					</td>
-				</tr>
-			</table>
-
-			<h3 style="padding: 2pt;">Robot IP Addresses</h3>
-
-			<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
-				<tr>
-					<td>
-						<table class="section-table">
-							<tr>
-								<td width="125">Robot Radio</td>
-								<td>10.TE.AM.1</td>
-							</tr>
-							<tr>
-								<td>roboRIO</td>
-								<td>10.TE.AM.2</td>
-							</tr>
-							<tr>
-								<td>roboRIO USB</td>
-								<td>172.22.11.2</td>
-							</tr>
-							<tr>
-								<td>roboRIO Name</td>
-								<td>roborio-TEAM-frc.local</td>
-							</tr>
-						</table>
-					</td>
-				</tr>
-			</table>
-
-			<h3 style="padding: 2pt;">Driver Station DHCP Settings</h3>
-
-			<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
-				<tr>
-					<td>
-						<table class="section-table">
-							<tr>
-								<td width="125">IP Address</td>
-								<td>10.TE.AM.X</td>
-							</tr>
-							<tr>
-								<td></td>
-								<td class="highlight">(dynamically assigned by field)</td>
-							</tr>
-							<tr>
-								<td>Subnet Mask</td>
-								<td>255.255.255.0</td>
-							</tr>
-							<tr>
-								<td>Gateway</td>
-								<td>10.TE.AM.4</td>
-							</tr>
-						</table>
-					</td>
-				</tr>
-			</table>
-
-			<h3 style="padding: 2pt;">Driver Station Static IP Settings</h3>
-
-			<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
-				<tr>
-					<td>
-						<table class="section-table">
-							<tr>
-								<td width="125">IP Address</td>
-								<td>10.TE.AM.5</td>
-							</tr>
-							<tr>
-								<td>Subnet Mask</td>
-								<td>255.0.0.0</td>
-							</tr>
-							<tr>
-								<td></td>
-								<td class="highlight">(if no default gateway)</td>
-							</tr>
-							<tr>
-								<td>Default Gateway</td>
-								<td>10.TE.AM.4</td>
-							</tr>
-							<tr>
-								<td>Subnet Mask</td>
-								<td>255.255.255.0</td>
-							</tr>
-							<tr>
-								<td></td>
-								<td class="highlight">(if default gateway is set)</td>
-							</tr>
-						</table>
-					</td>
-				</tr>
+				<tbody>
+					<tr>
+						<td>
+							<table class="section-table">
+								<tbody>
+									<tr>
+										<td width="125">Team 1</td>
+										<td>10.0.1.x</td>
+									</tr>
+									<tr>
+										<td>Team 12</td>
+										<td>10.0.12.x</td>
+									</tr>
+									<tr>
+										<td>Team 123</td>
+										<td>10.1.23.x</td>
+									</tr>
+									<tr>
+										<td>Team 1234</td>
+										<td>10.12.34.x</td>
+									</tr>
+									<tr>
+										<td>Team 12345</td>
+										<td>10.123.45.x</td>
+									</tr>
+								</tbody>
+							</table>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<table class="section-table">
+								<tbody>
+									<tr>
+										<td width="125">Robot Radio</td>
+										<td>10.TE.AM.1</td>
+									</tr>
+									<tr>
+										<td>roboRIO</td>
+										<td>10.TE.AM.2</td>
+									</tr>
+									<tr>
+										<td>roboRIO USB</td>
+										<td>172.22.11.2</td>
+									</tr>
+									<tr>
+										<td>roboRIO Name</td>
+										<td>roborio-TEAM-frc.local</td>
+									</tr>
+								</tbody>
+							</table>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<h3>On-Field Static IP Configuration</h3>
+							<table class="section-table">
+								<tbody>
+									<tr>
+										<td width="125">IP Address</td>
+										<td>10.TE.AM.5</td>
+									</tr>
+									<tr>
+										<td>Default Gateway</td>
+										<td>10.TE.AM.4</td>
+									</tr>
+									<tr>
+										<td>Subnet Mask</td>
+										<td>255.255.255.0</td>
+									</tr>
+								</tbody>
+							</table>
+						</td>
+					</tr>
+				</tbody>
 			</table>
 		</AccordionItem>
 
 		<AccordionItem class="text-black dark:text-white">
-			<span slot="header" class="font-bold">Helpful Commands (WINDOWS ONLY)</span>
+			<span slot="header" class="font-bold">Helpful Commands</span>
 
 			<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
-				<tr>
-					<td>
-						<table class="section-table">
-							<tr>
-								<td width="125">ncpa.cpl</td>
-								<td>Network adapters</td>
-							</tr>
-							<tr>
-								<td>wf.msc</td>
-								<td>Windows firewall</td>
-							</tr>
-							<tr>
-								<td>ipconfig</td>
-								<td>Show network settings</td>
-							</tr>
-							<tr>
-								<td>ipconfig /release</td>
-								<td>Release DHCP address</td>
-							</tr>
-							<tr>
-								<td>ipconfig /renew</td>
-								<td>Acquire DHCP address</td>
-							</tr>
-							<tr>
-								<td>ping 10.TE.AM.255</td>
-								<td>Scans network</td>
-							</tr>
-							<tr>
-								<td>arp -a</td>
-								<td>Shows reachable IPs</td>
-							</tr>
-						</table>
-					</td>
-				</tr>
+				<tbody>
+					<tr>
+						<td>
+							<table class="section-table">
+								<tbody>
+									<tr>
+										<td width="125">ncpa.cpl</td>
+										<td>Network adapters</td>
+									</tr>
+									<tr>
+										<td>wf.msc</td>
+										<td>Windows firewall</td>
+									</tr>
+									<tr>
+										<td>ipconfig</td>
+										<td>Show network settings</td>
+									</tr>
+									<tr>
+										<td>ipconfig /release</td>
+										<td>Release DHCP address</td>
+									</tr>
+									<tr>
+										<td>ipconfig /renew</td>
+										<td>Acquire DHCP address</td>
+									</tr>
+									<tr>
+										<td>ping 10.TE.AM.255</td>
+										<td>Scans network</td>
+									</tr>
+									<tr>
+										<td>arp -a</td>
+										<td>Shows reachable IPs</td>
+									</tr>
+								</tbody>
+							</table>
+						</td>
+					</tr>
+				</tbody>
 			</table>
 		</AccordionItem>
 	</Accordion>

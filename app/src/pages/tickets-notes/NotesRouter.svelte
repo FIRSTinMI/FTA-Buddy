@@ -2,7 +2,7 @@
 	import { onMount } from "svelte";
 	import { Route, Router } from "svelte-routing";
 
-	let NoteList: any;
+	let NoteList: any = $state();
 
 	onMount(async () => {
 		NoteList = (await import("./NoteList.svelte")).default;
@@ -10,18 +10,22 @@
 </script>
 
 <Router basepath="/notes/">
-	<Route path="/" let:params>
-		{#if NoteList}
-			<svelte:component this={NoteList} />
-		{:else}
-			<div>Loading...</div>
-		{/if}
-	</Route>
-	<Route path="/:teamNumber" let:params>
-		{#if NoteList}
-			<svelte:component this={NoteList} teamNumber={params.teamNumber} />
-		{:else}
-			<div>Loading...</div>
-		{/if}
-	</Route>
+	<Route path="/" >
+		{#snippet children({ params })}
+				{#if NoteList}
+				<NoteList />
+			{:else}
+				<div>Loading...</div>
+			{/if}
+					{/snippet}
+		</Route>
+	<Route path="/:teamNumber" >
+		{#snippet children({ params })}
+				{#if NoteList}
+				<NoteList teamNumber={params.teamNumber} />
+			{:else}
+				<div>Loading...</div>
+			{/if}
+					{/snippet}
+		</Route>
 </Router>

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { preventDefault } from 'svelte/legacy';
+
 	import { get } from "svelte/store";
 	import Spinner from "../../components/Spinner.svelte";
 	import { trpc } from "../../main";
@@ -16,36 +18,40 @@
 	import NotesPolicy from "../../components/NotesPolicy.svelte";
 	import MessageCard from "../../components/MessageCard.svelte";
 
-	export let id: string;
+	interface Props {
+		id: string;
+	}
+
+	let { id }: Props = $props();
 
 	let ticket_id = parseInt(id);
 
 	let event = get(eventStore);
 	let user = get(userStore);
 
-	let ticket: Awaited<ReturnType<typeof trpc.tickets.getByIdWithMessages.query>>;
+	let ticket: Awaited<ReturnType<typeof trpc.tickets.getByIdWithMessages.query>> = $state();
 
-	let ticketPromise: Promise<any> | undefined;
+	let ticketPromise: Promise<any> | undefined = $state();
 
 	let match_id: string | undefined | null;
 
 	let matchPromise: Promise<any> | undefined;
 
-	let match: Awaited<ReturnType<typeof trpc.match.getMatch.query>>;
+	let match: Awaited<ReturnType<typeof trpc.match.getMatch.query>> = $state();
 
-	let time: string = "";
+	let time: string = $state("");
 
-	let station: ROBOT | undefined = undefined;
+	let station: ROBOT | undefined = $state(undefined);
 
 	let assignedToUser = false;
 
-	let sortedMessages: Message[] | undefined;
+	let sortedMessages: Message[] | undefined = $derived(ticket && ticket.messages ? ticket.messages?.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) : []);
 
-	let deleteTicketPopup = false;
+	let deleteTicketPopup = $state(false);
 
-	let editTicketView = false;
-	let editTicketText: string;
-	let editTicketSubject: string;
+	let editTicketView = $state(false);
+	let editTicketText: string = $state();
+	let editTicketSubject: string = $state();
 
 	async function getTicketAndMatch() {
 		ticketPromise = trpc.tickets.getByIdWithMessages.query({
@@ -94,7 +100,7 @@
 		}
 	}
 
-	$: sortedMessages = ticket && ticket.messages ? ticket.messages?.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) : [];
+	
 
 	onMount(async () => {
 		getTicketAndMatch();
@@ -169,7 +175,7 @@
 		}
 	}
 
-	let message_text: string = "";
+	let message_text: string = $state("");
 
 	async function postMessage(evt: SubmitEvent) {
 		if (message_text.trim().length < 1) {
@@ -348,12 +354,12 @@
 		);
 	}
 
-	let notesPolicyElm: NotesPolicy;
+	let notesPolicyElm: NotesPolicy = $state();
 
-	let matchesPromise: ReturnType<typeof trpc.match.getMatchNumbers.query>;
-	let matches: SelectOptionType<string>[] = [];
+	let matchesPromise: ReturnType<typeof trpc.match.getMatchNumbers.query> = $state();
+	let matches: SelectOptionType<string>[] = $state([]);
 
-	let matchId: string | undefined = undefined;
+	let matchId: string | undefined = $state(undefined);
 
 	async function getMatchesForTeam(team: number | undefined) {
 		if (team) {
@@ -380,7 +386,7 @@
 		}
 	}
 
-	let matchLogModalOpen = false;
+	let matchLogModalOpen = $state(false);
 
 	function openMatchLogSelector() {
 		matchLogModalOpen = true;
@@ -397,10 +403,12 @@
 </script>
 
 <Modal bind:open={editTicketView} size="lg" dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
-	<div slot="header">
-		<h1 class="text-2xl font-bold text-black dark:text-white place-content-center">Edit Ticket #{ticket_id}</h1>
-	</div>
-	<form class="text-left flex flex-col gap-4" on:submit={editTicket}>
+	{#snippet header()}
+		<div >
+			<h1 class="text-2xl font-bold text-black dark:text-white place-content-center">Edit Ticket #{ticket_id}</h1>
+		</div>
+	{/snippet}
+	<form class="text-left flex flex-col gap-4" onsubmit={editTicket}>
 		<Label for="subject">Edit Subject:</Label>
 		<Textarea id="subject" class="w-full" rows="1" bind:value={editTicketSubject} />
 		<Label for="text">Edit Text:</Label>
@@ -419,8 +427,10 @@
 </Modal>
 
 <Modal bind:open={matchLogModalOpen} size="sm" outsideclose dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
-	<div slot="header"><h1 class="text-3xl p-2 font-bold text-black dark:text-white">Create a Ticket</h1></div>
-	<form class="text-left flex flex-col gap-4" on:submit|preventDefault={attachMatchLog}>
+	{#snippet header()}
+		<div ><h1 class="text-3xl p-2 font-bold text-black dark:text-white">Create a Ticket</h1></div>
+	{/snippet}
+	<form class="text-left flex flex-col gap-4" onsubmit={preventDefault(attachMatchLog)}>
 		{#await matchesPromise then}
 			{#if matches.length > 0}
 				<Label class="w-full text-left">
@@ -561,23 +571,25 @@
 								</div>
 							</div>
 							<div>
-								<form class="w-full" on:submit|preventDefault={postMessage}>
+								<form class="w-full" onsubmit={preventDefault(postMessage)}>
 									<label for="chat" class="sr-only">Add a Message:</label>
 									<Alert color="dark" class="px-0 py-2">
-										<svelte:fragment slot="icon">
-											<Textarea
-												id="chat"
-												class="ml-3"
-												rows="1"
-												placeholder="Your message..."
-												on:keydown={sendKey}
-												bind:value={message_text}
-											/>
-											<ToolbarButton type="submit" color="blue" class="rounded-full text-primary-600 dark:text-primary-500">
-												<Icon icon="mdi:send" class="w-6 h-8" />
-												<span class="sr-only">Send message</span>
-											</ToolbarButton>
-										</svelte:fragment>
+										{#snippet icon()}
+																			
+												<Textarea
+													id="chat"
+													class="ml-3"
+													rows="1"
+													placeholder="Your message..."
+													on:keydown={sendKey}
+													bind:value={message_text}
+												/>
+												<ToolbarButton type="submit" color="blue" class="rounded-full text-primary-600 dark:text-primary-500">
+													<Icon icon="mdi:send" class="w-6 h-8" />
+													<span class="sr-only">Send message</span>
+												</ToolbarButton>
+											
+																			{/snippet}
 									</Alert>
 								</form>
 							</div>

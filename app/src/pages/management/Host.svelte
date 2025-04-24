@@ -141,7 +141,7 @@
 	<Spinner />
 {/if}
 
-<div class="container mx-auto md:max-w-4xl flex flex-col justify-center p-4 h-full space-y-4 {waitingForFirstConnectionTest ? 'blur' : ''}">
+<div class="container mx-auto md:max-w-4xl flex flex-col justify-center p-4 h-full space-y-4 {waitingForFirstConnectionTest ? 'blur-sm' : ''}">
 	<h1 class="text-3xl font-bold">Host a FTA Buddy Instance</h1>
 	<div>
 		<div class="inline-flex gap-2 font-bold mx-auto">

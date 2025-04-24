@@ -159,7 +159,7 @@
 		{/if}
 	</div>
 
-	<div class:blur={loading}>
+	<div class:blur-sm={loading}>
 		<h2 class="text-lg lg:mt-2">Match: {match}</h2>
 		<p class="text-lg">{fieldState}</p>
 		<h4 class="text-lg font-bold lg:text-xl">{aheadBehind}</h4>

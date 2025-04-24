@@ -2,7 +2,7 @@ import { createTRPCClient, createWSClient, httpBatchLink, splitLink, wsLink } fr
 import SuperJSON from "superjson";
 import { get } from "svelte/store";
 import type { AppRouter } from '../../src/index';
-import "./app.pcss";
+import "./app.css";
 import App from "./App.svelte";
 import { settingsStore } from "./stores/settings";
 import { userStore } from "./stores/user";

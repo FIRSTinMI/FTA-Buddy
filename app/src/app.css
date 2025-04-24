@@ -1,6 +1,66 @@
-/* Write your global styles here, in PostCSS syntax */
+@import "tailwindcss";
 
-@tailwind base;
+@plugin 'flowbite/plugin';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+    --color-primary-50: #f9f5ff;
+    --color-primary-100: #f2e9fe;
+    --color-primary-200: #e7d6fe;
+    --color-primary-300: #d4b6fc;
+    --color-primary-400: #b988f8;
+    --color-primary-500: #ac71f4;
+    --color-primary-600: #8838e5;
+    --color-primary-700: #7427c9;
+    --color-primary-800: #6325a4;
+    --color-primary-900: #521f84;
+    --color-primary-950: #360a61;
+    --color-secondary-50: #f2f0ff;
+    --color-secondary-100: #e8e4ff;
+    --color-secondary-200: #d3ccff;
+    --color-secondary-300: #b2a4ff;
+    --color-secondary-400: #8e70ff;
+    --color-secondary-500: #6c37ff;
+    --color-secondary-600: #5d0fff;
+    --color-secondary-700: #4e00ff;
+    --color-secondary-800: #4100da;
+    --color-secondary-900: #3700b3;
+    --color-secondary-950: #1e007a;
+    --color-accent-50: #ebfeff;
+    --color-accent-100: #cdf9ff;
+    --color-accent-200: #a1f1ff;
+    --color-accent-300: #60e4ff;
+    --color-accent-400: #18cdf8;
+    --color-accent-500: #00b0de;
+    --color-accent-600: #0086b3;
+    --color-accent-700: #086f96;
+    --color-accent-800: #105a7a;
+    --color-accent-900: #124b67;
+    --color-accent-950: #053047;
+    --color-gray-50: #FAFAFA;
+    --color-gray-100: #F5F5F5;
+    --color-gray-200: #EEEEEE;
+    --color-gray-300: #E0E0E0;
+    --color-gray-400: #BDBDBD;
+    --color-gray-500: #9E9E9E;
+    --color-gray-600: #757575;
+    --color-gray-700: #616161;
+    --color-gray-800: #424242;
+    --color-gray-900: #212121;
+}
+
+@utility z-100 {
+    z-index: 100;
+}
+
+@layer base {
+    button, [role="button"] {
+      cursor: pointer;
+    }
+}
+
+@source "../node_modules/flowbite-svelte/dist";
 
 :root {
 	font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
@@ -169,7 +229,3 @@ div[aria-modal="true"] {
 .range:disabled::-webkit-slider-thumb {
 	background: #999999 !important;
 }
-
-@tailwind components;
-
-@tailwind utilities;

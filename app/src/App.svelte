@@ -300,7 +300,7 @@
 		<Toast
 			bind:open={showToast}
 			class="dark:bg-{toastColor}"
-			divClass="w-lg p-4 text-black dark:text-gray-500 bg-white shadow dark:text-gray-400 dark:bg-gray-800 gap-3"
+			divClass="w-lg p-4 text-black dark:text-gray-500 bg-white shadow-sm dark:text-gray-400 dark:bg-gray-800 gap-3"
 		>
 			<h3 class="text-lg font-bold text-left">{toastTitle}</h3>
 			<p class="text-left">{toastText}</p>
@@ -374,7 +374,7 @@
 		</Label>
 	{/if}
 	<Sidebar>
-		<SidebarWrapper divClass="overflow-y-auto py-4 px-3 rounded dark:bg-gray-800">
+		<SidebarWrapper divClass="overflow-y-auto py-4 px-3 rounded-sm dark:bg-gray-800">
 			{#if user.token && user.eventToken}
 				<SidebarGroup>
 					{#if user?.role === "FTA" || user?.role === "FTAA"}

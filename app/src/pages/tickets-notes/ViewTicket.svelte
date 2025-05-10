@@ -147,15 +147,15 @@
 
 	function viewLog() {
 		if (!ticket || !ticket.match_id || !station) return;
-		navigate(`/app/logs/${ticket.match_id}/${station}`);
+		navigate(`/logs/${ticket.match_id}/${station}`);
 	}
 
 	function back() {
 		if (window.history.state === null) {
 			if (user.role === "CSA" || user.role === "RI") {
-				navigate("/app/");
+				navigate("/");
 			} else {
-				navigate("/app/tickets/");
+				navigate("/tickets/");
 			}
 		} else {
 			window.history.back();

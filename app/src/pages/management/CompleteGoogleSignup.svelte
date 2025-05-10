@@ -36,7 +36,7 @@
 			});
 
 			toast("Success", "Account created successfully", "green-500");
-			navigate("/app/manage/login");
+			navigate("/manage/login");
 		} catch (err: any) {
 			console.error(err);
 			if (err.message.startsWith("[")) {

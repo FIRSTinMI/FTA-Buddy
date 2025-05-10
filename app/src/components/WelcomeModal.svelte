@@ -82,30 +82,30 @@
 				<li><span class="text-2xl">🛜</span>Team has not flashed radio.</li>
 			</ul>
 
-			<img src="/app/tutorial/monitor.png" alt="Monitor" class="sm:max-w-xl w-fit mx-auto py-1" />
-			<img src="/app/tutorial/cycles.png" alt="Cycles" class="sm:max-w-xl w-fit mx-auto py-1" />
+			<img src="/tutorial/monitor.png" alt="Monitor" class="sm:max-w-xl w-fit mx-auto py-1" />
+			<img src="/tutorial/cycles.png" alt="Cycles" class="sm:max-w-xl w-fit mx-auto py-1" />
 		{:else if step === 2}
 			<h2 class="font-bold">CSA Tickets & Team Notes</h2>
 			<p class="py-1">Create and assign tickets to track team issues. Collaborate with CSAs through ticket messages.</p>
 			<p class="py-1">Use notes to record helpful team info that carries across events, such as unresolved issues or key behavior.</p>
-			<img src="/app/tutorial/ticket_list.png" alt="Tickets" class="sm:max-w-xl w-fit mx-auto py-1" />
-			<img src="/app/tutorial/notes.png" alt="Notes" class="sm:max-w-xl w-fit mx-auto py-1" />
+			<img src="/tutorial/ticket_list.png" alt="Tickets" class="sm:max-w-xl w-fit mx-auto py-1" />
+			<img src="/tutorial/notes.png" alt="Notes" class="sm:max-w-xl w-fit mx-auto py-1" />
 		{:else if step === 3}
 			<h2 class="font-bold">Checklist & Logs</h2>
 			<p class="py-1">Track which teams have flashed radios and passed inspection. The checklist syncs across all users in the event.</p>
 			<p class="py-1">Match logs include detailed connection and radio data per alliance and team. View graphs, share links, and export data.</p>
-			<img src="/app/tutorial/checklist.png" alt="Checklist" class="sm:max-w-xl w-fit mx-auto py-1" />
-			<img src="/app/tutorial/logs.png" alt="Logs" class="sm:max-w-xl w-fit mx-auto py-1" />
+			<img src="/tutorial/checklist.png" alt="Checklist" class="sm:max-w-xl w-fit mx-auto py-1" />
+			<img src="/tutorial/logs.png" alt="Logs" class="sm:max-w-xl w-fit mx-auto py-1" />
 		{:else if step === 4}
 			<h2 class="font-bold">Public Ticket Creation</h2>
 			<p class="py-1">Allow teams to submit their own tickets via QR code or kiosk link. This reduces the need for paper and speeds up support.</p>
 			<p class="py-1">Public ticketing can be turned off at any time if abused.</p>
-			<img src="/app/tutorial/public_ticket_modal.png" alt="Public Ticketing" class="sm:max-w-xl w-fit mx-auto py-1" />
+			<img src="/tutorial/public_ticket_modal.png" alt="Public Ticketing" class="sm:max-w-xl w-fit mx-auto py-1" />
 		{:else if step === 5}
 			<h2 class="font-bold">Notifications</h2>
 			<p class="py-1">Receive push notifications for new tickets, updates to tickets you're following or assigned to, and robot status changes.</p>
 			<p class="py-1">You can customize which notifications you receive in the settings page.</p>
-			<img src="/app/tutorial/notifications_list.png" alt="Notifications" class="sm:max-w-xl w-fit mx-auto py-1" />
+			<img src="/tutorial/notifications_list.png" alt="Notifications" class="sm:max-w-xl w-fit mx-auto py-1" />
 		{:else if step === 6}
 			<h2 class="font-bold">Learn More</h2>
 			<p class="py-1">

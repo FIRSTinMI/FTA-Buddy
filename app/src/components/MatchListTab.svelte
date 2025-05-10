@@ -30,7 +30,7 @@
     });
 
     function tabClick() {
-        navigate(`/app/logs/#${label.toLowerCase()}`);
+        navigate(`/logs/#${label.toLowerCase()}`);
     }
 </script>
 
@@ -67,57 +67,57 @@
                 <TableBodyRow class="text-center cursor-pointer">
                     <TableBodyCell
                         class="dark:bg-neutral-700 hidden md:table-cell"
-                        on:click={() => navigate(`/app/logs/${match.id}`)}
+                        on:click={() => navigate(`/logs/${match.id}`)}
                         >{match.match_number}</TableBodyCell
                     >
                     <TableBodyCell
                         class="dark:bg-neutral-700 hidden md:table-cell"
-                        on:click={() => navigate(`/app/logs/${match.id}`)}
+                        on:click={() => navigate(`/logs/${match.id}`)}
                         >{match.play_number}</TableBodyCell
                     >
                     <TableBodyCell
                         class="dark:bg-neutral-700 md:hidden"
-                        on:click={() => navigate(`/app/logs/${match.id}`)}
+                        on:click={() => navigate(`/logs/${match.id}`)}
                         >{match.match_number}/{match.play_number}</TableBodyCell
                     >
                     <TableBodyCell
                         class="dark:bg-neutral-700 hidden md:table-cell"
-                        on:click={() => navigate(`/app/logs/${match.id}`)}
+                        on:click={() => navigate(`/logs/${match.id}`)}
                         >{formatTime(new Date(match.start_time))}</TableBodyCell
                     >
                     <TableBodyCell
                         class="px-1 bg-blue-400 dark:bg-blue-500 hover:bg-opacity-50 hover:underline"
-                        on:click={() => navigate(`/app/logs/${match.id}/blue1`)}
+                        on:click={() => navigate(`/logs/${match.id}/blue1`)}
                         >{match.blue1 ?? "None"}</TableBodyCell
                     >
                     <TableBodyCell
                         class="px-1 bg-blue-400 dark:bg-blue-500 hover:bg-opacity-50 hover:underline"
-                        on:click={() => navigate(`/app/logs/${match.id}/blue2`)}
+                        on:click={() => navigate(`/logs/${match.id}/blue2`)}
                         >{match.blue2 ?? "None"}</TableBodyCell
                     >
                     <TableBodyCell
                         class="px-1 bg-blue-400 dark:bg-blue-500 hover:bg-opacity-50 hover:underline"
-                        on:click={() => navigate(`/app/logs/${match.id}/blue3`)}
+                        on:click={() => navigate(`/logs/${match.id}/blue3`)}
                         >{match.blue3 ?? "None"}</TableBodyCell
                     >
                     <TableBodyCell
                         class="px-1 bg-red-400 dark:bg-red-500 hover:bg-opacity-50 hover:underline"
-                        on:click={() => navigate(`/app/logs/${match.id}/red1`)}
+                        on:click={() => navigate(`/logs/${match.id}/red1`)}
                         >{match.red1 ?? "None"}</TableBodyCell
                     >
                     <TableBodyCell
                         class="px-1 bg-red-400 dark:bg-red-500 hover:bg-opacity-50 hover:underline"
-                        on:click={() => navigate(`/app/logs/${match.id}/red2`)}
+                        on:click={() => navigate(`/logs/${match.id}/red2`)}
                         >{match.red2 ?? "None"}</TableBodyCell
                     >
                     <TableBodyCell
                         class="px-1 bg-red-400 dark:bg-red-500 hover:bg-opacity-50 hover:underline"
-                        on:click={() => navigate(`/app/logs/${match.id}/red3`)}
+                        on:click={() => navigate(`/logs/${match.id}/red3`)}
                         >{match.red3 ?? "None"}</TableBodyCell
                     >
                     <TableBodyCell
                         class="dark:bg-neutral-700 hover:bg-opacity-50 hover:underline"
-                        on:click={() => navigate(`/app/logs/${match.id}`)}
+                        on:click={() => navigate(`/logs/${match.id}`)}
                         >View</TableBodyCell
                     >
                 </TableBodyRow>

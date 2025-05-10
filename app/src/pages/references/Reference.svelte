@@ -15,20 +15,20 @@
 	<h1 class="text-3xl" style="font-weight: bold">References</h1>
 
 	<div class="grid grid-cols-3 gap-2 mt-2">
-		<Button href="/app/references/statuslights" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
+		<Button href="/references/statuslights" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
 			><Icon icon="heroicons:sun-16-solid" class="size-6 md:size-8" /> Status Lights</Button
 		>
-		<Button href="/app/references/softwaredocs" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
+		<Button href="/references/softwaredocs" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
 			><Icon icon="ion:library" class="size-6 md:size-8" /> Software Docs</Button
 		>
-		<Button href="/app/references/wiringdiagrams" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
+		<Button href="/references/wiringdiagrams" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
 			><Icon icon="fa6-solid:chart-diagram" class="size-6 md:size-8" /> Wiring Diagrams</Button
 		>
 		<div class="grid grid-cols-2 gap-2 col-span-3">
-			<Button href="/app/references/componentmanuals" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
+			<Button href="/references/componentmanuals" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
 				><Icon icon="streamline:manual-book-solid" class="size-6 md:size-8" /> Component Manuals</Button
 			>
-			<Button href="/app/references/fieldmanuals" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
+			<Button href="/references/fieldmanuals" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
 				><Icon icon="tabler:soccer-field" class="size-6 md:size-8" /> Field Manuals</Button
 			>
 		</div>
@@ -42,7 +42,7 @@
 
 	<Accordion flush class="text-left">
 		<AccordionItem class="text-black dark:text-white">
-			<span slot="header">Keyboard Shortcuts</span>
+			<span slot="header" class="font-bold">Keyboard Shortcuts</span>
 
 			<h3 style="padding: 2pt;">Driver Station</h3>
 
@@ -76,7 +76,7 @@
 		</AccordionItem>
 
 		<AccordionItem class="text-black dark:text-white">
-			<span slot="header">Team IP Addresses</span>
+			<span slot="header" class="font-bold">Team IP Addresses</span>
 
 			<h3 style="padding: 2pt;">IP Config Guide Link</h3>
 			
@@ -206,7 +206,7 @@
 		</AccordionItem>
 
 		<AccordionItem class="text-black dark:text-white">
-			<span slot="header">Helpful Commands (WINDOWS ONLY)</span>
+			<span slot="header" class="font-bold">Helpful Commands (WINDOWS ONLY)</span>
 
 			<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
 				<tr>

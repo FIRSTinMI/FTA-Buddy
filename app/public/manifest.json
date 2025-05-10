@@ -50,7 +50,7 @@
     "lang": "en-US",
     "name": "FTA Buddy",
     "prefer_related_applications": false,
-    "start_url": "/app/",
+    "start_url": "/",
     "description": "FTA Buddy",
     "short_name": "FTA Buddy"
 }

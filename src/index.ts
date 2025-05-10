@@ -175,14 +175,6 @@ app.get('/serviceworker.js', async (req, res) => {
     res.send(serviceWorkerFile);
 });
 
-if (process.env.NODE_ENV === 'dev') {
-    app.use('/FieldMonitor', express.static('app/src/public/FieldMonitor'));
-} else {
-    app.use('/app', express.static('app/dist'));
-    app.use('/app/*', express.static('app/dist/index.html'));
-    app.use('/FieldMonitor', express.static('app/dist/FieldMonitor'));
-}
-
 app.use('/report', express.static('reports'));
 
 app.get('/slack/oauth', async (req, res) => {
@@ -392,13 +384,21 @@ app.get('/hljs.css', (req, res) => {
     res.sendFile(join(__dirname, '../node_modules/highlight.js/styles/atom-one-dark.css'));
 });
 
-app.get('/', (req, res) => {
-    res.redirect('/app/');
+app.get('/kiosk', (req, res) => {
+    res.redirect('/manage/kiosk');
 });
 
-app.get('/kiosk', (req, res) => {
-    res.redirect('/app/manage/kiosk');
+app.get('/app', (req, res) => {
+    res.redirect('/');
 });
+
+if (process.env.NODE_ENV === 'dev') {
+    app.use('/FieldMonitor', express.static('app/src/public/FieldMonitor'));
+} else {
+    app.use('/', express.static('app/dist'));
+    app.use('/*', express.static('app/dist/index.html'));
+    app.use('/FieldMonitor', express.static('app/dist/FieldMonitor'));
+}
 
 connect().then(() => {
     if (process.env.NODE_ENV !== 'dev') {

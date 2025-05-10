@@ -55,7 +55,7 @@
 
 	function back() {
 		if (window.history.state === null) {
-			navigate("/app/logs");
+			navigate("/logs");
 		} else {
 			window.history.back();
 		}
@@ -158,7 +158,7 @@
 			Log published for 72 hours. Share this log only with team #{team} or other volunteers.
 		</p>
 		<div class="max-w-48 mx-auto">
-			<QrCode value="https://ftabuddy.com/app/logs/{matchid}/{shareid}" padding={12} />
+			<QrCode value="https://ftabuddy.com/logs/{matchid}/{shareid}" padding={12} />
 		</div>
 		<Button on:click={() => (shareOpen = false)} class="mt-2">Close</Button>
 	</div>

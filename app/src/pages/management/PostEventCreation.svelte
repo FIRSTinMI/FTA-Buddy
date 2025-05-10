@@ -100,7 +100,7 @@
 			<h2 class="text-xl font-bold">WPA Kiosk Tool</h2>
 
 			<span class="text-large">
-				Connect your WPA Kiosk to WiFi and visit <code class="bg-neutral-900 px-2 py-.75 rounded-xl">ftabuddy.com/app/manage/kiosk</code> to setup the extension
+				Connect your WPA Kiosk to WiFi and visit <code class="bg-neutral-900 px-2 py-.75 rounded-xl">ftabuddy.com/manage/kiosk</code> to setup the extension
 				on the kiosk. Then radio programming status will be automatically updated on the checklist!
 			</span>
 		</div>
@@ -113,6 +113,6 @@
 				<h2 class="text-lg"><code class="bg-neutral-900 px-2 py-.75 rounded-xl">/ftabuddy {$eventStore.code} {$eventStore.pin}</code></h2>
 			</span>
 		</div>
-		<Button on:click={() => navigate("/app")}>Go to FTA Buddy</Button>
+		<Button on:click={() => navigate("/")}>Go to FTA Buddy</Button>
 	</div>
 </div>

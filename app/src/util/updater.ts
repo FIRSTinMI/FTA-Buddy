@@ -360,7 +360,7 @@ export const VERSIONS: { [key: string]: Version; } = {
 
 export function update(currentVersion: string, newVersion: string, openWelcome: () => void, openChangelog: (arg0: string) => void, dontShowDialogs: boolean = false) {
     let changelog = "";
-    if (currentVersion == "0" && window.location.pathname === "/app/manage/login") {
+    if (currentVersion == "0" && window.location.pathname === "/manage/login") {
         currentVersion = newVersion;
         settingsStore.update(s => {
             s.version = newVersion;

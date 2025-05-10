@@ -146,7 +146,7 @@
 
 		// Create the QR code image
 		const qrCodeImg = doc.createElement("img");
-		qrCodeImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=http://ftabuddy.com/app/tickets/submit/${$eventStore.code}`;
+		qrCodeImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=http://ftabuddy.com/tickets/submit/${$eventStore.code}`;
 		qrCodeImg.style.width = "200px";
 		qrCodeImg.style.height = "200px";
 		qrCodeImg.style.border = "2px solid black";
@@ -241,7 +241,7 @@
 				});
 			}
 			toast("Ticket created successfully", "success", "green-500");
-			navigate("/app/tickets/view/" + res.id);
+			navigate("/tickets/view/" + res.id);
 		} catch (err: any) {
 			toast("An error occurred while creating the ticket", err.message);
 			console.error(err);

@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { Select, Progressbar, Spinner, Checkbox } from "flowbite-svelte";
-	import { formatTimeNoAgo, formatTimeShortNoAgo, formatTimeShortNoAgoSeconds } from "../../../../shared/formatTime";
-	import { trpc } from "../../main";
-	import type { FTCEvent } from "../../../../src/router/ftc";
+	import { Progressbar, Select, Spinner } from "flowbite-svelte";
 	import { onMount } from "svelte";
+	import { formatTimeShortNoAgo, formatTimeShortNoAgoSeconds } from "../../../../shared/formatTime";
+	import type { FTCEvent } from "../../../../src/router/ftc";
+	import { trpc } from "../../main";
 
 	let region = "FIM";
 	let events: string[] = []; //["2425-FIM-MHQ"];
@@ -25,10 +25,12 @@
 
 		eventData = await trpc.ftc.getEventUpdates.query({ events });
 		if (eventData.length > 0) loading = false;
+		console.log(eventData);
 
 		interval = setInterval(async () => {
 			eventData = await trpc.ftc.getEventUpdates.query({ events });
 			if (eventData.length > 0) loading = false;
+			console.log(eventData);
 		}, 30000);
 		// if (subscription) subscription.unsubscribe();
 		// subscription = trpc.ftc.dashboard.subscribe(

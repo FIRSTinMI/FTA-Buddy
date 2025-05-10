@@ -1,13 +1,9 @@
-import { observable } from "@trpc/server/observable";
-import { publicProcedure, router } from "../trpc";
 import { API } from "@the-orange-alliance/api";
-import { z } from "zod";
 import Match from "@the-orange-alliance/api/lib/esm/models/Match";
 import StreamType from "@the-orange-alliance/api/lib/esm/models/types/StreamType";
-import { google } from "googleapis";
-import { authenticate } from "@google-cloud/local-auth";
-import { join } from "path";
-import { writeFileSync } from "fs";
+import { observable } from "@trpc/server/observable";
+import { z } from "zod";
+import { publicProcedure, router } from "../trpc";
 
 process.env.TZ = "UTC";
 
@@ -426,15 +422,25 @@ function getAverageCycleTime(cycleTimes: number[], rollingAverage: number = 6) {
 
 function getTimezoneOffset(timezone: string): number {
     const now = new Date();
-    const formatter = new Intl.DateTimeFormat('en-US', {
+
+    const dtf = new Intl.DateTimeFormat('en-US', {
         timeZone: timezone,
-        timeZoneName: 'short',
+        hour12: false,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
     });
 
-    const parts = formatter.formatToParts(now);
-    const timeZoneName = parts.find(part => part.type === 'timeZoneName')?.value ?? "GMT-5";
+    const parts = dtf.formatToParts(now);
+    const getPart = (type: string) => parts.find(p => p.type === type)!.value;
 
-    // Match and calculate offset from timezone abbreviation (e.g., GMT-5)
-    const match = timeZoneName.match(/GMT([+-]\d+)/);
-    return match ? parseInt(match[1], 10) : -5;
-};
+    const tzDate = new Date(
+        `${getPart('year')}-${getPart('month')}-${getPart('day')}T${getPart('hour')}:${getPart('minute')}:${getPart('second')}Z`
+    );
+
+    // Offset in minutes (UTC - local), negate to get (local - UTC)
+    return Math.round(((tzDate.getTime() - now.getTime()) / 60000 / 6)) / 10;
+}

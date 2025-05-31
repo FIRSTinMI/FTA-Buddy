@@ -1523,6 +1523,7 @@
 			{/if}
 		</AccordionItem>
 
+		<!-- CTRE CANivore -->
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.ctrecanivore}>
 			<span slot="header" class="font-bold">CTRE Canivore</span>
 
@@ -1797,98 +1798,38 @@
 			<span slot="header" class="font-bold">CTRE Power Distribution Panel</span>
 
 			{#if openState.ctrepowerdistributionpanel === true || loadedState.ctrepowerdistributionpanel === true}
+			<h1>The two LEDs are always the same color/blink pattern. The only exception is when the device is in boot-loader.</h1>
 				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
 					<tr>
 						<td>
 							<table class="section-table">
 								<tr>
-									<td colspan="2" class="bold">General Status</td>
-								</tr>
-								<tr>
-									<td class="blue led"> </td>
-									<td>No communication established</td>
-								</tr>
-								<tr>
-									<td class="green led"> </td>
-									<td>RoboRIO communication established</td>
-								</tr>
-								<tr>
-									<td class="blue led"> </td>
-									<td>No communication established</td>
-								</tr>
-								<tr>
-									<td class="cyan led"> </td>
-									<td>Connected to REV Hardware Client</td>
-								</tr>
-								<tr>
-									<td class={LEDToggleState3Hz === true ? "magenta led" : "black led"}> </td>
-									<td>Keep Alive Timeout</td>
-								</tr>
-								<tr>
-									<td class={LEDToggleState3Hz === true ? "orange led" : "blue led"}> </td>
-									<td>Low Battery</td>
-								</tr>
-								<tr>
-									<td class={LEDToggleState3Hz === true ? "orange led" : "yellow led"}> </td>
-									<td>CAN Fault</td>
-								</tr>
-								<tr>
-									<td class={LEDToggleState3Hz === true ? "orange led" : "cyan led"}> </td>
-									<td>Hardware Fault</td>
-								</tr>
-								<tr>
-									<td class={LEDToggleState3Hz === true ? "orange led" : "magenta led"}> </td>
-									<td>Device Over Current</td>
-								</tr>
-							</table>
-						</td>
-					</tr>
-
-					<tr>
-						<td>
-							<table class="section-table">
-								<tr>
-									<td colspan="2" class="bold">Channel Status</td>
-								</tr>
-								<tr>
 									<td class="black led"> </td>
-									<td>Has voltage and normal operation</td>
+									<td>No Power</td>
 								</tr>
 								<tr>
-									<td class="red led"> </td>
-									<td>No voltage and active fault</td>
+									<td class={LEDToggleState20Hz === true ? "green led" : "black led"}> </td>
+									<td>Robot Enabled</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "green led" : "black led"}> </td>
+									<td>Robot Disabled</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "orange led" : "black led"}> </td>
+									<td>Disabled; Sticky Fault Present</td>
 								</tr>
 								<tr>
 									<td class={LEDToggleState3Hz === true ? "red led" : "black led"}> </td>
-									<td>Sticky fault</td>
+									<td>No CAN</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "green led" : "orange led"}> </td>
+									<td>COMM ONLY; In Boot-Loader, Field-Upgrade necessary</td>
 								</tr>
 							</table>
 						</td>
 					</tr>
-
-					<tr>
-						<td>
-							<table class="section-table">
-								<tr>
-									<td colspan="2" class="bold">Switched Channel</td>
-								</tr>
-								<tr>
-									<td class="black led"> </td>
-									<td>Has voltage and normal operation</td>
-								</tr>
-								<tr>
-									<td class="red led"> </td>
-									<td>No voltage and active fault</td>
-								</tr>
-								<tr>
-									<td class={LEDToggleState3Hz === true ? "red led" : "black led"}> </td>
-									<td>Sticky fault</td>
-								</tr>
-							</table>
-						</td>
-					</tr>
-
-					
 				</table>
 			{/if}
 		</AccordionItem>

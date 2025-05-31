@@ -1827,6 +1827,10 @@
 									<td class={LEDToggleState3Hz === true ? "green led" : "orange led"}> </td>
 									<td>COMM ONLY; In Boot-Loader, Field-Upgrade necessary</td>
 								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "red led" : "orange led"}> </td>
+									<td>Hardware Damages DO NOT ATTEMPT TO USE</td>
+								</tr>
 							</table>
 						</td>
 					</tr>

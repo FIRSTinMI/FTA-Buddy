@@ -189,6 +189,9 @@
 	<!-- Main Accordion -->
 	<Accordion flush class="text-left">
 		<!-- General Devices -->
+		<br>
+		<h1 class="text-xl text-white" style="font-weight: bold">General Devices</h1>
+		
 		<!-- Robot Radio -->
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.radio}>
 			<span slot="header" class="font-bold">Robot Radio VH-109</span>
@@ -586,6 +589,9 @@
 		</AccordionItem>
 
 		<!-- REV Devices -->
+		<br> <br>
+		<h1 class="text-xl text-white" style="font-weight: bold">REV Devices</h1>
+
 		<!-- REV Spark Max -->
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.revsparkmax}>
 			<span slot="header" class="font-bold">REV Spark Max</span>
@@ -1083,6 +1089,9 @@
 		</AccordionItem>
 
 		<!-- CTRE Devices -->
+		<br> <br>
+		<h1 class="text-xl text-white" style="font-weight: bold">CTRE Devices</h1>
+
 		<!-- CTRE Talon FX -->
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.ctretalonfx}>
 			<span slot="header" class="font-bold">CTRE Talon FX</span>

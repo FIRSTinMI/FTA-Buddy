@@ -3,7 +3,7 @@ let contentToCache = [
 	"/assets/{{CSS_FILE}}",
 	"/assets/{{JS_FILE}}",
 	"/index.html",
-	"/vh103.png",
+	"/vh109.png",
 	"/audio/red1_ds.ogg",
 	"/audio/red1_code.ogg",
 	"/audio/red1_rio.ogg",

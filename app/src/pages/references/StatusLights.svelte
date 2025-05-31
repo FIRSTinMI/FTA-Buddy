@@ -23,6 +23,7 @@
 		revsparkmax: false,
 		revsparkflex: false,
 		revpowerdistributionhub: false,
+		revpneumaticshub: false,
 
 		// CTRE Devices
 		ctretalonfx: false,
@@ -31,6 +32,8 @@
 		ctrecanivore: false,
 		ctrepigeon: false,
 		ctrecancoder: false,
+		ctrepowerdistributionpanel: false,
+		ctrepneumaticscontrolmodule: false,
 
 		// Other Devices
 	};
@@ -44,6 +47,7 @@
 		revsparkmax: false,
 		revsparkflex: false,
 		revpowerdistributionhub: false,
+		revpneumaticshub: false,
 
 		// CTRE Devices
 		ctretalonfx: false,
@@ -52,6 +56,8 @@
 		ctrecanivore: false,
 		ctrepigeon: false,
 		ctrecancoder: false,
+		ctrepowerdistributionpanel: false,
+		ctrepneumaticscontrolmodule: false,
 
 		// Other Devices
 	};
@@ -68,6 +74,9 @@
 		if (openState.ctrepigeon) loadedState.ctrepigeon = true;
 		if (openState.ctrecancoder) loadedState.ctrecancoder = true;
 		if (openState.revpowerdistributionhub) loadedState.revpowerdistributionhub = true;
+		if (openState.revpneumaticshub) loadedState.revpneumaticshub = true;
+		if (openState.ctrepowerdistributionpanel) loadedState.ctrepowerdistributionpanel = true;
+		if (openState.ctrepneumaticscontrolmodule) loadedState.ctrepneumaticscontrolmodule = true;
 	}
 
 	function toggleLED1Hz() {
@@ -182,9 +191,9 @@
 		<!-- General Devices -->
 		<!-- Robot Radio -->
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.radio}>
-			<span slot="header" class="font-bold">Robot Radio VH-103</span>
+			<span slot="header" class="font-bold">Robot Radio VH-109</span>
 
-			<img src="/vh103.png" width="325px" alt="Radio with LEDs labeled" />
+			<img src="/vh109.png" width="325px" alt="Radio with LEDs labeled" />
 
 			{#if openState.radio === true || loadedState.radio === true}
 				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
@@ -908,10 +917,6 @@
 									<td>RoboRIO communication established</td>
 								</tr>
 								<tr>
-									<td class="blue led"> </td>
-									<td>No communication established</td>
-								</tr>
-								<tr>
 									<td class="cyan led"> </td>
 									<td>Connected to REV Hardware Client</td>
 								</tr>
@@ -978,6 +983,95 @@
 								<tr>
 									<td class={LEDToggleState3Hz === true ? "red led" : "black led"}> </td>
 									<td>Sticky fault</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+
+					
+				</table>
+			{/if}
+		</AccordionItem>
+
+		<!-- REV Pneumatics Hub -->
+		<AccordionItem class="text-black dark:text-white" bind:open={openState.revpneumaticshub}>
+			<span slot="header" class="font-bold">REV Pneumatics Hub</span>
+
+			{#if openState.revpneumaticshub === true || loadedState.revpneumaticshub === true}
+				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td colspan="2" class="bold">General Status</td>
+								</tr>
+								<tr>
+									<td class="blue led"> </td>
+									<td>No communication established</td>
+								</tr>
+								<tr>
+									<td class="green led"> </td>
+									<td>RoboRIO communication established</td>
+								</tr>
+								<tr>
+									<td class="cyan led"> </td>
+									<td>Secondary Heartbeat</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "magenta led" : "black led"}> </td>
+									<td>Keep Alive Timeout</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "orange led" : "cyan led"}> </td>
+									<td>Hardware Fault</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "orange led" : "yellow led"}> </td>
+									<td>CAN Fault</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "orange led" : "green led"}> </td>
+									<td>Compressor Over Current</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "orange led" : "magenta led"}> </td>
+									<td>Device Over Current</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td colspan="2" class="bold">Compressor Status LED</td>
+								</tr>
+								<tr>
+									<td class="black led"> </td>
+									<td>Compressor OFF</td>
+								</tr>
+								<tr>
+									<td class="green led"> </td>
+									<td>Compressor ON</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td colspan="2" class="bold">Solenoid Status LED</td>
+								</tr>
+								<tr>
+									<td class="black led"> </td>
+									<td>Solenoid OFF</td>
+								</tr>
+								<tr>
+									<td class="green led"> </td>
+									<td>Solenoid ON</td>
 								</tr>
 							</table>
 						</td>
@@ -1698,7 +1792,210 @@
 			{/if}
 		</AccordionItem>
 
-		
+		<!-- CTRE Power Distribution Panel -->
+		<AccordionItem class="text-black dark:text-white" bind:open={openState.ctrepowerdistributionpanel}>
+			<span slot="header" class="font-bold">CTRE Power Distribution Panel</span>
+
+			{#if openState.ctrepowerdistributionpanel === true || loadedState.ctrepowerdistributionpanel === true}
+				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td colspan="2" class="bold">General Status</td>
+								</tr>
+								<tr>
+									<td class="blue led"> </td>
+									<td>No communication established</td>
+								</tr>
+								<tr>
+									<td class="green led"> </td>
+									<td>RoboRIO communication established</td>
+								</tr>
+								<tr>
+									<td class="blue led"> </td>
+									<td>No communication established</td>
+								</tr>
+								<tr>
+									<td class="cyan led"> </td>
+									<td>Connected to REV Hardware Client</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "magenta led" : "black led"}> </td>
+									<td>Keep Alive Timeout</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "orange led" : "blue led"}> </td>
+									<td>Low Battery</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "orange led" : "yellow led"}> </td>
+									<td>CAN Fault</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "orange led" : "cyan led"}> </td>
+									<td>Hardware Fault</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "orange led" : "magenta led"}> </td>
+									<td>Device Over Current</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td colspan="2" class="bold">Channel Status</td>
+								</tr>
+								<tr>
+									<td class="black led"> </td>
+									<td>Has voltage and normal operation</td>
+								</tr>
+								<tr>
+									<td class="red led"> </td>
+									<td>No voltage and active fault</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "red led" : "black led"}> </td>
+									<td>Sticky fault</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td colspan="2" class="bold">Switched Channel</td>
+								</tr>
+								<tr>
+									<td class="black led"> </td>
+									<td>Has voltage and normal operation</td>
+								</tr>
+								<tr>
+									<td class="red led"> </td>
+									<td>No voltage and active fault</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "red led" : "black led"}> </td>
+									<td>Sticky fault</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+
+					
+				</table>
+			{/if}
+		</AccordionItem>
+
+		<!-- CTRE Pneumatics Control Module -->
+		<AccordionItem class="text-black dark:text-white" bind:open={openState.ctrepneumaticscontrolmodule}>
+			<span slot="header" class="font-bold">CTRE Pneumatics Control Module</span>
+
+			{#if openState.ctrepneumaticscontrolmodule === true || loadedState.ctrepneumaticscontrolmodule === true}
+				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td colspan="2" class="bold">General Status</td>
+								</tr>
+								<tr>
+									<td class="blue led"> </td>
+									<td>No communication established</td>
+								</tr>
+								<tr>
+									<td class="green led"> </td>
+									<td>RoboRIO communication established</td>
+								</tr>
+								<tr>
+									<td class="blue led"> </td>
+									<td>No communication established</td>
+								</tr>
+								<tr>
+									<td class="cyan led"> </td>
+									<td>Connected to REV Hardware Client</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "magenta led" : "black led"}> </td>
+									<td>Keep Alive Timeout</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "orange led" : "blue led"}> </td>
+									<td>Low Battery</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "orange led" : "yellow led"}> </td>
+									<td>CAN Fault</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "orange led" : "cyan led"}> </td>
+									<td>Hardware Fault</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "orange led" : "magenta led"}> </td>
+									<td>Device Over Current</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td colspan="2" class="bold">Channel Status</td>
+								</tr>
+								<tr>
+									<td class="black led"> </td>
+									<td>Has voltage and normal operation</td>
+								</tr>
+								<tr>
+									<td class="red led"> </td>
+									<td>No voltage and active fault</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "red led" : "black led"}> </td>
+									<td>Sticky fault</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td colspan="2" class="bold">Switched Channel</td>
+								</tr>
+								<tr>
+									<td class="black led"> </td>
+									<td>Has voltage and normal operation</td>
+								</tr>
+								<tr>
+									<td class="red led"> </td>
+									<td>No voltage and active fault</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "red led" : "black led"}> </td>
+									<td>Sticky fault</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+
+					
+				</table>
+			{/if}
+		</AccordionItem>
+
+		<!-- Other Devices -->
+
 
 	</Accordion>
 </div>

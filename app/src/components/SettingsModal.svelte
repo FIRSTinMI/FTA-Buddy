@@ -214,6 +214,6 @@
 		<p>Authors: Filip Kin and Kelly Malone</p>
 		<p>Other Contributors: Cole H</p>
 		<p>Version: {settings.version}</p>
-		<a href="https://github.com/Filip-Kin/FTA-Buddy/" class="underline text-blue-400">GitHub</a>
+		<a href="https://github.com/FIRSTinMI/FTA-Buddy" class="underline text-blue-400">GitHub</a>
 	</div>
 </Modal>

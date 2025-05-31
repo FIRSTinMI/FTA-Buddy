@@ -212,6 +212,7 @@
 	<div class="border-t border-neutral-500 pt-2 mt-0 flex flex-col text-black dark:text-white">
 		<h1 class="text-lg">About</h1>
 		<p>Authors: Filip Kin and Kelly Malone</p>
+		<p>Other Contributors: Cole H</p>
 		<p>Version: {settings.version}</p>
 		<a href="https://github.com/Filip-Kin/FTA-Buddy/" class="underline text-blue-400">GitHub</a>
 	</div>

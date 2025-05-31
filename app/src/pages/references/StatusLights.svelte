@@ -15,45 +15,59 @@
 	let LEDToggleState4Blink = 0;
 
 	let openState = {
+		// General Devices
 		radio: false,
 		roborio: false,
-		sparkmax: false,
-		sparkflex: false,
-		talonfx: false,
-		talonsrx: false,
-		victorspx: false,
-		canivore: false,
-		pigeon: false,
-		cancoder: false,
-		powerDistributionHub: false,
+
+		// REV Devices
+		revsparkmax: false,
+		revsparkflex: false,
+		revpowerdistributionhub: false,
+
+		// CTRE Devices
+		ctretalonfx: false,
+		ctretalonsrx: false,
+		ctrevictorspx: false,
+		ctrecanivore: false,
+		ctrepigeon: false,
+		ctrecancoder: false,
+
+		// Other Devices
 	};
 
 	let loadedState = {
+		// General Devices
 		radio: false,
 		roborio: false,
-		sparkmax: false,
-		sparkflex: false,
-		talonfx: false,
-		talonsrx: false,
-		victorspx: false,
-		canivore: false,
-		pigeon: false,
-		cancoder: false,
-		powerDistributionHub: false,
+
+		// REV Devices
+		revsparkmax: false,
+		revsparkflex: false,
+		revpowerdistributionhub: false,
+
+		// CTRE Devices
+		ctretalonfx: false,
+		ctretalonsrx: false,
+		ctrevictorspx: false,
+		ctrecanivore: false,
+		ctrepigeon: false,
+		ctrecancoder: false,
+
+		// Other Devices
 	};
 
 	$: {
 		if (openState.radio) loadedState.radio = true;
 		if (openState.roborio) loadedState.roborio = true;
-		if (openState.sparkmax) loadedState.sparkmax = true;
-		if (openState.sparkflex) loadedState.sparkflex = true;
-		if (openState.talonfx) loadedState.talonfx = true;
-		if (openState.talonsrx) loadedState.talonsrx = true;
-		if (openState.victorspx) loadedState.victorspx = true;
-		if (openState.canivore) loadedState.canivore = true;
-		if (openState.pigeon) loadedState.pigeon = true;
-		if (openState.cancoder) loadedState.cancoder = true;
-		if (openState.powerDistributionHub) loadedState.powerDistributionHub = true;
+		if (openState.revsparkmax) loadedState.revsparkmax = true;
+		if (openState.revsparkflex) loadedState.revsparkflex = true;
+		if (openState.ctretalonfx) loadedState.ctretalonfx = true;
+		if (openState.ctretalonsrx) loadedState.ctretalonsrx = true;
+		if (openState.ctrevictorspx) loadedState.ctrevictorspx = true;
+		if (openState.ctrecanivore) loadedState.ctrecanivore = true;
+		if (openState.ctrepigeon) loadedState.ctrepigeon = true;
+		if (openState.ctrecancoder) loadedState.ctrecancoder = true;
+		if (openState.revpowerdistributionhub) loadedState.revpowerdistributionhub = true;
 	}
 
 	function toggleLED1Hz() {
@@ -162,9 +176,13 @@
 <div class="container mx-auto p-2 pr-3 w-full">
 	<h1 class="text-3xl" style="font-weight: bold">Status Lights</h1>
 	<h1>Please Note: Blink Frequency May Not Be Exact</h1>
+
+	<!-- Main Accordion -->
 	<Accordion flush class="text-left">
+		<!-- General Devices -->
+		<!-- Robot Radio -->
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.radio}>
-			<span slot="header" class="font-bold">Robot Radio</span>
+			<span slot="header" class="font-bold">Robot Radio VH-103</span>
 
 			<img src="/vh103.png" width="325px" alt="Radio with LEDs labeled" />
 
@@ -367,6 +385,7 @@
 			{/if}
 		</AccordionItem>
 
+		<!-- RoboRIO -->
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.roborio}>
 			<span slot="header" class="font-bold">RoboRIO</span>
 
@@ -557,10 +576,12 @@
 			{/if}
 		</AccordionItem>
 
-		<AccordionItem class="text-black dark:text-white" bind:open={openState.sparkmax}>
+		<!-- REV Devices -->
+		<!-- REV Spark Max -->
+		<AccordionItem class="text-black dark:text-white" bind:open={openState.revsparkmax}>
 			<span slot="header" class="font-bold">REV Spark Max</span>
 
-			{#if openState.sparkmax === true || loadedState.sparkmax === true}
+			{#if openState.revsparkmax === true || loadedState.revsparkmax === true}
 				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
 					<tr>
 						<td>
@@ -715,10 +736,11 @@
 			{/if}
 		</AccordionItem>
 
-		<AccordionItem class="text-black dark:text-white" bind:open={openState.sparkflex}>
+		<!-- REV Spark Flex -->
+		<AccordionItem class="text-black dark:text-white" bind:open={openState.revsparkflex}>
 			<span slot="header" class="font-bold">REV Spark Flex</span>
 
-			{#if openState.sparkflex === true || loadedState.sparkflex === true}
+			{#if openState.revsparkflex === true || loadedState.revsparkflex === true}
 				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
 					<tr>
 						<td>
@@ -865,10 +887,113 @@
 			{/if}
 		</AccordionItem>
 
-		<AccordionItem class="text-black dark:text-white" bind:open={openState.talonfx}>
-			<span slot="header" class="font-bold">CTRE TalonFX</span>
+		<!-- REV Power Distribution Hub -->
+		<AccordionItem class="text-black dark:text-white" bind:open={openState.revpowerdistributionhub}>
+			<span slot="header" class="font-bold">REV Power Distribution Hub</span>
 
-			{#if openState.talonfx === true || loadedState.talonfx === true}
+			{#if openState.revpowerdistributionhub === true || loadedState.revpowerdistributionhub === true}
+				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td colspan="2" class="bold">General Status</td>
+								</tr>
+								<tr>
+									<td class="blue led"> </td>
+									<td>No communication established</td>
+								</tr>
+								<tr>
+									<td class="green led"> </td>
+									<td>RoboRIO communication established</td>
+								</tr>
+								<tr>
+									<td class="blue led"> </td>
+									<td>No communication established</td>
+								</tr>
+								<tr>
+									<td class="cyan led"> </td>
+									<td>Connected to REV Hardware Client</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "magenta led" : "black led"}> </td>
+									<td>Keep Alive Timeout</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "orange led" : "blue led"}> </td>
+									<td>Low Battery</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "orange led" : "yellow led"}> </td>
+									<td>CAN Fault</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "orange led" : "cyan led"}> </td>
+									<td>Hardware Fault</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "orange led" : "magenta led"}> </td>
+									<td>Device Over Current</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td colspan="2" class="bold">Channel Status</td>
+								</tr>
+								<tr>
+									<td class="black led"> </td>
+									<td>Has voltage and normal operation</td>
+								</tr>
+								<tr>
+									<td class="red led"> </td>
+									<td>No voltage and active fault</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "red led" : "black led"}> </td>
+									<td>Sticky fault</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+
+					<tr>
+						<td>
+							<table class="section-table">
+								<tr>
+									<td colspan="2" class="bold">Switched Channel</td>
+								</tr>
+								<tr>
+									<td class="black led"> </td>
+									<td>Has voltage and normal operation</td>
+								</tr>
+								<tr>
+									<td class="red led"> </td>
+									<td>No voltage and active fault</td>
+								</tr>
+								<tr>
+									<td class={LEDToggleState3Hz === true ? "red led" : "black led"}> </td>
+									<td>Sticky fault</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+
+					
+				</table>
+			{/if}
+		</AccordionItem>
+
+		<!-- CTRE Devices -->
+		<!-- CTRE Talon FX -->
+		<AccordionItem class="text-black dark:text-white" bind:open={openState.ctretalonfx}>
+			<span slot="header" class="font-bold">CTRE Talon FX</span>
+
+			{#if openState.ctretalonfx === true || loadedState.ctretalonfx === true}
 				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
 					<tr>
 						<td>
@@ -999,10 +1124,11 @@
 			{/if}
 		</AccordionItem>
 
-		<AccordionItem class="text-black dark:text-white" bind:open={openState.talonsrx}>
-			<span slot="header" class="font-bold">CTRE TalonSRX</span>
+		<!-- CTRE Talon SRX -->
+		<AccordionItem class="text-black dark:text-white" bind:open={openState.ctretalonsrx}>
+			<span slot="header" class="font-bold">CTRE Talon SRX</span>
 
-			{#if openState.talonsrx === true || loadedState.talonsrx === true}
+			{#if openState.ctretalonsrx === true || loadedState.ctretalonsrx === true}
 				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
 					<tr>
 						<td>
@@ -1148,10 +1274,11 @@
 			{/if}
 		</AccordionItem>
 
-		<AccordionItem class="text-black dark:text-white" bind:open={openState.victorspx}>
-			<span slot="header" class="font-bold">CTRE VictorSPX</span>
+		<!-- CTRE Victor SPX -->
+		<AccordionItem class="text-black dark:text-white" bind:open={openState.ctrevictorspx}>
+			<span slot="header" class="font-bold">CTRE Victor SPX</span>
 
-			{#if openState.victorspx === true || loadedState.victorspx === true}
+			{#if openState.ctrevictorspx === true || loadedState.ctrevictorspx === true}
 				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
 					<tr>
 						<td>
@@ -1302,10 +1429,10 @@
 			{/if}
 		</AccordionItem>
 
-		<AccordionItem class="text-black dark:text-white" bind:open={openState.canivore}>
-			<span slot="header" class="font-bold">CTRE CANivore</span>
+		<AccordionItem class="text-black dark:text-white" bind:open={openState.ctrecanivore}>
+			<span slot="header" class="font-bold">CTRE Canivore</span>
 
-			{#if openState.canivore === true || loadedState.canivore === true}
+			{#if openState.ctrecanivore === true || loadedState.ctrecanivore === true}
 				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
 					<tr>
 						<td>
@@ -1461,10 +1588,11 @@
 			{/if}
 		</AccordionItem>
 
-		<AccordionItem class="text-black dark:text-white" bind:open={openState.pigeon}>
+		<!-- CTRE Pigeon 2.0 -->
+		<AccordionItem class="text-black dark:text-white" bind:open={openState.ctrepigeon}>
 			<span slot="header" class="font-bold">CTRE Pigeon 2.0 Lights</span>
 
-			{#if openState.pigeon === true || loadedState.pigeon === true}
+			{#if openState.ctrepigeon === true || loadedState.ctrepigeon === true}
 				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
 					<tr>
 						<td>
@@ -1514,10 +1642,11 @@
 			{/if}
 		</AccordionItem>
 
-		<AccordionItem class="text-black dark:text-white" bind:open={openState.cancoder}>
-			<span slot="header" class="font-bold">CANcoder</span>
+		<!-- CTRE CANcoder -->
+		<AccordionItem class="text-black dark:text-white" bind:open={openState.ctrecancoder}>
+			<span slot="header" class="font-bold">CTRE CANcoder</span>
 
-			{#if openState.cancoder === true || loadedState.cancoder === true}
+			{#if openState.ctrecancoder === true || loadedState.ctrecancoder === true}
 				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
 					<tr>
 						<td>
@@ -1569,105 +1698,7 @@
 			{/if}
 		</AccordionItem>
 
-		<AccordionItem class="text-black dark:text-white" bind:open={openState.powerDistributionHub}>
-			<span slot="header" class="font-bold">REV PDH</span>
-
-			{#if openState.powerDistributionHub === true || loadedState.powerDistributionHub === true}
-				<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
-					<tr>
-						<td>
-							<table class="section-table">
-								<tr>
-									<td colspan="2" class="bold">General Status</td>
-								</tr>
-								<tr>
-									<td class="blue led"> </td>
-									<td>No communication established</td>
-								</tr>
-								<tr>
-									<td class="green led"> </td>
-									<td>RoboRIO communication established</td>
-								</tr>
-								<tr>
-									<td class="blue led"> </td>
-									<td>No communication established</td>
-								</tr>
-								<tr>
-									<td class="cyan led"> </td>
-									<td>Connected to REV Hardware Client</td>
-								</tr>
-								<tr>
-									<td class={LEDToggleState3Hz === true ? "magenta led" : "black led"}> </td>
-									<td>Keep Alive Timeout</td>
-								</tr>
-								<tr>
-									<td class={LEDToggleState3Hz === true ? "orange led" : "blue led"}> </td>
-									<td>Low Battery</td>
-								</tr>
-								<tr>
-									<td class={LEDToggleState3Hz === true ? "orange led" : "yellow led"}> </td>
-									<td>CAN Fault</td>
-								</tr>
-								<tr>
-									<td class={LEDToggleState3Hz === true ? "orange led" : "cyan led"}> </td>
-									<td>Hardware Fault</td>
-								</tr>
-								<tr>
-									<td class={LEDToggleState3Hz === true ? "orange led" : "magenta led"}> </td>
-									<td>Device Over Current</td>
-								</tr>
-							</table>
-						</td>
-					</tr>
-
-					<tr>
-						<td>
-							<table class="section-table">
-								<tr>
-									<td colspan="2" class="bold">Channel Status</td>
-								</tr>
-								<tr>
-									<td class="black led"> </td>
-									<td>Has voltage and normal operation</td>
-								</tr>
-								<tr>
-									<td class="red led"> </td>
-									<td>No voltage and active fault</td>
-								</tr>
-								<tr>
-									<td class={LEDToggleState3Hz === true ? "red led" : "black led"}> </td>
-									<td>Sticky fault</td>
-								</tr>
-							</table>
-						</td>
-					</tr>
-
-					<tr>
-						<td>
-							<table class="section-table">
-								<tr>
-									<td colspan="2" class="bold">Switched Channel</td>
-								</tr>
-								<tr>
-									<td class="black led"> </td>
-									<td>Has voltage and normal operation</td>
-								</tr>
-								<tr>
-									<td class="red led"> </td>
-									<td>No voltage and active fault</td>
-								</tr>
-								<tr>
-									<td class={LEDToggleState3Hz === true ? "red led" : "black led"}> </td>
-									<td>Sticky fault</td>
-								</tr>
-							</table>
-						</td>
-					</tr>
-
-					
-				</table>
-			{/if}
-		</AccordionItem>
+		
 
 	</Accordion>
 </div>

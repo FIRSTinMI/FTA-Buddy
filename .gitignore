@@ -9,3 +9,5 @@ reports/*
 oauth2.keys.json
 app/public/music/*
 app/public/audio/*
+src/tests/reports
+src/tests/reports/*

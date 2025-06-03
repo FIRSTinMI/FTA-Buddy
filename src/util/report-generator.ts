@@ -9,20 +9,49 @@ export interface ReportFormat {
     fileName: string;
 }
 
-export async function generateReport(format: ReportFormat, data: (string | number)[][], eventCode: string) {
+export async function generateReport(
+    format: ReportFormat,
+    data: (string | number)[][],
+    eventCode: string
+) {
     const doc = new jsPDF({
         format: 'letter'
     });
+
+    // Title and description
     doc.setFontSize(20);
     doc.text(format.title, 15, 20);
     doc.setFontSize(12);
     doc.text(format.description, 15, 30);
 
+    // Sanitize data by removing "www.", "http://", and "https://"
+    const sanitizedData = data.map(row =>
+        row.map(cell => {
+            if (typeof cell === 'string') {
+                let sanitized = cell;
+                try {
+                    const url = new URL(sanitized);
+                    // Remove www. from the hostname
+                    let host = url.hostname.replace(/^www\./, '');
+                    // Remove http:// or https:// from the beginning
+                    sanitized = host + url.pathname + url.search + url.hash;
+                } catch {
+                    // Not a valid URL — fallback to regex check
+                    sanitized = sanitized.replace(/^https?:\/\//, '');
+                    sanitized = sanitized.replace(/^www\./, '');
+                }
+                return sanitized;
+            }
+            return cell;
+        })
+    );
+
+    // Table headers
     autoTable(doc, {
         head: [format.headers],
-        body: data,
+        body: sanitizedData,
         startY: 40,
-        margin: { top: 10, bottom: 20 },
+        margin: { top: 10, bottom: 20 }
     });
 
     const date = new Date();
@@ -41,6 +70,7 @@ export async function generateReport(format: ReportFormat, data: (string | numbe
         mkdirSync('reports');
     }
 
+    // Save the PDF file
     await doc.save(`reports/${format.fileName}-${eventCode}.pdf`);
     return `/report/${format.fileName}-${eventCode}.pdf`;
 }

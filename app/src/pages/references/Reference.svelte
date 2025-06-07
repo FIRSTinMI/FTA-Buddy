@@ -7,7 +7,6 @@
 	import SoftwareDocs from "./SoftwareDocs.svelte";
 	import WiringDiagrams from "./WiringDiagrams.svelte";
 	import ComponentManuals from "./ComponentManuals.svelte";
-	import FieldManuals from "./FieldManuals.svelte";
 	import QrCode from "svelte-qrcode";
 </script>
 
@@ -27,9 +26,6 @@
 		<div class="grid grid-cols-2 gap-2 col-span-3">
 			<Button href="/references/componentmanuals" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
 				><Icon icon="streamline:manual-book-solid" class="size-6 md:size-8" /> Component Manuals</Button
-			>
-			<Button href="/references/fieldmanuals" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
-				><Icon icon="tabler:soccer-field" class="size-6 md:size-8" /> Field Manuals</Button
 			>
 		</div>
 	</div>
@@ -79,7 +75,7 @@
 			<span slot="header" class="font-bold">Team IP Addresses</span>
 
 			<h3 style="padding: 2pt;">IP Config Guide Link</h3>
-			
+
 			<a href="https://docs.wpilib.org/en/stable/docs/networking/networking-introduction/ip-configurations.html" target="_blank">
 				<QrCode value="https://docs.wpilib.org/en/stable/docs/networking/networking-introduction/ip-configurations.html" padding={5} />
 			</a>

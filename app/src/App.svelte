@@ -72,7 +72,6 @@
 		"/ftc",
 		"/references",
 		"/references/statuslights",
-		"/references/fieldmanuals",
 		"/references/componentmanuals",
 		"/references/wiringdiagrams",
 		"/references/softwaredocs",
@@ -609,18 +608,6 @@
 				>
 					<svelte:fragment slot="icon">
 						<Icon icon="ion:library" class="size-6" />
-					</svelte:fragment>
-				</SidebarItem>
-				<SidebarItem
-					label="Field Manuals"
-					on:click={() => {
-						hideMenu = true;
-						navigate("/references/fieldmanuals");
-					}}
-					class="text-xs ml-8 pt-1 pb-1"
-				>
-					<svelte:fragment slot="icon">
-						<Icon icon="tabler:soccer-field" class="size-6" />
 					</svelte:fragment>
 				</SidebarItem>
 				<SidebarItem

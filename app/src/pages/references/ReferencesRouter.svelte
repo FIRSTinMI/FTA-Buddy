@@ -6,7 +6,6 @@
 	let SoftwareDocs: any;
 	let WiringDiagrams: any;
 	let ComponentManuals: any;
-	let FieldManuals: any;
 	let Reference: any;
 
 	onMount(async () => {
@@ -14,7 +13,6 @@
 		SoftwareDocs = (await import("./SoftwareDocs.svelte")).default;
 		WiringDiagrams = (await import("./WiringDiagrams.svelte")).default;
 		ComponentManuals = (await import("./ComponentManuals.svelte")).default;
-		FieldManuals = (await import("./FieldManuals.svelte")).default;
 		Reference = (await import("./Reference.svelte")).default;
 	});
 </script>
@@ -44,13 +42,6 @@
 	<Route path="/componentmanuals">
 		{#if ComponentManuals}
 			<svelte:component this={ComponentManuals} />
-		{:else}
-			<div>Loading...</div>
-		{/if}
-	</Route>
-	<Route path="/fieldmanuals">
-		{#if FieldManuals}
-			<svelte:component this={FieldManuals} />
 		{:else}
 			<div>Loading...</div>
 		{/if}

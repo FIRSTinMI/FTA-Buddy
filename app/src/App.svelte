@@ -298,7 +298,6 @@
 {#if showToast}
 	<div class="fixed bottom-0 left-0 p-4 z-100">
 		<Toast
-			bind:open={showToast}
 			class="dark:bg-{toastColor}"
 			divClass="w-lg p-4 text-black dark:text-gray-500 bg-white shadow-sm dark:text-gray-400 dark:bg-gray-800 gap-3"
 		>
@@ -326,7 +325,7 @@
 	<div slot="header">
 		<h1 class="text-2xl font-bold">Changelog</h1>
 	</div>
-	<div bind:innerHTML={changelog} contenteditable class="text-left text-black dark:text-white" />
+	<div bind:innerHTML={changelog} contenteditable class="text-left text-black dark:text-white"></div>
 	<div slot="footer">
 		<Button color="primary">Close</Button>
 	</div>
@@ -343,7 +342,6 @@
 		<Label class="text-left">
 			Event Selection
 			<Select
-				label="Event"
 				bind:value={multiEventSelection}
 				items={[{ value: "combined", name: "Combined" }, ...event.subEvents.map((e) => ({ value: e.code, name: e.label }))]}
 				class="w-full"

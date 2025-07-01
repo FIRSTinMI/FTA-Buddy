@@ -18,8 +18,8 @@
         "@googleapis/youtube": "^20.0.0",
         "@microsoft/signalr": "^8.0.7",
         "@the-orange-alliance/api": "^0.24.0",
-        "@trpc/client": "^11.0.0-rc.566",
-        "@trpc/server": "^11.1.1",
+        "@trpc/client": "^11.4.3",
+        "@trpc/server": "^11.4.3",
         "@types/bcrypt": "^5.0.2",
         "@types/localforage": "^0.0.33",
         "bcrypt": "^5.1.1",
@@ -62,8 +62,11 @@
         "@types/pg": "^8.11.10",
         "@types/sanitize-html": "^2.13.0",
         "@types/web-push": "^3.6.3",
+        "autoprefixer": "^10.4.21",
         "concurrently": "^8.2.2",
         "drizzle-kit": "^0.20.18",
+        "postcss": "^8.5.6",
+        "tailwindcss": "^4.1.11",
         "typescript": "^5.8.3"
     }
 }

@@ -1,0 +1,17 @@
+// vite.config.ts
+import { defineConfig } from "file:///home/fandit/Projects/Active/FTA-Buddy/app/node_modules/vite/dist/node/index.js";
+import { svelte } from "file:///home/fandit/Projects/Active/FTA-Buddy/app/node_modules/@sveltejs/vite-plugin-svelte/src/index.js";
+import Icons from "file:///home/fandit/Projects/Active/FTA-Buddy/app/node_modules/unplugin-icons/dist/vite.js";
+var vite_config_default = defineConfig({
+  plugins: [
+    svelte(),
+    Icons({
+      compiler: "svelte"
+    })
+  ],
+  base: "/"
+});
+export {
+  vite_config_default as default
+};
+//# sourceMappingURL=data:application/json;base64,ewogICJ2ZXJzaW9uIjogMywKICAic291cmNlcyI6IFsidml0ZS5jb25maWcudHMiXSwKICAic291cmNlc0NvbnRlbnQiOiBbImNvbnN0IF9fdml0ZV9pbmplY3RlZF9vcmlnaW5hbF9kaXJuYW1lID0gXCIvaG9tZS9mYW5kaXQvUHJvamVjdHMvQWN0aXZlL0ZUQS1CdWRkeS9hcHBcIjtjb25zdCBfX3ZpdGVfaW5qZWN0ZWRfb3JpZ2luYWxfZmlsZW5hbWUgPSBcIi9ob21lL2ZhbmRpdC9Qcm9qZWN0cy9BY3RpdmUvRlRBLUJ1ZGR5L2FwcC92aXRlLmNvbmZpZy50c1wiO2NvbnN0IF9fdml0ZV9pbmplY3RlZF9vcmlnaW5hbF9pbXBvcnRfbWV0YV91cmwgPSBcImZpbGU6Ly8vaG9tZS9mYW5kaXQvUHJvamVjdHMvQWN0aXZlL0ZUQS1CdWRkeS9hcHAvdml0ZS5jb25maWcudHNcIjtpbXBvcnQgeyBkZWZpbmVDb25maWcgfSBmcm9tICd2aXRlJztcbmltcG9ydCB7IHN2ZWx0ZSB9IGZyb20gJ0BzdmVsdGVqcy92aXRlLXBsdWdpbi1zdmVsdGUnO1xuaW1wb3J0IEljb25zIGZyb20gJ3VucGx1Z2luLWljb25zL3ZpdGUnO1xuXG4vLyBodHRwczovL3ZpdGVqcy5kZXYvY29uZmlnL1xuZXhwb3J0IGRlZmF1bHQgZGVmaW5lQ29uZmlnKHtcbiAgICBwbHVnaW5zOiBbXG4gICAgICAgIHN2ZWx0ZSgpLFxuICAgICAgICBJY29ucyh7XG4gICAgICAgICAgICBjb21waWxlcjogJ3N2ZWx0ZScsXG4gICAgICAgIH0pXG4gICAgXSxcbiAgICBiYXNlOiBcIi9cIixcbn0pO1xuIl0sCiAgIm1hcHBpbmdzIjogIjtBQUFnVCxTQUFTLG9CQUFvQjtBQUM3VSxTQUFTLGNBQWM7QUFDdkIsT0FBTyxXQUFXO0FBR2xCLElBQU8sc0JBQVEsYUFBYTtBQUFBLEVBQ3hCLFNBQVM7QUFBQSxJQUNMLE9BQU87QUFBQSxJQUNQLE1BQU07QUFBQSxNQUNGLFVBQVU7QUFBQSxJQUNkLENBQUM7QUFBQSxFQUNMO0FBQUEsRUFDQSxNQUFNO0FBQ1YsQ0FBQzsiLAogICJuYW1lcyI6IFtdCn0K

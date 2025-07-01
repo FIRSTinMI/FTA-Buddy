@@ -287,9 +287,20 @@ app.get('/api/cycles/:eventCode', async (req, res) => {
     res.json(await db.query.cycleLogs.findMany({ where: eq(cycleLogs.event, req.params.eventCode.toLowerCase()) }));
 });
 
-app.get('/api/team-average-cycle/:team/:eventCode?', async (req, res) => {
-    res.json(await getTeamAverageCycle(parseInt(req.params.team), req.params.eventCode?.toLowerCase()));
+app.get('/api/team-average-cycle/:team/:eventCode', async (req, res) => {
+    res.json(await getTeamAverageCycle(
+        parseInt(req.params.team),
+        req.params.eventCode.toLowerCase()
+    ));
 });
+
+app.get('/api/team-average-cycle/:team', async (req, res) => {
+    res.json(await getTeamAverageCycle(
+        parseInt(req.params.team),
+        undefined
+    ));
+});
+
 
 app.get('/api/logs/:shareCode', async (req, res) => {
     const share = await db.query.logPublishing.findFirst({ where: eq(logPublishing.id, req.params.shareCode) });
@@ -345,7 +356,7 @@ marked.use({
 
 marked.use(gfmHeadingId());
 
-app.get('/docs/*', async (req, res) => {
+app.get('/docs/{0,}', async (req, res) => {
     let path = req.path;
     if (path.endsWith('/')) path += 'index';
     path = join(__dirname, '../', path + '.md');
@@ -396,7 +407,7 @@ if (process.env.NODE_ENV === 'dev') {
     app.use('/FieldMonitor', express.static('app/src/public/FieldMonitor'));
 } else {
     app.use('/', express.static('app/dist'));
-    app.use('/*', express.static('app/dist/index.html'));
+    app.use('/{0,}', express.static('app/dist/index.html'));
     app.use('/FieldMonitor', express.static('app/dist/FieldMonitor'));
 }
 

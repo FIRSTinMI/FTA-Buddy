@@ -1,5 +1,4 @@
 <script lang="ts">
-	console.log("StatusLights component mounted");
 	import { Accordion, AccordionItem } from "flowbite-svelte";
 	import { onDestroy } from "svelte";
 

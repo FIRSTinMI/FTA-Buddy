@@ -2,62 +2,84 @@
 	import { onMount } from "svelte";
 	import { Route, Router } from "svelte-routing";
 
-	let StatusLights: any = $state();
-	let SoftwareDocs: any = $state();
-	let WiringDiagrams: any = $state();
-	let ComponentManuals: any = $state();
-	let FieldManuals: any = $state();
-	let Reference: any = $state();
+	let StatusLights: typeof import("./StatusLights.svelte").default | null = null;
+	let SoftwareDocs: typeof import("./SoftwareDocs.svelte").default | null = null;
+	let WiringDiagrams: typeof import("./WiringDiagrams.svelte").default | null = null;
+	let ComponentManuals: typeof import("./ComponentManuals.svelte").default | null = null;
+	let FieldManuals: typeof import("./FieldManuals.svelte").default | null = null;
+	let Reference: typeof import("./Reference.svelte").default | null = null;
 
 	onMount(async () => {
-		StatusLights = (await import("./StatusLights.svelte")).default;
-		SoftwareDocs = (await import("./SoftwareDocs.svelte")).default;
-		WiringDiagrams = (await import("./WiringDiagrams.svelte")).default;
-		ComponentManuals = (await import("./ComponentManuals.svelte")).default;
-		FieldManuals = (await import("./FieldManuals.svelte")).default;
-		Reference = (await import("./Reference.svelte")).default;
+		// Lazy load each component
+		const [
+			SL,
+			SD,
+			WD,
+			CM,
+			FM,
+			Ref
+		] = await Promise.all([
+			import("./StatusLights.svelte"),
+			import("./SoftwareDocs.svelte"),
+			import("./WiringDiagrams.svelte"),
+			import("./ComponentManuals.svelte"),
+			import("./FieldManuals.svelte"),
+			import("./Reference.svelte")
+		]);
+
+		StatusLights = SL.default;
+		SoftwareDocs = SD.default;
+		WiringDiagrams = WD.default;
+		ComponentManuals = CM.default;
+		FieldManuals = FM.default;
+		Reference = Ref.default;
 	});
 </script>
 
-<Router basepath="/references/">
+<Router basepath="/references">
 	<Route path="/statuslights">
 		{#if StatusLights}
-			<StatusLights />
+			<svelte:component this={StatusLights} />
 		{:else}
 			<div>Loading...</div>
 		{/if}
 	</Route>
+
 	<Route path="/softwaredocs">
 		{#if SoftwareDocs}
-			<SoftwareDocs />
+			<svelte:component this={SoftwareDocs} />
 		{:else}
 			<div>Loading...</div>
 		{/if}
 	</Route>
+
 	<Route path="/wiringdiagrams">
 		{#if WiringDiagrams}
-			<WiringDiagrams />
+			<svelte:component this={WiringDiagrams} />
 		{:else}
 			<div>Loading...</div>
 		{/if}
 	</Route>
+
 	<Route path="/componentmanuals">
 		{#if ComponentManuals}
-			<ComponentManuals />
+			<svelte:component this={ComponentManuals} />
 		{:else}
 			<div>Loading...</div>
 		{/if}
 	</Route>
+
 	<Route path="/fieldmanuals">
 		{#if FieldManuals}
-			<FieldManuals />
+			<svelte:component this={FieldManuals} />
 		{:else}
 			<div>Loading...</div>
 		{/if}
 	</Route>
+
 	<Route path="/">
 		{#if Reference}
-			<Reference />
+			<svelte:component this={Reference} />
 		{:else}
 			<div>Loading...</div>
 		{/if}

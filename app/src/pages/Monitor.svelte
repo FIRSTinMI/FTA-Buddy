@@ -162,10 +162,10 @@
 
 	setInterval(() => {
 		if (lastCycleTimeMS !== frameHandler.getLastCycleTime()) {
-			console.log("Cycle time is not matching", {
-				current: lastCycleTimeMS,
-				new: frameHandler.getLastCycleTime(),
-			});
+			// console.log("Cycle time is not matching", {
+			// 	current: lastCycleTimeMS,
+			// 	new: frameHandler.getLastCycleTime(),
+			// });
 			lastCycleTimeMS = frameHandler.getLastCycleTime() || 0;
 			lastCycleTime = formatTimeShortNoAgoSeconds(lastCycleTimeMS);
 		}

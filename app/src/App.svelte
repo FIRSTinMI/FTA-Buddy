@@ -297,10 +297,7 @@
 
 {#if showToast}
 	<div class="fixed bottom-0 left-0 p-4 z-100">
-		<Toast
-			class="dark:bg-{toastColor}"
-			divClass="w-lg p-4 text-black dark:text-gray-500 bg-white shadow-sm dark:text-gray-400 dark:bg-gray-800 gap-3"
-		>
+		<Toast class="dark:bg-{toastColor}" divClass="w-lg p-4 text-black dark:text-gray-500 bg-white shadow-sm dark:text-gray-400 dark:bg-gray-800 gap-3">
 			<h3 class="text-lg font-bold text-left">{toastTitle}</h3>
 			<p class="text-left">{toastText}</p>
 		</Toast>
@@ -709,57 +706,41 @@
 		<div class="flex justify-around py-2 bg-neutral-900 dark:bg-neutral-700 text-white {fullscreen && 'bg-white dark:bg-neutral-800'}">
 			{#if user.token && user.eventToken && !fullscreen}
 				{#if user?.role === "FTA" || user?.role === "FTAA"}
-					<Link to="/">
-						<Button class="!p-2" color="none">
-							<Icon icon="mdi:television" class="w-8 h-8" />
-						</Button>
-					</Link>
-					<Link to="/flashcards">
-						<Button class="!p-2" color="none">
-							<Icon icon="mdi:message-alert" class="w-8 h-8" />
-						</Button>
-					</Link>
-					<Link to="/references">
-						<Button class="!p-2" color="none">
-							<Icon icon="mdi:file-document-outline" class="w-8 h-8" />
-						</Button>
-					</Link>
-					<Link to="/notifications">
-						<Button class="!p-2 relative" color="none">
-							<Icon icon="fluent:alert-on-16-filled" class="w-8 h-8" />
-							{#if $notificationsStore.length > 0}
-								<Indicator color="red" border size="xl" placement="top-left">
-									<span class="text-white text-xs">{$notificationsStore.length}</span>
-								</Indicator>
-							{/if}
-						</Button>
-					</Link>
+					<Button class="!p-2" color="none" href="/monitor">
+						<Icon icon="mdi:television" class="w-8 h-8" />
+					</Button>
+					<Button class="!p-2" color="none" href="/flashcards">
+						<Icon icon="mdi:message-alert" class="w-8 h-8" />
+					</Button>
+					<Button class="!p-2" color="none" href="/references">
+						<Icon icon="mdi:file-document-outline" class="w-8 h-8" />
+					</Button>
+					<Button class="!p-2 relative" color="none" href="/notifications">
+						<Icon icon="fluent:alert-on-16-filled" class="w-8 h-8" />
+						{#if $notificationsStore.length > 0}
+							<Indicator color="red" border size="xl" placement="top-left">
+								<span class="text-white text-xs">{$notificationsStore.length}</span>
+							</Indicator>
+						{/if}
+					</Button>
 				{:else if user?.role === "CSA" || user?.role === "RI"}
-					<Link to="/tickets">
-						<Button class="!p-2" color="none">
-							<Icon icon="mdi:message-alert" class="w-8 h-8" />
-						</Button>
-					</Link>
-					<Link to="/references/statuslights">
-						<Button class="!p-2" color="none">
-							<Icon icon="heroicons:sun-16-solid" class="w-8 h-8" />
-						</Button>
-					</Link>
-					<Link to="/references/softwaredocs">
-						<Button class="!p-2" color="none">
-							<Icon icon="mdi:file-document-outline" class="w-8 h-8" />
-						</Button>
-					</Link>
-					<Link to="/notifications">
-						<Button class="!p-2 relative" color="none">
-							<Icon icon="fluent:alert-on-16-filled" class="w-8 h-8" />
-							{#if $notificationsStore.length > 0}
-								<Indicator color="red" border size="xl" placement="top-left">
-									<span class="text-white text-xs">{$notificationsStore.length}</span>
-								</Indicator>
-							{/if}
-						</Button>
-					</Link>
+					<Button class="!p-2" color="none" href="/tickets">
+						<Icon icon="mdi:message-alert" class="w-8 h-8" />
+					</Button>
+					<Button class="!p-2" color="none" href="/references/statuslights">
+						<Icon icon="heroicons:sun-16-solid" class="w-8 h-8" />
+					</Button>
+					<Button class="!p-2" color="none" href="/references/softwaredocs">
+						<Icon icon="mdi:file-document-outline" class="w-8 h-8" />
+					</Button>
+					<Button class="!p-2 relative" color="none" href="/notifications">
+						<Icon icon="fluent:alert-on-16-filled" class="w-8 h-8" />
+						{#if $notificationsStore.length > 0}
+							<Indicator color="red" border size="xl" placement="top-left">
+								<span class="text-white text-xs">{$notificationsStore.length}</span>
+							</Indicator>
+						{/if}
+					</Button>
 				{/if}
 			{/if}
 		</div>

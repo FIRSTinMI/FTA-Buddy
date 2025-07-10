@@ -406,9 +406,9 @@ app.get('/app', (req, res) => {
 if (process.env.NODE_ENV === 'dev') {
     app.use('/FieldMonitor', express.static('app/src/public/FieldMonitor'));
 } else {
-    app.use('/', express.static('app/src'));
-    app.use('/{0,}', express.static('app/src/index.html'));
-    app.use('/FieldMonitor', express.static('app/src/FieldMonitor'));
+    app.use('/', express.static('app/dist'));
+    app.use('/{0,}', express.static('app/dist/index.html'));
+    app.use('/FieldMonitor', express.static('app/dist/FieldMonitor'));
 }
 
 connect().then(() => {
@@ -423,6 +423,7 @@ connect().then(() => {
     }
 
     server.listen(port);
+    console.log('✅ HTTP Server listening on http://localhost:' + port);
 });
 
 

@@ -12,6 +12,7 @@
 	export let monitorFrame: MonitorFrame;
 	export let fullscreen = false;
 	export let frameHandler: MonitorFrameHandler;
+	export let noLastChange = false;
 	let robot: RobotInfo;
 
 	$: {
@@ -195,14 +196,16 @@
 			<Icon icon="mdi:signal-cellular-outline" class="size-12 lg:size-20 2xl:size-24" />
 		{/if}
 	</button>
-	<button
-		on:click={() => detailView}
-		class="fieldmonitor-square-height hidden lg:flex items-end pb-2 justify-center text-md sm:text-xl lg:text-4xl {fullscreen &&
-			'lg:text-5xl'} tabular-nums"
-		id="{getKey(robot)}-time"
-	>
-		{!robot.code && robot.lastChange ? formatTimeShortNoAgoSecondsOnly(robot.lastChange) : ""}
-	</button>
+	{#if !noLastChange}
+		<button
+			on:click={() => detailView}
+			class="fieldmonitor-square-height hidden lg:flex items-end pb-2 justify-center text-md sm:text-xl lg:text-4xl {fullscreen &&
+				'lg:text-5xl'} tabular-nums"
+			id="{getKey(robot)}-lastchange"
+		>
+			{robot.lastChange ? formatTimeShortNoAgoSecondsOnly(robot.lastChange) : ""}
+		</button>
+	{/if}
 	<button
 		on:click={() => detailView}
 		class="fieldmonitor-square-height lg:hidden flex flex-col items-end justify-center tabular-nums"

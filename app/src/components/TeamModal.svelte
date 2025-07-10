@@ -26,21 +26,18 @@
 		modalRobot = monitorFrame[modalStation];
 	});
 
-	let timeSinceChange = $derived(() => {
-		tick; // force re-evaluation
-		return modalRobot?.lastChange ? formatTimeShort(modalRobot.lastChange) : "";
-	});
+	let timeSinceChange = $state("");
 
 	setInterval(() => {
 		if (modalOpen) {
-			timeSinceChange = () => (modalRobot?.lastChange ? formatTimeShort(modalRobot.lastChange) : "");
+			timeSinceChange = modalRobot?.lastChange ? formatTimeShort(modalRobot.lastChange) : "";
 		}
 	}, 1000);
 </script>
 
-<Modal bind:open={modalOpen} size="lg" outsideclose id="team-modal" dismissable={false}>
+<Modal bind:open={modalOpen} size="xl" outsideclose id="team-modal" dismissable={false}>
 	<div slot="header" class="md:w-full -m-2">
-		<div class="grid grid-cols-fieldmonitor lg:grid-cols-fieldmonitor-large gap-0.5 md:gap-1 lg:gap-2 mx-auto justify-center">
+		<div class="grid grid-cols-fieldmonitor lg:grid-cols-teammodal gap-0.5 md:gap-1 lg:gap-2 mx-auto justify-center">
 			<p>Team</p>
 			<p>DS</p>
 			<p>Radio</p>
@@ -50,8 +47,7 @@
 			<p class="hidden lg:flex">BWU (mbps)</p>
 			<p class="hidden lg:flex">Signal (dBm)</p>
 			<p class="lg:hidden">Net</p>
-			<p class="hidden lg:flex">Last Change</p>
-			<MonitorRow station={modalStation} {monitorFrame} detailView={() => {}} {frameHandler} />
+			<MonitorRow station={modalStation} {monitorFrame} detailView={() => {}} {frameHandler} noLastChange />
 		</div>
 	</div>
 

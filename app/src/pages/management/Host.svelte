@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Button, Helper, Indicator, Input, Label } from "flowbite-svelte";
-	import { onMount } from "svelte";
+	import { onMount, tick } from "svelte";
 	import { navigate } from "svelte-routing";
 	import type { Profile } from "../../../../shared/types";
 	import Spinner from "../../components/Spinner.svelte";
@@ -39,6 +39,7 @@
 		} else if (event.data.type === "eventCode") {
 			if (eventCode.length < 1) {
 				eventCode = event.data.code.toLowerCase();
+				autofilledKey = event.data.code.toLowerCase();
 			}
 			teams = event.data.teams;
 			await checkEventCode();
@@ -72,9 +73,11 @@
 	let eventPin = Math.random().toString().slice(2, 6);
 	let loading = false;
 
+	let tbaKey: string | undefined = undefined;
+	let autofilledKey: string | undefined = undefined;
+
 	async function createEvent(evt: SubmitEvent) {
 		loading = true;
-
 		try {
 			const res = await trpc.event.create.query({
 				code: eventCode,
@@ -107,7 +110,17 @@
 		loading = false;
 	}
 
+	let checkEventCodeTimeout: ReturnType<typeof setTimeout> | null = null;
+
+	function checkEventCodeDebounced() {
+		if (checkEventCodeTimeout) clearTimeout(checkEventCodeTimeout);
+		checkEventCodeTimeout = setTimeout(() => {
+			checkEventCode();
+		}, 500);
+	}
+
 	async function checkEventCode() {
+		tbaKey = undefined;
 		try {
 			if (eventCode.length < 1) {
 				eventCodeHelperText = "Event code must match the code on TBA";
@@ -122,8 +135,21 @@
 			const res = await trpc.event.checkCode.query({ code: eventCode });
 			console.log(res);
 			if (res.error) {
-				eventCodeHelperText = res.message;
-				eventCodeError = true;
+				if (res.key) {
+					// If the current event code was autofilled from FMS, just replace the code and don't prompt the user
+					// Make sure it doesn't match autofilledKey to prevent a loop
+					if (eventCode === autofilledKey && res.key !== autofilledKey) {
+						eventCode = res.key;
+						checkEventCode();
+					} else {
+						eventCodeHelperText = "Did you mean to use the TBA key? ";
+						eventCodeError = true;
+						tbaKey = res.key;
+					}
+				} else {
+					eventCodeHelperText = res.message;
+					eventCodeError = true;
+				}
 			} else {
 				if ("eventData" in res) eventCodeHelperText = res.eventData.name;
 				eventCodeError = false;
@@ -200,11 +226,23 @@
 				id="event-code"
 				bind:value={eventCode}
 				placeholder="2024mitry"
-				on:keyup={checkEventCode}
+				on:keyup={checkEventCodeDebounced}
 				class="mt-1"
 				color={eventCodeError ? "red" : "base"}
 			/>
-			<Helper class="text-sm mt-1" color={eventCodeError ? "red" : undefined}>{eventCodeHelperText}</Helper>
+			<Helper class="text-sm mt-1" color={eventCodeError ? "red" : undefined}>
+				{eventCodeHelperText}
+				{#if tbaKey}
+					<a
+						href="#"
+						class="text-blue-400 hover:underline"
+						on:click={() => {
+							eventCode = tbaKey ?? "";
+							checkEventCode();
+						}}>{tbaKey}</a
+					>
+				{/if}
+			</Helper>
 		</div>
 		<div>
 			<Label for="event-pin" disabled={loading}>Event Pin</Label>

@@ -10,6 +10,36 @@ import { createHash } from 'crypto';
 import { getEvent } from "../util/get-event";
 //import { sendNotification } from "../../app/src/util/push-notifications";
 
+const fullEventList: {
+    fetched: Date | undefined;
+    events: {
+        first_event_code: string;
+        key: string;
+    }[];
+} = {
+    fetched: undefined,
+    events: []
+};
+
+async function updateFullEventList() {
+    if (!fullEventList.fetched || fullEventList.fetched.getTime() < Date.now() - 1000 * 60 * 60 * 24) {
+        const year = new Date().getFullYear();
+        const updatedEventList = await (await fetch(`https://www.thebluealliance.com/api/v3/events/${year}`, {
+            headers: {
+                'X-TBA-Auth-Key': process.env.TBA_API_KEY ?? ''
+            }
+        })).json();
+
+        fullEventList.fetched = new Date();
+        fullEventList.events = updatedEventList.map((event: any) => ({
+            key: event.key,
+            first_event_code: event.first_event_code
+        }));
+    }
+}
+
+updateFullEventList();
+
 export const eventRouter = router({
     checkCode: publicProcedure.input(z.object({
         code: z.string()
@@ -26,7 +56,20 @@ export const eventRouter = router({
             }
         })).json();
 
-        if ("Error" in eventData) return { error: true, message: eventData.Error };
+        // Event code not found
+        if ("Error" in eventData) {
+            // Update full event list if needed
+            await updateFullEventList();
+            // Check to see if the code matches a first event code
+            const inputCodeWithoutYear = input.code.replace(/\d{4}/, '');
+            const event = fullEventList.events.find(e => e.first_event_code === inputCodeWithoutYear);
+
+            if (event) {
+                return { error: true, message: 'Use TBA event code ' + event.key, key: event.key };
+            }
+
+            return { error: true, message: eventData.Error };
+        }
 
         return { error: false, message: 'Event found', eventData };
     }),

@@ -1,17 +1,16 @@
 const appExtensionData = chrome.runtime.getManifest();
 
 (async () => {
-    let url: string, cloud: boolean, changed: number, enabled: boolean, signalR: boolean, eventCode: string, eventToken: string, id: string;
+    let url: string, cloud: boolean, changed: number, enabled: boolean, eventCode: string, eventToken: string, id: string;
 
     await new Promise((resolve) => {
-        chrome.storage.local.get(['url', 'cloud', 'event', 'changed', 'enabled', 'signalR', 'eventToken', 'id'], item => {
+        chrome.storage.local.get(['url', 'cloud', 'event', 'changed', 'enabled', 'eventToken', 'id'], item => {
             console.log(item);
             url = item.url;
             cloud = item.cloud;
             eventCode = item.event;
             changed = item.changed;
             enabled = item.enabled;
-            signalR = item.signalR;
             eventToken = item.eventToken;
             id = item.id;
             resolve(void 0);
@@ -32,14 +31,13 @@ const appExtensionData = chrome.runtime.getManifest();
                 cloud,
                 eventCode,
                 enabled,
-                signalR,
+                signalR: enabled,
                 fms: fms.fms,
                 id
             });
         } else if (evt.data.type === "enable") {
             enabled = true;
-            signalR = true;
-            await chrome.storage.local.set({ enabled: enabled, signalR: enabled });
+            await chrome.storage.local.set({ enabled: enabled });
             await enable();
             window.postMessage({
                 source: 'ext',
@@ -48,13 +46,13 @@ const appExtensionData = chrome.runtime.getManifest();
                 cloud,
                 eventCode,
                 enabled,
-                signalR,
+                signalR: enabled,
                 fms: await pingFMS(),
                 id
             });
         } else if (evt.data.type === "enableNoSignalR") {
             enabled = true;
-            await chrome.storage.local.set({ enabled: enabled, signalR: enabled });
+            await chrome.storage.local.set({ enabled: enabled });
             await enableNoSignalR();
             window.postMessage({
                 source: 'ext',
@@ -63,7 +61,7 @@ const appExtensionData = chrome.runtime.getManifest();
                 cloud,
                 eventCode,
                 enabled,
-                signalR,
+                signalR: enabled,
                 fms: await pingFMS(),
                 id
             });
@@ -78,15 +76,15 @@ const appExtensionData = chrome.runtime.getManifest();
                 cloud,
                 eventCode,
                 enabled,
-                signalR,
+                signalR: enabled,
                 fms: await pingFMS(),
                 id
             });
             // Restart the extension after configuration changes
             await restart();
         } else if (evt.data.type === "enableSignalR") {
-            signalR = true;
-            await chrome.storage.local.set({ signalR: signalR });
+            enabled = true;
+            await chrome.storage.local.set({ enabled: enabled });
             window.postMessage({
                 source: 'ext',
                 version: appExtensionData.version,
@@ -94,7 +92,7 @@ const appExtensionData = chrome.runtime.getManifest();
                 cloud,
                 eventCode,
                 enabled,
-                signalR,
+                signalR: enabled,
                 fms: await pingFMS(),
                 id
             });

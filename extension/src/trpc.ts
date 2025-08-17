@@ -14,7 +14,7 @@ let eventToken: string = '';
 let linkURL = (cloud ? 'wss://ftabuddy.com/ws' : (url.replace('http', 'ws') + '/ws'));
 console.log(linkURL);
 
-let wsClient = createWSClient({
+export let wsClient = createWSClient({
     url: linkURL,
 });
 

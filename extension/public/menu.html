@@ -1,110 +1,402 @@
 <html>
 	<head>
+		<meta charset="utf-8" />
+		<title>FTA Buddy</title>
 		<style>
+			:root {
+				--bg: #0b0c10;
+				--panel: #16181d;
+				--muted: #8b94a7;
+				--text: #eef2ff;
+				--ring: #3b82f6;
+				--accent: #3b82f6;
+				--border: #23262d;
+				--input: #0f1116;
+				--btn: #2563eb;
+				--btn-text: #ffffff;
+
+				color-scheme: light dark;
+			}
+
+			@media (prefers-color-scheme: light) {
+				:root {
+					--bg: #f7f7fb;
+					--panel: #ffffff;
+					--muted: #6b7280;
+					--text: #0b1020;
+					--ring: #2563eb;
+					--accent: #2563eb;
+					--border: #e5e7eb;
+					--input: #ffffff;
+					--btn: #2563eb;
+					--btn-text: #ffffff;
+				}
+			}
+
+			* {
+				box-sizing: border-box;
+			}
+
+			html,
+			body {
+				margin: 0;
+				padding: 0;
+				background: var(--bg);
+				color: var(--text);
+				font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+			}
+
+			body {
+				width: 350px;
+				padding: 14px;
+				display: flex;
+				flex-direction: column;
+				gap: 12px;
+			}
+
+			/* Header */
+			.header {
+				display: flex;
+				align-items: center;
+				gap: 10px;
+			}
+			.header img {
+				height: 28px;
+				width: 28px;
+				border-radius: 6px;
+			}
+			.title {
+				font-size: 16px;
+				font-weight: 700;
+				letter-spacing: 0.1px;
+			}
+			.subtle a {
+				color: var(--accent);
+				text-decoration: none;
+			}
+			.subtle a:hover {
+				text-decoration: underline;
+			}
+			.subtle {
+				color: var(--muted);
+				font-size: 12px;
+				margin-top: 2px;
+			}
+
+			/* Cards / sections */
+			.card {
+				background: var(--panel);
+				border: 1px solid var(--border);
+				border-radius: 12px;
+				padding: 12px;
+			}
+			.section-title {
+				font-size: 12px;
+				font-weight: 700;
+				letter-spacing: 0.08em;
+				text-transform: uppercase;
+				color: var(--muted);
+				margin-bottom: 8px;
+			}
+
+			/* Rows */
+			.row {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				padding: 8px 0;
+			}
+			.row + .row {
+				border-top: 1px dashed var(--border);
+			}
+
+			/* Status */
+			.status-label {
+				font-weight: 700;
+				font-size: 13px;
+				min-width: 110px;
+			}
+			.status-text {
+				font-size: 12px;
+				color: var(--muted);
+			}
+
+			.status-indicator {
+				width: 10px;
+				height: 10px;
+				border-radius: 9999px;
+				border: 2px solid color-mix(in oklch, var(--panel), #000 20%);
+				flex: 0 0 auto;
+			}
+			.status-indicator.red {
+				background-color: oklch(57.7% 0.245 27.325);
+			}
+			.status-indicator.green {
+				background-color: oklch(62.7% 0.194 149.214);
+			}
+			.status-indicator.yellow {
+				background-color: oklch(85.2% 0.199 91.936);
+			}
+
+			/* Form bits */
+			.grid {
+				display: grid;
+				grid-template-columns: 1fr;
+				gap: 10px;
+			}
+			.field {
+				display: grid;
+				gap: 6px;
+			}
+			label {
+				font-size: 12px;
+				color: var(--muted);
+			}
+			input[type="text"],
+			input[type="url"],
+			input[type="number"] {
+				appearance: none;
+				width: 100%;
+				background: var(--input);
+				color: var(--text);
+				border: 1px solid var(--border);
+				border-radius: 10px;
+				padding: 8px 10px;
+				font-size: 13px;
+				outline: none;
+			}
+			input:focus {
+				border-color: var(--ring);
+				box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring), transparent 80%);
+			}
+
+			.hstack {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+			}
+			.spaced {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 8px;
+			}
+
+			/* Toggle (keeps your IDs/structure) */
 			.switch {
 				position: relative;
 				display: inline-block;
-				width: 30px;
-				height: 16px;
+				width: 40px;
+				height: 22px;
 			}
-
 			.switch input {
 				opacity: 0;
 				width: 0;
 				height: 0;
 			}
-
 			.slider {
 				position: absolute;
+				inset: 0;
 				cursor: pointer;
-				top: 0;
-				left: 0;
-				right: 0;
-				bottom: 0;
-				background-color: #ccc;
-				-webkit-transition: 0.4s;
-				transition: 0.4s;
+				background-color: #a0a6b4;
+				transition: 0.25s;
+				border-radius: 9999px;
+				border: 1px solid var(--border);
 			}
-
 			.slider:before {
-				position: absolute;
 				content: "";
-				height: 13px;
-				width: 13px;
+				position: absolute;
+				height: 18px;
+				width: 18px;
 				left: 2px;
-				bottom: 1.6px;
-				background-color: white;
-				-webkit-transition: 0.4s;
-				transition: 0.4s;
+				top: 1px;
+				background-color: #fff;
+				border-radius: 9999px;
+				transition: 0.25s;
+				box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
 			}
-
 			input:checked + .slider {
-				background-color: #2196f3;
+				background-color: var(--accent);
+				box-shadow: inset 0 0 0 1px color-mix(in oklch, black, transparent 90%);
 			}
-
-			input:focus + .slider {
-				box-shadow: 0 0 1px #2196f3;
-			}
-
 			input:checked + .slider:before {
-				-webkit-transform: translateX(13px);
-				-ms-transform: translateX(13px);
-				transform: translateX(13px);
+				transform: translateX(18px);
 			}
 
-			.slider.round {
-				border-radius: 16px;
+			/* Buttons */
+			.btn {
+				appearance: none;
+				border: 1px solid color-mix(in oklch, var(--btn), black 15%);
+				background: linear-gradient(180deg, color-mix(in oklch, var(--btn), white 15%), var(--btn));
+				color: var(--btn-text);
+				border-radius: 10px;
+				padding: 8px 12px;
+				font-size: 13px;
+				font-weight: 700;
+				cursor: pointer;
+				transition: transform 0.05s ease, filter 0.15s ease;
+			}
+			.btn:hover {
+				filter: brightness(1.05);
+			}
+			.btn:active {
+				transform: translateY(1px);
+			}
+			.btn.secondary {
+				background: var(--panel);
+				color: var(--text);
+				border: 1px solid var(--border);
 			}
 
-			.slider.round:before {
-				border-radius: 50%;
+			/* Helper utilities you referenced */
+			.flex {
+				display: flex;
+			}
+			.gap-2 {
+				gap: 8px;
+			}
+			.gap-4 {
+				gap: 16px;
+			}
+			.flex-col {
+				flex-direction: column;
+			}
+			.items-center {
+				align-items: center;
+			}
+			.justify-center {
+				justify-content: center;
+			}
+
+			/* Tiny separator */
+			.divider {
+				height: 1px;
+				background: var(--border);
+				margin: 6px 0;
+				opacity: 0.8;
+			}
+
+			/* Small badge for “Developer stuff” */
+			.badge {
+				display: inline-flex;
+				align-items: center;
+				font-size: 11px;
+				color: var(--muted);
+				border: 1px dashed var(--border);
+				border-radius: 999px;
+				padding: 2px 8px;
 			}
 		</style>
 	</head>
 
-	<body style="width: 300px">
-		<h1>FTA Buddy</h1>
-		<p>To use this extension, use the web app <a href="https://ftabuddy.com/">ftabuddy.com</a></p>
-		<div style="margin-bottom: 10px; display: flex; gap: 4px">
-			Enabled
-			<label class="switch">
-				<input type="checkbox" id="enabled" />
-				<span class="slider round"></span>
-			</label>
+	<body>
+		<!-- Header -->
+		<div class="header">
+			<img src="img/logo.png" alt="FTA Buddy" />
+			<div>
+				<div class="title">FTA Buddy</div>
+				<div class="subtle">
+					To use at your event, visit
+					<a href="https://ftabuddy.com/manage/host" target="_blank" rel="noopener">ftabuddy.com/manage/host</a>
+				</div>
+			</div>
 		</div>
-		<div style="margin-bottom: 10px; display: flex; gap: 4px">
-			Use Cloud Server
-			<label class="switch">
-				<input type="checkbox" id="cloud" checked />
-				<span class="slider round"></span>
-			</label>
+
+		<!-- Status card -->
+		<div class="card">
+			<div class="section-title">Status</div>
+
+			<div class="row">
+				<div class="status-indicator" id="extension-status"></div>
+				<div class="status-label">Extension</div>
+				<span class="status-text" id="extension-status-text"></span>
+			</div>
+
+			<div class="row">
+				<div class="status-indicator" id="fms-api-status"></div>
+				<div class="status-label">FMS API</div>
+				<span class="status-text" id="fms-api-status-text"></span>
+			</div>
+
+			<div class="row">
+				<div class="status-indicator" id="fms-signalr-status"></div>
+				<div class="status-label">FMS SignalR</div>
+				<span class="status-text" id="fms-signalr-status-text"></span>
+			</div>
+
+			<div class="row">
+				<div class="status-indicator" id="fta-buddy-status"></div>
+				<div class="status-label">FTA Buddy</div>
+				<span class="status-text" id="fta-buddy-status-text"></span>
+			</div>
 		</div>
-		<div style="margin-bottom: 10px; display: flex; gap: 4px">
-			Use SignalR instead of page scraping
-			<label class="switch">
-				<input type="checkbox" id="signalR" checked />
-				<span class="slider round"></span>
-			</label>
+
+		<!-- Settings card -->
+		<div class="card">
+			<div class="section-title">Settings</div>
+
+			<div class="spaced">
+				<span class="hstack" style="gap: 10px">
+					<span style="font-weight: 700">Enabled</span>
+				</span>
+				<label class="switch" aria-label="Enabled">
+					<input type="checkbox" id="enabled" />
+					<span class="slider"></span>
+				</label>
+			</div>
+
+			<div class="grid" style="margin-top: 8px">
+				<div class="field" id="event-container">
+					<label for="event">Event Code</label>
+					<input id="event" type="text" placeholder="e.g. 2024event" />
+				</div>
+
+				<div class="field">
+					<label for="eventToken">Event Token</label>
+					<input id="eventToken" type="text" placeholder="Paste token…" />
+				</div>
+
+				<div class="spaced" style="margin-top: 4px">
+					<span></span>
+					<button class="btn" id="save">Save</button>
+				</div>
+			</div>
 		</div>
-		<div id="event-container">
-			<label for="event">Event Code</label>
-			<input id="event" type="text" />
+
+		<!-- Developer card -->
+		<div class="card">
+			<div class="spaced">
+				<div class="badge">Developer</div>
+			</div>
+
+			<div class="field" style="margin-top: 10px">
+				<label for="match-number">Manually Import Match Logs</label>
+				<div class="hstack" style="gap: 8px; flex-wrap: wrap">
+					<input id="match-level" value="Qualification" type="text" style="flex: 1 1 120px" />
+					<input id="match-number" type="number" placeholder="Match #" style="flex: 1 1 100px" />
+					<input id="match-play" type="number" placeholder="Play #" style="flex: 1 1 100px" />
+					<button class="btn secondary" id="import" style="flex: 0 0 auto">Import</button>
+				</div>
+			</div>
+
+			<div class="divider"></div>
+
+			<div class="spaced" style="margin-top: 6px">
+				<span class="hstack">Use Cloud Server</span>
+				<label class="switch" aria-label="Use Cloud Server">
+					<input type="checkbox" id="cloud" checked />
+					<span class="slider"></span>
+				</label>
+			</div>
+
+			<div class="grid" id="url-container" style="display: none; margin-top: 10px">
+				<div class="field">
+					<label for="url">Server Host</label>
+					<input id="url" type="url" placeholder="http://localhost:3001" />
+				</div>
+			</div>
 		</div>
-		<div>
-			<label for="eventToken">Event Token</label>
-			<input id="eventToken" type="text" />
-		</div>
-		<div id="url-container" style="display: none">
-			<label for="url">Server Host</label>
-			<input id="url" type="url" />
-		</div>
-		<div>
-			<label for="match-number">Manually Import Match Logs</label>
-			<input id="match-level" value="Qualification" />
-			<input id="match-number" type="number" placeholder="1" />
-			<input id="match-play" type="number" placeholder="1" />
-			<button id="import">Import</button>
-		</div>
+
 		<script src="menu.js"></script>
 	</body>
 </html>

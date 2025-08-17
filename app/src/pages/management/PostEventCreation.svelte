@@ -95,6 +95,12 @@
 					Event Token (for API use): <code class="bg-neutral-900 px-2 py-.75 rounded-lg">{$userStore.eventToken}</code>
 				</p>
 			</div>
+			<Button
+				class="mt-4"
+				on:click={() => {
+					window.postMessage({ source: "page", type: "eventCode", code: $eventStore.code, token: $userStore.eventToken }, "*");
+				}}>Reconfigure Extension</Button
+			>
 		</div>
 		<div class="flex flex-col gap-4">
 			<h2 class="text-xl font-bold">WPA Kiosk Tool</h2>

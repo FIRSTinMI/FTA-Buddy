@@ -372,7 +372,24 @@
 			<div class="field" style="margin-top: 10px">
 				<label for="match-number">Manually Import Match Logs</label>
 				<div class="hstack" style="gap: 8px; flex-wrap: wrap">
-					<input id="match-level" value="Qualification" type="text" style="flex: 1 1 120px" />
+					<select
+						id="match-level"
+						style="
+							flex: 1 1 140px;
+							background: var(--input);
+							color: var(--text);
+							border: 1px solid var(--border);
+							border-radius: 10px;
+							padding: 8px 10px;
+							font-size: 13px;
+							outline: none;
+						">
+						<option value="None">Test</option>
+						<option value="Practice">Practice</option>
+						<option value="Qualification" selected>Qualification</option>
+						<option value="Playoff">Playoff</option>
+					</select>
+
 					<input id="match-number" type="number" placeholder="Match #" style="flex: 1 1 100px" />
 					<input id="match-play" type="number" placeholder="Play #" style="flex: 1 1 100px" />
 					<button class="btn secondary" id="import" style="flex: 0 0 auto">Import</button>
@@ -381,7 +398,7 @@
 
 			<div class="divider"></div>
 
-			<div class="spaced" style="margin-top: 6px">
+			<div class="spaced">
 				<span class="hstack">Use Cloud Server</span>
 				<label class="switch" aria-label="Use Cloud Server">
 					<input type="checkbox" id="cloud" checked />

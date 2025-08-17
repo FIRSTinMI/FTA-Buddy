@@ -10,7 +10,7 @@ const enabledInput = document.getElementById('enabled') as HTMLInputElement;
 const tokenInput = document.getElementById('eventToken') as HTMLInputElement;
 const saveButton = document.getElementById('save') as HTMLButtonElement;
 
-const matchLevelInput = document.getElementById('match-level') as HTMLInputElement;
+const matchLevelInput = document.getElementById('match-level') as HTMLSelectElement;
 const matchNumberInput = document.getElementById('match-number') as HTMLInputElement;
 const matchPlayInput = document.getElementById('match-play') as HTMLInputElement;
 const matchimportButton = document.getElementById('import') as HTMLButtonElement;

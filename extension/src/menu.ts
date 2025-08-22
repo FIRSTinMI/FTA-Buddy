@@ -8,6 +8,7 @@ const eventInput = document.getElementById('event') as HTMLInputElement;
 const eventContainer = document.getElementById('event-container') as HTMLDivElement;
 const enabledInput = document.getElementById('enabled') as HTMLInputElement;
 const tokenInput = document.getElementById('eventToken') as HTMLInputElement;
+const arenaTypeSelect = document.getElementById('arena-type') as HTMLSelectElement;
 const saveButton = document.getElementById('save') as HTMLButtonElement;
 
 const matchLevelInput = document.getElementById('match-level') as HTMLSelectElement;
@@ -42,15 +43,16 @@ async function bgGetStatuses(): Promise<{ signalrStatus: string; wsStatus: strin
 }
 
 function load() {
-    chrome.storage.local.get(['url', 'cloud', 'event', 'eventToken', 'changed', 'enabled'], item => {
-        if (item.url == undefined || item.cloud == undefined || item.event == undefined || item.changed == undefined || item.enabled == undefined || item.eventToken == undefined) {
+    chrome.storage.local.get(['url', 'cloud', 'event', 'eventToken', 'changed', 'enabled', 'arenaType'], item => {
+        if (item.url == undefined || item.cloud == undefined || item.event == undefined || item.changed == undefined || item.enabled == undefined || item.eventToken == undefined || item.arenaType == undefined) {
             item = {
                 url: item.url || 'http://localhost:3001',
                 cloud: item.cloud ?? true,
                 event: item.event || '2024event',
                 changed: item.changed || new Date().getTime(),
                 enabled: item.enabled ?? false,
-                eventToken: item.eventToken || ''
+                eventToken: item.eventToken || '',
+                arenaType: item.arenaType || 'FMS'
             };
             chrome.storage.local.set(item);
         }
@@ -60,6 +62,7 @@ function load() {
         eventInput.value = item.event;
         enabledInput.checked = item.enabled;
         tokenInput.value = item.eventToken;
+        arenaTypeSelect.value = item.arenaType;
 
         urlContainer.style.display = item.cloud ? 'none' : 'block';
 
@@ -105,6 +108,8 @@ async function updateStatusIndicators() {
         bgStatus = bgGetStatuses().then(status => {
             const { signalrStatus, wsStatus } = status;
 
+            console.log(status);
+
             fmsSignalRStatusIndicator.classList.remove('red', 'green', 'yellow');
             if (signalrStatus !== 'Connected') {
                 fmsSignalRStatusIndicator.classList.add('red');
@@ -131,6 +136,7 @@ async function updateStatusIndicators() {
     });
 
     const fmsRes = bgPingFMS().then(res => {
+        console.log(res);
         fmsApiStatusIndicator.classList.remove('red', 'green', 'yellow');
         if (!res.ok) {
             fmsApiStatusIndicator.classList.add('red');
@@ -180,14 +186,15 @@ function handleUpdate() {
         event: eventInput.value,
         changed: new Date().getTime(),
         enabled: enabledInput.checked,
-        eventToken: tokenInput.value
+        eventToken: tokenInput.value,
+        arenaType: arenaTypeSelect.value
     });
 
     urlContainer.style.display = cloudCheckbox.checked ? 'none' : 'block';
     chrome.runtime.reload();
 }
 
-function updatePopup(setting: 'url' | 'cloud' | 'enabled' | 'event' | 'eventToken', value: boolean | string) {
+function updatePopup(setting: 'url' | 'cloud' | 'enabled' | 'event' | 'eventToken' | 'arenaType', value: boolean | string) {
     const elm = document?.getElementById(setting);
     if (!elm) return;
     if (typeof value === 'boolean') {
@@ -200,7 +207,7 @@ function updatePopup(setting: 'url' | 'cloud' | 'enabled' | 'event' | 'eventToke
 chrome.storage.local.onChanged.addListener((changes) => {
     for (const key of Object.keys(changes)) {
         if (key === 'changed') continue;
-        updatePopup(key as 'url' | 'cloud' | 'enabled' | 'event' | 'eventToken', changes[key].newValue);
+        updatePopup(key as 'url' | 'cloud' | 'enabled' | 'event' | 'eventToken' | 'arenaType', changes[key].newValue);
     }
 });
 

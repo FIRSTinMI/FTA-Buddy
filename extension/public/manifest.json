@@ -5,10 +5,14 @@
     "version": "1.25",
     "permissions": [
         "storage",
-        "scripting"
+        "scripting",
+        "webRequest",
+        "webRequestBlocking"
     ],
     "host_permissions": [
-        "http://10.0.100.5/*"
+        "http://10.0.100.5/*",
+        "http://10.0.100.5:8080/*",
+        "ws://10.0.100.5:8080/*"
     ],
     "content_scripts": [
         {

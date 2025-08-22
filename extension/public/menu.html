@@ -356,6 +356,24 @@
 					<input id="eventToken" type="text" placeholder="Paste token…" />
 				</div>
 
+				<div class="field">
+					<label for="arena-type">Source</label>
+					<select
+						id="arena-type"
+						style="
+							background: var(--input);
+							color: var(--text);
+							border: 1px solid var(--border);
+							border-radius: 10px;
+							padding: 8px 10px;
+							font-size: 13px;
+							outline: none;
+						">
+						<option value="FMS" selected>FIRST FMS (SignalR)</option>
+						<option value="Chezy">Chezy Arena (WebSocket)</option>
+					</select>
+				</div>
+
 				<div class="spaced" style="margin-top: 4px">
 					<span></span>
 					<button class="btn" id="save">Save</button>

@@ -11,6 +11,9 @@
         "generate-migration": "drizzle-kit generate:pg",
         "migrate": "ts-node src/db/migrate"
     },
+    "engines": {
+        "node": "22"
+    },
     "author": "Filip Kin",
     "license": "ISC",
     "dependencies": {

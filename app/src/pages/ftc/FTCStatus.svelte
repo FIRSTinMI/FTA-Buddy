@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { Progressbar, Select, Spinner } from "flowbite-svelte";
+	import { Checkbox, Progressbar, Select, Spinner } from "flowbite-svelte";
 	import { onMount } from "svelte";
 	import { formatTimeShortNoAgo, formatTimeShortNoAgoSeconds } from "../../../../shared/formatTime";
 	import type { FTCEvent } from "../../../../src/router/ftc";
 	import { trpc } from "../../main";
 
 	let region = "FIM";
+	let includeMeets = false;
 	let events: string[] = []; //["2425-FIM-MHQ"];
 	let eventData: FTCEvent[] = [];
 	let subscription: ReturnType<typeof trpc.ftc.dashboard.subscribe> | null = null;
@@ -17,7 +18,7 @@
 		return events;
 	}
 
-	let interval: Timer | undefined;
+	let interval: ReturnType<typeof setInterval> | undefined;
 
 	async function subscribeToEvents(events: string[]) {
 		if (interval) clearInterval(interval);
@@ -63,14 +64,19 @@
 </script>
 
 <div class="flex flex-col gap-2 m-2">
-	<div class="max-w-xl">
-		{#await trpc.ftc.getRegions.query()}
-			<p>Loading Regions...</p>
-		{:then data}
-			<Select items={data} bind:value={region} on:change={async () => subscribeToEvents(await getEventsForRegion(region))} />
-		{:catch error}
-			<p>Error: {error.message}</p>
-		{/await}
+	<div class="flex gap-4 items-center">
+		<div class="max-w-xl">
+			{#await trpc.ftc.getRegions.query()}
+				<p>Loading Regions...</p>
+			{:then data}
+				<Select items={data} bind:value={region} on:change={async () => subscribeToEvents(await getEventsForRegion(region))} />
+			{:catch error}
+				<p>Error: {error.message}</p>
+			{/await}
+		</div>
+		<div>
+			<Checkbox bind:checked={includeMeets}>Include Leauge Meets</Checkbox>
+		</div>
 	</div>
 	<div class="grid grid-cols-3 md:grid-cols-[.20fr_.15fr_.30fr_.12fr_.12fr_.11fr] gap-2 items-end">
 		<h2 class="text-lg font-semibold hidden md:block">Name</h2>
@@ -80,7 +86,7 @@
 		<h2 class="text-lg font-semibold">Current Cycle Time</h2>
 		<h2 class="text-lg font-semibold">Avg Cycle Time</h2>
 		{#each eventData as event}
-			{#if events.includes(event.key)}
+			{#if events.includes(event.key) && (includeMeets || !event.name.toLowerCase().includes("meet"))}
 				<p class="col-span-3 md:col-span-1 font-semibold border-t border-gray-600 pt-1 mt-1 md:border-none md:mt-0 md:pt-0">
 					{#if event.code.startsWith("USMICMP")}
 						MSC {event.code.slice(8)}

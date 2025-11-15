@@ -377,7 +377,7 @@ function getTOAMatchKey(eventKey: string, matchNumber: number, level: "QUALIFICA
 }
 
 async function FTCAPIgetMatches(eventKey: string) {
-    const response = await fetch(`https://ftc-api.firstinspires.org/v2.0/2024/matches/${eventKey}?start=0&end=999`, {
+    const response = await fetch(`https://ftc-api.firstinspires.org/v2.0/2025/matches/${eventKey}?start=0&end=999`, {
         headers: {
             "Accept": "application/json",
             "Authorization": `Basic ${btoa(process.env.FTC_KEY ?? "")}`

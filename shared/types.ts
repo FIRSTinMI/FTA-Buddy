@@ -675,4 +675,6 @@ export interface DisconnectionEvent {
     startTime: number;
     endTime: number;
     duration: number;
+    startIndex: number;
+    endIndex: number;
 }

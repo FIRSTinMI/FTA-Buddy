@@ -141,7 +141,6 @@
             xAxis: {
                 type: 'category',
                 data: log.map(frame => frame.matchTime),
-                inverse: true,
                 axisLabel: { interval: 'auto' },
             },
             yAxis: [

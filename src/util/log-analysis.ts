@@ -10,16 +10,25 @@ export function analyzeLog(log: FMSLogFrame[]): DisconnectionEvent[] {
 
     // Disconnection tracking variables
     let codeDisconnectStart: number | null = null;
+    let codeDisconnectStartIdx: number | null = null;
     let rioDisconnectStart: number | null = null;
+    let rioDisconnectStartIdx: number | null = null;
     let radioDisconnectStart: number | null = null;
+    let radioDisconnectStartIdx: number | null = null;
     let dsDisconnectStart: number | null = null;
+    let dsDisconnectStartIdx: number | null = null;
 
     // New tracking variables for additional conditions
     let brownoutStart: number | null = null;
+    let brownoutStartIdx: number | null = null;
     let highTripTimeStart: number | null = null;
+    let highTripTimeStartIdx: number | null = null;
     let sustainedHighTripTimeStart: number | null = null;
+    let sustainedHighTripTimeStartIdx: number | null = null;
     let lowSignalStart: number | null = null;
+    let lowSignalStartIdx: number | null = null;
     let highDataRateStart: number | null = null;
+    let highDataRateStartIdx: number | null = null;
 
     // Arrays for rolling averages
     const tripTimeWindow: number[] = [];
@@ -45,118 +54,154 @@ export function analyzeLog(log: FMSLogFrame[]): DisconnectionEvent[] {
         // Check for code disconnection
         if (!frame.linkActive && frame.rioLink && frame.radioLink && frame.dsLinkActive && codeDisconnectStart === null) {
             codeDisconnectStart = currentTime;
+            codeDisconnectStartIdx = index;
         } else if (frame.linkActive && codeDisconnectStart !== null) {
             events.push({
                 issue: "Code disconnect",
                 startTime: codeDisconnectStart,
                 endTime: currentTime,
                 duration: codeDisconnectStart - currentTime,  // Reversed
+                startIndex: codeDisconnectStartIdx!,
+                endIndex: index,
             });
             codeDisconnectStart = null;
+            codeDisconnectStartIdx = null;
         }
 
         // Check for rio disconnection (dependent on radio)
         if (!frame.rioLink && frame.radioLink && frame.dsLinkActive && rioDisconnectStart === null) {
             rioDisconnectStart = currentTime;
+            rioDisconnectStartIdx = index;
         } else if (frame.rioLink && rioDisconnectStart !== null) {
             events.push({
                 issue: "RIO disconnect",
                 startTime: rioDisconnectStart,
                 endTime: currentTime,
                 duration: rioDisconnectStart - currentTime,  // Reversed
+                startIndex: rioDisconnectStartIdx!,
+                endIndex: index,
             });
             rioDisconnectStart = null;
+            rioDisconnectStartIdx = null;
         }
 
         // Check for radio disconnection
         if (!frame.radioLink && frame.dsLinkActive && radioDisconnectStart === null) {
             radioDisconnectStart = currentTime;
+            radioDisconnectStartIdx = index;
         } else if (frame.radioLink && radioDisconnectStart !== null) {
             events.push({
                 issue: "Radio disconnect",
                 startTime: radioDisconnectStart,
                 endTime: currentTime,
                 duration: radioDisconnectStart - currentTime,  // Reversed
+                startIndex: radioDisconnectStartIdx!,
+                endIndex: index,
             });
             radioDisconnectStart = null;
+            radioDisconnectStartIdx = null;
         }
 
         // Check for driver station disconnection
         if (!frame.dsLinkActive && dsDisconnectStart === null) {
             dsDisconnectStart = currentTime;
+            dsDisconnectStartIdx = index;
         } else if (frame.dsLinkActive && dsDisconnectStart !== null) {
             events.push({
                 issue: "DS disconnect",
                 startTime: dsDisconnectStart,
                 endTime: currentTime,
                 duration: dsDisconnectStart - currentTime,  // Reversed
+                startIndex: dsDisconnectStartIdx!,
+                endIndex: index,
             });
             dsDisconnectStart = null;
+            dsDisconnectStartIdx = null;
         }
 
         // Battery Voltage - Brownout condition, ignore if RIO or radio is disconnected
         if (frame.battery < 7 && brownoutStart === null && frame.linkActive && frame.rioLink && frame.radioLink && frame.dsLinkActive) {
             brownoutStart = currentTime;
+            brownoutStartIdx = index;
         } else if (frame.battery >= 7 && brownoutStart !== null) {
             events.push({
                 issue: "Brownout",
                 startTime: brownoutStart,
                 endTime: currentTime,
                 duration: brownoutStart - currentTime,  // Reversed
+                startIndex: brownoutStartIdx!,
+                endIndex: index,
             });
             brownoutStart = null;
+            brownoutStartIdx = null;
         }
 
         // Large spikes in trip time (>100ms) and measure how long it lasts
         if (frame.averageTripTime > 100 && highTripTimeStart === null) {
             highTripTimeStart = currentTime;
+            highTripTimeStartIdx = index;
         } else if (frame.averageTripTime <= 100 && highTripTimeStart !== null) {
             events.push({
                 issue: "Large spike in ping",
                 startTime: highTripTimeStart,
                 endTime: currentTime,
                 duration: highTripTimeStart - currentTime,  // Reversed
+                startIndex: highTripTimeStartIdx!,
+                endIndex: index,
             });
             highTripTimeStart = null;
+            highTripTimeStartIdx = null;
         }
 
         // Sustained high trip time (>10ms for more than 30 seconds using 3-frame rolling average)
         if (tripTimeAvg > 10 && sustainedHighTripTimeStart === null) {
             sustainedHighTripTimeStart = currentTime;
+            sustainedHighTripTimeStartIdx = index;
         } else if (tripTimeAvg <= 10 && sustainedHighTripTimeStart !== null) {
             events.push({
                 issue: "Sustained high ping",
                 startTime: sustainedHighTripTimeStart,
                 endTime: currentTime,
                 duration: sustainedHighTripTimeStart - currentTime,  // Reversed
+                startIndex: sustainedHighTripTimeStartIdx!,
+                endIndex: index,
             });
             sustainedHighTripTimeStart = null;
+            sustainedHighTripTimeStartIdx = null;
         }
 
         // Low signal (< -70 dBm for more than 30 seconds using 3-frame rolling average)
         if (signalAvg !== null && signalAvg < -70 && lowSignalStart === null) {
             lowSignalStart = currentTime;
+            lowSignalStartIdx = index;
         } else if (signalAvg !== null && signalAvg >= -70 && lowSignalStart !== null) {
             events.push({
                 issue: "Low signal",
                 startTime: lowSignalStart,
                 endTime: currentTime,
                 duration: lowSignalStart - currentTime,  // Reversed
+                startIndex: lowSignalStartIdx!,
+                endIndex: index,
             });
             lowSignalStart = null;
+            lowSignalStartIdx = null;
         }
 
         // High data rate (> 6.8 Mbps for more than 30 seconds using 3-frame rolling average)
         if (dataRateAvg > 6.8 && highDataRateStart === null) {
             highDataRateStart = currentTime;
+            highDataRateStartIdx = index;
         } else if (dataRateAvg <= 6.8 && highDataRateStart !== null) {
             events.push({
                 issue: "High BWU",
                 startTime: highDataRateStart,
                 endTime: currentTime,
                 duration: highDataRateStart - currentTime,  // Reversed
+                startIndex: highDataRateStartIdx!,
+                endIndex: index,
             });
             highDataRateStart = null;
+            highDataRateStartIdx = null;
         }
     });
 
@@ -172,6 +217,7 @@ export function analyzeLog(log: FMSLogFrame[]): DisconnectionEvent[] {
         ) {
             // Merge the events by updating the endTime and duration of the current event
             currentEvent.endTime = nextEvent.endTime;
+            currentEvent.endIndex = nextEvent.endIndex;
             currentEvent.duration = currentEvent.startTime - currentEvent.endTime;
 
             // Remove the next event from the list
@@ -266,6 +312,8 @@ export async function logAnalysisLoop(limit: number) {
                         start_time: evt.startTime,
                         end_time: evt.endTime,
                         duration: evt.duration,
+                        start_index: evt.startIndex,
+                        end_index: evt.endIndex,
                     }))
                 ).execute();
             }

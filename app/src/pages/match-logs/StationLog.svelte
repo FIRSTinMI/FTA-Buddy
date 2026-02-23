@@ -191,7 +191,7 @@
 
 		<div class="flex flex-col gap-2">
 			{#each match.analysis as logEvent}
-				<button class="w-full text-left cursor-pointer" on:click={() => logGraph?.zoomToRange(logEvent.startTime, logEvent.startTime + logEvent.duration)}>
+				<button class="w-full text-left cursor-pointer" on:click={() => logGraph?.zoomToRange(logEvent.startIndex, logEvent.endIndex)}>
 					<Alert class="text-left" color={analysisEventColors[logEvent.issue]} border>
 						<span class="font-medium">{logEvent.issue}</span>
 						Started at {logEvent.startTime}s lasting {formatTimeShortNoAgoSeconds(logEvent.duration * 1000)}

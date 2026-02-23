@@ -112,7 +112,6 @@
             xAxis: {
                 type: 'category',
                 data: log.map(f => f.matchTime),
-                inverse: true,
                 axisLabel: { interval: 'auto' },
             },
             yAxis: yAxes as any,
@@ -204,21 +203,17 @@
     }
 
     // --- Exported methods for external zoom control ---
-    export function zoomToRange(startTime: number, endTime: number, padding = 10) {
+    export function zoomToRange(startIndex: number, endIndex: number, padding = 10) {
         if (!chart || !log.length) return;
-        // Find category indices that bracket the time range (matchTime counts down)
-        const lo = Math.min(startTime, endTime);
-        const hi = Math.max(startTime, endTime);
-        // First index where matchTime <= hi, last index where matchTime >= lo
-        let startIdx = log.findIndex(f => f.matchTime <= hi);
-        let endIdx = log.length - 1 - [...log].reverse().findIndex(f => f.matchTime >= lo);
-        if (startIdx < 0) startIdx = 0;
-        if (endIdx < 0 || endIdx >= log.length) endIdx = log.length - 1;
-        // Apply padding in index space
-        startIdx = Math.max(0, startIdx - padding);
-        endIdx = Math.min(log.length - 1, endIdx + padding);
-        chart.dispatchAction({ type: 'dataZoom', dataZoomIndex: 0, startValue: log[startIdx].matchTime, endValue: log[endIdx].matchTime });
-        chart.dispatchAction({ type: 'dataZoom', dataZoomIndex: 1, startValue: log[startIdx].matchTime, endValue: log[endIdx].matchTime });
+        // startIndex/endIndex are direct frame indices into the log array
+        // Apply padding
+        const lo = Math.max(0, Math.min(startIndex, endIndex) - padding);
+        const hi = Math.min(log.length - 1, Math.max(startIndex, endIndex) + padding);
+        // Convert to percentage of total data range
+        const startPct = (lo / (log.length - 1)) * 100;
+        const endPct = (hi / (log.length - 1)) * 100;
+        chart.dispatchAction({ type: 'dataZoom', dataZoomIndex: 0, start: startPct, end: endPct });
+        chart.dispatchAction({ type: 'dataZoom', dataZoomIndex: 1, start: startPct, end: endPct });
     }
 
     export function resetZoom() {

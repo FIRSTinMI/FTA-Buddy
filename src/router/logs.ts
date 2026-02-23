@@ -217,7 +217,7 @@ export const matchRouter = router({
 
         const analysis: DisconnectionEvent[] = analysisRows
             .filter(r => r.issue !== 'Bypassed')
-            .map(r => ({ issue: r.issue, startTime: r.start_time!, endTime: r.end_time!, duration: r.duration! }));
+            .map(r => ({ issue: r.issue, startTime: r.start_time!, endTime: r.end_time!, duration: r.duration!, startIndex: r.start_index ?? 0, endIndex: r.end_index ?? 0 }));
         const bypassed = analysisRows.some(r => r.issue === 'Bypassed');
 
         return {
@@ -272,7 +272,7 @@ export const matchRouter = router({
 
         const analysis: DisconnectionEvent[] = analysisRows
             .filter(r => r.issue !== 'Bypassed')
-            .map(r => ({ issue: r.issue, startTime: r.start_time!, endTime: r.end_time!, duration: r.duration! }));
+            .map(r => ({ issue: r.issue, startTime: r.start_time!, endTime: r.end_time!, duration: r.duration!, startIndex: r.start_index ?? 0, endIndex: r.end_index ?? 0 }));
         const bypassed = analysisRows.some(r => r.issue === 'Bypassed');
 
         return {

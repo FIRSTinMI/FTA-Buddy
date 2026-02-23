@@ -164,6 +164,8 @@ export const analyzedLogs = pgTable('analyzed_logs', {
     start_time: integer('start_time'),
     end_time: integer('end_time'),
     duration: integer('duration'),
+    start_index: integer('start_index'),
+    end_index: integer('end_index'),
 });
 
 export const cycleLogs = pgTable('cycle_logs', {

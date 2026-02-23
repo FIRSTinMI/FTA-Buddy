@@ -8,6 +8,7 @@ import { generateToken } from "./user";
 import { EventChecklist, Profile, TeamList, TournamentLevel } from '../../shared/types';
 import { createHash } from 'crypto';
 import { getEvent } from "../util/get-event";
+import * as nexusPoller from "../util/nexusInspectionPoller";
 //import { sendNotification } from "../../app/src/util/push-notifications";
 
 const fullEventList: {
@@ -230,7 +231,9 @@ export const eventRouter = router({
             token,
             teams: uniqueTeams,
             checklist,
-            users: [user?.id]
+            users: [user?.id],
+            startDate: eventData.start_date ?? null,
+            endDate: eventData.end_date ?? null,
         }).returning();
 
         return event[0];
@@ -438,5 +441,22 @@ export const eventRouter = router({
         }
 
         return event.token;
+    }),
+
+    setNexusApiKey: eventProcedure.input(z.object({
+        nexusApiKey: z.string()
+    })).mutation(async ({ ctx, input }) => {
+        const event = await getEvent(ctx.event.token);
+        await db.update(events)
+            .set({ nexusApiKey: input.nexusApiKey || null })
+            .where(eq(events.code, event.code));
+        event.nexusApiKey = input.nexusApiKey || undefined;
+        nexusPoller.restartForEvent(event);
+        return { success: true };
+    }),
+
+    getNexusStatus: eventProcedure.query(async ({ ctx }) => {
+        const event = await getEvent(ctx.event.token);
+        return event.nexus;
     }),
 });

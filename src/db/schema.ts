@@ -34,6 +34,9 @@ export const events = pgTable('events', {
     publicTicketSubmit: boolean('publicTicketSubmit').notNull().default(true),
     slackChannel: varchar('slackChannel'),
     slackTeam: varchar('slackTeam'),
+    nexusApiKey: varchar('nexusApiKey'),
+    startDate: varchar('startDate'),
+    endDate: varchar('endDate'),
 });
 
 export const Event = typeof events.$inferInsert;

@@ -96,7 +96,7 @@ const appExtensionData = chrome.runtime.getManifest();
                 fms: await pingFMS(),
                 id
             });
-            await restart();
+            await enable();
         } else if (evt.data.type === "getEventCode") {
             window.postMessage(await getEventCode());
         } else if (evt.data.type === "restart") {

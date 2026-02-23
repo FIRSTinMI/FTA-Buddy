@@ -4,11 +4,12 @@ import { EventEmitter } from "events";
 import { TypedEmitter } from 'tiny-typed-emitter';
 import { eventCodes, events, newEventEmitter } from "..";
 import { DEFAULT_MONITOR } from "../../shared/constants";
-import { EventChecklist, Note, ScheduleDetails, ServerEvent, TeamList, Ticket, TicketUpdateEvents } from "../../shared/types";
+import { EventChecklist, Note, NexusStatus, ScheduleDetails, ServerEvent, TeamList, Ticket, TicketUpdateEvents } from "../../shared/types";
 import { db } from "../db/db";
 import schema from "../db/schema";
 import { getEventNotes } from "../router/notes";
 import { getEventTickets } from "../router/tickets";
+import * as nexusPoller from "./nexusInspectionPoller";
 
 
 let loadingEvents: { [key: string]: Promise<ServerEvent>; } = {};
@@ -132,6 +133,14 @@ export async function getEvent(eventToken: string, eventCode?: string) {
                 slackChannel: event.slackChannel,
                 slackTeam: event.slackTeam,
                 publicTicketSubmit: event.publicTicketSubmit,
+                nexusApiKey: event.nexusApiKey ?? undefined,
+                startDate: event.startDate ?? undefined,
+                endDate: event.endDate ?? undefined,
+                nexus: {
+                    state: event.nexusApiKey ? 'polling' : 'not_configured',
+                    intervalMinutes: 2,
+                    isAllInspected: false,
+                } as NexusStatus,
                 stats: {
                     extensions: [],
                     clients: [],
@@ -140,7 +149,9 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 
             newEventEmitter.emit('new', eventCode);
 
-            //console.log('Event loaded into memory: ', eventCode);
+            if (event.nexusApiKey) {
+                nexusPoller.startForEvent(events[eventCode]);
+            }
         }
 
         resolve(events[eventCode]);

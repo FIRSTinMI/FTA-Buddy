@@ -330,6 +330,13 @@
       "when": 1742050135292,
       "tag": "0046_amusing_sentinel",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "5",
+      "when": 1740268800000,
+      "tag": "0047_analyzed_logs_normalize",
+      "breakpoints": true
     }
   ]
 }

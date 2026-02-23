@@ -1,0 +1,15 @@
+# Normalize line endings to LF on commit
+* text=auto eol=lf
+
+# Binary files — never touch line endings
+*.png binary
+*.jpg binary
+*.ico binary
+*.svg binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.gif binary
+*.webp binary
+*.lockb binary

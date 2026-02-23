@@ -209,12 +209,16 @@ export const matchRouter = router({
             station = input.station as ROBOT;
         }
 
-        const analysis = await db.query.analyzedLogs.findFirst({
-            where: and(
+        const analysisRows = await db.select().from(analyzedLogs)
+            .where(and(
                 eq(analyzedLogs.match_id, input.id),
                 eq(analyzedLogs.team, match[station] ?? 0)
-            )
-        });
+            ));
+
+        const analysis: DisconnectionEvent[] = analysisRows
+            .filter(r => r.issue !== 'Bypassed')
+            .map(r => ({ issue: r.issue, startTime: r.start_time!, endTime: r.end_time!, duration: r.duration! }));
+        const bypassed = analysisRows.some(r => r.issue === 'Bypassed');
 
         return {
             id: match.id,
@@ -227,8 +231,8 @@ export const matchRouter = router({
             team: match[station] ?? 0,
             station: station,
             log: match[`${station}_log`] as string,
-            analysis: (analysis?.events ?? []) as DisconnectionEvent[],
-            bypassed: analysis?.bypassed ?? false
+            analysis,
+            bypassed
         };
     }),
 
@@ -260,12 +264,16 @@ export const matchRouter = router({
 
         if (!match) throw new Error('Match not found');
 
-        const analysis = await db.query.analyzedLogs.findFirst({
-            where: and(
+        const analysisRows = await db.select().from(analyzedLogs)
+            .where(and(
                 eq(analyzedLogs.match_id, input.id),
                 eq(analyzedLogs.team, match[station] ?? 0)
-            )
-        });
+            ));
+
+        const analysis: DisconnectionEvent[] = analysisRows
+            .filter(r => r.issue !== 'Bypassed')
+            .map(r => ({ issue: r.issue, startTime: r.start_time!, endTime: r.end_time!, duration: r.duration! }));
+        const bypassed = analysisRows.some(r => r.issue === 'Bypassed');
 
         return {
             id: match.id,
@@ -278,8 +286,8 @@ export const matchRouter = router({
             team: match[station] ?? 0,
             station: station,
             log: match[`${station}_log`] as string,
-            analysis: analysis?.events,
-            bypassed: analysis?.bypassed ?? false
+            analysis,
+            bypassed
         };
     }),
 
@@ -349,7 +357,7 @@ export const matchRouter = router({
     generateBypassReport: eventProcedure.query(async ({ ctx }) => {
         const bypassedTeams = await db.select().from(analyzedLogs)
             .where(and(
-                eq(analyzedLogs.bypassed, true),
+                eq(analyzedLogs.issue, 'Bypassed'),
                 eq(analyzedLogs.event, ctx.event.code)
             ));
 

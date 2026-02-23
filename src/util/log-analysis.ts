@@ -1,7 +1,7 @@
 import { compress, compressSync, decompressSync, zlib } from "fflate";
 import { DisconnectionEvent, FMSLogFrame, MatchLog, ROBOT } from "../../shared/types";
 import { db } from "../db/db";
-import { analyzedLogs, matchLogs } from "../db/schema";
+import { analyzedLogs, issueEnum, matchLogs } from "../db/schema";
 import { asc, eq, and, isNull } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 
@@ -233,19 +233,43 @@ export async function logAnalysisLoop(limit: number) {
             // Skip bypassed teams in test match
             if (log.level === "None" && logData.length < 1) continue;
 
+            const isBypassed = logData.length < 1;
             const analyzedLog = analyzeLog(logData);
-            await db.insert(analyzedLogs).values({
-                id: randomUUID(),
-                match_id: log.id,
-                event: log.event,
-                match_number: log.match_number,
-                play_number: log.play_number,
-                level: log.level,
-                team: teamNumber,
-                alliance: station.startsWith("blue") ? "blue" : "red",
-                events: analyzedLog,
-                bypassed: logData.length < 1
-            }).execute();
+            const alliance = station.startsWith("blue") ? "blue" : "red";
+
+            if (isBypassed) {
+                // Insert a single "Bypassed" row
+                await db.insert(analyzedLogs).values({
+                    id: randomUUID(),
+                    match_id: log.id,
+                    event: log.event,
+                    match_number: log.match_number,
+                    play_number: log.play_number,
+                    level: log.level,
+                    team: teamNumber,
+                    alliance,
+                    issue: 'Bypassed',
+                }).execute();
+            } else if (analyzedLog.length > 0) {
+                // Insert one row per event
+                await db.insert(analyzedLogs).values(
+                    analyzedLog.map(evt => ({
+                        id: randomUUID(),
+                        match_id: log.id,
+                        event: log.event,
+                        match_number: log.match_number,
+                        play_number: log.play_number,
+                        level: log.level,
+                        team: teamNumber,
+                        alliance,
+                        issue: evt.issue as (typeof issueEnum.enumValues)[number],
+                        start_time: evt.startTime,
+                        end_time: evt.endTime,
+                        duration: evt.duration,
+                    }))
+                ).execute();
+            }
+            // If no events and not bypassed, skip — don't insert anything
         }
         await db.update(matchLogs).set({ analyzed: true }).where(eq(matchLogs.id, log.id)).execute();
     }

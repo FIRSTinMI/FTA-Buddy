@@ -1,16 +1,13 @@
 <script lang="ts">
 	import { Button, Helper, Indicator, Input, Label } from "flowbite-svelte";
 	import { onMount } from "svelte";
-	import { userStore } from "../../stores/user";
-	import { eventStore } from "../../stores/event";
-	import { trpc } from "../../main";
-	import { navigate } from "svelte-routing";
 	import Spinner from "../../components/Spinner.svelte";
-	import type { Profile } from "../../../../shared/types";
+	import { trpc } from "../../main";
+	import { LATEST_EXTENSION_VERSION } from "../../util/updater";
 
-	export let toast: (title: string, text: string, color?: string) => void;
-
-	const latestExtensionVersion = "1.19";
+	function toast(title: string, text: string, color?: string) {
+		(window as any).toast?.(title, text, color);
+	}
 
 	let extensionDetected = false;
 	let extensionEnabled = false;
@@ -25,7 +22,7 @@
 			waitingForFirstConnectionTest = false;
 			extensionDetected = true;
 			extensionVersion = "v" + event.data.version;
-			if (event.data.version < latestExtensionVersion) {
+			if (event.data.version < LATEST_EXTENSION_VERSION) {
 				extensionUpdate = true;
 			} else {
 				extensionUpdate = false;
@@ -67,7 +64,7 @@
 	let eventCode = "";
 	let eventCodeHelperText = "Event code must match the code on TBA";
 	let eventCodeError = false;
-	let eventPin = Math.random().toString().slice(2, 6);
+	let eventPin = '';
 	let loading = false;
 
 	$: blockSubmit = !(eventCode.length > 6 && eventPin.length >= 4 && !loading && extensionDetected && extensionEnabled);
@@ -104,7 +101,7 @@
 			{#if extensionDetected}
 				{#if extensionUpdate}
 					<Indicator color="yellow" class="my-auto" />
-					<span class="text-yellow-300">Extension Update Available ({extensionVersion} &rarr; {latestExtensionVersion})</span>
+					<span class="text-yellow-300">Extension Update Available ({extensionVersion} &rarr; {LATEST_EXTENSION_VERSION})</span>
 					<a
 						href="https://chromewebstore.google.com/detail/fta-buddy/kddnhihfpfnehnnhbkfajdldlgigohjc"
 						class="text-blue-400 hover:underline"

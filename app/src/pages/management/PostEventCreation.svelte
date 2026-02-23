@@ -203,7 +203,7 @@
 			<div class="flex flex-col gap-3 rounded-xl border border-neutral-700 bg-neutral-900 p-5">
 				<h2 class="text-xl font-bold">WPA Kiosk Tool</h2>
 				<p class="text-sm text-gray-400">
-					Connect your WPA Kiosk to WiFi and visit <code class="bg-neutral-800 px-2 py-0.5 rounded-lg">ftabuddy.com/manage/kiosk</code> to set up the extension. Radio programming status will be updated on the checklist automatically.
+					Connect your WPA Kiosk to WiFi and visit <code class="bg-neutral-800 px-2 py-0.5 rounded-lg">ftabuddy.com/kiosk</code> to set up the extension. Radio programming status will be updated on the checklist automatically.
 				</p>
 			</div>
 

@@ -23,7 +23,6 @@
 	import Spinner from "../../components/Spinner.svelte";
 	import { json2csv } from "json-2-csv";
 	import { MCS_LOOKUP_TABLE } from "../../../../shared/constants";
-	import e from "cors";
 	import { decompressStationLog } from "../../util/log-compression";
 
 	export let matchid: string;
@@ -32,6 +31,7 @@
 
 	let log: FMSLogFrame[];
 	let team: number;
+	let logGraph: LogGraph;
 
 	let match: Awaited<ReturnType<typeof trpc.match.getStationMatch.query>>;
 	let matchPromise: Promise<any>;
@@ -187,14 +187,16 @@
 			<p class="md:hidden text-gray-600 text-sm">View on desktop for more detail</p>
 		</div>
 
-		<LogGraph {log} />
+		<LogGraph bind:this={logGraph} {log} />
 
 		<div class="flex flex-col gap-2">
 			{#each match.analysis as logEvent}
-				<Alert class="text-left" color={analysisEventColors[logEvent.issue]} border>
-					<span class="font-medium">{logEvent.issue}</span>
-					Started at {logEvent.startTime}s lasting {formatTimeShortNoAgoSeconds(logEvent.duration * 1000)}
-				</Alert>
+				<button class="w-full text-left cursor-pointer" on:click={() => logGraph?.zoomToRange(logEvent.startTime, logEvent.startTime + logEvent.duration)}>
+					<Alert class="text-left" color={analysisEventColors[logEvent.issue]} border>
+						<span class="font-medium">{logEvent.issue}</span>
+						Started at {logEvent.startTime}s lasting {formatTimeShortNoAgoSeconds(logEvent.duration * 1000)}
+					</Alert>
+				</button>
 			{/each}
 		</div>
 

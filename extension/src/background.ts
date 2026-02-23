@@ -3,6 +3,9 @@ import { getCurrentMatch, getEventCode, getScheduleBreakdown, getTeamNumbers } f
 import { SignalR } from "./signalR";
 import { trpc, updateValues, wsClient } from "./trpc";
 
+let teamPollInterval: ReturnType<typeof setInterval> | null = null;
+let qualsScheduleAvailable = false;
+
 const manifestData = chrome.runtime.getManifest();
 export const FMS = '10.0.100.5';
 
@@ -143,6 +146,7 @@ async function start() {
 
     updateValues();
     sendScheduleDetails();
+    startTeamPolling();
 }
 
 export async function pingFMS() {
@@ -173,10 +177,54 @@ async function sendScheduleDetails() {
     await trpc.cycles.postScheduleDetails.mutate({ eventToken, ...schedule, extensionId: id });
 }
 
+async function pollTeams() {
+    if (!fmsApi || !eventToken || qualsScheduleAvailable) return;
+
+    try {
+        // Check if quals schedule is now available — if so, stop polling
+        const schedule = await getScheduleBreakdown();
+        if (schedule.days.length > 0) {
+            console.log('Quals schedule available, stopping team polling');
+            qualsScheduleAvailable = true;
+            stopTeamPolling();
+            return;
+        }
+
+        // Fetch current team list from FMS and sync to server
+        const teams: number[] = await getTeamNumbers();
+        if (teams && teams.length > 0) {
+            const result = await trpc.event.syncTeams.mutate({ teamNumbers: teams });
+            if (result.added > 0 || result.removed > 0) {
+                console.log(`Team sync: +${result.added} added, -${result.removed} removed`);
+            }
+        }
+    } catch (err) {
+        console.warn('Team polling error:', err);
+    }
+}
+
+function startTeamPolling() {
+    if (teamPollInterval) return; // already running
+    qualsScheduleAvailable = false;
+    // Poll immediately, then every 2 minutes
+    pollTeams();
+    teamPollInterval = setInterval(pollTeams, 2 * 60 * 1000);
+    console.log('Started team polling (every 2 min until quals schedule available)');
+}
+
+function stopTeamPolling() {
+    if (teamPollInterval) {
+        clearInterval(teamPollInterval);
+        teamPollInterval = null;
+        console.log('Stopped team polling');
+    }
+}
+
 chrome.storage.local.onChanged.addListener((changes) => {
     for (const key of Object.keys(changes)) {
         if (key === 'changed') continue;
         // restart initialization if any relevant key changes
+        stopTeamPolling();
         start();
         return;
     }

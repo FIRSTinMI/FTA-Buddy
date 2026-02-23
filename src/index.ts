@@ -396,8 +396,10 @@ if (process.env.NODE_ENV === 'dev') {
     app.use('/FieldMonitor', express.static('app/src/public/FieldMonitor'));
 } else {
     app.use('/', express.static('app/dist'));
-    app.use('/*', express.static('app/dist/index.html'));
     app.use('/FieldMonitor', express.static('app/dist/FieldMonitor'));
+    app.get('*', (req, res) => {
+        res.sendFile(join(__dirname, '../app/dist/index.html'));
+    });
 }
 
 connect().then(() => {

@@ -146,10 +146,10 @@ export function analyzeLog(log: FMSLogFrame[]): DisconnectionEvent[] {
             lowSignalStart = null;
         }
 
-        // High data rate (> 4 Mbps for more than 30 seconds using 3-frame rolling average)
-        if (dataRateAvg > 4 && highDataRateStart === null) {
+        // High data rate (> 6.8 Mbps for more than 30 seconds using 3-frame rolling average)
+        if (dataRateAvg > 6.8 && highDataRateStart === null) {
             highDataRateStart = currentTime;
-        } else if (dataRateAvg <= 4 && highDataRateStart !== null) {
+        } else if (dataRateAvg <= 6.8 && highDataRateStart !== null) {
             events.push({
                 issue: "High BWU",
                 startTime: highDataRateStart,

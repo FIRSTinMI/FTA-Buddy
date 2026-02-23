@@ -244,6 +244,70 @@ export const eventRouter = router({
         }).from(events).where(eq(events.archived, false)).orderBy(desc(events.created_at));
     }),
 
+    syncTeams: eventProcedure.input(z.object({
+        teamNumbers: z.array(z.number()),
+    })).mutation(async ({ ctx, input }) => {
+        const event = await getEvent(ctx.event.token);
+        const existingTeams = event.teams as TeamList;
+        const existingNumbers = new Set(existingTeams.map(t => t.number.toString()));
+        const incomingNumbers = new Set(input.teamNumbers.map(n => n.toString()));
+        const checklist = event.checklist as EventChecklist;
+
+        // Find teams to add
+        const teamsToAdd: number[] = input.teamNumbers.filter(n => !existingNumbers.has(n.toString()));
+
+        // Find teams to remove (in existing but not in incoming FMS list)
+        const teamsToRemove = new Set(
+            existingTeams
+                .map(t => t.number.toString())
+                .filter(n => !incomingNumbers.has(n))
+        );
+
+        if (teamsToAdd.length === 0 && teamsToRemove.size === 0) return { added: 0, removed: 0 };
+
+        // Look up new team names from TBA
+        const newTeams: TeamList = await Promise.all(
+            teamsToAdd.map(async (num) => {
+                let name = `Team ${num}`;
+                try {
+                    const teamData = await fetch(`https://www.thebluealliance.com/api/v3/team/frc${num}/simple`, {
+                        headers: { 'X-TBA-Auth-Key': process.env.TBA_API_KEY ?? '' }
+                    }).then(res => res.json());
+                    if (teamData?.nickname) name = teamData.nickname;
+                } catch { /* fall back to generic name */ }
+
+                if (!checklist[num]) {
+                    checklist[num] = {
+                        present: false,
+                        weighed: false,
+                        inspected: false,
+                        radioProgrammed: false,
+                        connectionTested: false,
+                    };
+                }
+                return { number: num.toString(), name, inspected: false };
+            })
+        );
+
+        // Remove departed teams, add new ones
+        const updatedTeams = [
+            ...existingTeams.filter(t => !teamsToRemove.has(t.number.toString())),
+            ...newTeams,
+        ];
+
+        // Clean up checklist for removed teams
+        for (const num of teamsToRemove) {
+            delete checklist[num];
+        }
+
+        event.teams = updatedTeams;
+        event.checklist = checklist;
+
+        await db.update(events).set({ teams: updatedTeams, checklist }).where(eq(events.code, event.code)).execute();
+
+        return { added: newTeams.length, removed: teamsToRemove.size };
+    }),
+
     getMusicOrder: eventProcedure.input(z.object({
         match: z.number(),
         level: z.enum(["None", "Practice", "Qualification", "Playoff"])

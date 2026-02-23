@@ -23,6 +23,8 @@ export class SignalR {
 
     private sendScheduleCallback: () => void;
 
+    private statusInterval: ReturnType<typeof setInterval> | null = null;
+
     constructor(ip: string, version: string, callback: (frame: PartialMonitorFrame) => void, cycleTimeCallback: (type: 'lastCycleTime' | 'prestart' | 'start' | 'end' | 'refsDone' | 'scoresPosted', time: string) => void, sendScheduleCallback: () => void) {
         this.ip = ip;
         this.callback = callback;
@@ -120,7 +122,8 @@ export class SignalR {
             })
             .build();
 
-        setInterval(() => {
+        if (this.statusInterval) clearInterval(this.statusInterval);
+        this.statusInterval = setInterval(() => {
             signalRConnectionStatus = this.connection?.state || HubConnectionState.Disconnected;
         }, 5000);
 
@@ -461,6 +464,29 @@ export class SignalR {
         }
 
         return DSState.RED;
+    }
+
+    public async stop() {
+        if (this.statusInterval) {
+            clearInterval(this.statusInterval);
+            this.statusInterval = null;
+        }
+        const stops: Promise<void>[] = [];
+        if (this.connection) {
+            stops.push(this.connection.stop());
+            this.connection = null;
+        }
+        if (this.infrastructureConnection) {
+            stops.push(this.infrastructureConnection.stop());
+            this.infrastructureConnection = null;
+        }
+        if (this.gameSpecificConnection) {
+            stops.push(this.gameSpecificConnection.stop());
+            this.gameSpecificConnection = null;
+        }
+        await Promise.allSettled(stops);
+        signalRConnectionStatus = HubConnectionState.Disconnected;
+        console.log('SignalR stopped');
     }
 
     private enableState(data: SignalRMonitorFrame): EnableState {

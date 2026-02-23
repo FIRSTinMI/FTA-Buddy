@@ -1,7 +1,7 @@
 import { HubConnectionState } from "@microsoft/signalr";
 import { getCurrentMatch, getEventCode, getScheduleBreakdown, getTeamNumbers } from "./fmsapi";
 import { SignalR } from "./signalR";
-import { trpc, updateValues, wsClient } from "./trpc";
+import { closeWsClient, trpc, updateValues, wsClient } from "./trpc";
 
 let teamPollInterval: ReturnType<typeof setInterval> | null = null;
 let qualsScheduleAvailable = false;
@@ -21,7 +21,15 @@ export let changed: number;
 
 export let fmsApi: boolean = false;
 
+async function stop() {
+    stopTeamPolling();
+    await signalRConnection.stop();
+    closeWsClient();
+}
+
 async function start() {
+    await stop();
+
     await new Promise((resolve) => {
         chrome.storage.local.get(['url', 'cloud', 'event', 'changed', 'enabled', 'id', 'eventToken'], item => {
             if (!item.id) chrome.storage.local.set({ id: crypto.randomUUID() });
@@ -51,84 +59,6 @@ async function start() {
         });
     });
 
-    // existing onMessage handlers...
-    chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-        // Existing handlers first (ping, getEventCode, restart, enable)
-        if (msg?.type === "ping") {
-            pingFMS().then((fms) => {
-                sendResponse({
-                    source: 'ext',
-                    version: manifestData.version,
-                    type: "pong",
-                    fms,
-                    id
-                });
-            });
-            return true;
-        } else if (msg?.type === "getEventCode") {
-            getEventCode().then((code) => {
-                getTeamNumbers().then((teams) => {
-                    sendResponse({
-                        source: 'ext',
-                        version: manifestData.version,
-                        type: "eventCode",
-                        code,
-                        teams,
-                        id
-                    });
-                });
-            });
-            return true;
-        } else if (msg?.type === "restart") {
-            chrome.runtime.reload();
-            return false;
-        } else if (msg?.type === "enable") {
-            enabled = true;
-            chrome.storage.local.set({ enabled });
-            return false;
-        }
-
-        // NEW: popup/menu messages
-        if (msg?.type === "getState") {
-            sendResponse({
-                cloud,
-                url,
-                eventCode,
-                eventToken,
-                enabled,
-                id,
-                fmsApi,
-                version: manifestData.version,
-                FMS
-            });
-            return false;
-        }
-
-        if (msg?.type === "pingFMS") {
-            (async () => {
-                const ok = await pingFMS();
-                sendResponse({ ok, fmsApi, FMS });
-            })();
-            return true;
-        }
-
-        if (msg?.type === "getStatuses") {
-            // Report SignalR status from the background instance
-            const signalrStatus: HubConnectionState | string =
-                (signalRConnection as any)?.connection?.state ?? "Unknown";
-
-            const wsStatus = wsClient.connection?.state ?? "Unknown";
-
-            sendResponse({
-                signalrStatus,
-                wsStatus
-            });
-            return false;
-        }
-
-        return false;
-    });
-
     if (!enabled) {
         console.log('Not enabled');
         return;
@@ -140,7 +70,7 @@ async function start() {
     await pingFMS();
 
     console.log('Starting SignalR');
-    signalRConnection.start();
+    await signalRConnection.start();
 
     if (!(eventCode || eventToken)) return;
 
@@ -148,6 +78,80 @@ async function start() {
     sendScheduleDetails();
     startTeamPolling();
 }
+
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+    if (msg?.type === "ping") {
+        pingFMS().then((fms) => {
+            sendResponse({
+                source: 'ext',
+                version: manifestData.version,
+                type: "pong",
+                fms,
+                id
+            });
+        });
+        return true;
+    } else if (msg?.type === "getEventCode") {
+        getEventCode().then((code) => {
+            getTeamNumbers().then((teams) => {
+                sendResponse({
+                    source: 'ext',
+                    version: manifestData.version,
+                    type: "eventCode",
+                    code,
+                    teams,
+                    id
+                });
+            });
+        });
+        return true;
+    } else if (msg?.type === "restart") {
+        chrome.runtime.reload();
+        return false;
+    } else if (msg?.type === "enable") {
+        enabled = true;
+        chrome.storage.local.set({ enabled });
+        return false;
+    }
+
+    if (msg?.type === "getState") {
+        sendResponse({
+            cloud,
+            url,
+            eventCode,
+            eventToken,
+            enabled,
+            id,
+            fmsApi,
+            version: manifestData.version,
+            FMS
+        });
+        return false;
+    }
+
+    if (msg?.type === "pingFMS") {
+        (async () => {
+            const ok = await pingFMS();
+            sendResponse({ ok, fmsApi, FMS });
+        })();
+        return true;
+    }
+
+    if (msg?.type === "getStatuses") {
+        const signalrStatus: HubConnectionState | string =
+            (signalRConnection as any)?.connection?.state ?? "Unknown";
+
+        const wsStatus = wsClient?.connection?.state ?? "Unknown";
+
+        sendResponse({
+            signalrStatus,
+            wsStatus
+        });
+        return false;
+    }
+
+    return false;
+});
 
 export async function pingFMS() {
     try {
@@ -181,7 +185,6 @@ async function pollTeams() {
     if (!fmsApi || !eventToken || qualsScheduleAvailable) return;
 
     try {
-        // Check if quals schedule is now available — if so, stop polling
         const schedule = await getScheduleBreakdown();
         if (schedule.days.length > 0) {
             console.log('Quals schedule available, stopping team polling');
@@ -190,7 +193,6 @@ async function pollTeams() {
             return;
         }
 
-        // Fetch current team list from FMS and sync to server
         const teams: number[] = await getTeamNumbers();
         if (teams && teams.length > 0) {
             const result = await trpc.event.syncTeams.mutate({ teamNumbers: teams });
@@ -204,9 +206,8 @@ async function pollTeams() {
 }
 
 function startTeamPolling() {
-    if (teamPollInterval) return; // already running
+    if (teamPollInterval) return;
     qualsScheduleAvailable = false;
-    // Poll immediately, then every 2 minutes
     pollTeams();
     teamPollInterval = setInterval(pollTeams, 2 * 60 * 1000);
     console.log('Started team polling (every 2 min until quals schedule available)');
@@ -220,12 +221,15 @@ function stopTeamPolling() {
     }
 }
 
+let storageDebounce: ReturnType<typeof setTimeout> | null = null;
 chrome.storage.local.onChanged.addListener((changes) => {
     for (const key of Object.keys(changes)) {
         if (key === 'changed') continue;
-        // restart initialization if any relevant key changes
-        stopTeamPolling();
-        start();
+        if (storageDebounce) clearTimeout(storageDebounce);
+        storageDebounce = setTimeout(() => {
+            storageDebounce = null;
+            start().catch(console.error);
+        }, 300);
         return;
     }
 });

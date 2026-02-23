@@ -71,6 +71,7 @@ function load() {
         cloudCheckbox.addEventListener('input', handleUpdate);
         enabledInput.addEventListener('input', handleUpdate);
         saveButton.addEventListener('click', handleUpdate);
+        refreshButton.addEventListener('click', () => chrome.runtime.reload());
 
         matchimportButton.addEventListener('click', async () => {
             const level = matchLevelInput.value as TournamentLevel;
@@ -170,6 +171,8 @@ async function pingFTABuddy(cloud: boolean, url: string) {
 }
 
 
+const refreshButton = document.getElementById('refresh') as HTMLButtonElement;
+
 function handleUpdate() {
     if (eventInput.value == '') eventInput.value = '2024event';
     if (urlInput.value == '') urlInput.value = 'http://localhost:3001';
@@ -184,7 +187,7 @@ function handleUpdate() {
     });
 
     urlContainer.style.display = cloudCheckbox.checked ? 'none' : 'block';
-    chrome.runtime.reload();
+    // Storage change triggers background restart automatically
 }
 
 function updatePopup(setting: 'url' | 'cloud' | 'enabled' | 'event' | 'eventToken', value: boolean | string) {

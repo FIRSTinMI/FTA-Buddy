@@ -114,7 +114,7 @@
 				{:else}
 					<Indicator color="red" class="my-auto" />
 					<span class="text-red-500">SignalR Not Enabled</span>
-					<button class="text-blue-400 hover:underline" on:click={() => window.postMessage({ source: "page", type: "enableSignalR" }, "*")}
+					<button class="text-blue-400 hover:underline" on:click={() => window.postMessage({ source: "page", type: "enable" }, "*")}
 						>Enable</button
 					>
 				{/if}
@@ -125,7 +125,7 @@
 					class="text-blue-400 hover:underline"
 					on:click={() => {
 
-						window.postMessage({ source: "page", type: "enableSignalR" }, "*");
+						window.postMessage({ source: "page", type: "enable" }, "*");
 					}}>Enable</button
 				>
 			{/if}

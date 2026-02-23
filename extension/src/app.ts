@@ -17,6 +17,21 @@ const appExtensionData = chrome.runtime.getManifest();
         });
     });
 
+    function sendPong(extra?: Record<string, any>) {
+        window.postMessage({
+            source: 'ext',
+            version: appExtensionData.version,
+            type: "pong",
+            cloud,
+            eventCode,
+            enabled,
+            signalR: enabled,
+            fms: extra?.fms ?? false,
+            id,
+            ...extra,
+        });
+    }
+
     window.addEventListener('message', async (evt) => {
         console.log(evt.data);
 
@@ -24,83 +39,22 @@ const appExtensionData = chrome.runtime.getManifest();
 
         if (evt.data.type === "ping") {
             const fms = await pingFMS();
-            window.postMessage({
-                source: 'ext',
-                version: appExtensionData.version,
-                type: "pong",
-                cloud,
-                eventCode,
-                enabled,
-                signalR: enabled,
-                fms: fms.fms,
-                id
-            });
+            sendPong({ fms: fms.fms });
         } else if (evt.data.type === "enable") {
             enabled = true;
-            await chrome.storage.local.set({ enabled: enabled });
-            await enable();
-            window.postMessage({
-                source: 'ext',
-                version: appExtensionData.version,
-                type: "pong",
-                cloud,
-                eventCode,
-                enabled,
-                signalR: enabled,
-                fms: await pingFMS(),
-                id
-            });
-        } else if (evt.data.type === "enableNoSignalR") {
-            enabled = true;
-            await chrome.storage.local.set({ enabled: enabled });
-            await enableNoSignalR();
-            window.postMessage({
-                source: 'ext',
-                version: appExtensionData.version,
-                type: "pong",
-                cloud,
-                eventCode,
-                enabled,
-                signalR: enabled,
-                fms: await pingFMS(),
-                id
-            });
+            await chrome.storage.local.set({ enabled });
+            // Storage change triggers background restart automatically
+            const fms = await pingFMS();
+            sendPong({ fms: fms.fms });
         } else if (evt.data.type === "eventCode") {
             eventCode = evt.data.code;
             eventToken = evt.data.token;
             await chrome.storage.local.set({ event: eventCode, eventToken });
-            window.postMessage({
-                source: 'ext',
-                version: appExtensionData.version,
-                type: "pong",
-                cloud,
-                eventCode,
-                enabled,
-                signalR: enabled,
-                fms: await pingFMS(),
-                id
-            });
-            // Restart the extension after configuration changes
-            await restart();
-        } else if (evt.data.type === "enableSignalR") {
-            enabled = true;
-            await chrome.storage.local.set({ enabled: enabled });
-            window.postMessage({
-                source: 'ext',
-                version: appExtensionData.version,
-                type: "pong",
-                cloud,
-                eventCode,
-                enabled,
-                signalR: enabled,
-                fms: await pingFMS(),
-                id
-            });
-            await enable();
+            // Storage change triggers background restart automatically
+            const fms = await pingFMS();
+            sendPong({ fms: fms.fms });
         } else if (evt.data.type === "getEventCode") {
             window.postMessage(await getEventCode());
-        } else if (evt.data.type === "restart") {
-            await restart();
         }
     });
 })();
@@ -111,16 +65,4 @@ async function pingFMS() {
 
 async function getEventCode() {
     return await chrome.runtime.sendMessage({ type: "getEventCode" });
-}
-
-async function enable() {
-    return await chrome.runtime.sendMessage({ type: "enable" });
-}
-
-async function enableNoSignalR() {
-    return await chrome.runtime.sendMessage({ type: "enableNoSignalR" });
-}
-
-async function restart() {
-    return await chrome.runtime.sendMessage({ type: "restart" });
 }

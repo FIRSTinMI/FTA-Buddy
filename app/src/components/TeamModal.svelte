@@ -2,7 +2,14 @@
 	import { Button, Modal } from "flowbite-svelte";
 	import { navigate } from "svelte-routing";
 	import { formatTimeShort } from "../../../shared/formatTime";
-	import { DSState, MatchState, MatchStateMap, ROBOT, type MonitorFrame, type RobotInfo } from "../../../shared/types";
+	import {
+		DSState,
+		MatchState,
+		MatchStateMap,
+		ROBOT,
+		type MonitorFrame,
+		type RobotInfo,
+	} from "../../../shared/types";
 	import { trpc } from "../main";
 	import type { MonitorFrameHandler } from "../util/monitorFrameHandler";
 	import MonitorRow from "./MonitorRow.svelte";
@@ -36,20 +43,19 @@
 </script>
 
 <Modal bind:open={modalOpen} size="xl" outsideclose id="team-modal" dismissable={false}>
-	<div slot="header" class="md:w-full -m-2">
-		<div class="grid grid-cols-fieldmonitor lg:grid-cols-teammodal gap-0.5 md:gap-1 lg:gap-2 mx-auto justify-center">
-			<p>Team</p>
-			<p>DS</p>
-			<p>Radio</p>
-			<p>Rio</p>
-			<p>Battery</p>
-			<p class="hidden lg:flex">Ping (ms)</p>
-			<p class="hidden lg:flex">BWU (mbps)</p>
-			<p class="hidden lg:flex">Signal (dBm)</p>
-			<p class="lg:hidden">Net</p>
-			<MonitorRow station={modalStation} {monitorFrame} detailView={() => {}} {frameHandler} noLastChange />
+	{#snippet header()}
+		<div class="md:w-full -m-2">
+			<div class="grid grid-cols-teammodal gap-0.5 md:gap-1 lg:gap-2 mx-auto justify-center">
+				<p>Team</p>
+				<p>DS</p>
+				<p>Radio</p>
+				<p>Rio</p>
+				<p>Battery</p>
+				<p>Net</p>
+				<MonitorRow station={modalStation} {monitorFrame} compact />
+			</div>
 		</div>
-	</div>
+	{/snippet}
 
 	{#if modalRobot}
 		<div class="flex flex-col w-full items-center space-y-4 -mt-4">
@@ -73,14 +79,16 @@
 						<li>Check if there are link lights on the port.</li>
 						<li>Make sure WIFI is off.</li>
 						<li>
-							Click on the diagnostics tabs of DS, make sure firewall is green. Turn off firewalls if it's not (<code>Win + R</code>,
+							Click on the diagnostics tabs of DS, make sure firewall is green. Turn off firewalls if it's
+							not (<code>Win + R</code>,
 							<code>wf.msc</code>).
 						</li>
 						<li>Try clicking the refresh button to release and renew DHCP address.</li>
 						<li>Try a dongle.</li>
 						<li>Try restarting DS software.</li>
 						<li>
-							Go to network adapters (<code>Win + R</code>, <code>ncpa.cpl</code>). Ensure ethernet adapter is enabled and auto IP config is set.
+							Go to network adapters (<code>Win + R</code>, <code>ncpa.cpl</code>). Ensure ethernet
+							adapter is enabled and auto IP config is set.
 						</li>
 						<li>If all else fails, use spare DS laptop and recommend lunch-time diagnostics.</li>
 					</ol>
@@ -103,7 +111,10 @@
 							<li>Double check the schedule</li>
 							<li>If they're on the schedule, verify the DS team number is correct.</li>
 						{/if}
-						<li>Known FMS bug may show this state incorrectly. Match will run as normal or re-prestart if needed.</li>
+						<li>
+							Known FMS bug may show this state incorrectly. Match will run as normal or re-prestart if
+							needed.
+						</li>
 					</ol>
 				</div>
 			{:else if modalRobot.ds === DSState.BYPASS}
@@ -134,9 +145,8 @@
 					<p>{modalRobot.improved ? `DS Connected ${timeSinceChange}` : `Lost Radio ${timeSinceChange}`}</p>
 					<ol class="text-left list-decimal space-y-2">
 						<li>Make sure robot is on</li>
-						<li>Check radio power (at least one blue LED)</li>
-						<li>WIFI light should be green. Amber or off = reprogram</li>
-						<li>If lights freeze, reboot the radio</li>
+						<li>Check radio power (at least one green LED)</li>
+						<li>6GHz light should be blue. off = reprogram</li>
 					</ol>
 				</div>
 			{:else if !modalRobot.rio}
@@ -197,8 +207,8 @@
 		</div>
 	{/if}
 
-	<div slot="footer">
+	{#snippet footer()}
 		<Button color="primary" onclick={() => navigate("/notes/" + modalRobot?.number)}>Notes</Button>
 		<Button color="primary" onclick={() => (modalOpen = false)}>Close</Button>
-	</div>
+	{/snippet}
 </Modal>

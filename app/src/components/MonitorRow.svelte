@@ -11,25 +11,22 @@
 		type MonitorFrame,
 		type RobotInfo,
 	} from "../../../shared/types";
+	import { frameHandler } from "../field-monitor";
+	import { fullscreen } from "../stores/fullscreen";
 	import { settingsStore } from "../stores/settings";
-	import type { MonitorFrameHandler } from "../util/monitorFrameHandler";
 	import { processSignalStrengthForGraph } from "../util/signalStrengthProcessor";
 	import Graph from "./Graph.svelte";
 
 	let {
-		station = $bindable(ROBOT.blue1),
-		monitorFrame = $bindable({} as MonitorFrame),
-		fullscreen = $bindable(false),
-		frameHandler = $bindable({} as MonitorFrameHandler),
-		noLastChange = $bindable(false),
-		detailView = $bindable((evt: Event) => {}),
+		station,
+		monitorFrame,
+		compact = false,
+		detailView = (evt: Event) => {},
 	}: {
 		station: ROBOT;
 		monitorFrame: MonitorFrame;
-		fullscreen: boolean;
-		frameHandler: MonitorFrameHandler;
-		noLastChange: boolean;
-		detailView: (evt: Event) => void;
+		compact?: boolean;
+		detailView?: (evt: Event) => void;
 	} = $props();
 
 	let robot: RobotInfo | undefined = $state();
@@ -41,12 +38,6 @@
 		signalData = processSignalStrengthForGraph(frameHandler.getHistory(station, "signal", 20) as number[]);
 		percentileVoltage = getPercentileVoltage();
 	});
-
-	$inspect(monitorFrame);
-
-	function getKey(value: any) {
-		return Object.keys(monitorFrame).find((key) => (monitorFrame as any)[key] === value);
-	}
 
 	const DS_Colors: { [key: number]: string } = {
 		0: "bg-red-600",
@@ -66,12 +57,17 @@
 	};
 
 	let parsedData = $state(
+		// svelte-ignore state_referenced_locally
 		frameHandler.getHistory(station, "battery", 20).map((d, i) => ({ time: i, data: d as number })),
 	);
 	let parsedPingData = $state(
+		// svelte-ignore state_referenced_locally
 		frameHandler.getHistory(station, "ping", 20).map((d, i) => ({ time: i, data: d as number })),
 	);
-	let signalData = $state(processSignalStrengthForGraph(frameHandler.getHistory(station, "signal", 20) as number[]));
+	let signalData = $state(
+		// svelte-ignore state_referenced_locally
+		processSignalStrengthForGraph(frameHandler.getHistory(station, "signal", 20) as number[]),
+	);
 
 	let percentileVoltage = $state(0);
 
@@ -92,8 +88,12 @@
 
 {#if robot}
 	<button
-		class="w-full fieldmonitor-square-height md:aspect-square flex flex-col px-1 items-center justify-center text-lg sm:text-2xl lg:text-3xl {fullscreen &&
-			'lg:text-5xl'} font-mono tabular-nums {getKey(robot)?.startsWith('blue') ? 'bg-blue-600' : 'bg-red-600'}"
+		class="w-full fieldmonitor-square-height md:aspect-square flex flex-col px-1 items-center justify-center text-lg sm:text-2xl lg:text-3xl font-mono tabular-nums {station?.startsWith(
+			'blue',
+		)
+			? 'bg-blue-600'
+			: 'bg-red-600'}"
+		class:lg:text-5xl={$fullscreen}
 		onclick={() => navigate("/notes/" + robot?.number)}
 	>
 		<p>{robot.number}</p>
@@ -132,7 +132,7 @@
 			robot.ds
 		]} fieldmonitor-square-height md:aspect-square flex items-center justify-center font-mono text-4xl lg:text-8xl text-black"
 		onclick={detailView}
-		id="{getKey(robot)}-ds"
+		id="{station}-ds"
 	>
 		{#if robot.ds === DSState.GREEN_X}
 			X
@@ -153,7 +153,7 @@
 			robot.radio || robot.radioConnected ? 1 : 0
 		]} fieldmonitor-square-height md:aspect-square flex items-center justify-center font-mono text-4xl lg:text-8xl text-black"
 		onclick={detailView}
-		id="{getKey(robot)}-radio"
+		id="{station}-radio"
 	>
 		{#if robot.radioConnected && !robot.radio}
 			X
@@ -164,7 +164,7 @@
 			robot.rio ? 1 : 0
 		]} fieldmonitor-square-height md:aspect-square flex items-center justify-center font-mono text-4xl lg:text-8xl text-black"
 		onclick={detailView}
-		id="{getKey(robot)}-rio"
+		id="{station}-rio"
 	>
 		{#if robot.rio && !robot.code}
 			X
@@ -176,14 +176,14 @@
 		style="background-color: rgba(255,0,0,{robot.battery < 11 && robot.battery > 0
 			? (-1.5 * robot.battery ** 2 - 6.6 * robot.battery + 255) / 255
 			: 0})"
-		id="{getKey(robot)}-battery"
+		id="{station}-battery"
 	>
 		<div class="h-full text-center top-0 px-0.5 aspect-square">
 			<Graph data={parsedData} min={6} max={14} time={20} />
 		</div>
 		<div
-			class="absolute w-full bottom-2 xl:bottom-3 p-2 monitor-battery text-md sm:text-xl lg:text-4xl {fullscreen &&
-				'lg:text-5xl'} tabular-nums"
+			class="absolute w-full bottom-2 xl:bottom-3 p-2 monitor-battery text-md sm:text-xl lg:text-4xl tabular-nums"
+			class:lg:text-5xl={$fullscreen}
 		>
 			{robot.battery?.toFixed(1)}v
 		</div>
@@ -195,72 +195,82 @@
 			{percentileVoltage.toFixed(1)}v
 		</p>
 	</button>
-	<button
-		class="fieldmonitor-square-height hidden lg:flex p-0 relative aspect-square max-w-8 lg:max-w-32"
-		onclick={detailView}
-		style="background-color: rgba(255,0,0,{robot.ping >= 20 && robot.ping < 100
-			? Math.log10(robot.ping / 25)
-			: robot.ping > 100
-				? 0.5
-				: 0})"
-		id="{getKey(robot)}-ping"
-	>
-		<div class="h-full text-center top-0 px-0.5 aspect-square">
-			<Graph
-				data={parsedPingData}
-				min={0}
-				max={Math.max(23, ...parsedPingData.map((s) => s.data)) + 2}
-				time={20}
-			/>
-		</div>
-		<div
-			class="absolute w-full bottom-0 p-2 monitor-battery text-md sm:text-xl lg:text-4xl {fullscreen &&
-				'lg:text-5xl'} tabular-nums"
+	{#if !compact}
+		<button
+			class="fieldmonitor-square-height hidden lg:flex p-0 relative aspect-square max-w-8 lg:max-w-32"
+			onclick={detailView}
+			style="background-color: rgba(255,0,0,{robot.ping >= 20 && robot.ping < 100
+				? Math.log10(robot.ping / 25)
+				: robot.ping > 100
+					? 0.5
+					: 0})"
+			id="{station}-ping"
 		>
-			{robot.ping}ms
-		</div>
-	</button>
-	<button
-		onclick={() => detailView}
-		class="fieldmonitor-square-height hidden lg:flex items-end pb-2 justify-center text-md sm:text-xl lg:text-4xl {fullscreen &&
-			'lg:text-5xl'} tabular-nums"
-		id="{getKey(robot)}-bwu"
-	>
-		{robot.bwu.toFixed(2)}
-	</button>
-	<button
-		class="fieldmonitor-square-height hidden lg:flex md:aspect-square flex-col items-center justify-end"
-		onclick={() => detailView}
-		id="{getKey(robot)}-signal"
-	>
-		{robot.signal ?? ""}
-		{#if (robot.signal ?? -100) > -60 && robot.signal !== 0}
-			<Icon icon="mdi:signal-cellular-3" class="size-12 lg:size-20 2xl:size-24 text-green-600" />
-		{:else if (robot.signal ?? -100) > -70 && robot.signal !== 0}
-			<Icon icon="mdi:signal-cellular-2" class="size-12 lg:size-20 2xl:size-24 text-yellow-600" />
-		{:else if (robot.signal ?? -100) > -80 && robot.signal !== 0}
-			<Icon icon="mdi:signal-cellular-1" class="size-12 lg:size-20  2xl:size-24 text-red-600" />
-		{:else}
-			<Icon icon="mdi:signal-cellular-outline" class="size-12 lg:size-20 2xl:size-24" />
-		{/if}
-	</button>
-	{#if !noLastChange}
+			<div class="h-full text-center top-0 px-0.5 aspect-square">
+				<Graph
+					data={parsedPingData}
+					min={0}
+					max={Math.max(23, ...parsedPingData.map((s) => s.data)) + 2}
+					time={20}
+				/>
+			</div>
+			<div
+				class="absolute w-full bottom-0 p-2 monitor-battery text-md sm:text-xl lg:text-4xl tabular-nums"
+				class:lg:text-5xl={$fullscreen}
+			>
+				{robot.ping}ms
+			</div>
+		</button>
 		<button
 			onclick={() => detailView}
-			class="fieldmonitor-square-height hidden lg:flex items-end pb-2 justify-center text-md sm:text-xl lg:text-4xl {fullscreen &&
-				'lg:text-5xl'} tabular-nums"
-			id="{getKey(robot)}-lastchange"
+			class="fieldmonitor-square-height hidden lg:flex items-end pb-2 justify-center text-md sm:text-xl lg:text-4xl tabular-nums"
+			class:lg:text-5xl={$fullscreen}
+			id="{station}-bwu"
+		>
+			{robot.bwu.toFixed(2)}
+		</button>
+		<button
+			class="fieldmonitor-square-height hidden lg:flex md:aspect-square flex-col items-center justify-end"
+			onclick={() => detailView}
+			id="{station}-signal"
+		>
+			{robot.signal ?? ""}
+			{#if (robot.signal ?? -100) > -60 && robot.signal !== 0}
+				<Icon icon="mdi:signal-cellular-3" class="size-12 lg:size-20 2xl:size-24 text-green-600" />
+			{:else if (robot.signal ?? -100) > -70 && robot.signal !== 0}
+				<Icon icon="mdi:signal-cellular-2" class="size-12 lg:size-20 2xl:size-24 text-yellow-600" />
+			{:else if (robot.signal ?? -100) > -80 && robot.signal !== 0}
+				<Icon icon="mdi:signal-cellular-1" class="size-12 lg:size-20  2xl:size-24 text-red-600" />
+			{:else}
+				<Icon icon="mdi:signal-cellular-outline" class="size-12 lg:size-20 2xl:size-24" />
+			{/if}
+		</button>
+		<button
+			onclick={() => detailView}
+			class="fieldmonitor-square-height hidden lg:flex items-end pb-2 justify-center text-md sm:text-xl lg:text-4xl tabular-nums"
+			class:lg:text-5xl={$fullscreen}
+			id="{station}-lastchange"
 		>
 			{robot.lastChange ? formatTimeShortNoAgoSecondsOnly(robot.lastChange) : ""}
 		</button>
+		<button
+			onclick={() => detailView}
+			class="fieldmonitor-square-height lg:hidden flex flex-col items-end justify-center tabular-nums"
+			id="{station}-net"
+		>
+			<div>{robot.ping} ms</div>
+			<div>{robot.bwu.toFixed(2)}</div>
+			<div>{robot.signal ? robot.signal : 0} dBm</div>
+		</button>
+	{:else}
+		<button
+			onclick={() => detailView}
+			class="fieldmonitor-square-height flex-col items-end justify-center tabular-nums"
+			id="{station}-net"
+		>
+			<div>{robot.ping} ms</div>
+			<div>{robot.bwu.toFixed(2)}</div>
+			<div>{robot.signal ? robot.signal : 0} dBm</div>
+		</button>
 	{/if}
-	<button
-		onclick={() => detailView}
-		class="fieldmonitor-square-height lg:hidden flex flex-col items-end justify-center tabular-nums"
-		id="{getKey(robot)}-net"
-	>
-		<div>{robot.ping} ms</div>
-		<div>{robot.bwu.toFixed(2)}</div>
-		<div>{robot.signal ? robot.signal : 0} dBm</div>
-	</button>
 {/if}

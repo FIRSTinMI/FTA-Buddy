@@ -4,7 +4,14 @@
 	import { get } from "svelte/store";
 	import { cycleTimeToMS } from "../../../shared/cycleTimeToMS";
 	import { formatTimeShortNoAgo, formatTimeShortNoAgoSeconds } from "../../../shared/formatTime";
-	import { FieldState, MatchState, MatchStateMap, ROBOT, type MonitorFrame, type ScheduleDetails } from "../../../shared/types";
+	import {
+		FieldState,
+		MatchState,
+		MatchStateMap,
+		ROBOT,
+		type MonitorFrame,
+		type ScheduleDetails,
+	} from "../../../shared/types";
 	import MonitorRow from "../components/MonitorRow.svelte";
 	import Spinner from "../components/Spinner.svelte";
 	import TeamModal from "../components/TeamModal.svelte";
@@ -67,7 +74,7 @@
 					averageCycleTimeMS = data.averageCycleTime ?? 7 * 60 * 1000;
 					calculatedCycleTime = data.lastCycleTime ? cycleTimeToMS(data.lastCycleTime) : 0;
 				},
-			}
+			},
 		);
 
 		const bestCycleTimeRes = await trpc.cycles.getBestCycleTime.query();
@@ -93,7 +100,7 @@
 			monitorFrame?.match ?? scheduleDetails?.lastPlayed ?? 0,
 			scheduleDetails,
 			monitorFrame?.level ?? "",
-			averageCycleTimeMS
+			averageCycleTimeMS,
 		);
 
 		console.log({
@@ -153,7 +160,7 @@
 			monitorFrame?.match ?? scheduleDetails?.lastPlayed ?? 0,
 			scheduleDetails,
 			monitorFrame?.level ?? "",
-			averageCycleTimeMS
+			averageCycleTimeMS,
 		);
 
 		// Reset the cycle time so it doesn't screw up the next match's cycle time
@@ -222,12 +229,15 @@
 
 <div
 	class="grid grid-cols-fieldmonitor 2xl:grid-cols-fieldmonitor-large gap-0.5 md:gap-1 2xl:gap-2 mx-auto justify-center"
-    class:fullscreen={$fullscreen}
+	class:fullscreen={$fullscreen}
 	class:hidden={loading}
 >
 	{#key monitorFrame}
 		{#if monitorFrame}
-			<div class="col-span-6 lg:col-span-9 flex text-lg md:text-2xl font-semibold" class:lg:text-5xl={$fullscreen}>
+			<div
+				class="col-span-6 lg:col-span-9 flex text-lg md:text-2xl font-semibold"
+				class:lg:text-5xl={$fullscreen}
+			>
 				<div class="px-2">M: {monitorFrame.match}</div>
 				<div class="flex-1 px-2 text-center">{FieldStates[monitorFrame.field]}</div>
 				<div class="px-2">{monitorFrame.exactAheadBehind || monitorFrame.time}</div>
@@ -261,10 +271,13 @@
 			<p class="hidden lg:flex">Last Change</p>
 			<p class="lg:hidden">Net</p>
 			{#each stations as station}
-				<MonitorRow {station} {monitorFrame} {detailView} fullscreen={$fullscreen} {frameHandler} />
+				<MonitorRow {station} {monitorFrame} {detailView} />
 			{/each}
 		{/if}
-		<div class="col-span-6 lg:col-span-9 flex text-lg md:text-2xl font-semibold tabular-nums" class:lg:text-4xl={$fullscreen}>
+		<div
+			class="col-span-6 lg:col-span-9 flex text-lg md:text-2xl font-semibold tabular-nums"
+			class:lg:text-4xl={$fullscreen}
+		>
 			<div class="text-left" class:text-4xl={$fullscreen} class:text-green-500={currentCycleIsBest}>
 				C: {lastCycleTime} (A: {formatTimeShortNoAgoSeconds(averageCycleTimeMS)})
 			</div>
@@ -272,8 +285,10 @@
 				<span class="hidden sm:inline">{scheduleText}</span>
 			</div>
 			<div
-				class="text-right" class:text-4xl={$fullscreen}
-				style="color: rgba({75 * currentCycleTimeRedness + 180}, {180 * (1 - currentCycleTimeRedness)}, {180 * (1 - currentCycleTimeRedness)}, 1)"
+				class="text-right"
+				class:text-4xl={$fullscreen}
+				style="color: rgba({75 * currentCycleTimeRedness + 180}, {180 * (1 - currentCycleTimeRedness)}, {180 *
+					(1 - currentCycleTimeRedness)}, 1)"
 			>
 				T: {currentCycleTime}
 			</div>

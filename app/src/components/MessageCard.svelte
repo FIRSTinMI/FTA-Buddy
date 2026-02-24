@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { preventDefault } from "svelte/legacy";
 
+	import Icon from "@iconify/svelte";
 	import { Button, Card, Label, Modal, Textarea } from "flowbite-svelte";
-	import { EditOutline, TrashBinOutline } from "flowbite-svelte-icons";
 	import { get } from "svelte/store";
 	import { formatTimeNoAgoHourMins } from "../../../shared/formatTime";
 	import { toast } from "../../../shared/toast";
@@ -95,10 +95,10 @@
 			{#if user.id === message.author_id && !simple}
 				<div>
 					<Button class="pt-2 pb-2 pl-3 pr-2 mb-5" onclick={() => (editMessageView = true)}
-						><EditOutline class="w-5" /></Button
+						><Icon icon="mdi:pencil" class="w-5" /></Button
 					>
 					<Button onclick={() => (deleteMessagePopup = true)} class="pt-2 pb-2 pl-3 pr-2 mb-5"
-						><TrashBinOutline class="pr-1" /></Button
+						><Icon icon="mdi:trash-can-outline" class="pr-1" /></Button
 					>
 				</div>
 			{/if}

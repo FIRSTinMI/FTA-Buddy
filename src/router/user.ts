@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { compare, hash } from "bcrypt";
+import { compare, hash } from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { OAuth2Client } from "google-auth-library";
 import { z } from "zod";

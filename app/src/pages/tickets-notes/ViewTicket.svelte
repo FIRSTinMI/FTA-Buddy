@@ -26,7 +26,7 @@
 	let event = get(eventStore);
 	let user = get(userStore);
 
-	let ticket: Awaited<ReturnType<typeof trpc.tickets.getByIdWithMessages.query>> = $state();
+	let ticket: Awaited<ReturnType<typeof trpc.tickets.getByIdWithMessages.query>> | undefined = $state();
 
 	let ticketPromise: Promise<any> | undefined = $state();
 
@@ -34,7 +34,7 @@
 
 	let matchPromise: Promise<any> | undefined;
 
-	let match: Awaited<ReturnType<typeof trpc.match.getMatch.query>> = $state();
+	let match: Awaited<ReturnType<typeof trpc.match.getMatch.query>> | undefined = $state();
 
 	let time: string = $state("");
 
@@ -47,8 +47,8 @@
 	let deleteTicketPopup = $state(false);
 
 	let editTicketView = $state(false);
-	let editTicketText: string = $state();
-	let editTicketSubject: string = $state();
+	let editTicketText: string = $state('');
+	let editTicketSubject: string = $state('');
 
 	async function getTicketAndMatch() {
 		ticketPromise = trpc.tickets.getByIdWithMessages.query({
@@ -62,6 +62,11 @@
 				match_id = ticket.match_id;
 				matchPromise = trpc.match.getMatch.query({ id: match_id });
 				match = await matchPromise;
+
+                if (!match) {
+                    console.error("Match not found for ticket");
+                    return;
+                }
 
 				switch (ticket.team) {
 					case match.red1:
@@ -109,7 +114,8 @@
 			if (!ticket) return;
 			time = formatTimeNoAgoHourMins(ticket?.created_at);
 		},
-		time.includes("s ") ? 1000 : 60000
+		// svelte-ignore state_referenced_locally
+				time.includes("s ") ? 1000 : 60000
 	);
 
 	async function changeOpenStatus() {
@@ -175,6 +181,7 @@
 	let message_text: string = $state("");
 
 	async function postMessage(evt: SubmitEvent) {
+        evt.preventDefault();
 		if (message_text.trim().length < 1) {
 			toast("Error Sending Message", "Message cannot be empty");
 		}
@@ -183,7 +190,7 @@
 
 		try {
 			if (!$settingsStore.acknowledgedNotesPolicy) {
-				await notesPolicyElm.confirmPolicy();
+				await notesPolicyElm?.confirmPolicy();
 			}
 
 			const message = await trpc.tickets.messages.create.query({
@@ -212,6 +219,7 @@
 
 	async function editTicket() {
 		try {
+            if (!ticket) return;
 			if (editTicketText !== ticket.text && editTicketSubject !== ticket.subject) {
 				const res = await trpc.tickets.edit.query({
 					id: ticket_id,
@@ -244,6 +252,7 @@
 
 	async function deleteTicket() {
 		try {
+            if (!ticket) return;
 			if (!ticket.messages || ticket.is_open || !ticket.followers) {
 				const res = await trpc.tickets.delete.query({
 					id: ticket_id,
@@ -263,6 +272,7 @@
 
 	async function toggleFollowTicket() {
 		try {
+            if (!ticket) return;
 			if (!ticket.followers.includes(user.id)) {
 				const res = await trpc.tickets.follow.query({
 					id: ticket_id,
@@ -304,6 +314,7 @@
 			{
 				onData: (data) => {
 					//console.log(data);
+                    if (!ticket) return;
 					if (data.ticket_id === ticket.id) {
 						switch (data.kind) {
 							case "assign":
@@ -351,9 +362,9 @@
 		);
 	}
 
-	let notesPolicyElm: NotesPolicy = $state();
+	let notesPolicyElm: NotesPolicy | undefined = $state();
 
-	let matchesPromise: ReturnType<typeof trpc.match.getMatchNumbers.query> = $state();
+	let matchesPromise: ReturnType<typeof trpc.match.getMatchNumbers.query> | undefined = $state();
 	let matches: SelectOptionType<string>[] = $state([]);
 
 	let matchId: string | undefined = $state(undefined);
@@ -387,19 +398,21 @@
 
 	function openMatchLogSelector() {
 		matchLogModalOpen = true;
+        if (!ticket) return;
 		getMatchesForTeam(ticket.team);
 	}
 
 	function attachMatchLog() {
 		if (matchId) {
 			trpc.tickets.attachMatchLog.mutate({ ticketId: ticket_id, matchId });
+            if (!ticket) return;
 			ticket.match_id = matchId;
 			matchLogModalOpen = false;
 		}
 	}
 </script>
 
-<Modal bind:open={editTicketView} size="lg" dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
+<Modal bind:open={editTicketView} size="lg">
 	{#snippet header()}
 		<div >
 			<h1 class="text-2xl font-bold text-black dark:text-white place-content-center">Edit Ticket #{ticket_id}</h1>
@@ -407,14 +420,14 @@
 	{/snippet}
 	<form class="text-left flex flex-col gap-4" onsubmit={editTicket}>
 		<Label for="subject">Edit Subject:</Label>
-		<Textarea id="subject" class="w-full" rows="1" bind:value={editTicketSubject} />
+		<Textarea id="subject" class="w-full" rows={1} bind:value={editTicketSubject} />
 		<Label for="text">Edit Text:</Label>
-		<Textarea id="text" class="w-full" rows="5" bind:value={editTicketText} />
+		<Textarea id="text" class="w-full" rows={5} bind:value={editTicketText} />
 		<Button type="submit">Save Changes</Button>
 	</form>
 </Modal>
 
-<Modal bind:open={deleteTicketPopup} size="sm" outsideclose dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
+<Modal bind:open={deleteTicketPopup} size="sm" outsideclose>
 	<div class="text-center">
 		<h3 class="mb-5 text-lg">Are you sure you want to delete this Ticket?</h3>
 		<h2 class="mb-5 text-sm">Unable to delete Tickets that have attached Messages or followers, or those that have been closed.</h2>
@@ -423,7 +436,7 @@
 	</div>
 </Modal>
 
-<Modal bind:open={matchLogModalOpen} size="sm" outsideclose dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
+<Modal bind:open={matchLogModalOpen} size="sm" outsideclose>
 	{#snippet header()}
 		<div ><h1 class="text-3xl p-2 font-bold text-black dark:text-white">Create a Ticket</h1></div>
 	{/snippet}
@@ -510,9 +523,9 @@
 					</div>
 					<div class="text-left">
 						{#if $userStore.meshedEventToken && $eventStore.subEvents}
-							<p><b>Field:</b> {$eventStore.subEvents.find((e) => e.code === ticket.event_code)?.label ?? ticket.event_code}</p>
+							<p><b>Field:</b> {$eventStore.subEvents.find((e) => e.code === ticket?.event_code)?.label ?? ticket.event_code}</p>
 						{/if}
-						<p><b>Team:</b> {ticket.team} - {get(eventStore).teams?.find((team) => parseInt(team.number) === ticket.team)?.name ?? "Unknown"}</p>
+						<p><b>Team:</b> {ticket.team} - {get(eventStore).teams?.find((team) => parseInt(team.number) === ticket?.team)?.name ?? "Unknown"}</p>
 						<p><b>Created:</b> {time} by {ticket.author.username}</p>
 						<p>
 							<b>Assigned To:</b>
@@ -568,25 +581,21 @@
 								</div>
 							</div>
 							<div>
-								<form class="w-full" onsubmit={preventDefault(postMessage)}>
+								<form class="w-full" onsubmit={postMessage}>
 									<label for="chat" class="sr-only">Add a Message:</label>
-									<Alert color="dark" class="px-0 py-2">
-										{#snippet icon()}
-																			
-												<Textarea
-													id="chat"
-													class="ml-3"
-													rows="1"
-													placeholder="Your message..."
-													on:keydown={sendKey}
-													bind:value={message_text}
-												/>
-												<ToolbarButton type="submit" color="blue" class="rounded-full text-primary-600 dark:text-primary-500">
-													<Icon icon="mdi:send" class="w-6 h-8" />
-													<span class="sr-only">Send message</span>
-												</ToolbarButton>
-											
-																			{/snippet}
+									<Alert color="gray" class="px-0 py-2">			
+                                        <Textarea
+                                            id="chat"
+                                            class="ml-3"
+                                            rows={1}
+                                            placeholder="Your message..."
+                                            onkeydown={sendKey}
+                                            bind:value={message_text}
+                                        />
+                                        <ToolbarButton type="submit" color="blue" class="rounded-full text-primary-600 dark:text-primary-500">
+                                            <Icon icon="mdi:send" class="w-6 h-8" />
+                                            <span class="sr-only">Send message</span>
+                                        </ToolbarButton>
 									</Alert>
 								</form>
 							</div>

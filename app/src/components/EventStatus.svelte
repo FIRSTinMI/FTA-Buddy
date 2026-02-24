@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Icon from "@iconify/svelte";
-	import { Button, Card } from "flowbite-svelte";
+	import { Card } from "flowbite-svelte";
 	import { onDestroy, onMount } from "svelte";
 	import { cycleTimeToMS } from "../../../shared/cycleTimeToMS";
 	import { formatTimeShortNoAgo, formatTimeShortNoAgoSeconds } from "../../../shared/formatTime";
@@ -112,7 +112,7 @@
 
 					scheduleText = updateScheduleText(match, scheduleDetails, level, averageCycleTimeMS);
 				},
-			}
+			},
 		);
 
 		scheduleText = updateScheduleText(match, scheduleDetails, level, averageCycleTimeMS);
@@ -145,7 +145,7 @@
 	});
 </script>
 
-<Card padding={window.innerWidth < 640 ? "sm" : "lg"} class="py-1 px-2">
+<Card class="py-1 px-2">
 	{#if loading}
 		<div class="inset-0 z-50">
 			<Spinner />
@@ -155,7 +155,7 @@
 	<div class="flex">
 		<h1 class="text-lg lg:text-2xl font-bold flex-1">{eventName}</h1>
 		{#if removable}
-			<Button onclick={() => remove(eventCode)} color="none" class="p-0"><Icon icon="mdi:close" class="size-6" /></Button>
+			<button onclick={() => remove(eventCode)} class="p-0"><Icon icon="mdi:close" class="size-6" /></button>
 		{/if}
 	</div>
 
@@ -166,7 +166,8 @@
 
 		<div
 			class="lg:text-lg lg:mt-2"
-			style="color: rgba({75 * currentCycleTimeRedness + 180}, {180 * (1 - currentCycleTimeRedness)}, {180 * (1 - currentCycleTimeRedness)}, 1)"
+			style="color: rgba({75 * currentCycleTimeRedness + 180}, {180 * (1 - currentCycleTimeRedness)}, {180 *
+				(1 - currentCycleTimeRedness)}, 1)"
 		>
 			T: {currentCycleTime}
 		</div>

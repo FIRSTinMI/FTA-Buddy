@@ -9,7 +9,7 @@
 	import { route } from "../../router";
 	import { decompressStationLog } from "../../util/log-compression";
 
-    const { matchid } = route.getParams("/logs/:matchid");
+	const { matchid } = route.getParams("/logs/:matchid");
 
 	const match = trpc.match.getMatch.query({ id: matchid });
 	let data: MatchLog | undefined;
@@ -134,60 +134,56 @@
 		{#if data}
 			<Tabs
 				tabStyle="none"
-				defaultClass="flex"
-				activeClasses="p-1 md:p-4 w-full flex-grow text-primary-500 border-b-2 border-primary-500"
-				inactiveClasses="p-1 md:p-4 w-full text-gray-500 dark:text-gray-400 hover:text-gray-700 focus:ring-4 focus:ring-primary-300 focus:outline-none dark:hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-				contentClass="mt-4"
+				classes={{
+					active: "p-1 md:p-4 w-full flex-grow text-primary-500 border-b-2 border-primary-500",
+					inactive:
+						"p-1 md:p-4 w-full text-gray-500 dark:text-gray-400 hover:text-gray-700 focus:ring-4 focus:ring-primary-300 focus:outline-none dark:hover:text-white disabled:cursor-not-allowed disabled:opacity-50",
+					content: "mt-4",
+				}}
 			>
-				<TabItem open={averageTripTimeOpen} class="w-full" onclick={() => tabClick("averageTripTime")}>
-					<span slot="title">Ping</span>
-
+				<TabItem
+					open={averageTripTimeOpen}
+					class="w-full"
+					onclick={() => tabClick("averageTripTime")}
+					title="Ping"
+				>
 					<MatchGraph {data} log={data.log} stat="averageTripTime" />
 				</TabItem>
-				<TabItem open={batteryOpen} class="w-full" onclick={() => tabClick("battery")}>
-					<span slot="title">Battery</span>
-
+				<TabItem open={batteryOpen} class="w-full" onclick={() => tabClick("battery")} title="Battery">
 					<MatchGraph {data} log={data.log} stat="battery" />
 				</TabItem>
-				<TabItem open={dataRateTotalOpen} class="w-full" onclick={() => tabClick("dataRateTotal")}>
-					<span slot="title">BWU</span>
-
+				<TabItem open={dataRateTotalOpen} class="w-full" onclick={() => tabClick("dataRateTotal")} title="BWU">
 					<MatchGraph {data} log={data.log} stat="dataRateTotal" />
 				</TabItem>
-				<TabItem open={lostPacketsOpen} class="w-full" onclick={() => tabClick("lostPackets")}>
-					<span slot="title">Lost Packets</span>
-
+				<TabItem
+					open={lostPacketsOpen}
+					class="w-full"
+					onclick={() => tabClick("lostPackets")}
+					title="Lost Packets"
+				>
 					<MatchGraph {data} log={data.log} stat="lostPackets" />
 				</TabItem>
-				<TabItem open={signalOpen} class="w-full" onclick={() => tabClick("signal")}>
-					<span slot="title">Signal</span>
-
+				<TabItem open={signalOpen} class="w-full" onclick={() => tabClick("signal")} title="Signal">
 					<MatchGraph {data} log={data.log} stat="signal" />
 				</TabItem>
-				<TabItem open={noiseOpen} class="w-full" onclick={() => tabClick("noise")}>
-					<span slot="title">Noise</span>
-
+				<TabItem open={noiseOpen} class="w-full" onclick={() => tabClick("noise")} title="Noise">
 					<MatchGraph {data} log={data.log} stat="noise" />
 				</TabItem>
-				<TabItem open={txMCSOpen} class="w-full" onclick={() => tabClick("txMCS")}>
-					<span slot="title">TX MCS</span>
-
+				<TabItem open={txMCSOpen} class="w-full" onclick={() => tabClick("txMCS")} title="TX MCS">
 					<MatchGraph {data} log={data.log} stat="txMCS" />
 				</TabItem>
-				<TabItem open={rxMCSOpen} class="w-full" onclick={() => tabClick("rxMCS")}>
-					<span slot="title">RX MCS</span>
-
+				<TabItem open={rxMCSOpen} class="w-full" onclick={() => tabClick("rxMCS")} title="RX MCS">
 					<MatchGraph {data} log={data.log} stat="rxMCS" />
 				</TabItem>
 			</Tabs>
 			<h2>View a Team's Specific Log</h2>
 			<div class="grid grid-cols-2 gap-1">
-				<Button color="none" class="bg-blue-400 dark:bg-blue-500" href="/logs/{matchid}/blue1">{data?.blue1}</Button>
-				<Button color="none" class="bg-red-400 dark:bg-red-500" href="/logs/{matchid}/red1">{data?.red1}</Button>
-				<Button color="none" class="bg-blue-400 dark:bg-blue-500" href="/logs/{matchid}/blue2">{data?.blue2}</Button>
-				<Button color="none" class="bg-red-400 dark:bg-red-500" href="/logs/{matchid}/red2">{data?.red2}</Button>
-				<Button color="none" class="bg-blue-400 dark:bg-blue-500" href="/logs/{matchid}/blue3">{data?.blue3}</Button>
-				<Button color="none" class="bg-red-400 dark:bg-red-500" href="/logs/{matchid}/red3">{data?.red3}</Button>
+				<Button color="blue" onclick={() => navigate(`/logs/${matchid}/blue1`)}>{data?.blue1}</Button>
+				<Button color="red" onclick={() => navigate(`/logs/${matchid}/red1`)}>{data?.red1}</Button>
+				<Button color="blue" onclick={() => navigate(`/logs/${matchid}/blue2`)}>{data?.blue2}</Button>
+				<Button color="red" onclick={() => navigate(`/logs/${matchid}/red2`)}>{data?.red2}</Button>
+				<Button color="blue" onclick={() => navigate(`/logs/${matchid}/blue3`)}>{data?.blue3}</Button>
+				<Button color="red" onclick={() => navigate(`/logs/${matchid}/red3`)}>{data?.red3}</Button>
 			</div>
 		{/if}
 	{/await}

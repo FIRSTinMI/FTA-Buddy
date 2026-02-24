@@ -124,7 +124,7 @@
 	<Spinner />
 {/if}
 
-<Modal bind:open={settingsOpen} size="lg" outsideclose class="fixed top-0 inset-s-0 inset-e-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
+<Modal bind:open={settingsOpen} size="lg" outsideclose class="fixed top-0 inset-s-0 inset-e-0 h-modal md:inset-0 z-40 w-full p-4 flex">
 	{#snippet header()}
         <h1 class="text-2xl text-black dark:text-white">Settings</h1>
     {/snippet}
@@ -215,11 +215,13 @@
 			</div>
 		</div>
 	</form>
-	<div class="border-t border-neutral-500 pt-2 mt-0 flex flex-col text-black dark:text-white">
-		<h1 class="text-lg">About</h1>
-		<p>Author: Filip Kin</p>
-		<p>Contributors: Kelly Malone, Cole H</p>
-		<p>Version: {settings.version}</p>
-		<a href="https://github.com/FIRSTinMI/FTA-Buddy" class="underline text-blue-400">GitHub</a>
-	</div>
+    {#snippet footer()}
+        <div class="flex flex-col w-full">
+            <h1 class="text-lg">About</h1>
+            <p>Author: Filip Kin</p>
+            <p>Contributors: Kelly Malone, Cole H</p>
+            <p>Version: {settings.version}</p>
+            <a href="https://github.com/FIRSTinMI/FTA-Buddy" class="underline text-blue-400">GitHub</a>
+        </div>
+    {/snippet}
 </Modal>

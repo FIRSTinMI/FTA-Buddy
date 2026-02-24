@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { preventDefault, run } from 'svelte/legacy';
+	import { run } from 'svelte/legacy';
 
 	import Icon from "@iconify/svelte";
 	import { Button, Input, Label, Modal, Select, Textarea, Toggle, type SelectOptionType } from "flowbite-svelte";
@@ -12,6 +12,7 @@
 	import Spinner from "../../components/Spinner.svelte";
 	import TicketCard from "../../components/TicketCard.svelte";
 	import { trpc } from "../../main";
+	import { route } from '../../router';
 	import { eventStore } from "../../stores/event";
 	import { clearNotifications } from "../../stores/notifications";
 	import { settingsStore } from "../../stores/settings";
@@ -19,11 +20,7 @@
 
 	let createModalOpen = $state(false);
 
-	interface Props {
-		team: string | undefined;
-	}
-
-	let { team = $bindable() }: Props = $props();
+    let team = $state(route.params.team);
 
 	const teamNames = Object.fromEntries($eventStore.teams.map((team) => [team.number, team.name]));
 
@@ -98,7 +95,7 @@
 
 	let publicTicketsModalOpen = $state(false);
 
-	let publicTicketSubmitState: boolean = $state();
+	let publicTicketSubmitState: boolean = $state(false);
 
 	let eventPromise: ReturnType<typeof trpc.event.getPublicTicketSubmit.query>;
 
@@ -183,9 +180,9 @@
 		if ($userStore.role === "FTA" || $userStore.role === "FTAA") clearNotifications();
 	});
 
-	let notesPolicyElm: NotesPolicy = $state();
+	let notesPolicyElm: NotesPolicy | undefined = $state();
 
-	let matchesPromise: ReturnType<typeof trpc.match.getMatchNumbers.query> = $state();
+	let matchesPromise: ReturnType<typeof trpc.match.getMatchNumbers.query> | undefined = $state();
 	let matches: SelectOptionType<string>[] = $state([]);
 
 	let matchId: string | undefined = $state(undefined);
@@ -225,11 +222,12 @@
 	});
 
 	async function createTicket(evt: SubmitEvent) {
+		evt.preventDefault();
 		if (team === undefined || ticketText.length === 0 || ticketSubject.length === 0) return;
 
 		try {
 			if (!$settingsStore.acknowledgedNotesPolicy) {
-				await notesPolicyElm.confirmPolicy();
+				await notesPolicyElm?.confirmPolicy();
 			}
 
 			let res;
@@ -337,11 +335,11 @@
 
 <NotesPolicy bind:this={notesPolicyElm} />
 
-<Modal bind:open={createModalOpen} size="lg" outsideclose dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
+<Modal bind:open={createModalOpen} size="lg" outsideclose>
 	{#snippet header()}
 		<div ><h1 class="text-3xl p-2 font-bold text-black dark:text-white">Create a Ticket</h1></div>
 	{/snippet}
-	<form class="text-left flex flex-col gap-4" onsubmit={preventDefault(createTicket)}>
+	<form class="text-left flex flex-col gap-4" onsubmit={createTicket}>
 		<Label class="w-full text-left">
 			Select Team
 			<Select class="mt-2" items={teamOptions} bind:value={team} onchange={() => getMatchesForTeam(parseInt(team ?? "0"))} />
@@ -351,7 +349,7 @@
 		<Textarea id="subject" class="w-full" bind:value={ticketSubject} />
 
 		<Label for="text">Ticket Text:</Label>
-		<Textarea id="text" class="w-full" rows="5" bind:value={ticketText} />
+		<Textarea id="text" class="w-full" rows={5} bind:value={ticketText} />
 
 		{#await matchesPromise then}
 			{#if matches.length > 0}
@@ -366,7 +364,7 @@
 	</form>
 </Modal>
 
-<Modal bind:open={publicTicketsModalOpen} size="sm" outsideclose dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
+<Modal bind:open={publicTicketsModalOpen} size="sm" outsideclose>
 	<h1 class="text-2xl font-bold">Public Ticket Creation</h1>
 	<Button onclick={() => printPublicTicketSubmissionQRCode($eventStore.code)}>Print QR Code</Button>
 	<p>If the Public Ticket Creation page is being abused or spammed, please turn this setting off and inform your event FTA that you have done so.</p>

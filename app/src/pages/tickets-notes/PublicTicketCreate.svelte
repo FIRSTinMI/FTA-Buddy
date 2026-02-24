@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { preventDefault } from 'svelte/legacy';
-
 	import { Button, Input, Label, Modal, Textarea } from "flowbite-svelte";
 	import { onMount } from "svelte";
 	import { toast } from "../../../../shared/toast";
@@ -18,25 +16,22 @@
 
 	let termsPopupOpen = $state(true);
 
-	let event_code = eventCode;
-
 	onMount(() => {});
 
-	let team: string | undefined = $derived(agreeTerms === false || team === undefined || ticketText.length === 0 || ticketSubject.length === 0);
-
-	let disableSubmit = $state(false);
+	let team: string | undefined = $state();
 
 	let ticketSubject: string = $state("");
 	let ticketText: string = $state("");
 
-	
+	let disableSubmit = $derived(agreeTerms === false || team === undefined || ticketText.length === 0 || ticketSubject.length === 0);
 
 	async function createTicket(evt: SubmitEvent) {
+        evt.preventDefault();
 		if (agreeTerms === false || team === undefined || ticketText.length === 0 || ticketSubject.length === 0) return;
 
 		try {
 			const res = await trpc.tickets.publicCreate.query({
-				event_code: event_code,
+				event_code: eventCode,
 				team: parseInt(team),
 				subject: ticketSubject,
 				text: ticketText,
@@ -51,7 +46,7 @@
 	}
 </script>
 
-<Modal bind:open={termsPopupOpen} size="sm" dismissable={false} dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
+<Modal bind:open={termsPopupOpen} size="sm" dismissable={false}>
 	<h1 class="font-bold text-2xl">Terms and Conditions</h1>
 	<p class="text-center">All Tickets are saved after the end of the event and can be viewed by volunteers at other events the team attends in the future.</p>
 	<p class="text-center">
@@ -78,7 +73,7 @@
 <div class="container max-w-6xl mx-auto px-2 pt-2 h-full flex flex-col gap-2">
 	{#if ticketCreated === false}
 		<h1 class="text-3xl font-bold text-black dark:text-white">Create a Ticket</h1>
-		<form class="text-left flex flex-col gap-4" onsubmit={preventDefault(createTicket)}>
+		<form class="text-left flex flex-col gap-4" onsubmit={createTicket}>
 			<div>
 				<Label class="w-full text-left">Team Number</Label>
 				<Input type="number" id="team" required bind:value={team}></Input>
@@ -89,7 +84,7 @@
 			</div>
 			<div>
 				<Label for="text">Ticket Text:</Label>
-				<Textarea id="text" class="w-full" rows="5" required bind:value={ticketText} />
+				<Textarea id="text" class="w-full" rows={5} required bind:value={ticketText} />
 			</div>
 
 			<Button type="submit" disabled={disableSubmit}>Create Ticket</Button>

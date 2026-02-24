@@ -22,6 +22,9 @@
 			<Button href="/references/componentmanuals" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
 				><Icon icon="streamline:manual-book-solid" class="size-6 md:size-8" /> Component Manuals</Button
 			>
+			<Button href="/references/fieldmanuals" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
+				><Icon icon="mdi:package" class="size-6 md:size-8" /> Field Manuals</Button
+			>
 		</div>
 	</div>
 
@@ -33,7 +36,9 @@
 
 	<Accordion flush class="text-left">
 		<AccordionItem class="text-black dark:text-white">
-			<span slot="header" class="font-bold">Keyboard Shortcuts</span>
+			{#snippet header()}
+				<strong>Driver Station Shortcuts</strong>
+			{/snippet}
 
 			<h3 style="padding: 2pt;">Driver Station</h3>
 
@@ -71,12 +76,20 @@
 		</AccordionItem>
 
 		<AccordionItem class="text-black dark:text-white">
-			<span slot="header" class="font-bold">Team IP Addresses</span>
+			{#snippet header()}
+				<strong>Team Networking</strong>
+			{/snippet}
 
 			<h3 style="padding: 2pt;">IP Config Guide Link</h3>
 
-			<a href="https://docs.wpilib.org/en/stable/docs/networking/networking-introduction/ip-configurations.html" target="_blank">
-				<QrCode value="https://docs.wpilib.org/en/stable/docs/networking/networking-introduction/ip-configurations.html" padding={5} />
+			<a
+				href="https://docs.wpilib.org/en/stable/docs/networking/networking-introduction/ip-configurations.html"
+				target="_blank"
+			>
+				<QrCode
+					value="https://docs.wpilib.org/en/stable/docs/networking/networking-introduction/ip-configurations.html"
+					padding={5}
+				/>
 			</a>
 
 			<h3 style="padding: 2pt;">IP Address Format</h3>
@@ -161,7 +174,9 @@
 		</AccordionItem>
 
 		<AccordionItem class="text-black dark:text-white">
-			<span slot="header" class="font-bold">Helpful Commands</span>
+			{#snippet header()}
+				<strong>Helpful Commands</strong>
+			{/snippet}
 
 			<table cellpadding="5" cellspacing="0" class="led-table text-black dark:text-white">
 				<tbody>

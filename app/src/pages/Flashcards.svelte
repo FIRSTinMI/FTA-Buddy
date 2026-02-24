@@ -1,41 +1,37 @@
 <script lang="ts">
-    import { Button, Input, Label } from "flowbite-svelte";
-    import { get } from "svelte/store";
-    import { flashcardsStore } from "../stores/flashcards";
+  import { Button, Input, Label } from "flowbite-svelte";
+  import { flashcardsStore } from "../stores/flashcards";
 
-    let flashcards = $state(get(flashcardsStore));
-    let currentFlashcard = $state("");
-    let addRemoveState = $state(false);
-    let newFlashcard = $state("");
+  let currentFlashcard = $state("");
+  let addRemoveState = $state(false);
+  let newFlashcard = $state("");
 
-    function openFlashcard(e: MouseEvent) {
-        if (addRemoveState) {
-            const target = e.target as HTMLButtonElement;
-            const flashcard = target.textContent;
-            flashcards = flashcards.filter((card) => card !== flashcard);
-            flashcardsStore.set(flashcards);
-            return;
-        }
-
-        const target = e.target as HTMLButtonElement;
-        const flashcard = target.textContent;
-        currentFlashcard = flashcard || "";
+  function openFlashcard(card: string) {
+    if (addRemoveState) {
+      flashcardsStore.update(cards =>
+        cards.filter(c => c !== card)
+      );
+      return;
     }
 
-    function dismissFlashcard() {
-        currentFlashcard = "";
-    }
+    currentFlashcard = card;
+  }
 
-    function switchToAddRemove() {
-        addRemoveState = !addRemoveState;
-    }
+  function dismissFlashcard() {
+    currentFlashcard = "";
+  }
 
-    function addNewFlashcard(evt: Event) {
-        evt.preventDefault();
-        flashcards = [...flashcards, newFlashcard];
-        flashcardsStore.set(flashcards);
-        newFlashcard = "";
-    }
+  function switchToAddRemove() {
+    addRemoveState = !addRemoveState;
+  }
+
+  function addNewFlashcard(evt: Event) {
+    evt.preventDefault();
+    if (!newFlashcard.trim()) return;
+
+    flashcardsStore.update(cards => [...cards, newFlashcard.trim()]);
+    newFlashcard = "";
+  }
 </script>
 
 {#key currentFlashcard}
@@ -48,8 +44,8 @@
 
 <div class="flex flex-col p-4 h-full">
     <div class="space-y-2 grow">
-        {#each flashcards as card}
-            <Button pill class="w-full {addRemoveState ? 'bg-red-500 dark:bg-red-500' : 'bg-primary-700 dark:bg-primary-500'}" size="lg" onclick={openFlashcard}>{card}</Button>
+        {#each $flashcardsStore as card}
+            <Button pill class="w-full {addRemoveState ? 'bg-red-500 dark:bg-red-500' : 'bg-primary-700 dark:bg-primary-500'}" size="lg" onclick={() => openFlashcard(card)}>{card}</Button>
         {/each}
     </div>
     {#if addRemoveState}

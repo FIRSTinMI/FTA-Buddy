@@ -2,28 +2,47 @@
 	import Icon from "@iconify/svelte";
 	import { navigate } from "svelte-routing";
 	import { formatTimeShortNoAgoSecondsOnly } from "../../../shared/formatTime";
-	import { DSState, MatchState, MatchStateMap, ROBOT, RobotWarnings, type MonitorFrame, type RobotInfo } from "../../../shared/types";
+	import {
+		DSState,
+		MatchState,
+		MatchStateMap,
+		ROBOT,
+		RobotWarnings,
+		type MonitorFrame,
+		type RobotInfo,
+	} from "../../../shared/types";
 	import { settingsStore } from "../stores/settings";
 	import type { MonitorFrameHandler } from "../util/monitorFrameHandler";
 	import { processSignalStrengthForGraph } from "../util/signalStrengthProcessor";
 	import Graph from "./Graph.svelte";
 
-	export let station: ROBOT;
-	export let monitorFrame: MonitorFrame;
-	export let fullscreen = false;
-	export let frameHandler: MonitorFrameHandler;
-	export let noLastChange = false;
-	let robot: RobotInfo;
+	let {
+		station = $bindable(ROBOT.blue1),
+		monitorFrame = $bindable({} as MonitorFrame),
+		fullscreen = $bindable(false),
+		frameHandler = $bindable({} as MonitorFrameHandler),
+		noLastChange = $bindable(false),
+		detailView = $bindable((evt: Event) => {}),
+	}: {
+		station: ROBOT;
+		monitorFrame: MonitorFrame;
+		fullscreen: boolean;
+		frameHandler: MonitorFrameHandler;
+		noLastChange: boolean;
+		detailView: (evt: Event) => void;
+	} = $props();
 
-	$: {
+	let robot: RobotInfo | undefined = $state();
+
+	$effect(() => {
 		robot = monitorFrame[station];
 		parsedData = frameHandler.getHistory(station, "battery", 20).map((d, i) => ({ time: i, data: d as number }));
 		parsedPingData = frameHandler.getHistory(station, "ping", 20).map((d, i) => ({ time: i, data: d as number }));
 		signalData = processSignalStrengthForGraph(frameHandler.getHistory(station, "signal", 20) as number[]);
 		percentileVoltage = getPercentileVoltage();
-	}
+	});
 
-	export let detailView: (evt: Event) => void;
+	$inspect(monitorFrame);
 
 	function getKey(value: any) {
 		return Object.keys(monitorFrame).find((key) => (monitorFrame as any)[key] === value);
@@ -46,15 +65,21 @@
 		2: "bg-green-500" + ($settingsStore.roundGreen ? " rounded-full" : ""),
 	};
 
-	let parsedData = frameHandler.getHistory(station, "battery", 20).map((d, i) => ({ time: i, data: d as number }));
-	let parsedPingData = frameHandler.getHistory(station, "ping", 20).map((d, i) => ({ time: i, data: d as number }));
-	let signalData = processSignalStrengthForGraph(frameHandler.getHistory(station, "signal", 20) as number[]);
+	let parsedData = $state(
+		frameHandler.getHistory(station, "battery", 20).map((d, i) => ({ time: i, data: d as number })),
+	);
+	let parsedPingData = $state(
+		frameHandler.getHistory(station, "ping", 20).map((d, i) => ({ time: i, data: d as number })),
+	);
+	let signalData = $state(processSignalStrengthForGraph(frameHandler.getHistory(station, "signal", 20) as number[]));
 
-	let percentileVoltage = 0;
+	let percentileVoltage = $state(0);
 
 	function getPercentileVoltage() {
 		const frames = (new Date().getTime() - matchStart.getTime()) / 500;
-		const voltages = (frameHandler.getHistory(station, "battery", frames) as number[]).filter((v) => v > 0).sort((a, b) => a - b);
+		const voltages = (frameHandler.getHistory(station, "battery", frames) as number[])
+			.filter((v) => v > 0)
+			.sort((a, b) => a - b);
 		return voltages[Math.floor(voltages.length * 0.02)] || 0;
 	}
 
@@ -65,11 +90,11 @@
 	});
 </script>
 
-{#key robot}
+{#if robot}
 	<button
 		class="w-full fieldmonitor-square-height md:aspect-square flex flex-col px-1 items-center justify-center text-lg sm:text-2xl lg:text-3xl {fullscreen &&
 			'lg:text-5xl'} font-mono tabular-nums {getKey(robot)?.startsWith('blue') ? 'bg-blue-600' : 'bg-red-600'}"
-		onclick={() => navigate("/notes/" + robot.number)}
+		onclick={() => navigate("/notes/" + robot?.number)}
 	>
 		<p>{robot.number}</p>
 		<p class="text-sm lg:text-3xl flex">
@@ -103,7 +128,9 @@
 		</p>
 	</button>
 	<button
-		class="{DS_Colors[robot.ds]} fieldmonitor-square-height md:aspect-square flex items-center justify-center font-mono text-4xl lg:text-8xl text-black"
+		class="{DS_Colors[
+			robot.ds
+		]} fieldmonitor-square-height md:aspect-square flex items-center justify-center font-mono text-4xl lg:text-8xl text-black"
 		onclick={detailView}
 		id="{getKey(robot)}-ds"
 	>
@@ -146,29 +173,50 @@
 	<button
 		class="fieldmonitor-square-height p-0 relative aspect-square max-w-8 lg:max-w-32"
 		onclick={detailView}
-		style="background-color: rgba(255,0,0,{robot.battery < 11 && robot.battery > 0 ? (-1.5 * robot.battery ** 2 - 6.6 * robot.battery + 255) / 255 : 0})"
+		style="background-color: rgba(255,0,0,{robot.battery < 11 && robot.battery > 0
+			? (-1.5 * robot.battery ** 2 - 6.6 * robot.battery + 255) / 255
+			: 0})"
 		id="{getKey(robot)}-battery"
 	>
 		<div class="h-full text-center top-0 px-0.5 aspect-square">
 			<Graph data={parsedData} min={6} max={14} time={20} />
 		</div>
-		<div class="absolute w-full bottom-2 xl:bottom-3 p-2 monitor-battery text-md sm:text-xl lg:text-4xl {fullscreen && 'lg:text-5xl'} tabular-nums">
+		<div
+			class="absolute w-full bottom-2 xl:bottom-3 p-2 monitor-battery text-md sm:text-xl lg:text-4xl {fullscreen &&
+				'lg:text-5xl'} tabular-nums"
+		>
 			{robot.battery?.toFixed(1)}v
 		</div>
-		<p class="absolute bottom-0 px-2 py-0.5 text-xs xl:text-sm {percentileVoltage < 7.8 && percentileVoltage > 0 ? 'text-red-600' : 'text-gray-500'}">
+		<p
+			class="absolute bottom-0 px-2 py-0.5 text-xs xl:text-sm {percentileVoltage < 7.8 && percentileVoltage > 0
+				? 'text-red-600'
+				: 'text-gray-500'}"
+		>
 			{percentileVoltage.toFixed(1)}v
 		</p>
 	</button>
 	<button
 		class="fieldmonitor-square-height hidden lg:flex p-0 relative aspect-square max-w-8 lg:max-w-32"
 		onclick={detailView}
-		style="background-color: rgba(255,0,0,{robot.ping >= 20 && robot.ping < 100 ? Math.log10(robot.ping / 25) : robot.ping > 100 ? 0.5 : 0})"
+		style="background-color: rgba(255,0,0,{robot.ping >= 20 && robot.ping < 100
+			? Math.log10(robot.ping / 25)
+			: robot.ping > 100
+				? 0.5
+				: 0})"
 		id="{getKey(robot)}-ping"
 	>
 		<div class="h-full text-center top-0 px-0.5 aspect-square">
-			<Graph data={parsedPingData} min={0} max={Math.max(23, ...parsedPingData.map((s) => s.data)) + 2} time={20} />
+			<Graph
+				data={parsedPingData}
+				min={0}
+				max={Math.max(23, ...parsedPingData.map((s) => s.data)) + 2}
+				time={20}
+			/>
 		</div>
-		<div class="absolute w-full bottom-0 p-2 monitor-battery text-md sm:text-xl lg:text-4xl {fullscreen && 'lg:text-5xl'} tabular-nums">
+		<div
+			class="absolute w-full bottom-0 p-2 monitor-battery text-md sm:text-xl lg:text-4xl {fullscreen &&
+				'lg:text-5xl'} tabular-nums"
+		>
 			{robot.ping}ms
 		</div>
 	</button>
@@ -215,4 +263,4 @@
 		<div>{robot.bwu.toFixed(2)}</div>
 		<div>{robot.signal ? robot.signal : 0} dBm</div>
 	</button>
-{/key}
+{/if}

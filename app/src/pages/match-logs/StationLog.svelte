@@ -26,7 +26,7 @@
 	import { userStore } from "../../stores/user";
 	import { decompressStationLog } from "../../util/log-compression";
 
-    const { matchid, station } = route.getParams("/logs/:matchid/:station");
+	const { matchid, station } = route.getParams("/logs/:matchid/:station");
 	let actualStation: ROBOT;
 
 	let log: FMSLogFrame[];
@@ -127,16 +127,8 @@
 			| "purple"
 			| "pink"
 			| "blue"
-			| "light"
-			| "dark"
-			| "default"
-			| "dropdown"
-			| "navbar"
-			| "navbarUl"
-			| "form"
 			| "primary"
 			| "orange"
-			| "none"
 			| undefined;
 	} = {
 		"Code disconnect": "yellow",
@@ -144,15 +136,17 @@
 		"Radio disconnect": "red",
 		"DS disconnect": "red",
 		"Large spike in ping": "red",
-		"High BWU": "default",
+		"High BWU": "blue",
 		"Sustained high ping": "yellow",
 		"Low signal": "yellow",
-		Brownout: "dark",
+		Brownout: "orange",
 	};
 </script>
 
 <Modal bind:open={shareOpen} dismissable outsideclose>
-	<h1 slot="header" class="text-xl">Share Log</h1>
+	{#snippet header()}
+		<h1 class="text-xl">Share Log</h1>
+	{/snippet}
 	<div class="flex flex-col gap-2">
 		<p>
 			Log published for 72 hours. Share this log only with team #{team} or other volunteers.
@@ -182,7 +176,8 @@
 			</h1>
 			<p>{formatTimeNoAgo(new Date(match.start_time))}</p>
 			<h2 class="text-lg">
-				{(actualStation.startsWith("blue") ? "Blue " : "Red ") + actualStation.charAt(actualStation.length - 1)} - Team #{team}
+				{(actualStation.startsWith("blue") ? "Blue " : "Red ") + actualStation.charAt(actualStation.length - 1)} -
+				Team #{team}
 			</h2>
 			<p class="md:hidden text-gray-600 text-sm">View on desktop for more detail</p>
 		</div>
@@ -191,7 +186,10 @@
 
 		<div class="flex flex-col gap-2">
 			{#each match.analysis as logEvent}
-				<button class="w-full text-left cursor-pointer" onclick={() => logGraph?.zoomToRange(logEvent.startIndex, logEvent.endIndex)}>
+				<button
+					class="w-full text-left cursor-pointer"
+					onclick={() => logGraph?.zoomToRange(logEvent.startIndex, logEvent.endIndex)}
+				>
 					<Alert class="text-left" color={analysisEventColors[logEvent.issue]} border>
 						<span class="font-medium">{logEvent.issue}</span>
 						Started at {logEvent.startTime}s lasting {formatTimeShortNoAgoSeconds(logEvent.duration * 1000)}
@@ -234,14 +232,27 @@
 									<TableBodyCell
 										style="background-color: rgba(255,0,0,{frame.battery < 11 && frame.battery > 0
 											? (-1.5 * frame.battery ** 2 - 6.6 * frame.battery + 255) / 255
-											: 0})">{typeof frame.battery === "number" ? frame.battery.toFixed(2) : frame.battery}</TableBodyCell
+											: 0})"
+										>{typeof frame.battery === "number"
+											? frame.battery.toFixed(2)
+											: frame.battery}</TableBodyCell
 									>
 								{:else if ["averageTripTime", "lostPackets", "sentPackets", "signal", "noise", "txMCS", "rxMCS"].includes(col)}
-									<TableBodyCell>{typeof frame[col] === "number" ? frame[col].toFixed(0) : frame[col]}</TableBodyCell>
+									<TableBodyCell
+										>{typeof frame[col] === "number"
+											? frame[col].toFixed(0)
+											: frame[col]}</TableBodyCell
+									>
 								{:else if ["dataRateTotal", "txRate", "rxRate"].includes(col)}
-									<TableBodyCell>{typeof frame[col] === "number" ? frame[col].toFixed(2) : frame[col]}</TableBodyCell>
+									<TableBodyCell
+										>{typeof frame[col] === "number"
+											? frame[col].toFixed(2)
+											: frame[col]}</TableBodyCell
+									>
 								{:else}
-									<TableBodyCell class={frame[col] ? "" : "bg-red-500"}>{frame[col] ? "Y" : "N"}</TableBodyCell>
+									<TableBodyCell class={frame[col] ? "" : "bg-red-500"}
+										>{frame[col] ? "Y" : "N"}</TableBodyCell
+									>
 								{/if}
 							{/each}
 						</TableBodyRow>

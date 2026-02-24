@@ -4,7 +4,6 @@
 	import { onMount } from "svelte";
 	import { trpc } from "../main";
 	import { installPrompt } from "../stores/install-prompt";
-	import { settingsStore } from "../stores/settings";
 	import { gestureEvents } from "../util/gestureDetection";
 
     let {
@@ -36,11 +35,11 @@
     });
 </script>
 
-<Modal bind:open={welcomeOpen} dismissable outsideclose size="lg" style="height: calc(100vh - 8rem)">
+<Modal bind:open={welcomeOpen} dismissable outsideclose size="lg">
 	{#snippet header()}
 		<h1 class="text-xl text-black dark:text-white font-bold">Welcome to FTA Buddy</h1>
 	{/snippet}
-	<div class="flex flex-col justify-left text-left gap-1 text-black dark:text-white h-full">
+	<div class="flex flex-col justify-left text-left gap-1 text-black dark:text-white h-full" style="height: calc(100vh - 24rem)">
 		{#if step === 0}
 			<p class="py-1">
 				FTA Buddy is your all-in-one tool for managing field operations. Designed for FTAs, CSAs, and other volunteers, it brings everything into one
@@ -127,11 +126,13 @@
 			<Button color="primary" class="w-full py-1" onclick={() => closeModal}>Close</Button>
 		{/if}
 	</div>
-	<div class="flex justify-center gap-2 w-full" slot="footer">
+    {#snippet footer()}
+	<div class="flex justify-center gap-2 w-full">
 		<Button color="dark" class="p-1" onclick={() => step--} disabled={step <= 0}><Icon icon="mdi:arrow-left" class="w-6 h-6" /></Button>
 		{#each Array(7) as _, i}
-			<Indicator color={step >= i ? "purple" : $settingsStore.darkMode ? "dark" : "gray"} class="my-auto" />
+			<Indicator color={step >= i ? "purple" : "gray"} class="my-auto" />
 		{/each}
 		<Button color="dark" class="p-1" onclick={() => step++} disabled={step >= 6}><Icon icon="mdi:arrow-right" class="w-6 h-6" /></Button>
 	</div>
+    {/snippet}
 </Modal>

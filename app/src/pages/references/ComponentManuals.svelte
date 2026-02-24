@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { run } from 'svelte/legacy';
-
 	import { Accordion, AccordionItem } from "flowbite-svelte";
 	import QrCode from "svelte-qrcode";
 
@@ -15,14 +13,14 @@
 		canivore: false,
 		pigeon: false,
 		pdh: false,
-		cancoder: false
+		cancoder: false,
 	});
 
 	let loadedState = $state({
 		...openState,
 	});
 
-	run(() => {
+	$effect(() => {
 		if (openState.radio) loadedState.radio = true;
 		if (openState.roborio) loadedState.roborio = true;
 		if (openState.sparkmax) loadedState.sparkmax = true;
@@ -60,21 +58,21 @@
 	<Accordion flush class="text-left">
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.radio}>
 			{#snippet header()}
-						<span  class="font-bold">FRC Robot Radio</span>
-					{/snippet}
+				<span class="font-bold">FRC Robot Radio</span>
+			{/snippet}
 			{#if openState.radio === true || loadedState.radio === true}
-				<a href="https://frc-radio.vivid-hosting.net/" target="_blank"><QrCode value="https://frc-radio.vivid-hosting.net/" padding={12} /></a>
+				<a href="https://frc-radio.vivid-hosting.net/" target="_blank"
+					><QrCode value="https://frc-radio.vivid-hosting.net/" padding={12} /></a
+				>
 			{/if}
 		</AccordionItem>
 
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.roborio}>
 			{#snippet header()}
-						<span  class="font-bold">roboRio 2</span>
-					{/snippet}
+				<span class="font-bold">roboRio 2</span>
+			{/snippet}
 			{#if openState.roborio === true || loadedState.roborio === true}
-				<a
-					href="https://www.ni.com/docs/en-US/bundle/roborio-20-umanual/page/umanual.html"
-					target="_blank"
+				<a href="https://www.ni.com/docs/en-US/bundle/roborio-20-umanual/page/umanual.html" target="_blank"
 					><QrCode
 						value="https://www.ni.com/docs/en-US/bundle/roborio-20-umanual/page/umanual.html"
 						padding={12}
@@ -85,8 +83,8 @@
 
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.sparkmax}>
 			{#snippet header()}
-						<span  class="font-bold">REV Spark Max</span>
-					{/snippet}
+				<span class="font-bold">REV Spark Max</span>
+			{/snippet}
 			{#if openState.sparkmax === true || loadedState.sparkmax === true}
 				<a href="https://docs.revrobotics.com/brushless/spark-max/overview/" target="_blank"
 					><QrCode value="https://docs.revrobotics.com/brushless/spark-max/overview" padding={12} /></a
@@ -96,8 +94,8 @@
 
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.sparkflex}>
 			{#snippet header()}
-						<span  class="font-bold">REV Spark Flex</span>
-					{/snippet}
+				<span class="font-bold">REV Spark Flex</span>
+			{/snippet}
 			{#if openState.sparkflex === true || loadedState.sparkflex === true}
 				<a href="https://docs.revrobotics.com/brushless/spark-flex/overview" target="_blank"
 					><QrCode value="https://docs.revrobotics.com/brushless/spark-flex/overview" padding={12} /></a
@@ -107,63 +105,78 @@
 
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.talonfx}>
 			{#snippet header()}
-						<span  class="font-bold">CTRE Talon FX</span>
-					{/snippet}
+				<span class="font-bold">CTRE Talon FX</span>
+			{/snippet}
 			{#if openState.talonfx === true || loadedState.talonfx === true}
 				<a href="https://v6.docs.ctr-electronics.com/en/stable/docs/hardware-reference/talonfx/" target="_blank"
-					><QrCode value="https://v6.docs.ctr-electronics.com/en/stable/docs/hardware-reference/talonfx/" padding={12} /></a
+					><QrCode
+						value="https://v6.docs.ctr-electronics.com/en/stable/docs/hardware-reference/talonfx/"
+						padding={12}
+					/></a
 				>
 			{/if}
 		</AccordionItem>
 
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.talonsrx}>
 			{#snippet header()}
-						<span  class="font-bold">CTRE Talon SRX</span>
-					{/snippet}
+				<span class="font-bold">CTRE Talon SRX</span>
+			{/snippet}
 			{#if openState.talonsrx === true || loadedState.talonsrx === true}
 				<a href="https://ctre.download/files/user-manual/Talon%20SRX%20User's%20Guide.pdf" target="_blank"
-					><QrCode value="https://ctre.download/files/user-manual/Talon%20SRX%20User's%20Guide.pdf" padding={12} /></a
+					><QrCode
+						value="https://ctre.download/files/user-manual/Talon%20SRX%20User's%20Guide.pdf"
+						padding={12}
+					/></a
 				>
 			{/if}
 		</AccordionItem>
 
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.victorspx}>
 			{#snippet header()}
-						<span  class="font-bold">CTRE Victor SPX</span>
-					{/snippet}
+				<span class="font-bold">CTRE Victor SPX</span>
+			{/snippet}
 			{#if openState.victorspx === true || loadedState.victorspx === true}
 				<a href="https://ctre.download/files/user-manual/Victor%20SPX%20User's%20Guide.pdf" target="_blank"
-					><QrCode value="https://ctre.download/files/user-manual/Victor%20SPX%20User's%20Guide.pdf" padding={12} /></a
+					><QrCode
+						value="https://ctre.download/files/user-manual/Victor%20SPX%20User's%20Guide.pdf"
+						padding={12}
+					/></a
 				>
 			{/if}
 		</AccordionItem>
 
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.canivore}>
 			{#snippet header()}
-						<span  class="font-bold">CTRE CANivore</span>
-					{/snippet}
+				<span class="font-bold">CTRE CANivore</span>
+			{/snippet}
 			{#if openState.canivore === true || loadedState.canivore === true}
 				<a href="https://ctre.download/files/user-manual/CANivore%20User's%20Guide.pdf" target="_blank"
-					><QrCode value="https://ctre.download/files/user-manual/CANivore%20User's%20Guide.pdf" padding={12} /></a
+					><QrCode
+						value="https://ctre.download/files/user-manual/CANivore%20User's%20Guide.pdf"
+						padding={12}
+					/></a
 				>
 			{/if}
 		</AccordionItem>
 
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.pigeon}>
 			{#snippet header()}
-						<span  class="font-bold">CTRE Pigeon 2.0</span>
-					{/snippet}
+				<span class="font-bold">CTRE Pigeon 2.0</span>
+			{/snippet}
 			{#if openState.pigeon === true || loadedState.pigeon === true}
 				<a href="https://v6.docs.ctr-electronics.com/en/stable/docs/hardware-reference/pigeon2/" target="_blank"
-					><QrCode value="https://v6.docs.ctr-electronics.com/en/stable/docs/hardware-reference/pigeon2/" padding={12} /></a
+					><QrCode
+						value="https://v6.docs.ctr-electronics.com/en/stable/docs/hardware-reference/pigeon2/"
+						padding={12}
+					/></a
 				>
 			{/if}
 		</AccordionItem>
 
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.pdh}>
 			{#snippet header()}
-						<span  class="font-bold">REV Power Distribution Hub</span>
-					{/snippet}
+				<span class="font-bold">REV Power Distribution Hub</span>
+			{/snippet}
 			{#if openState.pdh === true || loadedState.pdh === true}
 				<a href="https://docs.revrobotics.com/ion-control-system/pdh/overview" target="_blank"
 					><QrCode value="https://docs.revrobotics.com/ion-control-system/pdh/overview" padding={12} /></a
@@ -173,11 +186,16 @@
 
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.cancoder}>
 			{#snippet header()}
-						<span  class="font-bold">CTRE CANcoder</span>
-					{/snippet}
+				<span class="font-bold">CTRE CANcoder</span>
+			{/snippet}
 			{#if openState.cancoder === true || loadedState.cancoder === true}
-				<a href="https://v6.docs.ctr-electronics.com/en/stable/docs/hardware-reference/cancoder/index.html" target="_blank"
-					><QrCode value="https://v6.docs.ctr-electronics.com/en/stable/docs/hardware-reference/cancoder/index.html" padding={5} /></a
+				<a
+					href="https://v6.docs.ctr-electronics.com/en/stable/docs/hardware-reference/cancoder/index.html"
+					target="_blank"
+					><QrCode
+						value="https://v6.docs.ctr-electronics.com/en/stable/docs/hardware-reference/cancoder/index.html"
+						padding={5}
+					/></a
 				>
 			{/if}
 		</AccordionItem>

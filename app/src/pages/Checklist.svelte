@@ -23,6 +23,7 @@
 
 	checklistPromise.then((c: EventChecklist) => {
 		checklist = c;
+        updateTotals(checklist);
 	});
 
 	let present = $state(0);
@@ -59,10 +60,6 @@
 		}
 	}
 
-    $effect(() => {
-        updateTotals(checklist);
-    });
-
 	async function updateChecklist(team: string, key: "present" | "inspected" | "radioProgrammed" | "connectionTested", value: boolean) {
 		const updated = [{ team: team, key, value }];
 
@@ -75,6 +72,7 @@
 		}
 
 		await trpc.checklist.update.query(updated);
+        updateTotals(checklist);
 	}
 
 	let subscription: ReturnType<typeof trpc.checklist.subscription.subscribe>;
@@ -167,7 +165,7 @@
 			</div>
 		</div>
 		<Table class="text-center pt-2">
-			<TableHead class="sticky top-0">
+			<TableHead class="sticky top-0 z-10">
 				<TableHeadCell class="p-1 md:p-2">Team</TableHeadCell>
 				<TableHeadCell class="hidden sm:table-cell p-1 md:p-2">Name</TableHeadCell>
 				<TableHeadCell class="p-1 md:p-2">Present</TableHeadCell>

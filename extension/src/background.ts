@@ -1,7 +1,7 @@
 import { HubConnectionState } from "@microsoft/signalr";
 import { getCurrentMatch, getEventCode, getScheduleBreakdown, getTeamNumbers } from "./fmsapi";
 import { SignalR } from "./signalR";
-import { closeWsClient, trpc, updateValues, wsClient } from "./trpc";
+import { trpc, updateValues } from "./trpc";
 
 let teamPollInterval: ReturnType<typeof setInterval> | null = null;
 let qualsScheduleAvailable = false;
@@ -24,7 +24,6 @@ export let fmsApi: boolean = false;
 async function stop() {
 	stopTeamPolling();
 	await signalRConnection.stop();
-	closeWsClient();
 }
 
 async function start() {
@@ -147,11 +146,8 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 	if (msg?.type === "getStatuses") {
 		const signalrStatus: HubConnectionState | string = (signalRConnection as any)?.connection?.state ?? "Unknown";
 
-		const wsStatus = wsClient?.connection?.state ?? "Unknown";
-
 		sendResponse({
 			signalrStatus,
-			wsStatus,
 		});
 		return false;
 	}

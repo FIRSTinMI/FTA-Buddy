@@ -44,7 +44,7 @@ async function bgPingFMS(): Promise<{ ok: boolean; fmsApi: boolean; FMS: string 
 	return chrome.runtime.sendMessage({ type: "pingFMS" });
 }
 
-async function bgGetStatuses(): Promise<{ signalrStatus: string; wsStatus: string }> {
+async function bgGetStatuses(): Promise<{ signalrStatus: string }> {
 	return chrome.runtime.sendMessage({ type: "getStatuses" });
 }
 
@@ -118,7 +118,7 @@ async function updateStatusIndicators() {
 		}
 
 		bgStatus = bgGetStatuses().then((status) => {
-			const { signalrStatus, wsStatus } = status;
+			const { signalrStatus } = status;
 
 			fmsSignalRStatusIndicator.classList.remove("red", "green", "yellow");
 			if (signalrStatus !== "Connected") {
@@ -135,9 +135,6 @@ async function updateStatusIndicators() {
 					ftaBuddyStatusIndicator.classList.add("red");
 					ftaBuddyStatusText.textContent =
 						"Not able to reach FTA Buddy on " + (state.cloud ? "https://ftabuddy.com/" : state.url);
-				} else if (wsStatus !== "open") {
-					ftaBuddyStatusIndicator.classList.add("yellow");
-					ftaBuddyStatusText.textContent = "WebSocket not open";
 				} else {
 					ftaBuddyStatusIndicator.classList.add("green");
 					ftaBuddyStatusText.textContent = "";

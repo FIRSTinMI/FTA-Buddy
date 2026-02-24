@@ -1,4 +1,4 @@
-import { createTRPCClient, httpBatchLink, httpSubscriptionLink, splitLink } from "@trpc/client";
+import { createTRPCClient, httpBatchLink, httpLink, httpSubscriptionLink, splitLink } from "@trpc/client";
 import SuperJSON from "superjson";
 import { mount } from "svelte";
 import { get } from "svelte/store";
@@ -16,60 +16,44 @@ export let server = get(settingsStore).forceCloud
 	: window.location.protocol + "//" + window.location.hostname;
 let localServer = server !== "https://ftabuddy.com";
 
-export let trpc = createTRPCClient<AppRouter>({
-	links: [
+/**
+ * Routes with large payloads that must bypass batching to avoid
+ * URL-length / encoding edge-cases. These are all mutations (POST body).
+ */
+const BIG_MUTATION_PATHS = new Set(["field.post", "match.putMatchLogs", "match.putCompressedMatchLogs"]);
+
+function buildLinks(token: string, eventToken: string) {
+	const trpcUrl = server + (localServer ? ":3001" : "") + "/trpc";
+	const headers = {
+		Authorization: `Bearer ${token}`,
+		"Event-Token": eventToken,
+	};
+
+	// SSE (EventSource) cannot send custom headers, so pass auth via query params
+	const sseUrl = `${trpcUrl}?token=${encodeURIComponent(token)}&eventToken=${encodeURIComponent(eventToken)}`;
+
+	return [
+		// 1st split: subscriptions → SSE (requires HTTP/2 in production for multi-tab)
 		splitLink({
-			condition(op) {
-				return op.type === "subscription";
-			},
-			true: httpSubscriptionLink({
-				url: server + (localServer ? ":3001" : "") + "/trpc",
-				transformer: SuperJSON,
-				headers: {
-					Authorization: `Bearer ${token}`,
-					"Event-Token": eventToken,
-				},
-			}),
-			false: httpBatchLink({
-				url: server + (localServer ? ":3001" : "") + "/trpc",
-				transformer: SuperJSON,
-				headers: {
-					Authorization: `Bearer ${token}`,
-					"Event-Token": eventToken,
-				},
+			condition: (op) => op.type === "subscription",
+			true: httpSubscriptionLink({ url: sseUrl, transformer: SuperJSON }),
+			false: splitLink({
+				// 2nd split: big mutations → non-batched httpLink (POST body, no batching quirks)
+				condition: (op) => BIG_MUTATION_PATHS.has(op.path),
+				true: httpLink({ url: trpcUrl, transformer: SuperJSON, headers }),
+				// Everything else → batched for performance
+				false: httpBatchLink({ url: trpcUrl, transformer: SuperJSON, headers }),
 			}),
 		}),
-	],
-});
+	];
+}
+
+export let trpc = createTRPCClient<AppRouter>({ links: buildLinks(token, eventToken) });
 
 userStore.subscribe((value) => {
 	token = value.token;
 	eventToken = value.eventToken;
-	trpc = createTRPCClient<AppRouter>({
-		links: [
-			splitLink({
-				condition(op) {
-					return op.type === "subscription";
-				},
-				true: httpSubscriptionLink({
-					url: server + (localServer ? ":3001" : "") + "/trpc",
-					transformer: SuperJSON,
-					headers: {
-						Authorization: `Bearer ${token}`,
-						"Event-Token": eventToken,
-					},
-				}),
-				false: httpBatchLink({
-					url: server + (localServer ? ":3001" : "") + "/trpc",
-					transformer: SuperJSON,
-					headers: {
-						Authorization: `Bearer ${token}`,
-						"Event-Token": eventToken,
-					},
-				}),
-			}),
-		],
-	});
+	trpc = createTRPCClient<AppRouter>({ links: buildLinks(token, eventToken) });
 });
 
 const target = document.getElementById("app");

@@ -239,11 +239,6 @@
 	.section-table td {
 		border: 0;
 	}
-	.highlight {
-		background-color: #fbc02d;
-		font-weight: bold;
-		color: #000000;
-	}
 	.section-table td {
 		vertical-align: top;
 	}

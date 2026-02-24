@@ -1,16 +1,18 @@
 import { TRPCError, initTRPC } from "@trpc/server";
 import { CreateExpressContextOptions } from "@trpc/server/adapters/express";
-import { CreateWSSContextFnOptions } from "@trpc/server/adapters/ws";
 import { and, eq, gt } from "drizzle-orm";
 import SuperJSON from "superjson";
 import { db } from "./db/db";
 import { events, users } from "./db/schema";
 
-export const createContext = (opts: CreateExpressContextOptions | CreateWSSContextFnOptions) => {
+export const createContext = (opts: CreateExpressContextOptions) => {
 	const h = opts.req.headers;
+	const q = opts.req.query as Record<string, string | undefined>;
 
-	const token = typeof h.authorization === "string" ? h.authorization.split(" ")[1] : undefined;
-	const eventToken = (h["event-token"] ?? h["Event-Token"])?.toString(); // keep both if you want
+	// Headers first, then fall back to query-params (needed for SSE / EventSource
+	// which cannot send custom headers).
+	const token = typeof h.authorization === "string" ? h.authorization.split(" ")[1] : q.token;
+	const eventToken = (h["event-token"] ?? h["Event-Token"])?.toString() ?? q.eventToken;
 	const extensionId = (h["extension-id"] ?? h["Extension-Id"])?.toString();
 	const userAgent = (h["user-agent"] ?? h["User-Agent"])?.toString();
 	const ip = (h["x-forwarded-for"] ?? h["X-Forwarded-For"])?.toString() ?? opts.req.socket.remoteAddress;

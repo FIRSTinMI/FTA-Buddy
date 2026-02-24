@@ -1,12 +1,10 @@
 <script lang="ts">
-	import { run } from "svelte/legacy";
-
-	import { A, Card } from "flowbite-svelte";
+	import { Card } from "flowbite-svelte";
 	import { formatTimeNoAgoHourMins } from "../../../shared/formatTime";
 	import type { Ticket } from "../../../shared/types";
-	import MessageCard from "./MessageCard.svelte";
-	import { userStore } from "../stores/user";
 	import { eventStore } from "../stores/event";
+	import { userStore } from "../stores/user";
+	import MessageCard from "./MessageCard.svelte";
 
 	interface Props {
 		ticket: Ticket;
@@ -21,11 +19,12 @@
 			() => {
 				time = formatTimeNoAgoHourMins(ticket.updated_at);
 			},
-			time.includes("s ") || time.includes("ow") ? 1000 : 60000
-		)
+			// svelte-ignore state_referenced_locally
+			time.includes("s ") || time.includes("ow") ? 1000 : 60000,
+		),
 	);
 
-	run(() => {
+	$effect(() => {
 		((updated) => {
 			time = formatTimeNoAgoHourMins(updated);
 			clearInterval(interval);
@@ -33,7 +32,7 @@
 				() => {
 					time = formatTimeNoAgoHourMins(updated);
 				},
-				time.includes("s ") || time.includes("ow") ? 1000 : 60000
+				time.includes("s ") || time.includes("ow") ? 1000 : 60000,
 			);
 		})(ticket.updated_at);
 	});
@@ -41,8 +40,10 @@
 	let messages = $derived(ticket.messages?.sort((a, b) => a.created_at.getTime() - b.created_at.getTime()));
 </script>
 
-<Card href="/tickets/view/{ticket.id}" padding="none" size="none" class="w-full text-black dark:text-white dark:bg-neutral-800">
-	<div class="flex flex-col sm:grid sm:grid-cols-[.1fr_auto_.1fr] max-sm:divide-y sm:divide-x divide-gray-500 pt-2 px-4 min-h-32 w-full">
+<Card href="/tickets/view/{ticket.id}" class="w-full text-black dark:text-white dark:bg-neutral-800">
+	<div
+		class="flex flex-col sm:grid sm:grid-cols-[.1fr_auto_.1fr] max-sm:divide-y sm:divide-x divide-gray-500 pt-2 px-4 min-h-32 w-full"
+	>
 		<div class="flex flex-row sm:flex-col place-content-between sm:place-content-center p-2 sm:w-40">
 			<p class="font-bold sm:text-center">
 				{#if $userStore.meshedEventToken && $eventStore.subEvents}
@@ -64,7 +65,9 @@
 			{#if messages && messages.length > 0}
 				<MessageCard message={messages[messages.length - 1]} simple />
 			{:else}
-				<p class="text-gray-500 dark:text-gray-400 pl-4 max-w-3xl">{ticket.text.slice(0, 300) + (ticket.text.length > 300 ? "..." : "")}</p>
+				<p class="text-gray-500 dark:text-gray-400 pl-4 max-w-3xl">
+					{ticket.text.slice(0, 300) + (ticket.text.length > 300 ? "..." : "")}
+				</p>
 			{/if}
 		</div>
 		<div class="flex flex-row sm:flex-col pb-4 place-content-between sm:place-content-center sm:w-40 p-2">

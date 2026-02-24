@@ -1,6 +1,19 @@
 <script lang="ts">
 	import Icon from "@iconify/svelte";
-	import { Button, CloseButton, Drawer, Indicator, Label, Modal, Select, Sidebar, SidebarGroup, SidebarItem, SidebarWrapper, Toast } from "flowbite-svelte";
+	import {
+		Button,
+		CloseButton,
+		Drawer,
+		Indicator,
+		Label,
+		Modal,
+		Select,
+		Sidebar,
+		SidebarGroup,
+		SidebarItem,
+		SidebarWrapper,
+		Toast,
+	} from "flowbite-svelte";
 	import { Router as SvRouter } from "sv-router";
 	import { onDestroy, onMount, setContext } from "svelte";
 	import { get } from "svelte/store";
@@ -96,10 +109,12 @@
 		}
 	}
 
-    redirectForAuth();
-    user.subscribe((value) => {
-        redirectForAuth();
-    });
+	onMount(() => {
+		redirectForAuth();
+		user.subscribe(() => {
+			redirectForAuth();
+		});
+	});
 
 	// Load settings
 
@@ -170,7 +185,7 @@
 		}, timeout);
 	}
 
-    setContext("toast", toast);
+	setContext("toast", toast);
 
 	// Auto update
 
@@ -197,20 +212,20 @@
 
 	// App install prompt
 
-    window.addEventListener("beforeinstallprompt", (event) => {
-        event.preventDefault();
-        installPrompt.set(event);
-    });
+	window.addEventListener("beforeinstallprompt", (event) => {
+		event.preventDefault();
+		installPrompt.set(event);
+	});
 
-    window.addEventListener("appinstalled", () => {
-        installPrompt.set(null);
-    });
+	window.addEventListener("appinstalled", () => {
+		installPrompt.set(null);
+	});
 
 	let event = get(eventStore);
 	eventStore.subscribe((value) => {
 		event = value;
 	});
-    
+
 	let drawerOpen = false;
 	function openMenu() {
 		drawerOpen = true;
@@ -223,17 +238,19 @@
 		multiEventSelection = event.code;
 	}
 
-	if ($user.token && route.pathname === "/") {
-		if ($user.role === "FTA" || $user.role === "FTAA") {
-			if ($user.meshedEventToken && event && event.subEvents && $user.eventToken === $user.meshedEventToken) {
-				navigate("/dashboard");
-			} else {
-				navigate("/monitor");
+	onMount(() => {
+		if ($user.token && route.pathname === "/") {
+			if ($user.role === "FTA" || $user.role === "FTAA") {
+				if ($user.meshedEventToken && event && event.subEvents && $user.eventToken === $user.meshedEventToken) {
+					navigate("/dashboard");
+				} else {
+					navigate("/monitor");
+				}
+			} else if ($user.role === "CSA" || $user.role === "RI") {
+				navigate("/tickets");
 			}
-		} else if ($user.role === "CSA" || $user.role === "RI") {
-			navigate("/tickets");
 		}
-	}
+	});
 
 	let statusSubscription: ReturnType<typeof trpc.app.status.subscribe> | undefined;
 	let knownIssue = false;
@@ -244,9 +261,17 @@
 		statusSubscription = await trpc.app.status.subscribe(undefined, {
 			onData: (data) => {
 				console.log(data);
-				if (data.current && (!event.code || data.effectedEvents.includes(event.code) || data.effectedEvents.length < 1)) {
+				if (
+					data.current &&
+					(!event.code || data.effectedEvents.includes(event.code) || data.effectedEvents.length < 1)
+				) {
 					if (!knownIssue) {
-						toast("Issue", data.message + " Started " + formatTime(data.startTime || new Date()), "red-500", -1);
+						toast(
+							"Issue",
+							data.message + " Started " + formatTime(data.startTime || new Date()),
+							"red-500",
+							-1,
+						);
 					}
 					knownIssue = true;
 				} else {
@@ -267,11 +292,11 @@
 {#if showToast}
 	<div class="fixed bottom-0 left-0 p-4 z-100">
 		<Toast
-            class={`w-lg p-4 text-black bg-white shadow-sm gap-3
+			class={`w-lg p-4 text-black bg-white shadow-sm gap-3
                     dark:text-gray-400 dark:bg-gray-800
                     ${toastColor === "red-500" ? "dark:bg-red-500" : ""}
                     `}
-            >
+		>
 			<h3 class="text-lg font-bold text-left">{toastTitle}</h3>
 			<p class="text-left">{toastText}</p>
 		</Toast>
@@ -293,19 +318,21 @@
 
 <Modal bind:open={changelogOpen} dismissable autoclose outsideclose>
 	{#snippet header()}
-        <h1 class="text-2xl font-bold">Changelog</h1>
-    {/snippet}
+		<h1 class="text-2xl font-bold">Changelog</h1>
+	{/snippet}
 	<div bind:innerHTML={changelog} contenteditable class="text-left text-black dark:text-white"></div>
 	{#snippet footer()}
 		<Button color="primary">Close</Button>
-    {/snippet}
+	{/snippet}
 </Modal>
 
 <SettingsModal bind:settingsOpen />
 
 <Drawer bind:open={drawerOpen} id="sidebar" class="bg-neutral-200">
 	<div class="flex items-center">
-		<h5 id="drawer-navigation-label-3" class="text-base font-semibold text-black uppercase dark:text-gray-400">Menu</h5>
+		<h5 id="drawer-navigation-label-3" class="text-base font-semibold text-black uppercase dark:text-gray-400">
+			Menu
+		</h5>
 		<CloseButton onclick={() => (drawerOpen = false)} class="mb-4 text-black dark:text-white" />
 	</div>
 	{#if $user.meshedEventToken && event.subEvents}
@@ -313,7 +340,10 @@
 			Event Selection
 			<Select
 				bind:value={multiEventSelection}
-				items={[{ value: "combined", name: "Combined" }, ...event.subEvents.map((e) => ({ value: e.code, name: e.label }))]}
+				items={[
+					{ value: "combined", name: "Combined" },
+					...event.subEvents.map((e) => ({ value: e.code, name: e.label })),
+				]}
 				class="w-full"
 				onchange={() => {
 					if (multiEventSelection === "combined") {
@@ -353,7 +383,7 @@
 								navigate("/");
 							}}
 						>
-                            {#snippet icon()}
+							{#snippet icon()}
 								<Icon icon="mdi:television" class="size-8" />
 							{/snippet}
 						</SidebarItem>
@@ -365,7 +395,7 @@
 								navigate("/");
 							}}
 						>
-                            {#snippet icon()}
+							{#snippet icon()}
 								<Icon icon="mdi:message-text" class="size-8" />
 							{/snippet}
 						</SidebarItem>
@@ -459,7 +489,7 @@
 					>
 						{#snippet icon()}
 							<Icon icon="fluent:alert-on-16-filled" class="size-8" />
-                        {/snippet}
+						{/snippet}
 						{#if $notificationsStore.length > 0}
 							<Indicator color="red" border size="xl" placement="top-left">
 								<span
@@ -490,7 +520,7 @@
 							navigate("/logs");
 						}}
 					>
-                        {#snippet icon()}
+						{#snippet icon()}
 							<Icon icon="uil:file-graph" class="size-8" />
 						{/snippet}
 					</SidebarItem>
@@ -503,7 +533,7 @@
 					>
 						{#snippet icon()}
 							<Icon icon="mdi:clipboard-outline" class="size-8" />
-                        {/snippet}
+						{/snippet}
 					</SidebarItem>
 				</SidebarGroup>
 			{/if}
@@ -648,7 +678,11 @@
 
 <!-- App.svelte -->
 <main class="bg-white dark:bg-neutral-800 w-screen h-dvh flex flex-col">
-	<div class="bg-primary-700 dark:bg-primary-500 flex w-full justify-between px-2 {$fullscreen ? 'hidden collapse' : ''}">
+	<div
+		class="bg-primary-700 dark:bg-primary-500 flex w-full justify-between px-2 {$fullscreen
+			? 'hidden collapse'
+			: ''}"
+	>
 		<button class="py-0 px-0 text-white" onclick={openMenu}>
 			<Icon icon="mdi:menu" class="w-8 h-10" />
 		</button>
@@ -663,45 +697,48 @@
 		<SvRouter />
 	</div>
 
-	<div class="flex justify-around py-2 bg-neutral-900 dark:bg-neutral-700 text-white {$fullscreen && 'bg-white dark:bg-neutral-800'}">
-			{#if $user.token && $user.eventToken && !$fullscreen}
-				{#if $user?.role === "FTA" || $user?.role === "FTAA"}
-					<button class="p-2" onclick={() => navigate("/monitor")}>
-						<Icon icon="mdi:television" class="size-8" />
-					</button>
-					<button class="p-2" onclick={() => navigate("/flashcards")}>
-						<Icon icon="mdi:message-alert" class="size-8" />
-					</button>
-					<button class="p-2" onclick={() => navigate("/references")}>
-						<Icon icon="mdi:file-document-outline" class="size-8" />
-					</button>
-					<button class="p-2 relative" onclick={() => navigate("/notifications")}>
-						<Icon icon="fluent:alert-on-16-filled" class="size-8" />
-						{#if $notificationsStore.length > 0}
-							<Indicator color="red" border size="xl" placement="top-left">
-								<span class="text-white text-xs">{$notificationsStore.length}</span>
-							</Indicator>
-						{/if}
-					</button>
-				{:else if $user?.role === "CSA" || $user?.role === "RI"}
-					<button class="p-2" onclick={() => navigate("/tickets")}>
-						<Icon icon="mdi:message-alert" class="size-8" />
-					</button>
-					<button class="p-2" onclick={() => navigate("/references/statuslights")}>
-						<Icon icon="heroicons:sun-16-solid" class="size-8" />
-					</button>
-					<button class="p-2" onclick={() => navigate("/references/softwaredocs")}>
-						<Icon icon="mdi:file-document-outline" class="size-8" />
-					</button>
-					<button class="p-2 relative" onclick={() => navigate("/notifications")}>
-						<Icon icon="fluent:alert-on-16-filled" class="size-8" />
-						{#if $notificationsStore.length > 0}
-							<Indicator color="red" border size="xl" placement="top-left">
-								<span class="text-white text-xs">{$notificationsStore.length}</span>
-							</Indicator>
-						{/if}
-					</button>
-				{/if}
+	<div
+		class="flex justify-around py-2 bg-neutral-900 dark:bg-neutral-700 text-white {$fullscreen &&
+			'bg-white dark:bg-neutral-800'}"
+	>
+		{#if $user.token && $user.eventToken && !$fullscreen}
+			{#if $user?.role === "FTA" || $user?.role === "FTAA"}
+				<button class="p-2" onclick={() => navigate("/monitor")}>
+					<Icon icon="mdi:television" class="size-8" />
+				</button>
+				<button class="p-2" onclick={() => navigate("/flashcards")}>
+					<Icon icon="mdi:message-alert" class="size-8" />
+				</button>
+				<button class="p-2" onclick={() => navigate("/references")}>
+					<Icon icon="mdi:file-document-outline" class="size-8" />
+				</button>
+				<button class="p-2 relative" onclick={() => navigate("/notifications")}>
+					<Icon icon="fluent:alert-on-16-filled" class="size-8" />
+					{#if $notificationsStore.length > 0}
+						<Indicator color="red" border size="xl" placement="top-left">
+							<span class="text-white text-xs">{$notificationsStore.length}</span>
+						</Indicator>
+					{/if}
+				</button>
+			{:else if $user?.role === "CSA" || $user?.role === "RI"}
+				<button class="p-2" onclick={() => navigate("/tickets")}>
+					<Icon icon="mdi:message-alert" class="size-8" />
+				</button>
+				<button class="p-2" onclick={() => navigate("/references/statuslights")}>
+					<Icon icon="heroicons:sun-16-solid" class="size-8" />
+				</button>
+				<button class="p-2" onclick={() => navigate("/references/softwaredocs")}>
+					<Icon icon="mdi:file-document-outline" class="size-8" />
+				</button>
+				<button class="p-2 relative" onclick={() => navigate("/notifications")}>
+					<Icon icon="fluent:alert-on-16-filled" class="size-8" />
+					{#if $notificationsStore.length > 0}
+						<Indicator color="red" border size="xl" placement="top-left">
+							<span class="text-white text-xs">{$notificationsStore.length}</span>
+						</Indicator>
+					{/if}
+				</button>
 			{/if}
-		</div>
+		{/if}
+	</div>
 </main>

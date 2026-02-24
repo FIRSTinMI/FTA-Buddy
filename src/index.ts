@@ -1,5 +1,4 @@
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { applyWSSHandler } from "@trpc/server/adapters/ws";
 import cors from "cors";
 import "dotenv/config";
 import { and, eq } from "drizzle-orm";
@@ -14,7 +13,6 @@ import { gfmHeadingId } from "marked-gfm-heading-id";
 import { markedHighlight } from "marked-highlight";
 import { join } from "path";
 import sanitizeHtml from "sanitize-html";
-import ws from "ws";
 import { NotificationEvents, ROBOT, ServerEvent, TournamentLevel } from "../shared/types";
 import { connect, db } from "./db/db";
 import { cycleLogs, logPublishing, matchLogs } from "./db/schema";
@@ -127,20 +125,6 @@ export type AppRouter = typeof appRouter;
 const app = express();
 
 const server = createServer(app);
-
-// Websocket Server (attached to main HTTP server at /ws path)
-const wss = new ws.Server({ server, path: "/ws" });
-
-const handler = applyWSSHandler({
-	wss,
-	router: appRouter,
-	createContext: createContext,
-});
-
-wss.on("connection", (ws) => {
-	ws.once("close", () => {});
-});
-console.log("✅ WebSocket Server listening on /ws");
 
 app.use(cors());
 app.use(express.json());
@@ -421,6 +405,5 @@ connect().then(async () => {
 
 process.on("SIGTERM", () => {
 	console.log("SIGTERM");
-	handler.broadcastReconnectNotification();
-	wss.close();
+	server.close();
 });

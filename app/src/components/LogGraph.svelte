@@ -56,6 +56,7 @@
 	// Custom legend state — tracks which metric series are visible
 	let visibleSeries: Record<string, boolean> = $state({});
 	for (const s of metricSeries) {
+		// svelte-ignore state_referenced_locally
 		visibleSeries[s.name] = !s.hidden;
 	}
 

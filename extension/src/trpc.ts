@@ -1,5 +1,5 @@
 import { TournamentLevel } from "@shared/types";
-import { createTRPCClient, createWSClient, httpBatchLink, splitLink, wsLink } from "@trpc/client";
+import { createTRPCClient, httpBatchLink, httpLink, httpSubscriptionLink, splitLink } from "@trpc/client";
 import { compressSync } from "fflate";
 import SuperJSON from "superjson";
 import type { AppRouter } from "../../src/index";
@@ -11,21 +11,6 @@ let eventCode: string = "";
 let url: string = "";
 let eventToken: string = "";
 
-let linkURL = cloud ? "wss://ftabuddy.com/ws" : url.replace("http", "ws") + "/ws";
-console.log(linkURL);
-
-export let wsClient = createWSClient({
-	url: linkURL,
-});
-
-export function closeWsClient() {
-	try {
-		wsClient?.close();
-	} catch {
-		// ignore – client may already be closed
-	}
-}
-
 export async function updateValues() {
 	return new Promise<void>((resolve) => {
 		chrome.storage.local.get(["url", "cloud", "event", "id", "eventToken"], (item) => {
@@ -35,16 +20,6 @@ export async function updateValues() {
 			url = String(item.url);
 			eventToken = String(item.eventToken);
 
-			linkURL = cloud ? "wss://ftabuddy.com/ws" : url.replace("http", "ws") + "/ws";
-			console.log(linkURL);
-
-			// Close old WebSocket before creating a new one
-			closeWsClient();
-
-			wsClient = createWSClient({
-				url: linkURL,
-			});
-
 			trpc = createTRPCConnection();
 
 			resolve();
@@ -52,28 +27,31 @@ export async function updateValues() {
 	});
 }
 
+/**
+ * Routes with large payloads that must bypass batching to avoid
+ * URL-length / encoding edge-cases. These are all mutations (POST body).
+ */
+const BIG_MUTATION_PATHS = new Set(["field.post", "match.putMatchLogs", "match.putCompressedMatchLogs"]);
+
 function createTRPCConnection() {
+	const httpUrl = cloud ? "https://ftabuddy.com/trpc" : url + "/trpc";
+	const httpHeaders = { "Event-Token": eventToken ?? "" };
+
+	// SSE (EventSource) cannot send custom headers, so pass auth via query params
+	const sseUrl = `${httpUrl}?eventToken=${encodeURIComponent(eventToken ?? "")}`;
+
 	return createTRPCClient<AppRouter>({
 		links: [
+			// 1st split: subscriptions → SSE
 			splitLink({
-				condition(op) {
-					return (
-						op.type === "subscription" ||
-						op.path === "field.post" ||
-						op.path === "match.putMatchLogs" ||
-						op.path === "match.putCompressedMatchLogs"
-					);
-				},
-				true: wsLink({
-					client: wsClient,
-					transformer: SuperJSON,
-				}),
-				false: httpBatchLink({
-					url: cloud ? "https://ftabuddy.com/trpc" : url + "/trpc",
-					transformer: SuperJSON,
-					headers: {
-						"Event-Token": eventToken ?? "",
-					},
+				condition: (op) => op.type === "subscription",
+				true: httpSubscriptionLink({ url: sseUrl, transformer: SuperJSON }),
+				false: splitLink({
+					// 2nd split: big mutations → non-batched httpLink (POST body, no batching quirks)
+					condition: (op) => BIG_MUTATION_PATHS.has(op.path),
+					true: httpLink({ url: httpUrl, transformer: SuperJSON, headers: httpHeaders }),
+					// Everything else → batched for performance
+					false: httpBatchLink({ url: httpUrl, transformer: SuperJSON, headers: httpHeaders }),
 				}),
 			}),
 		],

@@ -17,6 +17,7 @@ export let url: string;
 export let id: string;
 export let enabled: boolean;
 export let cloud: boolean;
+export let useDev: boolean;
 export let changed: number;
 
 export let fmsApi: boolean = false;
@@ -30,39 +31,44 @@ async function start() {
 	await stop();
 
 	await new Promise((resolve) => {
-		chrome.storage.local.get(["url", "cloud", "event", "changed", "enabled", "id", "eventToken"], (item) => {
-			if (!item.id) chrome.storage.local.set({ id: crypto.randomUUID() });
+		chrome.storage.local.get(
+			["url", "cloud", "useDev", "event", "changed", "enabled", "id", "eventToken"],
+			(item) => {
+				if (!item.id) chrome.storage.local.set({ id: crypto.randomUUID() });
 
-			if (
-				item.url == undefined ||
-				item.cloud == undefined ||
-				item.event == undefined ||
-				item.changed == undefined ||
-				item.enabled == undefined ||
-				item.eventToken == undefined
-			) {
-				item = {
-					url: item.url || "http://localhost:3001",
-					cloud: item.cloud ?? true,
-					event: item.event || "2024event",
-					changed: item.changed || new Date().getTime(),
-					enabled: item.enabled ?? false,
-					eventToken: item.eventToken || "",
-					id: item.id || crypto.randomUUID(),
-				};
-				chrome.storage.local.set(item);
-			}
+				if (
+					item.url == undefined ||
+					item.cloud == undefined ||
+					item.event == undefined ||
+					item.changed == undefined ||
+					item.enabled == undefined ||
+					item.eventToken == undefined
+				) {
+					item = {
+						url: item.url || "http://localhost:3001",
+						cloud: item.cloud ?? true,
+						useDev: item.useDev ?? false,
+						event: item.event || "2024event",
+						changed: item.changed || new Date().getTime(),
+						enabled: item.enabled ?? false,
+						eventToken: item.eventToken || "",
+						id: item.id || crypto.randomUUID(),
+					};
+					chrome.storage.local.set(item);
+				}
 
-			url = String(item.url);
-			cloud = Boolean(item.cloud);
-			eventCode = String(item.event);
-			changed = Number(item.changed);
-			enabled = Boolean(item.enabled);
-			eventToken = String(item.eventToken);
-			id = String(item.id) || crypto.randomUUID();
-			if (id !== item.id) chrome.storage.local.set({ id });
-			resolve(void 0);
-		});
+				url = String(item.url);
+				cloud = Boolean(item.cloud);
+				useDev = Boolean(item.useDev);
+				eventCode = String(item.event);
+				changed = Number(item.changed);
+				enabled = Boolean(item.enabled);
+				eventToken = String(item.eventToken);
+				id = String(item.id) || crypto.randomUUID();
+				if (id !== item.id) chrome.storage.local.set({ id });
+				resolve(void 0);
+			},
+		);
 	});
 
 	if (!enabled) {
@@ -123,6 +129,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 	if (msg?.type === "getState") {
 		sendResponse({
 			cloud,
+			useDev,
 			url,
 			eventCode,
 			eventToken,

@@ -3,13 +3,18 @@ import SuperJSON from "superjson";
 import type { AppRouter } from "../../src/index";
 
 let cloud: boolean = true;
+let useDev: boolean = false;
 let id: string = "";
 let eventCode: string = "";
 let url: string = "";
 let eventToken: string = "";
 let extensionId: string = "";
 
-let linkURL = cloud ? "wss://ftabuddy.com/ws" : url.replace("http", "ws") + "/ws";
+function cloudBase() {
+	return useDev ? "https://dev.ftabuddy.com" : "https://ftabuddy.com";
+}
+
+let linkURL = cloud ? cloudBase().replace("https", "wss") + "/ws" : url.replace("http", "ws") + "/ws";
 console.log(linkURL);
 
 // let wsClient = createWSClient({
@@ -18,6 +23,7 @@ console.log(linkURL);
 
 export async function updateValues(item: {
 	cloud: boolean;
+	useDev?: boolean;
 	id: string;
 	event: string;
 	url: string;
@@ -25,13 +31,14 @@ export async function updateValues(item: {
 	extensionId?: string;
 }) {
 	cloud = item.cloud;
+	useDev = Boolean(item.useDev);
 	id = item.id;
 	eventCode = item.event;
 	url = item.url;
 	eventToken = item.eventToken;
 	extensionId = item.extensionId || "";
 
-	linkURL = cloud ? "wss://ftabuddy.com/ws" : url.replace("http", "ws") + "/ws";
+	linkURL = cloud ? cloudBase().replace("https", "wss") + "/ws" : url.replace("http", "ws") + "/ws";
 	console.log(linkURL);
 
 	// wsClient = createWSClient({
@@ -45,7 +52,7 @@ function createTRPCConnection() {
 	return createTRPCClient<AppRouter>({
 		links: [
 			httpBatchLink({
-				url: cloud ? "https://ftabuddy.com/trpc" : url + "/trpc",
+				url: cloud ? cloudBase() + "/trpc" : url + "/trpc",
 				transformer: SuperJSON,
 				headers: {
 					"Event-Token": eventToken ?? "",

@@ -28,6 +28,7 @@ const ftaBuddyStatusText = document.getElementById("fta-buddy-status-text") as H
 // ---- Messaging helpers ----
 async function bgGetState(): Promise<{
 	cloud: boolean;
+	useDev: boolean;
 	url: string;
 	eventCode: string;
 	eventToken: string;
@@ -49,7 +50,7 @@ async function bgGetStatuses(): Promise<{ signalrStatus: string }> {
 }
 
 function load() {
-	chrome.storage.local.get(["url", "cloud", "event", "eventToken", "changed", "enabled"], (item) => {
+	chrome.storage.local.get(["url", "cloud", "useDev", "event", "eventToken", "changed", "enabled"], (item) => {
 		if (
 			item.url == undefined ||
 			item.cloud == undefined ||
@@ -61,6 +62,7 @@ function load() {
 			item = {
 				url: item.url || "http://localhost:3001",
 				cloud: item.cloud ?? true,
+				useDev: item.useDev ?? false,
 				event: item.event || "2024event",
 				changed: item.changed || new Date().getTime(),
 				enabled: item.enabled ?? false,
@@ -70,6 +72,8 @@ function load() {
 		}
 
 		cloudCheckbox.checked = Boolean(item.cloud);
+		const useDevCheckbox = document.getElementById("useDev") as HTMLInputElement;
+		if (useDevCheckbox) useDevCheckbox.checked = Boolean(item.useDev);
 		urlInput.value = String(item.url);
 		eventInput.value = String(item.event);
 		enabledInput.checked = Boolean(item.enabled);
@@ -85,6 +89,7 @@ function load() {
 
 		cloudCheckbox.addEventListener("input", handleUpdate);
 		enabledInput.addEventListener("input", handleUpdate);
+		if (useDevCheckbox) useDevCheckbox.addEventListener("input", handleUpdate);
 		saveButton.addEventListener("click", handleUpdate);
 		refreshButton.addEventListener("click", () => chrome.runtime.reload());
 
@@ -129,12 +134,13 @@ async function updateStatusIndicators() {
 				fmsSignalRStatusText.textContent = "";
 			}
 
-			ftaBuddy = pingFTABuddy(state.cloud, state.url).then((ftaBuddy) => {
+			ftaBuddy = pingFTABuddy(state.cloud, state.useDev, state.url).then((ftaBuddy) => {
 				ftaBuddyStatusIndicator.classList.remove("red", "green", "yellow");
+				const cloudHost = state.useDev ? "https://dev.ftabuddy.com/" : "https://ftabuddy.com/";
 				if (!ftaBuddy) {
 					ftaBuddyStatusIndicator.classList.add("red");
 					ftaBuddyStatusText.textContent =
-						"Not able to reach FTA Buddy on " + (state.cloud ? "https://ftabuddy.com/" : state.url);
+						"Not able to reach FTA Buddy on " + (state.cloud ? cloudHost : state.url);
 				} else {
 					ftaBuddyStatusIndicator.classList.add("green");
 					ftaBuddyStatusText.textContent = "";
@@ -158,8 +164,12 @@ async function updateStatusIndicators() {
 	setTimeout(updateStatusIndicators, 3000);
 }
 
-async function pingFTABuddy(cloud: boolean, url: string) {
-	const base = cloud ? "https://ftabuddy.com" : (url || "").replace(/\/+$/, "");
+async function pingFTABuddy(cloud: boolean, useDev: boolean, url: string) {
+	const base = cloud
+		? useDev
+			? "https://dev.ftabuddy.com"
+			: "https://ftabuddy.com"
+		: (url || "").replace(/\/+$/, "");
 	const endpoints = [`${base}/trpc`, `${base}/`];
 
 	for (const endpoint of endpoints) {
@@ -188,9 +198,12 @@ function handleUpdate() {
 	if (eventInput.value == "") eventInput.value = "2024event";
 	if (urlInput.value == "") urlInput.value = "http://localhost:3001";
 
+	const useDevCheckbox = document.getElementById("useDev") as HTMLInputElement;
+
 	chrome.storage.local.set({
 		url: urlInput.value,
 		cloud: cloudCheckbox.checked,
+		useDev: useDevCheckbox?.checked ?? false,
 		event: eventInput.value,
 		changed: new Date().getTime(),
 		enabled: enabledInput.checked,
@@ -201,7 +214,10 @@ function handleUpdate() {
 	// Storage change triggers background restart automatically
 }
 
-function updatePopup(setting: "url" | "cloud" | "enabled" | "event" | "eventToken", value: boolean | string) {
+function updatePopup(
+	setting: "url" | "cloud" | "useDev" | "enabled" | "event" | "eventToken",
+	value: boolean | string,
+) {
 	const elm = document?.getElementById(setting);
 	if (!elm) return;
 	if (typeof value === "boolean") {
@@ -215,7 +231,7 @@ chrome.storage.local.onChanged.addListener((changes) => {
 	for (const key of Object.keys(changes)) {
 		if (key === "changed") continue;
 		updatePopup(
-			key as "url" | "cloud" | "enabled" | "event" | "eventToken",
+			key as "url" | "cloud" | "useDev" | "enabled" | "event" | "eventToken",
 			changes[key].newValue as string | boolean,
 		);
 	}

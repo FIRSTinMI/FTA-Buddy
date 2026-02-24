@@ -11,10 +11,14 @@ import { userStore } from "./stores/user";
 let token = get(userStore).token;
 let eventToken = get(userStore).eventToken;
 
+/** Resolve the cloud host: dev.ftabuddy.com when on the dev domain, otherwise prod. */
+const CLOUD_HOST =
+	window.location.hostname === "dev.ftabuddy.com" ? "https://dev.ftabuddy.com" : "https://ftabuddy.com";
+
 export let server = get(settingsStore).forceCloud
-	? "https://ftabuddy.com"
+	? CLOUD_HOST
 	: window.location.protocol + "//" + window.location.hostname;
-let localServer = server !== "https://ftabuddy.com";
+let localServer = !server.endsWith("ftabuddy.com");
 
 /**
  * Routes with large payloads that must bypass batching to avoid

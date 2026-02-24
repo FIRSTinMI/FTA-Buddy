@@ -6,15 +6,22 @@ import type { AppRouter } from "../../src/index";
 import { getAllLogsForMatch, getCurrentMatch, getMatch } from "./fmsapi";
 
 let cloud: boolean = true;
+let useDev: boolean = false;
 let id: string = "";
 let eventCode: string = "";
 let url: string = "";
 let eventToken: string = "";
 
+/** Returns the correct cloud origin based on the useDev flag. */
+function cloudBase() {
+	return useDev ? "https://dev.ftabuddy.com" : "https://ftabuddy.com";
+}
+
 export async function updateValues() {
 	return new Promise<void>((resolve) => {
-		chrome.storage.local.get(["url", "cloud", "event", "id", "eventToken"], (item) => {
+		chrome.storage.local.get(["url", "cloud", "useDev", "event", "id", "eventToken"], (item) => {
 			cloud = Boolean(item.cloud);
+			useDev = Boolean(item.useDev);
 			id = String(item.id);
 			eventCode = String(item.event);
 			url = String(item.url);
@@ -34,7 +41,7 @@ export async function updateValues() {
 const BIG_MUTATION_PATHS = new Set(["field.post", "match.putMatchLogs", "match.putCompressedMatchLogs"]);
 
 function createTRPCConnection() {
-	const httpUrl = cloud ? "https://ftabuddy.com/trpc" : url + "/trpc";
+	const httpUrl = cloud ? cloudBase() + "/trpc" : url + "/trpc";
 	const httpHeaders = { "Event-Token": eventToken ?? "" };
 
 	// SSE (EventSource) cannot send custom headers, so pass auth via query params

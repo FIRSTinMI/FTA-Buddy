@@ -152,6 +152,7 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 				slackTeam: event.slackTeam,
 				publicTicketSubmit: event.publicTicketSubmit,
 				nexusApiKey: event.nexusApiKey ?? undefined,
+				fmsEventPassword: event.fmsEventPassword ?? undefined,
 				startDate: event.startDate ?? undefined,
 				endDate: event.endDate ?? undefined,
 				nexus: {

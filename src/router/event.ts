@@ -593,4 +593,32 @@ export const eventRouter = router({
 		const event = await getEvent(ctx.event.token);
 		return event.nexus;
 	}),
+
+	setFmsEventPassword: eventProcedure
+		.input(
+			z.object({
+				fmsEventPassword: z.string(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const event = await getEvent(ctx.event.token);
+			await db
+				.update(events)
+				.set({ fmsEventPassword: input.fmsEventPassword || null })
+				.where(eq(events.code, event.code));
+			event.fmsEventPassword = input.fmsEventPassword || undefined;
+			return { success: true };
+		}),
+
+	/** Returns whether a FMS event password is configured (without revealing the value). */
+	getFmsPasswordIsSet: eventProcedure.query(async ({ ctx }) => {
+		const event = await getEvent(ctx.event.token);
+		return { isSet: !!event.fmsEventPassword };
+	}),
+
+	/** Returns the FMS event password for use by the extension to authenticate against FMS APIs. */
+	getFmsEventPassword: eventProcedure.query(async ({ ctx }) => {
+		const event = await getEvent(ctx.event.token);
+		return { fmsEventPassword: event.fmsEventPassword ?? null };
+	}),
 });

@@ -1,5 +1,6 @@
 import { HubConnection, HubConnectionBuilder, HubConnectionState } from "@microsoft/signalr";
 import { DEFAULT_MONITOR } from "../../shared/constants";
+import type { FTAMatchStatusInfoChanged, FTANoteChangedEvent } from "../../shared/fmsApiTypes";
 import {
 	DSState,
 	EnableState,
@@ -21,9 +22,14 @@ export class SignalR {
 
 	public gameSpecificConnection: HubConnection | null = null;
 
+	/** Connection to the FMS FTA App Hub (`ftaAppHub`). */
+	public ftaAppHubConnection: HubConnection | null = null;
+
 	public frame: PartialMonitorFrame = DEFAULT_MONITOR;
 
 	private ip: string;
+
+	private fmsEventPassword: string | null = null;
 
 	private callback: (frame: PartialMonitorFrame) => void;
 
@@ -51,6 +57,11 @@ export class SignalR {
 		this.frame.version = version;
 		this.cycleTimeCallback = cycleTimeCallback;
 		this.sendScheduleCallback = sendScheduleCallback;
+	}
+
+	/** Set the FMS event password used to authenticate against ftaAppHub and FTA App API endpoints. */
+	public setFmsEventPassword(password: string | null) {
+		this.fmsEventPassword = password;
 	}
 
 	public async start() {
@@ -137,6 +148,33 @@ export class SignalR {
 			.withAutomaticReconnect({
 				nextRetryDelayInMilliseconds(retryContext) {
 					console.log("Retrying SignalR connection...");
+					return Math.min(2_000 * retryContext.previousRetryCount, 120_000);
+				},
+			})
+			.build();
+
+		// TODO: Authenticate with FMS using the event password (Basic auth or query param)
+		this.ftaAppHubConnection = new HubConnectionBuilder()
+			.withUrl(`http://${this.ip}/ftaAppHub`)
+			.withServerTimeout(30000)
+			.withKeepAliveInterval(15000)
+			.configureLogging({
+				log: (logLevel, message) => {
+					if (
+						message.startsWith("Failed to complete negotiation") ||
+						message.startsWith("Failed to start the connection") ||
+						message.startsWith("Error from HTTP request")
+					)
+						return console.log(`[ftaAppHub ${logLevel}] ${message}`);
+
+					[console.debug, console.debug, console.log, console.warn, console.error][logLevel](
+						`[ftaAppHub ${logLevel}] ${message}`,
+					);
+				},
+			})
+			.withAutomaticReconnect({
+				nextRetryDelayInMilliseconds(retryContext) {
+					console.log("Retrying ftaAppHub connection...");
 					return Math.min(2_000 * retryContext.previousRetryCount, 120_000);
 				},
 			})
@@ -440,11 +478,37 @@ export class SignalR {
 			console.log("fieldtestelements_changed: ", data),
 		);
 
+		// ── ftaAppHub stubs ─────────────────────────────────────────────────────
+
+		// Fired when a note is created, updated, resolved, reopened, or deleted in FMS.
+		this.ftaAppHubConnection.on("NoteChanged", (data: FTANoteChangedEvent) => {
+			// TODO: Sync FMS note changes to FTA Buddy
+			console.log("ftaAppHub NoteChanged: ", data);
+		});
+
+		// Fired when the active match state changes (match start/end, level, etc.).
+		this.ftaAppHubConnection.on("MatchStatusInfoChanged", (data: FTAMatchStatusInfoChanged) => {
+			// TODO: Use match state updates from ftaAppHub if needed
+			console.log("ftaAppHub MatchStatusInfoChanged: ", data);
+		});
+
+		this.ftaAppHubConnection.onreconnecting(() => {
+			console.log("ftaAppHub connection lost, reconnecting");
+		});
+
+		this.ftaAppHubConnection.onclose(() => {
+			console.log("ftaAppHub connection closed");
+		});
+
 		// Start connection to SignalR Hub
 		return Promise.all([
 			this.infrastructureConnection.start(),
 			this.connection.start(),
 			this.gameSpecificConnection.start(),
+			this.ftaAppHubConnection.start().catch(() => {
+				// ftaAppHub is optional; swallow connection errors so the rest of SignalR still starts
+				console.warn("ftaAppHub connection failed to start (no FMS event password configured?)");
+			}),
 		]).catch(console.log);
 	}
 
@@ -506,6 +570,10 @@ export class SignalR {
 		if (this.gameSpecificConnection) {
 			stops.push(this.gameSpecificConnection.stop());
 			this.gameSpecificConnection = null;
+		}
+		if (this.ftaAppHubConnection) {
+			stops.push(this.ftaAppHubConnection.stop());
+			this.ftaAppHubConnection = null;
 		}
 		await Promise.allSettled(stops);
 		signalRConnectionStatus = HubConnectionState.Disconnected;

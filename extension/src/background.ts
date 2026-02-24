@@ -1,5 +1,6 @@
 import { HubConnectionState } from "@microsoft/signalr";
 import { getCurrentMatch, getEventCode, getScheduleBreakdown, getTeamNumbers } from "./fmsapi";
+import { setFmsEventPassword } from "./ftaAppApi";
 import { SignalR } from "./signalR";
 import { trpc, updateValues } from "./trpc";
 
@@ -7,7 +8,7 @@ let teamPollInterval: ReturnType<typeof setInterval> | null = null;
 let qualsScheduleAvailable = false;
 
 const manifestData = chrome.runtime.getManifest();
-export const FMS = "10.0.100.5";
+export const FMS = "localhost";
 
 export let signalRConnection = new SignalR(FMS, manifestData.version, sendFrame, sendCycletime, sendScheduleDetails);
 
@@ -89,6 +90,15 @@ async function start() {
 	updateValues();
 	sendScheduleDetails();
 	startTeamPolling();
+
+	// Fetch FMS event password from the server and propagate to SignalR + FTA App API
+	try {
+		const { fmsEventPassword } = await trpc.event.getFmsEventPassword.query();
+		signalRConnection.setFmsEventPassword(fmsEventPassword);
+		setFmsEventPassword(fmsEventPassword);
+	} catch (err) {
+		console.warn("Could not fetch FMS event password:", err);
+	}
 }
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {

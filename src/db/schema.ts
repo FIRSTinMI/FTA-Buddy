@@ -48,6 +48,7 @@ export const events = pgTable("events", {
 	nexusApiKey: varchar("nexusApiKey"),
 	startDate: varchar("startDate"),
 	endDate: varchar("endDate"),
+	fmsEventPassword: varchar("fmsEventPassword"),
 });
 
 export type Event = typeof events.$inferInsert;

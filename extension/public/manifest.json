@@ -8,7 +8,8 @@
         "scripting"
     ],
     "host_permissions": [
-        "http://10.0.100.5/*"
+        "http://10.0.100.5/*",
+        "http://localhost/*"
     ],
     "content_scripts": [
         {

@@ -14,9 +14,17 @@ let eventToken: string = '';
 let linkURL = (cloud ? 'wss://ftabuddy.com/ws' : (url.replace('http', 'ws') + '/ws'));
 console.log(linkURL);
 
-let wsClient = createWSClient({
+export let wsClient = createWSClient({
     url: linkURL,
 });
+
+export function closeWsClient() {
+    try {
+        wsClient?.close();
+    } catch {
+        // ignore – client may already be closed
+    }
+}
 
 export async function updateValues() {
     return new Promise<void>((resolve) => {
@@ -29,6 +37,9 @@ export async function updateValues() {
 
             linkURL = (cloud ? 'wss://ftabuddy.com/ws' : (url.replace('http', 'ws') + '/ws'));
             console.log(linkURL);
+
+            // Close old WebSocket before creating a new one
+            closeWsClient();
 
             wsClient = createWSClient({
                 url: linkURL,

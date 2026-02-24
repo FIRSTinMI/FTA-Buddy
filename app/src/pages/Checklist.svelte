@@ -1,10 +1,8 @@
 <script lang="ts">
-	import { run } from 'svelte/legacy';
-
-	import { Checkbox, Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from "flowbite-svelte";
+	import { Checkbox, Indicator, Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from "flowbite-svelte";
 	import Spinner from "../components/Spinner.svelte";
 	import { trpc } from "../main";
-	import type { EventChecklist } from "../../../shared/types";
+	import type { EventChecklist, NexusStatus } from "../../../shared/types";
 	import { onDestroy, onMount } from "svelte";
 	import { userStore } from "../stores/user";
 	import { eventStore } from "../stores/event";
@@ -34,6 +32,16 @@
 	let connectionTested = $state(0);
 	let total = $state(0);
 
+	// Nexus status
+	let nexusStatus: NexusStatus | null = null;
+	let nexusStatusInterval: ReturnType<typeof setInterval> | null = null;
+
+	async function refreshNexusStatus() {
+		try {
+			nexusStatus = await trpc.event.getNexusStatus.query();
+		} catch { /* ignore */ }
+	}
+
 	function updateTotals(c: EventChecklist) {
 		present = 0;
 		weighed = 0;
@@ -51,9 +59,9 @@
 		}
 	}
 
-	run(() => {
-		updateTotals(checklist);
-	});
+    $effect(() => {
+        updateTotals(checklist);
+    });
 
 	async function updateChecklist(team: string, key: "present" | "inspected" | "radioProgrammed" | "connectionTested", value: boolean) {
 		const updated = [{ team: team, key, value }];
@@ -85,10 +93,14 @@
 				},
 			}
 		);
+
+		refreshNexusStatus();
+		nexusStatusInterval = setInterval(refreshNexusStatus, 30_000);
 	});
 
 	onDestroy(() => {
 		subscription?.unsubscribe();
+		if (nexusStatusInterval) clearInterval(nexusStatusInterval);
 	});
 </script>
 
@@ -99,6 +111,31 @@
 		<div class="flex w-full justify-center">
 			<div class="flex flex-col gap-2">
 				<h1 class="font-bold text-3xl">Team Checklist</h1>
+				{#if nexusStatus && nexusStatus.state !== 'not_configured'}
+					<div class="flex flex-row gap-2 items-center text-sm">
+						<Indicator
+							color={nexusStatus.state === 'complete' || nexusStatus.state === 'polling_slow' ? 'green'
+								: nexusStatus.state === 'polling' ? 'blue'
+								: nexusStatus.state === 'unauthorized' ? 'red'
+								: nexusStatus.state === 'error' ? 'yellow'
+								: 'gray'}
+							class="shrink-0"
+						/>
+						<span class="text-gray-400">
+							{#if nexusStatus.state === 'polling' || nexusStatus.state === 'polling_slow'}
+								Nexus syncing
+							{:else if nexusStatus.state === 'complete'}
+								Nexus synced ✓
+							{:else if nexusStatus.state === 'unauthorized'}
+								Nexus: unauthorized
+							{:else if nexusStatus.state === 'error'}
+								Nexus: error
+							{:else if nexusStatus.state === 'event_over'}
+								Nexus: event ended
+							{/if}
+						</span>
+					</div>
+				{/if}
 				<div class="flex flex-row gap-2 place-content-center">
 					<p class="font-bold">Present:</p>
 					<p class="">

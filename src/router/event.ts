@@ -8,7 +8,38 @@ import { generateToken } from "./user";
 import { EventChecklist, Profile, TeamList, TournamentLevel } from '../../shared/types';
 import { createHash } from 'crypto';
 import { getEvent } from "../util/get-event";
+import * as nexusPoller from "../util/nexusInspectionPoller";
 //import { sendNotification } from "../../app/src/util/push-notifications";
+
+const fullEventList: {
+    fetched: Date | undefined;
+    events: {
+        first_event_code: string;
+        key: string;
+    }[];
+} = {
+    fetched: undefined,
+    events: []
+};
+
+async function updateFullEventList() {
+    if (!fullEventList.fetched || fullEventList.fetched.getTime() < Date.now() - 1000 * 60 * 60 * 24) {
+        const year = new Date().getFullYear();
+        const updatedEventList = await (await fetch(`https://www.thebluealliance.com/api/v3/events/${year}`, {
+            headers: {
+                'X-TBA-Auth-Key': process.env.TBA_API_KEY ?? ''
+            }
+        })).json();
+
+        fullEventList.fetched = new Date();
+        fullEventList.events = updatedEventList.map((event: any) => ({
+            key: event.key,
+            first_event_code: event.first_event_code
+        }));
+    }
+}
+
+updateFullEventList();
 
 export const eventRouter = router({
     checkCode: publicProcedure.input(z.object({
@@ -26,7 +57,20 @@ export const eventRouter = router({
             }
         })).json();
 
-        if ("Error" in eventData) return { error: true, message: eventData.Error };
+        // Event code not found
+        if ("Error" in eventData) {
+            // Update full event list if needed
+            await updateFullEventList();
+            // Check to see if the code matches a first event code
+            const inputCodeWithoutYear = input.code.replace(/\d{4}/, '');
+            const event = fullEventList.events.find(e => e.first_event_code === inputCodeWithoutYear);
+
+            if (event) {
+                return { error: true, message: 'Use TBA event code ' + event.key, key: event.key };
+            }
+
+            return { error: true, message: eventData.Error };
+        }
 
         return { error: false, message: 'Event found', eventData };
     }),
@@ -187,7 +231,9 @@ export const eventRouter = router({
             token,
             teams: uniqueTeams,
             checklist,
-            users: [user?.id]
+            users: [user?.id],
+            startDate: eventData.start_date ?? null,
+            endDate: eventData.end_date ?? null,
         }).returning();
 
         return event[0];
@@ -199,6 +245,70 @@ export const eventRouter = router({
             name: events.name,
             created_at: events.created_at
         }).from(events).where(eq(events.archived, false)).orderBy(desc(events.created_at));
+    }),
+
+    syncTeams: eventProcedure.input(z.object({
+        teamNumbers: z.array(z.number()),
+    })).mutation(async ({ ctx, input }) => {
+        const event = await getEvent(ctx.event.token);
+        const existingTeams = event.teams as TeamList;
+        const existingNumbers = new Set(existingTeams.map(t => t.number.toString()));
+        const incomingNumbers = new Set(input.teamNumbers.map(n => n.toString()));
+        const checklist = event.checklist as EventChecklist;
+
+        // Find teams to add
+        const teamsToAdd: number[] = input.teamNumbers.filter(n => !existingNumbers.has(n.toString()));
+
+        // Find teams to remove (in existing but not in incoming FMS list)
+        const teamsToRemove = new Set(
+            existingTeams
+                .map(t => t.number.toString())
+                .filter(n => !incomingNumbers.has(n))
+        );
+
+        if (teamsToAdd.length === 0 && teamsToRemove.size === 0) return { added: 0, removed: 0 };
+
+        // Look up new team names from TBA
+        const newTeams: TeamList = await Promise.all(
+            teamsToAdd.map(async (num) => {
+                let name = `Team ${num}`;
+                try {
+                    const teamData = await fetch(`https://www.thebluealliance.com/api/v3/team/frc${num}/simple`, {
+                        headers: { 'X-TBA-Auth-Key': process.env.TBA_API_KEY ?? '' }
+                    }).then(res => res.json());
+                    if (teamData?.nickname) name = teamData.nickname;
+                } catch { /* fall back to generic name */ }
+
+                if (!checklist[num]) {
+                    checklist[num] = {
+                        present: false,
+                        weighed: false,
+                        inspected: false,
+                        radioProgrammed: false,
+                        connectionTested: false,
+                    };
+                }
+                return { number: num.toString(), name, inspected: false };
+            })
+        );
+
+        // Remove departed teams, add new ones
+        const updatedTeams = [
+            ...existingTeams.filter(t => !teamsToRemove.has(t.number.toString())),
+            ...newTeams,
+        ];
+
+        // Clean up checklist for removed teams
+        for (const num of teamsToRemove) {
+            delete checklist[num];
+        }
+
+        event.teams = updatedTeams;
+        event.checklist = checklist;
+
+        await db.update(events).set({ teams: updatedTeams, checklist }).where(eq(events.code, event.code)).execute();
+
+        return { added: newTeams.length, removed: teamsToRemove.size };
     }),
 
     getMusicOrder: eventProcedure.input(z.object({
@@ -331,5 +441,22 @@ export const eventRouter = router({
         }
 
         return event.token;
+    }),
+
+    setNexusApiKey: eventProcedure.input(z.object({
+        nexusApiKey: z.string()
+    })).mutation(async ({ ctx, input }) => {
+        const event = await getEvent(ctx.event.token);
+        await db.update(events)
+            .set({ nexusApiKey: input.nexusApiKey || null })
+            .where(eq(events.code, event.code));
+        event.nexusApiKey = input.nexusApiKey || undefined;
+        nexusPoller.restartForEvent(event);
+        return { success: true };
+    }),
+
+    getNexusStatus: eventProcedure.query(async ({ ctx }) => {
+        const event = await getEvent(ctx.event.token);
+        return event.nexus;
     }),
 });

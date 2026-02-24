@@ -1,7 +1,9 @@
-import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
+import { HubConnection, HubConnectionBuilder, HubConnectionState } from '@microsoft/signalr';
 import { DEFAULT_MONITOR } from '../../shared/constants';
 import { DSState, EnableState, FMSEnums, FieldState, PartialMonitorFrame, ROBOT, type SignalRMonitorFrame } from '../../shared/types';
 import { uploadMatchLogs } from './trpc';
+
+export let signalRConnectionStatus: HubConnectionState = HubConnectionState.Disconnected;
 
 export class SignalR {
     // SignalR Hub Connection
@@ -20,6 +22,8 @@ export class SignalR {
     private cycleTimeCallback: (type: 'lastCycleTime' | 'prestart' | 'start' | 'end' | 'refsDone' | 'scoresPosted', time: string) => void;
 
     private sendScheduleCallback: () => void;
+
+    private statusInterval: ReturnType<typeof setInterval> | null = null;
 
     constructor(ip: string, version: string, callback: (frame: PartialMonitorFrame) => void, cycleTimeCallback: (type: 'lastCycleTime' | 'prestart' | 'start' | 'end' | 'refsDone' | 'scoresPosted', time: string) => void, sendScheduleCallback: () => void) {
         this.ip = ip;
@@ -52,6 +56,7 @@ export class SignalR {
             // .withHubProtocol(new MessagePackHubProtocol())
             .withAutomaticReconnect({
                 nextRetryDelayInMilliseconds(retryContext) {
+                    signalRConnectionStatus = HubConnectionState.Reconnecting;
                     console.warn('Retrying SignalR connection...');
                     return Math.min(
                         2_000 * retryContext.previousRetryCount,
@@ -116,6 +121,11 @@ export class SignalR {
                 },
             })
             .build();
+
+        if (this.statusInterval) clearInterval(this.statusInterval);
+        this.statusInterval = setInterval(() => {
+            signalRConnectionStatus = this.connection?.state || HubConnectionState.Disconnected;
+        }, 5000);
 
         // Register listener for the "MatchStatusInfoChanged" event (match starts, ends, changes modes, etc)
         this.connection.on(
@@ -454,6 +464,29 @@ export class SignalR {
         }
 
         return DSState.RED;
+    }
+
+    public async stop() {
+        if (this.statusInterval) {
+            clearInterval(this.statusInterval);
+            this.statusInterval = null;
+        }
+        const stops: Promise<void>[] = [];
+        if (this.connection) {
+            stops.push(this.connection.stop());
+            this.connection = null;
+        }
+        if (this.infrastructureConnection) {
+            stops.push(this.infrastructureConnection.stop());
+            this.infrastructureConnection = null;
+        }
+        if (this.gameSpecificConnection) {
+            stops.push(this.gameSpecificConnection.stop());
+            this.gameSpecificConnection = null;
+        }
+        await Promise.allSettled(stops);
+        signalRConnectionStatus = HubConnectionState.Disconnected;
+        console.log('SignalR stopped');
     }
 
     private enableState(data: SignalRMonitorFrame): EnableState {

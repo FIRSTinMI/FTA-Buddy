@@ -41,6 +41,9 @@ import { ftcRouter } from './router/ftc';
 import { notesRouter } from './router/notes';
 import { decompressStationLog, logAnalysisLoop } from './util/log-analysis';
 import { linkChannel, slackOAuth } from './util/slack';
+import * as nexusPoller from './util/nexusInspectionPoller';
+import { getEvent } from './util/get-event';
+import schema from './db/schema';
 
 const port = parseInt(process.env.PORT || '3001');
 
@@ -407,11 +410,13 @@ if (process.env.NODE_ENV === 'dev') {
     app.use('/FieldMonitor', express.static('app/src/public/FieldMonitor'));
 } else {
     app.use('/', express.static('app/dist'));
-    app.use('/*page', express.static('app/dist/index.html'));
     app.use('/FieldMonitor', express.static('app/dist/FieldMonitor'));
+    app.get('*', (req, res) => {
+        res.sendFile(join(__dirname, '../app/dist/index.html'));
+    });
 }
 
-connect().then(() => {
+connect().then(async () => {
     if (process.env.NODE_ENV !== 'dev') {
         // Log analysis loop
         new Promise(async () => {
@@ -420,6 +425,21 @@ connect().then(() => {
                 await new Promise((resolve) => setTimeout(resolve, 3e3));
             }
         });
+    }
+
+    // Start Nexus pollers for any events that already have a key configured
+    try {
+        const eventsWithNexus = await db.select({
+            token: schema.events.token,
+        }).from(schema.events).where(
+            and(eq(schema.events.archived, false))
+        );
+        for (const row of eventsWithNexus) {
+            // Load event into memory (which will start the poller if nexusApiKey is set)
+            getEvent(row.token).catch(() => { /* ignore load errors on startup */ });
+        }
+    } catch (err) {
+        console.error('[Nexus] Failed to load events on startup:', (err as any)?.message);
     }
 
     server.listen(port);

@@ -342,6 +342,17 @@ export interface TeamChecklist { present: boolean, weighed: boolean, inspected: 
 export type EventChecklist = { [key: string]: TeamChecklist; };
 export type TeamList = ({ number: string, name: string, inspected: boolean; })[];
 
+export type NexusPollState = 'not_configured' | 'polling' | 'polling_slow' | 'unauthorized' | 'error' | 'complete' | 'event_over';
+
+export interface NexusStatus {
+    state: NexusPollState;
+    lastSuccessAt?: Date;
+    lastErrorAt?: Date;
+    lastErrorMessage?: string;
+    intervalMinutes: 2 | 30;
+    isAllInspected: boolean;
+}
+
 export interface ServerEvent {
     code: string,
     name: string,
@@ -381,6 +392,10 @@ export interface ServerEvent {
     slackChannel?: string;
     slackTeam?: string;
     publicTicketSubmit: boolean;
+    nexusApiKey?: string;
+    startDate?: string;
+    endDate?: string;
+    nexus: NexusStatus;
     stats: {
         extensions: {
             id: string,
@@ -675,4 +690,6 @@ export interface DisconnectionEvent {
     startTime: number;
     endTime: number;
     duration: number;
+    startIndex: number;
+    endIndex: number;
 }

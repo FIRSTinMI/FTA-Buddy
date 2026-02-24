@@ -22,9 +22,6 @@
 			<Button href="/references/componentmanuals" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
 				><Icon icon="streamline:manual-book-solid" class="size-6 md:size-8" /> Component Manuals</Button
 			>
-			<Button href="/references/fieldmanuals" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
-				><Icon icon="tabler:soccer-field" class="size-6 md:size-8" /> Field Manuals</Button
-			>
 		</div>
 	</div>
 

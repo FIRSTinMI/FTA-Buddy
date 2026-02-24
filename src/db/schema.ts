@@ -34,6 +34,9 @@ export const events = pgTable('events', {
     publicTicketSubmit: boolean('publicTicketSubmit').notNull().default(true),
     slackChannel: varchar('slackChannel'),
     slackTeam: varchar('slackTeam'),
+    nexusApiKey: varchar('nexusApiKey'),
+    startDate: varchar('startDate'),
+    endDate: varchar('endDate'),
 });
 
 export const Event = typeof events.$inferInsert;
@@ -100,6 +103,19 @@ export const notes = pgTable('notes', {
 
 export const levelEnum = pgEnum('level', ['None', 'Practice', 'Qualification', 'Playoff']);
 
+export const issueEnum = pgEnum('issue', [
+    'Bypassed',
+    'Code disconnect',
+    'RIO disconnect',
+    'Radio disconnect',
+    'DS disconnect',
+    'Brownout',
+    'Large spike in ping',
+    'Sustained high ping',
+    'Low signal',
+    'High BWU',
+]);
+
 const bytea = customType<{ data: string; notNull: false; default: false; }>({
     dataType() {
         return "bytea";
@@ -147,8 +163,12 @@ export const analyzedLogs = pgTable('analyzed_logs', {
     level: levelEnum('level').notNull(),
     team: integer('team').notNull(),
     alliance: varchar('alliance').notNull(),
-    events: jsonb('events').notNull().default('[]'),
-    bypassed: boolean('bypassed').notNull().default(false),
+    issue: issueEnum('issue').notNull(),
+    start_time: integer('start_time'),
+    end_time: integer('end_time'),
+    duration: integer('duration'),
+    start_index: integer('start_index'),
+    end_index: integer('end_index'),
 });
 
 export const cycleLogs = pgTable('cycle_logs', {

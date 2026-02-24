@@ -3,12 +3,23 @@ import { eventStore } from "../stores/event";
 import { settingsStore } from "../stores/settings";
 import { userStore } from "../stores/user";
 
+export const LATEST_EXTENSION_VERSION = "1.26.0";
+
 interface Version {
     changelog?: string;
     update?: () => void;
 }
 
 export const VERSIONS: { [key: string]: Version; } = {
+    '2.6.9.0': {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.6.9.0</h1>
+        <ul>
+        <li>Made the event code automatically correct if the FIRST code differs from TBA</li>
+        <li>Added a extension reconfigure button on the "See Event Pin" page</li>
+        <li>Extension <strong>v1.25</strong> Major rework, now with status indicators</li>
+        </ul>`,
+    },
     '2.6.8.7': {
         changelog: `
         <h1 class="text-lg font-bold">v2.6.8.7</h1>

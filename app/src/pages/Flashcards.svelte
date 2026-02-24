@@ -1,9 +1,7 @@
 <script lang="ts">
-    import { preventDefault } from 'svelte/legacy';
-
     import { Button, Input, Label } from "flowbite-svelte";
-    import { flashcardsStore } from "../stores/flashcards";
     import { get } from "svelte/store";
+    import { flashcardsStore } from "../stores/flashcards";
 
     let flashcards = $state(get(flashcardsStore));
     let currentFlashcard = $state("");
@@ -33,6 +31,7 @@
     }
 
     function addNewFlashcard(evt: Event) {
+        evt.preventDefault();
         flashcards = [...flashcards, newFlashcard];
         flashcardsStore.set(flashcards);
         newFlashcard = "";
@@ -50,12 +49,12 @@
 <div class="flex flex-col p-4 h-full">
     <div class="space-y-2 grow">
         {#each flashcards as card}
-            <Button pill class="w-full {addRemoveState ? 'bg-red-500 dark:bg-red-500' : 'bg-primary-700 dark:bg-primary-500'}" size="lg" on:click={openFlashcard}>{card}</Button>
+            <Button pill class="w-full {addRemoveState ? 'bg-red-500 dark:bg-red-500' : 'bg-primary-700 dark:bg-primary-500'}" size="lg" onclick={openFlashcard}>{card}</Button>
         {/each}
     </div>
     {#if addRemoveState}
         <p class="text-center mt-2">Click on a flashcard to remove it</p>
-        <form onsubmit={preventDefault(addNewFlashcard)} class="flex w-full space-x-2 items-end mb-2">
+        <form onsubmit={addNewFlashcard} class="flex w-full space-x-2 items-end mb-2">
             <Label class="grow">
                 New Flashcard Text
                 <Input bind:value={newFlashcard} />
@@ -63,7 +62,7 @@
             <Button pill class="h-10 my-1" type="submit">Add</Button>
         </form>
     {/if}
-    <Button pill class="w-full mt-2" size="lg" on:click={switchToAddRemove}>
+    <Button pill class="w-full mt-2" size="lg" onclick={switchToAddRemove}>
         {addRemoveState ? "Save" : "Add/Remove Flashcard"}
     </Button>
 </div>

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Button, Helper, Indicator, Input, Label } from "flowbite-svelte";
-	import { onMount, tick } from "svelte";
+	import { onMount } from "svelte";
 	import { navigate } from "svelte-routing";
 	import type { Profile } from "../../../../shared/types";
 	import Spinner from "../../components/Spinner.svelte";
@@ -187,7 +187,7 @@
 					<span class="text-yellow-300">Extension Not Enabled</span>
 					<button
 						class="text-blue-400 hover:underline"
-						on:click={async () => {
+						onclick={async () => {
 							await window.postMessage({ source: "page", type: "enable" }, "*");
 						}}>Enable</button
 					>
@@ -235,7 +235,7 @@
 					<a
 						href="#"
 						class="text-blue-400 hover:underline"
-						on:click={() => {
+						onclick={() => {
 							eventCode = tbaKey ?? "";
 							checkEventCode();
 						}}>{tbaKey}</a

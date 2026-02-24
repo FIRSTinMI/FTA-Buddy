@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount, onDestroy } from "svelte";
+    import { onDestroy, onMount } from "svelte";
     import type { FMSLogFrame, MatchLog } from "../../../shared/types";
     import { echarts, type ECharts, type ECOption } from "../util/echarts";
 
@@ -277,7 +277,7 @@
             <button
                 class="flex items-center gap-1 cursor-pointer select-none"
                 class:opacity-40={!visibleSeries[s.label]}
-                on:click={(e) => legendClick(s.label, e)}
+                onclick={(e) => legendClick(s.label, e)}
             >
                 <span class="inline-block w-3 h-3 rounded-sm" style="background-color: {s.color}"></span>
                 <span class:line-through={!visibleSeries[s.label]}>{s.label}</span>

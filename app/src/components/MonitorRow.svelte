@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { DSState, MatchState, MatchStateMap, ROBOT, RobotWarnings, type MonitorFrame, type RobotInfo } from "../../../shared/types";
+	import Icon from "@iconify/svelte";
 	import { navigate } from "svelte-routing";
-	import Graph from "./Graph.svelte";
+	import { formatTimeShortNoAgoSecondsOnly } from "../../../shared/formatTime";
+	import { DSState, MatchState, MatchStateMap, ROBOT, RobotWarnings, type MonitorFrame, type RobotInfo } from "../../../shared/types";
+	import { settingsStore } from "../stores/settings";
 	import type { MonitorFrameHandler } from "../util/monitorFrameHandler";
 	import { processSignalStrengthForGraph } from "../util/signalStrengthProcessor";
-	import { settingsStore } from "../stores/settings";
-	import { formatTimeShortNoAgoSecondsOnly } from "../../../shared/formatTime";
-	import Icon from "@iconify/svelte";
+	import Graph from "./Graph.svelte";
 
 	export let station: ROBOT;
 	export let monitorFrame: MonitorFrame;
@@ -69,7 +69,7 @@
 	<button
 		class="w-full fieldmonitor-square-height md:aspect-square flex flex-col px-1 items-center justify-center text-lg sm:text-2xl lg:text-3xl {fullscreen &&
 			'lg:text-5xl'} font-mono tabular-nums {getKey(robot)?.startsWith('blue') ? 'bg-blue-600' : 'bg-red-600'}"
-		on:click={() => navigate("/notes/" + robot.number)}
+		onclick={() => navigate("/notes/" + robot.number)}
 	>
 		<p>{robot.number}</p>
 		<p class="text-sm lg:text-3xl flex">
@@ -104,7 +104,7 @@
 	</button>
 	<button
 		class="{DS_Colors[robot.ds]} fieldmonitor-square-height md:aspect-square flex items-center justify-center font-mono text-4xl lg:text-8xl text-black"
-		on:click={detailView}
+		onclick={detailView}
 		id="{getKey(robot)}-ds"
 	>
 		{#if robot.ds === DSState.GREEN_X}
@@ -125,7 +125,7 @@
 		class="{Status_Colors[
 			robot.radio || robot.radioConnected ? 1 : 0
 		]} fieldmonitor-square-height md:aspect-square flex items-center justify-center font-mono text-4xl lg:text-8xl text-black"
-		on:click={detailView}
+		onclick={detailView}
 		id="{getKey(robot)}-radio"
 	>
 		{#if robot.radioConnected && !robot.radio}
@@ -136,7 +136,7 @@
 		class="{Status_Colors[
 			robot.rio ? 1 : 0
 		]} fieldmonitor-square-height md:aspect-square flex items-center justify-center font-mono text-4xl lg:text-8xl text-black"
-		on:click={detailView}
+		onclick={detailView}
 		id="{getKey(robot)}-rio"
 	>
 		{#if robot.rio && !robot.code}
@@ -145,7 +145,7 @@
 	</button>
 	<button
 		class="fieldmonitor-square-height p-0 relative aspect-square max-w-8 lg:max-w-32"
-		on:click={detailView}
+		onclick={detailView}
 		style="background-color: rgba(255,0,0,{robot.battery < 11 && robot.battery > 0 ? (-1.5 * robot.battery ** 2 - 6.6 * robot.battery + 255) / 255 : 0})"
 		id="{getKey(robot)}-battery"
 	>
@@ -161,7 +161,7 @@
 	</button>
 	<button
 		class="fieldmonitor-square-height hidden lg:flex p-0 relative aspect-square max-w-8 lg:max-w-32"
-		on:click={detailView}
+		onclick={detailView}
 		style="background-color: rgba(255,0,0,{robot.ping >= 20 && robot.ping < 100 ? Math.log10(robot.ping / 25) : robot.ping > 100 ? 0.5 : 0})"
 		id="{getKey(robot)}-ping"
 	>
@@ -173,7 +173,7 @@
 		</div>
 	</button>
 	<button
-		on:click={() => detailView}
+		onclick={() => detailView}
 		class="fieldmonitor-square-height hidden lg:flex items-end pb-2 justify-center text-md sm:text-xl lg:text-4xl {fullscreen &&
 			'lg:text-5xl'} tabular-nums"
 		id="{getKey(robot)}-bwu"
@@ -182,7 +182,7 @@
 	</button>
 	<button
 		class="fieldmonitor-square-height hidden lg:flex md:aspect-square flex-col items-center justify-end"
-		on:click={() => detailView}
+		onclick={() => detailView}
 		id="{getKey(robot)}-signal"
 	>
 		{robot.signal ?? ""}
@@ -198,7 +198,7 @@
 	</button>
 	{#if !noLastChange}
 		<button
-			on:click={() => detailView}
+			onclick={() => detailView}
 			class="fieldmonitor-square-height hidden lg:flex items-end pb-2 justify-center text-md sm:text-xl lg:text-4xl {fullscreen &&
 				'lg:text-5xl'} tabular-nums"
 			id="{getKey(robot)}-lastchange"
@@ -207,7 +207,7 @@
 		</button>
 	{/if}
 	<button
-		on:click={() => detailView}
+		onclick={() => detailView}
 		class="fieldmonitor-square-height lg:hidden flex flex-col items-end justify-center tabular-nums"
 		id="{getKey(robot)}-net"
 	>

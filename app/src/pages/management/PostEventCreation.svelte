@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { Button, Helper, Indicator, Input, Label } from "flowbite-svelte";
 	import { onDestroy, onMount } from "svelte";
-	import { userStore } from "../../stores/user";
-	import { eventStore } from "../../stores/event";
 	import { navigate } from "svelte-routing";
-	import { trpc } from "../../main";
 	import type { NexusStatus } from "../../../../shared/types";
+	import { trpc } from "../../main";
+	import { eventStore } from "../../stores/event";
+	import { userStore } from "../../stores/user";
 
 	let extensionDetected = false;
 	let extensionEnabled = false;
@@ -109,12 +109,12 @@
 					<span class="text-green text-green-500">Extension Enabled ({extensionVersion})</span>
                     <button
                         class="text-gray-500 hover:text-gray-300 text-xs font-normal ml-1"
-                        on:click={() => window.postMessage({ source: "page", type: "eventCode", code: $eventStore.code, token: $userStore.eventToken }, "*")}
+                        onclick={() => window.postMessage({ source: "page", type: "eventCode", code: $eventStore.code, token: $userStore.eventToken }, "*")}
                     >Reconfigure</button>
 				{:else}
 					<Indicator color="red" class="my-auto" />
 					<span class="text-red-500">SignalR Not Enabled</span>
-					<button class="text-blue-400 hover:underline" on:click={() => window.postMessage({ source: "page", type: "enable" }, "*")}
+					<button class="text-blue-400 hover:underline" onclick={() => window.postMessage({ source: "page", type: "enable" }, "*")}
 						>Enable</button
 					>
 				{/if}
@@ -123,7 +123,7 @@
 				<span class="text-yellow-300">Extension Not Enabled</span>
 				<button
 					class="text-blue-400 hover:underline"
-					on:click={() => {
+					onclick={() => {
 
 						window.postMessage({ source: "page", type: "enable" }, "*");
 					}}>Enable</button
@@ -149,7 +149,7 @@
 		FTA Buddy needs a host to send data to it from FMS. The extension must be installed and be able to communicate with FMS at
 		<code class="bg-neutral-900 px-2 py-.75 rounded-xl">10.0.100.5</code>
 	</p>
-		<Button on:click={() => navigate("/")}>Go to FTA Buddy</Button>
+		<Button onclick={() => navigate("/")}>Go to FTA Buddy</Button>
 	<div class="flex flex-col border-t border-neutral-500 pt-5 gap-6">
 		<div class="border-b border-neutral-500 pb-5">
 			<div>
@@ -179,7 +179,7 @@
 							autocomplete="off"
 						/>
 					</div>
-					<Button on:click={saveNexusApiKey} disabled={nexusSaving || !nexusApiKey}>
+					<Button onclick={saveNexusApiKey} disabled={nexusSaving || !nexusApiKey}>
 						{nexusSaving ? 'Saving…' : 'Save'}
 					</Button>
 				</div>

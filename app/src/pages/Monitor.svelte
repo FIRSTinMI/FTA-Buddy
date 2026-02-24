@@ -2,13 +2,14 @@
 	import Icon from "@iconify/svelte";
 	import { Button } from "flowbite-svelte";
 	import { onDestroy, onMount } from "svelte";
+	import { get } from "svelte/store";
 	import { cycleTimeToMS } from "../../../shared/cycleTimeToMS";
 	import { formatTimeShortNoAgo, formatTimeShortNoAgoSeconds } from "../../../shared/formatTime";
 	import { FieldState, MatchState, MatchStateMap, ROBOT, type MonitorFrame, type ScheduleDetails } from "../../../shared/types";
 	import MonitorRow from "../components/MonitorRow.svelte";
 	import Spinner from "../components/Spinner.svelte";
 	import TeamModal from "../components/TeamModal.svelte";
-	import { audioQueuer } from "../field-monitor";
+	import { audioQueuer, subscribeToFieldMonitor } from "../field-monitor";
 	import { trpc } from "../main";
 	import { userStore } from "../stores/user";
 	import type { MonitorEvent, MonitorFrameHandler } from "../util/monitorFrameHandler";
@@ -17,6 +18,16 @@
 	export let frameHandler: MonitorFrameHandler;
 	let monitorFrame: MonitorFrame | undefined = frameHandler.getFrame();
 	let cycleSubscription: ReturnType<typeof trpc.cycles.subscription.subscribe>;
+
+	let user = get(userStore);
+	userStore.subscribe((value) => {
+		if (user.eventToken !== value.eventToken) {
+			user = value;
+			subscribeToFieldMonitor();
+		} else {
+			user = value;
+		}
+	});
 
 	frameHandler.addEventListener("frame", (evt) => {
 		loading = false;
@@ -37,6 +48,7 @@
 	let scheduleText = "";
 
 	onMount(async () => {
+		subscribeToFieldMonitor();
 		const lastPrestart = await trpc.cycles.getLastPrestart.query();
 		const lastMatchStart = await trpc.cycles.getLastMatchStart.query();
 		if (lastPrestart) matchStartTime = lastPrestart;
@@ -224,7 +236,7 @@
 				<Button
 					color="none"
 					class="text-sm fixed top-12 right-0 z-50"
-					on:click={(evt) => {
+					onclick={(evt) => {
 						evt.preventDefault();
 						fullscreen = !fullscreen;
 						if (fullscreen) {

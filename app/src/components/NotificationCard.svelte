@@ -1,10 +1,10 @@
 <script lang="ts">
     import { Card } from "flowbite-svelte";
-    import type { Notification } from "../../../shared/types";
-    import { formatTimeShort } from "../../../shared/formatTime";
-    import { notificationsStore, removeNotification } from "../stores/notifications";
     import { get } from "svelte/store";
-    import icon512_rounded from "/icon512_rounded.png"
+    import { formatTimeShort } from "../../../shared/formatTime";
+    import type { Notification } from "../../../shared/types";
+    import { notificationsStore, removeNotification } from "../stores/notifications";
+    import icon512_rounded from "/icon512_rounded.png";
 
     interface Props {
         notification: Notification;
@@ -21,7 +21,7 @@
     }, (time.includes("s ") ? 1000 : 60000));
 
 </script>
-<Card href={notification.data?.page} on:click={() => removeNotification(notification.id)} padding="none" size="none" class="w-full text-black dark:text-white dark:bg-neutral-800">
+<Card href={notification.data?.page} onclick={() => removeNotification(notification.id)} padding="none" size="none" class="w-full text-black dark:text-white dark:bg-neutral-800">
     <div class="flex flex-row">
         <div class="content-center pl-2">
             <img src={icon512_rounded} alt="FTA Buddy Logo" class="max-w-16 sm:max-w-20">

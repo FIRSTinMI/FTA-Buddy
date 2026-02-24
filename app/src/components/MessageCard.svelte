@@ -1,17 +1,15 @@
 <script lang="ts">
 	import { preventDefault } from 'svelte/legacy';
 
-	import { Card, Modal, Label, Textarea, Button } from "flowbite-svelte";
+	import { Button, Card, Label, Modal, Textarea } from "flowbite-svelte";
 	import { EditOutline, TrashBinOutline } from "flowbite-svelte-icons";
-	import type { Message } from "../../../shared/types";
+	import { get } from "svelte/store";
 	import { formatTimeNoAgoHourMins } from "../../../shared/formatTime";
+	import { toast } from "../../../shared/toast";
+	import type { Message } from "../../../shared/types";
 	import { trpc } from "../main";
 	import { eventStore } from "../stores/event";
 	import { userStore } from "../stores/user";
-	import { get } from "svelte/store";
-	import { navigate } from "svelte-routing";
-	import { onMount } from "svelte";
-	import { toast } from "../../../shared/toast";
 
 	let event = get(eventStore);
 	let user = get(userStore);
@@ -81,8 +79,8 @@
 <Modal bind:open={deleteMessagePopup} size="sm" outsideclose dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
 	<div class="text-center">
 		<h3 class="mb-5 text-lg">Are you sure you want to delete this Message?</h3>
-		<Button on:click={deleteMessage} color="red" class="me-2">Yes, I'm sure</Button>
-		<Button on:click={() => (deleteMessagePopup = false)}>No, cancel</Button>
+		<Button onclick={deleteMessage} color="red" class="me-2">Yes, I'm sure</Button>
+		<Button onclick={() => (deleteMessagePopup = false)}>No, cancel</Button>
 	</div>
 </Modal>
 
@@ -94,8 +92,8 @@
 			<p class="sm:w-28 text-wrap italic font-bold pt-3">{message.author.username} - {message.author.role}</p>
 			{#if user.id === message.author_id && !simple}
 				<div>
-					<Button class="pt-2 pb-2 pl-3 pr-2 mb-5" on:click={() => (editMessageView = true)}><EditOutline class="w-5" /></Button>
-					<Button on:click={() => (deleteMessagePopup = true)} class="pt-2 pb-2 pl-3 pr-2 mb-5"><TrashBinOutline class="pr-1" /></Button>
+					<Button class="pt-2 pb-2 pl-3 pr-2 mb-5" onclick={() => (editMessageView = true)}><EditOutline class="w-5" /></Button>
+					<Button onclick={() => (deleteMessagePopup = true)} class="pt-2 pb-2 pl-3 pr-2 mb-5"><TrashBinOutline class="pr-1" /></Button>
 				</div>
 			{/if}
 		</div>

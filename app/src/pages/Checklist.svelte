@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { Checkbox, Indicator, Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from "flowbite-svelte";
+	import { onDestroy, onMount } from "svelte";
+	import { get } from "svelte/store";
+	import type { EventChecklist, NexusStatus } from "../../../shared/types";
 	import Spinner from "../components/Spinner.svelte";
 	import { trpc } from "../main";
-	import type { EventChecklist, NexusStatus } from "../../../shared/types";
-	import { onDestroy, onMount } from "svelte";
-	import { userStore } from "../stores/user";
 	import { eventStore } from "../stores/event";
-	import { get } from "svelte/store";
+	import { userStore } from "../stores/user";
 
 	let checklist: EventChecklist = $state({});
 	let checklistPromise = trpc.checklist.get.query();
@@ -33,7 +33,7 @@
 	let total = $state(0);
 
 	// Nexus status
-	let nexusStatus: NexusStatus | null = null;
+	let nexusStatus: NexusStatus | null = $state(null);
 	let nexusStatusInterval: ReturnType<typeof setInterval> | null = null;
 
 	async function refreshNexusStatus() {
@@ -104,7 +104,7 @@
 	});
 </script>
 
-<div class="container w-full flex flex-col py-2 h-full mx-auto h-fit gap-2">
+<div class="container w-full flex flex-col py-2 h-full mx-auto gap-2">
 	{#await checklistPromise}
 		<Spinner />
 	{:then c}
@@ -184,28 +184,28 @@
 							><Checkbox
 								class="justify-center"
 								bind:checked={items.present}
-								on:change={() => updateChecklist(team, "present", items.present)}
+								onchange={() => updateChecklist(team, "present", items.present)}
 							/></TableBodyCell
 						>
 						<TableBodyCell
 							><Checkbox
 								class="justify-center"
 								bind:checked={items.inspected}
-								on:change={() => updateChecklist(team, "inspected", items.inspected)}
+								onchange={() => updateChecklist(team, "inspected", items.inspected)}
 							/></TableBodyCell
 						>
 						<TableBodyCell
 							><Checkbox
 								class="justify-center"
 								bind:checked={items.radioProgrammed}
-								on:change={() => updateChecklist(team, "radioProgrammed", items.radioProgrammed)}
+								onchange={() => updateChecklist(team, "radioProgrammed", items.radioProgrammed)}
 							/></TableBodyCell
 						>
 						<TableBodyCell
 							><Checkbox
 								class="justify-center"
 								bind:checked={items.connectionTested}
-								on:change={() => updateChecklist(team, "connectionTested", items.connectionTested)}
+								onchange={() => updateChecklist(team, "connectionTested", items.connectionTested)}
 							/></TableBodyCell
 						>
 					</TableBodyRow>

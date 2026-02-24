@@ -1,28 +1,25 @@
 <script lang="ts">
 	import { preventDefault } from 'svelte/legacy';
 
+	import Icon from "@iconify/svelte";
+	import { Alert, Button, Label, Modal, Select, Textarea, ToolbarButton, type SelectOptionType } from "flowbite-svelte";
+	import { ArrowLeftOutline, EditOutline, TrashBinOutline } from "flowbite-svelte-icons";
+	import { onMount, tick } from "svelte";
+	import { navigate } from "svelte-routing";
 	import { get } from "svelte/store";
-	import Spinner from "../../components/Spinner.svelte";
-	import { trpc } from "../../main";
 	import { formatTimeNoAgoHourMins } from "../../../../shared/formatTime";
 	import { toast } from "../../../../shared/toast";
-	import { eventStore } from "../../stores/event";
-	import { ROBOT, type Message, type Profile, type TicketUpdateEvents, type TicketUpdateEventData } from "../../../../shared/types";
-	import { Alert, Button, Textarea, ToolbarButton, Modal, Label, type SelectOptionType, Select } from "flowbite-svelte";
-	import { EditOutline, ExclamationCircleOutline, TrashBinOutline, ArrowLeftOutline } from "flowbite-svelte-icons";
-	import { navigate } from "svelte-routing";
-	import { userStore } from "../../stores/user";
-	import Icon from "@iconify/svelte";
-	import { onDestroy, onMount, tick } from "svelte";
-	import { settingsStore } from "../../stores/settings";
-	import NotesPolicy from "../../components/NotesPolicy.svelte";
+	import { ROBOT, type Message } from "../../../../shared/types";
 	import MessageCard from "../../components/MessageCard.svelte";
+	import NotesPolicy from "../../components/NotesPolicy.svelte";
+	import Spinner from "../../components/Spinner.svelte";
+	import { trpc } from "../../main";
+	import { route } from '../../router';
+	import { eventStore } from "../../stores/event";
+	import { settingsStore } from "../../stores/settings";
+	import { userStore } from "../../stores/user";
 
-	interface Props {
-		id: string;
-	}
-
-	let { id }: Props = $props();
+	const { id } = route.getParams("/tickets/view/:id");
 
 	let ticket_id = parseInt(id);
 
@@ -421,8 +418,8 @@
 	<div class="text-center">
 		<h3 class="mb-5 text-lg">Are you sure you want to delete this Ticket?</h3>
 		<h2 class="mb-5 text-sm">Unable to delete Tickets that have attached Messages or followers, or those that have been closed.</h2>
-		<Button on:click={deleteTicket} color="red" class="me-2">Yes, I'm sure</Button>
-		<Button on:click={() => (deleteTicketPopup = false)}>No, cancel</Button>
+		<Button onclick={deleteTicket} color="red" class="me-2">Yes, I'm sure</Button>
+		<Button onclick={() => (deleteTicketPopup = false)}>No, cancel</Button>
 	</div>
 </Modal>
 
@@ -457,46 +454,46 @@
 				{#if user.id === ticket.author_id}
 					<div class="flex flex-row justify-between h-10 gap-1">
 						<div class="flex flex-row gap-1">
-							<Button on:click={back} class=""><ArrowLeftOutline class="" style="height: 13px; width: 13px;" /></Button>
+							<Button onclick={back} class=""><ArrowLeftOutline class="" style="height: 13px; width: 13px;" /></Button>
 							{#if !ticket.followers.includes(user.id)}
-								<Button on:click={toggleFollowTicket} class=""
+								<Button onclick={toggleFollowTicket} class=""
 									><Icon icon="simple-line-icons:user-following" style="height: 13px; width: 18px; padding-right: 4px;" /> Follow</Button
 								>
 							{:else}
-								<Button on:click={toggleFollowTicket} class=""
+								<Button onclick={toggleFollowTicket} class=""
 									><Icon icon="simple-line-icons:user-unfollow" style="height: 13px; width: 18px; padding-right: 4px;" /> Unfollow</Button
 								>
 							{/if}
-							<Button on:click={() => openMatchLogSelector()}
+							<Button onclick={() => openMatchLogSelector()}
 								>{#if ticket.match_id}Change Match Log{:else}Attach Match Log{/if}</Button
 							>
 						</div>
 						<div class="flex flex-row gap-1">
-							<Button on:click={() => location.reload()} class=""><Icon icon="charm:refresh" style="height: 13px; width: 13px;" /></Button>
-							<Button on:click={() => (editTicketView = true)} class=""><EditOutline class="" style="height: 13px; width: 13px;" /></Button>
-							<Button on:click={() => (deleteTicketPopup = true)} class=""><TrashBinOutline class="" style="height: 13px; width: 13px;" /></Button
+							<Button onclick={() => location.reload()} class=""><Icon icon="charm:refresh" style="height: 13px; width: 13px;" /></Button>
+							<Button onclick={() => (editTicketView = true)} class=""><EditOutline class="" style="height: 13px; width: 13px;" /></Button>
+							<Button onclick={() => (deleteTicketPopup = true)} class=""><TrashBinOutline class="" style="height: 13px; width: 13px;" /></Button
 							>
 						</div>
 					</div>
 				{:else}
 					<div class="flex flex-row justify-between gap-1">
 						<div class="flex flex-row h-10 gap-1">
-							<Button on:click={back} class=""><ArrowLeftOutline class="" style="height: 13px; width: 13px;" /></Button>
+							<Button onclick={back} class=""><ArrowLeftOutline class="" style="height: 13px; width: 13px;" /></Button>
 							{#if !ticket.followers.includes(user.id)}
-								<Button on:click={toggleFollowTicket} class=""
+								<Button onclick={toggleFollowTicket} class=""
 									><Icon icon="simple-line-icons:user-following" style="height: 13px; width: 18px; padding-right: 4px;" /> Follow</Button
 								>
 							{:else}
-								<Button on:click={toggleFollowTicket} class=""
+								<Button onclick={toggleFollowTicket} class=""
 									><Icon icon="simple-line-icons:user-unfollow" style="height: 13px; width: 18px; padding-right: 4px;" /> Unfollow</Button
 								>
 							{/if}
-							<Button on:click={() => openMatchLogSelector()}
+							<Button onclick={() => openMatchLogSelector()}
 								>{#if ticket.match_id}Change Match Log{:else}Attach Match Log{/if}</Button
 							>
 						</div>
 						<div class="flex flex-row gap-1">
-							<Button on:click={() => location.reload()} class=""><Icon icon="charm:refresh" style="height: 13px; width: 13px;" /></Button>
+							<Button onclick={() => location.reload()} class=""><Icon icon="charm:refresh" style="height: 13px; width: 13px;" /></Button>
 						</div>
 					</div>
 				{/if}
@@ -535,9 +532,9 @@
 						{/if}
 					</div>
 					<div class="flex flex-row gap-2 justify-between pt-2 sm:place-content-start">
-						<Button size="sm" on:click={() => changeOpenStatus()}>{ticket.is_open ? "Close Ticket" : "Reopen Ticket"}</Button>
+						<Button size="sm" onclick={() => changeOpenStatus()}>{ticket.is_open ? "Close Ticket" : "Reopen Ticket"}</Button>
 						{#if user}
-							<Button size="sm" on:click={() => assignSelf()}>
+							<Button size="sm" onclick={() => assignSelf()}>
 								{#if ticket.assigned_to_id === user.id}
 									Unassign
 								{:else if ticket.assigned_to_id === null || ticket.assigned_to_id === undefined}
@@ -548,7 +545,7 @@
 							</Button>
 						{/if}
 						{#if match}
-							<Button size="sm" on:click={() => viewLog()}>View Log</Button>
+							<Button size="sm" onclick={() => viewLog()}>View Log</Button>
 						{/if}
 					</div>
 					<div class="flex flex-col gap-2 overscroll-contain overflow-y-auto mt-4 pb-2">

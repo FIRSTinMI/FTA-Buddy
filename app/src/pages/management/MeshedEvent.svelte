@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { Button, Input, Label } from "flowbite-svelte";
-	import { trpc } from "../../main";
-	import { toast } from "../../../../shared/toast";
-	import { userStore } from "../../stores/user";
-	import { eventStore } from "../../stores/event";
 	import { navigate } from "svelte-routing";
+	import { toast } from "../../../../shared/toast";
+	import { trpc } from "../../main";
+	import { eventStore } from "../../stores/event";
+	import { userStore } from "../../stores/user";
 
 	let eventCode = "";
 	let eventPin = Math.random().toString().slice(2, 6);
@@ -69,9 +69,9 @@
 			<div class="flex gap-2">
 				<Input label="Event Code" placeholder="2025micmp{i + 1}" bind:value={subEvent.code} on:keydown={checkIfAddSubEvent} disabled={blocked} />
 				<Input label="Label" placeholder={["DTE", "Hemlock", "Consumers", "Aptive"][i]} bind:value={subEvent.label} disabled={blocked} />
-				<Button on:click={() => (subEvents = subEvents.filter((_, index) => index !== i))} disabled={subEvents.length <= 1 || blocked}>Remove</Button>
+				<Button onclick={() => (subEvents = subEvents.filter((_, index) => index !== i))} disabled={subEvents.length <= 1 || blocked}>Remove</Button>
 			</div>
 		{/each}
-		<Button class="mt-2" on:click={createMeshedEvent} disabled={!eventCode || !eventPin || blocked}>Create Meshed Event</Button>
+		<Button class="mt-2" onclick={createMeshedEvent} disabled={!eventCode || !eventPin || blocked}>Create Meshed Event</Button>
 	</form>
 </div>

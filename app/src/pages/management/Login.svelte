@@ -326,7 +326,7 @@
 			color="primary"
 			class="w-fit"
 			size="sm"
-			on:click={() => {
+			onclick={() => {
 				// @ts-ignore
 				if (installPrompt) installPrompt.prompt();
 			}}>Install</Button
@@ -342,7 +342,7 @@
 		color="primary"
 		class="w-fit"
 		size="sm"
-		on:click={() => {
+		onclick={() => {
 			try {
 				Notification.requestPermission().then((result) => {
 					if (result === "granted") {
@@ -362,7 +362,7 @@
 		color="primary"
 		class="w-fit"
 		size="sm"
-		on:click={() => {
+		onclick={() => {
 			notificationModalOpen = false;
 		}}>No, Thank You</Button
 	>
@@ -370,7 +370,7 @@
 		color="primary"
 		class="w-fit"
 		size="sm"
-		on:click={() => {
+		onclick={() => {
 			settings.notificationsDoNotAsk = true;
 			settingsStore.set(settings);
 			notificationModalOpen = false;
@@ -424,7 +424,7 @@
 
 				<Button type="submit" bind:disabled={loading}>Create Account</Button>
 			</form>
-			<Button on:click={() => (view = "login")} bind:disabled={loading} outline>Log In</Button>
+			<Button onclick={() => (view = "login")} bind:disabled={loading} outline>Log In</Button>
 
 			<!-- Login -->
 		{:else if view === "login"}
@@ -441,7 +441,7 @@
 				</div>
 				<Button type="submit" bind:disabled={loading}>Log In</Button>
 			</form>
-			<Button on:click={() => (view = "create")} bind:disabled={loading} outline>Create Account</Button>
+			<Button onclick={() => (view = "create")} bind:disabled={loading} outline>Create Account</Button>
 
 			<p>Or</p>
 			<div>
@@ -449,7 +449,7 @@
 				<Input id="event-token" bind:value={user.eventToken} placeholder="Event Token" bind:disabled={loading} />
 			</div>
 			<Button
-				on:click={() => {
+				onclick={() => {
 					userStore.set({ ...user, eventToken: user.eventToken });
 					if (user.role === "FTA" || user.role === "FTAA") setTimeout(() => navigate("/monitor"), 500);
 					else setTimeout(() => navigate("/tickets"), 500);
@@ -465,11 +465,11 @@
 						<div class="my-auto w-full">
 							<h2 class="text-xl">Run FTA Buddy from this computer</h2>
 							{#if user.eventToken}
-								<Button on:click={() => navigate("/")} class="w-full mt-4">Open Field Monitor</Button>
-								<Button on:click={() => navigate("/manage/event-created")} class="w-full mt-4">See Event Pin</Button>
-								<Button on:click={() => navigate("/manage/host")} class="w-full mt-4">Host New Event</Button>
+								<Button onclick={() => navigate("/")} class="w-full mt-4">Open Field Monitor</Button>
+								<Button onclick={() => navigate("/manage/event-created")} class="w-full mt-4">See Event Pin</Button>
+								<Button onclick={() => navigate("/manage/host")} class="w-full mt-4">Host New Event</Button>
 							{:else}
-								<Button on:click={() => navigate("/manage/host")} class="w-full mt-4">Host</Button>
+								<Button onclick={() => navigate("/manage/host")} class="w-full mt-4">Host</Button>
 							{/if}
 							<p class="text-gray-700 mt-2">Requires this computer to be on the field network</p>
 						</div>
@@ -501,9 +501,9 @@
 						></div>
 					</div>
 					<div class="border-t border-neutral-500"></div>
-					<Button on:click={() => (view = "login")} bind:disabled={loading}>Log In</Button>
+					<Button onclick={() => (view = "login")} bind:disabled={loading}>Log In</Button>
 
-					<Button on:click={() => (view = "create")} bind:disabled={loading}>Create Account</Button>
+					<Button onclick={() => (view = "create")} bind:disabled={loading}>Create Account</Button>
 				</div>
 			</div>
 		{/if}
@@ -519,7 +519,7 @@
 		</div>
 		<div class="flex pt-4">
 			<div class="my-auto w-full">
-				<Button class="w-full" on:click={logout}>Log Out</Button>
+				<Button class="w-full" onclick={logout}>Log Out</Button>
 			</div>
 		</div>
 
@@ -529,7 +529,7 @@
 				<div class="flex border-t border-neutral-500 pt-4">
 					<div class="my-auto w-full">
 						<h2 class="text-2xl" style="font-weight: bold;">Run FTA Buddy from this computer</h2>
-						<Button on:click={() => navigate("/manage/host")} class="w-full mt-4">Host</Button>
+						<Button onclick={() => navigate("/manage/host")} class="w-full mt-4">Host</Button>
 						<p class="text-gray-700 mt-2">Requires this computer to be on the field network</p>
 					</div>
 				</div>
@@ -541,9 +541,9 @@
 			</div>
 			<div class="flex flex-col pt-10 space-y-4">
 				<Label for="event-selector">Admin Event Selector</Label>
-				<Select id="event-selector" bind:value={event.code} items={eventList} placeholder="Select Event" on:change={adminSelectEvent} />
-				<Button href="/" on:click={() => navigate("/")}>Go to App</Button>
-				<Button outline on:click={() => navigate("/manage/event-created")}>See Event Pin</Button>
+				<Select id="event-selector" bind:value={event.code} items={eventList} placeholder="Select Event" onchange={adminSelectEvent} />
+				<Button href="/" onclick={() => navigate("/")}>Go to App</Button>
+				<Button outline onclick={() => navigate("/manage/event-created")}>See Event Pin</Button>
 				<Button outline href="/manage/meshed-event">Create Meshed Event</Button>
 				<Button outline href="/manage/manage">App Management</Button>
 			</div>
@@ -552,11 +552,11 @@
 		{:else if user.eventToken}
 			<div class="flex flex-col border-t border-neutral-500 pt-10 space-y-2">
 				<h1 class="text-xl" style="font-weight:bold;">The Event Currently Selected Is: {event.code}</h1>
-				<Button href="/" on:click={() => navigate("/")}>Go to App</Button>
-				<Button outline on:click={() => (eventStore.set({ code: "", pin: "", teams: [], users: [] }), userStore.set({ ...user, eventToken: "" }))}
+				<Button href="/" onclick={() => navigate("/")}>Go to App</Button>
+				<Button outline onclick={() => (eventStore.set({ code: "", pin: "", teams: [], users: [] }), userStore.set({ ...user, eventToken: "" }))}
 					>Leave Event</Button
 				>
-				<Button outline on:click={() => navigate("/manage/event-created")}>See Event Pin</Button>
+				<Button outline onclick={() => navigate("/manage/event-created")}>See Event Pin</Button>
 			</div>
 
 			<!-- No event selected -->
@@ -580,7 +580,7 @@
 				<div class="flex border-t border-neutral-500 pt-4">
 					<div class="my-auto w-full">
 						<h2 class="text-xl">Run FTA Buddy from this computer</h2>
-						<Button on:click={() => navigate("/manage/host")} class="w-full mt-4">Host</Button>
+						<Button onclick={() => navigate("/manage/host")} class="w-full mt-4">Host</Button>
 						<p class="text-gray-700 mt-2">Requires this computer to be on the field network</p>
 					</div>
 				</div>

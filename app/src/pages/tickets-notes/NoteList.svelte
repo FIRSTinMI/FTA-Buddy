@@ -1,22 +1,18 @@
 <script lang="ts">
-	import { run, preventDefault } from 'svelte/legacy';
+	import { run } from 'svelte/legacy';
 
-	import { Alert, Button, Label, Select, Textarea, ToolbarButton, Modal, Input } from "flowbite-svelte";
-	import { onDestroy, onMount } from "svelte";
-	import { get } from "svelte/store";
-	import TicketCard from "../../components/TicketCard.svelte";
-	import { trpc } from "../../main";
-	import { eventStore, type Event } from "../../stores/event";
-	import Icon from "@iconify/svelte";
-	import { userStore } from "../../stores/user";
-	import { toast } from "../../../../shared/toast";
-	import NotesPolicy from "../../components/NotesPolicy.svelte";
-	import { settingsStore } from "../../stores/settings";
-	import Spinner from "../../components/Spinner.svelte";
-	import type { Note, Ticket } from "../../../../shared/types";
-	import NoteCard from "../../components/NoteCard.svelte";
-	import { navigate } from "svelte-routing";
+	import { Button, Input, Label, Modal, Select, Textarea } from "flowbite-svelte";
 	import { SearchOutline } from "flowbite-svelte-icons";
+	import { onMount } from "svelte";
+	import { toast } from "../../../../shared/toast";
+	import type { Note } from "../../../../shared/types";
+	import NoteCard from "../../components/NoteCard.svelte";
+	import NotesPolicy from "../../components/NotesPolicy.svelte";
+	import Spinner from "../../components/Spinner.svelte";
+	import { trpc } from "../../main";
+	import { eventStore } from "../../stores/event";
+	import { settingsStore } from "../../stores/settings";
+	import { userStore } from "../../stores/user";
 
 	let createModalOpen = $state(false);
 
@@ -28,7 +24,7 @@
 
 	let search: string = $state("");
 
-	let filteredNotes: Note[] | null = $state();
+	let filteredNotes: Note[] | null = $state(null);
 
 	let notes: Awaited<ReturnType<typeof trpc.notes.getAll.query>> = $state([] as Note[]);
 
@@ -67,7 +63,7 @@
 		getNotes();
 	});
 
-	let notesPolicyElm: NotesPolicy = $state();
+	let notesPolicyElm: NotesPolicy | undefined = $state();
 	let open = false;
 
 	let team: number | undefined = $state();
@@ -86,10 +82,11 @@
 	});
 
 	async function createNote(evt: SubmitEvent) {
+        evt.preventDefault();
 		if (team === undefined || team === -1) return;
 		try {
 			if (!$settingsStore.acknowledgedNotesPolicy) {
-				await notesPolicyElm.confirmPolicy();
+				await notesPolicyElm?.confirmPolicy();
 			}
 			const res = await trpc.notes.create.query({
 				team: team,
@@ -122,13 +119,13 @@
 	{#snippet header()}
 		<div ><h1 class="text-2xl p-2 font-bold text-black dark:text-white">Create a Note</h1></div>
 	{/snippet}
-	<form class="text-left flex flex-col gap-4" onsubmit={preventDefault(createNote)}>
+	<form class="text-left flex flex-col gap-4" onsubmit={createNote}>
 		<Label class="w-full text-left">
 			Select Team:
 			<Select class="mt-2" items={teamOptions} bind:value={team} />
 		</Label>
 		<Label for="text">Text:</Label>
-		<Textarea id="text" class="w-full" rows="5" bind:value={noteText} />
+		<Textarea id="text" class="w-full" rows={5} bind:value={noteText} />
 
 		<Button type="submit" disabled={disableSubmit}>Create Note</Button>
 	</form>
@@ -137,7 +134,7 @@
 <div class="container max-w-6xl mx-auto px-2 pt-2 h-full flex flex-col gap-2">
 	<div class="flex flex-col overflow-y-auto h-full gap-2">
 		<h1 class="text-3xl mt-2 font-bold pt-2">Team Notes</h1>
-		<Button class="max-w-3xl mx-auto w-full" on:click={() => (createModalOpen = true)}>Create New Note</Button>
+		<Button class="max-w-3xl mx-auto w-full" onclick={() => (createModalOpen = true)}>Create New Note</Button>
 		<div class="flex items-center gap-2 max-w-3xl w-full mx-auto">
 			<Label class="w-full text-left">
 				<span class="ml-2">Search</span>

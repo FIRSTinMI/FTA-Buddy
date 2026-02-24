@@ -63,7 +63,7 @@
 
 {#await eventList then eventList}
 	<Modal title="Select Event" bind:open={eventSelectorOpen} outsideclose>
-		<Select bind:value={newEventCode} items={eventList} placeholder="Select Event" on:change={addEvent} />
+		<Select bind:value={newEventCode} items={eventList} placeholder="Select Event" onchange={addEvent} />
 	</Modal>
 {/await}
 
@@ -76,7 +76,7 @@
 		{#if events.length < 4 && (window.innerWidth >= 640 || events.length === 0) && !defaultEvents}
 			<div class="relative flex items-center justify-end {events.length > 0 && 'w-0 left-28'}">
 				<Button
-					on:click={() => {
+					onclick={() => {
 						eventSelectorOpen = true;
 					}}><Icon icon="mdi:plus" class="size-12" /></Button
 				>
@@ -85,7 +85,7 @@
 			<div class="relative flex items-end justify-end {events.length > 0 && 'w-0 right-8 bottom-8'}">
 				<Button
 					class="h-16"
-					on:click={() => {
+					onclick={() => {
 						eventSelectorOpen = true;
 					}}><Icon icon="mdi:plus" class="size-12" /></Button
 				>
@@ -95,7 +95,7 @@
 	{#if window.innerWidth < 640 && events.length < 6 && events.length > 0 && !defaultEvents}
 		<div class="flex justify-center">
 			<Button
-				on:click={() => {
+				onclick={() => {
 					eventSelectorOpen = true;
 				}}
 				size="sm"

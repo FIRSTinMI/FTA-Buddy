@@ -13,20 +13,20 @@
 		TableHeadCell,
 		type SelectOptionType,
 	} from "flowbite-svelte";
-	import { trpc } from "../../main";
+	import { json2csv } from "json-2-csv";
+	import QrCode from "svelte-qrcode";
 	import { navigate } from "svelte-routing";
+	import { MCS_LOOKUP_TABLE } from "../../../../shared/constants";
+	import { formatTimeNoAgo, formatTimeShortNoAgoSeconds } from "../../../../shared/formatTime";
 	import type { FMSLogFrame, ROBOT } from "../../../../shared/types";
 	import LogGraph from "../../components/LogGraph.svelte";
-	import QrCode from "svelte-qrcode";
-	import { userStore } from "../../stores/user";
-	import { formatTimeNoAgo, formatTimeShortNoAgoSeconds } from "../../../../shared/formatTime";
 	import Spinner from "../../components/Spinner.svelte";
-	import { json2csv } from "json-2-csv";
-	import { MCS_LOOKUP_TABLE } from "../../../../shared/constants";
+	import { trpc } from "../../main";
+	import { route } from "../../router";
+	import { userStore } from "../../stores/user";
 	import { decompressStationLog } from "../../util/log-compression";
 
-	export let matchid: string;
-	export let station: ROBOT | string;
+    const { matchid, station } = route.getParams("/logs/:matchid/:station");
 	let actualStation: ROBOT;
 
 	let log: FMSLogFrame[];
@@ -160,17 +160,17 @@
 		<div class="max-w-48 mx-auto">
 			<QrCode value="https://ftabuddy.com/logs/{matchid}/{shareid}" padding={12} />
 		</div>
-		<Button on:click={() => (shareOpen = false)} class="mt-2">Close</Button>
+		<Button onclick={() => (shareOpen = false)} class="mt-2">Close</Button>
 	</div>
 </Modal>
 
 <div class="container mx-auto p-2 lg:max-w-7xl w-full flex flex-col gap-2 md:gap-4">
 	<div class="flex">
 		{#if $userStore.eventToken}
-			<Button on:click={back} class="w-fit mx-1.5">Back</Button>
-			<Button on:click={share} class="w-fit mx-1.5">Share Log</Button>
+			<Button onclick={back} class="w-fit mx-1.5">Back</Button>
+			<Button onclick={share} class="w-fit mx-1.5">Share Log</Button>
 		{/if}
-		<Button on:click={exportLog} class="w-fit mx-1.5">Export CSV</Button>
+		<Button onclick={exportLog} class="w-fit mx-1.5">Export CSV</Button>
 	</div>
 	{#await matchPromise}
 		<Spinner />
@@ -191,7 +191,7 @@
 
 		<div class="flex flex-col gap-2">
 			{#each match.analysis as logEvent}
-				<button class="w-full text-left cursor-pointer" on:click={() => logGraph?.zoomToRange(logEvent.startIndex, logEvent.endIndex)}>
+				<button class="w-full text-left cursor-pointer" onclick={() => logGraph?.zoomToRange(logEvent.startIndex, logEvent.endIndex)}>
 					<Alert class="text-left" color={analysisEventColors[logEvent.issue]} border>
 						<span class="font-medium">{logEvent.issue}</span>
 						Started at {logEvent.startTime}s lasting {formatTimeShortNoAgoSeconds(logEvent.duration * 1000)}

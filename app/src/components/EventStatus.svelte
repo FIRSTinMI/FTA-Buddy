@@ -1,11 +1,11 @@
 <script lang="ts">
 	import Icon from "@iconify/svelte";
-	import { Card, Button } from "flowbite-svelte";
-	import { trpc } from "../main";
-	import type { FieldState, ScheduleDetails } from "../../../shared/types";
+	import { Button, Card } from "flowbite-svelte";
 	import { onDestroy, onMount } from "svelte";
 	import { cycleTimeToMS } from "../../../shared/cycleTimeToMS";
-	import { formatTimeShortNoAgo, formatTimeShortNoAgoMinutesOnly, formatTimeShortNoAgoSeconds } from "../../../shared/formatTime";
+	import { formatTimeShortNoAgo, formatTimeShortNoAgoSeconds } from "../../../shared/formatTime";
+	import type { FieldState, ScheduleDetails } from "../../../shared/types";
+	import { trpc } from "../main";
 	import { updateScheduleText } from "../util/schedule-detail-formatter";
 	import Spinner from "./Spinner.svelte";
 
@@ -155,7 +155,7 @@
 	<div class="flex">
 		<h1 class="text-lg lg:text-2xl font-bold flex-1">{eventName}</h1>
 		{#if removable}
-			<Button on:click={() => remove(eventCode)} color="none" class="p-0"><Icon icon="mdi:close" class="size-6" /></Button>
+			<Button onclick={() => remove(eventCode)} color="none" class="p-0"><Icon icon="mdi:close" class="size-6" /></Button>
 		{/if}
 	</div>
 

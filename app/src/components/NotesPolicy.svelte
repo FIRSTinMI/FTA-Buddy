@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Modal, Button } from "flowbite-svelte";
+	import { Button, Modal } from "flowbite-svelte";
 	import { settingsStore } from "../stores/settings";
 
     interface Props {
@@ -37,8 +37,8 @@
     </p>
     {#snippet footer()}
         <div  class="ml-auto">
-            <Button on:click={() => resolve()}>Agree and Send</Button>
-            <Button color="red" on:click={() => reject()}>Back</Button>
+            <Button onclick={() => resolve()}>Agree and Send</Button>
+            <Button color="red" onclick={() => reject()}>Back</Button>
         </div>
     {/snippet}
 </Modal>

@@ -88,8 +88,8 @@
 	<Input type="text" placeholder="Message" bind:value={message} class="mb-2" />
 	<Input type="text" placeholder="Effected Events" bind:value={effectedEvents} class="mb-2" />
 	<div class="flex gap-2">
-		<Button on:click={() => startIssue(message, effectedEvents.split(","))}>Start</Button>
-		<Button on:click={endIssue}>End Known Issue</Button>
+		<Button onclick={() => startIssue(message, effectedEvents.split(","))}>Start</Button>
+		<Button onclick={endIssue}>End Known Issue</Button>
 	</div>
 </div>
 

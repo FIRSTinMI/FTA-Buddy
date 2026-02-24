@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Button } from "flowbite-svelte";
-	import { trpc } from "../main";
 	import { toast } from "../../../shared/toast";
+	import { trpc } from "../main";
 
     async function downloadTicketReport() {
         try {
@@ -60,18 +60,18 @@
     <h1 class="text-3xl font-bold">Event Reports</h1>
     <div class="flex flex-col items-start">
         <p>Cycle Time Report</p>
-        <Button on:click={downloadCycleTimeReport} class="mt-2">Download</Button>
+        <Button onclick={downloadCycleTimeReport} class="mt-2">Download</Button>
     </div>
     <div class="flex flex-col items-start">
         <p>Bypass Report</p>
-        <Button on:click={downloadBypassReport} class="mt-2">Download</Button>
+        <Button onclick={downloadBypassReport} class="mt-2">Download</Button>
     </div>
     <div class="flex flex-col items-start">
         <p>Ticket Report</p>
-        <Button on:click={downloadTicketReport} class="mt-2">Download</Button>
+        <Button onclick={downloadTicketReport} class="mt-2">Download</Button>
     </div>
     <div class="flex flex-col items-start">
         <p>Notes Report</p>
-        <Button on:click={downloadNotesReport} class="mt-2">Download</Button>
+        <Button onclick={downloadNotesReport} class="mt-2">Download</Button>
     </div>
 </div>

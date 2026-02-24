@@ -59,14 +59,14 @@
 	</p>
 	<p class="text-center">Ticket creation will be disabled if abused.</p>
 	<Button
-		on:click={() => {
+		onclick={() => {
 			agreeTerms = true;
 			termsPopupOpen = false;
 			console.log(`agreeTerms = ${agreeTerms}`);
 		}}>Agree</Button
 	>
 	<Button
-		on:click={() => {
+		onclick={() => {
 			window.open("", "_self");
 			window.close();
 			// If closing the window doesn't work, redirect to google.com

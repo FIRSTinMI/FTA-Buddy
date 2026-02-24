@@ -3,13 +3,15 @@
 	import { Button, Indicator, Modal } from "flowbite-svelte";
 	import { onMount } from "svelte";
 	import { trpc } from "../main";
+	import { installPrompt } from "../stores/install-prompt";
 	import { settingsStore } from "../stores/settings";
 	import { gestureEvents } from "../util/gestureDetection";
 
-	export let welcomeOpen = false;
-	export let installPrompt: Event | null;
-	export let closeModal: () => void;
-	export let openChangelog: () => void;
+    let {
+        welcomeOpen = $bindable(false),
+        closeModal = () => {},
+        openChangelog = () => {}
+    } = $props();
 
 	onMount(() => {
 		step = 0;
@@ -22,18 +24,22 @@
 	});
 
 	let notificationsGranted = "Notification" in window && Notification.permission === "granted";
-	let step = 0;
-	let matchCount: Awaited<ReturnType<typeof trpc.match.getNumberOfMatches.query>> | undefined;
+	let step = $state(0);
+	let matchCount: Awaited<ReturnType<typeof trpc.match.getNumberOfMatches.query>> | undefined = $state();
 
 	async function getMatchCount() {
 		if (!matchCount) matchCount = await trpc.match.getNumberOfMatches.query();
 	}
+
+    $effect(() => {
+        if (welcomeOpen) getMatchCount();
+    });
 </script>
 
-<Modal bind:open={welcomeOpen} dismissable outsideclose size="lg" style="height: calc(100vh - 8rem)" on:open={() => getMatchCount()}>
-	<div slot="header">
+<Modal bind:open={welcomeOpen} dismissable outsideclose size="lg" style="height: calc(100vh - 8rem)">
+	{#snippet header()}
 		<h1 class="text-xl text-black dark:text-white font-bold">Welcome to FTA Buddy</h1>
-	</div>
+	{/snippet}
 	<div class="flex flex-col justify-left text-left gap-1 text-black dark:text-white h-full">
 		{#if step === 0}
 			<p class="py-1">
@@ -49,16 +55,15 @@
 				<li>Optional public ticket submission</li>
 			</ul>
 			<p class="py-1">You can access all features through the sidebar or bottom navigation.</p>
-			{#if installPrompt}
+			{#if $installPrompt}
 				<h2 class="font-bold py-1">Install this App</h2>
 				<p class="py-1">Recommended for the best experience.</p>
 				<Button
 					color="primary"
 					class="w-fit py-1"
 					size="sm"
-					on:click={() => {
-						// @ts-ignore
-						if (installPrompt) installPrompt.prompt();
+					onclick={() => {
+						if ($installPrompt) $installPrompt.prompt();
 					}}>Install</Button
 				>
 			{:else if navigator.userAgent.includes("iPhone")}
@@ -118,15 +123,15 @@
 					target="_blank">GitHub</a
 				>.
 			</p>
-			<Button color="primary" class="w-full py-1" on:click={openChangelog}>Changelog</Button>
-			<Button color="primary" class="w-full py-1" on:click={closeModal}>Close</Button>
+			<Button color="primary" class="w-full py-1" onclick={() => openChangelog}>Changelog</Button>
+			<Button color="primary" class="w-full py-1" onclick={() => closeModal}>Close</Button>
 		{/if}
 	</div>
 	<div class="flex justify-center gap-2 w-full" slot="footer">
-		<Button color="dark" class="p-1" on:click={() => step--} disabled={step <= 0}><Icon icon="mdi:arrow-left" class="w-6 h-6" /></Button>
+		<Button color="dark" class="p-1" onclick={() => step--} disabled={step <= 0}><Icon icon="mdi:arrow-left" class="w-6 h-6" /></Button>
 		{#each Array(7) as _, i}
 			<Indicator color={step >= i ? "purple" : $settingsStore.darkMode ? "dark" : "gray"} class="my-auto" />
 		{/each}
-		<Button color="dark" class="p-1" on:click={() => step++} disabled={step >= 6}><Icon icon="mdi:arrow-right" class="w-6 h-6" /></Button>
+		<Button color="dark" class="p-1" onclick={() => step++} disabled={step >= 6}><Icon icon="mdi:arrow-right" class="w-6 h-6" /></Button>
 	</div>
 </Modal>

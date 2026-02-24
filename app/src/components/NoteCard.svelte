@@ -1,14 +1,13 @@
 <script lang="ts">
-    import { Card, Modal, Label, Textarea, Button } from "flowbite-svelte";
+    import { Button, Card, Label, Modal, Textarea } from "flowbite-svelte";
     import { EditOutline, TrashBinOutline } from 'flowbite-svelte-icons';
-    import type { Message, Note } from "../../../shared/types";
+    import { get } from "svelte/store";
     import { formatTimeNoAgoHourMins } from "../../../shared/formatTime";
+    import { toast } from "../../../shared/toast";
+    import type { Note } from "../../../shared/types";
     import { trpc } from "../main";
     import { eventStore } from "../stores/event";
     import { userStore } from "../stores/user";
-    import { get } from "svelte/store";
-    import { navigate } from "svelte-routing";
-    import { toast } from "../../../shared/toast";
 
 
     let event = get(eventStore);
@@ -77,8 +76,8 @@
 <Modal bind:open={deleteNotePopup} size="sm" outsideclose dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
 	<div class="text-center">
 		<h3 class="mb-5 text-lg">Are you sure you want to delete this Note?</h3>
-		<Button on:click={deleteNote} color="red" class="me-2">Yes, I'm sure</Button>
-		<Button on:click={() => (deleteNotePopup = false)}>No, cancel</Button>
+		<Button onclick={deleteNote} color="red" class="me-2">Yes, I'm sure</Button>
+		<Button onclick={() => (deleteNotePopup = false)}>No, cancel</Button>
 	  </div>
 </Modal>
 
@@ -88,8 +87,8 @@
             <p class="sm:w-28 text-wrap italic font-bold mt-4 p-2">{note.author.username} - {note.author.role}</p>
             {#if (user.id === note.author_id)}
                 <div class="mt-4">
-                    <Button class="pt-2 pb-2 pl-3 pr-2 mb-5" on:click={() => (editNoteView = true)}><EditOutline class="w-5"/></Button>
-                    <Button on:click={() => (deleteNotePopup = true)} class="pt-2 pb-2 pl-3 pr-2 mb-5"><TrashBinOutline class="pr-1"/></Button>
+                    <Button class="pt-2 pb-2 pl-3 pr-2 mb-5" onclick={() => (editNoteView = true)}><EditOutline class="w-5"/></Button>
+                    <Button onclick={() => (deleteNotePopup = true)} class="pt-2 pb-2 pl-3 pr-2 mb-5"><TrashBinOutline class="pr-1"/></Button>
                 </div>
             {/if}
         </div>

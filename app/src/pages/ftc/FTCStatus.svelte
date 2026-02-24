@@ -9,7 +9,6 @@
     let includeMeets = $state(false);
 	let events: string[] = $state([]); //["2425-FIM-MHQ"];
 	let eventData: FTCEvent[] = $state([]);
-	let subscription: ReturnType<typeof trpc.ftc.dashboard.subscribe> | null = null;
 
 	let loading = $state(true);
 
@@ -33,24 +32,13 @@
 			if (eventData.length > 0) loading = false;
 			console.log(eventData);
 		}, 30000);
-		// if (subscription) subscription.unsubscribe();
-		// subscription = trpc.ftc.dashboard.subscribe(
-		// 	{ region, events },
-		// 	{
-		// 		onData: (data) => {
-		// 			if (data.length > 0) loading = false;
-		// 			console.log(data);
-		// 			eventData = data;
-		// 		},
-		// 	}
-		// );
 	}
 
 	onMount(async () => {
 		subscribeToEvents(await getEventsForRegion(region));
 	});
 
-	let eventCurrentCycleTimes = $state(eventData.map((event) => ({
+	let eventCurrentCycleTimes = $derived(eventData.map((event) => ({
 		event: event.key,
 		time: event.currentMatch?.postResultTime ? formatTimeShortNoAgo(event.currentMatch?.postResultTime) : "Unknown",
 	})));
@@ -69,7 +57,7 @@
 			{#await trpc.ftc.getRegions.query()}
 				<p>Loading Regions...</p>
 			{:then data}
-				<Select items={data} bind:value={region} on:change={async () => subscribeToEvents(await getEventsForRegion(region))} />
+				<Select items={data} bind:value={region} onchange={async () => subscribeToEvents(await getEventsForRegion(region))} />
 			{:catch error}
 				<p>Error: {error.message}</p>
 			{/await}

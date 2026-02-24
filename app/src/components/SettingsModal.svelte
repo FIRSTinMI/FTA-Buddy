@@ -1,17 +1,16 @@
 <script lang="ts">
 	import { Button, Label, Modal, Range, Select, Toggle, type SelectOptionType } from "flowbite-svelte";
-	import { derived, get } from "svelte/store";
+	import { get } from "svelte/store";
 	import { toast } from "../../../shared/toast";
 	import { audioQueuer } from "../field-monitor";
 	import { trpc } from "../main";
+	import { installPrompt } from "../stores/install-prompt";
 	import { settingsStore } from "../stores/settings";
 	import { userStore } from "../stores/user";
 	import { startNotificationSubscription, stopNotificationSubscription, subscribeToPush } from "../util/notifications";
 	import Spinner from "./Spinner.svelte";
 
-	export let settingsOpen = false;
-	export const userRole = derived(userStore, ($userStore) => $userStore.role);
-	export let installPrompt: Event | null;
+    let { settingsOpen = $bindable(false) } = $props();
 
 	let settings = get(settingsStore);
 	let user = get(userStore);
@@ -83,8 +82,9 @@
 	}
 
 	let rangeSlider: HTMLInputElement | undefined;
-	$: ((open: boolean) => {
-		if (!open || rangeSlider) return;
+
+	function setupRangeSlider(settingsOpen: boolean) {
+		if (!settingsOpen || rangeSlider) return;
 		setTimeout(() => {
 			rangeSlider = document.querySelector(".range") as HTMLInputElement;
 			console.log("range slider", rangeSlider);
@@ -95,9 +95,13 @@
 				});
 			}
 		}, 100);
-	})(settingsOpen);
+	}
 
-	let testingMusic = false;
+    $effect(() => {
+        setupRangeSlider(settingsOpen);
+    });
+
+	let testingMusic = $state(false);
 	let musicTestTimeout: NodeJS.Timeout | undefined;
 	function testMusic() {
 		testingMusic = true;
@@ -120,29 +124,31 @@
 	<Spinner />
 {/if}
 
-<Modal bind:open={settingsOpen} size="lg" outsideclose dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
-	<div slot="header"><h1 class="text-2xl text-black dark:text-white">Settings</h1></div>
+<Modal bind:open={settingsOpen} size="lg" outsideclose class="fixed top-0 inset-s-0 inset-e-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
+	{#snippet header()}
+        <h1 class="text-2xl text-black dark:text-white">Settings</h1>
+    {/snippet}
 	<form class="justify-start text-left">
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-2">
 			<div class="grid grid-cols-subgrid gap-2 row-span-5">
 				<p class="text-gray-700 dark:text-gray-400">General</p>
-				<Toggle class="toggle" bind:checked={settings.vibrations} on:change={updateSettings}>Vibrations</Toggle>
-				<Toggle class="toggle" bind:checked={settings.fimSpecifics} on:change={updateSettings}>FIM Specific Field Manuals</Toggle>
-				<Toggle class="toggle" bind:checked={settings.notificationsDoNotAsk} on:change={updateSettings}>Do Not Ask About Notifications</Toggle>
-				<Toggle class="toggle" bind:checked={settings.notifications} on:change={requestNotificationPermissions}>Enable Notifications</Toggle>
+				<Toggle class="toggle" bind:checked={settings.vibrations} onchange={updateSettings}>Vibrations</Toggle>
+				<Toggle class="toggle" bind:checked={settings.fimSpecifics} onchange={updateSettings}>FIM Specific Field Manuals</Toggle>
+				<Toggle class="toggle" bind:checked={settings.notificationsDoNotAsk} onchange={updateSettings}>Do Not Ask About Notifications</Toggle>
+				<Toggle class="toggle" bind:checked={settings.notifications} onchange={requestNotificationPermissions}>Enable Notifications</Toggle>
 				<div class="pl-4 grid grid-cols-subgrid gap-2 row-span-5">
-					<Toggle class="toggle" bind:checked={settings.notificationCategories.create} on:change={updateSettings}>New Tickets</Toggle>
-					<Toggle class="toggle" bind:checked={settings.notificationCategories.follow} on:change={updateSettings}>Followed Ticket Updates</Toggle>
-					<Toggle class="toggle" bind:checked={settings.notificationCategories.assign} on:change={updateSettings}>Assigned Ticket Updates</Toggle>
-					<Toggle class="toggle" bind:checked={settings.notificationCategories.robot} on:change={updateSettings}>Robot Status Updates</Toggle>
+					<Toggle class="toggle" bind:checked={settings.notificationCategories.create} onchange={updateSettings}>New Tickets</Toggle>
+					<Toggle class="toggle" bind:checked={settings.notificationCategories.follow} onchange={updateSettings}>Followed Ticket Updates</Toggle>
+					<Toggle class="toggle" bind:checked={settings.notificationCategories.assign} onchange={updateSettings}>Assigned Ticket Updates</Toggle>
+					<Toggle class="toggle" bind:checked={settings.notificationCategories.robot} onchange={updateSettings}>Robot Status Updates</Toggle>
 				</div>
 			</div>
 			<div class="grid grid-cols-subgrid gap-2 row-span-3">
 				<p class="text-gray-700 dark:text-gray-400">Change My Role</p>
-				<Select items={roleOptions} bind:value={user.role} on:change={updateUser} />
+				<Select items={roleOptions} bind:value={user.role} onchange={updateUser} />
 				<p class="text-gray-700 dark:text-gray-400">Audio Alerts</p>
-				<Toggle class="toggle" bind:checked={settings.soundAlerts} on:change={updateSettings}>Robot Connection</Toggle>
-				<Toggle class="toggle" bind:checked={settings.fieldGreen} on:change={updateSettings}>Field Green</Toggle>
+				<Toggle class="toggle" bind:checked={settings.soundAlerts} onchange={updateSettings}>Robot Connection</Toggle>
+				<Toggle class="toggle" bind:checked={settings.fieldGreen} onchange={updateSettings}>Field Green</Toggle>
 			</div>
 			<div class="grid grid-cols-subgrid gap-2 row-span-6">
 				<p class="text-gray-700 dark:text-gray-400">Music</p>
@@ -155,7 +161,7 @@
 						{ value: "pokemon", name: "Pokemon" },
 					]}
 					bind:value={settings.musicType}
-					on:change={updateSettings}
+					onchange={updateSettings}
 				/>
 				<Label>Volume</Label>
 				<div class="flex">
@@ -163,56 +169,56 @@
 						bind:value={settings.musicVolume}
 						min="0"
 						max="100"
-						on:change={updateSettings}
+						onchange={updateSettings}
 						step="1"
 						class="range mt-2 bg-gray-400"
 						disabled={settings.musicType === "none"}
 					/>
 					<div class="w-12 text-right text-gray-700 dark:text-gray-400">{settings.musicVolume}%</div>
 				</div>
-				<Button on:click={() => (testingMusic ? stopMusic : testMusic)()} size="xs" color={testingMusic ? "dark" : "primary"}
+				<Button onclick={() => (testingMusic ? stopMusic : testMusic)()} size="xs" color={testingMusic ? "dark" : "primary"}
 					>{testingMusic ? "Stop" : "Test"} Music</Button
 				>
 			</div>
 			<div class="grid grid-cols-subgrid gap-2 row-span-4">
 				<p class="text-gray-700 dark:text-gray-400">Appearance</p>
-				<Toggle class="toggle" bind:checked={settings.darkMode} on:change={updateSettings}>Dark Theme</Toggle>
-				<Toggle class="toggle" bind:checked={settings.roundGreen} on:change={updateSettings}>Round Green Indicators</Toggle>
-				<Toggle class="toggle" bind:checked={settings.inspectionAlerts} on:change={updateSettings}>🔍 Missing inspection icon on field monitor</Toggle>
+				<Toggle class="toggle" bind:checked={settings.darkMode} onchange={updateSettings}>Dark Theme</Toggle>
+				<Toggle class="toggle" bind:checked={settings.roundGreen} onchange={updateSettings}>Round Green Indicators</Toggle>
+				<Toggle class="toggle" bind:checked={settings.inspectionAlerts} onchange={updateSettings}>🔍 Missing inspection icon on field monitor</Toggle>
 			</div>
 			<div class="grid grid-cols-subgrid gap-2 row-span-4">
 				<p class="text-gray-700 dark:text-gray-400">Developer</p>
-				<Toggle class="toggle" bind:checked={settings.developerMode} on:change={updateSettings}>Developer Mode</Toggle>
-				<Toggle class="toggle {!settings.developerMode && 'hidden'}" bind:checked={settings.forceCloud} on:change={updateSettings}
+				<Toggle class="toggle" bind:checked={settings.developerMode} onchange={updateSettings}>Developer Mode</Toggle>
+				<Toggle class="toggle {!settings.developerMode ? 'hidden' : ''}" bind:checked={settings.forceCloud} onchange={updateSettings}
 					>Force cloud server</Toggle
 				>
 				<Button
-					class={!settings.developerMode && "hidden"}
-					on:click={() => {
+					class={!settings.developerMode ? "hidden" : ""}
+					onclick={() => {
 						//trpc.event.notification.query({ eventToken: user.eventToken });
 					}}
 					size="xs">Notification Test</Button
 				>
 			</div>
 			<div class="grid gap-2 md:col-span-2">
-				{#if installPrompt}
+				{#if $installPrompt}
 					<Button
 						color="primary"
 						size="xs"
-						on:click={() => {
+						onclick={() => {
 							// @ts-ignore
-							if (installPrompt) installPrompt.prompt();
+							if ($installPrompt) $installPrompt.prompt();
 						}}>Install</Button
 					>
 				{/if}
-				<Button on:click={clearStorage} size="xs" color="red">Clear All Data</Button>
+				<Button onclick={clearStorage} size="xs" color="red">Clear All Data</Button>
 			</div>
 		</div>
 	</form>
 	<div class="border-t border-neutral-500 pt-2 mt-0 flex flex-col text-black dark:text-white">
 		<h1 class="text-lg">About</h1>
-		<p>Authors: Filip Kin and Kelly Malone</p>
-		<p>Other Contributors: Cole H</p>
+		<p>Author: Filip Kin</p>
+		<p>Contributors: Kelly Malone, Cole H</p>
 		<p>Version: {settings.version}</p>
 		<a href="https://github.com/FIRSTinMI/FTA-Buddy" class="underline text-blue-400">GitHub</a>
 	</div>

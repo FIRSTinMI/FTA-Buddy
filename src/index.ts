@@ -411,7 +411,7 @@ if (process.env.NODE_ENV === 'dev') {
 } else {
     app.use('/', express.static('app/dist'));
     app.use('/FieldMonitor', express.static('app/dist/FieldMonitor'));
-    app.get('*', (req, res) => {
+    app.get('/*page', (req, res) => {
         res.sendFile(join(__dirname, '../app/dist/index.html'));
     });
 }

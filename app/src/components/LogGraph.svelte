@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount, onDestroy } from "svelte";
+    import { onDestroy, onMount } from "svelte";
     import type { FMSLogFrame } from "../../../shared/types";
     import { echarts, type ECharts, type ECOption } from "../util/echarts";
 
@@ -244,7 +244,7 @@
             <button
                 class="flex items-center gap-1 cursor-pointer select-none"
                 class:opacity-40={!visibleSeries[s.name]}
-                on:click={() => toggleSeries(s.name)}
+                onclick={() => toggleSeries(s.name)}
             >
                 <span class="inline-block w-3 h-3 rounded-sm" style="background-color: {s.color}"></span>
                 <span class:line-through={!visibleSeries[s.name]}>{s.name}</span>

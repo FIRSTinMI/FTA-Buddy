@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { Button, Modal } from "flowbite-svelte";
-	import { DSState, MatchState, MatchStateMap, ROBOT, type MonitorFrame, type RobotInfo } from "../../../shared/types";
-	import MonitorRow from "./MonitorRow.svelte";
 	import { navigate } from "svelte-routing";
-	import { formatTimeShort, formatTimeShortNoAgoSeconds } from "../../../shared/formatTime";
-	import type { MonitorFrameHandler } from "../util/monitorFrameHandler";
+	import { formatTimeShort } from "../../../shared/formatTime";
+	import { DSState, MatchState, MatchStateMap, ROBOT, type MonitorFrame, type RobotInfo } from "../../../shared/types";
 	import { trpc } from "../main";
+	import type { MonitorFrameHandler } from "../util/monitorFrameHandler";
+	import MonitorRow from "./MonitorRow.svelte";
 
 	let tick = 0;
 	setInterval(() => tick++, 1000);
@@ -198,7 +198,7 @@
 	{/if}
 
 	<div slot="footer">
-		<Button color="primary" on:click={() => navigate("/notes/" + modalRobot?.number)}>Notes</Button>
-		<Button color="primary" on:click={() => (modalOpen = false)}>Close</Button>
+		<Button color="primary" onclick={() => navigate("/notes/" + modalRobot?.number)}>Notes</Button>
+		<Button color="primary" onclick={() => (modalOpen = false)}>Close</Button>
 	</div>
 </Modal>

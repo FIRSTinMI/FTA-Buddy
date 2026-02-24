@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { run, preventDefault } from 'svelte/legacy';
+	import { preventDefault, run } from 'svelte/legacy';
 
 	import Icon from "@iconify/svelte";
 	import { Button, Input, Label, Modal, Select, Textarea, Toggle, type SelectOptionType } from "flowbite-svelte";
@@ -344,7 +344,7 @@
 	<form class="text-left flex flex-col gap-4" onsubmit={preventDefault(createTicket)}>
 		<Label class="w-full text-left">
 			Select Team
-			<Select class="mt-2" items={teamOptions} bind:value={team} on:change={() => getMatchesForTeam(parseInt(team ?? "0"))} />
+			<Select class="mt-2" items={teamOptions} bind:value={team} onchange={() => getMatchesForTeam(parseInt(team ?? "0"))} />
 		</Label>
 
 		<Label for="subject">Ticket Subject:</Label>
@@ -368,22 +368,22 @@
 
 <Modal bind:open={publicTicketsModalOpen} size="sm" outsideclose dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
 	<h1 class="text-2xl font-bold">Public Ticket Creation</h1>
-	<Button on:click={() => printPublicTicketSubmissionQRCode($eventStore.code)}>Print QR Code</Button>
+	<Button onclick={() => printPublicTicketSubmissionQRCode($eventStore.code)}>Print QR Code</Button>
 	<p>If the Public Ticket Creation page is being abused or spammed, please turn this setting off and inform your event FTA that you have done so.</p>
-	<Toggle class="toggle place-content-center" bind:checked={publicTicketSubmitState} on:change={setPublicTicketCreationState}
+	<Toggle class="toggle place-content-center" bind:checked={publicTicketSubmitState} onchange={setPublicTicketCreationState}
 		>Public Ticket Creation: {publicTicketSubmitState ? "ON" : "OFF"}</Toggle
 	>
 </Modal>
 
 <div class="container max-w-6xl mx-auto px-2 h-full flex flex-col gap-2">
 	<div class="fixed top-12 right-2">
-		<Button on:click={() => location.reload()} class=""><Icon icon="charm:refresh" style="height: 13px; width: 13px;" /></Button>
+		<Button onclick={() => location.reload()} class=""><Icon icon="charm:refresh" style="height: 13px; width: 13px;" /></Button>
 	</div>
 	<div class="flex flex-col overflow-hidden h-full gap-2">
 		<h1 class="text-3xl mt-2 font-bold p-2">Event Tickets</h1>
 		<div class="flex flex-row gap-2 max-w-3xl w-full items-center mx-auto">
-			<Button class="mx-auto grow" on:click={() => (createModalOpen = true)}>Create a New Ticket</Button>
-			<Button class="mx-auto w-fit text-nowrap" on:click={() => (publicTicketsModalOpen = true)}><Icon icon="ic:baseline-settings" class="h-5" /></Button>
+			<Button class="mx-auto grow" onclick={() => (createModalOpen = true)}>Create a New Ticket</Button>
+			<Button class="mx-auto w-fit text-nowrap" onclick={() => (publicTicketsModalOpen = true)}><Icon icon="ic:baseline-settings" class="h-5" /></Button>
 		</div>
 		<div class="flex items-center gap-2 max-w-3xl w-full mx-auto">
 			<Label class="w-full text-left">

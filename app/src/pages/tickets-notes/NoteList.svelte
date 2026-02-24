@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { run } from 'svelte/legacy';
+	import { run } from "svelte/legacy";
 
+	import Icon from "@iconify/svelte";
 	import { Button, Input, Label, Modal, Select, Textarea } from "flowbite-svelte";
-	import { SearchOutline } from "flowbite-svelte-icons";
 	import { onMount } from "svelte";
 	import { toast } from "../../../../shared/toast";
 	import type { Note } from "../../../../shared/types";
@@ -49,7 +49,10 @@
 			const tokenized = search.toLowerCase().split(" ");
 
 			notes = notes.filter((note) => {
-				return tokenized.every((token) => note.team.toString().includes(token) || teamNames[note.team].toLowerCase().includes(token));
+				return tokenized.every(
+					(token) =>
+						note.team.toString().includes(token) || teamNames[note.team].toLowerCase().includes(token),
+				);
 			});
 		}
 		filteredNotes = notes.sort((a, b) => b.updated_at.getTime() - a.updated_at.getTime());
@@ -82,13 +85,13 @@
 	});
 
 	async function createNote(evt: SubmitEvent) {
-        evt.preventDefault();
+		evt.preventDefault();
 		if (team === undefined || team === -1) return;
 		try {
 			if (!$settingsStore.acknowledgedNotesPolicy) {
 				await notesPolicyElm?.confirmPolicy();
 			}
-			const res = await trpc.notes.create.query({
+			const res = await trpc.notes.create.mutate({
 				team: team,
 				text: noteText,
 			});
@@ -117,7 +120,7 @@
 
 <Modal bind:open={createModalOpen} size="lg" outsideclose>
 	{#snippet header()}
-		<div ><h1 class="text-2xl p-2 font-bold text-black dark:text-white">Create a Note</h1></div>
+		<div><h1 class="text-2xl p-2 font-bold text-black dark:text-white">Create a Note</h1></div>
 	{/snippet}
 	<form class="text-left flex flex-col gap-4" onsubmit={createNote}>
 		<Label class="w-full text-left">
@@ -140,8 +143,8 @@
 				<span class="ml-2">Search</span>
 				<Input class="w-full" placeholder="Search Team #, Team Name" bind:value={search}>
 					{#snippet left()}
-										<SearchOutline  class="size-5 text-gray-500 dark:text-gray-400" />
-									{/snippet}
+						<Icon icon="mdi:magnify" class="size-5 text-gray-500 dark:text-gray-400" />
+					{/snippet}
 				</Input>
 			</Label>
 		</div>

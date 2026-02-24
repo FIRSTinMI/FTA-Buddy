@@ -64,12 +64,19 @@
 	let eventCode = "";
 	let eventCodeHelperText = "Event code must match the code on TBA";
 	let eventCodeError = false;
-	let eventPin = '';
+	let eventPin = "";
 	let loading = false;
 
-	$: blockSubmit = !(eventCode.length > 6 && eventPin.length >= 4 && !loading && extensionDetected && extensionEnabled);
+	$: blockSubmit = !(
+		eventCode.length > 6 &&
+		eventPin.length >= 4 &&
+		!loading &&
+		extensionDetected &&
+		extensionEnabled
+	);
 
-	async function setupExtension() {
+	async function setupExtension(evt: SubmitEvent) {
+		evt.preventDefault();
 		if (blockSubmit) return;
 
 		try {
@@ -94,14 +101,20 @@
 	<Spinner />
 {/if}
 
-<div class="container mx-auto md:max-w-4xl flex flex-col justify-center p-4 h-full space-y-4 {waitingForFirstConnectionTest ? 'blur-sm' : ''}">
+<div
+	class="container mx-auto md:max-w-4xl flex flex-col justify-center p-4 h-full space-y-4 {waitingForFirstConnectionTest
+		? 'blur-sm'
+		: ''}"
+>
 	<h1 class="text-3xl font-bold">Setup Radio Kiosk Extension</h1>
 	<div>
 		<div class="inline-flex gap-2 font-bold mx-auto">
 			{#if extensionDetected}
 				{#if extensionUpdate}
 					<Indicator color="yellow" class="my-auto" />
-					<span class="text-yellow-300">Extension Update Available ({extensionVersion} &rarr; {LATEST_EXTENSION_VERSION})</span>
+					<span class="text-yellow-300"
+						>Extension Update Available ({extensionVersion} &rarr; {LATEST_EXTENSION_VERSION})</span
+					>
 					<a
 						href="https://chromewebstore.google.com/detail/fta-buddy/kddnhihfpfnehnnhbkfajdldlgigohjc"
 						class="text-blue-400 hover:underline"
@@ -113,8 +126,9 @@
 				{:else}
 					<Indicator color="yellow" class="my-auto" />
 					<span class="text-yellow-300">Extension Not Enabled</span>
-					<button class="text-blue-400 hover:underline" onclick={() => window.postMessage({ source: "page", type: "enable" }, "*")}
-						>Enable</button
+					<button
+						class="text-blue-400 hover:underline"
+						onclick={() => window.postMessage({ source: "page", type: "enable" }, "*")}>Enable</button
 					>
 				{/if}
 			{:else}
@@ -139,16 +153,22 @@
 			<span class="text-red-500">FMS Not Detected</span>
 		{/if}
 	</span>
-	<form class="grid gap-3 text-left" on:submit|preventDefault={setupExtension}>
+	<form class="grid gap-3 text-left" onsubmit={setupExtension}>
 		<div>
 			<Label for="event-code">Event Code</Label>
-			<Input id="event-code" bind:value={eventCode} placeholder="2024mitry" class="mt-1" color={eventCodeError ? "red" : "base"} />
+			<Input
+				id="event-code"
+				bind:value={eventCode}
+				placeholder="2024mitry"
+				class="mt-1"
+				color={eventCodeError ? "red" : undefined}
+			/>
 			<Helper class="text-sm mt-1" color={eventCodeError ? "red" : undefined}>{eventCodeHelperText}</Helper>
 		</div>
 		<div>
-			<Label for="event-pin" disabled={loading}>Event Pin</Label>
+			<Label for="event-pin">Event Pin</Label>
 			<Input id="event-pin" bind:value={eventPin} disabled={loading} class="mt-1" />
 		</div>
-		<Button type="submit" bind:disabled={blockSubmit}>Setup Extension</Button>
+		<Button type="submit" disabled={blockSubmit}>Setup Extension</Button>
 	</form>
 </div>

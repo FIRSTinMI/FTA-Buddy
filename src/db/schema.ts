@@ -28,7 +28,7 @@ export const users = pgTable("users", {
 	admin: boolean("admin").notNull().default(false),
 });
 
-export const User = typeof users.$inferInsert;
+export type User = typeof users.$inferInsert;
 
 export const events = pgTable("events", {
 	code: varchar("code").primaryKey(),
@@ -50,7 +50,7 @@ export const events = pgTable("events", {
 	endDate: varchar("endDate"),
 });
 
-export const Event = typeof events.$inferInsert;
+export type Event = typeof events.$inferInsert;
 
 export const tickets = pgTable("tickets", {
 	id: serial("id").primaryKey(),
@@ -176,7 +176,7 @@ export const matchLogs = pgTable("match_logs", {
 	analyzed: boolean("analyzed").notNull().default(false),
 });
 
-export const MatchLog = typeof matchLogs.$inferInsert;
+export type MatchLog = typeof matchLogs.$inferInsert;
 
 export const analyzedLogs = pgTable("analyzed_logs", {
 	id: uuid("id").primaryKey(),
@@ -211,7 +211,7 @@ export const cycleLogs = pgTable("cycle_logs", {
 	end_time: timestamp("end_time"),
 });
 
-export const CycleLog = typeof cycleLogs.$inferSelect;
+export type CycleLog = typeof cycleLogs.$inferSelect;
 
 export const logPublishing = pgTable("log_publishing", {
 	id: uuid("id").primaryKey(),
@@ -250,7 +250,7 @@ export const robotCycleLogs = pgTable("team_cycle_logs", {
 	time_code: integer("time_code"),
 });
 
-export const RobotCycleLog = typeof robotCycleLogs.$inferInsert;
+export type RobotCycleLog = typeof robotCycleLogs.$inferInsert;
 
 export const pushSubscriptions = pgTable("push_subscriptions", {
 	id: serial("id").primaryKey(),

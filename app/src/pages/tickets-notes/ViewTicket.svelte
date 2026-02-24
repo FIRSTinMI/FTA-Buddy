@@ -1,9 +1,17 @@
 <script lang="ts">
-	import { preventDefault } from 'svelte/legacy';
+	import { preventDefault } from "svelte/legacy";
 
 	import Icon from "@iconify/svelte";
-	import { Alert, Button, Label, Modal, Select, Textarea, ToolbarButton, type SelectOptionType } from "flowbite-svelte";
-	import { ArrowLeftOutline, EditOutline, TrashBinOutline } from "flowbite-svelte-icons";
+	import {
+		Alert,
+		Button,
+		Label,
+		Modal,
+		Select,
+		Textarea,
+		ToolbarButton,
+		type SelectOptionType,
+	} from "flowbite-svelte";
 	import { onMount, tick } from "svelte";
 	import { navigate } from "svelte-routing";
 	import { get } from "svelte/store";
@@ -14,7 +22,7 @@
 	import NotesPolicy from "../../components/NotesPolicy.svelte";
 	import Spinner from "../../components/Spinner.svelte";
 	import { trpc } from "../../main";
-	import { route } from '../../router';
+	import { route } from "../../router";
 	import { eventStore } from "../../stores/event";
 	import { settingsStore } from "../../stores/settings";
 	import { userStore } from "../../stores/user";
@@ -42,13 +50,17 @@
 
 	let assignedToUser = false;
 
-	let sortedMessages: Message[] | undefined = $derived(ticket && ticket.messages ? ticket.messages?.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) : []);
+	let sortedMessages: Message[] | undefined = $derived(
+		ticket && ticket.messages
+			? ticket.messages?.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+			: [],
+	);
 
 	let deleteTicketPopup = $state(false);
 
 	let editTicketView = $state(false);
-	let editTicketText: string = $state('');
-	let editTicketSubject: string = $state('');
+	let editTicketText: string = $state("");
+	let editTicketSubject: string = $state("");
 
 	async function getTicketAndMatch() {
 		ticketPromise = trpc.tickets.getByIdWithMessages.query({
@@ -63,10 +75,10 @@
 				matchPromise = trpc.match.getMatch.query({ id: match_id });
 				match = await matchPromise;
 
-                if (!match) {
-                    console.error("Match not found for ticket");
-                    return;
-                }
+				if (!match) {
+					console.error("Match not found for ticket");
+					return;
+				}
 
 				switch (ticket.team) {
 					case match.red1:
@@ -102,8 +114,6 @@
 		}
 	}
 
-	
-
 	onMount(async () => {
 		getTicketAndMatch();
 		foregroundUpdate();
@@ -115,7 +125,7 @@
 			time = formatTimeNoAgoHourMins(ticket?.created_at);
 		},
 		// svelte-ignore state_referenced_locally
-				time.includes("s ") ? 1000 : 60000
+		time.includes("s ") ? 1000 : 60000,
 	);
 
 	async function changeOpenStatus() {
@@ -123,9 +133,17 @@
 		if (!ticket) return;
 		try {
 			if (ticket.is_open === true) {
-				update = await trpc.tickets.updateStatus.query({ id: ticket.id, new_status: false, event_code: event.code });
+				update = await trpc.tickets.updateStatus.mutate({
+					id: ticket.id,
+					new_status: false,
+					event_code: event.code,
+				});
 			} else {
-				update = await trpc.tickets.updateStatus.query({ id: ticket.id, new_status: true, event_code: event.code });
+				update = await trpc.tickets.updateStatus.mutate({
+					id: ticket.id,
+					new_status: true,
+					event_code: event.code,
+				});
 			}
 			ticket.is_open = update.is_open;
 		} catch (err: any) {
@@ -141,10 +159,10 @@
 		assignedToUser = ticket.assigned_to_id === user.id ? true : false;
 		try {
 			if (ticket.assigned_to_id === user.id) {
-				update = await trpc.tickets.unAssign.query({ ticket_id: ticket.id, event_code: event.code });
+				update = await trpc.tickets.unAssign.mutate({ ticket_id: ticket.id, event_code: event.code });
 				assignedToUser = false;
 			} else {
-				update = await trpc.tickets.assign.query({ id: ticket.id, user_id: user.id, event_code: event.code });
+				update = await trpc.tickets.assign.mutate({ id: ticket.id, user_id: user.id, event_code: event.code });
 				assignedToUser = true;
 			}
 		} catch (err: any) {
@@ -181,7 +199,7 @@
 	let message_text: string = $state("");
 
 	async function postMessage(evt: SubmitEvent) {
-        evt.preventDefault();
+		evt.preventDefault();
 		if (message_text.trim().length < 1) {
 			toast("Error Sending Message", "Message cannot be empty");
 		}
@@ -193,7 +211,7 @@
 				await notesPolicyElm?.confirmPolicy();
 			}
 
-			const message = await trpc.tickets.messages.create.query({
+			const message = await trpc.tickets.messages.create.mutate({
 				text: message_text.trim(),
 				ticket_id: ticket.id,
 				event_code: event.code,
@@ -219,9 +237,9 @@
 
 	async function editTicket() {
 		try {
-            if (!ticket) return;
+			if (!ticket) return;
 			if (editTicketText !== ticket.text && editTicketSubject !== ticket.subject) {
-				const res = await trpc.tickets.edit.query({
+				const res = await trpc.tickets.edit.mutate({
 					id: ticket_id,
 					new_text: editTicketText,
 					new_subject: editTicketSubject,
@@ -229,14 +247,14 @@
 				});
 				toast("Ticket edited successfully", "success", "green-500");
 			} else if (editTicketText !== ticket.text) {
-				const res = await trpc.tickets.edit.query({
+				const res = await trpc.tickets.edit.mutate({
 					id: ticket_id,
 					new_text: editTicketText,
 					event_code: event.code,
 				});
 				toast("Ticket edited successfully", "success", "green-500");
 			} else if (editTicketSubject !== ticket.subject) {
-				const res = await trpc.tickets.edit.query({
+				const res = await trpc.tickets.edit.mutate({
 					id: ticket_id,
 					new_subject: editTicketSubject,
 					event_code: event.code,
@@ -252,9 +270,9 @@
 
 	async function deleteTicket() {
 		try {
-            if (!ticket) return;
+			if (!ticket) return;
 			if (!ticket.messages || ticket.is_open || !ticket.followers) {
-				const res = await trpc.tickets.delete.query({
+				const res = await trpc.tickets.delete.mutate({
 					id: ticket_id,
 					event_code: event.code,
 				});
@@ -272,16 +290,16 @@
 
 	async function toggleFollowTicket() {
 		try {
-            if (!ticket) return;
+			if (!ticket) return;
 			if (!ticket.followers.includes(user.id)) {
-				const res = await trpc.tickets.follow.query({
+				const res = await trpc.tickets.follow.mutate({
 					id: ticket_id,
 					follow: true,
 					event_code: event.code,
 				});
 				// startBackgroundTicketSubscription(ticket_id);
 			} else {
-				const res = await trpc.tickets.follow.query({
+				const res = await trpc.tickets.follow.mutate({
 					id: ticket_id,
 					follow: false,
 					event_code: event.code,
@@ -314,7 +332,7 @@
 			{
 				onData: (data) => {
 					//console.log(data);
-                    if (!ticket) return;
+					if (!ticket) return;
 					if (data.ticket_id === ticket.id) {
 						switch (data.kind) {
 							case "assign":
@@ -348,7 +366,9 @@
 								break;
 							case "delete_message":
 								if (ticket.messages) {
-									let updatedMessages = ticket.messages.filter((message) => message.id !== data.message_id);
+									let updatedMessages = ticket.messages.filter(
+										(message) => message.id !== data.message_id,
+									);
 									ticket.messages = updatedMessages;
 								}
 								break;
@@ -358,7 +378,7 @@
 						}
 					}
 				},
-			}
+			},
 		);
 	}
 
@@ -373,7 +393,12 @@
 		if (team) {
 			matchesPromise = trpc.match.getMatchNumbers.query({ team });
 			matches = (await matchesPromise)
-				.sort((a, b) => levelToSort(b.level) - levelToSort(a.level) || b.match_number - a.match_number || b.play_number - a.play_number)
+				.sort(
+					(a, b) =>
+						levelToSort(b.level) - levelToSort(a.level) ||
+						b.match_number - a.match_number ||
+						b.play_number - a.play_number,
+				)
 				.map((match) => ({
 					value: match.id,
 					name: `${match.level} ${match.match_number}/${match.play_number}`,
@@ -398,14 +423,14 @@
 
 	function openMatchLogSelector() {
 		matchLogModalOpen = true;
-        if (!ticket) return;
+		if (!ticket) return;
 		getMatchesForTeam(ticket.team);
 	}
 
 	function attachMatchLog() {
 		if (matchId) {
 			trpc.tickets.attachMatchLog.mutate({ ticketId: ticket_id, matchId });
-            if (!ticket) return;
+			if (!ticket) return;
 			ticket.match_id = matchId;
 			matchLogModalOpen = false;
 		}
@@ -414,7 +439,7 @@
 
 <Modal bind:open={editTicketView} size="lg">
 	{#snippet header()}
-		<div >
+		<div>
 			<h1 class="text-2xl font-bold text-black dark:text-white place-content-center">Edit Ticket #{ticket_id}</h1>
 		</div>
 	{/snippet}
@@ -430,7 +455,9 @@
 <Modal bind:open={deleteTicketPopup} size="sm" outsideclose>
 	<div class="text-center">
 		<h3 class="mb-5 text-lg">Are you sure you want to delete this Ticket?</h3>
-		<h2 class="mb-5 text-sm">Unable to delete Tickets that have attached Messages or followers, or those that have been closed.</h2>
+		<h2 class="mb-5 text-sm">
+			Unable to delete Tickets that have attached Messages or followers, or those that have been closed.
+		</h2>
 		<Button onclick={deleteTicket} color="red" class="me-2">Yes, I'm sure</Button>
 		<Button onclick={() => (deleteTicketPopup = false)}>No, cancel</Button>
 	</div>
@@ -438,7 +465,7 @@
 
 <Modal bind:open={matchLogModalOpen} size="sm" outsideclose>
 	{#snippet header()}
-		<div ><h1 class="text-3xl p-2 font-bold text-black dark:text-white">Create a Ticket</h1></div>
+		<div><h1 class="text-3xl p-2 font-bold text-black dark:text-white">Create a Ticket</h1></div>
 	{/snippet}
 	<form class="text-left flex flex-col gap-4" onsubmit={preventDefault(attachMatchLog)}>
 		{#await matchesPromise then}
@@ -467,14 +494,22 @@
 				{#if user.id === ticket.author_id}
 					<div class="flex flex-row justify-between h-10 gap-1">
 						<div class="flex flex-row gap-1">
-							<Button onclick={back} class=""><ArrowLeftOutline class="" style="height: 13px; width: 13px;" /></Button>
+							<Button onclick={back} class=""
+								><Icon icon="mdi:arrow-left" class="" style="height: 13px; width: 13px;" /></Button
+							>
 							{#if !ticket.followers.includes(user.id)}
 								<Button onclick={toggleFollowTicket} class=""
-									><Icon icon="simple-line-icons:user-following" style="height: 13px; width: 18px; padding-right: 4px;" /> Follow</Button
+									><Icon
+										icon="simple-line-icons:user-following"
+										style="height: 13px; width: 18px; padding-right: 4px;"
+									/> Follow</Button
 								>
 							{:else}
 								<Button onclick={toggleFollowTicket} class=""
-									><Icon icon="simple-line-icons:user-unfollow" style="height: 13px; width: 18px; padding-right: 4px;" /> Unfollow</Button
+									><Icon
+										icon="simple-line-icons:user-unfollow"
+										style="height: 13px; width: 18px; padding-right: 4px;"
+									/> Unfollow</Button
 								>
 							{/if}
 							<Button onclick={() => openMatchLogSelector()}
@@ -482,23 +517,36 @@
 							>
 						</div>
 						<div class="flex flex-row gap-1">
-							<Button onclick={() => location.reload()} class=""><Icon icon="charm:refresh" style="height: 13px; width: 13px;" /></Button>
-							<Button onclick={() => (editTicketView = true)} class=""><EditOutline class="" style="height: 13px; width: 13px;" /></Button>
-							<Button onclick={() => (deleteTicketPopup = true)} class=""><TrashBinOutline class="" style="height: 13px; width: 13px;" /></Button
+							<Button onclick={() => location.reload()} class=""
+								><Icon icon="charm:refresh" style="height: 13px; width: 13px;" /></Button
+							>
+							<Button onclick={() => (editTicketView = true)} class=""
+								><Icon icon="mdi:pencil" class="" style="height: 13px; width: 13px;" /></Button
+							>
+							<Button onclick={() => (deleteTicketPopup = true)} class=""
+								><Icon icon="mdi:trash-can" class="" style="height: 13px; width: 13px;" /></Button
 							>
 						</div>
 					</div>
 				{:else}
 					<div class="flex flex-row justify-between gap-1">
 						<div class="flex flex-row h-10 gap-1">
-							<Button onclick={back} class=""><ArrowLeftOutline class="" style="height: 13px; width: 13px;" /></Button>
+							<Button onclick={back} class=""
+								><Icon icon="mdi:arrow-left" class="" style="height: 13px; width: 13px;" /></Button
+							>
 							{#if !ticket.followers.includes(user.id)}
 								<Button onclick={toggleFollowTicket} class=""
-									><Icon icon="simple-line-icons:user-following" style="height: 13px; width: 18px; padding-right: 4px;" /> Follow</Button
+									><Icon
+										icon="simple-line-icons:user-following"
+										style="height: 13px; width: 18px; padding-right: 4px;"
+									/> Follow</Button
 								>
 							{:else}
 								<Button onclick={toggleFollowTicket} class=""
-									><Icon icon="simple-line-icons:user-unfollow" style="height: 13px; width: 18px; padding-right: 4px;" /> Unfollow</Button
+									><Icon
+										icon="simple-line-icons:user-unfollow"
+										style="height: 13px; width: 18px; padding-right: 4px;"
+									/> Unfollow</Button
 								>
 							{/if}
 							<Button onclick={() => openMatchLogSelector()}
@@ -506,7 +554,9 @@
 							>
 						</div>
 						<div class="flex flex-row gap-1">
-							<Button onclick={() => location.reload()} class=""><Icon icon="charm:refresh" style="height: 13px; width: 13px;" /></Button>
+							<Button onclick={() => location.reload()} class=""
+								><Icon icon="charm:refresh" style="height: 13px; width: 13px;" /></Button
+							>
 						</div>
 					</div>
 				{/if}
@@ -523,9 +573,18 @@
 					</div>
 					<div class="text-left">
 						{#if $userStore.meshedEventToken && $eventStore.subEvents}
-							<p><b>Field:</b> {$eventStore.subEvents.find((e) => e.code === ticket?.event_code)?.label ?? ticket.event_code}</p>
+							<p>
+								<b>Field:</b>
+								{$eventStore.subEvents.find((e) => e.code === ticket?.event_code)?.label ??
+									ticket.event_code}
+							</p>
 						{/if}
-						<p><b>Team:</b> {ticket.team} - {get(eventStore).teams?.find((team) => parseInt(team.number) === ticket?.team)?.name ?? "Unknown"}</p>
+						<p>
+							<b>Team:</b>
+							{ticket.team} - {get(eventStore).teams?.find(
+								(team) => parseInt(team.number) === ticket?.team,
+							)?.name ?? "Unknown"}
+						</p>
 						<p><b>Created:</b> {time} by {ticket.author.username}</p>
 						<p>
 							<b>Assigned To:</b>
@@ -545,7 +604,9 @@
 						{/if}
 					</div>
 					<div class="flex flex-row gap-2 justify-between pt-2 sm:place-content-start">
-						<Button size="sm" onclick={() => changeOpenStatus()}>{ticket.is_open ? "Close Ticket" : "Reopen Ticket"}</Button>
+						<Button size="sm" onclick={() => changeOpenStatus()}
+							>{ticket.is_open ? "Close Ticket" : "Reopen Ticket"}</Button
+						>
 						{#if user}
 							<Button size="sm" onclick={() => assignSelf()}>
 								{#if ticket.assigned_to_id === user.id}
@@ -583,19 +644,23 @@
 							<div>
 								<form class="w-full" onsubmit={postMessage}>
 									<label for="chat" class="sr-only">Add a Message:</label>
-									<Alert color="gray" class="px-0 py-2">			
-                                        <Textarea
-                                            id="chat"
-                                            class="ml-3"
-                                            rows={1}
-                                            placeholder="Your message..."
-                                            onkeydown={sendKey}
-                                            bind:value={message_text}
-                                        />
-                                        <ToolbarButton type="submit" color="blue" class="rounded-full text-primary-600 dark:text-primary-500">
-                                            <Icon icon="mdi:send" class="w-6 h-8" />
-                                            <span class="sr-only">Send message</span>
-                                        </ToolbarButton>
+									<Alert color="gray" class="px-0 py-2">
+										<Textarea
+											id="chat"
+											class="ml-3"
+											rows={1}
+											placeholder="Your message..."
+											onkeydown={sendKey}
+											bind:value={message_text}
+										/>
+										<ToolbarButton
+											type="submit"
+											color="blue"
+											class="rounded-full text-primary-600 dark:text-primary-500"
+										>
+											<Icon icon="mdi:send" class="w-6 h-8" />
+											<span class="sr-only">Send message</span>
+										</ToolbarButton>
 									</Alert>
 								</form>
 							</div>

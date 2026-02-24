@@ -105,13 +105,13 @@ export async function uploadMatchLogs() {
 		};
 
 		console.debug(upload);
-		await trpc.match.putCompressedMatchLogs.query(upload);
+		await trpc.match.putCompressedMatchLogs.mutate(upload);
 	} catch (err) {
 		console.error(err);
 		console.log(`Uploading logs uncompressed`);
 		const upload = { event: eventCode, level: match.tournamentLevel, ...match, logs };
 		console.debug(upload);
-		await trpc.match.putMatchLogs.query(upload);
+		await trpc.match.putMatchLogs.mutate(upload);
 	}
 	console.log("done");
 }
@@ -143,13 +143,13 @@ export async function uploadMatchLogsForMatch(matchNumber: number, playNumber: n
 		};
 
 		console.debug(upload);
-		await trpc.match.putCompressedMatchLogs.query(upload);
+		await trpc.match.putCompressedMatchLogs.mutate(upload);
 	} catch (err) {
 		console.error(err);
 		console.log(`Uploading logs uncompressed`);
 		const upload = { event: eventCode, level: match.tournamentLevel, ...match, logs };
 		console.debug(upload);
-		await trpc.match.putMatchLogs.query(upload);
+		await trpc.match.putMatchLogs.mutate(upload);
 	}
 	console.log("done");
 }

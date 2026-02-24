@@ -1,9 +1,9 @@
 import { API } from "@the-orange-alliance/api";
 import Match from "@the-orange-alliance/api/lib/esm/models/Match";
 import StreamType from "@the-orange-alliance/api/lib/esm/models/types/StreamType";
-import { observable } from "@trpc/server/observable";
 import { z } from "zod";
 import { publicProcedure, router } from "../trpc";
+import { abortableSleep } from "../util/subscription";
 
 process.env.TZ = "UTC";
 
@@ -85,8 +85,8 @@ export const ftcRouter = router({
 				events: z.array(z.string()),
 			}),
 		)
-		.subscription(async ({ input }) => {
-			let promises = [];
+		.subscription(async function* ({ input, signal }) {
+			const promises = [];
 
 			for (const key of input.events) {
 				if (!eventData[key]) {
@@ -124,19 +124,12 @@ export const ftcRouter = router({
 
 			await Promise.all(promises);
 
-			return observable<FTCEvent[]>((emitter) => {
-				function sendEvents() {
-					emitter.next(input.events.map((key) => eventData[key]));
-				}
+			yield input.events.map((key) => eventData[key]);
 
-				sendEvents();
-				const interval = setInterval(sendEvents, 30000);
-
-				return () => {
-					console.log("Unsubscribing");
-					clearInterval(interval);
-				};
-			});
+			while (!signal?.aborted) {
+				await abortableSleep(30000, signal!);
+				if (!signal?.aborted) yield input.events.map((key) => eventData[key]);
+			}
 		}),
 
 	getRegions: publicProcedure.query(async () => {

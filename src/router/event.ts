@@ -90,7 +90,7 @@ export const eventRouter = router({
 				pin: z.string(),
 			}),
 		)
-		.query(async ({ input, ctx }) => {
+		.mutation(async ({ input, ctx }) => {
 			input.code = input.code.trim().toLowerCase();
 
 			const eventDB = await db.query.events.findFirst({ where: eq(events.code, input.code) });
@@ -134,7 +134,7 @@ export const eventRouter = router({
 				code: z.string(),
 			}),
 		)
-		.query(async ({ input, ctx }) => {
+		.mutation(async ({ input, ctx }) => {
 			input.code = input.code.trim().toLowerCase();
 
 			const eventDB = (
@@ -204,7 +204,7 @@ export const eventRouter = router({
 				teams: z.array(z.number()).optional(),
 			}),
 		)
-		.query(async ({ input, ctx }) => {
+		.mutation(async ({ input, ctx }) => {
 			input.code = input.code.trim().toLowerCase();
 			const token = generateToken();
 			const teams: TeamList = [];
@@ -508,7 +508,7 @@ export const eventRouter = router({
 				state: z.boolean(),
 			}),
 		)
-		.query(async ({ ctx, input }) => {
+		.mutation(async ({ ctx, input }) => {
 			const updatedValue = await db
 				.update(events)
 				.set({ publicTicketSubmit: input.state })

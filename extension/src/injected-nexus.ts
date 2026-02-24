@@ -90,7 +90,7 @@ function scrapeTeamList() {
 	return teamStatus;
 }
 
-function updateNexusFromChecklist(checklist: Awaited<ReturnType<typeof trpc.checklist.update.query>>) {
+function updateNexusFromChecklist(checklist: Awaited<ReturnType<typeof trpc.checklist.update.mutate>>) {
 	const { inspectionCol, hereCol, radioCol } = getColumnIndex();
 	const div = document.querySelector("nexus-teams > div > div > table > tbody");
 	if (!div) throw new Error("Could not find div element");
@@ -185,7 +185,7 @@ setInterval(async () => {
 			// Send a maximum of 30 updates at a time to prevent exceeding the query length limit
 			while (teamsToSend.length > 0) {
 				let chunk = teamsToSend.splice(0, 30);
-				lastResponse = await trpc.checklist.update.query(chunk);
+				lastResponse = await trpc.checklist.update.mutate(chunk);
 
 				for (let team of chunk) {
 					if (team.key === "inspected") {

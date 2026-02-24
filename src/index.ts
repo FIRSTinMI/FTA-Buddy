@@ -1,16 +1,13 @@
-import { createHTTPServer } from "@trpc/server/adapters/standalone";
+import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { applyWSSHandler } from "@trpc/server/adapters/ws";
-import { observable } from "@trpc/server/observable";
 import cors from "cors";
 import "dotenv/config";
 import { and, eq } from "drizzle-orm";
-import express, { RequestHandler } from "express";
-import proxy from "express-http-proxy";
+import express from "express";
 import { readFileSync, readdirSync } from "fs";
 import hljs from "highlight.js";
 import json from "highlight.js/lib/languages/json";
 import { createServer } from "http";
-import { createProxyServer } from "http-proxy";
 import { json2csv } from "json-2-csv";
 import { Marked } from "marked";
 import { gfmHeadingId } from "marked-gfm-heading-id";
@@ -30,6 +27,7 @@ import { addTicketMessageFromSlack, messagesRouter } from "./router/messages";
 import { ticketsRouter, updateTicketAssignmentFromSlack, updateTicketStatusFromSlack } from "./router/tickets";
 import { userRouter } from "./router/user";
 import { adminProcedure, createContext, publicProcedure, router } from "./trpc";
+import { abortableSleep } from "./util/subscription";
 import { getTeamAverageCycle } from "./util/team-cycles";
 //import { initializePushNotifications } from '../app/src/util/push-notifications';
 import { EventEmitter } from "events";
@@ -79,26 +77,19 @@ const appRouter = router({
 	tickets: ticketsRouter,
 	notes: notesRouter,
 	app: router({
-		version: publicProcedure.subscription(async () => {
-			return observable<string>((emitter) => {
-				const interval = setInterval(() => {
-					emitter.next(pjson.version ?? "dev");
-				}, 60000);
-
-				emitter.next(pjson.version ?? "dev");
-				return () => clearInterval(interval);
-			});
+		version: publicProcedure.subscription(async function* ({ signal }) {
+			yield pjson.version ?? "dev";
+			while (!signal?.aborted) {
+				await abortableSleep(60000, signal!);
+				if (!signal?.aborted) yield pjson.version ?? "dev";
+			}
 		}),
-		status: publicProcedure.subscription(async ({ input }) => {
-			return observable<typeof knownIssue>((emitter) => {
-				const interval = setInterval(() => {
-					emitter.next(knownIssue);
-				}, 20000);
-
-				emitter.next(knownIssue);
-
-				return () => clearInterval(interval);
-			});
+		status: publicProcedure.subscription(async function* ({ signal }) {
+			yield knownIssue;
+			while (!signal?.aborted) {
+				await abortableSleep(20000, signal!);
+				if (!signal?.aborted) yield knownIssue;
+			}
 		}),
 		startIssue: adminProcedure
 			.input(
@@ -133,15 +124,12 @@ const appRouter = router({
 
 export type AppRouter = typeof appRouter;
 
-// HTTP server hosting TRPC
-createHTTPServer({
-	router: appRouter,
-	middleware: cors(),
-	createContext,
-}).listen(port + 1);
+const app = express();
 
-// Websocket Server
-const wss = new ws.Server({ port: port + 2 });
+const server = createServer(app);
+
+// Websocket Server (attached to main HTTP server at /ws path)
+const wss = new ws.Server({ server, path: "/ws" });
 
 const handler = applyWSSHandler({
 	wss,
@@ -152,24 +140,13 @@ const handler = applyWSSHandler({
 wss.on("connection", (ws) => {
 	ws.once("close", () => {});
 });
-console.log("✅ WebSocket Server listening on ws://localhost:" + (port + 2));
-
-const app = express();
-
-const server = createServer(app);
-
-// Proxy for websocket
-const wsProxy = createProxyServer({ target: "http://localhost:" + (port + 2), ws: true });
-
-server.on("upgrade", function (req, socket, head) {
-	wsProxy.ws(req, socket, head);
-});
+console.log("✅ WebSocket Server listening on /ws");
 
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use("/trpc", proxy("http://localhost:" + (port + 1) + "/trpc") as unknown as RequestHandler);
+app.use("/trpc", createExpressMiddleware({ router: appRouter, createContext }));
 
 app.get("/serviceworker.js", async (req, res) => {
 	let assets = readdirSync("./app/dist/assets");
@@ -350,13 +327,9 @@ const marked = new Marked(
 	}),
 );
 
-marked.use({
-	gfm: true,
-});
-
 marked.use(gfmHeadingId());
 
-app.get("/docs/*page", async (req, res) => {
+app.get(/^\/docs\//, async (req, res) => {
 	let path = req.path;
 	if (path.endsWith("/")) path += "index";
 	path = join(__dirname, "../", path + ".md");
@@ -408,7 +381,7 @@ if (process.env.NODE_ENV === "dev") {
 } else {
 	app.use("/", express.static("app/dist"));
 	app.use("/FieldMonitor", express.static("app/dist/FieldMonitor"));
-	app.get("/*page", (req, res) => {
+	app.get(/.*/, (req, res) => {
 		res.sendFile(join(__dirname, "../app/dist/index.html"));
 	});
 }

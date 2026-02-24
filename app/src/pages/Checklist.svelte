@@ -1,5 +1,14 @@
 <script lang="ts">
-	import { Checkbox, Indicator, Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from "flowbite-svelte";
+	import {
+		Checkbox,
+		Indicator,
+		Table,
+		TableBody,
+		TableBodyCell,
+		TableBodyRow,
+		TableHead,
+		TableHeadCell,
+	} from "flowbite-svelte";
 	import { onDestroy, onMount } from "svelte";
 	import { get } from "svelte/store";
 	import type { EventChecklist, NexusStatus } from "../../../shared/types";
@@ -23,7 +32,7 @@
 
 	checklistPromise.then((c: EventChecklist) => {
 		checklist = c;
-        updateTotals(checklist);
+		updateTotals(checklist);
 	});
 
 	let present = $state(0);
@@ -40,7 +49,9 @@
 	async function refreshNexusStatus() {
 		try {
 			nexusStatus = await trpc.event.getNexusStatus.query();
-		} catch { /* ignore */ }
+		} catch {
+			/* ignore */
+		}
 	}
 
 	function updateTotals(c: EventChecklist) {
@@ -60,7 +71,11 @@
 		}
 	}
 
-	async function updateChecklist(team: string, key: "present" | "inspected" | "radioProgrammed" | "connectionTested", value: boolean) {
+	async function updateChecklist(
+		team: string,
+		key: "present" | "inspected" | "radioProgrammed" | "connectionTested",
+		value: boolean,
+	) {
 		const updated = [{ team: team, key, value }];
 
 		if (["inspected", "radioProgrammed", "connectionTested"].includes(key) && value) {
@@ -71,8 +86,8 @@
 			updated.push({ team: team, key: "radioProgrammed", value: true });
 		}
 
-		await trpc.checklist.update.query(updated);
-        updateTotals(checklist);
+		await trpc.checklist.update.mutate(updated);
+		updateTotals(checklist);
 	}
 
 	let subscription: ReturnType<typeof trpc.checklist.subscription.subscribe>;
@@ -89,7 +104,7 @@
 					checklist = c;
 					updateTotals(checklist);
 				},
-			}
+			},
 		);
 
 		refreshNexusStatus();
@@ -109,26 +124,30 @@
 		<div class="flex w-full justify-center">
 			<div class="flex flex-col gap-2">
 				<h1 class="font-bold text-3xl">Team Checklist</h1>
-				{#if nexusStatus && nexusStatus.state !== 'not_configured'}
+				{#if nexusStatus && nexusStatus.state !== "not_configured"}
 					<div class="flex flex-row gap-2 items-center text-sm">
 						<Indicator
-							color={nexusStatus.state === 'complete' || nexusStatus.state === 'polling_slow' ? 'green'
-								: nexusStatus.state === 'polling' ? 'blue'
-								: nexusStatus.state === 'unauthorized' ? 'red'
-								: nexusStatus.state === 'error' ? 'yellow'
-								: 'gray'}
+							color={nexusStatus.state === "complete" || nexusStatus.state === "polling_slow"
+								? "green"
+								: nexusStatus.state === "polling"
+									? "blue"
+									: nexusStatus.state === "unauthorized"
+										? "red"
+										: nexusStatus.state === "error"
+											? "yellow"
+											: "gray"}
 							class="shrink-0"
 						/>
 						<span class="text-gray-400">
-							{#if nexusStatus.state === 'polling' || nexusStatus.state === 'polling_slow'}
+							{#if nexusStatus.state === "polling" || nexusStatus.state === "polling_slow"}
 								Nexus syncing
-							{:else if nexusStatus.state === 'complete'}
+							{:else if nexusStatus.state === "complete"}
 								Nexus synced ✓
-							{:else if nexusStatus.state === 'unauthorized'}
+							{:else if nexusStatus.state === "unauthorized"}
 								Nexus: unauthorized
-							{:else if nexusStatus.state === 'error'}
+							{:else if nexusStatus.state === "error"}
 								Nexus: error
-							{:else if nexusStatus.state === 'event_over'}
+							{:else if nexusStatus.state === "event_over"}
 								Nexus: event ended
 							{/if}
 						</span>

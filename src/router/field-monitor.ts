@@ -1,5 +1,5 @@
-import { observable } from "@trpc/server/observable";
 import { and, eq, gt } from "drizzle-orm";
+import { on } from "events";
 import { z } from "zod";
 import { events, newEventEmitter } from "..";
 import { formatTimeShortNoAgoSeconds } from "../../shared/formatTime";
@@ -14,6 +14,7 @@ import {
 	processTeamWarnings,
 } from "../util/frame-processing";
 import { getEvent } from "../util/get-event";
+import { subscriptionQueue } from "../util/subscription";
 
 export interface Post {
 	type: "test";
@@ -176,30 +177,13 @@ export const fieldMonitorRouter = router({
 				eventToken: z.string(),
 			}),
 		)
-		.subscription(async ({ input, ctx }) => {
+		.subscription(async function* ({ input, signal }) {
 			const event = await getEvent(input.eventToken);
 
-			return observable<MonitorFrame>((emitter) => {
-				console.log("robots subscription", event.code);
-				const listener = (frame: MonitorFrame) => {
-					emitter.next(frame);
-				};
-
-				event.fieldMonitorEmitter.on("update", listener);
-
-				// const connectionId = crypto.randomUUID();
-				// event.stats.clients.push({
-				//     userAgent: ctx.userAgent,
-				//     ip: ctx.ip,
-				//     id: connectionId,
-				//     connected: new Date(),
-				// });
-
-				return () => {
-					event.fieldMonitorEmitter.off("update", listener);
-					// event.stats.clients = event.stats.clients.filter(c => c.id !== connectionId);
-				};
-			});
+			console.log("robots subscription", event.code);
+			for await (const [frame] of on(event.fieldMonitorEmitter, "update", { signal: signal! })) {
+				yield frame as MonitorFrame;
+			}
 		}),
 
 	robotStatus: publicProcedure
@@ -208,21 +192,13 @@ export const fieldMonitorRouter = router({
 				eventToken: z.string(),
 			}),
 		)
-		.subscription(async ({ input }) => {
+		.subscription(async function* ({ input, signal }) {
 			const event = await getEvent(input.eventToken);
 
-			return observable<StateChange>((emitter) => {
-				console.log("robot status subscription", event.code);
-				const listener = (change: StateChange) => {
-					emitter.next(change);
-				};
-
-				event.robotStateChangeEmitter.on("change", listener);
-
-				return () => {
-					event.robotStateChangeEmitter.off("change", listener);
-				};
-			});
+			console.log("robot status subscription", event.code);
+			for await (const [change] of on(event.robotStateChangeEmitter, "change", { signal: signal! })) {
+				yield change as StateChange;
+			}
 		}),
 
 	fieldStatus: publicProcedure
@@ -231,21 +207,13 @@ export const fieldMonitorRouter = router({
 				eventToken: z.string(),
 			}),
 		)
-		.subscription(async ({ input }) => {
+		.subscription(async function* ({ input, signal }) {
 			const event = await getEvent(input.eventToken);
 
-			return observable<FieldState>((emitter) => {
-				console.log("field status subscription", event.code);
-				const listener = (state: FieldState) => {
-					emitter.next(state);
-				};
-
-				event.fieldStatusEmitter.on("change", listener);
-
-				return () => {
-					event.fieldStatusEmitter.off("change", listener);
-				};
-			});
+			console.log("field status subscription", event.code);
+			for await (const [state] of on(event.fieldStatusEmitter, "change", { signal: signal! })) {
+				yield state as FieldState;
+			}
 		}),
 
 	combinedSubscription: publicProcedure
@@ -254,25 +222,23 @@ export const fieldMonitorRouter = router({
 				eventToken: z.string(),
 			}),
 		)
-		.subscription(async ({ input }) => {
+		.subscription(async function* ({ input, signal }) {
 			const event = await getEvent(input.eventToken);
 
-			return observable<MonitorFrame | StateChange | FieldState>((emitter) => {
-				console.log("combined subscription", event.code);
-				const listener = (state: MonitorFrame | StateChange | FieldState) => {
-					emitter.next(state);
-				};
+			console.log("combined subscription", event.code);
+			const { push, drain } = subscriptionQueue<MonitorFrame | StateChange | FieldState>(signal!);
 
-				event.fieldMonitorEmitter.on("update", listener);
-				event.robotStateChangeEmitter.on("change", listener);
-				event.fieldStatusEmitter.on("change", listener);
+			event.fieldMonitorEmitter.on("update", push);
+			event.robotStateChangeEmitter.on("change", push);
+			event.fieldStatusEmitter.on("change", push);
 
-				return () => {
-					event.fieldMonitorEmitter.off("update", listener);
-					event.robotStateChangeEmitter.off("change", listener);
-					event.fieldStatusEmitter.off("change", listener);
-				};
-			});
+			try {
+				yield* drain();
+			} finally {
+				event.fieldMonitorEmitter.off("update", push);
+				event.robotStateChangeEmitter.off("change", push);
+				event.fieldStatusEmitter.off("change", push);
+			}
 		}),
 
 	management: publicProcedure
@@ -281,7 +247,7 @@ export const fieldMonitorRouter = router({
 				token: z.string(),
 			}),
 		)
-		.subscription(async ({ input }) => {
+		.subscription(async function* ({ input, signal }) {
 			const user = await db.query.users.findFirst({
 				where: and(eq(users.token, input.token), gt(users.id, -1), eq(users.admin, true)),
 			});
@@ -290,59 +256,58 @@ export const fieldMonitorRouter = router({
 				throw new Error("Unauthorized");
 			}
 
-			return observable<EventState>((emitter) => {
-				let listeners: (() => void)[] = [];
+			const { push, drain } = subscriptionQueue<EventState>(signal!);
+			const cleanups: Array<() => void> = [];
 
-				const addNewEvent = (eventCode: string) => {
-					console.log("new event", eventCode);
-					const event = events[eventCode];
-					const listener = (frame: MonitorFrame) => {
-						emitter.next({
-							code: event.code,
-							name: event.name,
-							token: event.token,
-							pin: event.pin,
-							field: frame.field,
-							match: frame.match,
-							level: frame.level,
-							aheadBehind: frame.time,
-							exactAheadBehind: frame.exactAheadBehind,
-							clients: event.stats.clients,
-							extensions: event.stats.extensions,
-						});
-					};
-
-					event.fieldMonitorEmitter.on("update", listener);
-					listeners.push(() => event.fieldMonitorEmitter.off("update", listener));
-
-					emitter.next({
+			const addNewEvent = (eventCode: string) => {
+				console.log("new event", eventCode);
+				const event = events[eventCode];
+				const listener = (frame: MonitorFrame) => {
+					push({
 						code: event.code,
 						name: event.name,
 						token: event.token,
 						pin: event.pin,
-						field: event.monitorFrame.field,
-						match: event.monitorFrame.match,
-						level: event.monitorFrame.level,
-						aheadBehind: event.monitorFrame.time,
-						exactAheadBehind: event.monitorFrame.exactAheadBehind,
+						field: frame.field,
+						match: frame.match,
+						level: frame.level,
+						aheadBehind: frame.time,
+						exactAheadBehind: frame.exactAheadBehind,
 						clients: event.stats.clients,
 						extensions: event.stats.extensions,
 					});
 				};
 
-				for (let eventCode of Object.keys(events)) {
-					addNewEvent(eventCode);
-				}
+				event.fieldMonitorEmitter.on("update", listener);
+				cleanups.push(() => event.fieldMonitorEmitter.off("update", listener));
 
-				newEventEmitter.on("new", addNewEvent);
+				push({
+					code: event.code,
+					name: event.name,
+					token: event.token,
+					pin: event.pin,
+					field: event.monitorFrame.field,
+					match: event.monitorFrame.match,
+					level: event.monitorFrame.level,
+					aheadBehind: event.monitorFrame.time,
+					exactAheadBehind: event.monitorFrame.exactAheadBehind,
+					clients: event.stats.clients,
+					extensions: event.stats.extensions,
+				});
+			};
 
-				return () => {
-					newEventEmitter.off("new", addNewEvent);
-					for (const l of listeners) {
-						l();
-					}
-				};
-			});
+			for (const eventCode of Object.keys(events)) {
+				addNewEvent(eventCode);
+			}
+
+			newEventEmitter.on("new", addNewEvent);
+			cleanups.push(() => newEventEmitter.off("new", addNewEvent));
+
+			try {
+				yield* drain();
+			} finally {
+				for (const cleanup of cleanups) cleanup();
+			}
 		}),
 });
 

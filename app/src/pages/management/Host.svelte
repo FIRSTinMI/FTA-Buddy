@@ -76,9 +76,10 @@
 	let autofilledKey: string | undefined = undefined;
 
 	async function createEvent(evt: SubmitEvent) {
+		evt.preventDefault();
 		loading = true;
 		try {
-			const res = await trpc.event.create.query({
+			const res = await trpc.event.create.mutate({
 				code: eventCode,
 				pin: eventPin,
 				teams,
@@ -159,21 +160,35 @@
 		}
 	}
 
-	$: blockSubmit = !(eventCode.length > 6 && eventPin.length >= 4 && !loading && fmsDetected && extensionDetected && extensionEnabled && !eventCodeError);
+	$: blockSubmit = !(
+		eventCode.length > 6 &&
+		eventPin.length >= 4 &&
+		!loading &&
+		fmsDetected &&
+		extensionDetected &&
+		extensionEnabled &&
+		!eventCodeError
+	);
 </script>
 
 {#if waitingForFirstConnectionTest}
 	<Spinner />
 {/if}
 
-<div class="container mx-auto md:max-w-4xl flex flex-col justify-center p-4 h-full space-y-4 {waitingForFirstConnectionTest ? 'blur-sm' : ''}">
+<div
+	class="container mx-auto md:max-w-4xl flex flex-col justify-center p-4 h-full space-y-4 {waitingForFirstConnectionTest
+		? 'blur-sm'
+		: ''}"
+>
 	<h1 class="text-3xl font-bold">Host a FTA Buddy Instance</h1>
 	<div>
 		<div class="inline-flex gap-2 font-bold mx-auto">
 			{#if extensionDetected}
 				{#if extensionUpdate}
 					<Indicator color="yellow" class="my-auto" />
-					<span class="text-yellow-300">Extension Update Available ({extensionVersion} &rarr; {LATEST_EXTENSION_VERSION})</span>
+					<span class="text-yellow-300"
+						>Extension Update Available ({extensionVersion} &rarr; {LATEST_EXTENSION_VERSION})</span
+					>
 					<a
 						href="https://chromewebstore.google.com/detail/fta-buddy/kddnhihfpfnehnnhbkfajdldlgigohjc"
 						class="text-blue-400 hover:underline"
@@ -215,38 +230,38 @@
 		{/if}
 	</span>
 	<p class="text-lg">
-		FTA Buddy needs a host to send data to it from FMS. The extension must be installed and be able to communicate with FMS at
+		FTA Buddy needs a host to send data to it from FMS. The extension must be installed and be able to communicate
+		with FMS at
 		<code class="bg-neutral-200 dark:bg-neutral-900 px-2 py-.75 rounded-lg">10.0.100.5</code>
 	</p>
-	<form class="grid gap-3 text-left" on:submit|preventDefault={createEvent}>
+	<form class="grid gap-3 text-left" onsubmit={createEvent}>
 		<div>
 			<Label for="event-code">Event Code</Label>
 			<Input
 				id="event-code"
 				bind:value={eventCode}
 				placeholder="2024mitry"
-				on:keyup={checkEventCodeDebounced}
+				onkeyup={checkEventCodeDebounced}
 				class="mt-1"
-				color={eventCodeError ? "red" : "base"}
+				color={eventCodeError ? "red" : undefined}
 			/>
 			<Helper class="text-sm mt-1" color={eventCodeError ? "red" : undefined}>
 				{eventCodeHelperText}
 				{#if tbaKey}
-					<a
-						href="#"
+					<button
 						class="text-blue-400 hover:underline"
 						onclick={() => {
 							eventCode = tbaKey ?? "";
 							checkEventCode();
-						}}>{tbaKey}</a
+						}}>{tbaKey}</button
 					>
 				{/if}
 			</Helper>
 		</div>
 		<div>
-			<Label for="event-pin" disabled={loading}>Event Pin</Label>
+			<Label for="event-pin">Event Pin</Label>
 			<Input id="event-pin" bind:value={eventPin} disabled={loading} class="mt-1" />
 		</div>
-		<Button type="submit" bind:disabled={blockSubmit}>Create Event</Button>
+		<Button type="submit" disabled={blockSubmit}>Create Event</Button>
 	</form>
 </div>

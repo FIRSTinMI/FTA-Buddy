@@ -1,12 +1,12 @@
 import { TRPCError } from "@trpc/server";
-import { observable } from "@trpc/server/observable";
 import { randomUUID } from "crypto";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { on } from "events";
 import { z } from "zod";
 import { notificationEmitter } from "..";
 import { formatTimeShortNoAgoMinutes } from "../../shared/formatTime";
 import type { Notification } from "../../shared/types";
-import { NotificationEvents, Profile, Ticket, TicketUpdateEventData, TicketUpdateEvents } from "../../shared/types";
+import { Profile, Ticket, TicketUpdateEventData, TicketUpdateEvents } from "../../shared/types";
 import { db } from "../db/db";
 import { messages, pushSubscriptions, tickets, users } from "../db/schema";
 import { eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
@@ -20,6 +20,7 @@ import {
 	sendSlackMessage,
 	updateSlackMessage,
 } from "../util/slack";
+import { subscriptionQueue } from "../util/subscription";
 import { messagesRouter } from "./messages";
 
 const messageRouter = messagesRouter;
@@ -156,7 +157,7 @@ export const ticketsRouter = router({
 				text: z.string(),
 			}),
 		)
-		.query(async ({ input }) => {
+		.mutation(async ({ input }) => {
 			const event = await getEvent("", input.event_code);
 
 			const author = await db
@@ -286,7 +287,7 @@ export const ticketsRouter = router({
 				match_id: z.string().optional(),
 			}),
 		)
-		.query(async ({ ctx, input }) => {
+		.mutation(async ({ ctx, input }) => {
 			const event = await getEvent(ctx.eventToken as string);
 
 			const author = await db
@@ -400,7 +401,7 @@ export const ticketsRouter = router({
 				event_code: z.string(),
 			}),
 		)
-		.query(async ({ ctx, input }) => {
+		.mutation(async ({ ctx, input }) => {
 			const event = await getEvent(ctx.eventToken as string);
 
 			const ticket = await db.query.tickets.findFirst({
@@ -483,7 +484,7 @@ export const ticketsRouter = router({
 				event_code: z.string(),
 			}),
 		)
-		.query(async ({ ctx, input }) => {
+		.mutation(async ({ ctx, input }) => {
 			const event = await getEvent(ctx.eventToken as string);
 
 			const ticket = await db.query.tickets.findFirst({
@@ -574,7 +575,7 @@ export const ticketsRouter = router({
 				event_code: z.string(),
 			}),
 		)
-		.query(async ({ ctx, input }) => {
+		.mutation(async ({ ctx, input }) => {
 			const event = await getEvent(ctx.eventToken as string);
 
 			const ticket = await db.query.tickets.findFirst({
@@ -672,7 +673,7 @@ export const ticketsRouter = router({
 				event_code: z.string(),
 			}),
 		)
-		.query(async ({ ctx, input }) => {
+		.mutation(async ({ ctx, input }) => {
 			const event = await getEvent(ctx.eventToken as string);
 
 			const ticket = await db.query.tickets.findFirst({
@@ -752,7 +753,7 @@ export const ticketsRouter = router({
 				event_code: z.string(),
 			}),
 		)
-		.query(async ({ ctx, input }) => {
+		.mutation(async ({ ctx, input }) => {
 			const event = await getEvent(ctx.eventToken as string);
 
 			const ticket = await db.query.tickets.findFirst({
@@ -837,7 +838,7 @@ export const ticketsRouter = router({
 				event_code: z.string(),
 			}),
 		)
-		.query(async ({ ctx, input }) => {
+		.mutation(async ({ ctx, input }) => {
 			const event = await getEvent(ctx.eventToken as string);
 
 			const ticket = await db.query.tickets.findFirst({
@@ -888,165 +889,159 @@ export const ticketsRouter = router({
 					.optional(),
 			}),
 		)
-		.subscription(async ({ input }) => {
+		.subscription(async function* ({ input, signal }) {
 			const event = await getEvent(input.eventToken);
 
-			return observable<TicketUpdateEventData>((emitter) => {
-				const createHandler: TicketUpdateEvents["create"] = (data) => {
-					if (data.kind === "create" && input.ticket_id) {
-						if (data.ticket.id === input.ticket_id) {
-							emitter.next(data);
-						}
-					} else if (data.kind === "create") {
-						emitter.next(data);
+			const { push, drain } = subscriptionQueue<TicketUpdateEventData>(signal!);
+
+			const createHandler: TicketUpdateEvents["create"] = (data) => {
+				if (data.kind === "create" && input.ticket_id) {
+					if (data.ticket.id === input.ticket_id) {
+						push(data);
 					}
-				};
+				} else if (data.kind === "create") {
+					push(data);
+				}
+			};
 
-				const assignHandler: TicketUpdateEvents["assign"] = (data) => {
-					if (data.kind === "assign" && input.ticket_id) {
-						if (data.ticket_id === input.ticket_id) {
-							emitter.next(data);
-						}
-					} else if (data.kind === "assign") {
-						emitter.next(data);
+			const assignHandler: TicketUpdateEvents["assign"] = (data) => {
+				if (data.kind === "assign" && input.ticket_id) {
+					if (data.ticket_id === input.ticket_id) {
+						push(data);
 					}
-				};
+				} else if (data.kind === "assign") {
+					push(data);
+				}
+			};
 
-				const statusHandler: TicketUpdateEvents["status"] = (data) => {
-					if (data.kind === "status" && input.ticket_id) {
-						if (data.ticket_id === input.ticket_id) {
-							emitter.next(data);
-						}
-					} else if (data.kind === "status") {
-						emitter.next(data);
+			const statusHandler: TicketUpdateEvents["status"] = (data) => {
+				if (data.kind === "status" && input.ticket_id) {
+					if (data.ticket_id === input.ticket_id) {
+						push(data);
 					}
-				};
+				} else if (data.kind === "status") {
+					push(data);
+				}
+			};
 
-				const followHandler: TicketUpdateEvents["follow"] = (data) => {
-					if (data.kind === "follow" && input.ticket_id) {
-						if (data.ticket_id === input.ticket_id) {
-							emitter.next(data);
-						}
-					} else if (data.kind === "follow") {
-						emitter.next(data);
+			const followHandler: TicketUpdateEvents["follow"] = (data) => {
+				if (data.kind === "follow" && input.ticket_id) {
+					if (data.ticket_id === input.ticket_id) {
+						push(data);
 					}
-				};
+				} else if (data.kind === "follow") {
+					push(data);
+				}
+			};
 
-				const deleteTicketHandler: TicketUpdateEvents["delete_ticket"] = (data) => {
-					if (data.kind === "delete_ticket" && input.ticket_id) {
-						if (data.ticket_id === input.ticket_id) {
-							emitter.next(data);
-						}
-					} else if (data.kind === "delete_ticket") {
-						emitter.next(data);
+			const deleteTicketHandler: TicketUpdateEvents["delete_ticket"] = (data) => {
+				if (data.kind === "delete_ticket" && input.ticket_id) {
+					if (data.ticket_id === input.ticket_id) {
+						push(data);
 					}
-				};
+				} else if (data.kind === "delete_ticket") {
+					push(data);
+				}
+			};
 
-				const editHandler: TicketUpdateEvents["edit"] = (data) => {
-					if (data.kind === "edit" && input.ticket_id) {
-						if (data.ticket_id === input.ticket_id) {
-							emitter.next(data);
-						}
-					} else if (data.kind === "edit") {
-						emitter.next(data);
+			const editHandler: TicketUpdateEvents["edit"] = (data) => {
+				if (data.kind === "edit" && input.ticket_id) {
+					if (data.ticket_id === input.ticket_id) {
+						push(data);
 					}
-				};
+				} else if (data.kind === "edit") {
+					push(data);
+				}
+			};
 
-				const addMessageHandler: TicketUpdateEvents["add_message"] = (data) => {
-					//console.log(data);
-					//console.log(input.ticket_id, data.message.ticket_id);
-					if (data.kind === "add_message" && input.ticket_id) {
-						if (data.message.ticket_id === input.ticket_id) {
-							console.log("emitting");
-							emitter.next(data);
-						}
-					} else if (data.kind === "add_message") {
-						emitter.next(data);
+			const addMessageHandler: TicketUpdateEvents["add_message"] = (data) => {
+				//console.log(data);
+				//console.log(input.ticket_id, data.message.ticket_id);
+				if (data.kind === "add_message" && input.ticket_id) {
+					if (data.message.ticket_id === input.ticket_id) {
+						console.log("emitting");
+						push(data);
 					}
-				};
+				} else if (data.kind === "add_message") {
+					push(data);
+				}
+			};
 
-				const editMessageHandler: TicketUpdateEvents["edit_message"] = (data) => {
-					if (data.kind === "edit_message" && input.ticket_id) {
-						if (data.message.ticket_id === input.ticket_id) {
-							emitter.next(data);
-						}
-					} else if (data.kind === "edit_message") {
-						emitter.next(data);
+			const editMessageHandler: TicketUpdateEvents["edit_message"] = (data) => {
+				if (data.kind === "edit_message" && input.ticket_id) {
+					if (data.message.ticket_id === input.ticket_id) {
+						push(data);
 					}
-				};
+				} else if (data.kind === "edit_message") {
+					push(data);
+				}
+			};
 
-				const deleteMessageHandler: TicketUpdateEvents["delete_message"] = (data) => {
-					if (data.kind === "delete_message" && input.ticket_id) {
-						if (data.ticket_id === input.ticket_id) {
-							emitter.next(data);
-						}
-					} else if (data.kind === "delete_message") {
-						emitter.next(data);
+			const deleteMessageHandler: TicketUpdateEvents["delete_message"] = (data) => {
+				if (data.kind === "delete_message" && input.ticket_id) {
+					if (data.ticket_id === input.ticket_id) {
+						push(data);
 					}
+				} else if (data.kind === "delete_message") {
+					push(data);
+				}
+			};
+
+			if (!input.eventOptions) {
+				input.eventOptions = {
+					create: true,
+					assign: true,
+					status: true,
+					follow: true,
+					delete_ticket: true,
+					edit: true,
+					add_message: true,
+					edit_message: true,
+					delete_message: true,
 				};
+			}
 
-				if (!input.eventOptions) {
-					input.eventOptions = {
-						create: true,
-						assign: true,
-						status: true,
-						follow: true,
-						delete_ticket: true,
-						edit: true,
-						add_message: true,
-						edit_message: true,
-						delete_message: true,
-					};
-				}
+			if (input.eventOptions.create === true) {
+				event.ticketUpdateEmitter.on("create", createHandler);
+			}
+			if (input.eventOptions.assign === true) {
+				event.ticketUpdateEmitter.on("assign", assignHandler);
+			}
+			if (input.eventOptions.status === true) {
+				event.ticketUpdateEmitter.on("status", statusHandler);
+			}
+			if (input.eventOptions.follow === true) {
+				event.ticketUpdateEmitter.on("follow", followHandler);
+			}
+			if (input.eventOptions.delete_ticket === true) {
+				event.ticketUpdateEmitter.on("delete_ticket", deleteTicketHandler);
+			}
+			if (input.eventOptions.edit === true) {
+				event.ticketUpdateEmitter.on("edit", editHandler);
+			}
+			if (input.eventOptions.add_message === true) {
+				event.ticketUpdateEmitter.on("add_message", addMessageHandler);
+			}
+			if (input.eventOptions.edit_message === true) {
+				event.ticketUpdateEmitter.on("edit_message", editMessageHandler);
+			}
+			if (input.eventOptions.delete_message === true) {
+				event.ticketUpdateEmitter.on("delete_message", deleteMessageHandler);
+			}
 
-				if (input.eventOptions.create === true) {
-					event.ticketUpdateEmitter.on("create", createHandler);
-				}
-
-				if (input.eventOptions.assign === true) {
-					event.ticketUpdateEmitter.on("assign", assignHandler);
-				}
-
-				if (input.eventOptions.status === true) {
-					event.ticketUpdateEmitter.on("status", statusHandler);
-				}
-
-				if (input.eventOptions.follow === true) {
-					event.ticketUpdateEmitter.on("follow", followHandler);
-				}
-
-				if (input.eventOptions.delete_ticket === true) {
-					event.ticketUpdateEmitter.on("delete_ticket", deleteTicketHandler);
-				}
-
-				if (input.eventOptions.edit === true) {
-					event.ticketUpdateEmitter.on("edit", editHandler);
-				}
-
-				if (input.eventOptions.add_message === true) {
-					event.ticketUpdateEmitter.on("add_message", addMessageHandler);
-				}
-
-				if (input.eventOptions.edit_message === true) {
-					event.ticketUpdateEmitter.on("edit_message", editMessageHandler);
-				}
-
-				if (input.eventOptions.delete_message === true) {
-					event.ticketUpdateEmitter.on("delete_message", deleteMessageHandler);
-				}
-
-				return () => {
-					event.ticketUpdateEmitter.off("create", createHandler);
-					event.ticketUpdateEmitter.off("assign", assignHandler);
-					event.ticketUpdateEmitter.off("status", statusHandler);
-					event.ticketUpdateEmitter.off("follow", followHandler);
-					event.ticketUpdateEmitter.off("delete_ticket", deleteTicketHandler);
-					event.ticketUpdateEmitter.off("edit", editHandler);
-					event.ticketUpdateEmitter.off("add_message", addMessageHandler);
-					event.ticketUpdateEmitter.off("edit_message", editMessageHandler);
-					event.ticketUpdateEmitter.off("delete_message", deleteMessageHandler);
-				};
-			});
+			try {
+				yield* drain();
+			} finally {
+				event.ticketUpdateEmitter.off("create", createHandler);
+				event.ticketUpdateEmitter.off("assign", assignHandler);
+				event.ticketUpdateEmitter.off("status", statusHandler);
+				event.ticketUpdateEmitter.off("follow", followHandler);
+				event.ticketUpdateEmitter.off("delete_ticket", deleteTicketHandler);
+				event.ticketUpdateEmitter.off("edit", editHandler);
+				event.ticketUpdateEmitter.off("add_message", addMessageHandler);
+				event.ticketUpdateEmitter.off("edit_message", editMessageHandler);
+				event.ticketUpdateEmitter.off("delete_message", deleteMessageHandler);
+			}
 		}),
 
 	pushSubscription: publicProcedure
@@ -1055,27 +1050,19 @@ export const ticketsRouter = router({
 				token: z.string(),
 			}),
 		)
-		.subscription(async ({ input }) => {
+		.subscription(async function* ({ input, signal }) {
 			const user = await db.query.users.findFirst({ where: eq(users.token, input.token) });
 
 			if (!user) {
 				throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
 			}
 
-			return observable<Notification>((emitter) => {
-				const notificationHandler: NotificationEvents["send"] = (data) => {
-					//console.log(data);
-					if (data.users.includes(user.id)) {
-						emitter.next(data.notification);
-					}
-				};
-
-				notificationEmitter.on("send", notificationHandler);
-
-				return () => {
-					notificationEmitter.off("send", notificationHandler);
-				};
-			});
+			for await (const [payload] of on(notificationEmitter, "send", { signal: signal! })) {
+				const d = payload as { users: number[]; notification: Notification };
+				if (d.users.includes(user.id)) {
+					yield d.notification;
+				}
+			}
 		}),
 
 	registerPush: protectedProcedure
@@ -1089,7 +1076,7 @@ export const ticketsRouter = router({
 				}),
 			}),
 		)
-		.query(async ({ input, ctx }) => {
+		.mutation(async ({ input, ctx }) => {
 			db.insert(pushSubscriptions)
 				.values({
 					endpoint: input.endpoint,

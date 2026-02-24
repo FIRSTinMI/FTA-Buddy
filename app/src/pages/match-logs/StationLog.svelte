@@ -99,7 +99,7 @@
 
 	async function share() {
 		if (["blue1", "blue2", "blue3", "red1", "red2", "red3"].includes(station)) {
-			let response = await trpc.match.publishMatch.query({ id: matchid, station: station as ROBOT, team: team });
+			let response = await trpc.match.publishMatch.mutate({ id: matchid, station: station as ROBOT, team: team });
 			shareid = response.id;
 			shareOpen = true;
 		} else {

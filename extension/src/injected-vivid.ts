@@ -75,7 +75,7 @@ setInterval(async () => {
 		}
 	}
 
-	if (teamsToSend.length > 0) await trpc.checklist.update.query(teamsToSend);
+	if (teamsToSend.length > 0) await trpc.checklist.update.mutate(teamsToSend);
 }, 1000);
 
 setInterval(async () => {

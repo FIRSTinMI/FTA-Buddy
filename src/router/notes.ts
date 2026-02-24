@@ -95,7 +95,7 @@ export const notesRouter = router({
 				text: z.string(),
 			}),
 		)
-		.query(async ({ ctx, input }) => {
+		.mutation(async ({ ctx, input }) => {
 			const event = await getEvent(ctx.eventToken as string);
 
 			const authorProfile = (await db
@@ -141,7 +141,7 @@ export const notesRouter = router({
 				event_code: z.string(),
 			}),
 		)
-		.query(async ({ ctx, input }) => {
+		.mutation(async ({ ctx, input }) => {
 			const event = await getEvent(ctx.eventToken as string);
 
 			const note = await db.query.notes.findFirst({
@@ -193,7 +193,7 @@ export const notesRouter = router({
 				id: z.string().uuid(),
 			}),
 		)
-		.query(async ({ ctx, input }) => {
+		.mutation(async ({ ctx, input }) => {
 			const event = await getEvent(ctx.eventToken as string);
 
 			const note = await db.query.notes.findFirst({

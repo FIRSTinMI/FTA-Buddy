@@ -38,7 +38,7 @@ export const matchRouter = router({
 				}),
 			}),
 		)
-		.query(async ({ input }) => {
+		.mutation(async ({ input }) => {
 			const existing = await db
 				.select({ id: matchLogs.id })
 				.from(matchLogs)
@@ -98,7 +98,7 @@ export const matchRouter = router({
 				}),
 			}),
 		)
-		.query(async ({ input }) => {
+		.mutation(async ({ input }) => {
 			const existing = await db
 				.select({ id: matchLogs.id })
 				.from(matchLogs)
@@ -358,7 +358,7 @@ export const matchRouter = router({
 				team: z.number(),
 			}),
 		)
-		.query(async ({ input, ctx }) => {
+		.mutation(async ({ input, ctx }) => {
 			const existingShare = await db.query.logPublishing.findFirst({
 				where: and(
 					eq(logPublishing.match_id, input.id),

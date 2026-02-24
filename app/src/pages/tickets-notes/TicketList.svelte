@@ -1,9 +1,8 @@
 <script lang="ts">
-	import { run } from 'svelte/legacy';
+	import { run } from "svelte/legacy";
 
 	import Icon from "@iconify/svelte";
 	import { Button, Input, Label, Modal, Select, Textarea, Toggle, type SelectOptionType } from "flowbite-svelte";
-	import { SearchOutline } from "flowbite-svelte-icons";
 	import { onMount } from "svelte";
 	import { navigate } from "svelte-routing";
 	import { toast } from "../../../../shared/toast";
@@ -12,7 +11,7 @@
 	import Spinner from "../../components/Spinner.svelte";
 	import TicketCard from "../../components/TicketCard.svelte";
 	import { trpc } from "../../main";
-	import { route } from '../../router';
+	import { route } from "../../router";
 	import { eventStore } from "../../stores/event";
 	import { clearNotifications } from "../../stores/notifications";
 	import { settingsStore } from "../../stores/settings";
@@ -20,7 +19,7 @@
 
 	let createModalOpen = $state(false);
 
-    let team = $state(route.params.team);
+	let team = $state(route.params.team);
 
 	const teamNames = Object.fromEntries($eventStore.teams.map((team) => [team.number, team.name]));
 
@@ -65,7 +64,7 @@
 						ticket.team.toString().includes(token) ||
 						teamNames[ticket.team].toLowerCase().includes(token) ||
 						ticket.subject.toLowerCase().includes(token) ||
-						(ticket.assigned_to && ticket.assigned_to.username.toLowerCase().includes(token))
+						(ticket.assigned_to && ticket.assigned_to.username.toLowerCase().includes(token)),
 				);
 			});
 		}
@@ -105,9 +104,9 @@
 	}
 
 	async function setPublicTicketCreationState() {
-		let res: ReturnType<typeof trpc.event.togglePublicTicketSubmit.query>;
+		let res: ReturnType<typeof trpc.event.togglePublicTicketSubmit.mutate>;
 		try {
-			res = trpc.event.togglePublicTicketSubmit.query({ state: publicTicketSubmitState });
+			res = trpc.event.togglePublicTicketSubmit.mutate({ state: publicTicketSubmitState });
 			toast("Status updated successfully", "success", "green-500");
 		} catch (err: any) {
 			toast("An error occurred while updating the Public Ticket Submit State", err.message);
@@ -191,7 +190,12 @@
 		if (team) {
 			matchesPromise = trpc.match.getMatchNumbers.query({ team });
 			matches = (await matchesPromise)
-				.sort((a, b) => levelToSort(b.level) - levelToSort(a.level) || b.match_number - a.match_number || b.play_number - a.play_number)
+				.sort(
+					(a, b) =>
+						levelToSort(b.level) - levelToSort(a.level) ||
+						b.match_number - a.match_number ||
+						b.play_number - a.play_number,
+				)
 				.map((match) => ({
 					value: match.id,
 					name: `${match.level} ${match.match_number}/${match.play_number}`,
@@ -232,14 +236,14 @@
 
 			let res;
 			if (matchId) {
-				res = await trpc.tickets.create.query({
+				res = await trpc.tickets.create.mutate({
 					team: parseInt(team),
 					subject: ticketSubject,
 					text: ticketText,
 					match_id: matchId,
 				});
 			} else {
-				res = await trpc.tickets.create.query({
+				res = await trpc.tickets.create.mutate({
 					team: parseInt(team),
 					subject: ticketSubject,
 					text: ticketText,
@@ -321,14 +325,17 @@
 						case "delete_message":
 							if (ticket && ticket.messages) {
 								ticket.messages = ticket.messages.filter((m) => m.id !== data.message_id);
-								ticket.updated_at = ticket.messages.length > 0 ? ticket.messages[ticket.messages.length - 1].updated_at : new Date();
+								ticket.updated_at =
+									ticket.messages.length > 0
+										? ticket.messages[ticket.messages.length - 1].updated_at
+										: new Date();
 							}
 							break;
 					}
 					tickets = tickets;
 					//console.log(tickets);
 				},
-			}
+			},
 		);
 	}
 </script>
@@ -337,12 +344,17 @@
 
 <Modal bind:open={createModalOpen} size="lg" outsideclose>
 	{#snippet header()}
-		<div ><h1 class="text-3xl p-2 font-bold text-black dark:text-white">Create a Ticket</h1></div>
+		<div><h1 class="text-3xl p-2 font-bold text-black dark:text-white">Create a Ticket</h1></div>
 	{/snippet}
 	<form class="text-left flex flex-col gap-4" onsubmit={createTicket}>
 		<Label class="w-full text-left">
 			Select Team
-			<Select class="mt-2" items={teamOptions} bind:value={team} onchange={() => getMatchesForTeam(parseInt(team ?? "0"))} />
+			<Select
+				class="mt-2"
+				items={teamOptions}
+				bind:value={team}
+				onchange={() => getMatchesForTeam(parseInt(team ?? "0"))}
+			/>
 		</Label>
 
 		<Label for="subject">Ticket Subject:</Label>
@@ -367,29 +379,42 @@
 <Modal bind:open={publicTicketsModalOpen} size="sm" outsideclose>
 	<h1 class="text-2xl font-bold">Public Ticket Creation</h1>
 	<Button onclick={() => printPublicTicketSubmissionQRCode($eventStore.code)}>Print QR Code</Button>
-	<p>If the Public Ticket Creation page is being abused or spammed, please turn this setting off and inform your event FTA that you have done so.</p>
-	<Toggle class="toggle place-content-center" bind:checked={publicTicketSubmitState} onchange={setPublicTicketCreationState}
-		>Public Ticket Creation: {publicTicketSubmitState ? "ON" : "OFF"}</Toggle
+	<p>
+		If the Public Ticket Creation page is being abused or spammed, please turn this setting off and inform your
+		event FTA that you have done so.
+	</p>
+	<Toggle
+		class="toggle place-content-center"
+		bind:checked={publicTicketSubmitState}
+		onchange={setPublicTicketCreationState}>Public Ticket Creation: {publicTicketSubmitState ? "ON" : "OFF"}</Toggle
 	>
 </Modal>
 
 <div class="container max-w-6xl mx-auto px-2 h-full flex flex-col gap-2">
 	<div class="fixed top-12 right-2">
-		<Button onclick={() => location.reload()} class=""><Icon icon="charm:refresh" style="height: 13px; width: 13px;" /></Button>
+		<Button onclick={() => location.reload()} class=""
+			><Icon icon="charm:refresh" style="height: 13px; width: 13px;" /></Button
+		>
 	</div>
 	<div class="flex flex-col overflow-hidden h-full gap-2">
 		<h1 class="text-3xl mt-2 font-bold p-2">Event Tickets</h1>
 		<div class="flex flex-row gap-2 max-w-3xl w-full items-center mx-auto">
 			<Button class="mx-auto grow" onclick={() => (createModalOpen = true)}>Create a New Ticket</Button>
-			<Button class="mx-auto w-fit text-nowrap" onclick={() => (publicTicketsModalOpen = true)}><Icon icon="ic:baseline-settings" class="h-5" /></Button>
+			<Button class="mx-auto w-fit text-nowrap" onclick={() => (publicTicketsModalOpen = true)}
+				><Icon icon="ic:baseline-settings" class="h-5" /></Button
+			>
 		</div>
 		<div class="flex items-center gap-2 max-w-3xl w-full mx-auto">
 			<Label class="w-full text-left">
 				<span class="ml-2">Search</span>
-				<Input class="w-full" placeholder="Search Team #, Team Name, Subject, Assigned User" bind:value={search}>
+				<Input
+					class="w-full"
+					placeholder="Search Team #, Team Name, Subject, Assigned User"
+					bind:value={search}
+				>
 					{#snippet left()}
-										<SearchOutline  class="size-5 text-gray-500 dark:text-gray-400" />
-									{/snippet}
+						<Icon icon="mdi:magnify" class="size-5 text-gray-500 dark:text-gray-400" />
+					{/snippet}
 				</Input>
 			</Label>
 			<Label class="text-left">

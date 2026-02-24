@@ -23,14 +23,16 @@
 	let ticketSubject: string = $state("");
 	let ticketText: string = $state("");
 
-	let disableSubmit = $derived(agreeTerms === false || team === undefined || ticketText.length === 0 || ticketSubject.length === 0);
+	let disableSubmit = $derived(
+		agreeTerms === false || team === undefined || ticketText.length === 0 || ticketSubject.length === 0,
+	);
 
 	async function createTicket(evt: SubmitEvent) {
-        evt.preventDefault();
+		evt.preventDefault();
 		if (agreeTerms === false || team === undefined || ticketText.length === 0 || ticketSubject.length === 0) return;
 
 		try {
-			const res = await trpc.tickets.publicCreate.query({
+			const res = await trpc.tickets.publicCreate.mutate({
 				event_code: eventCode,
 				team: parseInt(team),
 				subject: ticketSubject,
@@ -48,9 +50,13 @@
 
 <Modal bind:open={termsPopupOpen} size="sm" dismissable={false}>
 	<h1 class="font-bold text-2xl">Terms and Conditions</h1>
-	<p class="text-center">All Tickets are saved after the end of the event and can be viewed by volunteers at other events the team attends in the future.</p>
 	<p class="text-center">
-		Keep this in mind when writing your Ticket, keep it GP and don't include any personal information like names, phone numbers, or emails.
+		All Tickets are saved after the end of the event and can be viewed by volunteers at other events the team
+		attends in the future.
+	</p>
+	<p class="text-center">
+		Keep this in mind when writing your Ticket, keep it GP and don't include any personal information like names,
+		phone numbers, or emails.
 	</p>
 	<p class="text-center">Ticket creation will be disabled if abused.</p>
 	<Button
@@ -91,6 +97,8 @@
 		</form>
 	{:else}
 		<h1 class="text-3xl font-bold text-black dark:text-white">Ticket Has Been Created Successfully!</h1>
-		<p class="font-bold text-black dark:text-white">Please refresh the page if you wish to create another Ticket.</p>
+		<p class="font-bold text-black dark:text-white">
+			Please refresh the page if you wish to create another Ticket.
+		</p>
 	{/if}
 </div>

@@ -52,7 +52,7 @@ export const messagesRouter = router({
 				event_code: z.string(),
 			}),
 		)
-		.query(async ({ ctx, input }) => {
+		.mutation(async ({ ctx, input }) => {
 			const event = await getEvent(ctx.eventToken as string);
 
 			const ticket = await db.query.tickets.findFirst({
@@ -176,7 +176,7 @@ export const messagesRouter = router({
 				new_text: z.string(),
 			}),
 		)
-		.query(async ({ ctx, input }) => {
+		.mutation(async ({ ctx, input }) => {
 			const event = await getEvent(ctx.eventToken as string);
 
 			const ticket = await db.query.tickets.findFirst({
@@ -283,7 +283,7 @@ export const messagesRouter = router({
 				message_id: z.string().uuid(),
 			}),
 		)
-		.query(async ({ ctx, input }) => {
+		.mutation(async ({ ctx, input }) => {
 			const event = await getEvent(ctx.eventToken as string);
 
 			const message = await db.query.messages.findFirst({

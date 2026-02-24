@@ -33,7 +33,9 @@
 	let view: null | "login" | "create" | "googleCreate" = null;
 
 	let desktop =
-		(navigator.userAgent.includes("Windows") || navigator.userAgent.includes("Macintosh") || navigator.userAgent.includes("Linux")) &&
+		(navigator.userAgent.includes("Windows") ||
+			navigator.userAgent.includes("Macintosh") ||
+			navigator.userAgent.includes("Linux")) &&
 		!navigator.userAgent.includes("Android");
 
 	async function createUser(evt: Event) {
@@ -45,7 +47,7 @@
 		}
 
 		try {
-			const res = await trpc.user.createAccount.query({
+			const res = await trpc.user.createAccount.mutate({
 				email,
 				username,
 				password,
@@ -83,7 +85,7 @@
 
 		try {
 			console.log({ email, password });
-			const res = await trpc.user.login.query({ email, password });
+			const res = await trpc.user.login.mutate({ email, password });
 
 			console.log(res);
 
@@ -166,7 +168,7 @@
 			return;
 		}
 		try {
-			const res = await trpc.event.get.query({ code: event.code });
+			const res = await trpc.event.get.mutate({ code: event.code });
 			//console.log(res);
 			if (res.subEvents) {
 				userStore.set({ ...user, eventToken: res.token, meshedEventToken: res.token });
@@ -199,7 +201,7 @@
 		loading = true;
 
 		try {
-			const res = await trpc.event.join.query({
+			const res = await trpc.event.join.mutate({
 				code: eventCode,
 				pin: eventPin,
 			});
@@ -240,7 +242,7 @@
 	window.googleLogin = async (googleUser: any) => {
 		console.log(googleUser);
 		try {
-			const res = await trpc.user.googleLogin.query({
+			const res = await trpc.user.googleLogin.mutate({
 				token: googleUser.credential,
 			});
 
@@ -291,7 +293,10 @@
 				if (!(Notification.permission === "granted") && !settings.notificationsDoNotAsk) {
 					//console.log("here 1")
 					notificationModalOpen = true;
-				} else if ((!(Notification.permission === "granted") && settings.notificationsDoNotAsk) || Notification.permission === "granted") {
+				} else if (
+					(!(Notification.permission === "granted") && settings.notificationsDoNotAsk) ||
+					Notification.permission === "granted"
+				) {
 					//console.log("here 2")
 					notificationModalOpen = false;
 				}
@@ -316,7 +321,7 @@
 	<script src="https://accounts.google.com/gsi/client" async></script>
 </svelte:head>
 
-<Modal bind:open={notificationModalOpen} outsideclose size="sm" dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
+<Modal bind:open={notificationModalOpen} outsideclose size="sm">
 	<h1 class="font-bold text-xl">Enable Notifications</h1>
 	<h2>Enable to get notifications for Tickets, and/or when a robot loses connection during a match</h2>
 	{#if installPrompt}
@@ -391,22 +396,22 @@
 			<form class="flex flex-col space-y-2 mt-2 text-left" on:submit|preventDefault={createUser}>
 				<div>
 					<Label for="username">Username</Label>
-					<Input id="username" bind:value={username} placeholder="John" bind:disabled={loading} />
+					<Input id="username" bind:value={username} placeholder="John" disabled={loading} />
 				</div>
 
 				<div>
 					<Label for="email">Email</Label>
-					<Input id="email" bind:value={email} placeholder="me@example.com" bind:disabled={loading} type="email" />
+					<Input id="email" bind:value={email} placeholder="me@example.com" disabled={loading} type="email" />
 				</div>
 
 				<div>
 					<Label for="password">Password</Label>
-					<Input id="password" bind:value={password} type="password" bind:disabled={loading} />
+					<Input id="password" bind:value={password} type="password" disabled={loading} />
 				</div>
 
 				<div>
 					<Label for="verify-password">Verify Password</Label>
-					<Input id="verify-password" bind:value={verifyPassword} type="password" bind:disabled={loading} />
+					<Input id="verify-password" bind:value={verifyPassword} type="password" disabled={loading} />
 				</div>
 
 				<div>
@@ -418,13 +423,13 @@
 							name: v,
 							value: v,
 						}))}
-						bind:disabled={loading}
+						disabled={loading}
 					/>
 				</div>
 
-				<Button type="submit" bind:disabled={loading}>Create Account</Button>
+				<Button type="submit" disabled={loading}>Create Account</Button>
 			</form>
-			<Button onclick={() => (view = "login")} bind:disabled={loading} outline>Log In</Button>
+			<Button onclick={() => (view = "login")} disabled={loading} outline>Log In</Button>
 
 			<!-- Login -->
 		{:else if view === "login"}
@@ -432,21 +437,21 @@
 			<form class="flex flex-col space-y-2 mt-2 text-left" on:submit|preventDefault={login}>
 				<div>
 					<Label for="email">Email</Label>
-					<Input id="email" bind:value={email} placeholder="me@example.com" bind:disabled={loading} type="email" />
+					<Input id="email" bind:value={email} placeholder="me@example.com" disabled={loading} type="email" />
 				</div>
 
 				<div>
 					<Label for="password">Password</Label>
-					<Input id="password" bind:value={password} type="password" bind:disabled={loading} />
+					<Input id="password" bind:value={password} type="password" disabled={loading} />
 				</div>
-				<Button type="submit" bind:disabled={loading}>Log In</Button>
+				<Button type="submit" disabled={loading}>Log In</Button>
 			</form>
-			<Button onclick={() => (view = "create")} bind:disabled={loading} outline>Create Account</Button>
+			<Button onclick={() => (view = "create")} disabled={loading} outline>Create Account</Button>
 
 			<p>Or</p>
 			<div>
 				<Label for="event-token">Event Token</Label>
-				<Input id="event-token" bind:value={user.eventToken} placeholder="Event Token" bind:disabled={loading} />
+				<Input id="event-token" bind:value={user.eventToken} placeholder="Event Token" disabled={loading} />
 			</div>
 			<Button
 				onclick={() => {
@@ -454,7 +459,7 @@
 					if (user.role === "FTA" || user.role === "FTAA") setTimeout(() => navigate("/monitor"), 500);
 					else setTimeout(() => navigate("/tickets"), 500);
 				}}
-				bind:disabled={loading}>Join Event</Button
+				disabled={loading}>Join Event</Button
 			>
 
 			<!-- Login Prompt -->
@@ -466,8 +471,12 @@
 							<h2 class="text-xl">Run FTA Buddy from this computer</h2>
 							{#if user.eventToken}
 								<Button onclick={() => navigate("/")} class="w-full mt-4">Open Field Monitor</Button>
-								<Button onclick={() => navigate("/manage/event-created")} class="w-full mt-4">See Event Pin</Button>
-								<Button onclick={() => navigate("/manage/host")} class="w-full mt-4">Host New Event</Button>
+								<Button onclick={() => navigate("/manage/event-created")} class="w-full mt-4"
+									>See Event Pin</Button
+								>
+								<Button onclick={() => navigate("/manage/host")} class="w-full mt-4"
+									>Host New Event</Button
+								>
 							{:else}
 								<Button onclick={() => navigate("/manage/host")} class="w-full mt-4">Host</Button>
 							{/if}
@@ -501,9 +510,9 @@
 						></div>
 					</div>
 					<div class="border-t border-neutral-500"></div>
-					<Button onclick={() => (view = "login")} bind:disabled={loading}>Log In</Button>
+					<Button onclick={() => (view = "login")} disabled={loading}>Log In</Button>
 
-					<Button onclick={() => (view = "create")} bind:disabled={loading}>Create Account</Button>
+					<Button onclick={() => (view = "create")} disabled={loading}>Create Account</Button>
 				</div>
 			</div>
 		{/if}
@@ -541,7 +550,13 @@
 			</div>
 			<div class="flex flex-col pt-10 space-y-4">
 				<Label for="event-selector">Admin Event Selector</Label>
-				<Select id="event-selector" bind:value={event.code} items={eventList} placeholder="Select Event" onchange={adminSelectEvent} />
+				<Select
+					id="event-selector"
+					bind:value={event.code}
+					items={eventList}
+					placeholder="Select Event"
+					onchange={adminSelectEvent}
+				/>
 				<Button href="/" onclick={() => navigate("/")}>Go to App</Button>
 				<Button outline onclick={() => navigate("/manage/event-created")}>See Event Pin</Button>
 				<Button outline href="/manage/meshed-event">Create Meshed Event</Button>
@@ -553,8 +568,12 @@
 			<div class="flex flex-col border-t border-neutral-500 pt-10 space-y-2">
 				<h1 class="text-xl" style="font-weight:bold;">The Event Currently Selected Is: {event.code}</h1>
 				<Button href="/" onclick={() => navigate("/")}>Go to App</Button>
-				<Button outline onclick={() => (eventStore.set({ code: "", pin: "", teams: [], users: [] }), userStore.set({ ...user, eventToken: "" }))}
-					>Leave Event</Button
+				<Button
+					outline
+					onclick={() => (
+						eventStore.set({ code: "", pin: "", teams: [], users: [] }),
+						userStore.set({ ...user, eventToken: "" })
+					)}>Leave Event</Button
 				>
 				<Button outline onclick={() => navigate("/manage/event-created")}>See Event Pin</Button>
 			</div>
@@ -563,7 +582,9 @@
 		{:else}
 			<div class="flex flex-col border-t border-neutral-500 pt-4">
 				<h3 class="text-lg">Join Event</h3>
-				{#if !desktop}<p class="text-gray-600 text-sm">To create a new event, open ftabuddy.com on a computer connected to the field network.</p>{/if}
+				{#if !desktop}<p class="text-gray-600 text-sm">
+						To create a new event, open ftabuddy.com on a computer connected to the field network.
+					</p>{/if}
 				<form class="flex flex-col gap-2 text-left mt-2" on:submit|preventDefault={joinEvent}>
 					<div>
 						<Label for="event-code">Event Code</Label>

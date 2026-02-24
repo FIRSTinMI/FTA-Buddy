@@ -23,14 +23,16 @@
 
 	let deleteMessagePopup = $state(false);
 
+	// svelte-ignore state_referenced_locally
 	let time = formatTimeNoAgoHourMins(message.created_at);
 	let editMessageView = $state(false);
+	// svelte-ignore state_referenced_locally
 	let editMessageText = $state(message.text);
 
 	async function editMessage() {
 		try {
 			if (editMessageText !== message.text) {
-				const res = await trpc.tickets.messages.edit.query({
+				const res = await trpc.tickets.messages.edit.mutate({
 					ticket_id: message.ticket_id,
 					message_id: message.id,
 					new_text: editMessageText,
@@ -49,7 +51,7 @@
 
 	async function deleteMessage() {
 		try {
-			const res = await trpc.tickets.messages.delete.query({
+			const res = await trpc.tickets.messages.delete.mutate({
 				ticket_id: message.ticket_id,
 				message_id: message.id,
 			});

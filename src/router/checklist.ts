@@ -1,5 +1,5 @@
-import { observable } from "@trpc/server/observable";
 import { eq } from "drizzle-orm";
+import { on } from "events";
 import { z } from "zod";
 import { EventChecklist } from "../../shared/types";
 import { db } from "../db/db";
@@ -22,7 +22,7 @@ export const checklistRouter = router({
 				}),
 			),
 		)
-		.query(async ({ input, ctx }) => {
+		.mutation(async ({ input, ctx }) => {
 			const checklist = ctx.event.checklist as EventChecklist;
 			for (const i of input) {
 				checklist[i.team][i.key] = i.value;
@@ -63,19 +63,11 @@ export const checklistRouter = router({
 				eventToken: z.string(),
 			}),
 		)
-		.subscription(async ({ input }) => {
+		.subscription(async function* ({ input, signal }) {
 			const event = await getEvent(input.eventToken);
 
-			return observable<EventChecklist>((emitter) => {
-				const listener = (checklist: EventChecklist) => {
-					emitter.next(checklist);
-				};
-
-				event.checklistEmitter.on("update", listener);
-
-				return () => {
-					event.checklistEmitter.off("update", listener);
-				};
-			});
+			for await (const [checklist] of on(event.checklistEmitter, "update", { signal })) {
+				yield checklist as EventChecklist;
+			}
 		}),
 });

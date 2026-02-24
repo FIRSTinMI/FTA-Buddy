@@ -1,4 +1,3 @@
-import { observable } from "@trpc/server/observable";
 import { randomUUID } from "crypto";
 import { and, asc, desc, eq, isNotNull } from "drizzle-orm";
 import { z } from "zod";
@@ -10,6 +9,7 @@ import { cycleLogs, events } from "../db/schema";
 import { eventProcedure, publicProcedure, router } from "../trpc";
 import { getEvent } from "../util/get-event";
 import { generateReport } from "../util/report-generator";
+import { subscriptionQueue } from "../util/subscription";
 import { getTeamAverageCycle } from "../util/team-cycles";
 
 export const cycleRouter = router({
@@ -112,7 +112,7 @@ export const cycleRouter = router({
 				eventCode: z.string().optional(),
 			}),
 		)
-		.subscription(async ({ input }) => {
+		.subscription(async function* ({ input, signal }) {
 			let event;
 			if (!input.eventToken && input.eventCode) {
 				event = await getEvent("", input.eventCode);
@@ -122,34 +122,36 @@ export const cycleRouter = router({
 				throw new Error("Must provide either eventToken or eventCode");
 			}
 
-			return observable<CycleData>((emitter) => {
-				const listener = async () => {
-					emitter.next({
-						eventCode: event.code,
-						startTime: event.lastMatchStart,
-						refEndTime: event.lastMatchRefDone,
-						scoresPostedTime: event.lastMatchScoresPosted,
-						prestartTime: event.lastPrestartDone,
-						endTime: event.lastMatchEnd,
-						matchNumber: event.monitorFrame.match,
-						lastCycleTime: event.monitorFrame.lastCycleTime,
-						averageCycleTime: await getAverageCycleTime(event.code),
-						level: event.monitorFrame.level,
-						aheadBehind: event.monitorFrame.time,
-						state: event.monitorFrame.field,
-						scheduleDetails: event.scheduleDetails,
-						exactAheadBehind: event.monitorFrame.exactAheadBehind || event.monitorFrame.time,
-					});
-				};
+			const { push, drain } = subscriptionQueue<CycleData>(signal!);
 
-				event.cycleEmitter.on("update", listener);
-				event.fieldStatusEmitter.on("change", listener);
+			const listener = async () => {
+				push({
+					eventCode: event.code,
+					startTime: event.lastMatchStart,
+					refEndTime: event.lastMatchRefDone,
+					scoresPostedTime: event.lastMatchScoresPosted,
+					prestartTime: event.lastPrestartDone,
+					endTime: event.lastMatchEnd,
+					matchNumber: event.monitorFrame.match,
+					lastCycleTime: event.monitorFrame.lastCycleTime,
+					averageCycleTime: await getAverageCycleTime(event.code),
+					level: event.monitorFrame.level,
+					aheadBehind: event.monitorFrame.time,
+					state: event.monitorFrame.field,
+					scheduleDetails: event.scheduleDetails,
+					exactAheadBehind: event.monitorFrame.exactAheadBehind || event.monitorFrame.time,
+				});
+			};
 
-				return () => {
-					event.cycleEmitter.off("update", listener);
-					event.fieldStatusEmitter.off("change", listener);
-				};
-			});
+			event.cycleEmitter.on("update", listener);
+			event.fieldStatusEmitter.on("change", listener);
+
+			try {
+				yield* drain();
+			} finally {
+				event.cycleEmitter.off("update", listener);
+				event.fieldStatusEmitter.off("change", listener);
+			}
 		}),
 
 	getCycle: publicProcedure

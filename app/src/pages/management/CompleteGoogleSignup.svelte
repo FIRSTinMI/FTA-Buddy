@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { Button, Input, Label, Select } from "flowbite-svelte";
-	import { navigate } from "svelte-routing";
 	import { get } from "svelte/store";
 	import Spinner from "../../components/Spinner.svelte";
 	import { trpc } from "../../main";
+	import { navigate } from "../../router";
 	import { userStore } from "../../stores/user";
 
 	interface Props {

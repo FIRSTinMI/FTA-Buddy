@@ -9,13 +9,12 @@
 		(window as any).toast?.(title, text, color);
 	}
 
-	let extensionDetected = false;
-	let extensionEnabled = false;
-	let extensionUpdate = false;
-	let signalREnabled = false;
-	let extensionVersion = "unknown version";
-	let fmsDetected = false;
-	let teams: number[] = [];
+	let extensionDetected = $state(false);
+	let extensionEnabled = $state(false);
+	let extensionUpdate = $state(false);
+	let signalREnabled = $state(false);
+	let extensionVersion = $state("unknown version");
+	let fmsDetected = $state(false);
 
 	window.addEventListener("message", (event) => {
 		if (event.data.type === "pong") {
@@ -49,7 +48,7 @@
 		}
 	}
 
-	let waitingForFirstConnectionTest = true;
+	let waitingForFirstConnectionTest = $state(true);
 
 	onMount(() => {
 		window.postMessage({ source: "page", type: "ping" }, "*");
@@ -61,18 +60,14 @@
 		}, 1000);
 	});
 
-	let eventCode = "";
+	let eventCode = $state("");
 	let eventCodeHelperText = "Event code must match the code on TBA";
-	let eventCodeError = false;
-	let eventPin = "";
-	let loading = false;
+	let eventCodeError = $state(false);
+	let eventPin = $state("");
+	let loading = $state(false);
 
-	$: blockSubmit = !(
-		eventCode.length > 6 &&
-		eventPin.length >= 4 &&
-		!loading &&
-		extensionDetected &&
-		extensionEnabled
+	let blockSubmit = $derived(
+		!(eventCode.length > 6 && eventPin.length >= 4 && !loading && extensionDetected && extensionEnabled),
 	);
 
 	async function setupExtension(evt: SubmitEvent) {

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import Icon from "@iconify/svelte";
-	import { navigate } from "svelte-routing";
 	import { formatTimeShortNoAgoSecondsOnly } from "../../../shared/formatTime";
 	import {
 		DSState,
@@ -12,6 +11,7 @@
 		type RobotInfo,
 	} from "../../../shared/types";
 	import { frameHandler } from "../field-monitor";
+	import { navigate } from "../router";
 	import { fullscreen } from "../stores/fullscreen";
 	import { settingsStore } from "../stores/settings";
 	import { processSignalStrengthForGraph } from "../util/signalStrengthProcessor";
@@ -94,7 +94,7 @@
 			? 'bg-blue-600'
 			: 'bg-red-600'}"
 		class:lg:text-5xl={$fullscreen}
-		onclick={() => navigate("/notes/" + robot?.number)}
+		onclick={() => navigate("/notes/:teamNumber", { params: { teamNumber: String(robot?.number) } })}
 	>
 		<p>{robot.number}</p>
 		<p class="text-sm lg:text-3xl flex">

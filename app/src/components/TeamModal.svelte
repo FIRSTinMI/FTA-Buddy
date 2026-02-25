@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { Button, Modal } from "flowbite-svelte";
-	import { navigate } from "svelte-routing";
 	import { formatTimeShort } from "../../../shared/formatTime";
 	import {
 		DSState,
@@ -11,6 +10,7 @@
 		type RobotInfo,
 	} from "../../../shared/types";
 	import { trpc } from "../main";
+	import { navigate } from "../router";
 	import type { MonitorFrameHandler } from "../util/monitorFrameHandler";
 	import MonitorRow from "./MonitorRow.svelte";
 
@@ -208,7 +208,11 @@
 	{/if}
 
 	{#snippet footer()}
-		<Button color="primary" onclick={() => navigate("/notes/" + modalRobot?.number)}>Notes</Button>
+		<Button
+			color="primary"
+			onclick={() => navigate("/notes/:teamNumber", { params: { teamNumber: String(modalRobot?.number) } })}
+			>Notes</Button
+		>
 		<Button color="primary" onclick={() => (modalOpen = false)}>Close</Button>
 	{/snippet}
 </Modal>

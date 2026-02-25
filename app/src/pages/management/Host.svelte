@@ -1,22 +1,22 @@
 <script lang="ts">
 	import { Button, Helper, Indicator, Input, Label } from "flowbite-svelte";
-	import { onMount } from "svelte";
-	import { navigate } from "svelte-routing";
+	import { getContext, onMount } from "svelte";
 	import type { Profile } from "../../../../shared/types";
 	import Spinner from "../../components/Spinner.svelte";
 	import { trpc } from "../../main";
+	import { navigate } from "../../router";
 	import { eventStore } from "../../stores/event";
 	import { userStore } from "../../stores/user";
 	import { LATEST_EXTENSION_VERSION } from "../../util/updater";
 
-	export let toast: (title: string, text: string, color?: string) => void;
+	let toast = getContext("toast") as (title: string, text: string, color?: string) => void;
 
-	let extensionDetected = false;
-	let extensionEnabled = false;
-	let extensionUpdate = false;
-	let signalREnabled = false;
-	let extensionVersion = "unknown version";
-	let fmsDetected = false;
+	let extensionDetected = $state(false);
+	let extensionEnabled = $state(false);
+	let extensionUpdate = $state(false);
+	let signalREnabled = $state(false);
+	let extensionVersion = $state("unknown version");
+	let fmsDetected = $state(false);
 	let teams: number[] = [];
 
 	window.addEventListener("message", async (event) => {
@@ -54,7 +54,7 @@
 		}
 	}
 
-	let waitingForFirstConnectionTest = true;
+	let waitingForFirstConnectionTest = $state(true);
 
 	onMount(() => {
 		window.postMessage({ source: "page", type: "ping" }, "*");
@@ -66,13 +66,13 @@
 		}, 1000);
 	});
 
-	let eventCode = "";
-	let eventCodeHelperText = "Event code must match the code on TBA";
-	let eventCodeError = false;
-	let eventPin = Math.random().toString().slice(2, 6);
-	let loading = false;
+	let eventCode = $state("");
+	let eventCodeHelperText = $state("Event code must match the code on TBA");
+	let eventCodeError = $state(false);
+	let eventPin = $state(Math.random().toString().slice(2, 6));
+	let loading = $state(false);
 
-	let tbaKey: string | undefined = undefined;
+	let tbaKey: string | undefined = $state(undefined);
 	let autofilledKey: string | undefined = undefined;
 
 	async function createEvent(evt: SubmitEvent) {
@@ -160,14 +160,16 @@
 		}
 	}
 
-	$: blockSubmit = !(
-		eventCode.length > 6 &&
-		eventPin.length >= 4 &&
-		!loading &&
-		fmsDetected &&
-		extensionDetected &&
-		extensionEnabled &&
-		!eventCodeError
+	let blockSubmit = $derived(
+		!(
+			eventCode.length > 6 &&
+			eventPin.length >= 4 &&
+			!loading &&
+			fmsDetected &&
+			extensionDetected &&
+			extensionEnabled &&
+			!eventCodeError
+		),
 	);
 </script>
 

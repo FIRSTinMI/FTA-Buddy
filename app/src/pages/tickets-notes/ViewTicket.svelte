@@ -13,7 +13,6 @@
 		type SelectOptionType,
 	} from "flowbite-svelte";
 	import { onMount, tick } from "svelte";
-	import { navigate } from "svelte-routing";
 	import { get } from "svelte/store";
 	import { formatTimeNoAgoHourMins } from "../../../../shared/formatTime";
 	import { toast } from "../../../../shared/toast";
@@ -22,7 +21,7 @@
 	import NotesPolicy from "../../components/NotesPolicy.svelte";
 	import Spinner from "../../components/Spinner.svelte";
 	import { trpc } from "../../main";
-	import { route } from "../../router";
+	import { navigate, route } from "../../router";
 	import { eventStore } from "../../stores/event";
 	import { settingsStore } from "../../stores/settings";
 	import { userStore } from "../../stores/user";
@@ -174,7 +173,7 @@
 
 	function viewLog() {
 		if (!ticket || !ticket.match_id || !station) return;
-		navigate(`/logs/${ticket.match_id}/${station}`);
+		navigate("/logs/:matchid/:station", { params: { matchid: ticket.match_id, station } });
 	}
 
 	function back() {
@@ -182,7 +181,7 @@
 			if (user.role === "CSA" || user.role === "RI") {
 				navigate("/");
 			} else {
-				navigate("/tickets/");
+				navigate("/tickets");
 			}
 		} else {
 			window.history.back();

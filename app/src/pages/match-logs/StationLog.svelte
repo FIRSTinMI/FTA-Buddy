@@ -15,14 +15,13 @@
 	} from "flowbite-svelte";
 	import { json2csv } from "json-2-csv";
 	import QrCode from "svelte-qrcode";
-	import { navigate } from "svelte-routing";
 	import { MCS_LOOKUP_TABLE } from "../../../../shared/constants";
 	import { formatTimeNoAgo, formatTimeShortNoAgoSeconds } from "../../../../shared/formatTime";
 	import type { FMSLogFrame, ROBOT } from "../../../../shared/types";
 	import LogGraph from "../../components/LogGraph.svelte";
 	import Spinner from "../../components/Spinner.svelte";
 	import { trpc } from "../../main";
-	import { route } from "../../router";
+	import { navigate, route } from "../../router";
 	import { userStore } from "../../stores/user";
 	import { decompressStationLog } from "../../util/log-compression";
 

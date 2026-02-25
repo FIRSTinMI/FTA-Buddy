@@ -1,12 +1,11 @@
 <script lang="ts">
 	import { Button, TabItem, Tabs } from "flowbite-svelte";
-	import { navigate } from "svelte-routing";
 	import { formatTimeNoAgo } from "../../../../shared/formatTime";
 	import { ROBOT, type FMSLogFrame, type MatchLog } from "../../../../shared/types";
 	import MatchGraph from "../../components/MatchGraph.svelte";
 	import Spinner from "../../components/Spinner.svelte";
 	import { trpc } from "../../main";
-	import { route } from "../../router";
+	import { navigate, route } from "../../router";
 	import { decompressStationLog } from "../../util/log-compression";
 
 	const { matchid } = route.getParams("/logs/:matchid");
@@ -178,12 +177,36 @@
 			</Tabs>
 			<h2>View a Team's Specific Log</h2>
 			<div class="grid grid-cols-2 gap-1">
-				<Button color="blue" onclick={() => navigate(`/logs/${matchid}/blue1`)}>{data?.blue1}</Button>
-				<Button color="red" onclick={() => navigate(`/logs/${matchid}/red1`)}>{data?.red1}</Button>
-				<Button color="blue" onclick={() => navigate(`/logs/${matchid}/blue2`)}>{data?.blue2}</Button>
-				<Button color="red" onclick={() => navigate(`/logs/${matchid}/red2`)}>{data?.red2}</Button>
-				<Button color="blue" onclick={() => navigate(`/logs/${matchid}/blue3`)}>{data?.blue3}</Button>
-				<Button color="red" onclick={() => navigate(`/logs/${matchid}/red3`)}>{data?.red3}</Button>
+				<Button
+					color="blue"
+					onclick={() => navigate("/logs/:matchid/:station", { params: { matchid, station: "blue1" } })}
+					>{data?.blue1}</Button
+				>
+				<Button
+					color="red"
+					onclick={() => navigate("/logs/:matchid/:station", { params: { matchid, station: "red1" } })}
+					>{data?.red1}</Button
+				>
+				<Button
+					color="blue"
+					onclick={() => navigate("/logs/:matchid/:station", { params: { matchid, station: "blue2" } })}
+					>{data?.blue2}</Button
+				>
+				<Button
+					color="red"
+					onclick={() => navigate("/logs/:matchid/:station", { params: { matchid, station: "red2" } })}
+					>{data?.red2}</Button
+				>
+				<Button
+					color="blue"
+					onclick={() => navigate("/logs/:matchid/:station", { params: { matchid, station: "blue3" } })}
+					>{data?.blue3}</Button
+				>
+				<Button
+					color="red"
+					onclick={() => navigate("/logs/:matchid/:station", { params: { matchid, station: "red3" } })}
+					>{data?.red3}</Button
+				>
 			</div>
 		{/if}
 	{/await}

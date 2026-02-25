@@ -8,29 +8,38 @@
 		TableHeadCell,
 		TableSearch,
 	} from "flowbite-svelte";
-	import { navigate } from "svelte-routing";
 	import { formatTime } from "../../../shared/formatTime";
 	import type { MatchRouterOutputs } from "../../../src/router/logs";
+	import { navigate } from "../router";
 
-	export let matches: MatchRouterOutputs["getMatches"] = [];
-	export let label: string = "Matches";
-	export let open: boolean = false;
+	let {
+		matches,
+		label = "Matches",
+		open = false,
+	}: {
+		matches: MatchRouterOutputs["getMatches"];
+		label?: string;
+		open?: boolean;
+	} = $props();
 
-	let searchTerm = "";
+	let searchTerm = $state("");
 
-	$: filteredMatches = matches.filter((match) => {
-		return (
-			match.blue1?.toString().includes(searchTerm) ||
-			match.blue2?.toString().includes(searchTerm) ||
-			match.blue3?.toString().includes(searchTerm) ||
-			match.red1?.toString().includes(searchTerm) ||
-			match.red2?.toString().includes(searchTerm) ||
-			match.red3?.toString().includes(searchTerm)
-		);
-	});
+	let filteredMatches = $derived(
+		matches.filter((match) => {
+			return (
+				match.blue1?.toString().includes(searchTerm) ||
+				match.blue2?.toString().includes(searchTerm) ||
+				match.blue3?.toString().includes(searchTerm) ||
+				match.red1?.toString().includes(searchTerm) ||
+				match.red2?.toString().includes(searchTerm) ||
+				match.red3?.toString().includes(searchTerm)
+			);
+		}),
+	);
 
 	function tabClick() {
-		navigate(`/logs/#${label.toLowerCase()}`);
+		// Hash navigation not supported by sv-router; update hash directly
+		window.location.hash = label.toLowerCase();
 	}
 </script>
 
@@ -65,47 +74,64 @@
 				<TableBodyRow class="text-center cursor-pointer">
 					<TableBodyCell
 						class="dark:bg-neutral-700 hidden md:table-cell"
-						onclick={() => navigate(`/logs/${match.id}`)}>{match.match_number}</TableBodyCell
+						onclick={() => navigate("/logs/:matchid", { params: { matchid: match.id } })}
+						>{match.match_number}</TableBodyCell
 					>
 					<TableBodyCell
 						class="dark:bg-neutral-700 hidden md:table-cell"
-						onclick={() => navigate(`/logs/${match.id}`)}>{match.play_number}</TableBodyCell
+						onclick={() => navigate("/logs/:matchid", { params: { matchid: match.id } })}
+						>{match.play_number}</TableBodyCell
 					>
-					<TableBodyCell class="dark:bg-neutral-700 md:hidden" onclick={() => navigate(`/logs/${match.id}`)}
+					<TableBodyCell
+						class="dark:bg-neutral-700 md:hidden"
+						onclick={() => navigate("/logs/:matchid", { params: { matchid: match.id } })}
 						>{match.match_number}/{match.play_number}</TableBodyCell
 					>
 					<TableBodyCell
 						class="dark:bg-neutral-700 hidden md:table-cell"
-						onclick={() => navigate(`/logs/${match.id}`)}
+						onclick={() => navigate("/logs/:matchid", { params: { matchid: match.id } })}
 						>{formatTime(new Date(match.start_time))}</TableBodyCell
 					>
 					<TableBodyCell
 						class="px-1 bg-blue-400 dark:bg-blue-600 hover:bg-opacity-50 hover:underline"
-						onclick={() => navigate(`/logs/${match.id}/blue1`)}>{match.blue1 ?? "None"}</TableBodyCell
+						onclick={() =>
+							navigate("/logs/:matchid/:station", { params: { matchid: match.id, station: "blue1" } })}
+						>{match.blue1 ?? "None"}</TableBodyCell
 					>
 					<TableBodyCell
 						class="px-1 bg-blue-400 dark:bg-blue-600 hover:bg-opacity-50 hover:underline"
-						onclick={() => navigate(`/logs/${match.id}/blue2`)}>{match.blue2 ?? "None"}</TableBodyCell
+						onclick={() =>
+							navigate("/logs/:matchid/:station", { params: { matchid: match.id, station: "blue2" } })}
+						>{match.blue2 ?? "None"}</TableBodyCell
 					>
 					<TableBodyCell
 						class="px-1 bg-blue-400 dark:bg-blue-600 hover:bg-opacity-50 hover:underline"
-						onclick={() => navigate(`/logs/${match.id}/blue3`)}>{match.blue3 ?? "None"}</TableBodyCell
+						onclick={() =>
+							navigate("/logs/:matchid/:station", { params: { matchid: match.id, station: "blue3" } })}
+						>{match.blue3 ?? "None"}</TableBodyCell
 					>
 					<TableBodyCell
 						class="px-1 bg-red-400 dark:bg-red-600 hover:bg-opacity-50 hover:underline"
-						onclick={() => navigate(`/logs/${match.id}/red1`)}>{match.red1 ?? "None"}</TableBodyCell
+						onclick={() =>
+							navigate("/logs/:matchid/:station", { params: { matchid: match.id, station: "red1" } })}
+						>{match.red1 ?? "None"}</TableBodyCell
 					>
 					<TableBodyCell
 						class="px-1 bg-red-400 dark:bg-red-600 hover:bg-opacity-50 hover:underline"
-						onclick={() => navigate(`/logs/${match.id}/red2`)}>{match.red2 ?? "None"}</TableBodyCell
+						onclick={() =>
+							navigate("/logs/:matchid/:station", { params: { matchid: match.id, station: "red2" } })}
+						>{match.red2 ?? "None"}</TableBodyCell
 					>
 					<TableBodyCell
 						class="px-1 bg-red-400 dark:bg-red-600 hover:bg-opacity-50 hover:underline"
-						onclick={() => navigate(`/logs/${match.id}/red3`)}>{match.red3 ?? "None"}</TableBodyCell
+						onclick={() =>
+							navigate("/logs/:matchid/:station", { params: { matchid: match.id, station: "red3" } })}
+						>{match.red3 ?? "None"}</TableBodyCell
 					>
 					<TableBodyCell
 						class="dark:bg-neutral-700 hover:bg-opacity-50 hover:underline"
-						onclick={() => navigate(`/logs/${match.id}`)}>View</TableBodyCell
+						onclick={() => navigate("/logs/:matchid", { params: { matchid: match.id } })}
+						>View</TableBodyCell
 					>
 				</TableBodyRow>
 			{/each}

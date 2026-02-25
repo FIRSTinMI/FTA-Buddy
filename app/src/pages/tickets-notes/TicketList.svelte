@@ -4,14 +4,13 @@
 	import Icon from "@iconify/svelte";
 	import { Button, Input, Label, Modal, Select, Textarea, Toggle, type SelectOptionType } from "flowbite-svelte";
 	import { onMount } from "svelte";
-	import { navigate } from "svelte-routing";
 	import { toast } from "../../../../shared/toast";
 	import type { Ticket } from "../../../../shared/types";
 	import NotesPolicy from "../../components/NotesPolicy.svelte";
 	import Spinner from "../../components/Spinner.svelte";
 	import TicketCard from "../../components/TicketCard.svelte";
 	import { trpc } from "../../main";
-	import { route } from "../../router";
+	import { navigate, route } from "../../router";
 	import { eventStore } from "../../stores/event";
 	import { clearNotifications } from "../../stores/notifications";
 	import { settingsStore } from "../../stores/settings";
@@ -251,7 +250,7 @@
 				});
 			}
 			toast("Ticket created successfully", "success", "green-500");
-			navigate("/tickets/view/" + res.id);
+			navigate("/tickets/view/:id", { params: { id: String(res.id) } });
 		} catch (err: any) {
 			toast("An error occurred while creating the ticket", err.message);
 			console.error(err);

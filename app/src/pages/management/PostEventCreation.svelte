@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { Button, Helper, Indicator, Input, Label } from "flowbite-svelte";
 	import { onDestroy, onMount } from "svelte";
-	import { navigate } from "svelte-routing";
 	import type { NexusStatus } from "../../../../shared/types";
 	import { trpc } from "../../main";
+	import { navigate } from "../../router";
 	import { eventStore } from "../../stores/event";
 	import { userStore } from "../../stores/user";
 

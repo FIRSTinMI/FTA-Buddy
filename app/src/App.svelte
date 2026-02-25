@@ -131,11 +131,13 @@
 		}
 	}
 
-	$: updateTheme(settings.darkMode);
+	$effect(() => {
+		updateTheme(settings.darkMode);
+	});
 
 	// Settings modal
 
-	let settingsOpen = false;
+	let settingsOpen = $state(false);
 	function openSettings() {
 		settingsOpen = true;
 	}
@@ -143,8 +145,8 @@
 	// Version/changelog modal
 
 	const version = Object.keys(VERSIONS).sort().pop() || "0";
-	let changelogOpen = false;
-	let changelog = "";
+	let changelogOpen = $state(false);
+	let changelog = $state("");
 	function openChangelog(text: string) {
 		changelog = text;
 		changelogOpen = true;
@@ -159,7 +161,7 @@
 
 	// Welcome modal
 
-	let welcomeOpen = false;
+	let welcomeOpen = $state(false);
 	function openWelcome() {
 		welcomeOpen = true;
 	}
@@ -170,10 +172,10 @@
 
 	// Toast manager
 
-	let showToast = false;
-	let toastTitle = "";
-	let toastText = "";
-	let toastColor = "red-500";
+	let showToast = $state(false);
+	let toastTitle = $state("");
+	let toastText = $state("");
+	let toastColor = $state("red-500");
 	function toast(title: string, text: string, color = "red-500", timeout = 5000) {
 		toastTitle = title;
 		toastText = text;
@@ -189,8 +191,8 @@
 
 	// Auto update
 
-	let showUpdateToast = false;
-	let updateNewVersion = "";
+	let showUpdateToast = $state(false);
+	let updateNewVersion = $state("");
 	let appSubscription: ReturnType<typeof trpc.app.version.subscribe> | undefined;
 	onMount(() => {
 		appSubscription = trpc.app.version.subscribe(undefined, {
@@ -221,21 +223,21 @@
 		installPrompt.set(null);
 	});
 
-	let event = get(eventStore);
+	let event = $state(get(eventStore));
 	eventStore.subscribe((value) => {
 		event = value;
 	});
 
-	let drawerOpen = false;
+	let drawerOpen = $state(false);
 	function openMenu() {
 		drawerOpen = true;
 	}
 
-	let multiEventSelection = "combined";
+	let multiEventSelection = $state("combined");
 	if ($user.meshedEventToken === $user.eventToken) {
 		multiEventSelection = "combined";
 	} else {
-		multiEventSelection = event.code;
+		multiEventSelection = $eventStore.code;
 	}
 
 	onMount(() => {

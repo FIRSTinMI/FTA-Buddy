@@ -9,27 +9,31 @@
 	import { updateScheduleText } from "../util/schedule-detail-formatter";
 	import Spinner from "./Spinner.svelte";
 
-	export let eventCode: string;
-	export let remove: (eventCode: string) => void;
-	export let removable: boolean = true;
+	let {
+		eventCode,
+		remove,
+		removable = true,
+	}: {
+		eventCode: string;
+		remove: (eventCode: string) => void;
+		removable?: boolean;
+	} = $props();
 
 	let cycleSubscription: ReturnType<typeof trpc.cycles.subscription.subscribe>;
 
-	let lastCycleTime = "";
+	let lastCycleTime = $state("");
 	let lastCycleTimeMS = 0;
-	let matchStartTime = new Date();
-	let bestCycleTimeMS = 0;
-	let currentCycleIsBest = false;
-	let averageCycleTimeMS = 8 * 60 * 1000; // Default to 7 minutes
-	let currentCycleTimeRedness = 0;
-	let currentCycleTime = "";
-	let calculatedCycleTime: number | undefined | null = 0;
-	let match = 0;
-	let level = "";
-	let aheadBehind = "";
-	let eventName = "";
-	let state: FieldState;
-	let fieldState = "";
+	let matchStartTime = $state(new Date());
+	let bestCycleTimeMS = $state(0);
+	let currentCycleIsBest = $state(false);
+	let averageCycleTimeMS = $state(8 * 60 * 1000); // Default to 7 minutes
+	let currentCycleTimeRedness = $state(0);
+	let currentCycleTime = $state("");
+	let calculatedCycleTime: number | undefined | null = $state(0);
+	let match = $state(0);
+	let level = $state("");
+	let aheadBehind = $state("");
+	let eventName = $state("");
 
 	const FieldStates = {
 		0: "Unknown",
@@ -46,12 +50,13 @@
 		11: "Match Not Ready",
 	};
 
-	$: fieldState = FieldStates[state];
-
-	let loading = true;
+	let loading = $state(true);
 
 	let scheduleDetails: ScheduleDetails | undefined;
-	let scheduleText = "";
+	let scheduleText = $state("");
+
+	let fieldState: FieldState = 0;
+	let fieldStateText = $derived(FieldStates[fieldState]);
 
 	onMount(async () => {
 		console.log("EventStatus mounted", eventCode);
@@ -108,7 +113,7 @@
 					match = data.matchNumber;
 					level = data.level;
 					aheadBehind = data.exactAheadBehind || data.aheadBehind;
-					state = data.state;
+					fieldState = data.state;
 
 					scheduleText = updateScheduleText(match, scheduleDetails, level, averageCycleTimeMS);
 				},
@@ -161,7 +166,7 @@
 
 	<div class:blur-sm={loading}>
 		<h2 class="text-lg lg:mt-2">Match: {match}</h2>
-		<p class="text-lg">{fieldState}</p>
+		<p class="text-lg">{fieldStateText}</p>
 		<h4 class="text-lg font-bold lg:text-xl">{aheadBehind}</h4>
 
 		<div

@@ -9,6 +9,12 @@ import { eventProcedure, publicProcedure, router } from "../trpc";
 import { compressStationLog } from "../util/log-analysis";
 import { generateReport } from "../util/report-generator";
 
+// FMS generates Windows-style GUIDs which may have version nibbles outside [1-8],
+// so we use a permissive hex pattern instead of the strict RFC 4122 z.string().uuid().
+const fmsGuid = z
+	.string()
+	.regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/, "Invalid GUID");
+
 export type MatchRouterOutputs = inferRouterOutputs<typeof matchRouter>;
 
 export const matchRouter = router({
@@ -205,7 +211,7 @@ export const matchRouter = router({
 	getMatch: eventProcedure
 		.input(
 			z.object({
-				id: z.string().uuid(),
+				id: fmsGuid,
 			}),
 		)
 		.query(async ({ input, ctx }) => {
@@ -224,7 +230,7 @@ export const matchRouter = router({
 	getStationMatch: eventProcedure
 		.input(
 			z.object({
-				id: z.string().uuid(),
+				id: fmsGuid,
 				station: z.string(),
 			}),
 		)
@@ -293,7 +299,7 @@ export const matchRouter = router({
 	getPublicMatch: publicProcedure
 		.input(
 			z.object({
-				id: z.string().uuid(),
+				id: fmsGuid,
 				sharecode: z.string(),
 			}),
 		)
@@ -353,7 +359,7 @@ export const matchRouter = router({
 	publishMatch: eventProcedure
 		.input(
 			z.object({
-				id: z.string().uuid(),
+				id: fmsGuid,
 				station: z.enum(["blue1", "blue2", "blue3", "red1", "red2", "red3"]),
 				team: z.number(),
 			}),
@@ -408,7 +414,7 @@ export const matchRouter = router({
 	putCycleInfo: publicProcedure
 		.input(
 			z.object({
-				matchId: z.string().uuid(),
+				matchId: fmsGuid,
 			}),
 		)
 		.query(async ({ input }) => {}),

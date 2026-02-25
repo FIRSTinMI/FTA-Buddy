@@ -14,6 +14,7 @@
 		type SelectOptionType,
 	} from "flowbite-svelte";
 	import { json2csv } from "json-2-csv";
+	import type { ComponentProps } from "svelte";
 	import QrCode from "svelte-qrcode";
 	import { MCS_LOOKUP_TABLE } from "../../../../shared/constants";
 	import { formatTimeNoAgo, formatTimeShortNoAgoSeconds } from "../../../../shared/formatTime";
@@ -117,18 +118,7 @@
 	}
 
 	const analysisEventColors: {
-		[key: string]:
-			| "gray"
-			| "red"
-			| "yellow"
-			| "green"
-			| "indigo"
-			| "purple"
-			| "pink"
-			| "blue"
-			| "primary"
-			| "orange"
-			| undefined;
+		[key: string]: ComponentProps<typeof Alert>["color"];
 	} = {
 		"Code disconnect": "yellow",
 		"RIO disconnect": "red",
@@ -138,7 +128,7 @@
 		"High BWU": "blue",
 		"Sustained high ping": "yellow",
 		"Low signal": "yellow",
-		Brownout: "orange",
+		Brownout: "teal",
 	};
 </script>
 

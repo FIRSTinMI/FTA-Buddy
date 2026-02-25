@@ -40,7 +40,11 @@
 
 	function processLog(teamLog: FMSLogFrame[], team: ROBOT, log: MatchLog["log"]) {
 		for (let i = 0; i < teamLog.length; i++) {
-			const existingFrame = log.find((frame) => frame.matchTime === teamLog[i].matchTime);
+			// Round timestamp to nearest 500ms to merge frames from different stations
+			// that correspond to the same point in time. matchTime alone is not granular
+			// enough since frames arrive ~600ms apart but matchTime only changes each second.
+			const frameKey = Math.round(new Date(teamLog[i].timeStamp).getTime() / 500);
+			const existingFrame = log.find((frame) => Math.round(frame.timeStamp.getTime() / 500) === frameKey);
 			if (existingFrame) {
 				existingFrame[team] = teamLog[i];
 

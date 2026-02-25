@@ -189,27 +189,33 @@
 
 	setContext("toast", toast);
 
+	const toastColorClasses: Record<string, string> = {
+		"red-500": "bg-red-200 dark:bg-red-700 text-red-950 dark:text-red-100",
+		"green-500": "bg-green-200 dark:bg-green-700 text-green-950 dark:text-green-100",
+	};
+
 	// Auto update
 
 	let showUpdateToast = $state(false);
 	let updateNewVersion = $state("");
-	let appSubscription: ReturnType<typeof trpc.app.version.subscribe> | undefined;
+	let versionPollInterval: ReturnType<typeof setInterval> | undefined;
+	async function checkVersion() {
+		const data = await trpc.app.version.query();
+		if (data !== settings.version) {
+			console.log("New version available");
+			updateNewVersion = data;
+			showUpdateToast = true;
+		}
+	}
 	onMount(() => {
-		appSubscription = trpc.app.version.subscribe(undefined, {
-			onData: (data) => {
-				if (data !== settings.version) {
-					console.log("New version available");
-					updateNewVersion = data;
-					showUpdateToast = true;
-				}
-			},
-		});
+		checkVersion();
+		versionPollInterval = setInterval(checkVersion, 60_000);
 		if (settings.notifications) {
 			startNotificationSubscription();
 		}
 	});
 	onDestroy(() => {
-		appSubscription?.unsubscribe();
+		clearInterval(versionPollInterval);
 	});
 
 	// App install prompt
@@ -254,50 +260,39 @@
 		}
 	});
 
-	let statusSubscription: ReturnType<typeof trpc.app.status.subscribe> | undefined;
+	let statusPollInterval: ReturnType<typeof setInterval> | undefined;
 	let knownIssue = false;
-	async function subscribeToStatus() {
-		if (statusSubscription) {
-			statusSubscription.unsubscribe();
+	async function checkStatus() {
+		const data = await trpc.app.status.query();
+		if (
+			data.current &&
+			(!event.code || data.effectedEvents.includes(event.code) || data.effectedEvents.length < 1)
+		) {
+			if (!knownIssue) {
+				toast("Issue", data.message + " Started " + formatTime(data.startTime || new Date()), "red-500", -1);
+			}
+			knownIssue = true;
+		} else {
+			if (knownIssue) {
+				toast("Resolved", "The issue has been resolved", "green-500");
+			}
+			knownIssue = false;
 		}
-		statusSubscription = await trpc.app.status.subscribe(undefined, {
-			onData: (data) => {
-				console.log(data);
-				if (
-					data.current &&
-					(!event.code || data.effectedEvents.includes(event.code) || data.effectedEvents.length < 1)
-				) {
-					if (!knownIssue) {
-						toast(
-							"Issue",
-							data.message + " Started " + formatTime(data.startTime || new Date()),
-							"red-500",
-							-1,
-						);
-					}
-					knownIssue = true;
-				} else {
-					if (knownIssue) {
-						toast("Resolved", "The issue has been resolved", "green-500");
-					}
-					knownIssue = false;
-				}
-			},
-		});
 	}
 
-	onMount(async () => {
-		subscribeToStatus();
+	onMount(() => {
+		checkStatus();
+		statusPollInterval = setInterval(checkStatus, 60_000);
+	});
+	onDestroy(() => {
+		clearInterval(statusPollInterval);
 	});
 </script>
 
 {#if showToast}
 	<div class="fixed bottom-0 left-0 p-4 z-100">
 		<Toast
-			class={`w-lg p-4 text-black bg-white shadow-sm gap-3
-                    dark:text-gray-400 dark:bg-gray-800
-                    ${toastColor === "red-500" ? "dark:bg-red-500" : ""}
-                    `}
+			class={`w-lg p-4 shadow-sm gap-3 ${toastColorClasses[toastColor] ?? "bg-white dark:bg-gray-800 text-black dark:text-gray-400"}`}
 		>
 			<h3 class="text-lg font-bold text-left">{toastTitle}</h3>
 			<p class="text-left">{toastText}</p>

@@ -25,7 +25,7 @@ import { addTicketMessageFromSlack, messagesRouter } from "./router/messages";
 import { ticketsRouter, updateTicketAssignmentFromSlack, updateTicketStatusFromSlack } from "./router/tickets";
 import { userRouter } from "./router/user";
 import { adminProcedure, createContext, publicProcedure, router } from "./trpc";
-import { abortableSleep } from "./util/subscription";
+
 import { getTeamAverageCycle } from "./util/team-cycles";
 //import { initializePushNotifications } from '../app/src/util/push-notifications';
 import { EventEmitter } from "events";
@@ -75,19 +75,11 @@ const appRouter = router({
 	tickets: ticketsRouter,
 	notes: notesRouter,
 	app: router({
-		version: publicProcedure.subscription(async function* ({ signal }) {
-			yield pjson.version ?? "dev";
-			while (!signal?.aborted) {
-				await abortableSleep(60000, signal!);
-				if (!signal?.aborted) yield pjson.version ?? "dev";
-			}
+		version: publicProcedure.query(() => {
+			return pjson.version ?? "dev";
 		}),
-		status: publicProcedure.subscription(async function* ({ signal }) {
-			yield knownIssue;
-			while (!signal?.aborted) {
-				await abortableSleep(20000, signal!);
-				if (!signal?.aborted) yield knownIssue;
-			}
+		status: publicProcedure.query(() => {
+			return knownIssue;
 		}),
 		startIssue: adminProcedure
 			.input(

@@ -311,7 +311,7 @@
 		<div class="shrink-0 flex {alliance === 'blue' ? 'bg-blue-600' : 'bg-red-600'}">
 			<button
 				class="flex-1 px-3 py-1.5 font-bold text-white text-left flex items-center gap-2"
-				onclick={() => navigate("/support/:team", { params: { team: String(teamNum) } })}
+				onclick={() => navigate("/support/team/:team", { params: { team: String(teamNum) } })}
 			>
 				#{teamNum}
 				{#if teamName}
@@ -394,7 +394,7 @@
 				>
 			</div>
 		{/if}
-		<div class="flex-1 min-h-0 overflow-y-hidden px-3" use:overflowCheck={teamNum}>
+		<div class="min-h-0 overflow-y-hidden px-3" use:overflowCheck={teamNum}>
 			{#if td?.loading}
 				<div class="flex justify-center py-2"><Spinner /></div>
 			{:else if allItems.length > 0}
@@ -429,7 +429,7 @@
 		{#if overflowing[teamNum]}
 			<button
 				class="shrink-0 text-xs text-blue-500 hover:underline py-1 text-center w-full border-t border-gray-200 dark:border-gray-700"
-				onclick={() => navigate("/support/:team", { params: { team: String(teamNum) } })}
+				onclick={() => navigate("/support/team/:team", { params: { team: String(teamNum) } })}
 			>
 				See All
 			</button>

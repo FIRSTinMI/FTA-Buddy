@@ -29,7 +29,6 @@ export const { p, navigate, isActive, preload, route } = createRouter({
 	"/support/team/:team": () => import("./pages/tickets-notes/TeamHistory.svelte"),
 	"/support/view/:id": () => import("./pages/tickets-notes/ViewNote.svelte"),
 	"/support/submit/:eventCode": () => import("./pages/tickets-notes/PublicNoteCreate.svelte"),
-	"/support/:team": () => import("./pages/SupportBoard.svelte"),
 
 	"/references": () => import("./pages/references/Reference.svelte"),
 	"/references/statuslights": () => import("./pages/references/StatusLights.svelte"),

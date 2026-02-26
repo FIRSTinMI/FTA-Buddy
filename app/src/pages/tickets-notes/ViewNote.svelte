@@ -205,17 +205,46 @@
 		}
 	}
 
-	async function editNote() {
+	async function openEditNote() {
+		if (!note) return;
+		editNoteText = note.text;
+		matchIdVal = note.match_id ?? undefined;
+		await getMatchesForTeam(note.team);
+		editNoteView = true;
+	}
+
+	async function editNote(evt: SubmitEvent) {
+		evt.preventDefault();
 		try {
 			if (!note) return;
-			if (editNoteText !== note.text) {
+			if (editNoteText !== note.text || matchIdVal !== (note.match_id ?? undefined)) {
 				await trpc.notes.edit.mutate({
 					id: noteId,
 					new_text: editNoteText,
 					event_code: event.code,
+					match_id: matchIdVal,
 				});
-				toast("Note edited successfully", "success", "green-500");
+				note.text = editNoteText;
+				note.match_id = matchIdVal ?? null;
+				// Refresh match display if match_id changed
+				if (matchIdVal) {
+					match = await trpc.match.getMatch.query({ id: matchIdVal });
+					station = undefined;
+					if (match && note.team) {
+						if (note.team === match.red1) station = ROBOT.red1;
+						else if (note.team === match.red2) station = ROBOT.red2;
+						else if (note.team === match.red3) station = ROBOT.red3;
+						else if (note.team === match.blue1) station = ROBOT.blue1;
+						else if (note.team === match.blue2) station = ROBOT.blue2;
+						else if (note.team === match.blue3) station = ROBOT.blue3;
+					}
+				} else {
+					match = undefined;
+					station = undefined;
+				}
+				toast("Note edited successfully", "", "green-500");
 			}
+			editNoteView = false;
 		} catch (err: any) {
 			toast("An error occurred while editing the Note", err.message);
 			console.error(err);
@@ -365,24 +394,6 @@
 				return 0;
 		}
 	}
-
-	let matchLogModalOpen = $state(false);
-
-	function openMatchLogSelector() {
-		matchLogModalOpen = true;
-		if (!note) return;
-		getMatchesForTeam(note.team);
-	}
-
-	function attachMatchLog(evt: SubmitEvent) {
-		evt.preventDefault();
-		if (matchIdVal) {
-			trpc.notes.attachMatchLog.mutate({ noteId: noteId, matchId: matchIdVal });
-			if (!note) return;
-			note.match_id = matchIdVal;
-			matchLogModalOpen = false;
-		}
-	}
 </script>
 
 <Modal bind:open={editNoteView} size="lg">
@@ -392,6 +403,19 @@
 		</div>
 	{/snippet}
 	<form class="text-left flex flex-col gap-4" onsubmit={editNote}>
+		{#await matchesPromise then}
+			{#if matches.length > 0}
+				<Label class="w-full text-left">
+					Select Match: <span class="text-xs text-gray-600">(optional)</span>
+					<Select
+						class="mt-2"
+						items={[{ value: undefined, name: "— None —" }, ...matches]}
+						bind:value={matchIdVal}
+					/>
+				</Label>
+			{/if}
+		{/await}
+
 		<Label for="text">Edit Text:</Label>
 		<Textarea id="text" class="w-full" rows={5} bind:value={editNoteText} />
 		<Button type="submit">Save Changes</Button>
@@ -404,24 +428,6 @@
 		<Button onclick={deleteNote} color="red" class="me-2">Yes, I'm sure</Button>
 		<Button onclick={() => (deleteNotePopup = false)}>No, cancel</Button>
 	</div>
-</Modal>
-
-<Modal bind:open={matchLogModalOpen} size="sm" outsideclose>
-	{#snippet header()}
-		<div><h1 class="text-3xl p-2 font-bold text-black dark:text-white">Attach Match Log</h1></div>
-	{/snippet}
-	<form class="text-left flex flex-col gap-4" onsubmit={attachMatchLog}>
-		{#await matchesPromise then}
-			{#if matches.length > 0}
-				<Label class="w-full text-left">
-					Attach a Match: <span class="text-xs text-gray-600">(optional)</span>
-					<Select class="mt-2" items={matches} bind:value={matchIdVal} />
-				</Label>
-			{/if}
-		{/await}
-
-		<Button type="submit">Attach Match Log</Button>
-	</form>
 </Modal>
 
 <NotesPolicy bind:this={notesPolicyElm} />
@@ -480,7 +486,7 @@
 									<Icon icon="mdi:chart-line" class="size-4 mr-1" />Log
 								</Button>
 							{/if}
-							<Button size="sm" color="alternative" onclick={() => (editNoteView = true)}>
+							<Button size="sm" color="alternative" onclick={openEditNote}>
 								<Icon icon="mdi:pencil" class="size-4" />
 							</Button>
 							<Button size="sm" color="red" onclick={() => (deleteNotePopup = true)}>
@@ -553,17 +559,16 @@
 					{:else}
 						<Badge color="gray">N/A</Badge>
 					{/if}
-					{#if note.team}
-						<Badge color="blue">
-							Team #{note.team}{get(eventStore).teams?.find((t) => parseInt(t.number) === note?.team)
-								?.name
-								? ` — ${get(eventStore).teams?.find((t) => parseInt(t.number) === note?.team)?.name}`
-								: ""}
-						</Badge>
-					{/if}
 					{#if match}
 						<Badge>
-							{match.level.replace("None", "Test")} M{match.match_number}/P{match.play_number} · {station}
+							{match.level === "Qualification"
+								? "Qual"
+								: match.level === "Playoff"
+									? "Playoff"
+									: (match.level ?? "")} M{match.match_number}{match.play_number &&
+							match.play_number > 1
+								? ` P${match.play_number}`
+								: ""}
 						</Badge>
 					{/if}
 					{#if note.issue_type && note.issue_type !== "Other"}
@@ -579,9 +584,16 @@
 							{$eventStore.subEvents.find((e) => e.code === note?.event_code)?.label ?? note.event_code}
 						</Badge>
 					{/if}
-					<span class="text-xs text-gray-400 dark:text-gray-500">
-						{time} by {note.author.username}
-					</span>
+				</div>
+				{#if note.team}
+					<div>
+						Team #{note.team}{get(eventStore).teams?.find((t) => parseInt(t.number) === note?.team)?.name
+							? ` - ${get(eventStore).teams?.find((t) => parseInt(t.number) === note?.team)?.name}`
+							: ""}
+					</div>
+				{/if}
+				<div class="text-xs text-gray-400 dark:text-gray-500">
+					{time} ago by {note.author.username}
 				</div>
 
 				<div class="flex flex-col flex-1 min-h-0 overflow-y-auto gap-3 pb-20">
@@ -600,7 +612,6 @@
 					</div>
 				</div>
 
-				<!-- ─── Compose box ─── -->
 				<div class="shrink-0 rounded-xl bg-white dark:bg-neutral-800 shadow-sm p-3 mt-1">
 					<form class="w-full flex flex-col gap-2" onsubmit={postMessage}>
 						<label for="chat-input" class="sr-only">Reply</label>

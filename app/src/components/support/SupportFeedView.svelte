@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Icon from "@iconify/svelte";
-	import { Button, Label, Modal, Select, Textarea } from "flowbite-svelte";
+	import { Button, Input, Label, Modal, Select, Textarea } from "flowbite-svelte";
 	import { onDestroy, onMount } from "svelte";
 	import type { Note, NoteUpdateEventData, TournamentLevel } from "../../../../shared/types";
 	import { trpc } from "../../main";
@@ -204,6 +204,7 @@
 		$state([]);
 	let matchOptions: { value: string; name: string }[] = $state([]);
 	let issueType: string | undefined = $state();
+	let selectedLabel: string | undefined = $state();
 	let newNoteText: string = $state("");
 
 	const ISSUE_TYPE_OPTIONS = [
@@ -332,6 +333,7 @@
 			createModalOpen = false;
 			newNoteText = "";
 			issueType = undefined;
+			selectedLabel = undefined;
 			matchId = undefined;
 		} catch (err: any) {
 			toast("Error creating note", err.message);
@@ -388,17 +390,6 @@
 			</Label>
 		{/if}
 
-		{#if newNoteType === "TeamIssue"}
-			<Label class="w-full text-left">
-				Issue Type (optional):
-				<Select
-					class="mt-2"
-					items={[{ value: undefined, name: "— None —" }, ...ISSUE_TYPE_OPTIONS]}
-					bind:value={issueType}
-				/>
-			</Label>
-		{/if}
-
 		<Label for="new-note-text">Text:</Label>
 		{#if newNoteType === "TeamIssue"}
 			<div class="flex flex-wrap gap-1.5">
@@ -406,11 +397,12 @@
 					<button
 						type="button"
 						class="text-xs px-2 py-1 rounded border transition-colors
-							{issueType === itemType && newNoteText.includes(label)
+					{selectedLabel === label
 							? 'border-blue-500 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
 							: 'border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-neutral-700 text-gray-700 dark:text-gray-300'}"
 						onclick={() => {
 							issueType = itemType;
+							selectedLabel = label;
 							const current = newNoteText.trim();
 							if (!current) newNoteText = label;
 							else if (!current.endsWith(label)) newNoteText = current + "\n" + label;
@@ -432,34 +424,32 @@
 		<Button size="sm" color="primary" class="shrink-0" onclick={openCreateModal}>
 			<Icon icon="mdi:plus" class="size-4 mr-1" />New Note
 		</Button>
-		<div class="relative grow">
-			<Icon
-				icon="mdi:magnify"
-				class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400 dark:text-gray-500 pointer-events-none"
-			/>
-			<input
-				class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-neutral-800 text-sm text-black dark:text-white pl-9 pr-3 h-8.5 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-				placeholder="Team #, Name, Text"
-				bind:value={search}
-			/>
-		</div>
-		<select
-			class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-neutral-800 text-sm text-black dark:text-white px-2 h-8.5 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+		<Input class="grow" size="sm" placeholder="Team #, Name, Text" bind:value={search}>
+			{#snippet left()}
+				<Icon icon="mdi:magnify" class="size-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
+			{/snippet}
+		</Input>
+		<Select
+			size="sm"
+			class="w-auto"
 			bind:value={typeFilter}
-		>
-			<option value="all">All types</option>
-			<option value="TeamIssue">Team Issues</option>
-			<option value="EventNote">Event Notes</option>
-			<option value="MatchNote">Match Notes</option>
-		</select>
-		<select
-			class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-neutral-800 text-sm text-black dark:text-white px-2 h-8.5 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+			items={[
+				{ value: "all", name: "All types" },
+				{ value: "TeamIssue", name: "Team Notes" },
+				{ value: "EventNote", name: "Event Notes" },
+				{ value: "MatchNote", name: "Match Notes" },
+			]}
+		/>
+		<Select
+			size="sm"
+			class="w-auto"
 			bind:value={statusFilter}
-		>
-			<option value="all">All statuses</option>
-			<option value="Open">Open</option>
-			<option value="Resolved">Resolved</option>
-		</select>
+			items={[
+				{ value: "all", name: "All statuses" },
+				{ value: "Open", name: "Open" },
+				{ value: "Resolved", name: "Resolved" },
+			]}
+		/>
 	</div>
 
 	<div class="flex flex-col grow gap-2 overflow-y-auto mt-2 pb-2">

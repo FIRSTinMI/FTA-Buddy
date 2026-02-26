@@ -31,12 +31,14 @@
 	let noteText = $state("");
 	let saving = $state(false);
 	let issueType = $state<FTAEventNoteIssueType | null>(null);
+	let selectedLabel = $state<string | null>(null);
 
 	// Reset text when modal opens for a new team
 	$effect(() => {
 		if (open) {
 			noteText = "";
 			issueType = null;
+			selectedLabel = null;
 		}
 	});
 
@@ -59,6 +61,7 @@
 
 	function appendLabel(label: string, type: FTAEventNoteIssueType) {
 		issueType = type;
+		selectedLabel = label;
 		const current = noteText.trim();
 		if (!current) {
 			noteText = label;
@@ -123,7 +126,7 @@
 			<button
 				type="button"
 				class="text-xs px-2 py-1 rounded border transition-colors
-					{issueType === itemType && noteText.includes(label)
+				{selectedLabel === label
 					? 'border-blue-500 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
 					: 'border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-neutral-700 text-gray-700 dark:text-gray-300'}"
 				onclick={() => appendLabel(label, itemType)}

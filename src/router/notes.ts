@@ -752,6 +752,7 @@ export const notesRouter = router({
 				id: z.string().uuid(),
 				new_text: z.string(),
 				event_code: z.string(),
+				match_id: z.string().optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -769,13 +770,11 @@ export const notesRouter = router({
 				.where(eq(users.token, ctx.token));
 			if (!currentUserProfile[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Current User not found" });
 
-			const update = await db
-				.update(notes)
-				.set({ text: input.new_text, updated_at: new Date() })
-				.where(eq(notes.id, input.id))
-				.returning();
-			if (!update[0])
-				throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Note text" });
+			const setFields: Record<string, any> = { text: input.new_text, updated_at: new Date() };
+			if (input.match_id !== undefined) setFields.match_id = input.match_id;
+
+			const update = await db.update(notes).set(setFields).where(eq(notes.id, input.id)).returning();
+			if (!update[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Note" });
 
 			event.noteUpdateEmitter.emit("edit", { kind: "edit", note: update[0] as Note });
 
@@ -1093,33 +1092,6 @@ export const notesRouter = router({
 			});
 
 			return update[0] as Note;
-		}),
-
-	attachMatchLog: eventProcedure
-		.input(z.object({ matchId: z.string(), noteId: z.string().uuid() }))
-		.mutation(async ({ ctx, input }) => {
-			const note = await db.query.notes.findFirst({ where: eq(notes.id, input.noteId) });
-			if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
-
-			const event = await getEvent(ctx.eventToken as string);
-
-			await db.update(notes).set({ match_id: input.matchId }).where(eq(notes.id, input.noteId));
-
-			if (event.slackTeam && note.slack_ts && note.slack_channel) {
-				await updateSlackMessage(
-					note.slack_channel,
-					event.slackTeam,
-					note.slack_ts,
-					createSlackNoteMessage(
-						note.id,
-						note.team,
-						note.author?.username ?? "Unknown",
-						note.text.substring(0, 60),
-						note.text,
-						input.matchId,
-					),
-				);
-			}
 		}),
 
 	generateNotesReport: eventProcedure.query(async ({ ctx }) => {

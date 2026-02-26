@@ -210,8 +210,8 @@
 	{#snippet footer()}
 		<Button
 			color="primary"
-			onclick={() => navigate("/notes/:teamNumber", { params: { teamNumber: String(modalRobot?.number) } })}
-			>Notes</Button
+			onclick={() => navigate("/support/team/:team", { params: { team: String(modalRobot?.number) } })}
+			>History</Button
 		>
 		<Button color="primary" onclick={() => (modalOpen = false)}>Close</Button>
 	{/snippet}

@@ -25,13 +25,11 @@ export const { p, navigate, isActive, preload, route } = createRouter({
 	"/logs/:matchid": () => import("./pages/match-logs/MatchLog.svelte"),
 	"/logs/:matchid/:station": () => import("./pages/match-logs/StationLog.svelte"),
 
-	"/notes": () => import("./pages/tickets-notes/NoteList.svelte"),
-	"/notes/:teamNumber": () => import("./pages/tickets-notes/NoteList.svelte"),
-
-	"/tickets": () => import("./pages/tickets-notes/TicketList.svelte"),
-	"/tickets/:team": () => import("./pages/tickets-notes/TicketList.svelte"),
-	"/tickets/view/:id": () => import("./pages/tickets-notes/ViewTicket.svelte"),
-	"/tickets/submit/:eventCode": () => import("./pages/tickets-notes/PublicTicketCreate.svelte"),
+	"/support": () => import("./pages/SupportBoard.svelte"),
+	"/support/team/:team": () => import("./pages/tickets-notes/TeamHistory.svelte"),
+	"/support/view/:id": () => import("./pages/tickets-notes/ViewNote.svelte"),
+	"/support/submit/:eventCode": () => import("./pages/tickets-notes/PublicNoteCreate.svelte"),
+	"/support/:team": () => import("./pages/SupportBoard.svelte"),
 
 	"/references": () => import("./pages/references/Reference.svelte"),
 	"/references/statuslights": () => import("./pages/references/StatusLights.svelte"),

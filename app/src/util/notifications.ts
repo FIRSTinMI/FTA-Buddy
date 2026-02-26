@@ -1,11 +1,11 @@
 import { get } from "svelte/store";
-import { toast } from "../../../shared/toast";
 import type { Notification } from "../../../shared/types";
 import { trpc } from "../main";
 import { addNotification, checkIfNotificationExists } from "../stores/notifications";
 import { settingsStore } from "../stores/settings";
 import { userStore } from "../stores/user";
 import type { MonitorEvent } from "./monitorFrameHandler";
+import { toast } from "./toast";
 
 let user = get(userStore);
 
@@ -56,14 +56,14 @@ export function robotNotification(type: string, event: MonitorEvent["detail"]) {
 	});
 }
 
-let backgroundNotificationSubscription: ReturnType<typeof trpc.tickets.pushSubscription.subscribe>;
+let backgroundNotificationSubscription: ReturnType<typeof trpc.notes.pushSubscription.subscribe>;
 
 export function startNotificationSubscription() {
 	if (backgroundNotificationSubscription && typeof backgroundNotificationSubscription.unsubscribe === "function")
 		backgroundNotificationSubscription.unsubscribe();
 
 	try {
-		backgroundNotificationSubscription = trpc.tickets.pushSubscription.subscribe(
+		backgroundNotificationSubscription = trpc.notes.pushSubscription.subscribe(
 			{
 				token: user.token,
 			},
@@ -76,19 +76,19 @@ export function startNotificationSubscription() {
 					let sendNotification = false;
 
 					switch (data.topic) {
-						case "Ticket-Created": {
+						case "Note-Created": {
 							sendNotification = get(settingsStore).notificationCategories.create;
 							break;
 						}
-						case "Ticket-Assigned": {
+						case "Note-Assigned": {
 							sendNotification = get(settingsStore).notificationCategories.assign;
 							break;
 						}
-						case "Ticket-Status": {
+						case "Note-Status": {
 							sendNotification = get(settingsStore).notificationCategories.follow;
 							break;
 						}
-						case "New-Ticket-Message": {
+						case "New-Note-Message": {
 							sendNotification = get(settingsStore).notificationCategories.follow;
 							break;
 						}
@@ -162,7 +162,7 @@ export async function subscribeToPush() {
 		const keys = subscription.toJSON().keys ?? {};
 
 		// Send push subscription to server
-		await trpc.tickets.registerPush.mutate({
+		await trpc.notes.registerPush.mutate({
 			endpoint: subscription.endpoint,
 			expirationTime: new Date(subscription.expirationTime ?? 0),
 			keys: {

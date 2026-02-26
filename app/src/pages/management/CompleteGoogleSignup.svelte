@@ -5,12 +5,7 @@
 	import { trpc } from "../../main";
 	import { navigate } from "../../router";
 	import { userStore } from "../../stores/user";
-
-	interface Props {
-		toast: (title: string, text: string, color?: string) => void;
-	}
-
-	let { toast }: Props = $props();
+	import { toast } from "../../util/toast";
 
 	let username = $state("");
 	let role: "FTA" | "FTAA" | "CSA" | "RI" | undefined = $state();

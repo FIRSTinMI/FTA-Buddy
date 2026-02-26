@@ -14,7 +14,7 @@ import {
 	StateChangeType,
 } from "../../shared/types";
 import { db } from "../db/db";
-import { events, robotCycleLogs, tickets } from "../db/schema";
+import { events, notes, robotCycleLogs } from "../db/schema";
 import { getEvent } from "./get-event";
 
 export function detectRadioNoDs(currentFrame: PartialMonitorFrame, pastFrames: MonitorFrame[]) {
@@ -156,17 +156,17 @@ export async function processTeamWarnings(eventCode: string, frame: MonitorFrame
 			robot.warnings.push(RobotWarnings.RADIO_NOT_FLASHED);
 		}
 
-		// The ticket warning is expensive on database transactions so only run it one time when prestart completes
+		// The note warning is expensive on database transactions so only run it one time when prestart completes
 		if (frame.field === FieldState.PRESTART_COMPLETED && previousFrame.field === FieldState.PRESTART_INITIATED) {
-			const teamTickets = await db
+			const teamNotes = await db
 				.select()
-				.from(tickets)
-				.where(and(eq(tickets.team, robot.number), eq(tickets.event_code, event.code)))
-				.orderBy(tickets.updated_at);
+				.from(notes)
+				.where(and(eq(notes.team, robot.number), eq(notes.event_code, event.code)))
+				.orderBy(notes.updated_at);
 
-			const openTicket = teamTickets.find((ticket) => ticket.is_open);
-			if (openTicket) {
-				robot.warnings.push(RobotWarnings.OPEN_TICKET);
+			const openNote = teamNotes.find((note) => note.resolution_status === "Open");
+			if (openNote) {
+				robot.warnings.push(RobotWarnings.OPEN_NOTE);
 			} else {
 				// Find what their last match was
 				const previousMatch = await db
@@ -176,14 +176,14 @@ export async function processTeamWarnings(eventCode: string, frame: MonitorFrame
 					.orderBy(desc(robotCycleLogs.prestart))
 					.limit(1);
 
-				const recentlyClosedTickets = teamTickets.filter((ticket) => !ticket.is_open);
+				const recentlyResolvedNotes = teamNotes.filter((note) => note.resolution_status === "Resolved");
 				let previousMatchStart = new Date();
 				if (previousMatch[0] && previousMatch[0].prestart) previousMatchStart = previousMatch[0].prestart;
 
-				for (let ticket of recentlyClosedTickets) {
-					// If ticket is closed and there either is no previous match or the previous match start time was before the ticket closed time
-					if (ticket.closed_at && (!previousMatchStart || ticket.closed_at > previousMatchStart)) {
-						robot.warnings.push(RobotWarnings.RECENT_TICKET);
+				for (let note of recentlyResolvedNotes) {
+					// If note is resolved and there either is no previous match or the previous match start time was before the note was resolved
+					if (note.updated_at && (!previousMatchStart || note.updated_at > previousMatchStart)) {
+						robot.warnings.push(RobotWarnings.RECENT_NOTE);
 						continue;
 					}
 				}
@@ -193,10 +193,10 @@ export async function processTeamWarnings(eventCode: string, frame: MonitorFrame
 		} else if (!(frame.field === FieldState.MATCH_OVER || frame.field === FieldState.MATCH_ABORTED)) {
 			const previousFrameWarnings = previousFrame[station as keyof MonitorFrame] as RobotInfo;
 
-			if (previousFrameWarnings.warnings.includes(RobotWarnings.OPEN_TICKET))
-				robot.warnings.push(RobotWarnings.OPEN_TICKET);
-			if (previousFrameWarnings.warnings.includes(RobotWarnings.RECENT_TICKET))
-				robot.warnings.push(RobotWarnings.RECENT_TICKET);
+			if (previousFrameWarnings.warnings.includes(RobotWarnings.OPEN_NOTE))
+				robot.warnings.push(RobotWarnings.OPEN_NOTE);
+			if (previousFrameWarnings.warnings.includes(RobotWarnings.RECENT_NOTE))
+				robot.warnings.push(RobotWarnings.RECENT_NOTE);
 		}
 	}
 

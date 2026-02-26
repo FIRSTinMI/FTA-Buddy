@@ -1,15 +1,14 @@
 <script lang="ts">
 	import { Button, Helper, Indicator, Input, Label } from "flowbite-svelte";
-	import { getContext, onMount } from "svelte";
+	import { onMount } from "svelte";
 	import type { Profile } from "../../../../shared/types";
 	import Spinner from "../../components/Spinner.svelte";
 	import { trpc } from "../../main";
 	import { navigate } from "../../router";
 	import { eventStore } from "../../stores/event";
 	import { userStore } from "../../stores/user";
+	import { toast } from "../../util/toast";
 	import { LATEST_EXTENSION_VERSION } from "../../util/updater";
-
-	let toast = getContext("toast") as (title: string, text: string, color?: string) => void;
 
 	let extensionDetected = $state(false);
 	let extensionEnabled = $state(false);

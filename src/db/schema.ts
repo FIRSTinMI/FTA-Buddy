@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 import {
+	bigint,
 	boolean,
 	customType,
 	integer,
@@ -12,7 +13,7 @@ import {
 	uuid,
 	varchar,
 } from "drizzle-orm/pg-core";
-import { Profile } from "../../shared/types";
+import { FmsNoteMetadata, Profile } from "../../shared/types";
 export const roleEnum = pgEnum("role", ["FTA", "FTAA", "CSA", "RI"]);
 
 export const users = pgTable("users", {
@@ -53,42 +54,10 @@ export const events = pgTable("events", {
 
 export type Event = typeof events.$inferInsert;
 
-export const tickets = pgTable("tickets", {
-	id: serial("id").primaryKey(),
-	team: integer("team").notNull().default(-1),
-	subject: varchar("subject").notNull().default(""),
-	author_id: integer("author_id")
-		.references(() => users.id)
-		.notNull(),
-	author: jsonb("author").$type<Profile>(),
-	assigned_to_id: integer("assigned_to_id").references(() => users.id),
-	assigned_to: jsonb("assigned_to").$type<Profile>(),
-	event_code: varchar("event_code")
-		.references(() => events.code)
-		.notNull(),
-	is_open: boolean("is_open").notNull().default(true),
-	text: varchar("text").notNull().default(""),
-	created_at: timestamp("created_at").notNull().defaultNow(),
-	updated_at: timestamp("updated_at").notNull().defaultNow(),
-	closed_at: timestamp("closed_at"),
-	match_id: uuid("match_id").references(() => matchLogs.id),
-	followers: jsonb("followers").$type<number[]>().default([]).notNull(),
-	slack_ts: varchar("slack_ts"),
-	slack_channel: varchar("slack_channel"),
-});
-
-export const eventTicketsRelations = relations(events, ({ many }) => ({
-	tickets: many(tickets),
-}));
-
-export const ticketEventRelations = relations(tickets, ({ one }) => ({
-	event: one(events, { fields: [tickets.event_code], references: [events.code] }),
-}));
-
 export const messages = pgTable("messages", {
 	id: uuid("id").primaryKey(),
-	ticket_id: integer("ticket_id")
-		.references(() => tickets.id)
+	note_id: uuid("note_id")
+		.references(() => notes.id)
 		.notNull(),
 	text: varchar("text").notNull().default(""),
 	author_id: integer("author_id")
@@ -104,13 +73,25 @@ export const messages = pgTable("messages", {
 	slack_channel: varchar("slack_channel"),
 });
 
-export const ticketMessagesRelations = relations(tickets, ({ many }) => ({
-	messages: many(messages),
-}));
+export const levelEnum = pgEnum("level", ["None", "Practice", "Qualification", "Playoff"]);
 
-export const messageTicketRelations = relations(messages, ({ one }) => ({
-	ticket: one(tickets, { fields: [messages.ticket_id], references: [tickets.id] }),
-}));
+export const noteTypeEnum = pgEnum("note_type", ["TeamIssue", "EventNote", "MatchNote"]);
+
+export const resolutionStatusEnum = pgEnum("resolution_status", ["Open", "Resolved", "NotApplicable"]);
+
+export const noteIssueTypeEnum = pgEnum("note_issue_type", [
+	"RoboRioIssue",
+	"DSIssue",
+	"NoRobot",
+	"RadioIssue",
+	"RobotPwrIssue",
+	"OtherRobotIssue",
+	"VenueIssue",
+	"ElectricalIssue",
+	"MechanicalIssue",
+	"VolunteerIssue",
+	"Other",
+]);
 
 export const notes = pgTable("notes", {
 	id: uuid("id").primaryKey(),
@@ -119,15 +100,37 @@ export const notes = pgTable("notes", {
 		.references(() => users.id)
 		.notNull(),
 	author: jsonb("author").$type<Profile>(),
-	team: integer("team").notNull().default(-1),
+	team: integer("team"),
+	note_type: noteTypeEnum("note_type").notNull().default("TeamIssue"),
+	resolution_status: resolutionStatusEnum("resolution_status").default("NotApplicable"),
+	issue_type: noteIssueTypeEnum("issue_type"),
+	match_number: integer("match_number"),
+	play_number: integer("play_number"),
+	tournament_level: levelEnum("tournament_level"),
+	fms_note_id: varchar("fms_note_id").unique(),
+	fms_record_version: bigint("fms_record_version", { mode: "number" }),
+	fms_metadata: jsonb("fms_metadata").$type<FmsNoteMetadata>(),
 	event_code: varchar("event_code")
 		.references(() => events.code)
 		.notNull(),
 	created_at: timestamp("created_at").notNull().defaultNow(),
 	updated_at: timestamp("updated_at").notNull().defaultNow(),
+	closed_at: timestamp("closed_at"),
+	assigned_to_id: integer("assigned_to_id").references(() => users.id),
+	assigned_to: jsonb("assigned_to").$type<Profile>(),
+	followers: jsonb("followers").$type<number[]>().default([]).notNull(),
+	slack_ts: varchar("slack_ts"),
+	slack_channel: varchar("slack_channel"),
+	match_id: uuid("match_id").references(() => matchLogs.id),
 });
 
-export const levelEnum = pgEnum("level", ["None", "Practice", "Qualification", "Playoff"]);
+export const noteMessagesRelations = relations(notes, ({ many }) => ({
+	messages: many(messages),
+}));
+
+export const messageNoteRelations = relations(messages, ({ one }) => ({
+	note: one(notes, { fields: [messages.note_id], references: [notes.id] }),
+}));
 
 export const issueEnum = pgEnum("issue", [
 	"Bypassed",

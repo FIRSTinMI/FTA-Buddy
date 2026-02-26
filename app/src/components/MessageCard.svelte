@@ -1,15 +1,13 @@
 <script lang="ts">
-	import { preventDefault } from "svelte/legacy";
-
 	import Icon from "@iconify/svelte";
-	import { Button, Card, Label, Modal, Textarea } from "flowbite-svelte";
+	import { Badge, Button, Label, Modal, Textarea } from "flowbite-svelte";
 	import { get } from "svelte/store";
 	import { formatTimeNoAgoHourMins } from "../../../shared/formatTime";
-	import { toast } from "../../../shared/toast";
 	import type { Message } from "../../../shared/types";
 	import { trpc } from "../main";
 	import { eventStore } from "../stores/event";
 	import { userStore } from "../stores/user";
+	import { toast } from "../util/toast";
 
 	let event = get(eventStore);
 	let user = get(userStore);
@@ -29,11 +27,12 @@
 	// svelte-ignore state_referenced_locally
 	let editMessageText = $state(message.text);
 
-	async function editMessage() {
+	async function editMessage(evt: SubmitEvent) {
+		evt.preventDefault();
 		try {
 			if (editMessageText !== message.text) {
-				const res = await trpc.tickets.messages.edit.mutate({
-					ticket_id: message.ticket_id,
+				const res = await trpc.notes.messages.edit.mutate({
+					note_id: message.note_id,
 					message_id: message.id,
 					new_text: editMessageText,
 				});
@@ -43,7 +42,7 @@
 				toast("Cannot Edit Message without Text", "red-500");
 			}
 		} catch (err: any) {
-			toast("An error occurred while editing the Ticket", err.message);
+			toast("An error occurred while editing the Message", err.message);
 			console.error(err);
 			return;
 		}
@@ -51,8 +50,8 @@
 
 	async function deleteMessage() {
 		try {
-			const res = await trpc.tickets.messages.delete.mutate({
-				ticket_id: message.ticket_id,
+			const res = await trpc.notes.messages.delete.mutate({
+				note_id: message.note_id,
 				message_id: message.id,
 			});
 			deleteMessagePopup = false;
@@ -71,7 +70,7 @@
 			<h1 class="text-2xl font-bold text-black dark:text-white place-content-center">Edit Message</h1>
 		</div>
 	{/snippet}
-	<form class="text-left flex flex-col gap-4" onsubmit={preventDefault(editMessage)}>
+	<form class="text-left flex flex-col gap-4" onsubmit={editMessage}>
 		<Label for="text">Edit Text:</Label>
 		<Textarea id="text" class="w-full" rows={5} bind:value={editMessageText} />
 		<Button type="submit">Save Changes</Button>
@@ -86,38 +85,48 @@
 	</div>
 </Modal>
 
-<Card class="w-full text-black dark:text-white dark:bg-neutral-800">
-	<div
-		class="flex flex-col sm:grid sm:grid-cols-[.1fr_auto_.1fr] max-sm:divide-y sm:divide-x divide-gray-500 {simple
-			? 'min-h-20 p-1'
-			: 'min-h-28 pt-2 px-4'}"
-	>
-		<div class="flex flex-row justify-between text-left sm:block sm:text-center sm:place-content-center">
-			<p class="sm:w-28 text-wrap italic font-bold pt-3">{message.author.username} - {message.author.role}</p>
-			{#if user.id === message.author_id && !simple}
-				<div>
-					<Button class="pt-2 pb-2 pl-3 pr-2 mb-5" onclick={() => (editMessageView = true)}
-						><Icon icon="mdi:pencil" class="w-5" /></Button
-					>
-					<Button onclick={() => (deleteMessagePopup = true)} class="pt-2 pb-2 pl-3 pr-2 mb-5"
-						><Icon icon="mdi:trash-can-outline" class="pr-1" /></Button
-					>
-				</div>
+<div class="rounded-lg bg-gray-100 dark:bg-neutral-700 px-3 py-2.5 flex flex-col gap-1">
+	<div class="flex items-center justify-between gap-2">
+		<div class="flex items-center gap-1.5 text-xs">
+			<span class="font-semibold text-gray-700 dark:text-gray-200">{message.author.username}</span>
+			{#if message.author.username !== message.author.role}
+				<span class="text-gray-400 dark:text-gray-500">·</span>
+				<span class="text-gray-400 dark:text-gray-500">{message.author.role}</span>
+			{/if}
+			{#if message.author.source === "FMS"}
+				<Badge color="indigo" class="text-[10px] py-0 px-1">FMS</Badge>
+			{:else if message.author.source === "Slack"}
+				<Badge color="purple" class="text-[10px] py-0 px-1">Slack</Badge>
 			{/if}
 		</div>
-		<div class="{simple ? 'px-4 py-1' : 'p-4'} grow text-left">
-			<p class="text-wrap">
-				{#if simple}
-					{message.text.slice(0, 240) + (message.text.length > 240 ? "..." : "")}
-				{:else}
-					{message.text}
-				{/if}
-			</p>
+		<div class="flex items-center gap-1 shrink-0">
+			<span class="text-xs text-gray-400 dark:text-gray-500">{time}</span>
+			{#if user.id === message.author_id && !simple}
+				<button
+					type="button"
+					class="p-0.5 rounded text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+					onclick={() => (editMessageView = true)}
+					title="Edit"
+				>
+					<Icon icon="mdi:pencil" class="size-3.5" />
+				</button>
+				<button
+					type="button"
+					class="p-0.5 rounded text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+					onclick={() => (deleteMessagePopup = true)}
+					title="Delete"
+				>
+					<Icon icon="mdi:trash-can-outline" class="size-3.5" />
+				</button>
+			{/if}
 		</div>
-		{#if !simple}
-			<div class="text-right sm:text-center sm:place-content-center">
-				<p class="sm:w-20 text-wrap italic p-2">{time}</p>
-			</div>
-		{/if}
 	</div>
-</Card>
+	<!-- Body -->
+	<p class="text-sm text-black dark:text-white text-wrap leading-relaxed">
+		{#if simple}
+			{message.text.slice(0, 240) + (message.text.length > 240 ? "…" : "")}
+		{:else}
+			{message.text}
+		{/if}
+	</p>
+</div>

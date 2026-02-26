@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { Button, Input, Label } from "flowbite-svelte";
-	import { toast } from "../../../../shared/toast";
 	import { trpc } from "../../main";
 	import { navigate } from "../../router";
 	import { eventStore } from "../../stores/event";
 	import { userStore } from "../../stores/user";
+	import { toast } from "../../util/toast";
 
 	let eventCode = "";
 	let eventPin = Math.random().toString().slice(2, 6);

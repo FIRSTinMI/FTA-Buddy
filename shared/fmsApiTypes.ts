@@ -31,6 +31,18 @@ export type FTAEventNoteType =
 	| "FMSMatchMaker"
 	| "Staff";
 
+/** Numeric values for FMS EventNoteTypes enum (used in AddNote body). */
+export const FTAEventNoteTypeNumeric: Record<FTAEventNoteType, number> = {
+	FTAEvent: 1,
+	FTAMatch: 2,
+	FTATeamIssue: 5,
+	FTAAppUsageData: 6,
+	FTATeam: 5, // alias for FTATeamIssue
+	FMSAllianceTimeout: 10,
+	FMSMatchMaker: 11,
+	Staff: 15,
+};
+
 /** Issue category for team issues (EventNoteIssueTypes enum). */
 export type FTAEventNoteIssueType =
 	| "RoboRioIssue"
@@ -45,8 +57,41 @@ export type FTAEventNoteIssueType =
 	| "VolunteerIssue"
 	| "Other";
 
+/** Numeric values for FMS EventNoteIssueTypes enum (confirmed from source). */
+export const FTAEventNoteIssueTypeNumeric: Record<FTAEventNoteIssueType, number> = {
+	RoboRioIssue: 1,
+	DSIssue: 5,
+	NoRobot: 10,
+	RadioIssue: 15,
+	RobotPwrIssue: 20,
+	OtherRobotIssue: 25,
+	VenueIssue: 26,
+	ElectricalIssue: 27,
+	MechanicalIssue: 28,
+	VolunteerIssue: 29,
+	Other: 30,
+};
+
 /** Resolution state for team issues (EventNoteResolutionTypes enum). */
 export type FTAEventNoteResolutionType = "Open" | "Resolved" | "NotApplicable";
+
+/** Numeric values for FMS EventNoteResolutionTypes enum (confirmed from source). */
+export const FTAEventNoteResolutionTypeNumeric: Record<FTAEventNoteResolutionType, number> = {
+	Open: 1,
+	Resolved: 5,
+	NotApplicable: 99,
+};
+
+/**
+ * Numeric values for FMS TournamentLevel enum.
+ * C# definition: None=0, Practice=1, Qualification=2, Playoff=3.
+ */
+export const TournamentLevelNumeric: Record<TournamentLevel, number> = {
+	None: 0,
+	Practice: 1,
+	Qualification: 2,
+	Playoff: 3,
+};
 
 // ---------------------------------------------------------------------------
 // Connection / bypass status
@@ -175,6 +220,81 @@ export interface FTATeamIssueCreateModifyModel {
 	issueType: FTAEventNoteIssueType;
 	resolutionStatus: FTAEventNoteResolutionType;
 	recordVersion?: number | null;
+}
+
+// ---------------------------------------------------------------------------
+// /Notes/ endpoint models (confirmed via network capture)
+// ---------------------------------------------------------------------------
+
+/**
+ * A note record as returned by /Notes/ endpoints (NoteModel).
+ * All optional fields are `null` when not applicable to the note type.
+ */
+export interface FTANoteRecord {
+	/** UUID of the note. */
+	fmsEventNoteId: string;
+	noteType: FTAEventNoteType;
+	tournamentLevel: string | null;
+	alliance: string | null;
+	station: string | null;
+	/** UUID of the associated match, or null. */
+	fmsMatchId: string | null;
+	/** UUID of the associated team, or null. */
+	fmsTeamId: string | null;
+	teamNumber: number | null;
+	matchDescription: string | null;
+	matchNumber: number | null;
+	playNumber: number | null;
+	note: string;
+	issueType: FTAEventNoteIssueType;
+	resolutionStatus: FTAEventNoteResolutionType;
+	isPrivate: boolean;
+	isDeleted: boolean;
+}
+
+/** Entry in the /Notes/GetNotesPerTeam response (TeamNotesModel). */
+export interface FTATeamNotesModel {
+	fmsTeamId: string;
+	teamNumber: number;
+	teamNotes: FTANoteRecord[];
+}
+
+/**
+ * Response from /Notes/GetMatches (MatchesModel).
+ * Match arrays contain match-level models whose full shape is not yet captured.
+ */
+export interface FTAMatchesModel {
+	eventNotes: FTANoteRecord[];
+	testMatches: unknown[];
+	practiceMatches: unknown[];
+	qualificationMatches: unknown[];
+	playoffMatches: unknown[];
+}
+
+/**
+ * Body for POST /Notes/AddNote (confirmed via network capture).
+ * Uses numeric enum values rather than string names.
+ *
+ * Observed examples:
+ *   { noteType: 5, issueType: 10, issueString: "No Robot",        resolutionStatus: 1, note: "Test", teamNumber: 1,
+ *     tournamentLevel: 0, matchNumber: 0, playNumber: 0 }
+ *   { noteType: 5, issueType: 25, issueString: "Other Robot Issue", ... }
+ */
+export interface FTAAddNoteBody {
+	/** Numeric value of the EventNoteTypes enum. */
+	noteType: number;
+	/** Numeric value of the EventNoteIssueTypes enum. */
+	issueType: number;
+	/** Human-readable label for issueType (e.g. "No Robot"). */
+	issueString: string;
+	/** Numeric value of the EventNoteResolutionTypes enum (e.g. 1 = Open). */
+	resolutionStatus: number;
+	note: string;
+	teamNumber: number;
+	/** Numeric value of TournamentLevel (e.g. 0 = None/Practice). */
+	tournamentLevel: number;
+	matchNumber: number;
+	playNumber: number;
 }
 
 // ---------------------------------------------------------------------------

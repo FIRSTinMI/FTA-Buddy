@@ -82,7 +82,7 @@
 	const eventTokenPaths = ["/monitor", "/checklist", "/logs"];
 
 	const pageIsPublicLog = route.pathname.startsWith("/logs/") && route.pathname.split("/")[3].length == 36;
-	const pageIsPublicTicketCreate = route.pathname.startsWith("/tickets/submit/");
+	const pageIsPublicNoteCreate = route.pathname.startsWith("/support/submit/");
 
 	function redirectForAuth() {
 		// if user has event token and is trying to access a page that requires an event token
@@ -92,14 +92,14 @@
 
 		if (!publicPaths.includes(route.pathname)) {
 			//user trying to acces protected page
-			if (!pageIsPublicLog && !pageIsPublicTicketCreate) {
-				//page is not public log or public ticket creation page
+			if (!pageIsPublicLog && !pageIsPublicNoteCreate) {
+				//page is not public log or public note creation page
 				if (!$user.token || !$user.eventToken) {
 					navigate("/manage/login"); //user is either not logged in or does not have event token
 				}
 				//user is logged in and has event token -- no redirect
 			}
-			//page is public log/public ticket creation page -- no tokens needed
+			//page is public log/public note creation page -- no tokens needed
 		} else if (route.pathname == "/") {
 			//user is accessing public path that is /
 			if (!$user.eventToken) {
@@ -168,7 +168,7 @@
 
 	// Update checking
 
-	update(settings.version, version, openWelcome, openChangelog, pageIsPublicLog || pageIsPublicTicketCreate);
+	update(settings.version, version, openWelcome, openChangelog, pageIsPublicLog || pageIsPublicNoteCreate);
 
 	// Toast manager
 
@@ -255,7 +255,7 @@
 					navigate("/monitor");
 				}
 			} else if ($user.role === "CSA" || $user.role === "RI") {
-				navigate("/tickets");
+				navigate("/support");
 			}
 		}
 	});
@@ -325,15 +325,15 @@
 
 <SettingsModal bind:settingsOpen />
 
-<Drawer bind:open={drawerOpen} id="sidebar" class="bg-neutral-200">
-	<div class="flex items-center">
+<Drawer bind:open={drawerOpen} id="sidebar" class="bg-neutral-200 p-0" dismissable={false}>
+	<div class="flex items-center justify-between px-4 pt-3 pb-1">
 		<h5 id="drawer-navigation-label-3" class="text-base font-semibold text-black uppercase dark:text-gray-400">
 			Menu
 		</h5>
-		<CloseButton onclick={() => (drawerOpen = false)} class="mb-4 text-black dark:text-white" />
+		<CloseButton onclick={() => (drawerOpen = false)} class="text-black dark:text-white" />
 	</div>
 	{#if $user.meshedEventToken && event.subEvents}
-		<Label class="text-left">
+		<Label class="text-left px-4 pb-2 block">
 			Event Selection
 			<Select
 				bind:value={multiEventSelection}
@@ -368,71 +368,32 @@
 			/>
 		</Label>
 	{/if}
-	<Sidebar classes={{ div: "px-2" }}>
-		<SidebarWrapper class="rounded-sm dark:bg-gray-800">
+	<Sidebar alwaysOpen={true} position="static" class="w-full" classes={{ div: "overflow-y-auto" }}>
+		<SidebarWrapper class="rounded-sm py-4 dark:bg-gray-800">
 			{#if $user.token && $user.eventToken}
 				<SidebarGroup>
-					{#if $user?.role === "FTA" || $user?.role === "FTAA"}
-						<SidebarItem
-							label="Monitor"
-							onclick={() => {
-								drawerOpen = false;
-								navigate("/");
-							}}
-						>
-							{#snippet icon()}
-								<Icon icon="mdi:television" class="size-8" />
-							{/snippet}
-						</SidebarItem>
-					{:else if $user?.role === "CSA" || $user?.role === "RI"}
-						<SidebarItem
-							label="Tickets"
-							onclick={() => {
-								drawerOpen = false;
-								navigate("/");
-							}}
-						>
-							{#snippet icon()}
-								<Icon icon="mdi:message-text" class="size-8" />
-							{/snippet}
-						</SidebarItem>
-					{/if}
 					<SidebarItem
-						label="Flashcards"
+						label="Monitor"
 						onclick={() => {
 							drawerOpen = false;
-							navigate("/flashcards");
+							navigate("/");
 						}}
 					>
 						{#snippet icon()}
-							<Icon icon="mdi:message-alert" class="size-8" />
+							<Icon icon="mdi:television" class="size-8" />
 						{/snippet}
 					</SidebarItem>
-					{#if $user?.role === "FTA" || $user?.role === "FTAA"}
-						<SidebarItem
-							label="Tickets"
-							onclick={() => {
-								drawerOpen = false;
-								navigate("/tickets");
-							}}
-						>
-							{#snippet icon()}
-								<Icon icon="mdi:message-text" class="size-8" />
-							{/snippet}
-						</SidebarItem>
-					{:else if $user?.role === "CSA" || $user?.role === "RI"}
-						<SidebarItem
-							label="Monitor"
-							onclick={() => {
-								drawerOpen = false;
-								navigate("/monitor");
-							}}
-						>
-							{#snippet icon()}
-								<Icon icon="mdi:television" class="size-8" />
-							{/snippet}
-						</SidebarItem>
-					{/if}
+					<SidebarItem
+						label="Support Board"
+						onclick={() => {
+							drawerOpen = false;
+							navigate("/support");
+						}}
+					>
+						{#snippet icon()}
+							<Icon icon="mdi:view-dashboard" class="size-8" />
+						{/snippet}
+					</SidebarItem>
 					<SidebarItem
 						label="Match Logs"
 						onclick={() => {
@@ -445,6 +406,17 @@
 						{/snippet}
 					</SidebarItem>
 					<SidebarItem
+						label="Flashcards"
+						onclick={() => {
+							drawerOpen = false;
+							navigate("/flashcards");
+						}}
+					>
+						{#snippet icon()}
+							<Icon icon="mdi:message-alert" class="size-8" />
+						{/snippet}
+					</SidebarItem>
+					<SidebarItem
 						label="Checklist"
 						onclick={() => {
 							drawerOpen = false;
@@ -453,17 +425,6 @@
 					>
 						{#snippet icon()}
 							<Icon icon="mdi:clipboard-outline" class="size-8" />
-						{/snippet}
-					</SidebarItem>
-					<SidebarItem
-						label="Team Notes"
-						onclick={() => {
-							drawerOpen = false;
-							navigate("/notes");
-						}}
-					>
-						{#snippet icon()}
-							<Icon icon="clarity:note-solid" class="size-8" />
 						{/snippet}
 					</SidebarItem>
 					<SidebarItem
@@ -674,7 +635,7 @@
 </Drawer>
 
 <!-- App.svelte -->
-<main class="bg-white dark:bg-neutral-800 w-screen h-dvh flex flex-col">
+<main class="bg-white dark:bg-neutral-800 w-screen h-dvh flex flex-col overflow-hidden">
 	<div
 		class="bg-primary-700 dark:bg-primary-500 flex w-full justify-between px-2 {$fullscreen
 			? 'hidden collapse'
@@ -690,12 +651,12 @@
 		</div>
 	</div>
 
-	<div class="flex-1 overflow-y-auto">
+	<div class="flex-1 min-h-0 overflow-y-auto">
 		<SvRouter />
 	</div>
 
 	<div
-		class="flex justify-around py-2 bg-neutral-900 dark:bg-neutral-700 text-white {$fullscreen &&
+		class="shrink-0 flex justify-around py-2 bg-neutral-900 dark:bg-neutral-700 text-white {$fullscreen &&
 			'bg-white dark:bg-neutral-800'}"
 	>
 		{#if $user.token && $user.eventToken && !$fullscreen}
@@ -718,8 +679,8 @@
 					{/if}
 				</button>
 			{:else if $user?.role === "CSA" || $user?.role === "RI"}
-				<button class="p-2" onclick={() => navigate("/tickets")}>
-					<Icon icon="mdi:message-alert" class="size-8" />
+				<button class="p-2" onclick={() => navigate("/support")}>
+					<Icon icon="mdi:view-dashboard" class="size-8" />
 				</button>
 				<button class="p-2" onclick={() => navigate("/references/statuslights")}>
 					<Icon icon="heroicons:sun-16-solid" class="size-8" />

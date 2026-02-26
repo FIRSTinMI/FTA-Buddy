@@ -3,11 +3,8 @@
 	import { onMount } from "svelte";
 	import Spinner from "../../components/Spinner.svelte";
 	import { trpc } from "../../main";
+	import { toast } from "../../util/toast";
 	import { LATEST_EXTENSION_VERSION } from "../../util/updater";
-
-	function toast(title: string, text: string, color?: string) {
-		(window as any).toast?.(title, text, color);
-	}
 
 	let extensionDetected = $state(false);
 	let extensionEnabled = $state(false);

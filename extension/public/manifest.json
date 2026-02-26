@@ -26,6 +26,7 @@
             "run_at": "document_end",
             "matches": [
                 "https://ftabuddy.com/*",
+                "https://dev.ftabuddy.com/*",
                 "http://localhost:5173/*"
             ],
             "js": [

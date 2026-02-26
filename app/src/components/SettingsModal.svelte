@@ -1,16 +1,20 @@
 <script lang="ts">
 	import { Button, Label, Modal, Range, Select, Toggle, type SelectOptionType } from "flowbite-svelte";
 	import { get } from "svelte/store";
-	import { toast } from "../../../shared/toast";
 	import { audioQueuer } from "../field-monitor";
 	import { trpc } from "../main";
 	import { installPrompt } from "../stores/install-prompt";
 	import { settingsStore } from "../stores/settings";
 	import { userStore } from "../stores/user";
-	import { startNotificationSubscription, stopNotificationSubscription, subscribeToPush } from "../util/notifications";
+	import {
+		startNotificationSubscription,
+		stopNotificationSubscription,
+		subscribeToPush,
+	} from "../util/notifications";
+	import { toast } from "../util/toast";
 	import Spinner from "./Spinner.svelte";
 
-    let { settingsOpen = $bindable(false) } = $props();
+	let { settingsOpen = $bindable(false) } = $props();
 
 	let settings = get(settingsStore);
 	let user = get(userStore);
@@ -97,9 +101,9 @@
 		}, 100);
 	}
 
-    $effect(() => {
-        setupRangeSlider(settingsOpen);
-    });
+	$effect(() => {
+		setupRangeSlider(settingsOpen);
+	});
 
 	let testingMusic = $state(false);
 	let musicTestTimeout: NodeJS.Timeout | undefined;
@@ -124,30 +128,59 @@
 	<Spinner />
 {/if}
 
-<Modal bind:open={settingsOpen} size="lg" outsideclose class="fixed top-0 inset-s-0 inset-e-0 h-modal md:inset-0 z-40 w-full p-4 flex">
+<Modal
+	bind:open={settingsOpen}
+	size="lg"
+	outsideclose
+	class="fixed top-0 inset-s-0 inset-e-0 h-modal md:inset-0 z-40 w-full p-4 flex"
+>
 	{#snippet header()}
-        <h1 class="text-2xl text-black dark:text-white">Settings</h1>
-    {/snippet}
+		<h1 class="text-2xl text-black dark:text-white">Settings</h1>
+	{/snippet}
 	<form class="justify-start text-left">
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-2">
 			<div class="grid grid-cols-subgrid gap-2 row-span-5">
 				<p class="text-gray-700 dark:text-gray-400">General</p>
 				<Toggle class="toggle" bind:checked={settings.vibrations} onchange={updateSettings}>Vibrations</Toggle>
-				<Toggle class="toggle" bind:checked={settings.fimSpecifics} onchange={updateSettings}>FIM Specific Field Manuals</Toggle>
-				<Toggle class="toggle" bind:checked={settings.notificationsDoNotAsk} onchange={updateSettings}>Do Not Ask About Notifications</Toggle>
-				<Toggle class="toggle" bind:checked={settings.notifications} onchange={requestNotificationPermissions}>Enable Notifications</Toggle>
+				<Toggle class="toggle" bind:checked={settings.fimSpecifics} onchange={updateSettings}
+					>FIM Specific Field Manuals</Toggle
+				>
+				<Toggle class="toggle" bind:checked={settings.notificationsDoNotAsk} onchange={updateSettings}
+					>Do Not Ask About Notifications</Toggle
+				>
+				<Toggle class="toggle" bind:checked={settings.notifications} onchange={requestNotificationPermissions}
+					>Enable Notifications</Toggle
+				>
 				<div class="pl-4 grid grid-cols-subgrid gap-2 row-span-5">
-					<Toggle class="toggle" bind:checked={settings.notificationCategories.create} onchange={updateSettings}>New Tickets</Toggle>
-					<Toggle class="toggle" bind:checked={settings.notificationCategories.follow} onchange={updateSettings}>Followed Ticket Updates</Toggle>
-					<Toggle class="toggle" bind:checked={settings.notificationCategories.assign} onchange={updateSettings}>Assigned Ticket Updates</Toggle>
-					<Toggle class="toggle" bind:checked={settings.notificationCategories.robot} onchange={updateSettings}>Robot Status Updates</Toggle>
+					<Toggle
+						class="toggle"
+						bind:checked={settings.notificationCategories.create}
+						onchange={updateSettings}>New Tickets</Toggle
+					>
+					<Toggle
+						class="toggle"
+						bind:checked={settings.notificationCategories.follow}
+						onchange={updateSettings}>Followed Ticket Updates</Toggle
+					>
+					<Toggle
+						class="toggle"
+						bind:checked={settings.notificationCategories.assign}
+						onchange={updateSettings}>Assigned Ticket Updates</Toggle
+					>
+					<Toggle
+						class="toggle"
+						bind:checked={settings.notificationCategories.robot}
+						onchange={updateSettings}>Robot Status Updates</Toggle
+					>
 				</div>
 			</div>
 			<div class="grid grid-cols-subgrid gap-2 row-span-3">
 				<p class="text-gray-700 dark:text-gray-400">Change My Role</p>
 				<Select items={roleOptions} bind:value={user.role} onchange={updateUser} />
 				<p class="text-gray-700 dark:text-gray-400">Audio Alerts</p>
-				<Toggle class="toggle" bind:checked={settings.soundAlerts} onchange={updateSettings}>Robot Connection</Toggle>
+				<Toggle class="toggle" bind:checked={settings.soundAlerts} onchange={updateSettings}
+					>Robot Connection</Toggle
+				>
 				<Toggle class="toggle" bind:checked={settings.fieldGreen} onchange={updateSettings}>Field Green</Toggle>
 			</div>
 			<div class="grid grid-cols-subgrid gap-2 row-span-6">
@@ -176,21 +209,31 @@
 					/>
 					<div class="w-12 text-right text-gray-700 dark:text-gray-400">{settings.musicVolume}%</div>
 				</div>
-				<Button onclick={() => (testingMusic ? stopMusic : testMusic)()} size="xs" color={testingMusic ? "dark" : "primary"}
-					>{testingMusic ? "Stop" : "Test"} Music</Button
+				<Button
+					onclick={() => (testingMusic ? stopMusic : testMusic)()}
+					size="xs"
+					color={testingMusic ? "dark" : "primary"}>{testingMusic ? "Stop" : "Test"} Music</Button
 				>
 			</div>
 			<div class="grid grid-cols-subgrid gap-2 row-span-4">
 				<p class="text-gray-700 dark:text-gray-400">Appearance</p>
 				<Toggle class="toggle" bind:checked={settings.darkMode} onchange={updateSettings}>Dark Theme</Toggle>
-				<Toggle class="toggle" bind:checked={settings.roundGreen} onchange={updateSettings}>Round Green Indicators</Toggle>
-				<Toggle class="toggle" bind:checked={settings.inspectionAlerts} onchange={updateSettings}>🔍 Missing inspection icon on field monitor</Toggle>
+				<Toggle class="toggle" bind:checked={settings.roundGreen} onchange={updateSettings}
+					>Round Green Indicators</Toggle
+				>
+				<Toggle class="toggle" bind:checked={settings.inspectionAlerts} onchange={updateSettings}
+					>🔍 Missing inspection icon on field monitor</Toggle
+				>
 			</div>
 			<div class="grid grid-cols-subgrid gap-2 row-span-4">
 				<p class="text-gray-700 dark:text-gray-400">Developer</p>
-				<Toggle class="toggle" bind:checked={settings.developerMode} onchange={updateSettings}>Developer Mode</Toggle>
-				<Toggle class="toggle {!settings.developerMode ? 'hidden' : ''}" bind:checked={settings.forceCloud} onchange={updateSettings}
-					>Force cloud server</Toggle
+				<Toggle class="toggle" bind:checked={settings.developerMode} onchange={updateSettings}
+					>Developer Mode</Toggle
+				>
+				<Toggle
+					class="toggle {!settings.developerMode ? 'hidden' : ''}"
+					bind:checked={settings.forceCloud}
+					onchange={updateSettings}>Force cloud server</Toggle
 				>
 				<Button
 					class={!settings.developerMode ? "hidden" : ""}
@@ -215,13 +258,13 @@
 			</div>
 		</div>
 	</form>
-    {#snippet footer()}
-        <div class="flex flex-col w-full">
-            <h1 class="text-lg">About</h1>
-            <p>Author: Filip Kin</p>
-            <p>Contributors: Kelly Malone, Cole H</p>
-            <p>Version: {settings.version}</p>
-            <a href="https://github.com/FIRSTinMI/FTA-Buddy" class="underline text-blue-400">GitHub</a>
-        </div>
-    {/snippet}
+	{#snippet footer()}
+		<div class="flex flex-col w-full">
+			<h1 class="text-lg">About</h1>
+			<p>Author: Filip Kin</p>
+			<p>Contributors: Kelly Malone, Cole H</p>
+			<p>Version: {settings.version}</p>
+			<a href="https://github.com/FIRSTinMI/FTA-Buddy" class="underline text-blue-400">GitHub</a>
+		</div>
+	{/snippet}
 </Modal>

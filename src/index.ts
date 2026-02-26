@@ -21,8 +21,12 @@ import { cycleRouter } from "./router/cycles";
 import { eventRouter } from "./router/event";
 import { fieldMonitorRouter } from "./router/field-monitor";
 import { matchRouter } from "./router/logs";
-import { addTicketMessageFromSlack, messagesRouter } from "./router/messages";
-import { ticketsRouter, updateTicketAssignmentFromSlack, updateTicketStatusFromSlack } from "./router/tickets";
+import {
+	addNoteMessageFromSlack,
+	notesRouter,
+	updateNoteAssignmentFromSlack,
+	updateNoteStatusFromSlack,
+} from "./router/notes";
 import { userRouter } from "./router/user";
 import { adminProcedure, createContext, publicProcedure, router } from "./trpc";
 
@@ -33,7 +37,6 @@ import { TypedEmitter } from "tiny-typed-emitter";
 import { z } from "zod";
 import schema from "./db/schema";
 import { ftcRouter } from "./router/ftc";
-import { notesRouter } from "./router/notes";
 import { getEvent } from "./util/get-event";
 import { decompressStationLog, logAnalysisLoop } from "./util/log-analysis";
 import { linkChannel, slackOAuth } from "./util/slack";
@@ -71,8 +74,6 @@ const appRouter = router({
 	checklist: checklistRouter,
 	field: fieldMonitorRouter,
 	cycles: cycleRouter,
-	messages: messagesRouter,
-	tickets: ticketsRouter,
 	notes: notesRouter,
 	app: router({
 		version: publicProcedure.query(() => {
@@ -206,11 +207,11 @@ app.post("/slack/events", async (req, res) => {
 			console.log(event);
 			// Only listen to reactions on messages from the bot
 			if (event.reaction === "white_check_mark" && event.item.user === "U08FVV94LPR") {
-				await updateTicketStatusFromSlack(event.item.ts, event.type !== "reaction_added");
+				await updateNoteStatusFromSlack(event.item.ts, event.type === "reaction_added");
 			} else if (event.reaction === "eyes" && event.item.user === "U08FVV94LPR") {
-				await updateTicketAssignmentFromSlack(event.item.ts, event.type === "reaction_added", event.user);
+				await updateNoteAssignmentFromSlack(event.item.ts, event.type === "reaction_added", event.user);
 			} else if (event.type === "message" && event.thread_ts) {
-				await addTicketMessageFromSlack(event.channel, event.ts, event.thread_ts, event.text, event.user);
+				await addNoteMessageFromSlack(event.channel, event.ts, event.thread_ts, event.text, event.user);
 			}
 		}
 	} catch (err) {

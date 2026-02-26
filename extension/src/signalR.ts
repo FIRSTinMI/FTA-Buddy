@@ -1,6 +1,12 @@
 import { HubConnection, HubConnectionBuilder, HubConnectionState } from "@microsoft/signalr";
 import { DEFAULT_MONITOR } from "../../shared/constants";
-import type { FTAMatchStatusInfoChanged, FTANoteChangedEvent } from "../../shared/fmsApiTypes";
+import type {
+	FTAEventNoteIssueType,
+	FTAEventNoteResolutionType,
+	FTAEventNoteType,
+	FTAMatchStatusInfoChanged,
+	FTANoteRecord,
+} from "../../shared/fmsApiTypes";
 import {
 	DSState,
 	EnableState,
@@ -13,6 +19,33 @@ import {
 import { uploadMatchLogs } from "./trpc";
 
 export let signalRConnectionStatus: HubConnectionState = HubConnectionState.Disconnected;
+
+/**
+ * SignalR sends note payloads in PascalCase while the REST API uses camelCase.
+ * Normalise to the camelCase FTANoteRecord shape so consumers don't need to care.
+ */
+function normalizeFmsNote(raw: any): FTANoteRecord {
+	// If already camelCase (e.g. from REST), pass through
+	if ("fmsEventNoteId" in raw) return raw as FTANoteRecord;
+	return {
+		fmsEventNoteId: raw.FMSEventNoteId ?? raw.fmsEventNoteId,
+		noteType: (raw.NoteType ?? raw.noteType) as FTAEventNoteType,
+		tournamentLevel: raw.TournamentLevel ?? raw.tournamentLevel ?? null,
+		alliance: raw.Alliance ?? raw.alliance ?? null,
+		station: raw.Station ?? raw.station ?? null,
+		fmsMatchId: raw.FMSMatchId ?? raw.fmsMatchId ?? null,
+		fmsTeamId: raw.FMSTeamId ?? raw.fmsTeamId ?? null,
+		teamNumber: raw.TeamNumber ?? raw.teamNumber ?? null,
+		matchDescription: raw.MatchDescription ?? raw.matchDescription ?? null,
+		matchNumber: raw.MatchNumber ?? raw.matchNumber ?? null,
+		playNumber: raw.PlayNumber ?? raw.playNumber ?? null,
+		note: raw.Note ?? raw.note,
+		issueType: (raw.IssueType ?? raw.issueType) as FTAEventNoteIssueType,
+		resolutionStatus: (raw.ResolutionStatus ?? raw.resolutionStatus) as FTAEventNoteResolutionType,
+		isPrivate: raw.IsPrivate ?? raw.isPrivate ?? false,
+		isDeleted: raw.IsDeleted ?? raw.isDeleted ?? false,
+	};
+}
 
 export class SignalR {
 	// SignalR Hub Connection
@@ -40,6 +73,14 @@ export class SignalR {
 
 	private sendScheduleCallback: () => void;
 
+	/**
+	 * Called whenever a note is added, updated, reopened, or resolved on ftaAppHub.
+	 * Set via {@link setNoteChangedCallback}.
+	 */
+	private noteChangedCallback:
+		| ((action: "added" | "updated" | "reopened" | "resolved" | "deleted", note: FTANoteRecord) => void)
+		| null = null;
+
 	private statusInterval: ReturnType<typeof setInterval> | null = null;
 
 	constructor(
@@ -62,6 +103,16 @@ export class SignalR {
 	/** Set the FMS event password used to authenticate against ftaAppHub and FTA App API endpoints. */
 	public setFmsEventPassword(password: string | null) {
 		this.fmsEventPassword = password;
+	}
+
+	/**
+	 * Register a callback invoked when a note changes on ftaAppHub.
+	 * `action` indicates what happened; `note` is the full updated NoteModel.
+	 */
+	public setNoteChangedCallback(
+		cb: (action: "added" | "updated" | "reopened" | "resolved" | "deleted", note: FTANoteRecord) => void,
+	) {
+		this.noteChangedCallback = cb;
 	}
 
 	public async start() {
@@ -478,18 +529,37 @@ export class SignalR {
 			console.log("fieldtestelements_changed: ", data),
 		);
 
-		// ── ftaAppHub stubs ─────────────────────────────────────────────────────
+		// ── ftaAppHub Server→Client events ──────────────────────────────────────
+		// SignalR normalises method names to lowercase.
 
-		// Fired when a note is created, updated, resolved, reopened, or deleted in FMS.
-		this.ftaAppHubConnection.on("NoteChanged", (data: FTANoteChangedEvent) => {
-			// TODO: Sync FMS note changes to FTA Buddy
-			console.log("ftaAppHub NoteChanged: ", data);
+		this.ftaAppHubConnection.on("noteadded", (note: FTANoteRecord) => {
+			console.log("ftaAppHub noteadded: ", note);
+			this.noteChangedCallback?.("added", normalizeFmsNote(note));
+		});
+
+		this.ftaAppHubConnection.on("noteupdated", (note: FTANoteRecord) => {
+			console.log("ftaAppHub noteupdated: ", note);
+			this.noteChangedCallback?.("updated", normalizeFmsNote(note));
+		});
+
+		this.ftaAppHubConnection.on("notereopened", (note: FTANoteRecord) => {
+			console.log("ftaAppHub notereopened: ", note);
+			this.noteChangedCallback?.("reopened", normalizeFmsNote(note));
+		});
+
+		this.ftaAppHubConnection.on("noteresolved", (note: FTANoteRecord) => {
+			console.log("ftaAppHub noteresolved: ", note);
+			this.noteChangedCallback?.("resolved", normalizeFmsNote(note));
+		});
+
+		this.ftaAppHubConnection.on("notedeleted", (note: FTANoteRecord) => {
+			console.log("ftaAppHub notedeleted: ", note);
+			this.noteChangedCallback?.("deleted", normalizeFmsNote(note));
 		});
 
 		// Fired when the active match state changes (match start/end, level, etc.).
-		this.ftaAppHubConnection.on("MatchStatusInfoChanged", (data: FTAMatchStatusInfoChanged) => {
-			// TODO: Use match state updates from ftaAppHub if needed
-			console.log("ftaAppHub MatchStatusInfoChanged: ", data);
+		this.ftaAppHubConnection.on("matchstatusinfochanged", (data: FTAMatchStatusInfoChanged) => {
+			console.log("ftaAppHub matchstatusinfochanged: ", data);
 		});
 
 		this.ftaAppHubConnection.onreconnecting(() => {

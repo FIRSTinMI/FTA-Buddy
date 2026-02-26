@@ -94,7 +94,7 @@
 			? 'bg-blue-600'
 			: 'bg-red-600'}"
 		class:lg:text-5xl={$fullscreen}
-		onclick={() => navigate("/notes/:teamNumber", { params: { teamNumber: String(robot?.number) } })}
+		onclick={() => navigate("/support/team/:team", { params: { team: String(robot?.number) } })}
 	>
 		<p>{robot.number}</p>
 		<p class="text-sm lg:text-3xl flex">
@@ -120,9 +120,9 @@
 			{#if robot.warnings.includes(RobotWarnings.SLOW)}
 				<span>🕑</span>
 			{/if}
-			{#if robot.warnings.includes(RobotWarnings.OPEN_TICKET)}
+			{#if robot.warnings.includes(RobotWarnings.OPEN_NOTE)}
 				<span>📝</span>
-			{:else if robot.warnings.includes(RobotWarnings.RECENT_TICKET)}
+			{:else if robot.warnings.includes(RobotWarnings.RECENT_NOTE)}
 				<span>📝</span>
 			{/if}
 		</p>

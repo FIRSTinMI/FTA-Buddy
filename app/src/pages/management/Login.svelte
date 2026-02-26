@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { Button, Input, Label, Modal, Select, type SelectOptionType } from "flowbite-svelte";
-	import { getContext } from "svelte";
 	import type { Profile, TeamList } from "../../../../shared/types";
 	import Spinner from "../../components/Spinner.svelte";
 	import { trpc } from "../../main";
@@ -10,8 +9,7 @@
 	import { settingsStore } from "../../stores/settings";
 	import { userStore as user } from "../../stores/user";
 	import { subscribeToPush } from "../../util/notifications";
-
-	let toast = getContext("toast") as (title: string, text: string, color?: string) => void;
+	import { toast } from "../../util/toast";
 
 	// If event token is missing, reset the event
 	// This prevents the admin event selector from showing that an event is selected when it's not
@@ -226,7 +224,7 @@
 				});
 
 				if ($user.role === "FTA" || $user.role === "FTAA") setTimeout(() => navigate("/monitor"), 700);
-				else setTimeout(() => navigate("/tickets"), 700);
+				else setTimeout(() => navigate("/support"), 700);
 			}
 			toast("Success", "Event joined successfully", "green-500");
 		} catch (err: any) {
@@ -377,7 +375,7 @@
 	<Spinner />
 {/if}
 
-<div class="container mx-auto max-w-xl md:max-w-3xl flex flex-col justify-center min-h-svh gap-4">
+<div class="container mx-auto max-w-xl md:max-w-3xl flex flex-col justify-center min-h-full gap-4">
 	{#if !user || !$user.token}
 		<!-- Create Account -->
 		{#if view === "create"}
@@ -446,7 +444,7 @@
 				onclick={() => {
 					user.set({ ...$user, eventToken: $user.eventToken });
 					if ($user.role === "FTA" || $user.role === "FTAA") setTimeout(() => navigate("/monitor"), 500);
-					else setTimeout(() => navigate("/tickets"), 500);
+					else setTimeout(() => navigate("/support"), 500);
 				}}
 				disabled={loading}>Join Event</Button
 			>

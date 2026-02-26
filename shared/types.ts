@@ -1,5 +1,6 @@
 import { EventEmitter } from "events";
 import { TypedEmitter } from "tiny-typed-emitter";
+import { FTAEventNoteIssueType, FTAEventNoteResolutionType } from "./fmsApiTypes";
 
 export interface MonitorFrame {
 	field: FieldState;
@@ -72,8 +73,8 @@ export enum RobotWarnings {
 	NOT_INSPECTED,
 	RADIO_NOT_FLASHED,
 	SLOW,
-	OPEN_TICKET,
-	RECENT_TICKET,
+	OPEN_NOTE,
+	RECENT_NOTE,
 }
 
 export enum ROBOT {
@@ -394,7 +395,7 @@ export interface ServerEvent {
 	robotStateChangeEmitter: EventEmitter;
 	fieldStatusEmitter: EventEmitter;
 	checklistEmitter: EventEmitter;
-	ticketUpdateEmitter: TypedEmitter<TicketUpdateEvents>;
+	noteUpdateEmitter: TypedEmitter<NoteUpdateEvents>;
 	cycleEmitter: EventEmitter;
 	teams: TeamList;
 	checklist: EventChecklist;
@@ -416,13 +417,12 @@ export interface ServerEvent {
 		red2?: RobotCycleTracking;
 		red3?: RobotCycleTracking;
 	};
-	tickets: Ticket[];
 	notes: Note[];
 	meshedEvent: boolean;
 	subEvents?: { code: string; label: string; token: string; teams: TeamList; pin: string; users: Profile[] }[];
 	slackChannel?: string;
 	slackTeam?: string;
-	publicTicketSubmit: boolean;
+	publicNoteSubmit: boolean;
 	nexusApiKey?: string;
 	fmsEventPassword?: string;
 	startDate?: string;
@@ -446,96 +446,6 @@ export interface ServerEvent {
 		}[];
 	};
 }
-
-export type TicketUpdateEvents = {
-	create: (data: { kind: "create"; ticket_id: number; ticket: Ticket }) => void;
-	assign: (data: {
-		kind: "assign";
-		ticket_id: number;
-		assigned_to_id: number | null;
-		assigned_to: Profile | null;
-	}) => void;
-	status: (data: { kind: "status"; ticket_id: number; is_open: boolean }) => void;
-	follow: (data: { kind: "follow"; ticket_id: number; followers: number[] }) => void;
-	delete_ticket: (data: { kind: "delete_ticket"; ticket_id: number }) => void;
-	edit: (data: {
-		kind: "edit";
-		ticket_id: number;
-		ticket_subject: string;
-		ticket_text: string;
-		ticket_updated_at: Date;
-	}) => void;
-	add_message: (data: { kind: "add_message"; ticket_id: number; message: Message }) => void;
-	edit_message: (data: { kind: "edit_message"; ticket_id: number; message: Message }) => void;
-	delete_message: (data: { kind: "delete_message"; ticket_id: number; message_id: string }) => void;
-};
-
-type AssignUpdateTicketEvent = {
-	kind: "assign";
-	ticket_id: number;
-	assigned_to_id: number | null;
-	assigned_to: Profile | null;
-};
-
-type StatusUpdateTicketEvent = {
-	kind: "status";
-	ticket_id: number;
-	is_open: boolean;
-};
-
-type FollowUpdateTicketEvent = {
-	kind: "follow";
-	ticket_id: number;
-	followers: number[];
-};
-
-type CreateUpdateTicketEvent = {
-	kind: "create";
-	ticket_id: number;
-	ticket: Ticket;
-};
-
-type DeleteTicketUpdateTicketEvent = {
-	kind: "delete_ticket";
-	ticket_id: number;
-};
-
-type EditUpdateTicketEvent = {
-	kind: "edit";
-	ticket_id: number;
-	ticket_subject: string;
-	ticket_text: string;
-	ticket_updated_at: Date;
-};
-
-type AddMessageUpdateTicketEvent = {
-	kind: "add_message";
-	ticket_id: number;
-	message: Message;
-};
-
-type EditMessageUpdateTicketEvent = {
-	kind: "edit_message";
-	ticket_id: number;
-	message: Message;
-};
-
-type DeleteMessageUpdateTicketEvent = {
-	kind: "delete_message";
-	ticket_id: number;
-	message_id: string;
-};
-
-export type TicketUpdateEventData =
-	| AssignUpdateTicketEvent
-	| StatusUpdateTicketEvent
-	| FollowUpdateTicketEvent
-	| CreateUpdateTicketEvent
-	| DeleteTicketUpdateTicketEvent
-	| EditUpdateTicketEvent
-	| AddMessageUpdateTicketEvent
-	| EditMessageUpdateTicketEvent
-	| DeleteMessageUpdateTicketEvent;
 
 export type NotificationEvents = {
 	send: (data: { users: number[]; notification: Notification }) => void;
@@ -579,41 +489,74 @@ export interface Profile {
 	username: string;
 	role: "FTAA" | "FTA" | "CSA" | "RI";
 	admin: boolean;
+	source?: "FMS" | "Slack";
 }
 
-export interface Ticket {
-	id: number;
-	team: number;
-	subject: string;
-	author_id: number;
-	author: Profile;
-	assigned_to_id: number | null;
-	assigned_to: Profile | null;
-	event_code: string;
-	is_open: boolean;
-	text: string;
-	created_at: Date;
-	updated_at: Date;
-	closed_at?: Date | null;
-	match_id?: string | null;
-	followers: number[];
-	messages?: Message[];
+export interface FmsNoteMetadata {
+	issueType: FTAEventNoteIssueType;
+	resolutionStatus: FTAEventNoteResolutionType;
 }
+
+export type NoteUpdateEvents = {
+	create: (data: { kind: "create"; note: Note; source?: "fms" }) => void;
+	edit: (data: { kind: "edit"; note: Note; source?: "fms" }) => void;
+	delete: (data: { kind: "delete"; note: Note; source?: "fms" }) => void;
+	status: (data: { kind: "status"; note_id: string; resolution_status: FTAEventNoteResolutionType }) => void;
+	assign: (data: {
+		kind: "assign";
+		note_id: string;
+		assigned_to_id: number | null;
+		assigned_to: Profile | null;
+	}) => void;
+	follow: (data: { kind: "follow"; note_id: string; followers: number[] }) => void;
+	add_message: (data: { kind: "add_message"; note_id: string; message: Message }) => void;
+	edit_message: (data: { kind: "edit_message"; note_id: string; message: Message }) => void;
+	delete_message: (data: { kind: "delete_message"; note_id: string; message_id: string }) => void;
+};
+
+export type NoteUpdateEventData =
+	| { kind: "create"; note: Note; source?: "fms" }
+	| { kind: "edit"; note: Note; source?: "fms" }
+	| { kind: "delete"; note: Note; source?: "fms" }
+	| { kind: "status"; note_id: string; resolution_status: FTAEventNoteResolutionType }
+	| { kind: "assign"; note_id: string; assigned_to_id: number | null; assigned_to: Profile | null }
+	| { kind: "follow"; note_id: string; followers: number[] }
+	| { kind: "add_message"; note_id: string; message: Message }
+	| { kind: "edit_message"; note_id: string; message: Message }
+	| { kind: "delete_message"; note_id: string; message_id: string };
 
 export interface Note {
 	id: string;
 	text: string;
 	author_id: number;
 	author: Profile;
-	team: number;
+	/** Nullable — EventNotes and MatchNotes may not be team-specific. */
+	team: number | null;
+	note_type: "TeamIssue" | "EventNote" | "MatchNote";
+	resolution_status: FTAEventNoteResolutionType | null;
+	issue_type: FTAEventNoteIssueType | null;
+	match_number: number | null;
+	play_number: number | null;
+	tournament_level: TournamentLevel | null;
+	fms_note_id: string | null;
+	fms_record_version: number | null;
+	fms_metadata: FmsNoteMetadata | null;
 	event_code: string;
 	created_at: Date;
 	updated_at: Date;
+	closed_at: Date | null;
+	assigned_to_id: number | null;
+	assigned_to: Profile | null;
+	followers: number[];
+	match_id?: string | null;
+	slack_ts?: string | null;
+	slack_channel?: string | null;
+	messages?: Message[];
 }
 
 export interface Message {
 	id: string;
-	ticket_id: number;
+	note_id: string;
 	text: string;
 	author_id: number;
 	author: Profile;
@@ -623,11 +566,11 @@ export interface Message {
 }
 
 export type NotificationTopic =
-	| "Ticket-Created"
-	| "Ticket-Status"
-	| "Ticket-Assigned"
-	| "New-Ticket-Message"
-	| "Ticket-Follow"
+	| "Note-Created"
+	| "Note-Status"
+	| "Note-Assigned"
+	| "New-Note-Message"
+	| "Note-Follow"
 	| "Robot-Status";
 
 export interface Notification {
@@ -640,7 +583,7 @@ export interface Notification {
 	tag?: string;
 	data?: {
 		page?: string;
-		ticket_id?: number;
+		note_id?: string;
 	};
 }
 

@@ -345,7 +345,7 @@ export const eventRouter = router({
 						const teamData = await fetch(`https://www.thebluealliance.com/api/v3/team/frc${num}/simple`, {
 							headers: { "X-TBA-Auth-Key": process.env.TBA_API_KEY ?? "" },
 						}).then((res) => res.json());
-						if (teamData?.nickname) name = teamData.nickname;
+						name = teamData.nickname ?? teamData.name;
 					} catch {
 						/* fall back to generic name */
 					}
@@ -502,7 +502,7 @@ export const eventRouter = router({
 			};
 		}),
 
-	togglePublicTicketSubmit: eventProcedure
+	togglePublicNoteSubmit: eventProcedure
 		.input(
 			z.object({
 				state: z.boolean(),
@@ -513,19 +513,19 @@ export const eventRouter = router({
 				.update(events)
 				.set({ publicTicketSubmit: input.state })
 				.where(eq(events.token, ctx.eventToken as string))
-				.returning({ publicTicketSubmit: events.publicTicketSubmit });
+				.returning({ publicNoteSubmit: events.publicTicketSubmit });
 
 			if (!updatedValue) {
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to update public ticket submit status",
+					message: "Failed to update public note submit status",
 				});
 			}
 
 			return updatedValue;
 		}),
 
-	getPublicTicketSubmit: eventProcedure.query(async ({ ctx }) => {
+	getPublicNoteSubmit: eventProcedure.query(async ({ ctx }) => {
 		const event = await db.query.events.findFirst({ where: eq(events.token, ctx.eventToken as string) });
 
 		if (!event) {

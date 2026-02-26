@@ -8,16 +8,14 @@ import {
 	EventChecklist,
 	NexusStatus,
 	Note,
+	NoteUpdateEvents,
 	ScheduleDetails,
 	ServerEvent,
 	TeamList,
-	Ticket,
-	TicketUpdateEvents,
 } from "../../shared/types";
 import { db } from "../db/db";
 import schema from "../db/schema";
 import { getEventNotes } from "../router/notes";
-import { getEventTickets } from "../router/tickets";
 import * as nexusPoller from "./nexusInspectionPoller";
 
 let loadingEvents: { [key: string]: Promise<ServerEvent> } = {};
@@ -75,7 +73,7 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 		});
 	}
 
-	const ticketUpdateEmitter = new TypedEmitter<TicketUpdateEvents>();
+	const noteUpdateEmitter = new TypedEmitter<NoteUpdateEvents>();
 
 	loadingEvents[eventCode] = new Promise(async (resolve) => {
 		const eventInMemory = events[eventCode];
@@ -138,19 +136,18 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 				robotStateChangeEmitter: new EventEmitter(),
 				fieldStatusEmitter: new EventEmitter(),
 				checklistEmitter: new EventEmitter(),
-				ticketUpdateEmitter: ticketUpdateEmitter,
+				noteUpdateEmitter: noteUpdateEmitter,
 				cycleEmitter: new EventEmitter(),
 				scheduleDetails: event.scheduleDetails as ScheduleDetails,
 				lastPrestartDone: null,
 				lastMatchEnd: null,
 				robotCycleTracking: {},
-				tickets: (await getEventTickets(eventCode)) as Ticket[],
 				notes: (await getEventNotes(eventCode)) as Note[],
 				meshedEvent: event.meshedEvent !== null,
 				subEvents: event.meshedEvent ? event.meshedEvent : undefined,
 				slackChannel: event.slackChannel,
 				slackTeam: event.slackTeam,
-				publicTicketSubmit: event.publicTicketSubmit,
+				publicNoteSubmit: event.publicTicketSubmit,
 				nexusApiKey: event.nexusApiKey ?? undefined,
 				fmsEventPassword: event.fmsEventPassword ?? undefined,
 				startDate: event.startDate ?? undefined,
@@ -183,5 +180,5 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 
 export async function getListenerCount(event_token: string) {
 	const event = await getEvent(event_token);
-	console.log(`Update Listener Count - ${event.ticketUpdateEmitter.listenerCount("status")}`);
+	console.log(`Update Listener Count - ${event.noteUpdateEmitter.listenerCount("status")}`);
 }

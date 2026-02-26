@@ -1,3 +1,4 @@
+import type { FTAAddNoteBody, FTANoteRecord } from "../../shared/fmsApiTypes";
 import { FMSEnums, FMSLogFrame, FMSMatch, ROBOT, ScheduleBreakdown, TournamentLevel } from "../../shared/types";
 import { FMS } from "./background";
 
@@ -198,4 +199,90 @@ export async function getScheduleBreakdown() {
 	}
 
 	return { days, lastPlayed, matches };
+}
+
+// ---------------------------------------------------------------------------
+// FMS Notes API (/Notes/ endpoints)
+// ---------------------------------------------------------------------------
+
+const NOTES_BASE = () => `http://${FMS}/Notes`;
+
+/** The current FMS event password (used as `token` in /Notes/ requests). */
+let fmsEventPassword: string | null = null;
+
+/**
+ * The loginTime string captured when the password was set.
+ * FMS expects this to be consistent across all requests in a session.
+ * Formatted as en-US locale: "M/D/YYYY, h:mm:ss AM/PM"
+ */
+let fmsLoginTime: string | null = null;
+
+/**
+ * Update the FMS event password and capture loginTime for the session.
+ * Call this whenever the password changes (e.g. on startup or event change).
+ */
+export function setFmsEventPassword(password: string | null) {
+	fmsEventPassword = password;
+	fmsLoginTime = password ? new Date().toLocaleString("en-US") : null;
+}
+
+/**
+ * Apply `token` and `loginTime` auth query params to a URL.
+ * Throws if the password has not been configured.
+ */
+function applyAuthParams(url: URL): void {
+	if (!fmsEventPassword || !fmsLoginTime) throw new Error("FMS event password not configured");
+	url.searchParams.set("token", fmsEventPassword);
+	url.searchParams.set("loginTime", fmsLoginTime);
+}
+
+/**
+ * Add a note to FMS.
+ * POST /Notes/AddNote — body contains numeric enum values (see {@link FTAAddNoteBody}).
+ */
+export async function addNote(body: FTAAddNoteBody): Promise<FTANoteRecord> {
+	const url = new URL(`${NOTES_BASE()}/AddNote`);
+	applyAuthParams(url);
+	const res = await fetch(url.toString(), {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(body),
+	});
+	if (!res.ok) throw new Error(`FMS API error: ${res.status}`);
+	return res.json() as Promise<FTANoteRecord>;
+}
+
+/**
+ * Update an existing note in FMS.
+ * POST /Notes/UpdateNote — all params are query params, no request body.
+ * @param fmsEventNoteId - UUID of the note to update.
+ * @param resolutionType - Numeric resolution status (e.g. 1 = Open, 5 = Resolved).
+ * @param notes - Updated note text.
+ */
+export async function updateNote(
+	fmsEventNoteId: string,
+	resolutionType: number,
+	notes: string,
+): Promise<FTANoteRecord> {
+	const url = new URL(`${NOTES_BASE()}/UpdateNote`);
+	url.searchParams.set("fmsEventNoteId", fmsEventNoteId);
+	url.searchParams.set("resolutionType", String(resolutionType));
+	url.searchParams.set("notes", notes);
+	applyAuthParams(url);
+	const res = await fetch(url.toString(), { method: "POST" });
+	if (!res.ok) throw new Error(`FMS API error: ${res.status}`);
+	return res.json() as Promise<FTANoteRecord>;
+}
+
+/**
+ * Delete a note in FMS.
+ * POST /Notes/DeleteNote — noteId passed as a query param, no request body.
+ * @param fmsEventNoteId - UUID of the note to delete.
+ */
+export async function deleteNote(fmsEventNoteId: string): Promise<void> {
+	const url = new URL(`${NOTES_BASE()}/DeleteNote`);
+	url.searchParams.set("fmsEventNoteId", fmsEventNoteId);
+	applyAuthParams(url);
+	const res = await fetch(url.toString(), { method: "POST" });
+	if (!res.ok) throw new Error(`FMS API error: ${res.status}`);
 }

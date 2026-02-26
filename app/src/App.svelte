@@ -30,6 +30,7 @@
 	import { settingsStore } from "./stores/settings";
 	import { userStore as user } from "./stores/user";
 	import { startNotificationSubscription } from "./util/notifications";
+	import { registerToast } from "./util/toast";
 	import { update, VERSIONS } from "./util/updater";
 
 	// On mount check if the user's permissions have changed
@@ -188,6 +189,7 @@
 	}
 
 	setContext("toast", toast);
+	registerToast(toast);
 
 	const toastColorClasses: Record<string, string> = {
 		"red-500": "bg-red-200 dark:bg-red-700 text-red-950 dark:text-red-100",

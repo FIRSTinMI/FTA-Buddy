@@ -30,28 +30,35 @@
 
 	let noteText = $state("");
 	let saving = $state(false);
+	let issueType = $state<FTAEventNoteIssueType | null>(null);
 
 	// Reset text when modal opens for a new team
 	$effect(() => {
-		if (open) noteText = "";
+		if (open) {
+			noteText = "";
+			issueType = null;
+		}
 	});
 
-	const QUICK_LABELS = [
-		"Radio reboot",
-		"RIO reboot",
-		"Lost comms",
-		"Lost power",
-		"Driver station issues",
-		"Controller issues",
-		"Code issues",
-		"CAN issues",
-		"Unable to drive",
-		"BYPASSED - no connection",
-		"BYPASSED - no code",
-		"BYPASSED - no robot",
+	import type { FTAEventNoteIssueType } from "../../../../shared/fmsApiTypes";
+
+	const QUICK_LABELS: { label: string; issueType: FTAEventNoteIssueType }[] = [
+		{ label: "Radio reboot", issueType: "RadioIssue" },
+		{ label: "RIO reboot", issueType: "RoboRioIssue" },
+		{ label: "Lost comms", issueType: "RadioIssue" },
+		{ label: "Lost power", issueType: "RobotPwrIssue" },
+		{ label: "Driver station issues", issueType: "DSIssue" },
+		{ label: "Controller issues", issueType: "DSIssue" },
+		{ label: "Code issues", issueType: "RoboRioIssue" },
+		{ label: "CAN issues", issueType: "RoboRioIssue" },
+		{ label: "Unable to drive", issueType: "OtherRobotIssue" },
+		{ label: "BYPASSED - no connection", issueType: "RadioIssue" },
+		{ label: "BYPASSED - no code", issueType: "RoboRioIssue" },
+		{ label: "BYPASSED - no robot", issueType: "NoRobot" },
 	];
 
-	function appendLabel(label: string) {
+	function appendLabel(label: string, type: FTAEventNoteIssueType) {
+		issueType = type;
 		const current = noteText.trim();
 		if (!current) {
 			noteText = label;
@@ -71,7 +78,7 @@
 				team: teamNumber,
 				text,
 				note_type: "TeamIssue",
-				issue_type: "Other",
+				issue_type: issueType ?? "Other",
 				match_number: match_number ?? null,
 				play_number: play_number ?? null,
 				tournament_level: (level as TournamentLevel) ?? null,
@@ -112,11 +119,14 @@
 	{/snippet}
 
 	<div class="flex flex-wrap gap-1.5 mb-3">
-		{#each QUICK_LABELS as label}
+		{#each QUICK_LABELS as { label, issueType: itemType }}
 			<button
 				type="button"
-				class="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-neutral-700 text-gray-700 dark:text-gray-300 transition-colors"
-				onclick={() => appendLabel(label)}
+				class="text-xs px-2 py-1 rounded border transition-colors
+					{issueType === itemType && noteText.includes(label)
+					? 'border-blue-500 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+					: 'border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-neutral-700 text-gray-700 dark:text-gray-300'}"
+				onclick={() => appendLabel(label, itemType)}
 			>
 				{label}
 			</button>

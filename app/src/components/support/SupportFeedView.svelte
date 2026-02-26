@@ -220,6 +220,21 @@
 		{ value: "Other", name: "Other" },
 	];
 
+	const QUICK_LABELS: { label: string; issueType: string }[] = [
+		{ label: "Radio reboot", issueType: "RadioIssue" },
+		{ label: "RIO reboot", issueType: "RoboRioIssue" },
+		{ label: "Lost comms", issueType: "RadioIssue" },
+		{ label: "Lost power", issueType: "RobotPwrIssue" },
+		{ label: "Driver station issues", issueType: "DSIssue" },
+		{ label: "Controller issues", issueType: "DSIssue" },
+		{ label: "Code issues", issueType: "RoboRioIssue" },
+		{ label: "CAN issues", issueType: "RoboRioIssue" },
+		{ label: "Unable to drive", issueType: "OtherRobotIssue" },
+		{ label: "BYPASSED - no connection", issueType: "RadioIssue" },
+		{ label: "BYPASSED - no code", issueType: "RoboRioIssue" },
+		{ label: "BYPASSED - no robot", issueType: "NoRobot" },
+	];
+
 	let disableSubmit = $derived.by(() => {
 		if (newNoteText.length < 1) return true;
 		if (newNoteType === "TeamIssue") return newTeam === undefined || newTeam === -1;
@@ -385,6 +400,27 @@
 		{/if}
 
 		<Label for="new-note-text">Text:</Label>
+		{#if newNoteType === "TeamIssue"}
+			<div class="flex flex-wrap gap-1.5">
+				{#each QUICK_LABELS as { label, issueType: itemType }}
+					<button
+						type="button"
+						class="text-xs px-2 py-1 rounded border transition-colors
+							{issueType === itemType && newNoteText.includes(label)
+							? 'border-blue-500 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+							: 'border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-neutral-700 text-gray-700 dark:text-gray-300'}"
+						onclick={() => {
+							issueType = itemType;
+							const current = newNoteText.trim();
+							if (!current) newNoteText = label;
+							else if (!current.endsWith(label)) newNoteText = current + "\n" + label;
+						}}
+					>
+						{label}
+					</button>
+				{/each}
+			</div>
+		{/if}
 		<Textarea id="new-note-text" class="w-full" rows={5} bind:value={newNoteText} autofocus />
 
 		<Button type="submit" disabled={disableSubmit}>Create Note</Button>

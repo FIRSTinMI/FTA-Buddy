@@ -1311,6 +1311,7 @@ export const notesRouter = router({
 			where: and(eq(notes.fms_note_id, input.fms_note_id), eq(notes.event_code, event.code)),
 		});
 		if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found for given FMS note ID" });
+		await db.delete(messages).where(eq(messages.note_id, note.id));
 		await db.delete(notes).where(eq(notes.id, note.id));
 		event.noteUpdateEmitter.emit("delete", { kind: "delete", note: note as Note, source: "fms" });
 		return note.id;

@@ -626,22 +626,45 @@ export const eventRouter = router({
 	 * Admin-only: send a test push notification to every user currently joined to the event
 	 * identified by `eventToken`. Useful for verifying that push subscriptions are wired up.
 	 */
-	notification: adminProcedure.input(z.object({ eventToken: z.string() })).query(async ({ input }) => {
-		const event = await getEvent(input.eventToken);
-		const userIds = (event.users as Profile[]).map((u) => u.id);
+	notification: adminProcedure
+		.input(
+			z.object({
+				eventToken: z.string(),
+				/** Optional pre-built payload from the notification preview UI. */
+				notification: z
+					.object({
+						title: z.string(),
+						body: z.string().optional(),
+						topic: z.string(),
+						tag: z.string().optional(),
+						kind: z.string().optional(),
+						urgency: z.enum(["low", "normal", "high"]).optional(),
+						data: z.object({ page: z.string().optional(), note_id: z.string().optional() }).optional(),
+					})
+					.optional(),
+			}),
+		)
+		.query(async ({ input }) => {
+			const event = await getEvent(input.eventToken);
+			const userIds = (event.users as Profile[]).map((u) => u.id);
 
-		if (userIds.length === 0) {
-			return { sent: 0, message: "No users on this event" };
-		}
+			if (userIds.length === 0) {
+				return { sent: 0, message: "No users on this event" };
+			}
 
-		await createNotification(userIds, {
-			id: randomUUID(),
-			title: "Test Notification",
-			timestamp: new Date(),
-			topic: "Note-Created",
-			data: { page: "/" },
-		});
+			const base = input.notification;
+			await createNotification(userIds, {
+				id: randomUUID(),
+				timestamp: new Date(),
+				title: base?.title ?? "Test Notification",
+				body: base?.body,
+				topic: (base?.topic ?? "Note-Created") as any,
+				tag: base?.tag,
+				kind: base?.kind,
+				urgency: base?.urgency,
+				data: base?.data ?? { page: "/" },
+			});
 
-		return { sent: userIds.length };
-	}),
+			return { sent: userIds.length };
+		}),
 });

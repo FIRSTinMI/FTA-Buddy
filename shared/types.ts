@@ -581,6 +581,12 @@ export interface Notification {
 	body?: string;
 	icon?: string;
 	tag?: string;
+	/** Notification kind from the taxonomy in shared/notifications.ts. */
+	kind?: string;
+	/** Ultra-short version for compact toasts (falls back to title if absent). */
+	short?: string;
+	/** Delivery urgency hint ("low" | "normal" | "high"). */
+	urgency?: "low" | "normal" | "high";
 	data?: {
 		page?: string;
 		note_id?: string;

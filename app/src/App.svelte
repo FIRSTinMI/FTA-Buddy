@@ -30,6 +30,7 @@
 	import { settingsStore } from "./stores/settings";
 	import { userStore as user } from "./stores/user";
 	import {
+		ensurePushRegistration,
 		setupSwMessageHandler,
 		startNotificationSubscription,
 		stopNotificationSubscription,
@@ -57,6 +58,9 @@
 					eventToken: $user.eventToken,
 					meshedEventToken: $user.meshedEventToken,
 				});
+				// Reconcile push subscription in case it was rotated while the app was closed.
+				// Non-blocking: run in background, errors are logged but don't affect startup.
+				ensurePushRegistration().catch(() => {});
 			} else {
 				// Server returned no user: token is invalid/expired — clear it.
 				// Common causes: token from wrong environment (dev vs prod), session pruned, or
@@ -690,8 +694,9 @@
 	</div>
 
 	<div
-		class="shrink-0 flex justify-around py-2 bg-neutral-900 dark:bg-neutral-700 text-white {$fullscreen &&
+		class="shrink-0 flex justify-around pt-2 bg-neutral-900 dark:bg-neutral-700 text-white {$fullscreen &&
 			'bg-white dark:bg-neutral-800'}"
+		style="padding-bottom: max(0.5rem, env(safe-area-inset-bottom))"
 	>
 		{#if $user.token && $user.eventToken && !$fullscreen}
 			{#if $user?.role === "FTA" || $user?.role === "FTAA"}

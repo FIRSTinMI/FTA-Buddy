@@ -1,4 +1,5 @@
 let cacheName = "ftabuddy";
+const SW_VERSION = "{{JS_FILE}}";
 let contentToCache = [
 	"/assets/{{CSS_FILE}}",
 	"/assets/{{JS_FILE}}",
@@ -29,6 +30,16 @@ self.addEventListener("install", (evt) => {
 
 self.addEventListener("activate", (evt) => {
 	console.log("Service worker activated");
+	// Tell all open windows that a new SW version is active so they can
+	// trigger update checks and refresh their state if needed.
+	evt.waitUntil(
+		(async () => {
+			const windowClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
+			for (const client of windowClients) {
+				client.postMessage({ type: "sw-ready", version: SW_VERSION });
+			}
+		})()
+	);
 });
 
 async function getSettingsStore() {
@@ -82,10 +93,18 @@ const DEFAULT_SETTINGS = {
 self.addEventListener("push", (event) => {
 	event.waitUntil(
 		(async () => {
-			// 1) Parse payload safely — PushEvent.data may be null
+			// 1) Payload size guard + safe parse — PushEvent.data may be null or malformed
 			let data = {};
 			try {
-				data = event.data ? event.data.json() : {};
+				if (event.data) {
+					// Ignore payloads larger than 4 KB (push services shouldn't send more)
+					const text = event.data.text();
+					if (text.length <= 4096) {
+						data = JSON.parse(text);
+					} else {
+						console.warn("[SW] push: payload too large (", text.length, "bytes), ignoring");
+					}
+				}
 			} catch (e) {
 				console.warn("[SW] push: failed to parse payload", e);
 			}
@@ -99,8 +118,9 @@ self.addEventListener("push", (event) => {
 				// keep defaults
 			}
 
-			// 3) Check whether this topic is enabled
-			const category = TOPIC_CATEGORY[data.topic];
+			// 3) Normalize + look up topic
+			const rawTopic = typeof data.topic === "string" ? data.topic.trim() : "";
+			const category = TOPIC_CATEGORY[rawTopic];
 			if (!category || !settings.notificationCategories?.[category]) return;
 
 			// 4) De-duplicate non-robot notifications
@@ -145,16 +165,25 @@ self.addEventListener("notificationclick", (event) => {
 self.addEventListener("pushsubscriptionchange", (event) => {
 	event.waitUntil(
 		(async () => {
-			try {
-				const newSub = await self.registration.pushManager.subscribe(
-					event.oldSubscription.options
-				);
+			const broadcast = async (msg) => {
 				const windowClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
-				for (const client of windowClients) {
-					client.postMessage({ type: "pushsubscriptionchange", subscription: newSub.toJSON() });
-				}
+				for (const client of windowClients) client.postMessage(msg);
+			};
+
+			const oldOptions = event.oldSubscription?.options;
+			if (!oldOptions) {
+				// No old subscription to derive options from; app will reconcile on next open.
+				console.warn("[SW] pushsubscriptionchange: no oldSubscription — cannot resubscribe");
+				await broadcast({ type: "pushsubscriptionchange-error", message: "no oldSubscription" });
+				return;
+			}
+
+			try {
+				const newSub = await self.registration.pushManager.subscribe(oldOptions);
+				await broadcast({ type: "pushsubscriptionchange", subscription: newSub.toJSON() });
 			} catch (e) {
 				console.warn("[SW] pushsubscriptionchange: failed to resubscribe", e);
+				await broadcast({ type: "pushsubscriptionchange-error", message: e?.message ?? String(e) });
 			}
 		})()
 	);

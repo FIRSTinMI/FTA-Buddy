@@ -173,6 +173,82 @@ const urlBase64ToUint8Array = (base64String: string) => {
 	return outputArray;
 };
 
+/**
+ * Stable fingerprint for a push subscription.
+ * The endpoint is guaranteed unique per subscription — it changes whenever
+ * the browser issues a new subscription, so comparing endpoints is sufficient
+ * to detect "subscription rotated".
+ */
+function subscriptionFingerprint(endpoint: string): string {
+	return endpoint;
+}
+
+const PUSH_FINGERPRINT_KEY = "ftabuddy-push-fingerprint";
+
+/** In-flight mutex: prevents concurrent registerPush calls from racing. */
+let registerPushInFlight: Promise<void> | null = null;
+
+/**
+ * Low-level helper shared by subscribeToPush, ensurePushRegistration, and
+ * setupSwMessageHandler. Sends the subscription to the server and persists
+ * the endpoint fingerprint to avoid redundant future calls.
+ *
+ * Accepts either a live PushSubscription or the plain JSON object the SW
+ * sends via postMessage (both expose `.endpoint`, `.expirationTime`, `.keys`).
+ */
+async function doRegisterPush(
+	subscription:
+		| PushSubscription
+		| { endpoint: string; expirationTime: number | null; keys?: Record<string, string | undefined> },
+): Promise<void> {
+	const endpoint = subscription.endpoint;
+	const fingerprint = subscriptionFingerprint(endpoint);
+
+	// If the same registration is already in-flight, wait for it to settle first.
+	if (registerPushInFlight) {
+		try {
+			await registerPushInFlight;
+		} catch {
+			/* ignore */
+		}
+		// If the previous call already registered this exact endpoint, skip.
+		if (localStorage.getItem(PUSH_FINGERPRINT_KEY) === fingerprint) {
+			console.info("[PUSH] doRegisterPush: already registered by in-flight call — skipping");
+			return;
+		}
+	}
+
+	let resolve!: () => void;
+	let reject!: (e: unknown) => void;
+	registerPushInFlight = new Promise<void>((res, rej) => {
+		resolve = res;
+		reject = rej;
+	});
+
+	try {
+		const json: any =
+			typeof (subscription as any).toJSON === "function" ? (subscription as any).toJSON() : subscription;
+		const keys = json.keys ?? {};
+		const rawExpiry = (subscription as any).expirationTime;
+		const expirationTime = rawExpiry != null ? new Date(rawExpiry) : null;
+
+		await trpc.notes.registerPush.mutate({
+			endpoint,
+			expirationTime,
+			keys: { p256dh: keys.p256dh, auth: keys.auth },
+		});
+
+		localStorage.setItem(PUSH_FINGERPRINT_KEY, fingerprint);
+		console.info("[PUSH] doRegisterPush: registered successfully");
+		resolve();
+	} catch (e) {
+		reject(e);
+		throw e;
+	} finally {
+		registerPushInFlight = null;
+	}
+}
+
 export async function subscribeToPush() {
 	try {
 		if (!("serviceWorker" in navigator)) {
@@ -181,33 +257,18 @@ export async function subscribeToPush() {
 		}
 
 		console.info("[PUSH] subscribeToPush: awaiting serviceWorker.ready…");
-		// This resolves once a SW is installed and active — safe in all browsers.
 		const registration = await navigator.serviceWorker.ready;
 		console.info("[PUSH] subscribeToPush: SW ready, subscribing to push manager…");
 
-		// Subscribe to push notifications
 		const subscription = await registration.pushManager.subscribe({
 			userVisibleOnly: true,
 			applicationServerKey: urlBase64ToUint8Array(publicVapidKey),
 		});
 
-		const keys = subscription.toJSON().keys ?? {};
-		// expirationTime is null in most browsers — coerce to null rather than new Date(0)
-		const expirationTime = subscription.expirationTime != null ? new Date(subscription.expirationTime) : null;
-
-		console.info(`[PUSH] subscribeToPush: obtained subscription endpoint, expirationTime: ${expirationTime}`);
-
-		// Send push subscription to server
-		await trpc.notes.registerPush.mutate({
-			endpoint: subscription.endpoint,
-			expirationTime,
-			keys: {
-				p256dh: keys.p256dh,
-				auth: keys.auth,
-			},
-		});
-
-		console.info("[PUSH] subscribeToPush: registration sent to server successfully");
+		console.info(
+			`[PUSH] subscribeToPush: obtained subscription endpoint, expirationTime: ${subscription.expirationTime}`,
+		);
+		await doRegisterPush(subscription);
 	} catch (e: any) {
 		console.error("[PUSH] subscribeToPush error:", e);
 		toast("Failed to subscribe to push notifications", e.message);
@@ -215,32 +276,95 @@ export async function subscribeToPush() {
 }
 
 /**
- * Listen for messages from the service worker.
- * Handles `pushsubscriptionchange` — when the browser rotates our push subscription,
- * the SW cannot call our tRPC endpoint directly (no auth token), so it sends the new
- * subscription JSON here and we register it with the server.
+ * Called on app startup after auth resolves. Gets the current push subscription
+ * and re-registers it with the server if the endpoint has changed since the last
+ * successful registration. This is the recovery path for the case where the
+ * browser rotated the subscription while no app window was open (so the SW's
+ * pushsubscriptionchange message had no window to deliver to).
+ */
+export async function ensurePushRegistration(): Promise<void> {
+	if (!("serviceWorker" in navigator)) return;
+	if (Notification.permission !== "granted") return;
+
+	const token = get(userStore).token;
+	if (!token) return;
+
+	try {
+		const registration = await navigator.serviceWorker.ready;
+		const subscription = await registration.pushManager.getSubscription();
+
+		if (!subscription) {
+			console.info("[PUSH] ensurePushRegistration: no active subscription");
+			return;
+		}
+
+		const fingerprint = subscriptionFingerprint(subscription.endpoint);
+		const lastFingerprint = localStorage.getItem(PUSH_FINGERPRINT_KEY);
+
+		if (fingerprint === lastFingerprint) {
+			console.info("[PUSH] ensurePushRegistration: subscription unchanged — skipping");
+			return;
+		}
+
+		console.info("[PUSH] ensurePushRegistration: fingerprint mismatch — re-registering with server");
+		await doRegisterPush(subscription);
+		console.info("[PUSH] ensurePushRegistration: complete");
+	} catch (e: any) {
+		console.error("[PUSH] ensurePushRegistration error:", e);
+	}
+}
+
+/**
+ * Listen for messages from the service worker:
+ * - `pushsubscriptionchange`:       browser rotated subscription; re-register with server.
+ * - `pushsubscriptionchange-error`: resubscribe failed in SW; log so we know to reconcile.
+ * - `sw-ready`:                     new SW activated; opportunistically call update().
  */
 export function setupSwMessageHandler() {
 	if (!("serviceWorker" in navigator)) return;
 
 	navigator.serviceWorker.addEventListener("message", async (event) => {
-		if (event.data?.type !== "pushsubscriptionchange") return;
+		const msg = event.data;
+		if (!msg?.type) return;
 
-		const sub = event.data.subscription;
-		if (!sub) return;
+		if (msg.type === "pushsubscriptionchange") {
+			const sub = msg.subscription;
+			if (!sub?.endpoint) {
+				console.warn("[PUSH] pushsubscriptionchange message had no subscription — push may be disabled");
+				return;
+			}
 
-		console.info("[PUSH] SW sent pushsubscriptionchange — re-registering with server");
-		try {
-			const keys = sub.keys ?? {};
-			const expirationTime = sub.expirationTime != null ? new Date(sub.expirationTime) : null;
-			await trpc.notes.registerPush.mutate({
-				endpoint: sub.endpoint,
-				expirationTime,
-				keys: { p256dh: keys.p256dh, auth: keys.auth },
-			});
-			console.info("[PUSH] pushsubscriptionchange: re-registration sent to server successfully");
-		} catch (e: any) {
-			console.error("[PUSH] pushsubscriptionchange: failed to re-register", e);
+			// Deduplicate: skip if this endpoint was already successfully registered.
+			if (localStorage.getItem(PUSH_FINGERPRINT_KEY) === subscriptionFingerprint(sub.endpoint)) {
+				console.info("[PUSH] pushsubscriptionchange: fingerprint unchanged — skipping");
+				return;
+			}
+
+			console.info("[PUSH] SW sent pushsubscriptionchange — re-registering with server");
+			try {
+				await doRegisterPush(sub);
+			} catch (e: any) {
+				console.error("[PUSH] pushsubscriptionchange: failed to re-register", e);
+			}
+			return;
+		}
+
+		if (msg.type === "pushsubscriptionchange-error") {
+			// SW could not resubscribe (permissions revoked, key changed, etc.).
+			// ensurePushRegistration() on the next startup will reconcile if possible.
+			console.warn("[PUSH] SW could not resubscribe after pushsubscriptionchange:", msg.message);
+			return;
+		}
+
+		if (msg.type === "sw-ready") {
+			console.info("[PUSH] New SW activated (version:", msg.version, ")");
+			try {
+				const reg = await navigator.serviceWorker.getRegistration();
+				if (reg) await reg.update();
+			} catch {
+				/* non-fatal */
+			}
+			return;
 		}
 	});
 }

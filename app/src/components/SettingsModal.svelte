@@ -3,6 +3,7 @@
 	import { get } from "svelte/store";
 	import { audioQueuer } from "../field-monitor";
 	import { trpc } from "../main";
+	import { navigate } from "../router";
 	import { installPrompt } from "../stores/install-prompt";
 	import { settingsStore } from "../stores/settings";
 	import { userStore } from "../stores/user";
@@ -246,6 +247,11 @@
 						}
 					}}
 					size="xs">Notification Test</Button
+				>
+				<Button
+					class={!settings.developerMode || !user.admin ? "hidden" : ""}
+					onclick={() => navigate("/manage/notification-preview")}
+					size="xs">Notification Preview</Button
 				>
 			</div>
 			<div class="grid gap-2 md:col-span-2">

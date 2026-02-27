@@ -5,6 +5,7 @@ import { on } from "events";
 import { z } from "zod";
 import { notificationEmitter } from "..";
 import { formatTimeShortNoAgoMinutes } from "../../shared/formatTime";
+import { buildNotification, toNoteCtx } from "../../shared/notifications";
 import type { Notification } from "../../shared/types";
 import { FmsNoteMetadata, Message, Note, NoteUpdateEventData, NoteUpdateEvents, Profile } from "../../shared/types";
 import { db } from "../db/db";
@@ -287,14 +288,13 @@ const messagesSubRouter = router({
 
 			createNotification(
 				(note.followers ?? []).filter((id) => id !== authorProfile[0].id),
-				{
-					id: randomUUID(),
-					timestamp: new Date(),
-					topic: "New-Note-Message",
-					title: `New Message on Note`,
-					body: `A new message has been added by ${authorProfile[0].username}`,
-					data: { page: "support/view/" + note.id, note_id: note.id },
-				},
+				buildNotification({
+					kind: "note.message",
+					note: toNoteCtx(note as any),
+					author: authorProfile[0].username,
+					messageText: insert[0].text,
+					messageId: insert[0].id,
+				}),
 			);
 
 			if (event.slackTeam && note.slack_channel && note.slack_ts) {
@@ -618,14 +618,11 @@ export const notesRouter = router({
 
 			createNotification(
 				event.users.map((u) => u.id),
-				{
-					id: randomUUID(),
-					timestamp: new Date(),
-					topic: "Note-Created",
-					title: `New Note for Team #${insert[0].team}`,
-					body: `New Note created by Team #${insert[0].team}`,
-					data: { page: "support/view/" + insert[0].id, note_id: insert[0].id },
-				},
+				buildNotification({
+					kind: "note.created",
+					note: toNoteCtx(insert[0] as any),
+					author: `Team #${insert[0].team}`,
+				}),
 			);
 
 			if (event.slackChannel && event.slackTeam) {
@@ -716,16 +713,11 @@ export const notesRouter = router({
 
 			createNotification(
 				event.users.map((u) => u.id).filter((id) => id !== authorProfile[0].id),
-				{
-					id: randomUUID(),
-					timestamp: new Date(),
-					topic: "Note-Created",
-					title: insert[0].team
-						? `New Note for Team #${insert[0].team}`
-						: `New ${insert[0].note_type === "EventNote" ? "Event" : "Match"} Note`,
-					body: `New Note created by ${authorProfile[0].username}`,
-					data: { page: "support/view/" + insert[0].id, note_id: insert[0].id },
-				},
+				buildNotification({
+					kind: "note.created",
+					note: toNoteCtx(insert[0] as any),
+					author: authorProfile[0].username,
+				}),
 			);
 
 			if (event.slackChannel && event.slackTeam) {
@@ -880,14 +872,12 @@ export const notesRouter = router({
 
 			createNotification(
 				(note.followers ?? []).filter((id) => id !== currentUserProfile[0].id),
-				{
-					id: randomUUID(),
-					timestamp: new Date(),
-					topic: "Note-Status",
-					title: `Note Status Updated to ${input.new_status}`,
-					body: `Note status updated by ${currentUserProfile[0].username} and is now ${input.new_status}`,
-					data: { page: "support/view/" + update[0].id, note_id: update[0].id },
-				},
+				buildNotification({
+					kind: "note.statusChanged",
+					note: toNoteCtx(note as any),
+					newStatus: input.new_status as "Open" | "Resolved",
+					actor: currentUserProfile[0].username,
+				}),
 			);
 
 			if (event.slackTeam && note.slack_ts && note.slack_channel) {
@@ -924,10 +914,11 @@ export const notesRouter = router({
 			if (!profile[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve User profile" });
 
 			const actorProfileAssign = await db
-				.select({ id: users.id })
+				.select({ id: users.id, username: users.username })
 				.from(users)
 				.where(eq(users.token, ctx.token as string));
 			const actorIdAssign = actorProfileAssign[0]?.id;
+			const actorUsernameAssign = actorProfileAssign[0]?.username ?? "Unknown";
 
 			if (note.assigned_to_id === input.user_id) {
 				throw new TRPCError({ code: "BAD_REQUEST", message: "User is already assigned to this note" });
@@ -953,26 +944,24 @@ export const notesRouter = router({
 
 			createNotification(
 				(note.followers ?? []).filter((id) => id !== profile[0].id && id !== actorIdAssign),
-				{
-					id: randomUUID(),
-					timestamp: new Date(),
-					topic: "Note-Assigned",
-					title: `Note Has Been Assigned`,
-					body: `Note assigned to ${profile[0].username}`,
-					data: { page: "support/view/" + note.id, note_id: note.id },
-				},
+				buildNotification({
+					kind: "note.assigned",
+					note: toNoteCtx(note as any),
+					assignee: profile[0].username,
+					actor: actorUsernameAssign,
+				}),
 			);
 
 			// Only notify the assignee if they didn't assign themselves
 			if (profile[0].id !== actorIdAssign) {
-				createNotification([profile[0].id], {
-					id: randomUUID(),
-					timestamp: new Date(),
-					topic: "Note-Assigned",
-					title: `A Note Has Been Assigned to You`,
-					body: `Note assigned to you`,
-					data: { page: "support/view/" + note.id, note_id: note.id },
-				});
+				createNotification(
+					[profile[0].id],
+					buildNotification({
+						kind: "note.assignedToYou",
+						note: toNoteCtx(note as any),
+						actor: actorUsernameAssign,
+					}),
+				);
 			}
 
 			if (event.slackTeam && note.slack_ts && note.slack_channel) {
@@ -1013,10 +1002,11 @@ export const notesRouter = router({
 			if (!profile[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to find assigned User" });
 
 			const actorProfileUnassign = await db
-				.select({ id: users.id })
+				.select({ id: users.id, username: users.username })
 				.from(users)
 				.where(eq(users.token, ctx.token as string));
 			const actorIdUnassign = actorProfileUnassign[0]?.id;
+			const actorUsernameUnassign = actorProfileUnassign[0]?.username ?? "Unknown";
 
 			const update = await db
 				.update(notes)
@@ -1035,26 +1025,23 @@ export const notesRouter = router({
 
 			createNotification(
 				(note.followers ?? []).filter((id) => id !== actorIdUnassign),
-				{
-					id: randomUUID(),
-					timestamp: new Date(),
-					topic: "Note-Assigned",
-					title: `Note Has Been Set to Unassigned`,
-					body: `Note has been set to unassigned`,
-					data: { page: "support/view/" + note.id, note_id: note.id },
-				},
+				buildNotification({
+					kind: "note.unassigned",
+					note: toNoteCtx(note as any),
+					actor: actorUsernameUnassign,
+				}),
 			);
 
 			// Only notify the previously-assigned user if they didn't unassign themselves
 			if (profile[0].id !== actorIdUnassign) {
-				createNotification([profile[0].id], {
-					id: randomUUID(),
-					timestamp: new Date(),
-					topic: "Note-Assigned",
-					title: `No Longer Assigned to Note`,
-					body: `You are no longer assigned`,
-					data: { page: "support/view/" + note.id, note_id: note.id },
-				});
+				createNotification(
+					[profile[0].id],
+					buildNotification({
+						kind: "note.unassignedFromYou",
+						note: toNoteCtx(note as any),
+						actor: actorUsernameUnassign,
+					}),
+				);
 			}
 
 			if (event.slackTeam && note.slack_ts && note.slack_channel) {
@@ -1476,14 +1463,15 @@ export async function updateNoteStatusFromSlack(message_ts: string, resolved: bo
 		resolution_status: update[0].resolution_status ?? "Open",
 	});
 
-	createNotification(note.followers ?? [], {
-		id: randomUUID(),
-		timestamp: new Date(),
-		topic: "Note-Status",
-		title: `Note Status Updated to ${newStatus}`,
-		body: `Note status updated and is now ${newStatus}`,
-		data: { page: "support/view/" + update[0].id, note_id: update[0].id },
-	});
+	createNotification(
+		note.followers ?? [],
+		buildNotification({
+			kind: "note.statusChanged",
+			note: toNoteCtx(note as any),
+			newStatus: newStatus as "Open" | "Resolved",
+			actor: "FMS",
+		}),
+	);
 
 	if (!resolved && note.slack_channel && event.slackTeam && note.slack_ts) {
 		removeSlackReaction(note.slack_channel, event.slackTeam, note.slack_ts, "white_check_mark");
@@ -1517,14 +1505,15 @@ export async function updateNoteAssignmentFromSlack(message_ts: string, add: boo
 			assigned_to_id: update[0].assigned_to_id,
 			assigned_to: profile,
 		});
-		createNotification(note.followers ?? [], {
-			id: randomUUID(),
-			timestamp: new Date(),
-			topic: "Note-Assigned",
-			title: `Note Has Been Assigned`,
-			body: `Note assigned to ${profile.username}`,
-			data: { page: "support/view/" + note.id, note_id: note.id },
-		});
+		createNotification(
+			note.followers ?? [],
+			buildNotification({
+				kind: "note.assigned",
+				note: toNoteCtx(note as any),
+				assignee: profile.username,
+				actor: "Slack",
+			}),
+		);
 	} else {
 		event.noteUpdateEmitter.emit("assign", {
 			kind: "assign",
@@ -1532,14 +1521,14 @@ export async function updateNoteAssignmentFromSlack(message_ts: string, add: boo
 			assigned_to_id: update[0].assigned_to_id,
 			assigned_to: null,
 		});
-		createNotification(note.followers ?? [], {
-			id: randomUUID(),
-			timestamp: new Date(),
-			topic: "Note-Assigned",
-			title: `Note Has Been Set to Unassigned`,
-			body: `Note has been set to unassigned`,
-			data: { page: "support/view/" + note.id, note_id: note.id },
-		});
+		createNotification(
+			note.followers ?? [],
+			buildNotification({
+				kind: "note.unassigned",
+				note: toNoteCtx(note as any),
+				actor: "Slack",
+			}),
+		);
 		if (note.slack_channel && event.slackTeam && note.slack_ts) {
 			removeSlackReaction(note.slack_channel, event.slackTeam, note.slack_ts, "eyes");
 		}
@@ -1584,12 +1573,13 @@ export async function addNoteMessageFromSlack(
 		message: insert[0] as Message,
 	});
 
-	createNotification(note.followers ?? [], {
-		id: randomUUID(),
-		timestamp: new Date(),
-		topic: "New-Note-Message",
-		title: `New Message on Note`,
-		body: `A new message has been added by ${user.username}`,
-		data: { page: "support/view/" + note.id, note_id: note.id },
-	});
+	createNotification(
+		note.followers ?? [],
+		buildNotification({
+			kind: "note.message",
+			note: toNoteCtx(note as any),
+			author: user.username,
+			messageText: text,
+		}),
+	);
 }

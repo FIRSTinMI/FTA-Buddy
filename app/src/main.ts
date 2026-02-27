@@ -71,7 +71,7 @@ const app = mount(App, {
 
 export default app;
 
-async () => {
+(async () => {
 	if ("serviceWorker" in navigator) {
 		try {
 			await navigator.serviceWorker.register("/serviceworker.js");
@@ -83,4 +83,4 @@ async () => {
 			}
 		}
 	}
-};
+})();

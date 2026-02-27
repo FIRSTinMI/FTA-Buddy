@@ -153,8 +153,8 @@
 					target="_blank">GitHub</a
 				>.
 			</p>
-			<Button color="primary" class="w-full py-1" onclick={() => openChangelog}>Changelog</Button>
-			<Button color="primary" class="w-full py-1" onclick={() => closeModal}>Close</Button>
+			<Button color="primary" class="w-full py-1" onclick={() => openChangelog()}>Changelog</Button>
+			<Button color="primary" class="w-full py-1" onclick={() => closeModal()}>Close</Button>
 		{/if}
 	</div>
 	{#snippet footer()}

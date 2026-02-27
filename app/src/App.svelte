@@ -15,7 +15,7 @@
 		Toast,
 	} from "flowbite-svelte";
 	import { Router as SvRouter } from "sv-router";
-	import { onDestroy, onMount, setContext } from "svelte";
+	import { onDestroy, onMount } from "svelte";
 	import { get } from "svelte/store";
 	import { formatTime } from "../../shared/formatTime";
 	import SettingsModal from "./components/SettingsModal.svelte";
@@ -188,7 +188,6 @@
 		}, timeout);
 	}
 
-	setContext("toast", toast);
 	registerToast(toast);
 
 	const toastColorClasses: Record<string, string> = {

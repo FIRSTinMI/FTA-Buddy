@@ -251,6 +251,7 @@
 				{#if tbaKey}
 					<button
 						class="text-blue-400 hover:underline"
+						type="button"
 						onclick={() => {
 							eventCode = tbaKey ?? "";
 							checkEventCode();

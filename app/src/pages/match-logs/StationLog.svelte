@@ -141,7 +141,7 @@
 			Log published for 72 hours. Share this log only with team #{team} or other volunteers.
 		</p>
 		<div class="max-w-48 mx-auto">
-			<QrCode value="https://ftabuddy.com/logs/{matchid}/{shareid}" padding={12} />
+			<QrCode value={`https://ftabuddy.com/logs/${matchid}/${shareid}`} padding={12} />
 		</div>
 		<Button onclick={() => (shareOpen = false)} class="mt-2">Close</Button>
 	</div>

@@ -51,7 +51,7 @@ export function robotNotification(type: string, event: MonitorEvent["detail"]) {
 		body: `${event.robot} lost ${type} at ${event.frame.time} in ${event.frame.match}.`,
 		icon: "/icon192_rounded.png",
 		data: {
-			page: `https://ftabuddy.com${path}`,
+			page: path,
 		},
 	});
 }

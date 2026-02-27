@@ -5,6 +5,7 @@
 	import { get } from "svelte/store";
 	import { formatTimeNoAgoHourMins } from "../../../../shared/formatTime";
 	import { ROBOT, type Message, type Note } from "../../../../shared/types";
+	import FormattedTime from "../../components/FormattedTime.svelte";
 	import MessageCard from "../../components/MessageCard.svelte";
 	import NotesPolicy from "../../components/NotesPolicy.svelte";
 	import Spinner from "../../components/Spinner.svelte";
@@ -29,8 +30,6 @@
 	let matchPromise: Promise<any> | undefined;
 
 	let match: Awaited<ReturnType<typeof trpc.match.getMatch.query>> | undefined = $state();
-
-	let time: string = $state("");
 
 	let station: ROBOT | undefined = $state(undefined);
 
@@ -91,8 +90,6 @@
 			} else {
 				match_id = null;
 			}
-			time = formatTimeNoAgoHourMins(note.created_at);
-
 			assignedToUser = note.assigned_to_id === user.id ? true : false;
 			editNoteText = note.text;
 		}
@@ -102,15 +99,6 @@
 		getNoteAndMatch();
 		foregroundUpdate();
 	});
-
-	setInterval(
-		() => {
-			if (!note) return;
-			time = formatTimeNoAgoHourMins(note?.created_at);
-		},
-		// svelte-ignore state_referenced_locally
-		time.includes("s ") ? 1000 : 60000,
-	);
 
 	const isOpen = $derived(note?.resolution_status === "Open");
 
@@ -593,7 +581,8 @@
 					</div>
 				{/if}
 				<div class="text-xs text-gray-400 dark:text-gray-500">
-					{time} ago by {note.author.username}
+					<FormattedTime date={note.created_at} formatter={formatTimeNoAgoHourMins} /> ago by {note.author
+						.username}
 				</div>
 
 				<div class="flex flex-col flex-1 min-h-0 overflow-y-auto gap-3 pb-20">

@@ -134,7 +134,7 @@
 		loading = false;
 	});
 
-	setInterval(() => {
+	let interval = setInterval(() => {
 		const currentTime = new Date().getTime() - matchStartTime.getTime();
 		if (currentTime < averageCycleTimeMS) {
 			currentCycleTimeRedness = 0;
@@ -147,6 +147,7 @@
 
 	onDestroy(() => {
 		if (cycleSubscription) cycleSubscription.unsubscribe();
+		clearInterval(interval);
 	});
 </script>
 

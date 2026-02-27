@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Checkbox, Progressbar, Select, Spinner } from "flowbite-svelte";
-	import { onMount } from "svelte";
+	import { onDestroy, onMount } from "svelte";
 	import { formatTimeShortNoAgo, formatTimeShortNoAgoSeconds } from "../../../../shared/formatTime";
 	import type { FTCEvent } from "../../../../src/router/ftc";
 	import { trpc } from "../../main";
@@ -47,7 +47,7 @@
 		})),
 	);
 
-	setInterval(async () => {
+	let eventCycleInterval = setInterval(async () => {
 		eventCurrentCycleTimes = eventData.map((event) => ({
 			event: event.key,
 			time: event.currentMatch?.postResultTime
@@ -55,6 +55,11 @@
 				: "Unknown",
 		}));
 	}, 1000);
+
+	onDestroy(() => {
+		clearInterval(interval);
+		clearInterval(eventCycleInterval);
+	});
 </script>
 
 <div class="flex flex-col gap-2 m-2">

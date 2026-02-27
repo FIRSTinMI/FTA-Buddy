@@ -4,6 +4,7 @@
 	import { formatTimeShort } from "../../../shared/formatTime";
 	import type { Notification } from "../../../shared/types";
 	import { notificationsStore, removeNotification } from "../stores/notifications";
+	import FormattedTime from "./FormattedTime.svelte";
 	import icon512_rounded from "/icon512_rounded.png";
 
 	interface Props {
@@ -13,17 +14,6 @@
 	let { notification }: Props = $props();
 
 	const notifications = get(notificationsStore);
-
-	// svelte-ignore state_referenced_locally
-	let time = $state(formatTimeShort(notification.timestamp));
-
-	setInterval(
-		() => {
-			time = formatTimeShort(notification.timestamp);
-		},
-		// svelte-ignore state_referenced_locally
-		time.includes("s ") ? 1000 : 60000,
-	);
 </script>
 
 <Card
@@ -43,7 +33,7 @@
 				<p class="pt-2 text-left">{notification.body}</p>
 			</div>
 			<div class="flex flex-col sm:my-auto text-right p-2 italic">
-				<p>{time}</p>
+				<p><FormattedTime date={notification.timestamp} formatter={formatTimeShort} /></p>
 			</div>
 		</div>
 	</div>

@@ -12,10 +12,8 @@
 	import { trpc } from "../main";
 	import { navigate } from "../router";
 	import type { MonitorFrameHandler } from "../util/monitorFrameHandler";
+	import FormattedTime from "./FormattedTime.svelte";
 	import MonitorRow from "./MonitorRow.svelte";
-
-	let tick = 0;
-	setInterval(() => tick++, 1000);
 
 	interface Props {
 		modalOpen: boolean;
@@ -32,14 +30,6 @@
 	$effect(() => {
 		modalRobot = monitorFrame[modalStation];
 	});
-
-	let timeSinceChange = $state("");
-
-	setInterval(() => {
-		if (modalOpen) {
-			timeSinceChange = modalRobot?.lastChange ? formatTimeShort(modalRobot.lastChange) : "";
-		}
-	}, 1000);
 </script>
 
 <Modal bind:open={modalOpen} size="xl" outsideclose id="team-modal" dismissable={false}>
@@ -62,7 +52,7 @@
 			{#if modalRobot.ds === DSState.RED}
 				<div>
 					<p class="font-bold">Ethernet not plugged in</p>
-					<p>Unplugged {timeSinceChange}</p>
+					<p>Unplugged <FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} /></p>
 					<ol class="text-left list-decimal space-y-2">
 						<li>Make sure the cable is plugged into the laptop</li>
 						<li>Check if there are link lights on the port</li>
@@ -73,7 +63,10 @@
 			{:else if modalRobot.ds === DSState.GREEN_X}
 				<div>
 					<p class="font-bold">Ethernet plugged in but no communication with DS</p>
-					<p>{modalRobot.improved ? `Plugged in ${timeSinceChange}` : `Lost FMS ${timeSinceChange}`}</p>
+					<p>
+						{modalRobot.improved ? "Plugged in" : "Lost FMS"}
+						<FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} />
+					</p>
 					<ol class="text-left list-decimal space-y-2">
 						<li>Make sure DS is open, and only one instance is open.</li>
 						<li>Check if there are link lights on the port.</li>
@@ -96,14 +89,24 @@
 			{:else if modalRobot.ds === DSState.MOVE_STATION}
 				<div>
 					<p class="font-bold">Team is in wrong station</p>
-					<p>{modalRobot.improved ? `Plugged in ${timeSinceChange}` : timeSinceChange}</p>
+					<p>
+						{modalRobot.improved ? "Plugged in " : ""}<FormattedTime
+							date={modalRobot?.lastChange}
+							formatter={formatTimeShort}
+						/>
+					</p>
 					<p>Their DS will tell them which station to move to.</p>
 					<p>If this is during playoffs, double check with HR and Scorekeeper first.</p>
 				</div>
 			{:else if modalRobot.ds === DSState.WAITING}
 				<div>
 					<p class="font-bold">Team is in wrong match</p>
-					<p>{modalRobot.improved ? `Plugged in ${timeSinceChange}` : timeSinceChange}</p>
+					<p>
+						{modalRobot.improved ? "Plugged in " : ""}<FormattedTime
+							date={modalRobot?.lastChange}
+							formatter={formatTimeShort}
+						/>
+					</p>
 					<ol class="text-left list-decimal space-y-2">
 						{#if MatchStateMap[monitorFrame.field] === MatchState.OVER}
 							<li>DS is connected but the field hasn't been prestarted yet.</li>
@@ -120,12 +123,12 @@
 			{:else if modalRobot.ds === DSState.BYPASS}
 				<div>
 					<p class="font-bold">Team is bypassed</p>
-					<p>{timeSinceChange}</p>
+					<p><FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} /></p>
 				</div>
 			{:else if modalRobot.ds === DSState.ESTOP}
 				<div>
 					<p class="font-bold">Team is E-stopped</p>
-					<p>{timeSinceChange}</p>
+					<p><FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} /></p>
 					<ol class="text-left list-decimal space-y-2">
 						<li>RIO and DS must be restarted to clear E-stop.</li>
 						<li>If HR triggered it, explain to team why.</li>
@@ -134,7 +137,7 @@
 			{:else if modalRobot.ds === DSState.ASTOP}
 				<div>
 					<p class="font-bold">Team is A-stopped</p>
-					<p>{timeSinceChange}</p>
+					<p><FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} /></p>
 					<ol class="text-left list-decimal space-y-2">
 						<li>Clears on teleop start. Reset the button after match.</li>
 					</ol>
@@ -142,7 +145,10 @@
 			{:else if !modalRobot.radio}
 				<div>
 					<p class="font-bold">Radio not connected to field</p>
-					<p>{modalRobot.improved ? `DS Connected ${timeSinceChange}` : `Lost Radio ${timeSinceChange}`}</p>
+					<p>
+						{modalRobot.improved ? "DS Connected" : "Lost Radio"}
+						<FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} />
+					</p>
 					<ol class="text-left list-decimal space-y-2">
 						<li>Make sure robot is on</li>
 						<li>Check radio power (at least one green LED)</li>
@@ -152,7 +158,10 @@
 			{:else if !modalRobot.rio}
 				<div>
 					<p class="font-bold">Radio connected but no communication with RIO</p>
-					<p>{modalRobot.improved ? `Radio Connected ${timeSinceChange}` : `Lost RIO ${timeSinceChange}`}</p>
+					<p>
+						{modalRobot.improved ? "Radio Connected" : "Lost RIO"}
+						<FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} />
+					</p>
 					<ol class="text-left list-decimal space-y-2">
 						<li>Check RIO lights: Power (green), Status (off), Link (flashing)</li>
 						<li>Reconnect ethernet; avoid switches for testing</li>
@@ -168,7 +177,10 @@
 			{:else if !modalRobot.code}
 				<div>
 					<p class="font-bold">Radio and RIO connected, but code not running</p>
-					<p>{modalRobot.improved ? `RIO Connected ${timeSinceChange}` : `Lost Code ${timeSinceChange}`}</p>
+					<p>
+						{modalRobot.improved ? "RIO Connected" : "Lost Code"}
+						<FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} />
+					</p>
 					<ol class="text-left list-decimal space-y-2">
 						<li>Restart RIO (can be done from DS if RIO 2)</li>
 						<li>Check DS logs. Ask if code was recently changed or deployed.</li>
@@ -177,7 +189,7 @@
 			{:else}
 				<div>
 					<p class="font-bold">Robot Connected</p>
-					<p>{timeSinceChange}</p>
+					<p><FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} /></p>
 					{#if modalRobot.battery < 11}
 						<p>Low Battery: {modalRobot.battery.toFixed(1)}V</p>
 					{/if}

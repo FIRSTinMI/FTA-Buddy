@@ -126,6 +126,8 @@
 
 	onDestroy(() => {
 		if (cycleSubscription) cycleSubscription.unsubscribe();
+		clearInterval(interval);
+		clearInterval(lastCycleTimeInterval);
 	});
 
 	frameHandler.addEventListener("match-start", async (evt) => {
@@ -167,7 +169,7 @@
 		calculatedCycleTime = undefined;
 	});
 
-	setInterval(() => {
+	let interval = setInterval(() => {
 		const currentTime = new Date().getTime() - matchStartTime.getTime();
 		if (currentTime < averageCycleTimeMS) {
 			currentCycleTimeRedness = 0;
@@ -178,7 +180,7 @@
 		currentCycleTime = formatTimeShortNoAgo(matchStartTime);
 	}, 1000);
 
-	setInterval(() => {
+	let lastCycleTimeInterval = setInterval(() => {
 		if (lastCycleTimeMS !== frameHandler.getLastCycleTime()) {
 			// console.log("Cycle time is not matching", {
 			// 	current: lastCycleTimeMS,

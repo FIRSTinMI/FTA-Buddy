@@ -222,7 +222,7 @@
 	{#snippet footer()}
 		<Button
 			color="primary"
-			onclick={() => navigate("/support/team/:team", { params: { team: String(modalRobot?.number) } })}
+			onclick={() => navigate("/notepad/team/:team", { params: { team: String(modalRobot?.number) } })}
 			>History</Button
 		>
 		<Button color="primary" onclick={() => (modalOpen = false)}>Close</Button>

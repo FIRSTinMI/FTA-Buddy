@@ -311,7 +311,7 @@
 		<div class="shrink-0 flex {alliance === 'blue' ? 'bg-blue-600' : 'bg-red-600'}">
 			<button
 				class="flex-1 px-3 py-1.5 font-bold text-white text-left flex items-center gap-2"
-				onclick={() => navigate("/support/team/:team", { params: { team: String(teamNum) } })}
+				onclick={() => navigate("/notepad/team/:team", { params: { team: String(teamNum) } })}
 			>
 				#{teamNum}
 				{#if teamName}
@@ -401,7 +401,7 @@
 				{#each allItems as item}
 					<button
 						class="w-full text-left pt-1 mt-1 hover:bg-gray-50 dark:hover:bg-neutral-700 rounded px-0.5"
-						onclick={() => navigate("/support/view/:id", { params: { id: item.note.id } })}
+						onclick={() => navigate("/notepad/view/:id", { params: { id: item.note.id } })}
 					>
 						<div class="flex items-center gap-1 text-xs">
 							<Badge color="blue" class="text-xs">Note</Badge>
@@ -429,7 +429,7 @@
 		{#if overflowing[teamNum]}
 			<button
 				class="shrink-0 text-xs text-blue-500 hover:underline py-1 text-center w-full border-t border-gray-200 dark:border-gray-700"
-				onclick={() => navigate("/support/team/:team", { params: { team: String(teamNum) } })}
+				onclick={() => navigate("/notepad/team/:team", { params: { team: String(teamNum) } })}
 			>
 				See All
 			</button>

@@ -377,7 +377,7 @@ export function update(
 	dontShowDialogs: boolean = false,
 ) {
 	let changelog = "";
-	if (currentVersion == "0" && window.location.pathname === "/manage/login") {
+	if (currentVersion == "0") {
 		currentVersion = newVersion;
 		settingsStore.update((s) => {
 			s.version = newVersion;

@@ -236,9 +236,14 @@
 					onchange={updateSettings}>Force cloud server</Toggle
 				>
 				<Button
-					class={!settings.developerMode ? "hidden" : ""}
-					onclick={() => {
-						//trpc.event.notification.query({ eventToken: user.eventToken });
+					class={!settings.developerMode || !user.admin ? "hidden" : ""}
+					onclick={async () => {
+						try {
+							const res = await trpc.event.notification.query({ eventToken: user.eventToken });
+							toast("Notification Test", `Sent to ${res.sent} user(s)`, "green-500");
+						} catch (err: any) {
+							toast("Notification Test Failed", err.message);
+						}
 					}}
 					size="xs">Notification Test</Button
 				>

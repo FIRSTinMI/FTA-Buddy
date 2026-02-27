@@ -8,7 +8,7 @@
 	import { trpc } from "../../main";
 	import { navigate, route } from "../../router";
 
-	const { team } = route.getParams("/support/team/:team");
+	const { team } = route.getParams("/notepad/team/:team");
 	const teamNumber = parseInt(team, 10);
 
 	let notesPromise: Promise<Note[]> = $state(trpc.notes.getAllByTeam.query({ team_number: teamNumber }));
@@ -57,7 +57,7 @@
 	}
 
 	function back() {
-		navigate("/support");
+		navigate("/notepad");
 	}
 </script>
 
@@ -131,7 +131,7 @@
 									{@const isOpen = note.resolution_status === "Open"}
 									{@const isApplicable = note.resolution_status !== "NotApplicable"}
 									<a
-										href="/support/view/{note.id}"
+										href="/notepad/view/{note.id}"
 										class="block w-full rounded-xl bg-white dark:bg-neutral-800 shadow-sm hover:shadow-md transition-shadow p-4 text-black dark:text-white no-underline"
 									>
 										<div class="flex flex-col gap-2.5">

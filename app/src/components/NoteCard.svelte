@@ -137,7 +137,7 @@
 </Modal>
 
 <a
-	href="/support/view/{note.id}"
+	href="/notepad/view/{note.id}"
 	class="block w-full rounded-xl bg-white dark:bg-neutral-700 shadow-sm hover:shadow-md transition-shadow p-4 text-black dark:text-white no-underline"
 >
 	<div class="flex flex-col gap-2.5">

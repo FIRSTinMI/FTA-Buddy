@@ -94,7 +94,7 @@
 			? 'bg-blue-600'
 			: 'bg-red-600'}"
 		class:lg:text-5xl={$fullscreen}
-		onclick={() => navigate("/support/team/:team", { params: { team: String(robot?.number) } })}
+		onclick={() => navigate("/notepad/team/:team", { params: { team: String(robot?.number) } })}
 	>
 		<p>{robot.number}</p>
 		<p class="text-sm lg:text-3xl flex">

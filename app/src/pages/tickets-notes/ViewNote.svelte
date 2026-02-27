@@ -16,7 +16,7 @@
 	import { userStore } from "../../stores/user";
 	import { toast } from "../../util/toast";
 
-	const { id: noteId } = route.getParams("/support/view/:id");
+	const { id: noteId } = route.getParams("/notepad/view/:id");
 
 	let event = get(eventStore);
 	let user = get(userStore);
@@ -142,7 +142,7 @@
 
 	function back() {
 		if (window.history.state === null) {
-			navigate("/support");
+			navigate("/notepad");
 		} else {
 			window.history.back();
 		}

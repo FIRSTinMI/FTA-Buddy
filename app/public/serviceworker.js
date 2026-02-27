@@ -58,89 +58,105 @@ async function addNotification(notification) {
 	}
 }
 
-self.addEventListener("push", async (evt) => {
-	const data = evt.data.json();
-	// console.log(evt);
-	// console.log(evt.data);
+// Map server topic -> local settings category
+// Includes both canonical names (shared/types.ts) and legacy aliases
+const TOPIC_CATEGORY = {
+	// Canonical
+	"Note-Created": "create",
+	"Note-Assigned": "assign",
+	"Note-Status": "follow",
+	"New-Note-Message": "follow",
+	"Note-Follow": "follow",
+	"Robot-Status": "robot",
+	// Legacy aliases
+	"Ticket-Created": "create",
+	"Ticket-Assigned": "assign",
+	"Ticket-Status": "follow",
+	"New-Ticket-Message": "follow",
+};
 
-	let sendNotification = false;
+const DEFAULT_SETTINGS = {
+	notificationCategories: { create: true, follow: true, assign: true, robot: true },
+};
 
-	switch (data.topic) {
-		case "Ticket-Created": {
-			sendNotification = (await getSettingsStore()).notificationCategories.create;
-			break;
-		}
-		case "Ticket-Assigned": {
-			sendNotification = (await getSettingsStore()).notificationCategories.assign;
-			break;
-		}
-		case "Ticket-Status": {
-			sendNotification = (await getSettingsStore()).notificationCategories.follow;
-			break;
-		}
-		case "New-Ticket-Message": {
-			sendNotification = (await getSettingsStore()).notificationCategories.follow;
-			break;
-		}
-		case "Robot-Status": {
-			sendNotification = (await getSettingsStore()).notificationCategories.robot;
-			break;
-		}
-		default: {
-			sendNotification = false;
-			break;
-		}
-	}
+self.addEventListener("push", (event) => {
+	event.waitUntil(
+		(async () => {
+			// 1) Parse payload safely — PushEvent.data may be null
+			let data = {};
+			try {
+				data = event.data ? event.data.json() : {};
+			} catch (e) {
+				console.warn("[SW] push: failed to parse payload", e);
+			}
 
-	if (sendNotification) {
-		// Add to notification store if not robot alert
-		if (data.topic !== "Robot-Status") {
-			if (await checkIfNotificationExists(data.id)) return;
-			await addNotification(data);
-		}
+			// 2) Load settings safely — SW may start cold with empty storage
+			let settings = DEFAULT_SETTINGS;
+			try {
+				const stored = await getSettingsStore();
+				if (stored && stored.notificationCategories) settings = stored;
+			} catch (e) {
+				// keep defaults
+			}
 
-		// Send notification to browser
-		self.registration.showNotification(data.title, {
-			body: data.body ?? "",
-			tag: data.tag,
-			data: data.data,
-			icon: "https://ftabuddy.com" + (data.icon ?? "/icon512_rounded.png"),
-		});
-		//console.log(await clients.matchAll());
-	}
+			// 3) Check whether this topic is enabled
+			const category = TOPIC_CATEGORY[data.topic];
+			if (!category || !settings.notificationCategories?.[category]) return;
+
+			// 4) De-duplicate non-robot notifications
+			if (data.topic !== "Robot-Status") {
+				if (data.id && (await checkIfNotificationExists(data.id))) return;
+				if (data.id) await addNotification(data);
+			}
+
+			// 5) Show notification — return the promise so Chromium knows a visible
+			//    notification was shown and does not generate its generic fallback.
+			return self.registration.showNotification(data.title || "FTA Buddy", {
+				body: data.body ?? "",
+				tag: data.tag,
+				data: data.data,
+				icon: data.icon || "/icon512_rounded.png",
+			});
+		})()
+	);
 });
 
-self.addEventListener("notificationclick", (evt) => {
-	//console.log(evt);
+self.addEventListener("notificationclick", (event) => {
 	const rootUrl = new URL("/", location).href;
-	const pageToOpen = evt.notification.data?.page ?? "";
-	evt.notification.close();
-	evt.waitUntil(
-		clients.matchAll().then((matchedClients) => {
-			//console.log("Clients: ", matchedClients);
-			try {
-				for (let client of matchedClients) {
-					if (client.url.indexOf(rootUrl + pageToOpen) >= 0) {
-						console.log("Found matching client");
-						return client.focus();
-					}
+	const pageToOpen = event.notification.data?.page ?? "";
+	const targetUrl = rootUrl + pageToOpen;
+	event.notification.close();
+	event.waitUntil(
+		(async () => {
+			const matched = await clients.matchAll({ type: "window", includeUncontrolled: true });
+			for (const client of matched) {
+				if (client.url === targetUrl && "focus" in client) {
+					return client.focus();
 				}
+			}
+			return clients.openWindow(targetUrl);
+		})()
+	);
+});
 
-				if (clients[0]) {
-					console.log("trying to take over existing client");
-					client[0].focus();
-					clients[0].navigate(rootUrl + pageToOpen);
-					return;
+// Re-subscribe when the browser rotates our push subscription.
+// We can't call tRPC directly from the SW (no auth token), so we message
+// an open window and let the app handle the re-registration.
+self.addEventListener("pushsubscriptionchange", (event) => {
+	event.waitUntil(
+		(async () => {
+			try {
+				const newSub = await self.registration.pushManager.subscribe(
+					event.oldSubscription.options
+				);
+				const windowClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
+				for (const client of windowClients) {
+					client.postMessage({ type: "pushsubscriptionchange", subscription: newSub.toJSON() });
 				}
 			} catch (e) {
-				console.log(e);
-			} finally {
-				console.log("Opening new client");
-				clients.openWindow(rootUrl + pageToOpen).then(function (client) {
-					client.focus();
-				});
+				console.warn("[SW] pushsubscriptionchange: failed to resubscribe", e);
 			}
-		})
+		})()
 	);
 });
 /*

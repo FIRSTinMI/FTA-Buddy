@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { createHash } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import { desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { EventChecklist, Profile, TeamList, TournamentLevel } from "../../shared/types";
@@ -8,8 +8,8 @@ import { events, users } from "../db/schema";
 import { adminProcedure, eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
 import { getEvent } from "../util/get-event";
 import * as nexusPoller from "../util/nexusInspectionPoller";
+import { createNotification } from "../util/push-notifications";
 import { generateToken } from "./user";
-//import { sendNotification } from "../../app/src/util/push-notifications";
 
 const fullEventList: {
 	fetched: Date | undefined;
@@ -620,5 +620,28 @@ export const eventRouter = router({
 	getFmsEventPassword: eventProcedure.query(async ({ ctx }) => {
 		const event = await getEvent(ctx.event.token);
 		return { fmsEventPassword: event.fmsEventPassword ?? null };
+	}),
+
+	/**
+	 * Admin-only: send a test push notification to every user currently joined to the event
+	 * identified by `eventToken`. Useful for verifying that push subscriptions are wired up.
+	 */
+	notification: adminProcedure.input(z.object({ eventToken: z.string() })).query(async ({ input }) => {
+		const event = await getEvent(input.eventToken);
+		const userIds = (event.users as Profile[]).map((u) => u.id);
+
+		if (userIds.length === 0) {
+			return { sent: 0, message: "No users on this event" };
+		}
+
+		await createNotification(userIds, {
+			id: randomUUID(),
+			title: "Test Notification",
+			timestamp: new Date(),
+			topic: "Note-Created",
+			data: { page: "/" },
+		});
+
+		return { sent: userIds.length };
 	}),
 });

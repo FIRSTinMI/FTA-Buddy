@@ -111,13 +111,6 @@
 			});
 
 			toast("Success", "Logged in successfully", "green-500");
-
-			// Wait for Svelte to flush the store update before checking notification state
-			await tick();
-
-			if (!$settingsStore.notificationsDoNotAsk) {
-				notificationModalOpen = true;
-			}
 		} catch (err: any) {
 			toast("Error Logging In", err.message);
 			console.error("[AUTH] login error:", err);
@@ -190,6 +183,11 @@
 			}
 			eventCode = $eventStore.code;
 			eventPin = res.pin;
+			// Show notification prompt right after joining — closing the modal stays on this page.
+			if (!$settingsStore.notificationsDoNotAsk && Notification.permission !== "granted") {
+				pendingNavigateDest = null;
+				notificationModalOpen = true;
+			}
 		} catch (err: any) {
 			toast("Error", err.message);
 			console.error(err);
@@ -222,7 +220,7 @@
 				// Flush store updates before navigating to avoid route guards seeing stale state
 				await tick();
 				console.info("[ROUTER] navigate → /dashboard");
-				navigate("/dashboard");
+				goToApp("/dashboard");
 			} else {
 				user.set({ ...$user, eventToken: res.token });
 				eventStore.set({
@@ -233,9 +231,9 @@
 				});
 
 				await tick();
-				const dest = $user.role === "FTA" || $user.role === "FTAA" ? "/monitor" : "/support";
+				const dest = $user.role === "FTA" || $user.role === "FTAA" ? "/monitor" : "/notepad";
 				console.info(`[ROUTER] navigate → ${dest}`);
-				navigate(dest);
+				goToApp(dest);
 			}
 			toast("Success", "Event joined successfully", "green-500");
 		} catch (err: any) {
@@ -291,25 +289,25 @@
 	};
 
 	let notificationModalOpen = $state(false);
-
-	$effect(() => {
-		try {
-			if ($user.token) {
-				if (!(Notification.permission === "granted") && !$settingsStore.notificationsDoNotAsk) {
-					notificationModalOpen = true;
-				} else if (
-					(!(Notification.permission === "granted") && $settingsStore.notificationsDoNotAsk) ||
-					Notification.permission === "granted"
-				) {
-					notificationModalOpen = false;
-				}
-			} else {
-				notificationModalOpen = false;
-			}
-		} catch (e) {
-			console.error(e);
+	// Destination to navigate to after the notification modal is dismissed.
+	let pendingNavigateDest = $state<string | null>(null);
+	function doNavigateAfterModal() {
+		notificationModalOpen = false;
+		if (pendingNavigateDest) {
+			const dest = pendingNavigateDest;
+			pendingNavigateDest = null;
+			navigate(dest);
 		}
-	});
+	}
+
+	function goToApp(dest: string) {
+		if (!$settingsStore.notificationsDoNotAsk && Notification.permission !== "granted") {
+			pendingNavigateDest = dest;
+			notificationModalOpen = true;
+		} else {
+			navigate(dest);
+		}
+	}
 
 	const ios = () => {
 		if (typeof window === `undefined` || typeof navigator === `undefined`) return false;
@@ -322,7 +320,7 @@
 	<script src="https://accounts.google.com/gsi/client" async></script>
 </svelte:head>
 
-<Modal bind:open={notificationModalOpen} outsideclose size="sm">
+<Modal bind:open={notificationModalOpen} outsideclose size="sm" onclose={doNavigateAfterModal}>
 	<h1 class="font-bold text-xl">Enable Notifications</h1>
 	<h2>Enable to get notifications for Tickets, and/or when a robot loses connection during a match</h2>
 	{#if $installPrompt}
@@ -347,17 +345,40 @@
 		color="primary"
 		class="w-fit"
 		size="sm"
-		onclick={() => {
+		onclick={async () => {
+			console.info("[PUSH] Grant button clicked — requesting permission…");
 			try {
-				Notification.requestPermission().then((result) => {
-					if (result === "granted") {
-						$settingsStore.notifications = true;
-						subscribeToPush();
-					}
-				});
-				notificationModalOpen = false;
-			} catch (e) {
-				console.error(e);
+				// If already granted (e.g. user allowed via the address-bar bell icon in Edge),
+				// skip re-prompting and proceed directly.
+				let result = Notification.permission;
+				if (result !== "granted") {
+					result = await Notification.requestPermission();
+				}
+				console.info(`[PUSH] Permission result: ${result}`);
+				if (result === "granted") {
+					// Setting notifications=true triggers the $effect in App.svelte which calls
+					// startNotificationSubscription() — do NOT call it here too or we get two connections.
+					$settingsStore.notifications = true;
+					// Register this browser's push endpoint with the server (for background/FCM push)
+					await subscribeToPush();
+					doNavigateAfterModal();
+				} else if (result === "denied") {
+					toast(
+						"Notifications blocked",
+						"Open browser site settings and set Notifications to Allow, then try again.",
+					);
+					doNavigateAfterModal();
+				} else {
+					// "default" — browser suppressed the popup (Edge/Chrome quiet notifications).
+					// The user needs to click the bell/lock icon in the address bar.
+					toast(
+						"Notifications",
+						"No popup? Look for a bell or lock icon in your browser's address bar and click Allow there, then press this button again.",
+					);
+					// Keep modal open so user can try again after allowing via address bar
+				}
+			} catch (e: any) {
+				console.error("[PUSH] Permission request error:", e);
 				toast("Error", "Error requesting notification permissions");
 			}
 		}}>Grant Notification Permissions</Button
@@ -367,7 +388,7 @@
 		class="w-fit"
 		size="sm"
 		onclick={() => {
-			notificationModalOpen = false;
+			doNavigateAfterModal();
 		}}>No, Thank You</Button
 	>
 	<Button
@@ -376,7 +397,7 @@
 		size="sm"
 		onclick={() => {
 			$settingsStore.notificationsDoNotAsk = true;
-			notificationModalOpen = false;
+			doNavigateAfterModal();
 		}}>Do Not Ask Again</Button
 	>
 	<p class="text-sm">You can change which types of notifications you are subscribed to from the Settings screen</p>
@@ -455,7 +476,7 @@
 				onclick={() => {
 					user.set({ ...$user, eventToken: $user.eventToken });
 					if ($user.role === "FTA" || $user.role === "FTAA") setTimeout(() => navigate("/monitor"), 500);
-					else setTimeout(() => navigate("/support"), 500);
+					else setTimeout(() => navigate("/notepad"), 500);
 				}}
 				disabled={loading}>Join Event</Button
 			>

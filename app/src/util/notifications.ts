@@ -58,6 +58,8 @@ export function robotNotification(type: string, event: MonitorEvent["detail"]) {
 }
 
 let backgroundNotificationSubscription: ReturnType<typeof trpc.notes.pushSubscription.subscribe>;
+// Track the token the current subscription was opened with so we can skip redundant reconnects.
+let currentSubscriptionToken: string | null = null;
 
 export function startNotificationSubscription() {
 	// Always read the token fresh from the store — never rely on a stale module-level snapshot.
@@ -74,12 +76,21 @@ export function startNotificationSubscription() {
 		return;
 	}
 
+	// Idempotency guard: if we already have an active subscription for this exact token, do nothing.
+	// This prevents the $effect + explicit-call combination from spinning up duplicate connections.
+	if (currentSubscriptionToken === token && backgroundNotificationSubscription) {
+		console.info("[PUSH] Already subscribed with this token — skipping duplicate start");
+		return;
+	}
+
 	if (backgroundNotificationSubscription && typeof backgroundNotificationSubscription.unsubscribe === "function") {
 		console.info("[PUSH] Tearing down existing subscription before reconnecting");
 		backgroundNotificationSubscription.unsubscribe();
+		currentSubscriptionToken = null;
 	}
 
 	try {
+		currentSubscriptionToken = token;
 		backgroundNotificationSubscription = trpc.notes.pushSubscription.subscribe(
 			{
 				token,
@@ -140,7 +151,8 @@ export function startNotificationSubscription() {
 export function stopNotificationSubscription() {
 	if (!backgroundNotificationSubscription) return;
 
-	backgroundNotificationSubscription?.unsubscribe();
+	backgroundNotificationSubscription.unsubscribe();
+	currentSubscriptionToken = null;
 
 	console.info("[PUSH] Stopped notification subscription");
 }
@@ -200,4 +212,35 @@ export async function subscribeToPush() {
 		console.error("[PUSH] subscribeToPush error:", e);
 		toast("Failed to subscribe to push notifications", e.message);
 	}
+}
+
+/**
+ * Listen for messages from the service worker.
+ * Handles `pushsubscriptionchange` — when the browser rotates our push subscription,
+ * the SW cannot call our tRPC endpoint directly (no auth token), so it sends the new
+ * subscription JSON here and we register it with the server.
+ */
+export function setupSwMessageHandler() {
+	if (!("serviceWorker" in navigator)) return;
+
+	navigator.serviceWorker.addEventListener("message", async (event) => {
+		if (event.data?.type !== "pushsubscriptionchange") return;
+
+		const sub = event.data.subscription;
+		if (!sub) return;
+
+		console.info("[PUSH] SW sent pushsubscriptionchange — re-registering with server");
+		try {
+			const keys = sub.keys ?? {};
+			const expirationTime = sub.expirationTime != null ? new Date(sub.expirationTime) : null;
+			await trpc.notes.registerPush.mutate({
+				endpoint: sub.endpoint,
+				expirationTime,
+				keys: { p256dh: keys.p256dh, auth: keys.auth },
+			});
+			console.info("[PUSH] pushsubscriptionchange: re-registration sent to server successfully");
+		} catch (e: any) {
+			console.error("[PUSH] pushsubscriptionchange: failed to re-register", e);
+		}
+	});
 }

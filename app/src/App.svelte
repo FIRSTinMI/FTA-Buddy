@@ -29,7 +29,11 @@
 	import { notificationsStore } from "./stores/notifications";
 	import { settingsStore } from "./stores/settings";
 	import { userStore as user } from "./stores/user";
-	import { startNotificationSubscription, stopNotificationSubscription } from "./util/notifications";
+	import {
+		setupSwMessageHandler,
+		startNotificationSubscription,
+		stopNotificationSubscription,
+	} from "./util/notifications";
 	import { registerToast } from "./util/toast";
 	import { update, VERSIONS } from "./util/updater";
 
@@ -94,7 +98,7 @@
 	const eventTokenPaths = ["/monitor", "/checklist", "/logs"];
 
 	const pageIsPublicLog = route.pathname.startsWith("/logs/") && route.pathname.split("/")[3].length == 36;
-	const pageIsPublicNoteCreate = route.pathname.startsWith("/support/submit/");
+	const pageIsPublicNoteCreate = route.pathname.startsWith("/notepad/submit/");
 
 	function redirectForAuth() {
 		// if user has event token and is trying to access a page that requires an event token
@@ -222,26 +226,27 @@
 	onMount(() => {
 		checkVersion();
 		versionPollInterval = setInterval(checkVersion, 60_000);
+		// Re-register push subscription when the browser rotates it (handled via SW message)
+		setupSwMessageHandler();
 		// Subscription is now driven by the $effect below — no need to start it here.
 	});
 	onDestroy(() => {
 		clearInterval(versionPollInterval);
 	});
 
-	// Reactively start/stop the notification SSE subscription when the auth token changes.
-	// Using queueMicrotask so the store write fully settles before we open the connection.
-	// This prevents "No token provided" / "User not found" errors that occur when the
-	// subscription is opened against a stale (empty) token during a store transition.
+	// Reactively start/stop the notification SSE subscription when the auth token changes
+	// or when the notifications setting is toggled from anywhere (modal, settings screen, etc.).
+	// IMPORTANT: must read $settingsStore (reactive store ref) NOT the plain `settings` variable —
+	// plain variable reassignment is invisible to $effect's dependency tracker.
 	$effect(() => {
 		const token = $user.token;
-		const wantsNotifications = settings.notifications;
+		const wantsNotifications = $settingsStore.notifications;
 
 		if (token && wantsNotifications) {
-			// Defer to next microtask so any in-flight store updates complete first
-			queueMicrotask(() => {
-				console.info(`[PUSH] App effect: starting subscription (token length: ${token.length})`);
-				startNotificationSubscription();
-			});
+			// Call directly (no queueMicrotask) — the idempotency guard in startNotificationSubscription
+			// ensures repeated $effect runs with the same token are no-ops, preventing the loop.
+			console.info(`[PUSH] App effect: starting subscription (token length: ${token.length})`);
+			startNotificationSubscription();
 		} else {
 			stopNotificationSubscription();
 		}
@@ -284,7 +289,7 @@
 					navigate("/monitor");
 				}
 			} else if ($user.role === "CSA" || $user.role === "RI") {
-				navigate("/support");
+				navigate("/notepad");
 			}
 		}
 	});
@@ -413,14 +418,14 @@
 						{/snippet}
 					</SidebarItem>
 					<SidebarItem
-						label="Support Board"
+						label="Notepad"
 						onclick={() => {
 							drawerOpen = false;
-							navigate("/support");
+							navigate("/notepad");
 						}}
 					>
 						{#snippet icon()}
-							<Icon icon="mdi:view-dashboard" class="size-8" />
+							<Icon icon="mdi:note-outline" class="size-8" />
 						{/snippet}
 					</SidebarItem>
 					<SidebarItem
@@ -708,8 +713,8 @@
 					{/if}
 				</button>
 			{:else if $user?.role === "CSA" || $user?.role === "RI"}
-				<button class="p-2" onclick={() => navigate("/support")}>
-					<Icon icon="mdi:view-dashboard" class="size-8" />
+				<button class="p-2" onclick={() => navigate("/notepad")}>
+					<Icon icon="mdi:note-outline" class="size-8" />
 				</button>
 				<button class="p-2" onclick={() => navigate("/references/statuslights")}>
 					<Icon icon="heroicons:sun-16-solid" class="size-8" />

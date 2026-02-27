@@ -30,16 +30,16 @@ import {
 import { userRouter } from "./router/user";
 import { adminProcedure, createContext, publicProcedure, router } from "./trpc";
 
-import { getTeamAverageCycle } from "./util/team-cycles";
-//import { initializePushNotifications } from '../app/src/util/push-notifications';
 import { EventEmitter } from "events";
 import { TypedEmitter } from "tiny-typed-emitter";
 import { z } from "zod";
+import { initializePushNotifications } from "../src/util/push-notifications";
 import schema from "./db/schema";
 import { ftcRouter } from "./router/ftc";
 import { getEvent } from "./util/get-event";
 import { decompressStationLog, logAnalysisLoop } from "./util/log-analysis";
 import { linkChannel, slackOAuth } from "./util/slack";
+import { getTeamAverageCycle } from "./util/team-cycles";
 
 const pjson = require("../package.json") as { version: string };
 
@@ -48,7 +48,7 @@ const port = parseInt(process.env.PORT || "3001");
 export const events: { [key: string]: ServerEvent } = {};
 export const eventCodes: { [key: string]: string } = {};
 
-//initializePushNotifications();
+initializePushNotifications();
 // event emitter for all notifications
 export const notificationEmitter = new TypedEmitter<NotificationEvents>();
 export const newEventEmitter = new EventEmitter();

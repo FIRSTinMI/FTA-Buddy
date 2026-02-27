@@ -174,10 +174,10 @@
 	function fmsIntegrationLabel(): string {
 		switch (fmsIntegrationState()) {
 			case "ready":
-				return "Extension connected";
+				return "FTA App Sync Enabled";
 			case "no_extension": {
 				const ago = fmsLastSeenAt ? ` (last seen ${fmsLastSeenAt.toLocaleTimeString()})` : " - never seen";
-				return `Password saved - no extension active${ago}`;
+				return `FTA App Sync Offline${ago}`;
 			}
 			case "not_configured":
 				return "Not configured";
@@ -286,6 +286,11 @@
 							placeholder="Paste your Nexus API key here"
 							bind:value={nexusApiKey}
 							autocomplete="off"
+							onkeydown={(e) => {
+								if (e.key === "Enter" && nexusApiKey) {
+									saveNexusApiKey();
+								}
+							}}
 						/>
 					</div>
 					<Button onclick={saveNexusApiKey} disabled={nexusSaving || !nexusApiKey}>
@@ -326,6 +331,11 @@
 							placeholder={fmsPasswordIsSet ? "••••••••" : "Enter FMS event password"}
 							bind:value={fmsEventPassword}
 							autocomplete="off"
+							onkeydown={(e) => {
+								if (e.key === "Enter" && fmsEventPassword) {
+									saveFmsEventPassword();
+								}
+							}}
 						/>
 					</div>
 					<Button onclick={saveFmsEventPassword} disabled={fmsPasswordSaving || !fmsEventPassword}>

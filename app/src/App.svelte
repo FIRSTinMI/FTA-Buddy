@@ -29,38 +29,49 @@
 	import { notificationsStore } from "./stores/notifications";
 	import { settingsStore } from "./stores/settings";
 	import { userStore as user } from "./stores/user";
-	import { startNotificationSubscription } from "./util/notifications";
+	import { startNotificationSubscription, stopNotificationSubscription } from "./util/notifications";
 	import { registerToast } from "./util/toast";
 	import { update, VERSIONS } from "./util/updater";
 
 	// On mount check if the user's permissions have changed
 	onMount(async () => {
-		const checkAuth = await trpc.user.checkAuth.query({
-			token: $user.token,
-			eventToken: $user.eventToken,
-		});
+		console.info(
+			`[AUTH] checkAuth on mount — token length: ${$user.token?.length ?? 0}, origin: ${window.location.origin}`,
+		);
 
-		if (checkAuth.user) {
-			user.set({
-				...checkAuth.user,
+		try {
+			const checkAuth = await trpc.user.checkAuth.query({
 				token: $user.token,
 				eventToken: $user.eventToken,
-				meshedEventToken: $user.meshedEventToken,
 			});
-		} else {
-			// No user found then reset
-			user.set({
-				email: "",
-				username: "",
-				id: -1,
-				token: "",
-				eventToken: $user.eventToken,
-				role: "FTA",
-				admin: false,
-			});
-		}
 
-		//console.log(user);
+			if (checkAuth.user) {
+				console.info(`[AUTH] checkAuth OK — id: ${checkAuth.user.id}, username: ${checkAuth.user.username}`);
+				user.set({
+					...checkAuth.user,
+					token: $user.token,
+					eventToken: $user.eventToken,
+					meshedEventToken: $user.meshedEventToken,
+				});
+			} else {
+				// Server returned no user: token is invalid/expired — clear it.
+				// Common causes: token from wrong environment (dev vs prod), session pruned, or
+				// the v2.6.0 migration already cleared it on a previous boot.
+				console.warn("[AUTH] checkAuth returned no user — clearing token. Origin:", window.location.origin);
+				user.set({
+					email: "",
+					username: "",
+					id: -1,
+					token: "",
+					eventToken: $user.eventToken,
+					role: "FTA",
+					admin: false,
+				});
+			}
+		} catch (err: any) {
+			// Network / server error — do NOT clear the token to avoid false logouts on flaky connections
+			console.warn("[AUTH] checkAuth request failed (not clearing token):", err.message);
+		}
 	});
 
 	const publicPaths = [
@@ -211,12 +222,29 @@
 	onMount(() => {
 		checkVersion();
 		versionPollInterval = setInterval(checkVersion, 60_000);
-		if (settings.notifications) {
-			startNotificationSubscription();
-		}
+		// Subscription is now driven by the $effect below — no need to start it here.
 	});
 	onDestroy(() => {
 		clearInterval(versionPollInterval);
+	});
+
+	// Reactively start/stop the notification SSE subscription when the auth token changes.
+	// Using queueMicrotask so the store write fully settles before we open the connection.
+	// This prevents "No token provided" / "User not found" errors that occur when the
+	// subscription is opened against a stale (empty) token during a store transition.
+	$effect(() => {
+		const token = $user.token;
+		const wantsNotifications = settings.notifications;
+
+		if (token && wantsNotifications) {
+			// Defer to next microtask so any in-flight store updates complete first
+			queueMicrotask(() => {
+				console.info(`[PUSH] App effect: starting subscription (token length: ${token.length})`);
+				startNotificationSubscription();
+			});
+		} else {
+			stopNotificationSubscription();
+		}
 	});
 
 	// App install prompt

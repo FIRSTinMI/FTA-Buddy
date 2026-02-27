@@ -1,4 +1,4 @@
-import { createTRPCClient, httpBatchLink, httpLink, httpSubscriptionLink, splitLink } from "@trpc/client";
+import { createTRPCClient, httpBatchLink, httpLink, httpSubscriptionLink, loggerLink, splitLink } from "@trpc/client";
 import SuperJSON from "superjson";
 import { mount } from "svelte";
 import { get } from "svelte/store";
@@ -36,7 +36,25 @@ function buildLinks(token: string, eventToken: string) {
 	// SSE (EventSource) cannot send custom headers, so pass auth via query params
 	const sseUrl = `${trpcUrl}?token=${encodeURIComponent(token)}&eventToken=${encodeURIComponent(eventToken)}`;
 
+	// Dev-only tRPC logger: prints procedure + direction; masks the password field
+	const devLogLink = loggerLink({
+		enabled: (opts) => import.meta.env.DEV || (opts.direction === "down" && opts.result instanceof Error),
+		colorMode: "ansi",
+		logger: (opts) => {
+			if (opts.direction === "down" && opts.result instanceof Error) {
+				const input = opts.input as Record<string, unknown> | undefined;
+				const safeInput = input ? { ...input, password: input.password ? "[redacted]" : undefined } : undefined;
+				console.info(
+					`[TRPC] ↓ ERROR ${opts.path} | input: ${JSON.stringify(safeInput)} | ${opts.result.message}`,
+				);
+			} else if (import.meta.env.DEV) {
+				console.info(`[TRPC] ${opts.direction === "up" ? "↑" : "↓"} ${opts.type} ${opts.path}`);
+			}
+		},
+	});
+
 	return [
+		devLogLink,
 		// 1st split: subscriptions → SSE (requires HTTP/2 in production for multi-tab)
 		splitLink({
 			condition: (op) => op.type === "subscription",
@@ -57,6 +75,7 @@ export let trpc = createTRPCClient<AppRouter>({ links: buildLinks(token, eventTo
 userStore.subscribe((value) => {
 	token = value.token;
 	eventToken = value.eventToken;
+	console.info(`[AUTH] trpc client rebuilt — token length: ${token?.length ?? 0}, origin: ${window.location.origin}`);
 	trpc = createTRPCClient<AppRouter>({ links: buildLinks(token, eventToken) });
 });
 

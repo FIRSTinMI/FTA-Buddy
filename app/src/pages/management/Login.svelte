@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Button, Input, Label, Modal, Select, type SelectOptionType } from "flowbite-svelte";
+	import { tick } from "svelte";
 	import type { Profile, TeamList } from "../../../../shared/types";
 	import Spinner from "../../components/Spinner.svelte";
 	import { trpc } from "../../main";
@@ -26,6 +27,8 @@
 	let role: "FTA" | "FTAA" | "CSA" | "RI" = $state("FTA");
 
 	let loading = $state(false);
+	// Single-flight guard: prevents double-submission when button is tapped quickly
+	let isSubmitting = false;
 	let view: null | "login" | "create" | "googleCreate" = $state(null);
 
 	let desktop =
@@ -36,10 +39,15 @@
 
 	async function createUser(evt: Event) {
 		evt.preventDefault();
+		if (isSubmitting) return;
+		isSubmitting = true;
 		loading = true;
 
+		// Validate before hitting the network — reset loading in the guard branch
 		if (password !== verifyPassword) {
 			toast("Error", "Passwords do not match");
+			loading = false;
+			isSubmitting = false;
 			return;
 		}
 
@@ -50,6 +58,8 @@
 				password,
 				role,
 			});
+
+			console.info(`[AUTH] createUser succeeded — id: ${res.id}, token length: ${res.token?.length ?? 0}`);
 
 			user.set({
 				token: res.token,
@@ -63,7 +73,7 @@
 
 			toast("Success", "Account created successfully", "green-500");
 		} catch (err: any) {
-			console.error(err);
+			console.error("[AUTH] createUser error:", err);
 			if (err.message.startsWith("[")) {
 				const obj = JSON.parse(err.message);
 				for (const key in obj) {
@@ -72,20 +82,23 @@
 			} else {
 				toast("Error Creating Account", err.message);
 			}
+		} finally {
+			loading = false;
+			isSubmitting = false;
 		}
-
-		loading = false;
 	}
 
 	async function login(evt: Event) {
 		evt.preventDefault();
+		if (isSubmitting) return;
+		isSubmitting = true;
 		loading = true;
 
 		try {
-			console.log({ email, password });
+			console.info(`[AUTH] login attempt — email: ${email}`);
 			const res = await trpc.user.login.mutate({ email, password });
 
-			console.log(res);
+			console.info(`[AUTH] login succeeded — id: ${res.id}, token length: ${res.token?.length ?? 0}`);
 
 			user.set({
 				token: res.token,
@@ -97,31 +110,21 @@
 				admin: res.admin,
 			});
 
-			console.log({
-				token: res.token,
-				eventToken: "",
-				username: res.username,
-				email: res.email,
-				role: res.role,
-				id: res.id,
-				admin: res.admin,
-			});
-
 			toast("Success", "Logged in successfully", "green-500");
+
+			// Wait for Svelte to flush the store update before checking notification state
+			await tick();
+
+			if (!$settingsStore.notificationsDoNotAsk) {
+				notificationModalOpen = true;
+			}
 		} catch (err: any) {
 			toast("Error Logging In", err.message);
-			console.error(err);
+			console.error("[AUTH] login error:", err);
+		} finally {
+			loading = false;
+			isSubmitting = false;
 		}
-
-		console.log($settingsStore.notificationsDoNotAsk);
-
-		if (!$settingsStore.notificationsDoNotAsk) {
-			notificationModalOpen = true;
-		}
-
-		console.log(notificationModalOpen);
-
-		loading = false;
 	}
 
 	function logout() {
@@ -195,9 +198,12 @@
 
 	async function joinEvent(evt: Event) {
 		evt.preventDefault();
+		if (isSubmitting) return;
+		isSubmitting = true;
 		loading = true;
 
 		try {
+			console.info(`[AUTH] joinEvent — code: ${eventCode}`);
 			const res = await trpc.event.join.mutate({
 				code: eventCode,
 				pin: eventPin,
@@ -213,7 +219,10 @@
 					meshedEventCode: res.code,
 				});
 
-				setTimeout(() => navigate("/dashboard"), 700);
+				// Flush store updates before navigating to avoid route guards seeing stale state
+				await tick();
+				console.info("[ROUTER] navigate → /dashboard");
+				navigate("/dashboard");
 			} else {
 				user.set({ ...$user, eventToken: res.token });
 				eventStore.set({
@@ -223,27 +232,30 @@
 					users: res.users as Profile[],
 				});
 
-				if ($user.role === "FTA" || $user.role === "FTAA") setTimeout(() => navigate("/monitor"), 700);
-				else setTimeout(() => navigate("/support"), 700);
+				await tick();
+				const dest = $user.role === "FTA" || $user.role === "FTAA" ? "/monitor" : "/support";
+				console.info(`[ROUTER] navigate → ${dest}`);
+				navigate(dest);
 			}
 			toast("Success", "Event joined successfully", "green-500");
 		} catch (err: any) {
 			toast("Error Joining Event", err.message);
-			console.error(err);
+			console.error("[AUTH] joinEvent error:", err);
+		} finally {
+			loading = false;
+			isSubmitting = false;
 		}
-
-		loading = false;
 	}
 
 	// @ts-ignore
 	window.googleLogin = async (googleUser: any) => {
-		console.log(googleUser);
+		console.info("[AUTH] googleLogin callback fired");
 		try {
 			const res = await trpc.user.googleLogin.mutate({
 				token: googleUser.credential,
 			});
 
-			console.log(res);
+			console.info(`[AUTH] googleLogin succeeded — id: ${res.id}, token length: ${res.token?.length ?? 0}`);
 
 			user.set({
 				token: res.token,
@@ -256,11 +268,10 @@
 				googleToken: googleUser.credential,
 			});
 
-			console.log($user);
-
 			toast("Success", "Logged in successfully", "green-500");
 		} catch (err: any) {
 			if (err.code === 404 || err.message.startsWith("User not found")) {
+				console.info("[AUTH] googleLogin: user not found, redirecting to google-signup");
 				user.set({
 					token: "",
 					eventToken: "",
@@ -274,7 +285,7 @@
 				navigate("/manage/google-signup");
 			} else {
 				toast("Error Logging In", err.message);
-				console.error(err);
+				console.error("[AUTH] googleLogin error:", err);
 			}
 		}
 	};
@@ -546,8 +557,8 @@
 					placeholder="Select Event"
 					onchange={adminSelectEvent}
 				/>
-				<Button href="/" onclick={() => navigate("/")}>Go to App</Button>
-				<Button outline onclick={() => navigate("/manage/event-created")}>See Event Pin</Button>
+				<Button onclick={() => navigate("/")}>Go to App</Button>
+				<Button outline onclick={() => navigate("/manage/event-created")}>Event Management</Button>
 				<Button outline href="/manage/meshed-event">Create Meshed Event</Button>
 				<Button outline href="/manage/manage">App Management</Button>
 			</div>
@@ -556,7 +567,7 @@
 		{:else if $user.eventToken}
 			<div class="flex flex-col border-t border-neutral-500 pt-10 space-y-2">
 				<h1 class="text-xl" style="font-weight:bold;">The Event Currently Selected Is: {$eventStore.code}</h1>
-				<Button href="/" onclick={() => navigate("/")}>Go to App</Button>
+				<Button onclick={() => navigate("/")}>Go to App</Button>
 				<Button
 					outline
 					onclick={() => (

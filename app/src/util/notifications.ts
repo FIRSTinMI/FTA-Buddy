@@ -7,7 +7,7 @@ import { userStore } from "../stores/user";
 import type { MonitorEvent } from "./monitorFrameHandler";
 import { toast } from "./toast";
 
-let user = get(userStore);
+// NOTE: Do NOT snapshot user at module load — always read freshly from the store.
 
 export function createNotification(data: Notification) {
 	//console.log('Creating notification:', data);
@@ -35,6 +35,7 @@ export function createNotification(data: Notification) {
 // TODO: Wtf does this do?
 export function robotNotification(type: string, event: MonitorEvent["detail"]) {
 	const robot = event.frame[event.robot];
+	const user = get(userStore); // always read freshly
 	let path: string;
 
 	if (user.role === "FTA" || user.role === "FTAA") {
@@ -59,13 +60,29 @@ export function robotNotification(type: string, event: MonitorEvent["detail"]) {
 let backgroundNotificationSubscription: ReturnType<typeof trpc.notes.pushSubscription.subscribe>;
 
 export function startNotificationSubscription() {
-	if (backgroundNotificationSubscription && typeof backgroundNotificationSubscription.unsubscribe === "function")
+	// Always read the token fresh from the store — never rely on a stale module-level snapshot.
+	const token = get(userStore).token;
+
+	console.info(
+		`[PUSH] startNotificationSubscription called — token present: ${!!token}, token length: ${token?.length ?? 0}`,
+	);
+
+	// Safety guard: never open an SSE subscription without a valid token.
+	// Doing so causes "No token provided" / "User not found" tRPC errors.
+	if (!token) {
+		console.warn("[PUSH] Aborting subscription start: token is empty");
+		return;
+	}
+
+	if (backgroundNotificationSubscription && typeof backgroundNotificationSubscription.unsubscribe === "function") {
+		console.info("[PUSH] Tearing down existing subscription before reconnecting");
 		backgroundNotificationSubscription.unsubscribe();
+	}
 
 	try {
 		backgroundNotificationSubscription = trpc.notes.pushSubscription.subscribe(
 			{
-				token: user.token,
+				token,
 			},
 			{
 				onError: console.error,
@@ -125,7 +142,7 @@ export function stopNotificationSubscription() {
 
 	backgroundNotificationSubscription?.unsubscribe();
 
-	console.log("Stopped Notification Subscription");
+	console.info("[PUSH] Stopped notification subscription");
 }
 
 const publicVapidKey = "BFTN7PqbkHaSPpmQBbMANVP7NSJg2qGkSEisDlTborp3FMIlZAwvMVcEbCOS11JqPgDQLuk42DY5AU_mHQdyibs";
@@ -146,12 +163,15 @@ const urlBase64ToUint8Array = (base64String: string) => {
 
 export async function subscribeToPush() {
 	try {
-		if (!("serviceWorker" in navigator)) throw new Error("Service workers are not supported");
+		if (!("serviceWorker" in navigator)) {
+			console.warn("[PUSH] subscribeToPush: service workers not supported in this browser/profile");
+			throw new Error("Service workers are not supported");
+		}
 
-		console.log("Registering service worker");
+		console.info("[PUSH] subscribeToPush: awaiting serviceWorker.ready…");
+		// This resolves once a SW is installed and active — safe in all browsers.
 		const registration = await navigator.serviceWorker.ready;
-
-		//console.log(registration);
+		console.info("[PUSH] subscribeToPush: SW ready, subscribing to push manager…");
 
 		// Subscribe to push notifications
 		const subscription = await registration.pushManager.subscribe({
@@ -160,18 +180,24 @@ export async function subscribeToPush() {
 		});
 
 		const keys = subscription.toJSON().keys ?? {};
+		// expirationTime is null in most browsers — coerce to null rather than new Date(0)
+		const expirationTime = subscription.expirationTime != null ? new Date(subscription.expirationTime) : null;
+
+		console.info(`[PUSH] subscribeToPush: obtained subscription endpoint, expirationTime: ${expirationTime}`);
 
 		// Send push subscription to server
 		await trpc.notes.registerPush.mutate({
 			endpoint: subscription.endpoint,
-			expirationTime: new Date(subscription.expirationTime ?? 0),
+			expirationTime,
 			keys: {
 				p256dh: keys.p256dh,
 				auth: keys.auth,
 			},
 		});
+
+		console.info("[PUSH] subscribeToPush: registration sent to server successfully");
 	} catch (e: any) {
-		console.error(e);
+		console.error("[PUSH] subscribeToPush error:", e);
 		toast("Failed to subscribe to push notifications", e.message);
 	}
 }

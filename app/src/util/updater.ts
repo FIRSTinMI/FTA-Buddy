@@ -401,11 +401,12 @@ export function update(
 
 		if (!dontShowDialogs && !updateIsOnlyPatch && changelog !== "") openChangelog(changelog);
 
-		console.log("Queued updates: " + updatesToDo.join(", "));
+		console.info("[AUTH] updater: queued migrations — " + updatesToDo.join(", "));
 
 		for (let v of updatesToDo) {
-			console.log("Running update " + v);
+			console.info("[AUTH] updater: running migration " + v);
 			if (VERSIONS[v].update) VERSIONS[v].update();
+			console.info("[AUTH] updater: migration " + v + " complete");
 		}
 
 		currentVersion = newVersion;

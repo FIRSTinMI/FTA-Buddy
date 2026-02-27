@@ -372,7 +372,7 @@
 					Match (optional):
 					<Select
 						class="mt-2"
-						items={[{ value: undefined, name: "— None —" }, ...matchOptions]}
+						items={[{ value: undefined, name: "- None -" }, ...matchOptions]}
 						bind:value={matchId}
 					/>
 				</Label>

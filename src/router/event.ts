@@ -616,6 +616,24 @@ export const eventRouter = router({
 		return { isSet: !!event.fmsEventPassword };
 	}),
 
+	/**
+	 * Returns the FMS integration status: whether a password is configured and whether
+	 * any extension has sent a frame in the last 90 seconds.
+	 */
+	getFmsIntegrationStatus: eventProcedure.query(async ({ ctx }) => {
+		const event = await getEvent(ctx.event.token);
+		const cutoff = new Date(Date.now() - 90_000);
+		const activeExtension =
+			event.stats.extensions
+				.filter((e) => e.lastFrame > cutoff)
+				.sort((a, b) => b.lastFrame.getTime() - a.lastFrame.getTime())[0] ?? null;
+		return {
+			passwordConfigured: !!event.fmsEventPassword,
+			extensionConnected: !!activeExtension,
+			lastSeenAt: activeExtension?.lastFrame ?? null,
+		};
+	}),
+
 	/** Returns the FMS event password for use by the extension to authenticate against FMS APIs. */
 	getFmsEventPassword: eventProcedure.query(async ({ ctx }) => {
 		const event = await getEvent(ctx.event.token);

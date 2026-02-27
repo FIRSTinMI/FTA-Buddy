@@ -69,8 +69,12 @@ async function addNotification(notification) {
 	}
 }
 
+async function broadcastToClients(msg) {
+	const windowClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
+	for (const client of windowClients) client.postMessage(msg);
+}
+
 // Map server topic -> local settings category
-// Includes both canonical names (shared/types.ts) and legacy aliases
 const TOPIC_CATEGORY = {
 	// Canonical
 	"Note-Created": "create",
@@ -93,7 +97,7 @@ const DEFAULT_SETTINGS = {
 self.addEventListener("push", (event) => {
 	event.waitUntil(
 		(async () => {
-			// 1) Payload size guard + safe parse — PushEvent.data may be null or malformed
+			// 1) Payload size guard + safe parse - PushEvent.data may be null or malformed
 			let data = {};
 			try {
 				if (event.data) {
@@ -109,7 +113,7 @@ self.addEventListener("push", (event) => {
 				console.warn("[SW] push: failed to parse payload", e);
 			}
 
-			// 2) Load settings safely — SW may start cold with empty storage
+			// 2) Load settings safely - SW may start cold with empty storage
 			let settings = DEFAULT_SETTINGS;
 			try {
 				const stored = await getSettingsStore();
@@ -129,12 +133,11 @@ self.addEventListener("push", (event) => {
 				if (data.id) await addNotification(data);
 			}
 
-			// 5) Show notification — return the promise so Chromium knows a visible
-			//    notification was shown and does not generate its generic fallback.
+			// 5) Show notification
 			return self.registration.showNotification(data.title || "FTA Buddy", {
 				body: data.body ?? "",
 				tag: data.tag,
-				data: data.data,
+				data: { ...(data.data ?? {}), notificationId: data.id },
 				icon: data.icon || "/icon512_rounded.png",
 			});
 		})()
@@ -145,9 +148,13 @@ self.addEventListener("notificationclick", (event) => {
 	const rootUrl = new URL("/", location).href;
 	const pageToOpen = event.notification.data?.page ?? "";
 	const targetUrl = rootUrl + pageToOpen;
+	const notificationId = event.notification.data?.notificationId;
 	event.notification.close();
 	event.waitUntil(
 		(async () => {
+			if (notificationId) {
+				await broadcastToClients({ type: "notification_cleared", notificationId });
+			}
 			const matched = await clients.matchAll({ type: "window", includeUncontrolled: true });
 			for (const client of matched) {
 				if (client.url === targetUrl && "focus" in client) {
@@ -159,31 +166,29 @@ self.addEventListener("notificationclick", (event) => {
 	);
 });
 
+self.addEventListener("notificationclose", (event) => {
+	const notificationId = event.notification.data?.notificationId;
+	if (!notificationId) return;
+	event.waitUntil(broadcastToClients({ type: "notification_cleared", notificationId }));
+});
+
 // Re-subscribe when the browser rotates our push subscription.
-// We can't call tRPC directly from the SW (no auth token), so we message
-// an open window and let the app handle the re-registration.
 self.addEventListener("pushsubscriptionchange", (event) => {
 	event.waitUntil(
 		(async () => {
-			const broadcast = async (msg) => {
-				const windowClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
-				for (const client of windowClients) client.postMessage(msg);
-			};
-
 			const oldOptions = event.oldSubscription?.options;
 			if (!oldOptions) {
-				// No old subscription to derive options from; app will reconcile on next open.
-				console.warn("[SW] pushsubscriptionchange: no oldSubscription — cannot resubscribe");
-				await broadcast({ type: "pushsubscriptionchange-error", message: "no oldSubscription" });
+				console.warn("[SW] pushsubscriptionchange: no oldSubscription - cannot resubscribe");
+				await broadcastToClients({ type: "pushsubscriptionchange-error", message: "no oldSubscription" });
 				return;
 			}
 
 			try {
 				const newSub = await self.registration.pushManager.subscribe(oldOptions);
-				await broadcast({ type: "pushsubscriptionchange", subscription: newSub.toJSON() });
+				await broadcastToClients({ type: "pushsubscriptionchange", subscription: newSub.toJSON() });
 			} catch (e) {
 				console.warn("[SW] pushsubscriptionchange: failed to resubscribe", e);
-				await broadcast({ type: "pushsubscriptionchange-error", message: e?.message ?? String(e) });
+				await broadcastToClients({ type: "pushsubscriptionchange-error", message: e?.message ?? String(e) });
 			}
 		})()
 	);

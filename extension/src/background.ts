@@ -50,7 +50,7 @@ type OutboundSubscription = ReturnType<typeof trpc.notes.updateSubscription.subs
 let outboundNoteSubscription: OutboundSubscription;
 
 const manifestData = chrome.runtime.getManifest();
-export const FMS = "localhost";
+export const FMS = "10.0.100.5";
 
 export let signalRConnection = new SignalR(FMS, manifestData.version, sendFrame, sendCycletime, sendScheduleDetails);
 
@@ -259,7 +259,7 @@ async function handleFmsNoteChanged(
 		return;
 	}
 	if (inboundSyncInProgress) {
-		console.log(`[NoteSync] SKIPPED — inboundSyncInProgress`);
+		console.log(`[NoteSync] SKIPPED - inboundSyncInProgress`);
 		return;
 	}
 	inboundSyncInProgress = true;
@@ -284,7 +284,7 @@ async function handleFmsNoteChanged(
 			await trpc.notes.deleteByFmsNoteId.mutate({ fms_note_id: fmsNote.fmsEventNoteId });
 		} else {
 			console.log(`[NoteSync] Calling editFromFMS for fmsId=${fmsNote.fmsEventNoteId} (${action})`);
-			// updated / reopened / resolved — pass fms_note_id directly, no lookup needed
+			// updated / reopened / resolved - pass fms_note_id directly, no lookup needed
 			await trpc.notes.editFromFMS.mutate({
 				fms_note_id: fmsNote.fmsEventNoteId,
 				text: fmsNote.note,
@@ -313,7 +313,7 @@ function startOutboundNoteSync() {
 				);
 				// Events originating from FMS don't need to be synced back
 				if (data.source === "fms") {
-					console.log(`[NoteSync] outbound SKIPPED — source is fms`);
+					console.log(`[NoteSync] outbound SKIPPED - source is fms`);
 					return;
 				}
 				if (!fmsApi) return;

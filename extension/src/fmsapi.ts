@@ -238,7 +238,7 @@ function applyAuthParams(url: URL): void {
 
 /**
  * Add a note to FMS.
- * POST /Notes/AddNote — body contains numeric enum values (see {@link FTAAddNoteBody}).
+ * POST /Notes/AddNote - body contains numeric enum values (see {@link FTAAddNoteBody}).
  */
 export async function addNote(body: FTAAddNoteBody): Promise<FTANoteRecord> {
 	const url = new URL(`${NOTES_BASE()}/AddNote`);
@@ -254,7 +254,7 @@ export async function addNote(body: FTAAddNoteBody): Promise<FTANoteRecord> {
 
 /**
  * Update an existing note in FMS.
- * POST /Notes/UpdateNote — all params are query params, no request body.
+ * POST /Notes/UpdateNote - all params are query params, no request body.
  * @param fmsEventNoteId - UUID of the note to update.
  * @param resolutionType - Numeric resolution status (e.g. 1 = Open, 5 = Resolved).
  * @param notes - Updated note text.
@@ -276,7 +276,7 @@ export async function updateNote(
 
 /**
  * Delete a note in FMS.
- * POST /Notes/DeleteNote — noteId passed as a query param, no request body.
+ * POST /Notes/DeleteNote - noteId passed as a query param, no request body.
  * @param fmsEventNoteId - UUID of the note to delete.
  */
 export async function deleteNote(fmsEventNoteId: string): Promise<void> {

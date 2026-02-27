@@ -183,7 +183,7 @@ async function pingFTABuddy(cloud: boolean, useDev: boolean, url: string) {
 			});
 			clearTimeout(t);
 
-			// tRPC GET often returns 404 when route names aren’t specified — host is still UP.
+			// tRPC GET often returns 404 when route names aren’t specified - host is still UP.
 			if (res.status === 200 || res.status === 404) return true;
 		} catch {
 			// try next endpoint

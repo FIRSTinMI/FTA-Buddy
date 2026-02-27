@@ -1,16 +1,13 @@
 import { get } from "svelte/store";
 import type { Notification } from "../../../shared/types";
 import { trpc } from "../main";
-import { addNotification, checkIfNotificationExists } from "../stores/notifications";
+import { addNotification, checkIfNotificationExists, removeNotification } from "../stores/notifications";
 import { settingsStore } from "../stores/settings";
 import { userStore } from "../stores/user";
 import type { MonitorEvent } from "./monitorFrameHandler";
 import { toast } from "./toast";
 
-// NOTE: Do NOT snapshot user at module load — always read freshly from the store.
-
 export function createNotification(data: Notification) {
-	//console.log('Creating notification:', data);
 	if (!("Notification" in window)) {
 		throw new Error("This browser does not support desktop notifications");
 	}
@@ -28,11 +25,10 @@ export function createNotification(data: Notification) {
 	});
 
 	notification.onclick = () => {
-		console.log("Notification clicked");
+		window.focus();
 	};
 }
 
-// TODO: Wtf does this do?
 export function robotNotification(type: string, event: MonitorEvent["detail"]) {
 	const robot = event.frame[event.robot];
 	const user = get(userStore); // always read freshly
@@ -62,29 +58,19 @@ let backgroundNotificationSubscription: ReturnType<typeof trpc.notes.pushSubscri
 let currentSubscriptionToken: string | null = null;
 
 export function startNotificationSubscription() {
-	// Always read the token fresh from the store — never rely on a stale module-level snapshot.
+	// Always read the token fresh from the store - never rely on a stale module-level snapshot.
 	const token = get(userStore).token;
 
-	console.info(
-		`[PUSH] startNotificationSubscription called — token present: ${!!token}, token length: ${token?.length ?? 0}`,
-	);
-
-	// Safety guard: never open an SSE subscription without a valid token.
-	// Doing so causes "No token provided" / "User not found" tRPC errors.
 	if (!token) {
 		console.warn("[PUSH] Aborting subscription start: token is empty");
 		return;
 	}
 
-	// Idempotency guard: if we already have an active subscription for this exact token, do nothing.
-	// This prevents the $effect + explicit-call combination from spinning up duplicate connections.
 	if (currentSubscriptionToken === token && backgroundNotificationSubscription) {
-		console.info("[PUSH] Already subscribed with this token — skipping duplicate start");
 		return;
 	}
 
 	if (backgroundNotificationSubscription && typeof backgroundNotificationSubscription.unsubscribe === "function") {
-		console.info("[PUSH] Tearing down existing subscription before reconnecting");
 		backgroundNotificationSubscription.unsubscribe();
 		currentSubscriptionToken = null;
 	}
@@ -98,9 +84,6 @@ export function startNotificationSubscription() {
 			{
 				onError: console.error,
 				onData: (data) => {
-					// console.log(Notification.permission);
-					// console.log("in data reciever 1");
-
 					let sendNotification = false;
 
 					switch (data.topic) {
@@ -145,16 +128,12 @@ export function startNotificationSubscription() {
 	} catch (err: any) {
 		console.error("Subscription setup error:", err);
 	}
-	//console.log(`Listeners ${event.ticketPushEmitter.listenerCount()}`);
 }
 
 export function stopNotificationSubscription() {
 	if (!backgroundNotificationSubscription) return;
-
 	backgroundNotificationSubscription.unsubscribe();
 	currentSubscriptionToken = null;
-
-	console.info("[PUSH] Stopped notification subscription");
 }
 
 const publicVapidKey = "BFTN7PqbkHaSPpmQBbMANVP7NSJg2qGkSEisDlTborp3FMIlZAwvMVcEbCOS11JqPgDQLuk42DY5AU_mHQdyibs";
@@ -173,12 +152,6 @@ const urlBase64ToUint8Array = (base64String: string) => {
 	return outputArray;
 };
 
-/**
- * Stable fingerprint for a push subscription.
- * The endpoint is guaranteed unique per subscription — it changes whenever
- * the browser issues a new subscription, so comparing endpoints is sufficient
- * to detect "subscription rotated".
- */
 function subscriptionFingerprint(endpoint: string): string {
 	return endpoint;
 }
@@ -188,14 +161,6 @@ const PUSH_FINGERPRINT_KEY = "ftabuddy-push-fingerprint";
 /** In-flight mutex: prevents concurrent registerPush calls from racing. */
 let registerPushInFlight: Promise<void> | null = null;
 
-/**
- * Low-level helper shared by subscribeToPush, ensurePushRegistration, and
- * setupSwMessageHandler. Sends the subscription to the server and persists
- * the endpoint fingerprint to avoid redundant future calls.
- *
- * Accepts either a live PushSubscription or the plain JSON object the SW
- * sends via postMessage (both expose `.endpoint`, `.expirationTime`, `.keys`).
- */
 async function doRegisterPush(
 	subscription:
 		| PushSubscription
@@ -213,7 +178,6 @@ async function doRegisterPush(
 		}
 		// If the previous call already registered this exact endpoint, skip.
 		if (localStorage.getItem(PUSH_FINGERPRINT_KEY) === fingerprint) {
-			console.info("[PUSH] doRegisterPush: already registered by in-flight call — skipping");
 			return;
 		}
 	}
@@ -239,7 +203,6 @@ async function doRegisterPush(
 		});
 
 		localStorage.setItem(PUSH_FINGERPRINT_KEY, fingerprint);
-		console.info("[PUSH] doRegisterPush: registered successfully");
 		resolve();
 	} catch (e) {
 		reject(e);
@@ -252,22 +215,16 @@ async function doRegisterPush(
 export async function subscribeToPush() {
 	try {
 		if (!("serviceWorker" in navigator)) {
-			console.warn("[PUSH] subscribeToPush: service workers not supported in this browser/profile");
+			console.warn("[PUSH] subscribeToPush: service workers not supported");
 			throw new Error("Service workers are not supported");
 		}
 
-		console.info("[PUSH] subscribeToPush: awaiting serviceWorker.ready…");
 		const registration = await navigator.serviceWorker.ready;
-		console.info("[PUSH] subscribeToPush: SW ready, subscribing to push manager…");
 
 		const subscription = await registration.pushManager.subscribe({
 			userVisibleOnly: true,
 			applicationServerKey: urlBase64ToUint8Array(publicVapidKey),
 		});
-
-		console.info(
-			`[PUSH] subscribeToPush: obtained subscription endpoint, expirationTime: ${subscription.expirationTime}`,
-		);
 		await doRegisterPush(subscription);
 	} catch (e: any) {
 		console.error("[PUSH] subscribeToPush error:", e);
@@ -275,13 +232,6 @@ export async function subscribeToPush() {
 	}
 }
 
-/**
- * Called on app startup after auth resolves. Gets the current push subscription
- * and re-registers it with the server if the endpoint has changed since the last
- * successful registration. This is the recovery path for the case where the
- * browser rotated the subscription while no app window was open (so the SW's
- * pushsubscriptionchange message had no window to deliver to).
- */
 export async function ensurePushRegistration(): Promise<void> {
 	if (!("serviceWorker" in navigator)) return;
 	if (Notification.permission !== "granted") return;
@@ -293,33 +243,20 @@ export async function ensurePushRegistration(): Promise<void> {
 		const registration = await navigator.serviceWorker.ready;
 		const subscription = await registration.pushManager.getSubscription();
 
-		if (!subscription) {
-			console.info("[PUSH] ensurePushRegistration: no active subscription");
-			return;
-		}
+		if (!subscription) return;
 
 		const fingerprint = subscriptionFingerprint(subscription.endpoint);
 		const lastFingerprint = localStorage.getItem(PUSH_FINGERPRINT_KEY);
 
-		if (fingerprint === lastFingerprint) {
-			console.info("[PUSH] ensurePushRegistration: subscription unchanged — skipping");
-			return;
-		}
+		if (fingerprint === lastFingerprint) return;
 
-		console.info("[PUSH] ensurePushRegistration: fingerprint mismatch — re-registering with server");
 		await doRegisterPush(subscription);
-		console.info("[PUSH] ensurePushRegistration: complete");
 	} catch (e: any) {
 		console.error("[PUSH] ensurePushRegistration error:", e);
 	}
 }
 
-/**
- * Listen for messages from the service worker:
- * - `pushsubscriptionchange`:       browser rotated subscription; re-register with server.
- * - `pushsubscriptionchange-error`: resubscribe failed in SW; log so we know to reconcile.
- * - `sw-ready`:                     new SW activated; opportunistically call update().
- */
+// Listen for messages from the service worker.
 export function setupSwMessageHandler() {
 	if (!("serviceWorker" in navigator)) return;
 
@@ -330,17 +267,15 @@ export function setupSwMessageHandler() {
 		if (msg.type === "pushsubscriptionchange") {
 			const sub = msg.subscription;
 			if (!sub?.endpoint) {
-				console.warn("[PUSH] pushsubscriptionchange message had no subscription — push may be disabled");
+				console.warn("[PUSH] pushsubscriptionchange message had no subscription - push may be disabled");
 				return;
 			}
 
 			// Deduplicate: skip if this endpoint was already successfully registered.
 			if (localStorage.getItem(PUSH_FINGERPRINT_KEY) === subscriptionFingerprint(sub.endpoint)) {
-				console.info("[PUSH] pushsubscriptionchange: fingerprint unchanged — skipping");
 				return;
 			}
 
-			console.info("[PUSH] SW sent pushsubscriptionchange — re-registering with server");
 			try {
 				await doRegisterPush(sub);
 			} catch (e: any) {
@@ -357,13 +292,17 @@ export function setupSwMessageHandler() {
 		}
 
 		if (msg.type === "sw-ready") {
-			console.info("[PUSH] New SW activated (version:", msg.version, ")");
 			try {
 				const reg = await navigator.serviceWorker.getRegistration();
 				if (reg) await reg.update();
 			} catch {
 				/* non-fatal */
 			}
+			return;
+		}
+
+		if (msg.type === "notification_cleared") {
+			if (msg.notificationId) removeNotification(msg.notificationId);
 			return;
 		}
 	});

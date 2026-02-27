@@ -401,7 +401,7 @@ export function update(
 
 		if (!dontShowDialogs && !updateIsOnlyPatch && changelog !== "") openChangelog(changelog);
 
-		console.info("[AUTH] updater: queued migrations — " + updatesToDo.join(", "));
+		console.info("[AUTH] updater: queued migrations - " + updatesToDo.join(", "));
 
 		for (let v of updatesToDo) {
 			console.info("[AUTH] updater: running migration " + v);

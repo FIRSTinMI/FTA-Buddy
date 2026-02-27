@@ -68,7 +68,7 @@
 			<Icon icon="mdi:arrow-left" class="size-4 mr-1" />Back
 		</Button>
 		<h1 class="text-2xl font-bold text-black dark:text-white">
-			Team {teamNumber} — Full History
+			Team {teamNumber} - Full History
 		</h1>
 	</div>
 

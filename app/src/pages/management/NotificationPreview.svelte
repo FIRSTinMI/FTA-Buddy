@@ -351,7 +351,7 @@
 				<!-- Field table -->
 				<table class="w-full text-xs">
 					<tbody>
-						{#each [["title", payload.title], ["body", payload.body ?? "—"], ["tag", payload.tag ?? "—"], ["topic", payload.topic], ["id", payload.id], ["url", payload.data?.page || "(root)"], ["note_id", payload.data?.note_id ?? "—"]] as [label, val]}
+						{#each [["title", payload.title], ["body", payload.body ?? "-"], ["tag", payload.tag ?? "-"], ["topic", payload.topic], ["id", payload.id], ["url", payload.data?.page || "(root)"], ["note_id", payload.data?.note_id ?? "-"]] as [label, val]}
 							<tr class="border-b border-gray-100 dark:border-gray-700">
 								<td class="py-1.5 pr-3 font-mono text-gray-500 font-medium whitespace-nowrap"
 									>{label}</td

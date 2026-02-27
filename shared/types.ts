@@ -530,7 +530,7 @@ export interface Note {
 	text: string;
 	author_id: number;
 	author: Profile;
-	/** Nullable — EventNotes and MatchNotes may not be team-specific. */
+	/** Nullable - EventNotes and MatchNotes may not be team-specific. */
 	team: number | null;
 	note_type: "TeamIssue" | "EventNote" | "MatchNote";
 	resolution_status: FTAEventNoteResolutionType | null;

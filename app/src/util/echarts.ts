@@ -1,25 +1,25 @@
 /**
- * Modular ECharts barrel — registers only the components we use to minimize bundle size.
+ * Modular ECharts barrel - registers only the components we use to minimize bundle size.
  * Import `echarts` from this file instead of 'echarts' directly.
  */
-import * as echarts from "echarts/core";
 import { LineChart } from "echarts/charts";
-import { CanvasRenderer } from "echarts/renderers";
 import {
-	GridComponent,
-	TooltipComponent,
 	DataZoomComponent,
 	DataZoomInsideComponent,
 	DataZoomSliderComponent,
+	GridComponent,
 	ToolboxComponent,
+	TooltipComponent,
 } from "echarts/components";
+import * as echarts from "echarts/core";
+import { CanvasRenderer } from "echarts/renderers";
 
 import type { LineSeriesOption } from "echarts/charts";
 import type {
-	GridComponentOption,
-	TooltipComponentOption,
 	DataZoomComponentOption,
+	GridComponentOption,
 	ToolboxComponentOption,
+	TooltipComponentOption,
 } from "echarts/components";
 import type { ComposeOption } from "echarts/core";
 

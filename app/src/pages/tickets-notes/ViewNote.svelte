@@ -397,7 +397,7 @@
 					Select Match: <span class="text-xs text-gray-600">(optional)</span>
 					<Select
 						class="mt-2"
-						items={[{ value: undefined, name: "— None —" }, ...matches]}
+						items={[{ value: undefined, name: "- None -" }, ...matches]}
 						bind:value={matchIdVal}
 					/>
 				</Label>

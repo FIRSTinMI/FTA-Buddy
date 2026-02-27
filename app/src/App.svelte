@@ -40,10 +40,6 @@
 
 	// On mount check if the user's permissions have changed
 	onMount(async () => {
-		console.info(
-			`[AUTH] checkAuth on mount — token length: ${$user.token?.length ?? 0}, origin: ${window.location.origin}`,
-		);
-
 		try {
 			const checkAuth = await trpc.user.checkAuth.query({
 				token: $user.token,
@@ -51,7 +47,6 @@
 			});
 
 			if (checkAuth.user) {
-				console.info(`[AUTH] checkAuth OK — id: ${checkAuth.user.id}, username: ${checkAuth.user.username}`);
 				user.set({
 					...checkAuth.user,
 					token: $user.token,
@@ -62,10 +57,8 @@
 				// Non-blocking: run in background, errors are logged but don't affect startup.
 				ensurePushRegistration().catch(() => {});
 			} else {
-				// Server returned no user: token is invalid/expired — clear it.
-				// Common causes: token from wrong environment (dev vs prod), session pruned, or
-				// the v2.6.0 migration already cleared it on a previous boot.
-				console.warn("[AUTH] checkAuth returned no user — clearing token. Origin:", window.location.origin);
+				// Server returned no user: token is invalid/expired - clear it.
+				console.warn("[AUTH] Session invalid - clearing token.");
 				user.set({
 					email: "",
 					username: "",
@@ -77,7 +70,7 @@
 				});
 			}
 		} catch (err: any) {
-			// Network / server error — do NOT clear the token to avoid false logouts on flaky connections
+			// Network / server error - do NOT clear the token to avoid false logouts on flaky connections
 			console.warn("[AUTH] checkAuth request failed (not clearing token):", err.message);
 		}
 	});
@@ -222,7 +215,6 @@
 	async function checkVersion() {
 		const data = await trpc.app.version.query();
 		if (data !== settings.version) {
-			console.log("New version available");
 			updateNewVersion = data;
 			showUpdateToast = true;
 		}
@@ -232,7 +224,7 @@
 		versionPollInterval = setInterval(checkVersion, 60_000);
 		// Re-register push subscription when the browser rotates it (handled via SW message)
 		setupSwMessageHandler();
-		// Subscription is now driven by the $effect below — no need to start it here.
+		// Subscription is now driven by the $effect below - no need to start it here.
 	});
 	onDestroy(() => {
 		clearInterval(versionPollInterval);
@@ -240,16 +232,13 @@
 
 	// Reactively start/stop the notification SSE subscription when the auth token changes
 	// or when the notifications setting is toggled from anywhere (modal, settings screen, etc.).
-	// IMPORTANT: must read $settingsStore (reactive store ref) NOT the plain `settings` variable —
+	// IMPORTANT: must read $settingsStore (reactive store ref) NOT the plain `settings` variable -
 	// plain variable reassignment is invisible to $effect's dependency tracker.
 	$effect(() => {
 		const token = $user.token;
 		const wantsNotifications = $settingsStore.notifications;
 
 		if (token && wantsNotifications) {
-			// Call directly (no queueMicrotask) — the idempotency guard in startNotificationSubscription
-			// ensures repeated $effect runs with the same token are no-ops, preventing the loop.
-			console.info(`[PUSH] App effect: starting subscription (token length: ${token.length})`);
 			startNotificationSubscription();
 		} else {
 			stopNotificationSubscription();

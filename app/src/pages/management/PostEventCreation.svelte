@@ -26,6 +26,9 @@
 	let fmsPasswordSaving = false;
 	let fmsPasswordSaveError = "";
 	let fmsPasswordIsSet = false;
+	let fmsExtensionConnected = false;
+	let fmsLastSeenAt: Date | null = null;
+	let fmsStatusInterval: ReturnType<typeof setInterval> | null = null;
 
 	async function saveNexusApiKey() {
 		nexusSaving = true;
@@ -53,8 +56,7 @@
 		fmsPasswordSaveError = "";
 		try {
 			await trpc.event.setFmsEventPassword.mutate({ fmsEventPassword });
-			const status = await trpc.event.getFmsPasswordIsSet.query();
-			fmsPasswordIsSet = status.isSet;
+			await refreshFmsStatus();
 			fmsEventPassword = "";
 		} catch (e: any) {
 			fmsPasswordSaveError = e?.message ?? "Failed to save";
@@ -63,10 +65,12 @@
 		}
 	}
 
-	async function refreshFmsPasswordStatus() {
+	async function refreshFmsStatus() {
 		try {
-			const status = await trpc.event.getFmsPasswordIsSet.query();
-			fmsPasswordIsSet = status.isSet;
+			const status = await trpc.event.getFmsIntegrationStatus.query();
+			fmsPasswordIsSet = status.passwordConfigured;
+			fmsExtensionConnected = status.extensionConnected;
+			fmsLastSeenAt = status.lastSeenAt ? new Date(status.lastSeenAt) : null;
 		} catch {
 			/* ignore */
 		}
@@ -98,11 +102,13 @@
 		setTimeout(checkConnection, 200);
 		refreshNexusStatus();
 		nexusStatusInterval = setInterval(refreshNexusStatus, 30_000);
-		refreshFmsPasswordStatus();
+		refreshFmsStatus();
+		fmsStatusInterval = setInterval(refreshFmsStatus, 15_000);
 	});
 
 	onDestroy(() => {
 		if (nexusStatusInterval) clearInterval(nexusStatusInterval);
+		if (fmsStatusInterval) clearInterval(fmsStatusInterval);
 	});
 
 	function nexusStateColor(state: NexusStatus["state"] | undefined): "green" | "yellow" | "red" | "gray" | "blue" {
@@ -143,6 +149,38 @@
 				return "Event ended - polling stopped";
 			default:
 				return status.state;
+		}
+	}
+
+	type FmsIntegrationState = "not_configured" | "no_extension" | "ready";
+
+	function fmsIntegrationState(): FmsIntegrationState {
+		if (!fmsPasswordIsSet) return "not_configured";
+		if (!fmsExtensionConnected) return "no_extension";
+		return "ready";
+	}
+
+	function fmsIntegrationColor(): "green" | "yellow" | "gray" {
+		switch (fmsIntegrationState()) {
+			case "ready":
+				return "green";
+			case "no_extension":
+				return "yellow";
+			case "not_configured":
+				return "gray";
+		}
+	}
+
+	function fmsIntegrationLabel(): string {
+		switch (fmsIntegrationState()) {
+			case "ready":
+				return "Extension connected";
+			case "no_extension": {
+				const ago = fmsLastSeenAt ? ` (last seen ${fmsLastSeenAt.toLocaleTimeString()})` : " - never seen";
+				return `Password saved - no extension active${ago}`;
+			}
+			case "not_configured":
+				return "Not configured";
 		}
 	}
 </script>
@@ -297,9 +335,12 @@
 				{#if fmsPasswordSaveError}
 					<Helper color="red">{fmsPasswordSaveError}</Helper>
 				{/if}
-				{#if fmsPasswordIsSet}
-					<p class="text-xs text-green-400 mt-1">FMS event password is configured.</p>
-				{/if}
+				<div class="flex flex-col gap-1 py-3 border-t border-neutral-700 mt-2">
+					<span class="inline-flex items-center gap-2 text-sm">
+						<Indicator color={fmsIntegrationColor()} class="shrink-0" />
+						<span class="font-medium">{fmsIntegrationLabel()}</span>
+					</span>
+				</div>
 			</div>
 
 			<!-- WPA Kiosk Tool -->

@@ -32,7 +32,7 @@ export async function generateReport(format: ReportFormat, data: (string | numbe
 					// Remove http:// or https:// from the beginning
 					sanitized = host + url.pathname + url.search + url.hash;
 				} catch {
-					// Not a valid URL — fallback to regex check
+					// Not a valid URL - fallback to regex check
 					sanitized = sanitized.replace(/^https?:\/\//, "");
 					sanitized = sanitized.replace(/^www\./, "");
 				}

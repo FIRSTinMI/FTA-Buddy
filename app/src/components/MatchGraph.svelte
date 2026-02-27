@@ -74,7 +74,7 @@
 		{ label: `Red 3 - ${data.red3}`, color: "#ffd000", station: "red3" as const },
 	];
 
-	// Lane series (Auto/Teleop) — hidden from legend
+	// Lane series (Auto/Teleop) - hidden from legend
 	const laneDefs = [
 		{ name: "Auto", color: "rgb(54, 162, 235)", field: (f: MatchLog["log"][number]) => (f.auto ? 1.01 : null) },
 		{ name: "Teleop", color: "rgb(153, 102, 155)", field: (f: MatchLog["log"][number]) => (!f.auto ? 1.01 : null) },

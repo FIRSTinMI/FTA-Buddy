@@ -43,7 +43,7 @@
 		isSubmitting = true;
 		loading = true;
 
-		// Validate before hitting the network — reset loading in the guard branch
+		// Validate before hitting the network - reset loading in the guard branch
 		if (password !== verifyPassword) {
 			toast("Error", "Passwords do not match");
 			loading = false;
@@ -58,8 +58,6 @@
 				password,
 				role,
 			});
-
-			console.info(`[AUTH] createUser succeeded — id: ${res.id}, token length: ${res.token?.length ?? 0}`);
 
 			user.set({
 				token: res.token,
@@ -95,10 +93,7 @@
 		loading = true;
 
 		try {
-			console.info(`[AUTH] login attempt — email: ${email}`);
 			const res = await trpc.user.login.mutate({ email, password });
-
-			console.info(`[AUTH] login succeeded — id: ${res.id}, token length: ${res.token?.length ?? 0}`);
 
 			user.set({
 				token: res.token,
@@ -147,7 +142,6 @@
 			eventList = res.map((e) => ({ value: e.code, name: e.code }));
 			eventList.unshift({ value: "none", name: "None" });
 			eventList = eventList;
-			console.log(eventList);
 		});
 	}
 
@@ -161,7 +155,6 @@
 		}
 		try {
 			const res = await trpc.event.get.mutate({ code: $eventStore.code });
-			//console.log(res);
 			if (res.subEvents) {
 				user.set({ ...$user, eventToken: res.token, meshedEventToken: res.token });
 				eventStore.set({
@@ -183,9 +176,7 @@
 			}
 			eventCode = $eventStore.code;
 			eventPin = res.pin;
-			// Show notification prompt right after joining — closing the modal stays on this page.
 			if (!$settingsStore.notificationsDoNotAsk && Notification.permission !== "granted") {
-				pendingNavigateDest = null;
 				notificationModalOpen = true;
 			}
 		} catch (err: any) {
@@ -201,7 +192,6 @@
 		loading = true;
 
 		try {
-			console.info(`[AUTH] joinEvent — code: ${eventCode}`);
 			const res = await trpc.event.join.mutate({
 				code: eventCode,
 				pin: eventPin,
@@ -217,10 +207,8 @@
 					meshedEventCode: res.code,
 				});
 
-				// Flush store updates before navigating to avoid route guards seeing stale state
 				await tick();
-				console.info("[ROUTER] navigate → /dashboard");
-				goToApp("/dashboard");
+				navigate("/dashboard");
 			} else {
 				user.set({ ...$user, eventToken: res.token });
 				eventStore.set({
@@ -231,9 +219,7 @@
 				});
 
 				await tick();
-				const dest = $user.role === "FTA" || $user.role === "FTAA" ? "/monitor" : "/notepad";
-				console.info(`[ROUTER] navigate → ${dest}`);
-				goToApp(dest);
+				navigate($user.role === "FTA" || $user.role === "FTAA" ? "/monitor" : "/notepad");
 			}
 			toast("Success", "Event joined successfully", "green-500");
 		} catch (err: any) {
@@ -247,13 +233,10 @@
 
 	// @ts-ignore
 	window.googleLogin = async (googleUser: any) => {
-		console.info("[AUTH] googleLogin callback fired");
 		try {
 			const res = await trpc.user.googleLogin.mutate({
 				token: googleUser.credential,
 			});
-
-			console.info(`[AUTH] googleLogin succeeded — id: ${res.id}, token length: ${res.token?.length ?? 0}`);
 
 			user.set({
 				token: res.token,
@@ -269,7 +252,6 @@
 			toast("Success", "Logged in successfully", "green-500");
 		} catch (err: any) {
 			if (err.code === 404 || err.message.startsWith("User not found")) {
-				console.info("[AUTH] googleLogin: user not found, redirecting to google-signup");
 				user.set({
 					token: "",
 					eventToken: "",
@@ -289,25 +271,6 @@
 	};
 
 	let notificationModalOpen = $state(false);
-	// Destination to navigate to after the notification modal is dismissed.
-	let pendingNavigateDest = $state<string | null>(null);
-	function doNavigateAfterModal() {
-		notificationModalOpen = false;
-		if (pendingNavigateDest) {
-			const dest = pendingNavigateDest;
-			pendingNavigateDest = null;
-			navigate(dest);
-		}
-	}
-
-	function goToApp(dest: string) {
-		if (!$settingsStore.notificationsDoNotAsk && Notification.permission !== "granted") {
-			pendingNavigateDest = dest;
-			notificationModalOpen = true;
-		} else {
-			navigate(dest);
-		}
-	}
 
 	const ios = () => {
 		if (typeof window === `undefined` || typeof navigator === `undefined`) return false;
@@ -320,7 +283,7 @@
 	<script src="https://accounts.google.com/gsi/client" async></script>
 </svelte:head>
 
-<Modal bind:open={notificationModalOpen} outsideclose size="sm" onclose={doNavigateAfterModal}>
+<Modal bind:open={notificationModalOpen} outsideclose size="sm" onclose={() => (notificationModalOpen = false)}>
 	<h1 class="font-bold text-xl">Enable Notifications</h1>
 	<h2>Enable to get notifications for Tickets, and/or when a robot loses connection during a match</h2>
 	{#if $installPrompt}
@@ -346,31 +309,22 @@
 		class="w-fit"
 		size="sm"
 		onclick={async () => {
-			console.info("[PUSH] Grant button clicked — requesting permission…");
 			try {
-				// If already granted (e.g. user allowed via the address-bar bell icon in Edge),
-				// skip re-prompting and proceed directly.
 				let result = Notification.permission;
 				if (result !== "granted") {
 					result = await Notification.requestPermission();
 				}
-				console.info(`[PUSH] Permission result: ${result}`);
 				if (result === "granted") {
-					// Setting notifications=true triggers the $effect in App.svelte which calls
-					// startNotificationSubscription() — do NOT call it here too or we get two connections.
 					$settingsStore.notifications = true;
-					// Register this browser's push endpoint with the server (for background/FCM push)
 					await subscribeToPush();
-					doNavigateAfterModal();
+					notificationModalOpen = false;
 				} else if (result === "denied") {
 					toast(
 						"Notifications blocked",
 						"Open browser site settings and set Notifications to Allow, then try again.",
 					);
-					doNavigateAfterModal();
+					notificationModalOpen = false;
 				} else {
-					// "default" — browser suppressed the popup (Edge/Chrome quiet notifications).
-					// The user needs to click the bell/lock icon in the address bar.
 					toast(
 						"Notifications",
 						"No popup? Look for a bell or lock icon in your browser's address bar and click Allow there, then press this button again.",
@@ -383,13 +337,8 @@
 			}
 		}}>Grant Notification Permissions</Button
 	>
-	<Button
-		color="primary"
-		class="w-fit"
-		size="sm"
-		onclick={() => {
-			doNavigateAfterModal();
-		}}>No, Thank You</Button
+	<Button color="primary" class="w-fit" size="sm" onclick={() => (notificationModalOpen = false)}
+		>No, Thank You</Button
 	>
 	<Button
 		color="primary"
@@ -397,7 +346,7 @@
 		size="sm"
 		onclick={() => {
 			$settingsStore.notificationsDoNotAsk = true;
-			doNavigateAfterModal();
+			notificationModalOpen = false;
 		}}>Do Not Ask Again</Button
 	>
 	<p class="text-sm">You can change which types of notifications you are subscribed to from the Settings screen</p>
@@ -581,7 +530,7 @@
 				<Button onclick={() => navigate("/")}>Go to App</Button>
 				<Button outline onclick={() => navigate("/manage/event-created")}>Event Management</Button>
 				<Button outline href="/manage/meshed-event">Create Meshed Event</Button>
-				<Button outline href="/manage/manage">App Management</Button>
+				<Button outline href="/manage">App Management</Button>
 			</div>
 
 			<!-- Currently have an event selected -->

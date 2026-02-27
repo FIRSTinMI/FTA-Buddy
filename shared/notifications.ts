@@ -1,25 +1,8 @@
-/**
- * Notification builder — pure function, no DB calls.
- * Importable from both server (src/) and client (app/src/).
- *
- * Usage:
- *   import { buildNotification, toNoteCtx } from "../../shared/notifications";
- *   const payload = buildNotification({ kind: "note.created", note: toNoteCtx(row), author: "Filip" });
- *   createNotification(userIds, payload);  // server side
- *   toast(payload.short ?? payload.title, payload.body ?? "");  // client side
- *
- * To add a new kind:
- *   1. Add a string literal to NotificationKind.
- *   2. Add a context type to NotificationContext.
- *   3. Add a case to the switch in buildNotification().
- *   4. Add a topic mapping to TOPIC_FOR_KIND.
- */
+// Pure notification builder - no DB calls. Importable from server and client.
 
 import type { Notification, TournamentLevel } from "./types";
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Kinds
-// ─────────────────────────────────────────────────────────────────────────────
 
 export type NotificationKind =
 	| "note.created"
@@ -34,9 +17,7 @@ export type NotificationKind =
 
 export type Urgency = "low" | "normal" | "high";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Per-note context (reused across many kinds)
-// ─────────────────────────────────────────────────────────────────────────────
+// Per-kind note context
 
 export interface NoteContext {
 	noteId: string;
@@ -48,9 +29,7 @@ export interface NoteContext {
 	tournamentLevel: TournamentLevel | null;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Discriminated union of per-kind context objects
-// ─────────────────────────────────────────────────────────────────────────────
 
 export type NotificationContext =
 	| { kind: "note.created"; note: NoteContext; author: string }
@@ -63,9 +42,7 @@ export type NotificationContext =
 	| { kind: "event.general"; title: string; body: string }
 	| { kind: "robot.warning"; station: string; team: number | null; warning: string };
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Internal formatting helpers
-// ─────────────────────────────────────────────────────────────────────────────
 
 const MAX_TITLE = 50;
 const MAX_BODY = 120;
@@ -74,11 +51,6 @@ function trunc(s: string, max: number): string {
 	return s.length <= max ? s : s.slice(0, max - 1) + "…";
 }
 
-/**
- * Format a tournament match into a compact abbreviation.
- * Examples: "Q32", "P3", "P3-2", "Prac1"
- * Returns null when matchNumber is absent / 0.
- */
 export function formatMatchId(
 	level: TournamentLevel | null | undefined,
 	matchNumber: number | null | undefined,
@@ -124,9 +96,7 @@ const TOPIC_FOR_KIND: Record<NotificationKind, Notification["topic"]> = {
 	"robot.warning": "Robot-Status",
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Main builder
-// ─────────────────────────────────────────────────────────────────────────────
 
 export function buildNotification(ctx: NotificationContext): Notification {
 	const now = new Date();
@@ -276,9 +246,7 @@ export function buildNotification(ctx: NotificationContext): Notification {
 	};
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helper: extract NoteContext from a Note-shaped DB row or client Note object
-// ─────────────────────────────────────────────────────────────────────────────
+// Helper: build NoteContext from a DB note row
 
 export function toNoteCtx(note: {
 	id: string;

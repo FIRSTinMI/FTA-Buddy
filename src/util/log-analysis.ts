@@ -335,7 +335,7 @@ export async function logAnalysisLoop(limit: number) {
 					)
 					.execute();
 			}
-			// If no events and not bypassed, skip — don't insert anything
+			// If no events and not bypassed, skip - don't insert anything
 		}
 		await db.update(matchLogs).set({ analyzed: true }).where(eq(matchLogs.id, log.id)).execute();
 	}

@@ -53,7 +53,7 @@
 		{ name: "DS", color: "rgb(75, 192, 192)", width: 1, field: (f: FMSLogFrame) => (f.dsLinkActive ? 1 : null) },
 	];
 
-	// Custom legend state — tracks which metric series are visible
+	// Custom legend state - tracks which metric series are visible
 	let visibleSeries: Record<string, boolean> = $state({});
 	for (const s of metricSeries) {
 		// svelte-ignore state_referenced_locally
@@ -174,7 +174,7 @@
 					}
 
 					let html = `<div style="text-align:left">`;
-					html += `<div style="margin-bottom:4px"><b>${frame.matchTime}s</b> — ${status}</div>`;
+					html += `<div style="margin-bottom:4px"><b>${frame.matchTime}s</b> - ${status}</div>`;
 					for (const p of params) {
 						// Skip lane series
 						if (laneSeries.some((l) => l.name === p.seriesName)) continue;

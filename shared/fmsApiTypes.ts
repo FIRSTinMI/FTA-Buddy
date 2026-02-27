@@ -8,7 +8,7 @@
  * (e.g. "2/17/2026 10:38:46 PM"). They are typed as `string` here.
  *
  * `recordVersion` is a C# `ulong` used for optimistic concurrency. FMS
- * returns it as an opaque JSON value (number | null) — it must be echoed
+ * returns it as an opaque JSON value (number | null) - it must be echoed
  * back unchanged on modify/delete calls.
  */
 
@@ -118,13 +118,13 @@ export interface FTABypassStatusInfoTeam {
 }
 
 // ---------------------------------------------------------------------------
-// Note models — GET (read) responses
+// Note models - GET (read) responses
 // ---------------------------------------------------------------------------
 
 /** Event-level note returned by Api_GetEventNote (EventNoteModel). */
 export interface FTAEventNoteModel {
 	note: string;
-	/** UUID. Optional per spec — absent on some older records. */
+	/** UUID. Optional per spec - absent on some older records. */
 	noteId?: string;
 	/** FMS date string: "M/d/yyyy h:mm:ss tt" */
 	timeAdded?: string | null;
@@ -133,7 +133,7 @@ export interface FTAEventNoteModel {
 	isDeleted: boolean;
 	whoAdded: string;
 	whoUpdated: string;
-	/** Opaque ulong from C# — echo back unchanged on modify. */
+	/** Opaque ulong from C# - echo back unchanged on modify. */
 	recordVersion: number | null;
 }
 
@@ -179,7 +179,7 @@ export interface FTATeamIssueModel {
 export interface FTANoteCreatedUpdatedModel {
 	/** UUID of the created/updated note. Optional per spec. */
 	noteId?: string;
-	/** Opaque ulong — store and echo back on subsequent modify calls. */
+	/** Opaque ulong - store and echo back on subsequent modify calls. */
 	recordVersion: number | null;
 }
 
@@ -194,7 +194,7 @@ export interface FTAEventNoteCreateModifyModel {
 	note: string;
 	/** Required for modify. Omit (or null) for create. */
 	noteId?: string | null;
-	/** Required for modify — prevents stale overwrites. */
+	/** Required for modify - prevents stale overwrites. */
 	recordVersion?: number | null;
 }
 
@@ -353,7 +353,7 @@ export interface FTANoteModel {
 	RecordVersion: number | null;
 	/** Identifies the calling device/user. */
 	FMSDeviceIdentification: string;
-	/** ISO 8601 timestamp — set to the time of the operation. */
+	/** ISO 8601 timestamp - set to the time of the operation. */
 	CurrentTimeStamp: string;
 	/**
 	 * ISO 8601 timestamp returned by `GetPreviousTimeStamp` before the operation.

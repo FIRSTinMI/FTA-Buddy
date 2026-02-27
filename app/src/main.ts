@@ -75,7 +75,7 @@ export let trpc = createTRPCClient<AppRouter>({ links: buildLinks(token, eventTo
 userStore.subscribe((value) => {
 	token = value.token;
 	eventToken = value.eventToken;
-	console.info(`[AUTH] trpc client rebuilt — token length: ${token?.length ?? 0}, origin: ${window.location.origin}`);
+	console.info(`[AUTH] trpc client rebuilt - token length: ${token?.length ?? 0}, origin: ${window.location.origin}`);
 	trpc = createTRPCClient<AppRouter>({ links: buildLinks(token, eventToken) });
 });
 

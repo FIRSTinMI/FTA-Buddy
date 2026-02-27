@@ -20,7 +20,6 @@ export const { p, navigate, isActive, preload, route } = createRouter({
 	"/manage/event-created": () => import("./pages/management/PostEventCreation.svelte"),
 	"/manage/google-signup": () => import("./pages/management/CompleteGoogleSignup.svelte"),
 	"/manage/meshed-event": () => import("./pages/management/MeshedEvent.svelte"),
-	"/manage/notification-preview": () => import("./pages/management/NotificationPreview.svelte"),
 
 	"/logs": () => import("./pages/match-logs/MatchLogsList.svelte"),
 	"/logs/:matchid": () => import("./pages/match-logs/MatchLog.svelte"),

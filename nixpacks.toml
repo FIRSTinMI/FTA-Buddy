@@ -1,0 +1,17 @@
+# Nixpacks / Coolify build configuration
+# Uses Bun for both root and app installs to avoid npm ci + native addon issues.
+
+[phases.setup]
+nixPkgs = ["bun"]
+
+[phases.install]
+cmds = [
+  "bun install --frozen-lockfile",
+  "cd app && bun install --frozen-lockfile",
+]
+
+[phases.build]
+cmds = ["bun run build"]
+
+[start]
+cmd = "bun run start"

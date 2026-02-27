@@ -1,695 +1,620 @@
 import { EventEmitter } from "events";
 import { TypedEmitter } from "tiny-typed-emitter";
+import { FTAEventNoteIssueType, FTAEventNoteResolutionType } from "./fmsApiTypes";
 
 export interface MonitorFrame {
-    field: FieldState;
-    match: number;
-    play: number;
-    level: TournamentLevel;
-    time: string;
-    version: string;
-    frameTime: number;
-    blue1: RobotInfo;
-    blue2: RobotInfo;
-    blue3: RobotInfo;
-    red1: RobotInfo;
-    red2: RobotInfo;
-    red3: RobotInfo;
-    lastCycleTime: string;
-    matchScheduledStartTime?: Date;
-    exactAheadBehind?: string;
+	field: FieldState;
+	match: number;
+	play: number;
+	level: TournamentLevel;
+	time: string;
+	version: string;
+	frameTime: number;
+	blue1: RobotInfo;
+	blue2: RobotInfo;
+	blue3: RobotInfo;
+	red1: RobotInfo;
+	red2: RobotInfo;
+	red3: RobotInfo;
+	lastCycleTime: string;
+	matchScheduledStartTime?: Date;
+	exactAheadBehind?: string;
 }
 
 type PartialBy<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>> & Partial<Pick<T, K>>;
 
-export interface PartialMonitorFrame extends Omit<MonitorFrame, 'blue1' | 'blue2' | 'blue3' | 'red1' | 'red2' | 'red3'> {
-    blue1: PartialRobotInfo;
-    blue2: PartialRobotInfo;
-    blue3: PartialRobotInfo;
-    red1: PartialRobotInfo;
-    red2: PartialRobotInfo;
-    red3: PartialRobotInfo;
+export interface PartialMonitorFrame extends Omit<
+	MonitorFrame,
+	"blue1" | "blue2" | "blue3" | "red1" | "red2" | "red3"
+> {
+	blue1: PartialRobotInfo;
+	blue2: PartialRobotInfo;
+	blue3: PartialRobotInfo;
+	red1: PartialRobotInfo;
+	red2: PartialRobotInfo;
+	red3: PartialRobotInfo;
 }
 
-export type PartialRobotInfo = PartialBy<RobotInfo, 'lastChange' | 'improved' | 'warnings'>;
+export type PartialRobotInfo = PartialBy<RobotInfo, "lastChange" | "improved" | "warnings">;
 
 export interface RobotInfo {
-    number: number;
-    ds: DSState;
-    radio: boolean;
-    rio: boolean;
-    code: boolean;
-    enabled: EnableState;
-    bwu: number;
-    battery: number;
-    ping: number;
-    packets: number;
-    MAC: string | null;
-    RX: number | null;
-    RXMCS: number | null;
-    TX: number | null;
-    TXMCS: number | null;
-    SNR: number | null;
-    noise: number | null;
-    signal: number | null;
-    versionmm: boolean;
-    lastChange: Date | null;
-    improved: boolean;
-    warnings: RobotWarnings[];
-    radioConnectionQuality: 'Warning' | 'Caution' | 'Good' | 'Excellent' | null;
-    radioConnected: boolean | null;
-    versionData?: {
-        VersionTag: 'DSVersion' | 'WPILibVersion' | 'RIOVersion',
-        Version: string,
-        Status: 'preferred' | 'unknown';
-    };
+	number: number;
+	ds: DSState;
+	radio: boolean;
+	rio: boolean;
+	code: boolean;
+	enabled: EnableState;
+	bwu: number;
+	battery: number;
+	ping: number;
+	packets: number;
+	MAC: string | null;
+	RX: number | null;
+	RXMCS: number | null;
+	TX: number | null;
+	TXMCS: number | null;
+	SNR: number | null;
+	noise: number | null;
+	signal: number | null;
+	versionmm: boolean;
+	lastChange: Date | null;
+	improved: boolean;
+	warnings: RobotWarnings[];
+	radioConnectionQuality: "Warning" | "Caution" | "Good" | "Excellent" | null;
+	radioConnected: boolean | null;
+	versionData?: {
+		VersionTag: "DSVersion" | "WPILibVersion" | "RIOVersion";
+		Version: string;
+		Status: "preferred" | "unknown";
+	};
 }
 
 export enum RobotWarnings {
-    NOT_INSPECTED,
-    RADIO_NOT_FLASHED,
-    SLOW,
-    OPEN_TICKET,
-    RECENT_TICKET
+	NOT_INSPECTED,
+	RADIO_NOT_FLASHED,
+	SLOW,
+	OPEN_NOTE,
+	RECENT_NOTE,
 }
 
 export enum ROBOT {
-    blue1 = 'blue1',
-    blue2 = 'blue2',
-    blue3 = 'blue3',
-    red1 = 'red1',
-    red2 = 'red2',
-    red3 = 'red3'
+	blue1 = "blue1",
+	blue2 = "blue2",
+	blue3 = "blue3",
+	red1 = "red1",
+	red2 = "red2",
+	red3 = "red3",
 }
 
 export enum FieldState {
-    UNKNOWN,
-    MATCH_RUNNING_TELEOP,
-    MATCH_TRANSITIONING,
-    MATCH_RUNNING_AUTO,
-    MATCH_READY,
-    PRESTART_COMPLETED,
-    PRESTART_INITIATED,
-    READY_TO_PRESTART,
-    MATCH_ABORTED,
-    MATCH_OVER,
-    READY_FOR_POST_RESULT,
-    MATCH_NOT_READY
+	UNKNOWN,
+	MATCH_RUNNING_TELEOP,
+	MATCH_TRANSITIONING,
+	MATCH_RUNNING_AUTO,
+	MATCH_READY,
+	PRESTART_COMPLETED,
+	PRESTART_INITIATED,
+	READY_TO_PRESTART,
+	MATCH_ABORTED,
+	MATCH_OVER,
+	READY_FOR_POST_RESULT,
+	MATCH_NOT_READY,
 }
 
 export enum MatchState {
-    RUNNING,
-    OVER,
-    PRESTART
+	RUNNING,
+	OVER,
+	PRESTART,
 }
 
 export const MatchStateMap: { [key in FieldState]: MatchState } = {
-    [FieldState.MATCH_RUNNING_TELEOP]: MatchState.RUNNING,
-    [FieldState.MATCH_TRANSITIONING]: MatchState.RUNNING,
-    [FieldState.MATCH_RUNNING_AUTO]: MatchState.RUNNING,
-    [FieldState.MATCH_READY]: MatchState.PRESTART,
-    [FieldState.PRESTART_COMPLETED]: MatchState.PRESTART,
-    [FieldState.PRESTART_INITIATED]: MatchState.PRESTART,
-    [FieldState.READY_TO_PRESTART]: MatchState.PRESTART,
-    [FieldState.MATCH_ABORTED]: MatchState.OVER,
-    [FieldState.MATCH_OVER]: MatchState.OVER,
-    [FieldState.READY_FOR_POST_RESULT]: MatchState.OVER,
-    [FieldState.MATCH_NOT_READY]: MatchState.PRESTART,
-    [FieldState.UNKNOWN]: MatchState.PRESTART
+	[FieldState.MATCH_RUNNING_TELEOP]: MatchState.RUNNING,
+	[FieldState.MATCH_TRANSITIONING]: MatchState.RUNNING,
+	[FieldState.MATCH_RUNNING_AUTO]: MatchState.RUNNING,
+	[FieldState.MATCH_READY]: MatchState.PRESTART,
+	[FieldState.PRESTART_COMPLETED]: MatchState.PRESTART,
+	[FieldState.PRESTART_INITIATED]: MatchState.PRESTART,
+	[FieldState.READY_TO_PRESTART]: MatchState.PRESTART,
+	[FieldState.MATCH_ABORTED]: MatchState.OVER,
+	[FieldState.MATCH_OVER]: MatchState.OVER,
+	[FieldState.READY_FOR_POST_RESULT]: MatchState.OVER,
+	[FieldState.MATCH_NOT_READY]: MatchState.PRESTART,
+	[FieldState.UNKNOWN]: MatchState.PRESTART,
 };
 
-
 export enum DSState {
-    RED,
-    GREEN,
-    GREEN_X,
-    MOVE_STATION,
-    WAITING,
-    BYPASS,
-    ESTOP,
-    ASTOP
+	RED,
+	GREEN,
+	GREEN_X,
+	MOVE_STATION,
+	WAITING,
+	BYPASS,
+	ESTOP,
+	ASTOP,
 }
 
 export enum EnableState {
-    RED,
-    RED_A,
-    RED_T,
-    GREEN_A,
-    GREEN_T,
-    ESTOP,
-    ASTOP
+	RED,
+	RED_A,
+	RED_T,
+	GREEN_A,
+	GREEN_T,
+	ESTOP,
+	ASTOP,
 }
 
-export type MonitoredRobotParts = Omit<keyof RobotInfo, 'number' | 'bwu' | 'battery' | 'ping' | 'packets' | 'MAC' | 'RX' | 'RXMCS' | 'TX' | 'TXMCS' | 'SNR' | 'noise' | 'signal' | 'versionmm'>;
+export type MonitoredRobotParts = Omit<
+	keyof RobotInfo,
+	| "number"
+	| "bwu"
+	| "battery"
+	| "ping"
+	| "packets"
+	| "MAC"
+	| "RX"
+	| "RXMCS"
+	| "TX"
+	| "TXMCS"
+	| "SNR"
+	| "noise"
+	| "signal"
+	| "versionmm"
+>;
 
 export enum StateChangeType {
-    FallingEdge,
-    RisingEdge,
+	FallingEdge,
+	RisingEdge,
 }
 
 export interface StateChange {
-    station: ROBOT,
-    robot: RobotInfo,
-    key: MonitoredRobotParts,
-    oldValue: boolean | DSState | EnableState,
-    newValue: boolean | DSState | EnableState;
-    type: StateChangeType;
+	station: ROBOT;
+	robot: RobotInfo;
+	key: MonitoredRobotParts;
+	oldValue: boolean | DSState | EnableState;
+	newValue: boolean | DSState | EnableState;
+	type: StateChangeType;
 }
 
 export interface SignalRMonitorFrame {
-    Alliance: "Red" | "Blue";
-    Station: FMSEnums.StationType;
-    TeamNumber: number;
-    Connection: boolean;
-    LinkActive: boolean;
-    DSLinkActive: boolean;
-    RadioLink: boolean;
-    RIOLink: boolean;
-    IsEnabled: boolean;
-    IsAuto: boolean;
-    IsBypassed: boolean;
-    IsEStopPressed: boolean;
-    IsEStopped: boolean;
-    Battery: number;
-    MonitorStatus: FMSEnums.MonitorStatusType;
-    AverageTripTime: number;
-    LostPackets: number;
-    Signal: number;
-    Noise: number;
-    SNR: number;
-    Inactivity: number;
-    MACAddress: string | null,
-    TxRate: number;
-    TxMCS: number;
-    TxMCSBandWidth: number;
-    TxVHT: number | null,
-    TxVHTNSS: boolean | null,
-    TxPackets: number;
-    RxRate: number;
-    RxMCS: number;
-    RxMCSBandWidth: number;
-    RxVHT: number | null,
-    RxVHTNSS: boolean | null,
-    RxPackets: number;
-    DataRateTotal: number;
-    DataRateToRobot: number;
-    DataRateFromRobot: number;
-    BWUtilization: FMSEnums.BWUtilizationType,
-    WPAKeyStatus: FMSEnums.WPAKeyStatusType,
-    DriverStationIsOfficial: boolean;
-    StationStatus: 'Good' | 'WrongStation' | 'Waiting' | 'Unknown',
-    Brownout: boolean;
-    EStopSource: string,
-    IsAStopPressed: boolean;
-    IsAStopped: boolean;
-    MoveToStation: string | null;
-    RadioConnectionQuality: 'Warning' | 'Caution' | 'Good' | 'Excellent' | null;
-    RadioConnectedToAp: boolean | null;
+	Alliance: "Red" | "Blue";
+	Station: FMSEnums.StationType;
+	TeamNumber: number;
+	Connection: boolean;
+	LinkActive: boolean;
+	DSLinkActive: boolean;
+	RadioLink: boolean;
+	RIOLink: boolean;
+	IsEnabled: boolean;
+	IsAuto: boolean;
+	IsBypassed: boolean;
+	IsEStopPressed: boolean;
+	IsEStopped: boolean;
+	Battery: number;
+	MonitorStatus: FMSEnums.MonitorStatusType;
+	AverageTripTime: number;
+	LostPackets: number;
+	Signal: number;
+	Noise: number;
+	SNR: number;
+	Inactivity: number;
+	MACAddress: string | null;
+	TxRate: number;
+	TxMCS: number;
+	TxMCSBandWidth: number;
+	TxVHT: number | null;
+	TxVHTNSS: boolean | null;
+	TxPackets: number;
+	RxRate: number;
+	RxMCS: number;
+	RxMCSBandWidth: number;
+	RxVHT: number | null;
+	RxVHTNSS: boolean | null;
+	RxPackets: number;
+	DataRateTotal: number;
+	DataRateToRobot: number;
+	DataRateFromRobot: number;
+	BWUtilization: FMSEnums.BWUtilizationType;
+	WPAKeyStatus: FMSEnums.WPAKeyStatusType;
+	DriverStationIsOfficial: boolean;
+	StationStatus: "Good" | "WrongStation" | "Waiting" | "Unknown";
+	Brownout: boolean;
+	EStopSource: string;
+	IsAStopPressed: boolean;
+	IsAStopped: boolean;
+	MoveToStation: string | null;
+	RadioConnectionQuality: "Warning" | "Caution" | "Good" | "Excellent" | null;
+	RadioConnectedToAp: boolean | null;
 }
 
 export interface FMSLogFrame {
-    timeStamp: string,
-    matchTimeBase: number,
-    matchTime: number,
-    auto: boolean,
-    dsLinkActive: boolean,
-    enabled: boolean,
-    aStopPressed: boolean,
-    eStopPressed: boolean,
-    linkActive: boolean,
-    radioLink: boolean,
-    rioLink: boolean,
-    averageTripTime: number,
-    lostPackets: number,
-    sentPackets: number,
-    battery: number,
-    brownout: boolean,
-    signal: number | null,
-    noise: number | null,
-    snr: number | null,
-    txRate: number | null,
-    txMCS: number | null,
-    rxRate: number | null,
-    rxMCS: number | null,
-    dataRateTotal: number;
+	timeStamp: string;
+	matchTimeBase: number;
+	matchTime: number;
+	auto: boolean;
+	dsLinkActive: boolean;
+	enabled: boolean;
+	aStopPressed: boolean;
+	eStopPressed: boolean;
+	linkActive: boolean;
+	radioLink: boolean;
+	rioLink: boolean;
+	averageTripTime: number;
+	lostPackets: number;
+	sentPackets: number;
+	battery: number;
+	brownout: boolean;
+	signal: number | null;
+	noise: number | null;
+	snr: number | null;
+	txRate: number | null;
+	txMCS: number | null;
+	rxRate: number | null;
+	rxMCS: number | null;
+	dataRateTotal: number;
 }
 
 export interface MatchLog {
-    blue1: number;
-    blue2: number;
-    blue3: number;
-    red1: number;
-    red2: number;
-    red3: number;
-    level: string;
-    match_number: number;
-    play_number: number;
-    start_time: Date;
-    log: {
-        matchTime: number;
-        matchTimeBase: number;
-        timeStamp: Date;
-        auto: boolean;
-        blue1: FMSLogFrame | null;
-        blue2: FMSLogFrame | null;
-        blue3: FMSLogFrame | null;
-        red1: FMSLogFrame | null;
-        red2: FMSLogFrame | null;
-        red3: FMSLogFrame | null;
-    }[];
+	blue1: number;
+	blue2: number;
+	blue3: number;
+	red1: number;
+	red2: number;
+	red3: number;
+	level: string;
+	match_number: number;
+	play_number: number;
+	start_time: Date;
+	log: {
+		matchTime: number;
+		matchTimeBase: number;
+		timeStamp: Date;
+		auto: boolean;
+		blue1: FMSLogFrame | null;
+		blue2: FMSLogFrame | null;
+		blue3: FMSLogFrame | null;
+		red1: FMSLogFrame | null;
+		red2: FMSLogFrame | null;
+		red3: FMSLogFrame | null;
+	}[];
 }
 
 export interface FMSMatch {
-    actualStartTime: string,
-    dayNumber: number,
-    description: string, // "Test Match"
-    fmsEventId: string,
-    fmsMatchId: string,
-    matchNumber: number,
-    playNumber: number,
-    startTime: string,
-    teamNumberBlue1: number,
-    teamNumberBlue2: number,
-    teamNumberBlue3: number,
-    teamNumberRed1: number,
-    teamNumberRed2: number,
-    teamNumberRed3: number,
-    tournamentLevel: TournamentLevel;
+	actualStartTime: string;
+	dayNumber: number;
+	description: string; // "Test Match"
+	fmsEventId: string;
+	fmsMatchId: string;
+	matchNumber: number;
+	playNumber: number;
+	startTime: string;
+	teamNumberBlue1: number;
+	teamNumberBlue2: number;
+	teamNumberBlue3: number;
+	teamNumberRed1: number;
+	teamNumberRed2: number;
+	teamNumberRed3: number;
+	tournamentLevel: TournamentLevel;
 }
 
 export type TournamentLevel = "None" | "Practice" | "Qualification" | "Playoff";
 
 export namespace FMSEnums {
-    export enum Level {
-        None = 0,
-        Practice = 1,
-        Qualification = 2,
-        Playoff = 3
-    }
+	export enum Level {
+		None = 0,
+		Practice = 1,
+		Qualification = 2,
+		Playoff = 3,
+	}
 
-    export enum AllianceType {
-        None = 0,
-        Red = 1,
-        Blue = 2
-    }
+	export enum AllianceType {
+		None = 0,
+		Red = 1,
+		Blue = 2,
+	}
 
-    export enum StationType {
-        None = 0,
-        Station1 = 1,
-        Station2 = 2,
-        Station3 = 3
-    }
+	export enum StationType {
+		None = 0,
+		Station1 = 1,
+		Station2 = 2,
+		Station3 = 3,
+	}
 
-    export enum MonitorStatusType {
-        Unknown,
-        EStopped,
-        AStopped,
-        DisabledAuto,
-        DisabledTeleop,
-        EnabledAuto,
-        EnabledTeleop
-    }
+	export enum MonitorStatusType {
+		Unknown,
+		EStopped,
+		AStopped,
+		DisabledAuto,
+		DisabledTeleop,
+		EnabledAuto,
+		EnabledTeleop,
+	}
 
-    export enum BWUtilizationType {
-        Low,
-        Medium,
-        High,
-        VeryHigh
-    }
+	export enum BWUtilizationType {
+		Low,
+		Medium,
+		High,
+		VeryHigh,
+	}
 
-    export enum WPAKeyStatusType {
-        NotTested,
-        UsedInConnectionTest,
-        UsedInMatch
-    }
+	export enum WPAKeyStatusType {
+		NotTested,
+		UsedInConnectionTest,
+		UsedInMatch,
+	}
 
-    export enum StationStatusType {
-        Good,
-        WrongStation,
-        WrongMatch,
-        Unknown
-    }
+	export enum StationStatusType {
+		Good,
+		WrongStation,
+		WrongMatch,
+		Unknown,
+	}
 }
 
 export const FMSLevelMap: { [key in FMSEnums.Level]: "None" | "Practice" | "Qualification" | "Playoff" } = {
-    [FMSEnums.Level.None]: "None",
-    [FMSEnums.Level.Practice]: "Practice",
-    [FMSEnums.Level.Qualification]: "Qualification",
-    [FMSEnums.Level.Playoff]: "Playoff"
+	[FMSEnums.Level.None]: "None",
+	[FMSEnums.Level.Practice]: "Practice",
+	[FMSEnums.Level.Qualification]: "Qualification",
+	[FMSEnums.Level.Playoff]: "Playoff",
 };
 
-export interface TeamChecklist { present: boolean, weighed: boolean, inspected: boolean, radioProgrammed: boolean, connectionTested: boolean; }
-export type EventChecklist = { [key: string]: TeamChecklist; };
-export type TeamList = ({ number: string, name: string, inspected: boolean; })[];
+export interface TeamChecklist {
+	present: boolean;
+	weighed: boolean;
+	inspected: boolean;
+	radioProgrammed: boolean;
+	connectionTested: boolean;
+}
+export type EventChecklist = { [key: string]: TeamChecklist };
+export type TeamList = { number: string; name: string; inspected: boolean }[];
 
-export type NexusPollState = 'not_configured' | 'polling' | 'polling_slow' | 'unauthorized' | 'error' | 'complete' | 'event_over';
+export type NexusPollState =
+	| "not_configured"
+	| "polling"
+	| "polling_slow"
+	| "unauthorized"
+	| "error"
+	| "complete"
+	| "event_over";
 
 export interface NexusStatus {
-    state: NexusPollState;
-    lastSuccessAt?: Date;
-    lastErrorAt?: Date;
-    lastErrorMessage?: string;
-    intervalMinutes: 2 | 30;
-    isAllInspected: boolean;
+	state: NexusPollState;
+	lastSuccessAt?: Date;
+	lastErrorAt?: Date;
+	lastErrorMessage?: string;
+	intervalMinutes: 2 | 30;
+	isAllInspected: boolean;
 }
 
 export interface ServerEvent {
-    code: string,
-    name: string,
-    pin: string,
-    token: string,
-    year: number,
-    fieldMonitorEmitter: EventEmitter,
-    robotStateChangeEmitter: EventEmitter,
-    fieldStatusEmitter: EventEmitter,
-    checklistEmitter: EventEmitter,
-    ticketUpdateEmitter: TypedEmitter<TicketUpdateEvents>,
-    cycleEmitter: EventEmitter,
-    teams: TeamList,
-    checklist: EventChecklist,
-    users: Profile[],
-    monitorFrame: MonitorFrame,
-    history: MonitorFrame[],
-    scheduleDetails: ScheduleDetails,
-    lastPrestartDone: Date | null,
-    lastMatchStart: Date | null,
-    lastMatchEnd: Date | null,
-    lastMatchRefDone: Date | null,
-    lastMatchScoresPosted: Date | null;
-    robotCycleTracking: {
-        prestart?: Date,
-        blue1?: RobotCycleTracking,
-        blue2?: RobotCycleTracking,
-        blue3?: RobotCycleTracking,
-        red1?: RobotCycleTracking,
-        red2?: RobotCycleTracking,
-        red3?: RobotCycleTracking;
-    };
-    tickets: Ticket[],
-    notes: Note[],
-    meshedEvent: boolean,
-    subEvents?: { code: string, label: string, token: string, teams: TeamList, pin: string, users: Profile[]; }[];
-    slackChannel?: string;
-    slackTeam?: string;
-    publicTicketSubmit: boolean;
-    nexusApiKey?: string;
-    startDate?: string;
-    endDate?: string;
-    nexus: NexusStatus;
-    stats: {
-        extensions: {
-            id: string,
-            lastFrame: Date,
-            frames: number,
-            checklistUpdates: number,
-            ip?: string;
-            userAgent?: string;
-            connected: Date;
-        }[],
-        clients: {
-            id: string;
-            userAgent?: string;
-            ip?: string;
-            connected: Date;
-        }[];
-    };
+	code: string;
+	name: string;
+	pin: string;
+	token: string;
+	year: number;
+	fieldMonitorEmitter: EventEmitter;
+	robotStateChangeEmitter: EventEmitter;
+	fieldStatusEmitter: EventEmitter;
+	checklistEmitter: EventEmitter;
+	noteUpdateEmitter: TypedEmitter<NoteUpdateEvents>;
+	cycleEmitter: EventEmitter;
+	teams: TeamList;
+	checklist: EventChecklist;
+	users: Profile[];
+	monitorFrame: MonitorFrame;
+	history: MonitorFrame[];
+	scheduleDetails: ScheduleDetails;
+	lastPrestartDone: Date | null;
+	lastMatchStart: Date | null;
+	lastMatchEnd: Date | null;
+	lastMatchRefDone: Date | null;
+	lastMatchScoresPosted: Date | null;
+	robotCycleTracking: {
+		prestart?: Date;
+		blue1?: RobotCycleTracking;
+		blue2?: RobotCycleTracking;
+		blue3?: RobotCycleTracking;
+		red1?: RobotCycleTracking;
+		red2?: RobotCycleTracking;
+		red3?: RobotCycleTracking;
+	};
+	notes: Note[];
+	meshedEvent: boolean;
+	subEvents?: { code: string; label: string; token: string; teams: TeamList; pin: string; users: Profile[] }[];
+	slackChannel?: string;
+	slackTeam?: string;
+	publicNoteSubmit: boolean;
+	nexusApiKey?: string;
+	fmsEventPassword?: string;
+	startDate?: string;
+	endDate?: string;
+	nexus: NexusStatus;
+	stats: {
+		extensions: {
+			id: string;
+			lastFrame: Date;
+			frames: number;
+			checklistUpdates: number;
+			ip?: string;
+			userAgent?: string;
+			connected: Date;
+		}[];
+		clients: {
+			id: string;
+			userAgent?: string;
+			ip?: string;
+			connected: Date;
+		}[];
+	};
 }
 
-export type TicketUpdateEvents = {
-    create: (
-        data: {
-            kind: "create",
-            ticket_id: number,
-            ticket: Ticket;
-        }
-    ) => void;
-    assign: (
-        data: {
-            kind: "assign",
-            ticket_id: number,
-            assigned_to_id: number | null,
-            assigned_to: Profile | null,
-        }
-    ) => void;
-    status: (
-        data: {
-            kind: "status",
-            ticket_id: number,
-            is_open: boolean;
-        }
-    ) => void;
-    follow: (
-        data: {
-            kind: "follow",
-            ticket_id: number,
-            followers: number[],
-        }
-    ) => void;
-    delete_ticket: (
-        data: {
-            kind: "delete_ticket",
-            ticket_id: number;
-        }
-    ) => void;
-    edit: (
-        data: {
-            kind: "edit",
-            ticket_id: number,
-            ticket_subject: string,
-            ticket_text: string,
-            ticket_updated_at: Date,
-        }
-    ) => void;
-    add_message: (
-        data: {
-            kind: "add_message",
-            ticket_id: number,
-            message: Message;
-        }
-    ) => void;
-    edit_message: (
-        data: {
-            kind: "edit_message",
-            ticket_id: number,
-            message: Message,
-        }
-    ) => void;
-    delete_message: (
-        data: {
-            kind: "delete_message",
-            ticket_id: number,
-            message_id: string,
-        }
-    ) => void;
-};
-
-type AssignUpdateTicketEvent = {
-    kind: "assign";
-    ticket_id: number;
-    assigned_to_id: number | null;
-    assigned_to: Profile | null;
-};
-
-type StatusUpdateTicketEvent = {
-    kind: "status";
-    ticket_id: number;
-    is_open: boolean;
-};
-
-type FollowUpdateTicketEvent = {
-    kind: "follow";
-    ticket_id: number;
-    followers: number[];
-};
-
-type CreateUpdateTicketEvent = {
-    kind: "create";
-    ticket_id: number,
-    ticket: Ticket;
-};
-
-type DeleteTicketUpdateTicketEvent = {
-    kind: "delete_ticket";
-    ticket_id: number;
-};
-
-type EditUpdateTicketEvent = {
-    kind: "edit";
-    ticket_id: number;
-    ticket_subject: string;
-    ticket_text: string;
-    ticket_updated_at: Date;
-};
-
-type AddMessageUpdateTicketEvent = {
-    kind: "add_message";
-    ticket_id: number;
-    message: Message;
-};
-
-type EditMessageUpdateTicketEvent = {
-    kind: "edit_message";
-    ticket_id: number;
-    message: Message;
-};
-
-type DeleteMessageUpdateTicketEvent = {
-    kind: "delete_message";
-    ticket_id: number;
-    message_id: string;
-};
-
-export type TicketUpdateEventData =
-    | AssignUpdateTicketEvent
-    | StatusUpdateTicketEvent
-    | FollowUpdateTicketEvent
-    | CreateUpdateTicketEvent
-    | DeleteTicketUpdateTicketEvent
-    | EditUpdateTicketEvent
-    | AddMessageUpdateTicketEvent
-    | EditMessageUpdateTicketEvent
-    | DeleteMessageUpdateTicketEvent;
-
 export type NotificationEvents = {
-    send: (
-        data: {
-            users: number[],
-            notification: Notification;
-        }
-    ) => void;
+	send: (data: { users: number[]; notification: Notification }) => void;
 };
 
 export interface RobotCycleTracking {
-    team: number,
-    firstDS?: Date,
-    lastDS?: Date,
-    timeDS?: number,
-    firstRadio?: Date,
-    lastRadio?: Date,
-    timeRadio?: number,
-    firstRio?: Date,
-    lastRio?: Date,
-    timeRio?: number,
-    firstCode?: Date,
-    lastCode?: Date,
-    timeCode?: number;
+	team: number;
+	firstDS?: Date;
+	lastDS?: Date;
+	timeDS?: number;
+	firstRadio?: Date;
+	lastRadio?: Date;
+	timeRadio?: number;
+	firstRio?: Date;
+	lastRio?: Date;
+	timeRio?: number;
+	firstCode?: Date;
+	lastCode?: Date;
+	timeCode?: number;
 }
 
 export interface CycleData {
-    eventCode: string,
-    matchNumber: number,
-    prestartTime: Date | null,
-    startTime: Date | null,
-    endTime: Date | null,
-    refEndTime: Date | null,
-    scoresPostedTime: Date | null,
-    lastCycleTime: string | null;
-    averageCycleTime: number | null;
-    level: TournamentLevel;
-    aheadBehind: string;
-    state: FieldState;
-    scheduleDetails: ScheduleDetails;
-    exactAheadBehind: string;
+	eventCode: string;
+	matchNumber: number;
+	prestartTime: Date | null;
+	startTime: Date | null;
+	endTime: Date | null;
+	refEndTime: Date | null;
+	scoresPostedTime: Date | null;
+	lastCycleTime: string | null;
+	averageCycleTime: number | null;
+	level: TournamentLevel;
+	aheadBehind: string;
+	state: FieldState;
+	scheduleDetails: ScheduleDetails;
+	exactAheadBehind: string;
 }
 
 export interface Profile {
-    id: number,
-    username: string,
-    role: "FTAA" | "FTA" | "CSA" | "RI";
-    admin: boolean,
+	id: number;
+	username: string;
+	role: "FTAA" | "FTA" | "CSA" | "RI";
+	admin: boolean;
+	source?: "FMS" | "Slack";
 }
 
-export interface Ticket {
-    id: number,
-    team: number,
-    subject: string,
-    author_id: number,
-    author: Profile,
-    assigned_to_id: number | null,
-    assigned_to: Profile | null,
-    event_code: string,
-    is_open: boolean,
-    text: string,
-    created_at: Date,
-    updated_at: Date,
-    closed_at?: Date | null,
-    match_id?: string | null,
-    followers: number[],
-    messages?: Message[],
+export interface FmsNoteMetadata {
+	issueType: FTAEventNoteIssueType;
+	resolutionStatus: FTAEventNoteResolutionType;
 }
+
+export type NoteUpdateEvents = {
+	create: (data: { kind: "create"; note: Note; source?: "fms" }) => void;
+	edit: (data: { kind: "edit"; note: Note; source?: "fms" }) => void;
+	delete: (data: { kind: "delete"; note: Note; source?: "fms" }) => void;
+	status: (data: { kind: "status"; note_id: string; resolution_status: FTAEventNoteResolutionType }) => void;
+	assign: (data: {
+		kind: "assign";
+		note_id: string;
+		assigned_to_id: number | null;
+		assigned_to: Profile | null;
+	}) => void;
+	follow: (data: { kind: "follow"; note_id: string; followers: number[] }) => void;
+	add_message: (data: { kind: "add_message"; note_id: string; message: Message }) => void;
+	edit_message: (data: { kind: "edit_message"; note_id: string; message: Message }) => void;
+	delete_message: (data: { kind: "delete_message"; note_id: string; message_id: string }) => void;
+};
+
+export type NoteUpdateEventData =
+	| { kind: "create"; note: Note; source?: "fms" }
+	| { kind: "edit"; note: Note; source?: "fms" }
+	| { kind: "delete"; note: Note; source?: "fms" }
+	| { kind: "status"; note_id: string; resolution_status: FTAEventNoteResolutionType }
+	| { kind: "assign"; note_id: string; assigned_to_id: number | null; assigned_to: Profile | null }
+	| { kind: "follow"; note_id: string; followers: number[] }
+	| { kind: "add_message"; note_id: string; message: Message }
+	| { kind: "edit_message"; note_id: string; message: Message }
+	| { kind: "delete_message"; note_id: string; message_id: string };
 
 export interface Note {
-    id: string,
-    text: string,
-    author_id: number,
-    author: Profile,
-    team: number,
-    event_code: string,
-    created_at: Date,
-    updated_at: Date,
+	id: string;
+	text: string;
+	author_id: number;
+	author: Profile;
+	/** Nullable — EventNotes and MatchNotes may not be team-specific. */
+	team: number | null;
+	note_type: "TeamIssue" | "EventNote" | "MatchNote";
+	resolution_status: FTAEventNoteResolutionType | null;
+	issue_type: FTAEventNoteIssueType | null;
+	match_number: number | null;
+	play_number: number | null;
+	tournament_level: TournamentLevel | null;
+	fms_note_id: string | null;
+	fms_record_version: number | null;
+	fms_metadata: FmsNoteMetadata | null;
+	event_code: string;
+	created_at: Date;
+	updated_at: Date;
+	closed_at: Date | null;
+	assigned_to_id: number | null;
+	assigned_to: Profile | null;
+	followers: number[];
+	match_id?: string | null;
+	slack_ts?: string | null;
+	slack_channel?: string | null;
+	messages?: Message[];
 }
 
 export interface Message {
-    id: string,
-    ticket_id: number,
-    text: string,
-    author_id: number,
-    author: Profile,
-    event_code: string,
-    created_at: Date,
-    updated_at: Date,
+	id: string;
+	note_id: string;
+	text: string;
+	author_id: number;
+	author: Profile;
+	event_code: string;
+	created_at: Date;
+	updated_at: Date;
 }
 
 export type NotificationTopic =
-    | 'Ticket-Created'
-    | 'Ticket-Status'
-    | 'Ticket-Assigned'
-    | 'New-Ticket-Message'
-    | "Ticket-Follow"
-    | 'Robot-Status';
+	| "Note-Created"
+	| "Note-Status"
+	| "Note-Assigned"
+	| "New-Note-Message"
+	| "Note-Follow"
+	| "Robot-Status";
 
 export interface Notification {
-    id: string,
-    timestamp: Date,
-    title: string;
-    topic: NotificationTopic;
-    body?: string;
-    icon?: string;
-    tag?: string;
-    data?: {
-        page?: string;
-        ticket_id?: number;
-    };
+	id: string;
+	timestamp: Date;
+	title: string;
+	topic: NotificationTopic;
+	body?: string;
+	icon?: string;
+	tag?: string;
+	data?: {
+		page?: string;
+		note_id?: string;
+	};
 }
 
 export type ScheduleBreakdown = {
-    date: Date,
-    start: number,
-    end: number,
-    endTime: Date | null,
-    lunch: number | null,
-    lunchTime: Date | null,
-    cycleTimes: {
-        match: number,
-        minutes: number;
-    }[];
+	date: Date;
+	start: number;
+	end: number;
+	endTime: Date | null;
+	lunch: number | null;
+	lunchTime: Date | null;
+	cycleTimes: {
+		match: number;
+		minutes: number;
+	}[];
 }[];
 
 export interface ScheduleDetails {
-    days: ScheduleBreakdown;
-    lastPlayed: number;
-    matches?: {
-        match: number;
-        level: TournamentLevel;
-        scheduledStartTime: Date;
-    }[];
+	days: ScheduleBreakdown;
+	lastPlayed: number;
+	matches?: {
+		match: number;
+		level: TournamentLevel;
+		scheduledStartTime: Date;
+	}[];
 }
 
 export interface DisconnectionEvent {
-    issue: string;
-    startTime: number;
-    endTime: number;
-    duration: number;
-    startIndex: number;
-    endIndex: number;
+	issue: string;
+	startTime: number;
+	endTime: number;
+	duration: number;
+	startIndex: number;
+	endIndex: number;
 }

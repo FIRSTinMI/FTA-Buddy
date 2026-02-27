@@ -1,21 +1,21 @@
 <script lang="ts">
 	import { Tabs } from "flowbite-svelte";
-	import { trpc } from "../../main";
-	import MatchListTab from "../../components/MatchListTab.svelte";
 	import type { MatchRouterOutputs } from "../../../../src/router/logs";
+	import MatchListTab from "../../components/MatchListTab.svelte";
 	import Spinner from "../../components/Spinner.svelte";
+	import { trpc } from "../../main";
 
 	const matches = trpc.match.getMatches.query({});
 
-	const testMatches: MatchRouterOutputs["getMatches"] = [];
-	const practiceMatches: MatchRouterOutputs["getMatches"] = [];
-	const qualificationMatches: MatchRouterOutputs["getMatches"] = [];
-	const playoffMatches: MatchRouterOutputs["getMatches"] = [];
+	const testMatches: MatchRouterOutputs["getMatches"] = $state([]);
+	const practiceMatches: MatchRouterOutputs["getMatches"] = $state([]);
+	const qualificationMatches: MatchRouterOutputs["getMatches"] = $state([]);
+	const playoffMatches: MatchRouterOutputs["getMatches"] = $state([]);
 
-	let testOpen = false;
-	let practiceOpen = false;
-	let qualificationOpen = false;
-	let playoffOpen = false;
+	let testOpen = $state(false);
+	let practiceOpen = $state(false);
+	let qualificationOpen = $state(false);
+	let playoffOpen = $state(false);
 
 	matches.then((data) => {
 		for (let match of data) {
@@ -58,10 +58,12 @@
 	<h1 class="text-3xl font-bold p-2">Event Match Logs</h1>
 	<Tabs
 		tabStyle="none"
-		defaultClass="flex"
-		activeClasses="p-4 w-full flex-grow text-primary-500 border-b-2 border-primary-500"
-		inactiveClasses="p-4 w-full text-gray-500 dark:text-gray-400 hover:text-gray-700 focus:ring-4 focus:ring-primary-300 focus:outline-none dark:hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-		contentClass="mt-4"
+		classes={{
+			active: "p-4 w-full flex-grow text-primary-500 border-b-2 border-primary-500",
+			inactive:
+				"p-4 w-full text-gray-500 dark:text-gray-400 hover:text-gray-700 focus:ring-4 focus:ring-primary-300 focus:outline-none dark:hover:text-white disabled:cursor-not-allowed disabled:opacity-50",
+			content: "mt-4",
+		}}
 	>
 		{#await matches}
 			<Spinner />

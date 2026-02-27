@@ -1,22 +1,39 @@
 <script lang="ts">
 	import Icon from "@iconify/svelte";
-	import { Button } from "flowbite-svelte";
 	import { onDestroy, onMount } from "svelte";
+	import { get } from "svelte/store";
 	import { cycleTimeToMS } from "../../../shared/cycleTimeToMS";
 	import { formatTimeShortNoAgo, formatTimeShortNoAgoSeconds } from "../../../shared/formatTime";
-	import { FieldState, MatchState, MatchStateMap, ROBOT, type MonitorFrame, type ScheduleDetails } from "../../../shared/types";
+	import {
+		FieldState,
+		MatchState,
+		MatchStateMap,
+		ROBOT,
+		type MonitorFrame,
+		type ScheduleDetails,
+	} from "../../../shared/types";
 	import MonitorRow from "../components/MonitorRow.svelte";
 	import Spinner from "../components/Spinner.svelte";
 	import TeamModal from "../components/TeamModal.svelte";
-	import { audioQueuer } from "../field-monitor";
+	import { audioQueuer, frameHandler, subscribeToFieldMonitor } from "../field-monitor";
 	import { trpc } from "../main";
+	import { fullscreen } from "../stores/fullscreen";
 	import { userStore } from "../stores/user";
-	import type { MonitorEvent, MonitorFrameHandler } from "../util/monitorFrameHandler";
+	import type { MonitorEvent } from "../util/monitorFrameHandler";
 	import { updateScheduleText } from "../util/schedule-detail-formatter";
 
-	export let frameHandler: MonitorFrameHandler;
 	let monitorFrame: MonitorFrame | undefined = frameHandler.getFrame();
 	let cycleSubscription: ReturnType<typeof trpc.cycles.subscription.subscribe>;
+
+	let user = get(userStore);
+	userStore.subscribe((value) => {
+		if (user.eventToken !== value.eventToken) {
+			user = value;
+			subscribeToFieldMonitor();
+		} else {
+			user = value;
+		}
+	});
 
 	frameHandler.addEventListener("frame", (evt) => {
 		loading = false;
@@ -37,6 +54,7 @@
 	let scheduleText = "";
 
 	onMount(async () => {
+		subscribeToFieldMonitor();
 		const lastPrestart = await trpc.cycles.getLastPrestart.query();
 		const lastMatchStart = await trpc.cycles.getLastMatchStart.query();
 		if (lastPrestart) matchStartTime = lastPrestart;
@@ -56,7 +74,7 @@
 					averageCycleTimeMS = data.averageCycleTime ?? 7 * 60 * 1000;
 					calculatedCycleTime = data.lastCycleTime ? cycleTimeToMS(data.lastCycleTime) : 0;
 				},
-			}
+			},
 		);
 
 		const bestCycleTimeRes = await trpc.cycles.getBestCycleTime.query();
@@ -82,7 +100,7 @@
 			monitorFrame?.match ?? scheduleDetails?.lastPlayed ?? 0,
 			scheduleDetails,
 			monitorFrame?.level ?? "",
-			averageCycleTimeMS
+			averageCycleTimeMS,
 		);
 
 		console.log({
@@ -108,6 +126,8 @@
 
 	onDestroy(() => {
 		if (cycleSubscription) cycleSubscription.unsubscribe();
+		clearInterval(interval);
+		clearInterval(lastCycleTimeInterval);
 	});
 
 	frameHandler.addEventListener("match-start", async (evt) => {
@@ -142,14 +162,14 @@
 			monitorFrame?.match ?? scheduleDetails?.lastPlayed ?? 0,
 			scheduleDetails,
 			monitorFrame?.level ?? "",
-			averageCycleTimeMS
+			averageCycleTimeMS,
 		);
 
 		// Reset the cycle time so it doesn't screw up the next match's cycle time
 		calculatedCycleTime = undefined;
 	});
 
-	setInterval(() => {
+	let interval = setInterval(() => {
 		const currentTime = new Date().getTime() - matchStartTime.getTime();
 		if (currentTime < averageCycleTimeMS) {
 			currentCycleTimeRedness = 0;
@@ -160,12 +180,12 @@
 		currentCycleTime = formatTimeShortNoAgo(matchStartTime);
 	}, 1000);
 
-	setInterval(() => {
+	let lastCycleTimeInterval = setInterval(() => {
 		if (lastCycleTimeMS !== frameHandler.getLastCycleTime()) {
-			console.log("Cycle time is not matching", {
-				current: lastCycleTimeMS,
-				new: frameHandler.getLastCycleTime(),
-			});
+			// console.log("Cycle time is not matching", {
+			// 	current: lastCycleTimeMS,
+			// 	new: frameHandler.getLastCycleTime(),
+			// });
 			lastCycleTimeMS = frameHandler.getLastCycleTime() || 0;
 			lastCycleTime = formatTimeShortNoAgoSeconds(lastCycleTimeMS);
 		}
@@ -198,8 +218,6 @@
 
 	const stations: ROBOT[] = Object.values(ROBOT);
 
-	export let fullscreen = window.outerWidth > 1900 ? window.innerHeight === 1080 : false;
-
 	let loading = true;
 </script>
 
@@ -212,34 +230,37 @@
 </div>
 
 <div
-	class="grid grid-cols-fieldmonitor 2xl:grid-cols-fieldmonitor-large gap-0.5 md:gap-1 2xl:gap-2 mx-auto justify-center {fullscreen && 'fullscreen'}"
+	class="grid grid-cols-fieldmonitor 2xl:grid-cols-fieldmonitor-large gap-0.5 md:gap-1 2xl:gap-2 mx-auto justify-center"
+	class:fullscreen={$fullscreen}
 	class:hidden={loading}
 >
 	{#key monitorFrame}
 		{#if monitorFrame}
-			<div class="col-span-6 lg:col-span-9 flex text-lg md:text-2xl font-semibold {fullscreen && 'lg:text-5xl'}">
+			<div
+				class="col-span-6 lg:col-span-9 flex text-lg md:text-2xl font-semibold"
+				class:lg:text-5xl={$fullscreen}
+			>
 				<div class="px-2">M: {monitorFrame.match}</div>
 				<div class="flex-1 px-2 text-center">{FieldStates[monitorFrame.field]}</div>
 				<div class="px-2">{monitorFrame.exactAheadBehind || monitorFrame.time}</div>
-				<Button
-					color="none"
+				<button
 					class="text-sm fixed top-12 right-0 z-50"
-					on:click={(evt) => {
+					onclick={(evt) => {
 						evt.preventDefault();
-						fullscreen = !fullscreen;
-						if (fullscreen) {
+						$fullscreen = !$fullscreen;
+						if ($fullscreen) {
 							document.documentElement.requestFullscreen();
 						} else {
 							document.exitFullscreen();
 						}
 					}}
 				>
-					{#if fullscreen}
+					{#if $fullscreen}
 						<Icon icon="mdi:fullscreen-exit" class="w-8 h-8" />
 					{:else}
 						<Icon icon="mdi:fullscreen" class="w-8 h-8" />
 					{/if}
-				</Button>
+				</button>
 			</div>
 			<p>Team</p>
 			<p>DS</p>
@@ -252,19 +273,24 @@
 			<p class="hidden lg:flex">Last Change</p>
 			<p class="lg:hidden">Net</p>
 			{#each stations as station}
-				<MonitorRow {station} {monitorFrame} {detailView} {fullscreen} {frameHandler} />
+				<MonitorRow {station} {monitorFrame} {detailView} />
 			{/each}
 		{/if}
-		<div class="col-span-6 lg:col-span-9 flex text-lg md:text-2xl font-semibold tabular-nums {fullscreen && 'lg:text-4xl'}">
-			<div class="text-left {fullscreen ? 'text-4xl' : 'md:text-2xl'} {currentCycleIsBest && 'text-green-500'}">
+		<div
+			class="col-span-6 lg:col-span-9 flex text-lg md:text-2xl font-semibold tabular-nums"
+			class:lg:text-4xl={$fullscreen}
+		>
+			<div class="text-left" class:text-4xl={$fullscreen} class:text-green-500={currentCycleIsBest}>
 				C: {lastCycleTime} (A: {formatTimeShortNoAgoSeconds(averageCycleTimeMS)})
 			</div>
-			<div class="grow {fullscreen ? 'text-4xl' : 'md:text-2xl'}">
+			<div class="grow" class:text-4xl={$fullscreen}>
 				<span class="hidden sm:inline">{scheduleText}</span>
 			</div>
 			<div
-				class="text-right {fullscreen ? 'text-4xl' : 'md:text-2xl'}"
-				style="color: rgba({75 * currentCycleTimeRedness + 180}, {180 * (1 - currentCycleTimeRedness)}, {180 * (1 - currentCycleTimeRedness)}, 1)"
+				class="text-right"
+				class:text-4xl={$fullscreen}
+				style="color: rgba({75 * currentCycleTimeRedness + 180}, {180 * (1 - currentCycleTimeRedness)}, {180 *
+					(1 - currentCycleTimeRedness)}, 1)"
 			>
 				T: {currentCycleTime}
 			</div>

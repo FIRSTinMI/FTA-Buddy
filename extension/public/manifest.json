@@ -8,7 +8,8 @@
         "scripting"
     ],
     "host_permissions": [
-        "http://10.0.100.5/*"
+        "http://10.0.100.5/*",
+        "http://localhost/*"
     ],
     "content_scripts": [
         {
@@ -25,6 +26,7 @@
             "run_at": "document_end",
             "matches": [
                 "https://ftabuddy.com/*",
+                "https://dev.ftabuddy.com/*",
                 "http://localhost:5173/*"
             ],
             "js": [

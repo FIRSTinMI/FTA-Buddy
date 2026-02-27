@@ -1,42 +1,41 @@
 <script lang="ts">
 	import { Button, Input, Label, Modal, Select, type SelectOptionType } from "flowbite-svelte";
-	import { navigate } from "svelte-routing";
 	import type { Profile, TeamList } from "../../../../shared/types";
 	import Spinner from "../../components/Spinner.svelte";
 	import { trpc } from "../../main";
+	import { navigate } from "../../router";
 	import { eventStore } from "../../stores/event";
+	import { installPrompt } from "../../stores/install-prompt";
 	import { settingsStore } from "../../stores/settings";
-	import { userStore } from "../../stores/user";
+	import { userStore as user } from "../../stores/user";
 	import { subscribeToPush } from "../../util/notifications";
-
-	export let toast: (title: string, text: string, color?: string) => void;
-
-	let event = $eventStore;
-	let user = $userStore;
-	let settings = $settingsStore;
+	import { toast } from "../../util/toast";
 
 	// If event token is missing, reset the event
 	// This prevents the admin event selector from showing that an event is selected when it's not
-	if (!user.eventToken) {
-		event.code = "";
-		event.pin = "";
-		event.teams = [];
+	if (!$user.eventToken) {
+		$eventStore.code = "";
+		$eventStore.pin = "";
+		$eventStore.teams = [];
 	}
 
-	let email = "";
-	let username = "";
-	let password = "";
-	let verifyPassword = "";
-	let role: "FTA" | "FTAA" | "CSA" | "RI";
+	let email = $state("");
+	let username = $state("");
+	let password = $state("");
+	let verifyPassword = $state("");
+	let role: "FTA" | "FTAA" | "CSA" | "RI" = $state("FTA");
 
-	let loading = false;
-	let view: null | "login" | "create" | "googleCreate" = null;
+	let loading = $state(false);
+	let view: null | "login" | "create" | "googleCreate" = $state(null);
 
 	let desktop =
-		(navigator.userAgent.includes("Windows") || navigator.userAgent.includes("Macintosh") || navigator.userAgent.includes("Linux")) &&
+		(navigator.userAgent.includes("Windows") ||
+			navigator.userAgent.includes("Macintosh") ||
+			navigator.userAgent.includes("Linux")) &&
 		!navigator.userAgent.includes("Android");
 
 	async function createUser(evt: Event) {
+		evt.preventDefault();
 		loading = true;
 
 		if (password !== verifyPassword) {
@@ -45,14 +44,14 @@
 		}
 
 		try {
-			const res = await trpc.user.createAccount.query({
+			const res = await trpc.user.createAccount.mutate({
 				email,
 				username,
 				password,
 				role,
 			});
 
-			userStore.set({
+			user.set({
 				token: res.token,
 				eventToken: "",
 				username,
@@ -79,15 +78,16 @@
 	}
 
 	async function login(evt: Event) {
+		evt.preventDefault();
 		loading = true;
 
 		try {
 			console.log({ email, password });
-			const res = await trpc.user.login.query({ email, password });
+			const res = await trpc.user.login.mutate({ email, password });
 
 			console.log(res);
 
-			userStore.set({
+			user.set({
 				token: res.token,
 				eventToken: "",
 				username: res.username,
@@ -113,9 +113,9 @@
 			console.error(err);
 		}
 
-		console.log(settings.notificationsDoNotAsk);
+		console.log($settingsStore.notificationsDoNotAsk);
 
-		if (!settings.notificationsDoNotAsk) {
+		if (!$settingsStore.notificationsDoNotAsk) {
 			notificationModalOpen = true;
 		}
 
@@ -125,7 +125,7 @@
 	}
 
 	function logout() {
-		userStore.set({
+		user.set({
 			token: "",
 			eventToken: "",
 			username: "",
@@ -137,16 +137,14 @@
 		window.location.reload();
 	}
 
-	userStore.subscribe((value) => {
-		//console.log(value);
-		user = value;
+	user.subscribe((value) => {
 		updateEventList();
 	});
 
-	let eventCode = "";
-	let eventPin = "";
+	let eventCode = $state("");
+	let eventPin = $state("");
 
-	let eventList: SelectOptionType<string>[] = [];
+	let eventList: SelectOptionType<string>[] = $state([]);
 
 	function updateEventList() {
 		trpc.event.getAll.query().then((res) => {
@@ -157,21 +155,21 @@
 		});
 	}
 
-	if (user.admin === true) updateEventList();
+	if ($user.admin === true) updateEventList();
 
 	async function adminSelectEvent() {
-		if (event.code === "none") {
-			userStore.set({ ...user, eventToken: "" });
+		if ($eventStore.code === "none") {
+			user.set({ ...$user, eventToken: "" });
 			eventStore.set({ code: "", pin: "", teams: [], users: [] });
 			return;
 		}
 		try {
-			const res = await trpc.event.get.query({ code: event.code });
+			const res = await trpc.event.get.mutate({ code: $eventStore.code });
 			//console.log(res);
 			if (res.subEvents) {
-				userStore.set({ ...user, eventToken: res.token, meshedEventToken: res.token });
+				user.set({ ...$user, eventToken: res.token, meshedEventToken: res.token });
 				eventStore.set({
-					code: event.code,
+					code: $eventStore.code,
 					pin: res.pin,
 					teams: res.teams as TeamList,
 					users: res.users as Profile[],
@@ -179,15 +177,15 @@
 					meshedEventCode: res.code,
 				});
 			} else {
-				userStore.set({ ...user, eventToken: res.token });
+				user.set({ ...$user, eventToken: res.token });
 				eventStore.set({
-					code: event.code,
+					code: $eventStore.code,
 					pin: res.pin,
 					teams: res.teams as TeamList,
 					users: res.users as Profile[],
 				});
 			}
-			eventCode = event.code;
+			eventCode = $eventStore.code;
 			eventPin = res.pin;
 		} catch (err: any) {
 			toast("Error", err.message);
@@ -196,15 +194,16 @@
 	}
 
 	async function joinEvent(evt: Event) {
+		evt.preventDefault();
 		loading = true;
 
 		try {
-			const res = await trpc.event.join.query({
+			const res = await trpc.event.join.mutate({
 				code: eventCode,
 				pin: eventPin,
 			});
 			if (res.subEvents) {
-				userStore.set({ ...user, eventToken: res.token, meshedEventToken: res.token });
+				user.set({ ...$user, eventToken: res.token, meshedEventToken: res.token });
 				eventStore.set({
 					code: eventCode,
 					pin: res.pin,
@@ -216,7 +215,7 @@
 
 				setTimeout(() => navigate("/dashboard"), 700);
 			} else {
-				userStore.set({ ...user, eventToken: res.token });
+				user.set({ ...$user, eventToken: res.token });
 				eventStore.set({
 					code: eventCode,
 					pin: eventPin,
@@ -224,8 +223,8 @@
 					users: res.users as Profile[],
 				});
 
-				if (user.role === "FTA" || user.role === "FTAA") setTimeout(() => navigate("/monitor"), 700);
-				else setTimeout(() => navigate("/tickets"), 700);
+				if ($user.role === "FTA" || $user.role === "FTAA") setTimeout(() => navigate("/monitor"), 700);
+				else setTimeout(() => navigate("/support"), 700);
 			}
 			toast("Success", "Event joined successfully", "green-500");
 		} catch (err: any) {
@@ -240,13 +239,13 @@
 	window.googleLogin = async (googleUser: any) => {
 		console.log(googleUser);
 		try {
-			const res = await trpc.user.googleLogin.query({
+			const res = await trpc.user.googleLogin.mutate({
 				token: googleUser.credential,
 			});
 
 			console.log(res);
 
-			userStore.set({
+			user.set({
 				token: res.token,
 				eventToken: "",
 				username: res.username,
@@ -257,12 +256,12 @@
 				googleToken: googleUser.credential,
 			});
 
-			console.log($userStore);
+			console.log($user);
 
 			toast("Success", "Logged in successfully", "green-500");
 		} catch (err: any) {
 			if (err.code === 404 || err.message.startsWith("User not found")) {
-				userStore.set({
+				user.set({
 					token: "",
 					eventToken: "",
 					username: "",
@@ -280,55 +279,50 @@
 		}
 	};
 
-	let notificationModalOpen = false;
+	let notificationModalOpen = $state(false);
 
-	$: {
+	$effect(() => {
 		try {
-			if (user.token) {
-				//console.log("I have a token");
-				//console.log(user);
-				//console.log(Notification.permission);
-				if (!(Notification.permission === "granted") && !settings.notificationsDoNotAsk) {
-					//console.log("here 1")
+			if ($user.token) {
+				if (!(Notification.permission === "granted") && !$settingsStore.notificationsDoNotAsk) {
 					notificationModalOpen = true;
-				} else if ((!(Notification.permission === "granted") && settings.notificationsDoNotAsk) || Notification.permission === "granted") {
-					//console.log("here 2")
+				} else if (
+					(!(Notification.permission === "granted") && $settingsStore.notificationsDoNotAsk) ||
+					Notification.permission === "granted"
+				) {
 					notificationModalOpen = false;
 				}
 			} else {
-				//console.log("here 3")
 				notificationModalOpen = false;
 			}
 		} catch (e) {
 			console.error(e);
 		}
-	}
+	});
 
 	const ios = () => {
 		if (typeof window === `undefined` || typeof navigator === `undefined`) return false;
 
 		return /iPhone|iPad|iPod/i.test(navigator.userAgent || navigator.vendor);
 	};
-	export let installPrompt: Event | null;
 </script>
 
 <svelte:head>
 	<script src="https://accounts.google.com/gsi/client" async></script>
 </svelte:head>
 
-<Modal bind:open={notificationModalOpen} outsideclose size="sm" dialogClass="fixed top-0 start-0 end-0 h-modal md:inset-0 md:h-full z-40 w-full p-4 flex">
+<Modal bind:open={notificationModalOpen} outsideclose size="sm">
 	<h1 class="font-bold text-xl">Enable Notifications</h1>
 	<h2>Enable to get notifications for Tickets, and/or when a robot loses connection during a match</h2>
-	{#if installPrompt}
+	{#if $installPrompt}
 		<h2 class="font-bold">Install this App to get push notifications</h2>
 		<p class="py-1">Recommended for the best experience.</p>
 		<Button
 			color="primary"
 			class="w-fit"
 			size="sm"
-			on:click={() => {
-				// @ts-ignore
-				if (installPrompt) installPrompt.prompt();
+			onclick={() => {
+				if ($installPrompt) $installPrompt.prompt();
 			}}>Install</Button
 		>
 	{:else if ios()}
@@ -342,13 +336,12 @@
 		color="primary"
 		class="w-fit"
 		size="sm"
-		on:click={() => {
+		onclick={() => {
 			try {
 				Notification.requestPermission().then((result) => {
 					if (result === "granted") {
 						$settingsStore.notifications = true;
 						subscribeToPush();
-						settingsStore.set(settings);
 					}
 				});
 				notificationModalOpen = false;
@@ -362,7 +355,7 @@
 		color="primary"
 		class="w-fit"
 		size="sm"
-		on:click={() => {
+		onclick={() => {
 			notificationModalOpen = false;
 		}}>No, Thank You</Button
 	>
@@ -370,9 +363,8 @@
 		color="primary"
 		class="w-fit"
 		size="sm"
-		on:click={() => {
-			settings.notificationsDoNotAsk = true;
-			settingsStore.set(settings);
+		onclick={() => {
+			$settingsStore.notificationsDoNotAsk = true;
 			notificationModalOpen = false;
 		}}>Do Not Ask Again</Button
 	>
@@ -383,30 +375,30 @@
 	<Spinner />
 {/if}
 
-<div class="container mx-auto max-w-xl md:max-w-3xl flex flex-col justify-center min-h-svh gap-4">
-	{#if !user || !user.token}
+<div class="container mx-auto max-w-xl md:max-w-3xl flex flex-col justify-center min-h-full gap-4">
+	{#if !user || !$user.token}
 		<!-- Create Account -->
 		{#if view === "create"}
 			<h2 class="text-2xl" style="font-weight: bold;">Create Account</h2>
-			<form class="flex flex-col space-y-2 mt-2 text-left" on:submit|preventDefault={createUser}>
+			<form class="flex flex-col space-y-2 mt-2 text-left" onsubmit={createUser}>
 				<div>
 					<Label for="username">Username</Label>
-					<Input id="username" bind:value={username} placeholder="John" bind:disabled={loading} />
+					<Input id="username" bind:value={username} placeholder="John" disabled={loading} />
 				</div>
 
 				<div>
 					<Label for="email">Email</Label>
-					<Input id="email" bind:value={email} placeholder="me@example.com" bind:disabled={loading} type="email" />
+					<Input id="email" bind:value={email} placeholder="me@example.com" disabled={loading} type="email" />
 				</div>
 
 				<div>
 					<Label for="password">Password</Label>
-					<Input id="password" bind:value={password} type="password" bind:disabled={loading} />
+					<Input id="password" bind:value={password} type="password" disabled={loading} />
 				</div>
 
 				<div>
 					<Label for="verify-password">Verify Password</Label>
-					<Input id="verify-password" bind:value={verifyPassword} type="password" bind:disabled={loading} />
+					<Input id="verify-password" bind:value={verifyPassword} type="password" disabled={loading} />
 				</div>
 
 				<div>
@@ -418,43 +410,43 @@
 							name: v,
 							value: v,
 						}))}
-						bind:disabled={loading}
+						disabled={loading}
 					/>
 				</div>
 
-				<Button type="submit" bind:disabled={loading}>Create Account</Button>
+				<Button type="submit" disabled={loading}>Create Account</Button>
 			</form>
-			<Button on:click={() => (view = "login")} bind:disabled={loading} outline>Log In</Button>
+			<Button onclick={() => (view = "login")} disabled={loading} outline>Log In</Button>
 
 			<!-- Login -->
 		{:else if view === "login"}
 			<h2 class="text-2xl" style="font-weight: bold;">Log In</h2>
-			<form class="flex flex-col space-y-2 mt-2 text-left" on:submit|preventDefault={login}>
+			<form class="flex flex-col space-y-2 mt-2 text-left" onsubmit={login}>
 				<div>
 					<Label for="email">Email</Label>
-					<Input id="email" bind:value={email} placeholder="me@example.com" bind:disabled={loading} type="email" />
+					<Input id="email" bind:value={email} placeholder="me@example.com" disabled={loading} type="email" />
 				</div>
 
 				<div>
 					<Label for="password">Password</Label>
-					<Input id="password" bind:value={password} type="password" bind:disabled={loading} />
+					<Input id="password" bind:value={password} type="password" disabled={loading} />
 				</div>
-				<Button type="submit" bind:disabled={loading}>Log In</Button>
+				<Button type="submit" disabled={loading}>Log In</Button>
 			</form>
-			<Button on:click={() => (view = "create")} bind:disabled={loading} outline>Create Account</Button>
+			<Button onclick={() => (view = "create")} disabled={loading} outline>Create Account</Button>
 
 			<p>Or</p>
 			<div>
 				<Label for="event-token">Event Token</Label>
-				<Input id="event-token" bind:value={user.eventToken} placeholder="Event Token" bind:disabled={loading} />
+				<Input id="event-token" bind:value={$user.eventToken} placeholder="Event Token" disabled={loading} />
 			</div>
 			<Button
-				on:click={() => {
-					userStore.set({ ...user, eventToken: user.eventToken });
-					if (user.role === "FTA" || user.role === "FTAA") setTimeout(() => navigate("/monitor"), 500);
-					else setTimeout(() => navigate("/tickets"), 500);
+				onclick={() => {
+					user.set({ ...$user, eventToken: $user.eventToken });
+					if ($user.role === "FTA" || $user.role === "FTAA") setTimeout(() => navigate("/monitor"), 500);
+					else setTimeout(() => navigate("/support"), 500);
 				}}
-				bind:disabled={loading}>Join Event</Button
+				disabled={loading}>Join Event</Button
 			>
 
 			<!-- Login Prompt -->
@@ -464,12 +456,16 @@
 					<div class="flex h-full">
 						<div class="my-auto w-full">
 							<h2 class="text-xl">Run FTA Buddy from this computer</h2>
-							{#if user.eventToken}
-								<Button on:click={() => navigate("/")} class="w-full mt-4">Open Field Monitor</Button>
-								<Button on:click={() => navigate("/manage/event-created")} class="w-full mt-4">See Event Pin</Button>
-								<Button on:click={() => navigate("/manage/host")} class="w-full mt-4">Host New Event</Button>
+							{#if $user.eventToken}
+								<Button onclick={() => navigate("/")} class="w-full mt-4">Open Field Monitor</Button>
+								<Button onclick={() => navigate("/manage/event-created")} class="w-full mt-4"
+									>See Event Pin</Button
+								>
+								<Button onclick={() => navigate("/manage/host")} class="w-full mt-4"
+									>Host New Event</Button
+								>
 							{:else}
-								<Button on:click={() => navigate("/manage/host")} class="w-full mt-4">Host</Button>
+								<Button onclick={() => navigate("/manage/host")} class="w-full mt-4">Host</Button>
 							{/if}
 							<p class="text-gray-700 mt-2">Requires this computer to be on the field network</p>
 						</div>
@@ -501,9 +497,9 @@
 						></div>
 					</div>
 					<div class="border-t border-neutral-500"></div>
-					<Button on:click={() => (view = "login")} bind:disabled={loading}>Log In</Button>
+					<Button onclick={() => (view = "login")} disabled={loading}>Log In</Button>
 
-					<Button on:click={() => (view = "create")} bind:disabled={loading}>Create Account</Button>
+					<Button onclick={() => (view = "create")} disabled={loading}>Create Account</Button>
 				</div>
 			</div>
 		{/if}
@@ -513,58 +509,72 @@
 		<div class="flex pt-4">
 			<div class="my-auto w-full">
 				<h2 class="text-4xl" style="font-weight: bold;">Welcome to FTA Buddy!</h2>
-				<h2 class="text-xl" style="font-weight: bold;">You are logged in as {user.username}</h2>
-				<h1 class="text-xl" style="font-style: italic;">Your role is set to {user.role}.</h1>
+				<h2 class="text-xl" style="font-weight: bold;">You are logged in as {$user.username}</h2>
+				<h1 class="text-xl" style="font-style: italic;">Your role is set to {$user.role}.</h1>
 			</div>
 		</div>
 		<div class="flex pt-4">
 			<div class="my-auto w-full">
-				<Button class="w-full" on:click={logout}>Log Out</Button>
+				<Button class="w-full" onclick={logout}>Log Out</Button>
 			</div>
 		</div>
 
 		<!-- Event selector for admins -->
-		{#if user.admin === true}
+		{#if $user.admin === true}
 			{#if desktop}
 				<div class="flex border-t border-neutral-500 pt-4">
 					<div class="my-auto w-full">
 						<h2 class="text-2xl" style="font-weight: bold;">Run FTA Buddy from this computer</h2>
-						<Button on:click={() => navigate("/manage/host")} class="w-full mt-4">Host</Button>
+						<Button onclick={() => navigate("/manage/host")} class="w-full mt-4">Host</Button>
 						<p class="text-gray-700 mt-2">Requires this computer to be on the field network</p>
 					</div>
 				</div>
 			{/if}
 			<div class="flex pt-4">
 				<div class="my-auto w-full">
-					<h1 class="text-xl" style="font-weight:bold;">The Event Currently Selected Is: {event.code}</h1>
+					<h1 class="text-xl" style="font-weight:bold;">
+						The Event Currently Selected Is: {$eventStore.code}
+					</h1>
 				</div>
 			</div>
 			<div class="flex flex-col pt-10 space-y-4">
 				<Label for="event-selector">Admin Event Selector</Label>
-				<Select id="event-selector" bind:value={event.code} items={eventList} placeholder="Select Event" on:change={adminSelectEvent} />
-				<Button href="/" on:click={() => navigate("/")}>Go to App</Button>
-				<Button outline on:click={() => navigate("/manage/event-created")}>See Event Pin</Button>
+				<Select
+					id="event-selector"
+					bind:value={$eventStore.code}
+					items={eventList}
+					placeholder="Select Event"
+					onchange={adminSelectEvent}
+				/>
+				<Button href="/" onclick={() => navigate("/")}>Go to App</Button>
+				<Button outline onclick={() => navigate("/manage/event-created")}>See Event Pin</Button>
 				<Button outline href="/manage/meshed-event">Create Meshed Event</Button>
 				<Button outline href="/manage/manage">App Management</Button>
 			</div>
 
 			<!-- Currently have an event selected -->
-		{:else if user.eventToken}
+		{:else if $user.eventToken}
 			<div class="flex flex-col border-t border-neutral-500 pt-10 space-y-2">
-				<h1 class="text-xl" style="font-weight:bold;">The Event Currently Selected Is: {event.code}</h1>
-				<Button href="/" on:click={() => navigate("/")}>Go to App</Button>
-				<Button outline on:click={() => (eventStore.set({ code: "", pin: "", teams: [], users: [] }), userStore.set({ ...user, eventToken: "" }))}
-					>Leave Event</Button
+				<h1 class="text-xl" style="font-weight:bold;">The Event Currently Selected Is: {$eventStore.code}</h1>
+				<Button href="/" onclick={() => navigate("/")}>Go to App</Button>
+				<Button
+					outline
+					onclick={() => (
+						eventStore.set({ code: "", pin: "", teams: [], users: [] }),
+						user.set({ ...$user, eventToken: "" })
+					)}>Leave Event</Button
 				>
-				<Button outline on:click={() => navigate("/manage/event-created")}>See Event Pin</Button>
+				<Button outline onclick={() => navigate("/manage/event-created")}>See Event Pin</Button>
 			</div>
 
 			<!-- No event selected -->
 		{:else}
 			<div class="flex flex-col border-t border-neutral-500 pt-4">
 				<h3 class="text-lg">Join Event</h3>
-				{#if !desktop}<p class="text-gray-600 text-sm">To create a new event, open ftabuddy.com on a computer connected to the field network.</p>{/if}
-				<form class="flex flex-col gap-2 text-left mt-2" on:submit|preventDefault={joinEvent}>
+				{#if !desktop}<p class="text-gray-600 text-sm">
+						To create a new event, open ftabuddy.com on a computer connected to the field network.
+					</p>{/if}
+				<form class="flex flex-col gap-2 text-left mt-2" onsubmit={joinEvent}>
 					<div>
 						<Label for="event-code">Event Code</Label>
 						<Input id="event-code" bind:value={eventCode} placeholder="2024mitry" />
@@ -580,7 +590,7 @@
 				<div class="flex border-t border-neutral-500 pt-4">
 					<div class="my-auto w-full">
 						<h2 class="text-xl">Run FTA Buddy from this computer</h2>
-						<Button on:click={() => navigate("/manage/host")} class="w-full mt-4">Host</Button>
+						<Button onclick={() => navigate("/manage/host")} class="w-full mt-4">Host</Button>
 						<p class="text-gray-700 mt-2">Requires this computer to be on the field network</p>
 					</div>
 				</div>

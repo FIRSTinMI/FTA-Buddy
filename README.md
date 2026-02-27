@@ -1,4 +1,5 @@
 # FTA Buddy
+
 <img src="shared/logo.svg" alt="Logo" width="120" height="120">
 
 <a href="https://ftabuddy.com/"><strong>Web App</strong></a>
@@ -20,35 +21,58 @@ The cloud server also enables the notes functionality. The notes are also persis
 
 - Install the extension from the [Chrome webstore](https://chrome.google.com/webstore/detail/fta-buddy/kddnhihfpfnehnnhbkfajdldlgigohjc)
 - Go to [ftabuddy.com](https://ftabuddy.com/) on a computer connected to the field network.
-- Click Host *and optionally login first*.
+- Click Host _and optionally login first_.
 - Enter the event code (e.g. 2024miket) and a passcode of your choosing, and click create event
 - Visit [ftabuddy.com](https://ftabuddy.com/) on your phone, add/install the web app to your home screen for the best experience
 - Login or create an account for yourself, then connect to the event with the same code and pin!
 
-
 ### Full Feature List
-- Dark theme 
-- Mobile optimized 
-- Reduce signalR congestion 
+
+- Dark theme
+- Mobile optimized
+- Reduce signalR congestion
 - Access without being on field wifi
 - Detailed status view with troubleshooting steps
 - Vibration notifications when a robot drops during a match
-- Tracking how long since the last status change happened 
-- 👀 emoji helps identify robots that are taking longer than expected to connect 
+- Tracking how long since the last status change happened
+- 👀 emoji helps identify robots that are taking longer than expected to connect
 - Flashcards to communicate through driver station glass
-- Reference page with status light codes and other handy information 
-- Dsplay signal strength information 
+- Reference page with status light codes and other handy information
+- Dsplay signal strength information
 - Display last cycle time and timer for current cycle
-- Audio notifications to quickly know which robot dropped and what disconnected 
+- Audio notifications to quickly know which robot dropped and what disconnected
 - Cycle time tracking
-- ***A way better*** event log viewer, give your CSAs access to the data that can help them help you help teams! 
-- Synced team checklist to help track radio programming 
+- **_A way better_** event log viewer, give your CSAs access to the data that can help them help you help teams!
+- Synced team checklist to help track radio programming
 - Ticket and note system that's synchronized between events
 - Current cycle will become more red as you approach 2x your average cycle time
 - Last cycle time will be green if it's your best that event
 
 **Coming soon:**
-- Tracking connection time per team, and display 🕜 emoji when there's a team that takes 1 std deviation longer than the average team to connect 
+
+- Tracking connection time per team, and display 🕜 emoji when there's a team that takes 1 std deviation longer than the average team to connect
+
+## Deployment
+
+### SSE Subscriptions & HTTP/2
+
+SSE subscriptions require **HTTP/2** in production so multiple browser tabs can
+share a single multiplexed connection (HTTP/1.1 limits concurrent connections to
+~6 per origin, which gets exhausted by long-lived SSE streams).
+
+A [Caddyfile](Caddyfile) is included that:
+
+- Terminates TLS and negotiates h2 via ALPN (automatic with Caddy's built-in ACME).
+- Proxies `/trpc` to the Bun upstream with `flush_interval -1` (no response buffering for SSE).
+- Proxies `/ws` for the Chrome extension's WebSocket connection.
+
+```bash
+# Install Caddy: https://caddyserver.com/docs/install
+caddy run          # foreground, auto-HTTPS via Let's Encrypt
+```
+
+**Verify HTTP/2:** Open Chrome DevTools → Network tab → right-click column
+headers → enable "Protocol". Subscription requests to `/trpc` should show `h2`.
 
 ## License
 

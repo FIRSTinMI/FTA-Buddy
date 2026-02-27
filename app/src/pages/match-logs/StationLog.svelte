@@ -13,20 +13,20 @@
 		TableHeadCell,
 		type SelectOptionType,
 	} from "flowbite-svelte";
-	import { trpc } from "../../main";
-	import { navigate } from "svelte-routing";
+	import { json2csv } from "json-2-csv";
+	import type { ComponentProps } from "svelte";
+	import QrCode from "svelte-qrcode";
+	import { MCS_LOOKUP_TABLE } from "../../../../shared/constants";
+	import { formatTimeNoAgo, formatTimeShortNoAgoSeconds } from "../../../../shared/formatTime";
 	import type { FMSLogFrame, ROBOT } from "../../../../shared/types";
 	import LogGraph from "../../components/LogGraph.svelte";
-	import QrCode from "svelte-qrcode";
-	import { userStore } from "../../stores/user";
-	import { formatTimeNoAgo, formatTimeShortNoAgoSeconds } from "../../../../shared/formatTime";
 	import Spinner from "../../components/Spinner.svelte";
-	import { json2csv } from "json-2-csv";
-	import { MCS_LOOKUP_TABLE } from "../../../../shared/constants";
+	import { trpc } from "../../main";
+	import { navigate, route } from "../../router";
+	import { userStore } from "../../stores/user";
 	import { decompressStationLog } from "../../util/log-compression";
 
-	export let matchid: string;
-	export let station: ROBOT | string;
+	const { matchid, station } = route.getParams("/logs/:matchid/:station");
 	let actualStation: ROBOT;
 
 	let log: FMSLogFrame[];
@@ -99,7 +99,7 @@
 
 	async function share() {
 		if (["blue1", "blue2", "blue3", "red1", "red2", "red3"].includes(station)) {
-			let response = await trpc.match.publishMatch.query({ id: matchid, station: station as ROBOT, team: team });
+			let response = await trpc.match.publishMatch.mutate({ id: matchid, station: station as ROBOT, team: team });
 			shareid = response.id;
 			shareOpen = true;
 		} else {
@@ -118,59 +118,42 @@
 	}
 
 	const analysisEventColors: {
-		[key: string]:
-			| "gray"
-			| "red"
-			| "yellow"
-			| "green"
-			| "indigo"
-			| "purple"
-			| "pink"
-			| "blue"
-			| "light"
-			| "dark"
-			| "default"
-			| "dropdown"
-			| "navbar"
-			| "navbarUl"
-			| "form"
-			| "primary"
-			| "orange"
-			| "none"
-			| undefined;
+		[key: string]: ComponentProps<typeof Alert>["color"];
 	} = {
 		"Code disconnect": "yellow",
 		"RIO disconnect": "red",
 		"Radio disconnect": "red",
 		"DS disconnect": "red",
 		"Large spike in ping": "red",
-		"High BWU": "default",
+		"High BWU": "blue",
 		"Sustained high ping": "yellow",
 		"Low signal": "yellow",
-		Brownout: "dark",
+		Brownout: "teal",
 	};
 </script>
 
 <Modal bind:open={shareOpen} dismissable outsideclose>
-	<h1 slot="header" class="text-xl">Share Log</h1>
+	{#snippet header()}
+		<h1 class="text-xl">Share Log</h1>
+	{/snippet}
 	<div class="flex flex-col gap-2">
 		<p>
 			Log published for 72 hours. Share this log only with team #{team} or other volunteers.
 		</p>
 		<div class="max-w-48 mx-auto">
-			<QrCode value="https://ftabuddy.com/logs/{matchid}/{shareid}" padding={12} />
+			<QrCode value={`https://ftabuddy.com/logs/${matchid}/${shareid}`} padding={12} />
 		</div>
-		<Button on:click={() => (shareOpen = false)} class="mt-2">Close</Button>
+		<Button onclick={() => (shareOpen = false)} class="mt-2">Close</Button>
 	</div>
 </Modal>
 
 <div class="container mx-auto p-2 lg:max-w-7xl w-full flex flex-col gap-2 md:gap-4">
 	<div class="flex">
 		{#if $userStore.eventToken}
-			<Button on:click={back} class="w-fit mx-1.5">Back</Button>
-			<Button on:click={share} class="w-fit mx-1.5">Share Log</Button>
+			<Button onclick={back} class="w-fit mx-1.5">Back</Button>
+			<Button onclick={share} class="w-fit mx-1.5">Share Log</Button>
 		{/if}
-		<Button on:click={exportLog} class="w-fit mx-1.5">Export CSV</Button>
+		<Button onclick={exportLog} class="w-fit mx-1.5">Export CSV</Button>
 	</div>
 	{#await matchPromise}
 		<Spinner />
@@ -182,7 +165,8 @@
 			</h1>
 			<p>{formatTimeNoAgo(new Date(match.start_time))}</p>
 			<h2 class="text-lg">
-				{(actualStation.startsWith("blue") ? "Blue " : "Red ") + actualStation.charAt(actualStation.length - 1)} - Team #{team}
+				{(actualStation.startsWith("blue") ? "Blue " : "Red ") + actualStation.charAt(actualStation.length - 1)} -
+				Team #{team}
 			</h2>
 			<p class="md:hidden text-gray-600 text-sm">View on desktop for more detail</p>
 		</div>
@@ -191,7 +175,10 @@
 
 		<div class="flex flex-col gap-2">
 			{#each match.analysis as logEvent}
-				<button class="w-full text-left cursor-pointer" on:click={() => logGraph?.zoomToRange(logEvent.startIndex, logEvent.endIndex)}>
+				<button
+					class="w-full text-left cursor-pointer"
+					onclick={() => logGraph?.zoomToRange(logEvent.startIndex, logEvent.endIndex)}
+				>
 					<Alert class="text-left" color={analysisEventColors[logEvent.issue]} border>
 						<span class="font-medium">{logEvent.issue}</span>
 						Started at {logEvent.startTime}s lasting {formatTimeShortNoAgoSeconds(logEvent.duration * 1000)}
@@ -234,14 +221,27 @@
 									<TableBodyCell
 										style="background-color: rgba(255,0,0,{frame.battery < 11 && frame.battery > 0
 											? (-1.5 * frame.battery ** 2 - 6.6 * frame.battery + 255) / 255
-											: 0})">{typeof frame.battery === "number" ? frame.battery.toFixed(2) : frame.battery}</TableBodyCell
+											: 0})"
+										>{typeof frame.battery === "number"
+											? frame.battery.toFixed(2)
+											: frame.battery}</TableBodyCell
 									>
 								{:else if ["averageTripTime", "lostPackets", "sentPackets", "signal", "noise", "txMCS", "rxMCS"].includes(col)}
-									<TableBodyCell>{typeof frame[col] === "number" ? frame[col].toFixed(0) : frame[col]}</TableBodyCell>
+									<TableBodyCell
+										>{typeof frame[col] === "number"
+											? frame[col].toFixed(0)
+											: frame[col]}</TableBodyCell
+									>
 								{:else if ["dataRateTotal", "txRate", "rxRate"].includes(col)}
-									<TableBodyCell>{typeof frame[col] === "number" ? frame[col].toFixed(2) : frame[col]}</TableBodyCell>
+									<TableBodyCell
+										>{typeof frame[col] === "number"
+											? frame[col].toFixed(2)
+											: frame[col]}</TableBodyCell
+									>
 								{:else}
-									<TableBodyCell class={frame[col] ? "" : "bg-red-500"}>{frame[col] ? "Y" : "N"}</TableBodyCell>
+									<TableBodyCell class={frame[col] ? "" : "bg-red-500"}
+										>{frame[col] ? "Y" : "N"}</TableBodyCell
+									>
 								{/if}
 							{/each}
 						</TableBodyRow>

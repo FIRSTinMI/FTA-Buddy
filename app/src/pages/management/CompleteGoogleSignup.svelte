@@ -1,27 +1,27 @@
 <script lang="ts">
-	import { Label, Input, Select, Button } from "flowbite-svelte";
+	import { Button, Input, Label, Select } from "flowbite-svelte";
 	import { get } from "svelte/store";
-	import { trpc } from "../../main";
-	import { userStore } from "../../stores/user";
 	import Spinner from "../../components/Spinner.svelte";
-	import { navigate } from "svelte-routing";
+	import { trpc } from "../../main";
+	import { navigate } from "../../router";
+	import { userStore } from "../../stores/user";
+	import { toast } from "../../util/toast";
 
-	export let toast: (title: string, text: string, color?: string) => void;
+	let username = $state("");
+	let role: "FTA" | "FTAA" | "CSA" | "RI" | undefined = $state();
 
-	let username = "";
-	let role: "FTA" | "FTAA" | "CSA" | "RI";
-
-	let loading = false;
+	let loading = $state(false);
 
 	async function createGoogleUser(evt: Event) {
+		evt.preventDefault();
 		loading = true;
 		const googleToken = get(userStore).googleToken;
 
 		try {
-			const res = await trpc.user.createGoogleUser.query({
+			const res = await trpc.user.createGoogleUser.mutate({
 				token: googleToken || "",
 				username,
-				role,
+				role: role || "FTA",
 			});
 
 			userStore.set({
@@ -29,7 +29,7 @@
 				eventToken: "",
 				username,
 				email: res.email,
-				role,
+				role: role || "FTA",
 				id: res.id,
 				googleToken,
 				admin: false,
@@ -60,10 +60,10 @@
 <div class="container mx-auto md:max-w-3xl flex flex-col justify-center p-4 h-full space-y-4">
 	<h1 class="text-3xl">Welcome to FTA Buddy</h1>
 	<h2 class="text-xl">Finish Creating Account</h2>
-	<form class="flex flex-col space-y-2 mt-2 text-left" on:submit|preventDefault={createGoogleUser}>
+	<form class="flex flex-col space-y-2 mt-2 text-left" onsubmit={createGoogleUser}>
 		<div>
 			<Label for="username">Username</Label>
-			<Input id="username" bind:value={username} placeholder="John" bind:disabled={loading} />
+			<Input id="username" bind:value={username} placeholder="John" disabled={loading} />
 		</div>
 
 		<div>
@@ -75,10 +75,10 @@
 					name: v,
 					value: v,
 				}))}
-				bind:disabled={loading}
+				disabled={loading}
 			/>
 		</div>
 
-		<Button type="submit" bind:disabled={loading}>Create Account</Button>
+		<Button type="submit" disabled={loading}>Create Account</Button>
 	</form>
 </div>

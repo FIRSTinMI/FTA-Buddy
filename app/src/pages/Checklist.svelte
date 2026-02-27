@@ -1,16 +1,25 @@
 <script lang="ts">
-	import { Checkbox, Indicator, Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from "flowbite-svelte";
+	import {
+		Checkbox,
+		Indicator,
+		Table,
+		TableBody,
+		TableBodyCell,
+		TableBodyRow,
+		TableHead,
+		TableHeadCell,
+	} from "flowbite-svelte";
+	import { onDestroy, onMount } from "svelte";
+	import { get } from "svelte/store";
+	import type { EventChecklist, NexusStatus } from "../../../shared/types";
 	import Spinner from "../components/Spinner.svelte";
 	import { trpc } from "../main";
-	import type { EventChecklist, NexusStatus } from "../../../shared/types";
-	import { onDestroy, onMount } from "svelte";
-	import { userStore } from "../stores/user";
 	import { eventStore } from "../stores/event";
-	import { get } from "svelte/store";
+	import { userStore } from "../stores/user";
 
-	let checklist: EventChecklist = {};
+	let checklist: EventChecklist = $state({});
 	let checklistPromise = trpc.checklist.get.query();
-	const teamNames: { [key: string]: string } = {};
+	const teamNames: { [key: string]: string } = $state({});
 
 	for (let team of get(eventStore).teams) {
 		let name = team.name;
@@ -23,23 +32,26 @@
 
 	checklistPromise.then((c: EventChecklist) => {
 		checklist = c;
+		updateTotals(checklist);
 	});
 
-	let present = 0;
+	let present = $state(0);
 	let weighed = 0;
-	let inspected = 0;
-	let radioProgrammed = 0;
-	let connectionTested = 0;
-	let total = 0;
+	let inspected = $state(0);
+	let radioProgrammed = $state(0);
+	let connectionTested = $state(0);
+	let total = $state(0);
 
 	// Nexus status
-	let nexusStatus: NexusStatus | null = null;
+	let nexusStatus: NexusStatus | null = $state(null);
 	let nexusStatusInterval: ReturnType<typeof setInterval> | null = null;
 
 	async function refreshNexusStatus() {
 		try {
 			nexusStatus = await trpc.event.getNexusStatus.query();
-		} catch { /* ignore */ }
+		} catch {
+			/* ignore */
+		}
 	}
 
 	function updateTotals(c: EventChecklist) {
@@ -59,9 +71,11 @@
 		}
 	}
 
-	$: updateTotals(checklist);
-
-	async function updateChecklist(team: string, key: "present" | "inspected" | "radioProgrammed" | "connectionTested", value: boolean) {
+	async function updateChecklist(
+		team: string,
+		key: "present" | "inspected" | "radioProgrammed" | "connectionTested",
+		value: boolean,
+	) {
 		const updated = [{ team: team, key, value }];
 
 		if (["inspected", "radioProgrammed", "connectionTested"].includes(key) && value) {
@@ -72,7 +86,8 @@
 			updated.push({ team: team, key: "radioProgrammed", value: true });
 		}
 
-		await trpc.checklist.update.query(updated);
+		await trpc.checklist.update.mutate(updated);
+		updateTotals(checklist);
 	}
 
 	let subscription: ReturnType<typeof trpc.checklist.subscription.subscribe>;
@@ -89,7 +104,7 @@
 					checklist = c;
 					updateTotals(checklist);
 				},
-			}
+			},
 		);
 
 		refreshNexusStatus();
@@ -102,33 +117,37 @@
 	});
 </script>
 
-<div class="container w-full flex flex-col py-2 h-full mx-auto h-fit gap-2">
+<div class="container w-full flex flex-col py-2 h-full mx-auto gap-2">
 	{#await checklistPromise}
 		<Spinner />
 	{:then c}
 		<div class="flex w-full justify-center">
 			<div class="flex flex-col gap-2">
 				<h1 class="font-bold text-3xl">Team Checklist</h1>
-				{#if nexusStatus && nexusStatus.state !== 'not_configured'}
+				{#if nexusStatus && nexusStatus.state !== "not_configured"}
 					<div class="flex flex-row gap-2 items-center text-sm">
 						<Indicator
-							color={nexusStatus.state === 'complete' || nexusStatus.state === 'polling_slow' ? 'green'
-								: nexusStatus.state === 'polling' ? 'blue'
-								: nexusStatus.state === 'unauthorized' ? 'red'
-								: nexusStatus.state === 'error' ? 'yellow'
-								: 'gray'}
+							color={nexusStatus.state === "complete" || nexusStatus.state === "polling_slow"
+								? "green"
+								: nexusStatus.state === "polling"
+									? "blue"
+									: nexusStatus.state === "unauthorized"
+										? "red"
+										: nexusStatus.state === "error"
+											? "yellow"
+											: "gray"}
 							class="shrink-0"
 						/>
 						<span class="text-gray-400">
-							{#if nexusStatus.state === 'polling' || nexusStatus.state === 'polling_slow'}
+							{#if nexusStatus.state === "polling" || nexusStatus.state === "polling_slow"}
 								Nexus syncing
-							{:else if nexusStatus.state === 'complete'}
+							{:else if nexusStatus.state === "complete"}
 								Nexus synced ✓
-							{:else if nexusStatus.state === 'unauthorized'}
+							{:else if nexusStatus.state === "unauthorized"}
 								Nexus: unauthorized
-							{:else if nexusStatus.state === 'error'}
+							{:else if nexusStatus.state === "error"}
 								Nexus: error
-							{:else if nexusStatus.state === 'event_over'}
+							{:else if nexusStatus.state === "event_over"}
 								Nexus: event ended
 							{/if}
 						</span>
@@ -165,7 +184,7 @@
 			</div>
 		</div>
 		<Table class="text-center pt-2">
-			<TableHead class="sticky top-0">
+			<TableHead class="sticky top-0 z-10">
 				<TableHeadCell class="p-1 md:p-2">Team</TableHeadCell>
 				<TableHeadCell class="hidden sm:table-cell p-1 md:p-2">Name</TableHeadCell>
 				<TableHeadCell class="p-1 md:p-2">Present</TableHeadCell>
@@ -182,28 +201,28 @@
 							><Checkbox
 								class="justify-center"
 								bind:checked={items.present}
-								on:change={() => updateChecklist(team, "present", items.present)}
+								onchange={() => updateChecklist(team, "present", items.present)}
 							/></TableBodyCell
 						>
 						<TableBodyCell
 							><Checkbox
 								class="justify-center"
 								bind:checked={items.inspected}
-								on:change={() => updateChecklist(team, "inspected", items.inspected)}
+								onchange={() => updateChecklist(team, "inspected", items.inspected)}
 							/></TableBodyCell
 						>
 						<TableBodyCell
 							><Checkbox
 								class="justify-center"
 								bind:checked={items.radioProgrammed}
-								on:change={() => updateChecklist(team, "radioProgrammed", items.radioProgrammed)}
+								onchange={() => updateChecklist(team, "radioProgrammed", items.radioProgrammed)}
 							/></TableBodyCell
 						>
 						<TableBodyCell
 							><Checkbox
 								class="justify-center"
 								bind:checked={items.connectionTested}
-								on:change={() => updateChecklist(team, "connectionTested", items.connectionTested)}
+								onchange={() => updateChecklist(team, "connectionTested", items.connectionTested)}
 							/></TableBodyCell
 						>
 					</TableBodyRow>

@@ -41,13 +41,16 @@
 							} else {
 								const aDate = a.extensions[0].lastFrame;
 								const bDate = b.extensions[0].lastFrame;
-								return bDate.toISOString().split("T")[1].localeCompare(aDate.toISOString().split("T")[1]);
+								return bDate
+									.toISOString()
+									.split("T")[1]
+									.localeCompare(aDate.toISOString().split("T")[1]);
 							}
 						}
 						return b.extensions.length - a.extensions.length;
 					});
 				},
-			}
+			},
 		);
 	});
 
@@ -74,7 +77,7 @@
 			await trpc.app.startIssue.mutate({
 				message,
 				effectedEvents: effectedEvents.filter((e) => e !== ""),
-			})
+			}),
 		);
 	}
 
@@ -88,8 +91,8 @@
 	<Input type="text" placeholder="Message" bind:value={message} class="mb-2" />
 	<Input type="text" placeholder="Effected Events" bind:value={effectedEvents} class="mb-2" />
 	<div class="flex gap-2">
-		<Button on:click={() => startIssue(message, effectedEvents.split(","))}>Start</Button>
-		<Button on:click={endIssue}>End Known Issue</Button>
+		<Button onclick={() => startIssue(message, effectedEvents.split(","))}>Start</Button>
+		<Button onclick={endIssue}>End Known Issue</Button>
 	</div>
 </div>
 
@@ -106,7 +109,12 @@
 		<p>{event.level} - {event.match}</p>
 		<p>{event.aheadBehind}</p>
 		<p>{event.exactAheadBehind}</p>
-		<p><Icon icon="mdi:favorite" class="w-8 h-full py-2 mx-auto {hearts[event.code] ? 'text-green-600' : 'text-gray-500'}" /></p>
+		<p>
+			<Icon
+				icon="mdi:favorite"
+				class="w-8 h-full py-2 mx-auto {hearts[event.code] ? 'text-green-600' : 'text-gray-500'}"
+			/>
+		</p>
 		<div class="col-span-2">
 			{#each event.clients as client}
 				<div class="flex items-center gap-2">

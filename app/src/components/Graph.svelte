@@ -1,34 +1,34 @@
 <script lang="ts">
-    import { curveBasis, line, scaleLinear } from "d3";
+	import { curveBasis, line, scaleLinear } from "d3";
 
-    // props
-    export let data: { time: number; data: number }[];
+	// props
+	export let data: { time: number; data: number }[];
 
-    export let min = 6;
-    export let max = 14;
-    export let time = 20;
+	export let min = 6;
+	export let max = 14;
+	export let time = 20;
 
-    // scales
-    const xScale = scaleLinear().domain([0, time]).range([0, 90]);
+	// scales
+	const xScale = scaleLinear().domain([0, time]).range([0, 90]);
 
-    const yScale = scaleLinear().domain([min, max]).range([0, 100]);
+	const yScale = scaleLinear().domain([min, max]).range([0, 100]);
 
-    // the path generator
-    const pathLine = line()
-        .x((d) => xScale(d[0]))
-        .y((d) => yScale((max + min) - d[1]))
-        .curve(curveBasis);
+	// the path generator
+	const pathLine = line()
+		.x((d) => xScale(d[0]))
+		.y((d) => yScale(max + min - d[1]))
+		.curve(curveBasis);
 </script>
 
 <svg viewBox="0 0 100 100">
-    <path d={pathLine(data.map(d => [d.time, d.data]))} />
+	<path d={pathLine(data.map((d) => [d.time, d.data]))} />
 </svg>
 
 <style>
-    path {
-        stroke: gray;
-        stroke-width: 2;
-        fill: none;
-        stroke-linecap: round;
-    }
+	path {
+		stroke: gray;
+		stroke-width: 2;
+		fill: none;
+		stroke-linecap: round;
+	}
 </style>

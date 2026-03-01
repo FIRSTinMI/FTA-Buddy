@@ -244,7 +244,7 @@
 				<div class="flex-1 px-2 text-center">{FieldStates[monitorFrame.field]}</div>
 				<div class="px-2">{monitorFrame.exactAheadBehind || monitorFrame.time}</div>
 				<button
-					class="text-sm fixed top-12 right-0 z-50"
+					class="text-sm fixed top-12 right-0 z-50 hidden md:block"
 					onclick={(evt) => {
 						evt.preventDefault();
 						$fullscreen = !$fullscreen;

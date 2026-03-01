@@ -20,6 +20,7 @@ const localforageSettings = localforage.createInstance({
 
 self.addEventListener("install", (evt) => {
 	console.log("Service worker installed");
+	self.skipWaiting();
 	evt.waitUntil(
 		caches.open(cacheName).then((cache) => {
 			console.log("[Service Worker] Caching all: app shell and content");
@@ -30,10 +31,10 @@ self.addEventListener("install", (evt) => {
 
 self.addEventListener("activate", (evt) => {
 	console.log("Service worker activated");
-	// Tell all open windows that a new SW version is active so they can
-	// trigger update checks and refresh their state if needed.
+	// Claim all open windows immediately so clearing fixes apply without reload.
 	evt.waitUntil(
 		(async () => {
+			await clients.claim();
 			const windowClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
 			for (const client of windowClients) {
 				client.postMessage({ type: "sw-ready", version: SW_VERSION });
@@ -66,6 +67,17 @@ async function addNotification(notification) {
 		await localforageNotifications.setItem("notifications", JSON.stringify(parsed));
 	} else {
 		await localforageNotifications.setItem("notifications", JSON.stringify([notification]));
+	}
+}
+
+async function removeNotificationFromStorage(id) {
+	try {
+		const raw = await localforageNotifications.getItem("notifications");
+		if (!raw) return;
+		const filtered = JSON.parse(raw).filter((n) => n.id !== id);
+		await localforageNotifications.setItem("notifications", JSON.stringify(filtered));
+	} catch (e) {
+		console.warn("[SW] removeNotificationFromStorage failed", e);
 	}
 }
 
@@ -169,7 +181,16 @@ self.addEventListener("notificationclick", (event) => {
 self.addEventListener("notificationclose", (event) => {
 	const notificationId = event.notification.data?.notificationId;
 	if (!notificationId) return;
-	event.waitUntil(broadcastToClients({ type: "notification_cleared", notificationId }));
+	// NOTE: notificationclose is unreliable on Android Chrome (often doesn't fire
+	// when the user swipes away from the notification shade). The page-side
+	// reconcile_notifications message is the authoritative fallback.
+	event.waitUntil(
+		(async () => {
+			// Persist the removal so a fresh page load won't re-show this notification.
+			await removeNotificationFromStorage(notificationId);
+			await broadcastToClients({ type: "notification_cleared", notificationId });
+		})()
+	);
 });
 
 // Re-subscribe when the browser rotates our push subscription.

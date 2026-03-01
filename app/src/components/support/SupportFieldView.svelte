@@ -333,10 +333,10 @@
 		</div>
 		{#if liveRobot && isLive}
 			<div
-				class="shrink-0 flex items-center gap-2 px-2 py-1.5 border-b border-gray-200 dark:border-gray-700 text-xs"
+				class="shrink-0 flex items-center gap-1 sm:gap-2 px-2 py-1 sm:py-1.5 border-b border-gray-200 dark:border-gray-700 text-xs"
 			>
 				<div
-					class="size-6 rounded-sm flex items-center justify-center text-black font-bold text-[10px] shrink-0 {dsColor(
+					class="size-4 sm:size-6 rounded-sm flex items-center justify-center text-black font-bold text-[9px] sm:text-[10px] shrink-0 {dsColor(
 						liveRobot.ds,
 					)}"
 					title="Driver Station: {liveRobot.ds === DSState.GREEN_X
@@ -363,7 +363,7 @@
 					{/if}
 				</div>
 				<div
-					class="size-6 rounded-sm shrink-0 {liveRobot.radio || liveRobot.radioConnected
+					class="size-4 sm:size-6 rounded-sm shrink-0 {liveRobot.radio || liveRobot.radioConnected
 						? 'bg-green-500'
 						: 'bg-red-600'}"
 					title="Radio: {liveRobot.radio
@@ -373,24 +373,28 @@
 							: 'No radio'}"
 				></div>
 				<div
-					class="size-6 rounded-sm flex items-center justify-center text-black text-[10px] font-bold shrink-0 {liveRobot.rio
+					class="size-4 sm:size-6 rounded-sm flex items-center justify-center text-black text-[9px] sm:text-[10px] font-bold shrink-0 {liveRobot.rio
 						? 'bg-green-500'
 						: 'bg-red-600'}"
 					title="RoboRIO: {liveRobot.rio ? (liveRobot.code ? 'Code running' : 'No code') : 'Not connected'}"
 				>
 					{#if liveRobot.rio && !liveRobot.code}X{/if}
 				</div>
-				<span class="tabular-nums font-mono text-black dark:text-white shrink-0" title="Battery voltage"
-					>{liveRobot.battery.toFixed(1)}v</span
+				<span
+					class="tabular-nums font-mono text-[10px] sm:text-xs text-black dark:text-white shrink-0"
+					title="Battery voltage">{liveRobot.battery.toFixed(1)}v</span
 				>
-				<span class="tabular-nums font-mono text-black dark:text-white shrink-0" title="Round-trip ping"
-					>{liveRobot.ping}ms</span
+				<span
+					class="tabular-nums font-mono text-[10px] sm:text-xs text-black dark:text-white shrink-0"
+					title="Round-trip ping">{liveRobot.ping}ms</span
 				>
-				<span class="tabular-nums font-mono text-black dark:text-white shrink-0" title="Bandwidth utilization"
-					>{liveRobot.bwu.toFixed(2)}</span
+				<span
+					class="tabular-nums font-mono text-[10px] sm:text-xs text-black dark:text-white shrink-0"
+					title="Bandwidth utilization">{liveRobot.bwu.toFixed(2)}</span
 				>
-				<span class="tabular-nums font-mono text-black dark:text-white shrink-0" title="Signal strength"
-					>{liveRobot.signal ?? 0}dBm</span
+				<span
+					class="tabular-nums font-mono text-[10px] sm:text-xs text-black dark:text-white shrink-0"
+					title="Signal strength">{liveRobot.signal ?? 0}dBm</span
 				>
 			</div>
 		{/if}
@@ -461,27 +465,26 @@
 	</div>
 {:else}
 	<div class="flex flex-col h-full">
-		<div class="shrink-0 grid grid-cols-3 items-center px-3 py-2 gap-2">
-			<div class="flex items-center">
+		<div class="shrink-0 px-3 pt-2 pb-1">
+			<div class="flex items-center justify-between gap-2">
 				<Button size="sm" color="alternative" onclick={goToPrevMatch} disabled={matchIndex === 0}>
 					<Icon icon="mdi:chevron-left" class="size-5" />
 				</Button>
-			</div>
 
-			<div class="flex flex-col items-center">
-				<p class="font-bold text-2xl leading-tight text-black dark:text-white text-center">{matchLabel}</p>
-				<Badge
-					color="green"
-					class="text-xs mt-0.5 transition-opacity {isLive ? 'opacity-100' : 'opacity-0 pointer-events-none'}"
-					>LIVE</Badge
-				>
-			</div>
-
-			<div class="flex items-center justify-end gap-2">
-				<div class="flex items-center gap-1.5 shrink-0">
-					<Toggle size="small" bind:checked={autoAdvance} />
-					<span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">Current match</span>
+				<div class="flex flex-col items-center min-w-0">
+					<p
+						class="font-bold text-lg sm:text-2xl leading-tight text-black dark:text-white text-center truncate"
+					>
+						{matchLabel}
+					</p>
+					<Badge
+						color="green"
+						class="text-xs mt-0.5 transition-opacity {isLive
+							? 'opacity-100'
+							: 'opacity-0 pointer-events-none'}">LIVE</Badge
+					>
 				</div>
+
 				<Button
 					size="sm"
 					color="alternative"
@@ -490,6 +493,10 @@
 				>
 					<Icon icon="mdi:chevron-right" class="size-5" />
 				</Button>
+			</div>
+			<div class="flex justify-end items-center gap-1.5 mt-1">
+				<Toggle size="small" bind:checked={autoAdvance} />
+				<span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">Current match</span>
 			</div>
 		</div>
 

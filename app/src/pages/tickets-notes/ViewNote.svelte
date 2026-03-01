@@ -14,6 +14,7 @@
 	import { eventStore } from "../../stores/event";
 	import { settingsStore } from "../../stores/settings";
 	import { userStore } from "../../stores/user";
+	import { clearNotificationsForNote } from "../../util/notifications";
 	import { toast } from "../../util/toast";
 
 	const { id: noteId } = route.getParams("/notepad/view/:id");
@@ -24,6 +25,10 @@
 	let note: Note | undefined = $state();
 
 	let notePromise: Promise<any> | undefined = $state();
+
+	onMount(() => {
+		clearNotificationsForNote(noteId);
+	});
 
 	let match_id: string | undefined | null;
 

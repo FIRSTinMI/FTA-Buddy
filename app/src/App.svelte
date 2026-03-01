@@ -222,7 +222,6 @@
 	onMount(() => {
 		checkVersion();
 		versionPollInterval = setInterval(checkVersion, 60_000);
-		// Re-register push subscription when the browser rotates it (handled via SW message)
 		setupSwMessageHandler();
 		// Subscription is now driven by the $effect below - no need to start it here.
 	});
@@ -313,6 +312,22 @@
 	});
 	onDestroy(() => {
 		clearInterval(statusPollInterval);
+	});
+
+	function updateAppHeight() {
+		const h = window.visualViewport?.height ?? window.innerHeight;
+		document.documentElement.style.setProperty("--app-height", `${h}px`);
+	}
+
+	onMount(() => {
+		updateAppHeight();
+		window.addEventListener("resize", updateAppHeight);
+		window.visualViewport?.addEventListener("resize", updateAppHeight);
+	});
+
+	onDestroy(() => {
+		window.removeEventListener("resize", updateAppHeight);
+		window.visualViewport?.removeEventListener("resize", updateAppHeight);
 	});
 </script>
 
@@ -418,7 +433,7 @@
 						}}
 					>
 						{#snippet icon()}
-							<Icon icon="mdi:note-outline" class="size-8" />
+							<Icon icon="mdi:file-document-outline" class="size-8" />
 						{/snippet}
 					</SidebarItem>
 					<SidebarItem
@@ -462,7 +477,7 @@
 						}}
 					>
 						{#snippet icon()}
-							<Icon icon="mdi:file-document-outline" class="size-8" />
+							<Icon icon="mdi:database-export-outline" class="size-8" />
 						{/snippet}
 					</SidebarItem>
 					<SidebarItem
@@ -662,7 +677,10 @@
 </Drawer>
 
 <!-- App.svelte -->
-<main class="bg-white dark:bg-neutral-800 w-screen h-dvh flex flex-col overflow-hidden">
+<main
+	class="bg-white dark:bg-neutral-800 w-screen flex flex-col overflow-hidden"
+	style="height: var(--app-height, 100dvh)"
+>
 	<div
 		class="bg-primary-700 dark:bg-primary-500 flex w-full justify-between px-2 {$fullscreen
 			? 'hidden collapse'
@@ -696,10 +714,21 @@
 					<Icon icon="mdi:message-alert" class="size-8" />
 				</button>
 				<button class="p-2" onclick={() => navigate("/references")}>
-					<Icon icon="mdi:file-document-outline" class="size-8" />
+					<Icon icon="mdi:file-text-outline" class="size-8" />
 				</button>
-				<button class="p-2 relative" onclick={() => navigate("/notifications")}>
+
+				<!-- Gonna trial having the notepad button here instead of notifications -->
+				<!-- <button class="p-2 relative" onclick={() => navigate("/notifications")}>
 					<Icon icon="fluent:alert-on-16-filled" class="size-8" />
+					{#if $notificationsStore.length > 0}
+						<Indicator color="red" border size="xl" placement="top-left">
+							<span class="text-white text-xs">{$notificationsStore.length}</span>
+						</Indicator>
+					{/if}
+				</button> -->
+
+				<button class="p-2 relative" onclick={() => navigate("/notepad")}>
+					<Icon icon="mdi:file-text-outline" class="size-8" />
 					{#if $notificationsStore.length > 0}
 						<Indicator color="red" border size="xl" placement="top-left">
 							<span class="text-white text-xs">{$notificationsStore.length}</span>
@@ -708,13 +737,13 @@
 				</button>
 			{:else if $user?.role === "CSA" || $user?.role === "RI"}
 				<button class="p-2" onclick={() => navigate("/notepad")}>
-					<Icon icon="mdi:note-outline" class="size-8" />
+					<Icon icon="mdi:file-document-outline" class="size-8" />
 				</button>
 				<button class="p-2" onclick={() => navigate("/references/statuslights")}>
 					<Icon icon="heroicons:sun-16-solid" class="size-8" />
 				</button>
 				<button class="p-2" onclick={() => navigate("/references/softwaredocs")}>
-					<Icon icon="mdi:file-document-outline" class="size-8" />
+					<Icon icon="mdi:file-text-outline" class="size-8" />
 				</button>
 				<button class="p-2 relative" onclick={() => navigate("/notifications")}>
 					<Icon icon="fluent:alert-on-16-filled" class="size-8" />

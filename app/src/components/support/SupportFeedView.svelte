@@ -190,7 +190,8 @@
 
 	onDestroy(() => subscription?.unsubscribe());
 
-	// ── Create note modal ──
+	let filterModalOpen = $state(false);
+
 	let createModalOpen = $state(false);
 
 	const teamOptions = $eventStore.teams
@@ -424,33 +425,59 @@
 		<Button size="sm" color="primary" class="shrink-0" onclick={openCreateModal}>
 			<Icon icon="mdi:plus" class="size-4 mr-1" />New Note
 		</Button>
-		<Input class="grow" size="sm" placeholder="Team #, Name, Text" bind:value={search}>
-			{#snippet left()}
-				<Icon icon="mdi:magnify" class="size-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
-			{/snippet}
-		</Input>
-		<Select
+
+		<div class="relative grow">
+			<Input class="ps-8 pe-2.5 py-1.5 h-9" type="text" placeholder="Team #, Name, Text" bind:value={search}>
+				{#snippet left()}
+					<Icon icon="mdi:magnify" />
+				{/snippet}
+			</Input>
+		</div>
+
+		<Button
 			size="sm"
-			class="w-auto"
-			bind:value={typeFilter}
-			items={[
-				{ value: "all", name: "All types" },
-				{ value: "TeamIssue", name: "Team Notes" },
-				{ value: "EventNote", name: "Event Notes" },
-				{ value: "MatchNote", name: "Match Notes" },
-			]}
-		/>
-		<Select
-			size="sm"
-			class="w-auto"
-			bind:value={statusFilter}
-			items={[
-				{ value: "all", name: "All statuses" },
-				{ value: "Open", name: "Open" },
-				{ value: "Resolved", name: "Resolved" },
-			]}
-		/>
+			color={typeFilter !== "all" || statusFilter !== "all" ? "primary" : "alternative"}
+			class="shrink-0"
+			onclick={() => (filterModalOpen = true)}
+			title="Filters"
+		>
+			<Icon icon="mdi:filter-variant" class="size-4" />
+		</Button>
 	</div>
+
+	<Modal bind:open={filterModalOpen} size="sm" outsideclose>
+		{#snippet header()}
+			<h2 class="text-lg font-bold text-black dark:text-white">Filters</h2>
+		{/snippet}
+		<div class="flex flex-col gap-4">
+			<Label>
+				Note type
+				<Select
+					class="mt-1"
+					bind:value={typeFilter}
+					items={[
+						{ value: "all", name: "All types" },
+						{ value: "TeamIssue", name: "Team Notes" },
+						{ value: "EventNote", name: "Event Notes" },
+						{ value: "MatchNote", name: "Match Notes" },
+					]}
+				/>
+			</Label>
+			<Label>
+				Status
+				<Select
+					class="mt-1"
+					bind:value={statusFilter}
+					items={[
+						{ value: "all", name: "All statuses" },
+						{ value: "Open", name: "Open" },
+						{ value: "Resolved", name: "Resolved" },
+					]}
+				/>
+			</Label>
+			<Button color="primary" onclick={() => (filterModalOpen = false)}>Done</Button>
+		</div>
+	</Modal>
 
 	<div class="flex flex-col grow gap-2 overflow-y-auto mt-2 pb-2">
 		{#if loading}

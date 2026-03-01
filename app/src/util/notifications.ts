@@ -1,7 +1,12 @@
 import { get } from "svelte/store";
 import type { Notification } from "../../../shared/types";
 import { trpc } from "../main";
-import { addNotification, checkIfNotificationExists, removeNotification } from "../stores/notifications";
+import {
+	addNotification,
+	checkIfNotificationExists,
+	notificationsStore,
+	removeNotification,
+} from "../stores/notifications";
 import { settingsStore } from "../stores/settings";
 import { userStore } from "../stores/user";
 import type { MonitorEvent } from "./monitorFrameHandler";
@@ -51,6 +56,11 @@ export function robotNotification(type: string, event: MonitorEvent["detail"]) {
 			page: path,
 		},
 	});
+}
+
+export function clearNotificationsForNote(noteId: string) {
+	const matches = get(notificationsStore).filter((n) => n.data?.note_id === noteId);
+	for (const n of matches) removeNotification(n.id);
 }
 
 let backgroundNotificationSubscription: ReturnType<typeof trpc.notes.pushSubscription.subscribe>;

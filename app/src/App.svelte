@@ -714,7 +714,7 @@
 					<Icon icon="mdi:message-alert" class="size-8" />
 				</button>
 				<button class="p-2" onclick={() => navigate("/references")}>
-					<Icon icon="mdi:file-text-outline" class="size-8" />
+					<Icon icon="heroicons:sun-16-solid" class="size-8" />
 				</button>
 
 				<!-- Gonna trial having the notepad button here instead of notifications -->

@@ -2,36 +2,38 @@ import { get } from "svelte/store";
 import type { Notification } from "../../../shared/types";
 import { trpc } from "../main";
 import {
-	addNotification,
-	checkIfNotificationExists,
-	notificationsStore,
-	removeNotification,
+    addNotification,
+    checkIfNotificationExists,
+    notificationsStore,
+    removeNotification,
 } from "../stores/notifications";
 import { settingsStore } from "../stores/settings";
 import { userStore } from "../stores/user";
 import type { MonitorEvent } from "./monitorFrameHandler";
 import { toast } from "./toast";
 
-export function createNotification(data: Notification) {
+export async function createNotification(data: Notification) {
 	if (!("Notification" in window)) {
-		throw new Error("This browser does not support desktop notifications");
+		throw new Error("Notifications are not supported in this browser");
 	}
+	if (!("serviceWorker" in navigator)) {
+		throw new Error("Service workers are required for notifications");
+	}
+
+	// Permission must be granted (request must happen from a user gesture elsewhere)
 	if (Notification.permission !== "granted") {
 		throw new Error("You need to grant permission to show notifications");
 	}
 
-	const notification = new Notification(data.title, {
-		body: data.body,
-		icon: data.icon ?? "/icon192_rounded.png",
-		tag: data.tag,
-		data: {
-			path: `${data.data?.page ?? ""}`,
-		},
-	});
+	const reg = await navigator.serviceWorker.ready;
 
-	notification.onclick = () => {
-		window.focus();
-	};
+	await reg.showNotification(data.title, {
+		body: data.body,
+		icon: data.icon || "/transparent.png",
+		badge: data.badge || "/icon96_badge.png",
+		tag: data.tag,
+		data: { page: data.data?.page ?? "", notificationId: data.id ?? crypto.randomUUID() },
+	});
 }
 
 export function robotNotification(type: string, event: MonitorEvent["detail"]) {
@@ -51,7 +53,6 @@ export function robotNotification(type: string, event: MonitorEvent["detail"]) {
 		topic: "Robot-Status",
 		title: `${robot.number} Lost ${type.toLocaleUpperCase()}`,
 		body: `${event.robot} lost ${type} at ${event.frame.time} in ${event.frame.match}.`,
-		icon: "/icon192_rounded.png",
 		data: {
 			page: path,
 		},
@@ -60,6 +61,7 @@ export function robotNotification(type: string, event: MonitorEvent["detail"]) {
 
 export function clearNotificationsForNote(noteId: string) {
 	const matches = get(notificationsStore).filter((n) => n.data?.note_id === noteId);
+	if (matches.length) console.log("[NOTIFICATIONS] clearing", matches.length, "notification(s) for note", noteId);
 	for (const n of matches) removeNotification(n.id);
 }
 
@@ -124,13 +126,16 @@ export function startNotificationSubscription() {
 					}
 
 					if (sendNotification) {
-						if (checkIfNotificationExists(data.id)) return;
+						if (checkIfNotificationExists(data.id)) {
+							console.log("[NOTIFICATIONS] dedupe: already in store", data.id);
+							return;
+						}
 
-						// Add to notification store
+						console.log("[NOTIFICATIONS] adding and showing:", data.topic, data.id);
 						addNotification(data);
-
-						// Send notification to browser
 						createNotification(data);
+					} else {
+						console.log("[NOTIFICATIONS] suppressed by settings:", data.topic);
 					}
 				},
 			},
@@ -312,6 +317,7 @@ export function setupSwMessageHandler() {
 		}
 
 		if (msg.type === "notification_cleared") {
+			console.log("[NOTIFICATIONS] SW cleared notification:", msg.notificationId);
 			if (msg.notificationId) removeNotification(msg.notificationId);
 			return;
 		}

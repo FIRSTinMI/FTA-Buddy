@@ -580,6 +580,7 @@ export interface Notification {
 	topic: NotificationTopic;
 	body?: string;
 	icon?: string;
+	badge?: string;
 	tag?: string;
 	/** Notification kind from the taxonomy in shared/notifications.ts. */
 	kind?: string;

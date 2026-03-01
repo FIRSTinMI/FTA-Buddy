@@ -729,11 +729,6 @@
 
 				<button class="p-2 relative" onclick={() => navigate("/notepad")}>
 					<Icon icon="mdi:file-text-outline" class="size-8" />
-					{#if $notificationsStore.length > 0}
-						<Indicator color="red" border size="xl" placement="top-left">
-							<span class="text-white text-xs">{$notificationsStore.length}</span>
-						</Indicator>
-					{/if}
 				</button>
 			{:else if $user?.role === "CSA" || $user?.role === "RI"}
 				<button class="p-2" onclick={() => navigate("/notepad")}>

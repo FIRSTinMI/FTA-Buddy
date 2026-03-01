@@ -109,14 +109,13 @@ const DEFAULT_SETTINGS = {
 self.addEventListener("push", (event) => {
 	event.waitUntil(
 		(async () => {
-			// 1) Payload size guard + safe parse - PushEvent.data may be null or malformed
 			let data = {};
 			try {
 				if (event.data) {
-					// Ignore payloads larger than 4 KB (push services shouldn't send more)
 					const text = event.data.text();
 					if (text.length <= 4096) {
 						data = JSON.parse(text);
+						console.log("[SW] push received:", data.topic, data.id);
 					} else {
 						console.warn("[SW] push: payload too large (", text.length, "bytes), ignoring");
 					}
@@ -137,20 +136,27 @@ self.addEventListener("push", (event) => {
 			// 3) Normalize + look up topic
 			const rawTopic = typeof data.topic === "string" ? data.topic.trim() : "";
 			const category = TOPIC_CATEGORY[rawTopic];
-			if (!category || !settings.notificationCategories?.[category]) return;
+			if (!category || !settings.notificationCategories?.[category]) {
+				console.log("[SW] push filtered out: topic=%s category=%s enabled=%s", rawTopic, category, settings.notificationCategories?.[category]);
+				return;
+			}
 
 			// 4) De-duplicate non-robot notifications
 			if (data.topic !== "Robot-Status") {
-				if (data.id && (await checkIfNotificationExists(data.id))) return;
+				if (data.id && (await checkIfNotificationExists(data.id))) {
+					console.log("[SW] push dedupe: already shown", data.id);
+					return;
+				}
 				if (data.id) await addNotification(data);
 			}
 
-			// 5) Show notification
+			console.log("[SW] showing notification:", data.title, data.id);
 			return self.registration.showNotification(data.title || "FTA Buddy", {
 				body: data.body ?? "",
 				tag: data.tag,
 				data: { ...(data.data ?? {}), notificationId: data.id },
-				icon: data.icon || "/icon512_rounded.png",
+				icon: data.icon || '/transparent.png',
+                badge: data.badge || '/icon96_badge.png'
 			});
 		})()
 	);
@@ -161,10 +167,12 @@ self.addEventListener("notificationclick", (event) => {
 	const pageToOpen = event.notification.data?.page ?? "";
 	const targetUrl = rootUrl + pageToOpen;
 	const notificationId = event.notification.data?.notificationId;
+	console.log("[SW] notificationclick: id=%s target=%s", notificationId, targetUrl);
 	event.notification.close();
 	event.waitUntil(
 		(async () => {
 			if (notificationId) {
+			    await removeNotificationFromStorage(notificationId);
 				await broadcastToClients({ type: "notification_cleared", notificationId });
 			}
 			const matched = await clients.matchAll({ type: "window", includeUncontrolled: true });
@@ -181,12 +189,9 @@ self.addEventListener("notificationclick", (event) => {
 self.addEventListener("notificationclose", (event) => {
 	const notificationId = event.notification.data?.notificationId;
 	if (!notificationId) return;
-	// NOTE: notificationclose is unreliable on Android Chrome (often doesn't fire
-	// when the user swipes away from the notification shade). The page-side
-	// reconcile_notifications message is the authoritative fallback.
+	console.log("[SW] notificationclose: id=%s", notificationId);
 	event.waitUntil(
 		(async () => {
-			// Persist the removal so a fresh page load won't re-show this notification.
 			await removeNotificationFromStorage(notificationId);
 			await broadcastToClients({ type: "notification_cleared", notificationId });
 		})()

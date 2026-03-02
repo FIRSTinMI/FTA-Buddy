@@ -2,7 +2,7 @@
 	import Icon from "@iconify/svelte";
 	import { Badge, Button, Toggle } from "flowbite-svelte";
 	import { onDestroy, onMount } from "svelte";
-	import type { MonitorFrame, Note, NoteUpdateEventData, RobotInfo } from "../../../../shared/types";
+	import type { MatchEvent, MatchEventUpdateEventData, MonitorFrame, Note, NoteUpdateEventData, RobotInfo } from "../../../../shared/types";
 	import { DSState, ROBOT } from "../../../../shared/types";
 	import { frameHandler, subscribeToFieldMonitor } from "../../field-monitor";
 	import { trpc } from "../../main";
@@ -10,6 +10,7 @@
 	import { eventStore } from "../../stores/event";
 	import { userStore } from "../../stores/user";
 	import type { MonitorEvent } from "../../util/monitorFrameHandler";
+	import MatchEventCard from "../MatchEventCard.svelte";
 	import Spinner from "../Spinner.svelte";
 	import AddQuickNoteModal from "./AddQuickNoteModal.svelte";
 
@@ -76,6 +77,7 @@
 	interface TeamData {
 		teamNumber: number;
 		notes: Note[];
+		matchEvents: MatchEvent[];
 		loading: boolean;
 	}
 
@@ -91,18 +93,22 @@
 		if (teamNumber === 0) return;
 		if (teamData[teamNumber] && !teamData[teamNumber].loading) return;
 
-		teamData[teamNumber] = { teamNumber, notes: [], loading: true };
+		teamData[teamNumber] = { teamNumber, notes: [], matchEvents: [], loading: true };
 
 		try {
-			const teamNotes = await trpc.notes.getAllByTeam.query({ team_number: teamNumber });
+			const [teamNotes, teamMatchEvents] = await Promise.all([
+				trpc.notes.getAllByTeam.query({ team_number: teamNumber }),
+				trpc.matchEvents.getByTeam.query({ team_number: teamNumber }),
+			]);
 			teamData[teamNumber] = {
 				teamNumber,
 				notes: teamNotes,
+				matchEvents: teamMatchEvents,
 				loading: false,
 			};
 		} catch (err) {
 			console.error(`Failed to load data for team ${teamNumber}:`, err);
-			teamData[teamNumber] = { teamNumber, notes: [], loading: false };
+			teamData[teamNumber] = { teamNumber, notes: [], matchEvents: [], loading: false };
 		}
 	}
 
@@ -187,8 +193,10 @@
 	}
 
 	// Live subscription for updates
-	type Subscription = ReturnType<typeof trpc.notes.updateSubscription.subscribe>;
-	let subscription: Subscription | undefined;
+	type NoteSubscription = ReturnType<typeof trpc.notes.updateSubscription.subscribe>;
+	type MatchEventSubscription = ReturnType<typeof trpc.matchEvents.updateSubscription.subscribe>;
+	let subscription: NoteSubscription | undefined;
+	let matchEventSubscription: MatchEventSubscription | undefined;
 
 	function startSubscription() {
 		subscription?.unsubscribe();
@@ -255,6 +263,39 @@
 		);
 	}
 
+	function startMatchEventSubscription() {
+		matchEventSubscription?.unsubscribe();
+		matchEventSubscription = trpc.matchEvents.updateSubscription.subscribe(
+			{ eventToken: $userStore.eventToken },
+			{
+				onError: console.error,
+				onData: (data: MatchEventUpdateEventData) => {
+					switch (data.kind) {
+						case "match_event_create": {
+							const teamNum = data.matchEvent.team;
+							if (teamNum !== null && teamData[teamNum]) {
+								teamData[teamNum].matchEvents = [...teamData[teamNum].matchEvents, data.matchEvent];
+							}
+							break;
+						}
+						case "match_event_dismiss":
+						case "match_event_convert": {
+							for (const td of Object.values(teamData)) {
+								if (!td) continue;
+								const idx = td.matchEvents.findIndex((e) => e.id === data.id);
+								if (idx !== -1) {
+									td.matchEvents = td.matchEvents.filter((e) => e.id !== data.id);
+									break;
+								}
+							}
+							break;
+						}
+					}
+				},
+			},
+		);
+	}
+
 	onMount(() => {
 		if (!frameHandler.getFrame()) {
 			subscribeToFieldMonitor();
@@ -263,12 +304,14 @@
 		frameHandler.addEventListener("prestart", onPrestart);
 		loadMatchIndex();
 		startSubscription();
+		startMatchEventSubscription();
 	});
 
 	onDestroy(() => {
 		frameHandler.removeEventListener("frame", onFrame);
 		frameHandler.removeEventListener("prestart", onPrestart);
 		subscription?.unsubscribe();
+		matchEventSubscription?.unsubscribe();
 	});
 
 	function dsColor(ds: number): string {
@@ -305,8 +348,19 @@
 	{@const teamName = $eventStore.teams.find((t) => t.number === String(teamNum))?.name ?? ""}
 	{@const allItems =
 		td && !td.loading
-			? td.notes.map((n) => ({ date: n.updated_at, note: n })).sort((a, b) => b.date.getTime() - a.date.getTime())
+			? [
+				...td.notes.map((n) => ({ kind: "note" as const, date: n.updated_at, note: n })),
+				...td.matchEvents.map((e) => ({ kind: "event" as const, date: new Date(e.created_at), matchEvent: e })),
+			].sort((a, b) => b.date.getTime() - a.date.getTime())
 			: []}
+	{@const eventSummaries = td && !td.loading && td.matchEvents.length > 0
+		? Object.entries(
+			td.matchEvents.reduce<Record<string, number>>((acc, e) => {
+				acc[e.issue] = (acc[e.issue] ?? 0) + 1;
+				return acc;
+			}, {})
+		).map(([issue, count]) => `${issue} x${count}`)
+		: []}
 	<div class="flex-1 min-h-0 flex flex-col rounded-lg overflow-hidden shadow dark:bg-neutral-800 bg-white">
 		<div class="shrink-0 flex {alliance === 'blue' ? 'bg-blue-600' : 'bg-red-600'}">
 			<button
@@ -401,26 +455,45 @@
 		<div class="min-h-0 overflow-y-hidden px-3" use:overflowCheck={teamNum}>
 			{#if td?.loading}
 				<div class="flex justify-center py-2"><Spinner /></div>
-			{:else if allItems.length > 0}
-				{#each allItems as item}
-					<button
-						class="w-full text-left pt-1 mt-1 hover:bg-gray-50 dark:hover:bg-neutral-700 rounded px-0.5"
-						onclick={() => navigate("/notepad/view/:id", { params: { id: item.note.id } })}
-					>
-						<div class="flex items-center gap-1 text-xs">
-							<Badge color="blue" class="text-xs">Note</Badge>
-							{#if item.note.resolution_status === "Open"}
-								<span class="text-green-500 font-bold">Open</span>
-							{:else if item.note.resolution_status === "Resolved"}
-								<span class="text-gray-500">Resolved</span>
-							{/if}
-							{#if item.note.match_number}
-								<span class="text-gray-400">M{item.note.match_number}</span>
-							{/if}
+			{:else}
+				{#if eventSummaries.length > 0}
+					<div class="py-1 border-b border-amber-200 dark:border-amber-800/40">
+						<div class="flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400">
+							<Icon icon="mdi:alert-circle-outline" class="size-3 shrink-0" />
+							<span class="font-semibold truncate">{eventSummaries.join(", ")}</span>
 						</div>
-						<p class="text-sm text-black dark:text-white truncate">{item.note.text}</p>
-					</button>
-				{/each}
+					</div>
+				{/if}
+				{#if allItems.length > 0}
+					{#each allItems as item}
+						{#if item.kind === "note"}
+							<button
+								class="w-full text-left pt-1 mt-1 hover:bg-gray-50 dark:hover:bg-neutral-700 rounded px-0.5"
+								onclick={() => navigate("/notepad/view/:id", { params: { id: item.note.id } })}
+							>
+								<div class="flex items-center gap-1 text-xs">
+									<Badge color="blue" class="text-xs">Note</Badge>
+									{#if item.note.resolution_status === "Open"}
+										<span class="text-green-500 font-bold">Open</span>
+									{:else if item.note.resolution_status === "Resolved"}
+										<span class="text-gray-500">Resolved</span>
+									{/if}
+									{#if item.note.match_number}
+										<span class="text-gray-400">M{item.note.match_number}</span>
+									{/if}
+								</div>
+								<p class="text-sm text-black dark:text-white truncate">{item.note.text}</p>
+							</button>
+						{:else}
+							<div class="pt-1 mt-1 px-0.5">
+								<MatchEventCard matchEvent={item.matchEvent} compact
+									onDismiss={(id) => { if (td) td.matchEvents = td.matchEvents.filter((e) => e.id !== id); }}
+									onConvert={(id) => { if (td) td.matchEvents = td.matchEvents.filter((e) => e.id !== id); }}
+								/>
+							</div>
+						{/if}
+					{/each}
+				{/if}
 			{/if}
 		</div>
 		<button

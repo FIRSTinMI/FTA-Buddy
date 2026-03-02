@@ -13,7 +13,7 @@ import {
 	uuid,
 	varchar,
 } from "drizzle-orm/pg-core";
-import { FmsNoteMetadata, Profile } from "../../shared/types";
+import { EventAutoEventSettings, FmsNoteMetadata, Profile } from "../../shared/types";
 export const roleEnum = pgEnum("role", ["FTA", "FTAA", "CSA", "RI"]);
 
 export const users = pgTable("users", {
@@ -50,6 +50,7 @@ export const events = pgTable("events", {
 	startDate: varchar("startDate"),
 	endDate: varchar("endDate"),
 	fmsEventPassword: varchar("fmsEventPassword"),
+	autoEventSettings: jsonb("autoEventSettings").$type<EventAutoEventSettings>().notNull().default({}),
 });
 
 export type Event = typeof events.$inferInsert;
@@ -255,6 +256,32 @@ export const robotCycleLogs = pgTable("team_cycle_logs", {
 });
 
 export type RobotCycleLog = typeof robotCycleLogs.$inferInsert;
+
+export const matchEventStatusEnum = pgEnum("match_event_status", ["active", "dismissed", "converted"]);
+
+export const matchEvents = pgTable("match_events", {
+	id: uuid("id").primaryKey(),
+	match_id: uuid("match_id")
+		.references(() => matchLogs.id)
+		.notNull(),
+	event_code: varchar("event_code")
+		.references(() => events.code)
+		.notNull(),
+	team: integer("team").notNull(),
+	alliance: varchar("alliance").notNull(),
+	issue: issueEnum("issue").notNull(),
+	match_number: integer("match_number").notNull(),
+	play_number: integer("play_number").notNull(),
+	level: levelEnum("level").notNull(),
+	start_time: integer("start_time"),
+	end_time: integer("end_time"),
+	duration: integer("duration"),
+	status: matchEventStatusEnum("status").notNull().default("active"),
+	converted_note_id: uuid("converted_note_id").references(() => notes.id),
+	created_at: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type MatchEvent = typeof matchEvents.$inferSelect;
 
 export const pushSubscriptions = pgTable("push_subscriptions", {
 	id: serial("id").primaryKey(),

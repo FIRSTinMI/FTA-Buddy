@@ -2,12 +2,13 @@
 	import Icon from "@iconify/svelte";
 	import { Button, Input, Label, Modal, Select, Textarea } from "flowbite-svelte";
 	import { onDestroy, onMount } from "svelte";
-	import type { Note, NoteUpdateEventData, TournamentLevel } from "../../../../shared/types";
+	import type { MatchEvent, MatchEventUpdateEventData, Note, NoteUpdateEventData, TournamentLevel } from "../../../../shared/types";
 	import { trpc } from "../../main";
 	import { eventStore } from "../../stores/event";
 	import { settingsStore } from "../../stores/settings";
 	import { userStore } from "../../stores/user";
 	import { toast } from "../../util/toast";
+	import MatchEventCard from "../MatchEventCard.svelte";
 	import NoteCard from "../NoteCard.svelte";
 	import NotesPolicy from "../NotesPolicy.svelte";
 	import Spinner from "../Spinner.svelte";
@@ -27,45 +28,76 @@
 	});
 	let typeFilter: string = $state("all");
 	let statusFilter: string = $state("all");
+	let feedFilter: string = $state("all"); // "all" | "notes" | "events"
 
 	let notes: Note[] = $state([]);
-	let filteredNotes: Note[] = $state([]);
+	let matchEvents: MatchEvent[] = $state([]);
+	type FeedItem = { kind: "note"; note: Note; date: Date } | { kind: "event"; matchEvent: MatchEvent; date: Date };
+	let filteredFeed: FeedItem[] = $state([]);
 
 	let loading = $state(true);
 
 	function buildFeed() {
-		let feed: Note[] = [...notes];
+		let items: FeedItem[] = [];
 
-		// Type filter
-		if (typeFilter !== "all") {
-			feed = feed.filter((n) => n.note_type === typeFilter);
+		// Add notes (unless filtering to events only)
+		if (feedFilter !== "events") {
+			let feed: Note[] = [...notes];
+
+			// Type filter
+			if (typeFilter !== "all") {
+				feed = feed.filter((n) => n.note_type === typeFilter);
+			}
+
+			// Status filter
+			if (statusFilter === "Open") {
+				feed = feed.filter((n) => n.resolution_status === "Open");
+			} else if (statusFilter === "Resolved") {
+				feed = feed.filter((n) => n.resolution_status === "Resolved");
+			}
+
+			// Search filter
+			if (search.length > 0) {
+				const tokenized = search.toLowerCase().split(" ");
+				feed = feed.filter((n) => {
+					const teamStr = n.team?.toString() ?? "";
+					const teamName = n.team !== null ? (teamNames[n.team]?.toLowerCase() ?? "") : "";
+					const assignedName = n.assigned_to?.username?.toLowerCase() ?? "";
+					return tokenized.every(
+						(tok) =>
+							teamStr.includes(tok) ||
+							teamName.includes(tok) ||
+							n.text.toLowerCase().includes(tok) ||
+							assignedName.includes(tok),
+					);
+				});
+			}
+
+			items.push(...feed.map((n) => ({ kind: "note" as const, note: n, date: n.updated_at })));
 		}
 
-		// Status filter
-		if (statusFilter === "Open") {
-			feed = feed.filter((n) => n.resolution_status === "Open");
-		} else if (statusFilter === "Resolved") {
-			feed = feed.filter((n) => n.resolution_status === "Resolved");
+		// Add match events (unless filtering to notes only)
+		if (feedFilter !== "notes") {
+			let evts = [...matchEvents].filter((e) => e.status === "active");
+
+			if (search.length > 0) {
+				const tokenized = search.toLowerCase().split(" ");
+				evts = evts.filter((e) => {
+					const teamStr = e.team?.toString() ?? "";
+					const teamName = e.team !== null ? (teamNames[e.team]?.toLowerCase() ?? "") : "";
+					return tokenized.every(
+						(tok) =>
+							teamStr.includes(tok) ||
+							teamName.includes(tok) ||
+							e.issue.toLowerCase().includes(tok),
+					);
+				});
+			}
+
+			items.push(...evts.map((e) => ({ kind: "event" as const, matchEvent: e, date: new Date(e.created_at) })));
 		}
 
-		// Search filter
-		if (search.length > 0) {
-			const tokenized = search.toLowerCase().split(" ");
-			feed = feed.filter((n) => {
-				const teamStr = n.team?.toString() ?? "";
-				const teamName = n.team !== null ? (teamNames[n.team]?.toLowerCase() ?? "") : "";
-				const assignedName = n.assigned_to?.username?.toLowerCase() ?? "";
-				return tokenized.every(
-					(tok) =>
-						teamStr.includes(tok) ||
-						teamName.includes(tok) ||
-						n.text.toLowerCase().includes(tok) ||
-						assignedName.includes(tok),
-				);
-			});
-		}
-
-		filteredNotes = feed.sort((a, b) => b.updated_at.getTime() - a.updated_at.getTime());
+		filteredFeed = items.sort((a, b) => b.date.getTime() - a.date.getTime());
 	}
 
 	$effect(() => {
@@ -75,7 +107,12 @@
 	async function fetchAll() {
 		loading = true;
 		try {
-			notes = await trpc.notes.getAllWithMessages.query();
+			const [fetchedNotes, fetchedEvents] = await Promise.all([
+				trpc.notes.getAllWithMessages.query(),
+				trpc.matchEvents.getAll.query({ status: "active" }),
+			]);
+			notes = fetchedNotes;
+			matchEvents = fetchedEvents;
 		} catch (err) {
 			console.error("Failed to fetch support data:", err);
 		} finally {
@@ -84,8 +121,10 @@
 	}
 
 	// Live updates subscription
-	type Subscription = ReturnType<typeof trpc.notes.updateSubscription.subscribe>;
-	let subscription: Subscription | undefined;
+	type NoteSubscription = ReturnType<typeof trpc.notes.updateSubscription.subscribe>;
+	type MatchEventSubscription = ReturnType<typeof trpc.matchEvents.updateSubscription.subscribe>;
+	let subscription: NoteSubscription | undefined;
+	let matchEventSubscription: MatchEventSubscription | undefined;
 
 	function startSubscription() {
 		subscription?.unsubscribe();
@@ -173,6 +212,29 @@
 		);
 	}
 
+	function startMatchEventSubscription() {
+		matchEventSubscription?.unsubscribe();
+		matchEventSubscription = trpc.matchEvents.updateSubscription.subscribe(
+			{ eventToken: $userStore.eventToken },
+			{
+				onError: console.error,
+				onData: (data: MatchEventUpdateEventData) => {
+					switch (data.kind) {
+						case "match_event_create":
+							matchEvents = [...matchEvents, data.matchEvent];
+							break;
+						case "match_event_dismiss":
+							matchEvents = matchEvents.filter((e) => e.id !== data.id);
+							break;
+						case "match_event_convert":
+							matchEvents = matchEvents.filter((e) => e.id !== data.id);
+							break;
+					}
+				},
+			},
+		);
+	}
+
 	// Re-subscribe on eventToken change
 	let eventToken = $userStore.eventToken;
 	userStore.subscribe((value) => {
@@ -180,15 +242,20 @@
 			eventToken = value.eventToken;
 			fetchAll();
 			startSubscription();
+			startMatchEventSubscription();
 		}
 	});
 
 	onMount(() => {
 		fetchAll();
 		startSubscription();
+		startMatchEventSubscription();
 	});
 
-	onDestroy(() => subscription?.unsubscribe());
+	onDestroy(() => {
+		subscription?.unsubscribe();
+		matchEventSubscription?.unsubscribe();
+	});
 
 	let filterModalOpen = $state(false);
 
@@ -436,7 +503,7 @@
 
 		<Button
 			size="sm"
-			color={typeFilter !== "all" || statusFilter !== "all" ? "primary" : "alternative"}
+			color={typeFilter !== "all" || statusFilter !== "all" || feedFilter !== "all" ? "primary" : "alternative"}
 			class="shrink-0"
 			onclick={() => (filterModalOpen = true)}
 			title="Filters"
@@ -451,30 +518,44 @@
 		{/snippet}
 		<div class="flex flex-col gap-4">
 			<Label>
-				Note type
+				Show
 				<Select
 					class="mt-1"
-					bind:value={typeFilter}
+					bind:value={feedFilter}
 					items={[
-						{ value: "all", name: "All types" },
-						{ value: "TeamIssue", name: "Team Notes" },
-						{ value: "EventNote", name: "Event Notes" },
-						{ value: "MatchNote", name: "Match Notes" },
+						{ value: "all", name: "Notes & Events" },
+						{ value: "notes", name: "Notes only" },
+						{ value: "events", name: "Auto Events only" },
 					]}
 				/>
 			</Label>
-			<Label>
-				Status
-				<Select
-					class="mt-1"
-					bind:value={statusFilter}
-					items={[
-						{ value: "all", name: "All statuses" },
-						{ value: "Open", name: "Open" },
-						{ value: "Resolved", name: "Resolved" },
-					]}
-				/>
-			</Label>
+			{#if feedFilter !== "events"}
+				<Label>
+					Note type
+					<Select
+						class="mt-1"
+						bind:value={typeFilter}
+						items={[
+							{ value: "all", name: "All types" },
+							{ value: "TeamIssue", name: "Team Notes" },
+							{ value: "EventNote", name: "Event Notes" },
+							{ value: "MatchNote", name: "Match Notes" },
+						]}
+					/>
+				</Label>
+				<Label>
+					Status
+					<Select
+						class="mt-1"
+						bind:value={statusFilter}
+						items={[
+							{ value: "all", name: "All statuses" },
+							{ value: "Open", name: "Open" },
+							{ value: "Resolved", name: "Resolved" },
+						]}
+					/>
+				</Label>
+			{/if}
 			<Button color="primary" onclick={() => (filterModalOpen = false)}>Done</Button>
 		</div>
 	</Modal>
@@ -482,11 +563,19 @@
 	<div class="flex flex-col grow gap-2 overflow-y-auto mt-2 pb-2">
 		{#if loading}
 			<Spinner />
-		{:else if filteredNotes.length === 0}
+		{:else if filteredFeed.length === 0}
 			<div class="text-center text-gray-500 dark:text-gray-400 mt-8">No items found</div>
 		{:else}
-			{#each filteredNotes as note}
-				<NoteCard {note} />
+			{#each filteredFeed as item}
+				{#if item.kind === "note"}
+					<NoteCard note={item.note} />
+				{:else}
+					<MatchEventCard
+						matchEvent={item.matchEvent}
+						onDismiss={(id) => { matchEvents = matchEvents.filter((e) => e.id !== id); }}
+						onConvert={(id) => { matchEvents = matchEvents.filter((e) => e.id !== id); }}
+					/>
+				{/if}
 			{/each}
 		{/if}
 	</div>

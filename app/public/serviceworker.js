@@ -177,8 +177,12 @@ self.addEventListener("notificationclick", (event) => {
 			}
 			const matched = await clients.matchAll({ type: "window", includeUncontrolled: true });
 			for (const client of matched) {
-				if (client.url === targetUrl && "focus" in client) {
-					return client.focus();
+				if (client.url.startsWith(targetUrl) && "focus" in client) {
+					await client.focus();
+					if (client.url !== targetUrl && "navigate" in client) {
+						await client.navigate(targetUrl);
+					}
+					return;
 				}
 			}
 			return clients.openWindow(targetUrl);

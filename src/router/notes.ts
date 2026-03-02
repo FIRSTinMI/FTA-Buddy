@@ -1312,6 +1312,7 @@ export const notesRouter = router({
 			z.object({
 				eventToken: z.string(),
 				note_id: z.string().uuid().optional(),
+				source: z.string().optional(),
 				eventOptions: z
 					.object({
 						create: z.boolean().optional(),
@@ -1350,11 +1351,19 @@ export const notesRouter = router({
 				push(data);
 			};
 
+			const before = event.noteUpdateEmitter.listenerCount("note_update");
+			console.log(
+				`[notes sub] +1 listener (before=${before} after=${before + 1}) event=${event.code} source=${input.source ?? "unknown"}`,
+			);
+
 			event.noteUpdateEmitter.on("note_update", handler);
+
 			try {
 				yield* drain();
 			} finally {
 				event.noteUpdateEmitter.off("note_update", handler);
+				const after = event.noteUpdateEmitter.listenerCount("note_update");
+				console.log(`[notes sub] -1 listener (after=${after}) event=${event.code}`);
 			}
 		}),
 

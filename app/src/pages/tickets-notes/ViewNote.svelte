@@ -284,6 +284,7 @@
 		foregroundUpdater = trpc.notes.updateSubscription.subscribe(
 			{
 				eventToken: get(userStore).eventToken,
+				source: `${get(userStore).username}.note.${noteId}`,
 				note_id: noteId,
 				eventOptions: {
 					edit: true,

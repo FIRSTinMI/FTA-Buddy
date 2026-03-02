@@ -303,6 +303,7 @@ function startOutboundNoteSync() {
 	outboundNoteSubscription = trpc.notes.updateSubscription.subscribe(
 		{
 			eventToken,
+			source: `${id}.outboundNoteSync`,
 		},
 		{
 			onData: async (data) => {

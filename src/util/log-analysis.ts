@@ -1,9 +1,11 @@
 import { asc, eq } from "drizzle-orm";
 import { compressSync, decompressSync } from "fflate";
 import { randomUUID } from "node:crypto";
-import { DisconnectionEvent, FMSLogFrame, ROBOT } from "../../shared/types";
+import type { AutoEventIssueType, DisconnectionEvent, FMSLogFrame } from "../../shared/types";
+import { ROBOT } from "../../shared/types";
 import { db } from "../db/db";
-import { analyzedLogs, issueEnum, matchLogs } from "../db/schema";
+import { analyzedLogs, issueEnum, matchEvents, matchLogs } from "../db/schema";
+import { events } from "../index";
 
 export function analyzeLog(log: FMSLogFrame[]): DisconnectionEvent[] {
 	const events: DisconnectionEvent[] = [];
@@ -334,6 +336,44 @@ export async function logAnalysisLoop(limit: number) {
 						})),
 					)
 					.execute();
+
+				// Generate match events for enabled issue types
+				const serverEvent = events[log.event];
+				if (serverEvent) {
+					const settings = serverEvent.autoEventSettings ?? {};
+					for (const evt of analyzedLog) {
+						const issueType = evt.issue as AutoEventIssueType;
+						// Default to enabled if not explicitly set to false
+						const isEnabled = settings[issueType] !== false;
+						if (isEnabled) {
+							const matchEventId = randomUUID();
+							const [inserted] = await db
+								.insert(matchEvents)
+								.values({
+									id: matchEventId,
+									match_id: log.id,
+									event_code: log.event,
+									team: teamNumber,
+									alliance,
+									issue: evt.issue as (typeof issueEnum.enumValues)[number],
+									match_number: log.match_number,
+									play_number: log.play_number,
+									level: log.level,
+									start_time: evt.startTime,
+									end_time: evt.endTime,
+									duration: evt.duration,
+									status: "active",
+								})
+								.returning()
+								.execute();
+
+							serverEvent.matchEventEmitter.emit("create", {
+								kind: "match_event_create",
+								matchEvent: inserted,
+							});
+						}
+					}
+				}
 			}
 			// If no events and not bypassed, skip - don't insert anything
 		}

@@ -425,6 +425,8 @@ export interface ServerEvent {
 	publicNoteSubmit: boolean;
 	nexusApiKey?: string;
 	fmsEventPassword?: string;
+	autoEventSettings: EventAutoEventSettings;
+	matchEventEmitter: TypedEmitter<MatchEventUpdateEvents>;
 	startDate?: string;
 	endDate?: string;
 	nexus: NexusStatus;
@@ -500,6 +502,17 @@ export interface FmsNoteMetadata {
 export type NoteUpdateEvents = {
 	note_update: (data: NoteUpdateEventData) => void;
 };
+
+export type MatchEventUpdateEvents = {
+	create: (data: { kind: "match_event_create"; matchEvent: MatchEvent }) => void;
+	dismiss: (data: { kind: "match_event_dismiss"; id: string }) => void;
+	convert: (data: { kind: "match_event_convert"; id: string; note_id: string }) => void;
+};
+
+export type MatchEventUpdateEventData =
+	| { kind: "match_event_create"; matchEvent: MatchEvent }
+	| { kind: "match_event_dismiss"; id: string }
+	| { kind: "match_event_convert"; id: string; note_id: string };
 
 export type NoteUpdateEventData =
 	| { kind: "create"; note: Note; source?: "fms" }
@@ -611,4 +624,52 @@ export interface DisconnectionEvent {
 	duration: number;
 	startIndex: number;
 	endIndex: number;
+}
+
+/**
+ * Issue types that can be auto-detected from match logs.
+ * Used as keys in EventAutoEventSettings.
+ */
+export const AUTO_EVENT_ISSUE_TYPES = [
+	"Code disconnect",
+	"RIO disconnect",
+	"Radio disconnect",
+	"DS disconnect",
+	"Brownout",
+	"Large spike in ping",
+	"Sustained high ping",
+	"Low signal",
+	"High BWU",
+] as const;
+
+export type AutoEventIssueType = (typeof AUTO_EVENT_ISSUE_TYPES)[number];
+
+/**
+ * Per-event settings controlling which log issues auto-generate match events.
+ * Stored as JSON in the events table. Missing keys default to true (enabled).
+ */
+export type EventAutoEventSettings = Partial<Record<AutoEventIssueType, boolean>>;
+
+export type MatchEventStatus = "active" | "dismissed" | "converted";
+
+/**
+ * A match event auto-generated from log analysis.
+ * Can be dismissed or converted into a full note.
+ */
+export interface MatchEvent {
+	id: string;
+	match_id: string;
+	event_code: string;
+	team: number;
+	alliance: string;
+	issue: string;
+	match_number: number;
+	play_number: number;
+	level: string;
+	start_time: number | null;
+	end_time: number | null;
+	duration: number | null;
+	status: MatchEventStatus;
+	converted_note_id: string | null;
+	created_at: Date;
 }

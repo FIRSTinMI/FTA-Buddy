@@ -21,6 +21,7 @@ import { cycleRouter } from "./router/cycles";
 import { eventRouter } from "./router/event";
 import { fieldMonitorRouter } from "./router/field-monitor";
 import { matchRouter } from "./router/logs";
+import { matchEventsRouter } from "./router/match-events";
 import {
 	addNoteMessageFromSlack,
 	notesRouter,
@@ -75,6 +76,7 @@ const appRouter = router({
 	field: fieldMonitorRouter,
 	cycles: cycleRouter,
 	notes: notesRouter,
+	matchEvents: matchEventsRouter,
 	app: router({
 		version: publicProcedure.query(() => {
 			return pjson.version ?? "dev";
@@ -364,7 +366,7 @@ if (process.env.NODE_ENV === "dev") {
 }
 
 connect().then(async () => {
-	if (process.env.NODE_ENV !== "dev") {
+	if (true) { //change to process.env.NODE_ENV != "dev" to disable auto event loading in dev
 		// Log analysis loop
 		new Promise(async () => {
 			while (true) {

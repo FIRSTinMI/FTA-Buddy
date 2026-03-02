@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { createHash, randomUUID } from "crypto";
 import { desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
-import { EventChecklist, Profile, TeamList, TournamentLevel } from "../../shared/types";
+import { AUTO_EVENT_ISSUE_TYPES, EventAutoEventSettings, EventChecklist, Profile, TeamList, TournamentLevel } from "../../shared/types";
 import { db } from "../db/db";
 import { events, users } from "../db/schema";
 import { adminProcedure, eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
@@ -639,6 +639,35 @@ export const eventRouter = router({
 		const event = await getEvent(ctx.event.token);
 		return { fmsEventPassword: event.fmsEventPassword ?? null };
 	}),
+
+	/** Get the auto-event settings for this event. Missing keys default to true (enabled). */
+	getAutoEventSettings: eventProcedure.query(async ({ ctx }) => {
+		const event = await getEvent(ctx.event.token);
+		// Fill in defaults: any missing key is treated as enabled
+		const settings: EventAutoEventSettings = {};
+		for (const issue of AUTO_EVENT_ISSUE_TYPES) {
+			settings[issue] = event.autoEventSettings?.[issue] ?? true;
+		}
+		return settings;
+	}),
+
+	/** Update the auto-event settings for this event. */
+	setAutoEventSettings: eventProcedure
+		.input(
+			z.object({
+				settings: z.record(z.string(), z.boolean()),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const event = await getEvent(ctx.event.token);
+			const newSettings = input.settings as EventAutoEventSettings;
+			await db
+				.update(events)
+				.set({ autoEventSettings: newSettings })
+				.where(eq(events.code, event.code));
+			event.autoEventSettings = newSettings;
+			return { success: true };
+		}),
 
 	/**
 	 * Admin-only: send a test push notification to every user currently joined to the event

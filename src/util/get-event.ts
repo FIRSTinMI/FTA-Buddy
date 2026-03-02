@@ -5,7 +5,9 @@ import { TypedEmitter } from "tiny-typed-emitter";
 import { eventCodes, events, newEventEmitter } from "..";
 import { DEFAULT_MONITOR } from "../../shared/constants";
 import {
+	EventAutoEventSettings,
 	EventChecklist,
+	MatchEventUpdateEvents,
 	NexusStatus,
 	Note,
 	NoteUpdateEvents,
@@ -74,7 +76,9 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 	}
 
 	const noteUpdateEmitter = new TypedEmitter<NoteUpdateEvents>();
-	noteUpdateEmitter.setMaxListeners(100);
+	const matchEventEmitter = new TypedEmitter<MatchEventUpdateEvents>();
+	matchEventEmitter.setMaxListeners(100);
+    noteUpdateEmitter.setMaxListeners(100);
 
 	loadingEvents[eventCode] = new Promise(async (resolve) => {
 		const eventInMemory = events[eventCode];
@@ -109,14 +113,14 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 			const users =
 				event.users.length > 0
 					? await db
-							.select({
-								id: schema.users.id,
-								username: schema.users.username,
-								role: schema.users.role,
-								admin: schema.users.admin,
-							})
-							.from(schema.users)
-							.where(inArray(schema.users.id, Array.from(new Set([...usersToGet]))))
+						.select({
+							id: schema.users.id,
+							username: schema.users.username,
+							role: schema.users.role,
+							admin: schema.users.admin,
+						})
+						.from(schema.users)
+						.where(inArray(schema.users.id, Array.from(new Set([...usersToGet]))))
 					: [];
 
 			events[eventCode] = {
@@ -138,6 +142,7 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 				fieldStatusEmitter: new EventEmitter(),
 				checklistEmitter: new EventEmitter(),
 				noteUpdateEmitter: noteUpdateEmitter,
+				matchEventEmitter: matchEventEmitter,
 				cycleEmitter: new EventEmitter(),
 				scheduleDetails: event.scheduleDetails as ScheduleDetails,
 				lastPrestartDone: null,
@@ -151,6 +156,7 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 				publicNoteSubmit: event.publicTicketSubmit,
 				nexusApiKey: event.nexusApiKey ?? undefined,
 				fmsEventPassword: event.fmsEventPassword ?? undefined,
+				autoEventSettings: (event.autoEventSettings ?? {}) as EventAutoEventSettings,
 				startDate: event.startDate ?? undefined,
 				endDate: event.endDate ?? undefined,
 				nexus: {

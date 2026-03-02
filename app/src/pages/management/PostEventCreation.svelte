@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { Button, Helper, Indicator, Input, Label } from "flowbite-svelte";
+	import { Button, Helper, Indicator, Input, Label, Toggle } from "flowbite-svelte";
 	import { onDestroy, onMount } from "svelte";
 	import type { NexusStatus } from "../../../../shared/types";
+	import { AUTO_EVENT_ISSUE_TYPES, type AutoEventIssueType, type EventAutoEventSettings } from "../../../../shared/types";
 	import { trpc } from "../../main";
 	import { navigate } from "../../router";
 	import { eventStore } from "../../stores/event";
@@ -76,6 +77,45 @@
 		}
 	}
 
+	// Auto-Event Settings state
+	let autoEventSettings: EventAutoEventSettings = $state({});
+	let autoEventSaving = $state(false);
+
+	const ISSUE_LABELS: Record<AutoEventIssueType, string> = {
+		"Code disconnect": "Code Disconnect",
+		"RIO disconnect": "RIO Disconnect",
+		"Radio disconnect": "Radio Disconnect",
+		"DS disconnect": "DS Disconnect",
+		"Brownout": "Brownout",
+		"Large spike in ping": "Large Spike in Ping",
+		"Sustained high ping": "Sustained High Ping",
+		"Low signal": "Low Signal",
+		"High BWU": "High BWU",
+	};
+
+	async function loadAutoEventSettings() {
+		try {
+			autoEventSettings = await trpc.event.getAutoEventSettings.query();
+		} catch { /* ignore */ }
+	}
+
+	async function saveAutoEventSettings() {
+		autoEventSaving = true;
+		try {
+			await trpc.event.setAutoEventSettings.mutate({ settings: autoEventSettings });
+		} catch (e: any) {
+			console.error("Failed to save auto-event settings", e);
+		} finally {
+			autoEventSaving = false;
+		}
+	}
+
+	function toggleIssue(issue: AutoEventIssueType) {
+		const current = autoEventSettings[issue] !== false; // default enabled
+		autoEventSettings = { ...autoEventSettings, [issue]: !current };
+		saveAutoEventSettings();
+	}
+
 	window.addEventListener("message", (event) => {
 		if (event.data.type === "pong") {
 			extensionDetected = true;
@@ -104,6 +144,7 @@
 		nexusStatusInterval = setInterval(refreshNexusStatus, 30_000);
 		refreshFmsStatus();
 		fmsStatusInterval = setInterval(refreshFmsStatus, 15_000);
+		loadAutoEventSettings();
 	});
 
 	onDestroy(() => {
@@ -375,6 +416,29 @@
 						>/ftabuddy {$eventStore.code} {$eventStore.pin}</code
 					>
 				</div>
+			</div>
+
+			<!-- Auto Match Events -->
+			<div class="flex flex-col gap-3 rounded-xl border border-neutral-700 bg-neutral-900 p-5">
+				<h2 class="text-xl font-bold">Auto Match Events</h2>
+				<p class="text-sm text-gray-400">
+					Automatically generate events in the Notepad feed when log analysis detects issues. Toggle which issue types create events.
+				</p>
+				<div class="flex flex-col gap-2 mt-1">
+					{#each AUTO_EVENT_ISSUE_TYPES as issue}
+						<div class="flex items-center justify-between gap-2">
+							<span class="text-sm">{ISSUE_LABELS[issue]}</span>
+							<Toggle
+								size="small"
+								checked={autoEventSettings[issue] !== false}
+								on:change={() => toggleIssue(issue)}
+							/>
+						</div>
+					{/each}
+				</div>
+				{#if autoEventSaving}
+					<p class="text-xs text-gray-500">Saving...</p>
+				{/if}
 			</div>
 		</div>
 	</div>

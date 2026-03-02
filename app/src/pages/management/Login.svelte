@@ -582,6 +582,3 @@
 		<a href="/privacy.html" class="underline">Privacy Policy</a>
 	</p>
 </div>
-
-<style>
-</style>

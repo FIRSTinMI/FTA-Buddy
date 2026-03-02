@@ -15,7 +15,7 @@
 		Toast,
 	} from "flowbite-svelte";
 	import { Router as SvRouter } from "sv-router";
-	import { onDestroy, onMount } from "svelte";
+	import { onDestroy, onMount, tick } from "svelte";
 	import { get } from "svelte/store";
 	import { formatTime } from "../../shared/formatTime";
 	import SettingsModal from "./components/SettingsModal.svelte";
@@ -314,21 +314,90 @@
 		clearInterval(statusPollInterval);
 	});
 
+	// let keyboardOpen = $state(false);
+	// let initialWindowHeight = 0; 
+
+	// function updateAppHeight() {
+	// 	const vv = window.visualViewport;
+	// 	if (!vv) {
+	// 		document.documentElement.style.setProperty("--app-height", `${window.innerHeight}px`);
+	// 		return;
+	// 	}
+
+	// 	keyboardOpen = vv.height < initialWindowHeight * 0.85;
+
+	// 	// On iOS PWA, when keyboard opens the visualViewport scrolls upward.
+	// 	// We counter this by applying a transform to the shell instead of
+	// 	// letting the body scroll, which causes the black area.
+	// 	document.documentElement.style.setProperty("--app-height", `${vv.height}px`);
+	// 	document.documentElement.style.setProperty("--vv-offset-top", `${vv.offsetTop}px`);
+	// }
+
+	// onMount(() => {
+	// 	updateAppHeight();
+	// 	window.addEventListener("resize", updateAppHeight);
+	// 	window.visualViewport?.addEventListener("resize", updateAppHeight);
+	// 	window.visualViewport?.addEventListener("scroll", updateAppHeight);
+	// });
+
+	// onDestroy(() => {
+	// 	window.removeEventListener("resize", updateAppHeight);
+	// 	window.visualViewport?.removeEventListener("resize", updateAppHeight);
+	// 	window.visualViewport?.removeEventListener("scroll", updateAppHeight);
+	// });
+
+	let keyboardOpen = $state(false);
+	let initialWindowHeight = window.innerHeight;
+
 	function updateAppHeight() {
 		const h = window.visualViewport?.height ?? window.innerHeight;
 		document.documentElement.style.setProperty("--app-height", `${h}px`);
 	}
 
+	function handleFocusIn(e: FocusEvent) {
+		const tag = (e.target as HTMLElement)?.tagName;
+		if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+			keyboardOpen = true;
+			setTimeout(() => {
+				(e.target as HTMLElement)?.scrollIntoView({ 
+					behavior: 'smooth', 
+					block: 'nearest' 
+				});
+			}, 500); // wait for keyboard animation
+		}
+	}
+
+	function handleFocusOut() {
+		// Small delay to avoid flicker when moving between inputs
+		setTimeout(() => {
+			if (!document.activeElement || 
+				!['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+				keyboardOpen = false;
+			}
+		}, 100);
+	}
+
+	let isMobile = $state(false);
+
+	onMount(() => {
+		isMobile = window.matchMedia('(pointer: coarse)').matches;
+	});
+
 	onMount(() => {
 		updateAppHeight();
-		window.addEventListener("resize", updateAppHeight);
 		window.visualViewport?.addEventListener("resize", updateAppHeight);
+		window.visualViewport?.addEventListener("scroll", updateAppHeight);
+		document.addEventListener('focusin', handleFocusIn);
+		document.addEventListener('focusout', handleFocusOut);
 	});
 
 	onDestroy(() => {
-		window.removeEventListener("resize", updateAppHeight);
 		window.visualViewport?.removeEventListener("resize", updateAppHeight);
+		window.visualViewport?.removeEventListener("scroll", updateAppHeight);
+		document.removeEventListener('focusin', handleFocusIn);
+		document.removeEventListener('focusout', handleFocusOut);
 	});
+	
 </script>
 
 {#if showToast}
@@ -433,7 +502,7 @@
 						}}
 					>
 						{#snippet icon()}
-							<Icon icon="mdi:file-document-outline" class="size-8" />
+							<Icon icon="fluent:notepad-16-regular" class="size-8" />
 						{/snippet}
 					</SidebarItem>
 					<SidebarItem
@@ -678,77 +747,97 @@
 
 <!-- App.svelte -->
 <main
-	class="bg-white dark:bg-neutral-800 w-screen flex flex-col overflow-hidden"
-	style="height: var(--app-height, 100dvh)"
+	class="bg-white dark:bg-neutral-800 flex flex-col overflow-hidden"
+	style="height: 100%;"
 >
-	<div
-		class="bg-primary-700 dark:bg-primary-500 flex w-full justify-between px-2 {$fullscreen
-			? 'hidden collapse'
-			: ''}"
-	>
-		<button class="py-0 px-0 text-white" onclick={openMenu}>
-			<Icon icon="mdi:menu" class="w-8 h-10" />
-		</button>
-		<div class="grow mr-12">
-			{#if $user.token && $user.eventToken}
-				<h1 class="text-white text-lg place-content-center pt-1 font-bold">{event.label ?? event.code}</h1>
-			{/if}
+	{#if !$fullscreen}
+		<div
+			class="bg-primary-700 dark:bg-primary-500 flex w-full justify-between px-2"
+			style="padding-top: env(safe-area-inset-top, 0px)"
+		>
+			<button class="py-0 px-0 text-white" onclick={openMenu}>
+				<Icon icon="mdi:menu" class="w-8 h-10" />
+			</button>
+			<div class="grow mr-12">
+				{#if $user.token && $user.eventToken}
+					<h1 class="text-white text-lg place-content-center pt-1 font-bold">{event.label ?? event.code}</h1>
+				{/if}
+			</div>
 		</div>
-	</div>
+	{/if}
 
 	<div class="flex-1 min-h-0 overflow-y-auto">
 		<SvRouter />
 	</div>
 
-	<div
-		class="shrink-0 flex justify-around pt-2 bg-neutral-900 dark:bg-neutral-700 text-white {$fullscreen &&
-			'bg-white dark:bg-neutral-800'}"
-		style="padding-bottom: max(0.5rem, env(safe-area-inset-bottom))"
-	>
-		{#if $user.token && $user.eventToken && !$fullscreen}
-			{#if $user?.role === "FTA" || $user?.role === "FTAA"}
-				<button class="p-2" onclick={() => navigate("/monitor")}>
-					<Icon icon="mdi:television" class="size-8" />
-				</button>
-				<button class="p-2" onclick={() => navigate("/flashcards")}>
-					<Icon icon="mdi:message-alert" class="size-8" />
-				</button>
-				<button class="p-2" onclick={() => navigate("/references")}>
-					<Icon icon="heroicons:sun-16-solid" class="size-8" />
-				</button>
-
-				<!-- Gonna trial having the notepad button here instead of notifications -->
-				<!-- <button class="p-2 relative" onclick={() => navigate("/notifications")}>
-					<Icon icon="fluent:alert-on-16-filled" class="size-8" />
-					{#if $notificationsStore.length > 0}
-						<Indicator color="red" border size="xl" placement="top-left">
-							<span class="text-white text-xs">{$notificationsStore.length}</span>
-						</Indicator>
-					{/if}
-				</button> -->
-
-				<button class="p-2 relative" onclick={() => navigate("/notepad")}>
-					<Icon icon="mdi:file-text-outline" class="size-8" />
-				</button>
-			{:else if $user?.role === "CSA" || $user?.role === "RI"}
-				<button class="p-2" onclick={() => navigate("/notepad")}>
-					<Icon icon="mdi:file-document-outline" class="size-8" />
-				</button>
-				<button class="p-2" onclick={() => navigate("/references/statuslights")}>
-					<Icon icon="heroicons:sun-16-solid" class="size-8" />
-				</button>
-				<button class="p-2" onclick={() => navigate("/references/softwaredocs")}>
-					<Icon icon="mdi:file-text-outline" class="size-8" />
-				</button>
-				<button class="p-2 relative" onclick={() => navigate("/notifications")}>
-					<Icon icon="fluent:alert-on-16-filled" class="size-8" />
-					{#if $notificationsStore.length > 0}
-						<Indicator color="red" border size="xl" placement="top-left">
-							<span class="text-white text-xs">{$notificationsStore.length}</span>
-						</Indicator>
-					{/if}
-				</button>
+	{#if (!keyboardOpen || !isMobile) && !$fullscreen}
+		<div
+			class="shrink-0 flex justify-around pt-2 bg-neutral-900 dark:bg-neutral-700 text-white"
+			style="padding-bottom: max(0.5rem, env(safe-area-inset-bottom))"
+		>
+			{#if $user.token && $user.eventToken}
+				{#if $user?.role === "FTA" || $user?.role === "FTAA"}
+					<button class="p-2" onclick={() => navigate("/monitor")}>
+						<Icon icon="mdi:television" class="size-8" />
+					</button>
+					<button class="p-2" onclick={() => navigate("/flashcards")}>
+						<Icon icon="mdi:message-alert" class="size-8" />
+					</button>
+					<button class="p-2" onclick={() => navigate("/references")}>
+						<Icon icon="heroicons:sun-16-solid" class="size-8" />
+					</button>
+					<button class="p-2 relative" onclick={() => navigate("/notepad")}>
+						<Icon icon="fluent:notepad-16-regular" class="size-8" />
+					</button>
+					<!-- Gonna trial having the notepad button here instead of notifications -->
+                    <!-- <button class="p-2 relative" onclick={() => navigate("/notifications")}>
+                        <Icon icon="fluent:alert-on-16-filled" class="size-8" />
+                        {#if $notificationsStore.length > 0}
+                            <Indicator color="red" border size="xl" placement="top-left">
+                                <span class="text-white text-xs">{$notificationsStore.length}</span>
+                            </Indicator>
+                        {/if}
+                    </button> -->
+				{:else if $user?.role === "CSA" || $user?.role === "RI"}
+					<button class="p-2" onclick={() => navigate("/notepad")}>
+						<Icon icon="fluent:notepad-16-regular" class="size-8" />
+					</button>
+					<button class="p-2" onclick={() => navigate("/references/statuslights")}>
+						<Icon icon="heroicons:sun-16-solid" class="size-8" />
+					</button>
+					<button class="p-2" onclick={() => navigate("/references/softwaredocs")}>
+						<Icon icon="ion:library" class="size-8" />
+					</button>
+					<button class="p-2 relative" onclick={() => navigate("/notifications")}>
+						<Icon icon="fluent:alert-on-16-filled" class="size-8" />
+						{#if $notificationsStore.length > 0}
+							<Indicator color="red" border size="xl" placement="top-left">
+								<span class="text-white text-xs">{$notificationsStore.length}</span>
+							</Indicator>
+						{/if}
+					</button>
+				{/if}
 			{/if}
-		{/if}
-	</div>
+		</div>
+	{/if}
 </main>
+
+<style>
+	:global(html, body) {
+		overflow: hidden;
+		overscroll-behavior: none;
+		height: 100%;
+		margin: 0;
+		padding: 0;
+	}
+
+	:global(#app) {
+		height: 100%;
+	}
+
+	@supports (-webkit-touch-callout: none) {
+		:global(input, textarea, select) {
+			font-size: max(16px, 1em) !important;
+		}
+	}
+</style>

@@ -365,17 +365,19 @@
 	async function getMatchesForTeam(team: number | null | undefined) {
 		if (team) {
 			matchesPromise = trpc.match.getMatchNumbers.query({ team });
-			matches = (await matchesPromise)
-				.sort(
+			const result = await matchesPromise;
+
+			matches = result
+				.toSorted(
 					(a, b) =>
-						levelToSort(b.level) - levelToSort(a.level) ||
-						b.match_number - a.match_number ||
-						b.play_number - a.play_number,
+					levelToSort(b.level) - levelToSort(a.level) ||
+					b.match_number - a.match_number ||
+					b.play_number - a.play_number,
 				)
 				.map((m) => ({
 					value: m.id,
 					name: `${m.level} ${m.match_number}/${m.play_number}`,
-				}));
+			}));
 		}
 	}
 

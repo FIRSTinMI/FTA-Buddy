@@ -38,11 +38,15 @@
 
 	let station: ROBOT | undefined = $state(undefined);
 
-	let assignedToUser = false;
-
-	let sortedMessages: Message[] | undefined = $derived(
-		note && note.messages
-			? note.messages?.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+	let assignedToUser = $derived(
+		note ? note.assigned_to_id === user.id : false
+	);
+	
+	let sortedMessages: Message[] = $derived(
+		note?.messages
+			? note.messages.toSorted(
+					(a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+			)
 			: [],
 	);
 
@@ -95,7 +99,7 @@
 			} else {
 				match_id = null;
 			}
-			assignedToUser = note.assigned_to_id === user.id ? true : false;
+			// assignedToUser = note.assigned_to_id === user.id ? true : false;
 			editNoteText = note.text;
 		}
 	}
@@ -125,14 +129,14 @@
 
 	async function assignSelf() {
 		if (!note) return;
-		assignedToUser = note.assigned_to_id === user.id;
+		// assignedToUser = note.assigned_to_id === user.id;
 		try {
 			if (note.assigned_to_id === user.id) {
 				await trpc.notes.unAssign.mutate({ note_id: note.id, event_code: event.code });
-				assignedToUser = false;
+				// assignedToUser = false;
 			} else {
 				await trpc.notes.assign.mutate({ id: note.id, user_id: user.id, event_code: event.code });
-				assignedToUser = true;
+				// assignedToUser = true;
 			}
 		} catch (err: any) {
 			toast("An error occurred while updating the note", err.message);
@@ -150,7 +154,7 @@
 			navigate("/notepad");
 		} else {
 			window.history.back();
-		}
+		}	
 	}
 
 	function sendKey(event: KeyboardEvent) {
@@ -217,8 +221,11 @@
 					event_code: event.code,
 					match_id: matchIdVal,
 				});
-				note.text = editNoteText;
-				note.match_id = matchIdVal ?? null;
+				note = {
+					...note,
+					text: editNoteText,
+					match_id: matchIdVal ?? null
+				};
 				// Refresh match display if match_id changed
 				if (matchIdVal) {
 					match = await trpc.match.getMatch.query({ id: matchIdVal });
@@ -249,7 +256,7 @@
 			if (!note) return;
 			await trpc.notes.delete.mutate({ id: noteId });
 			toast("Note deleted successfully", "success", "green-500");
-			back();
+			// back();
 		} catch (err: any) {
 			toast("An error occurred while deleting the Note", err.message);
 			console.error(err);
@@ -296,7 +303,7 @@
 					switch (data.kind) {
 						case "edit":
 							if (data.note.id === note.id) {
-								note.text = data.note.text;
+								note = { ...note, text: data.note.text };
 							}
 							break;
 						case "delete":
@@ -307,40 +314,36 @@
 							break;
 						case "status":
 							if (data.note_id === note.id) {
-								note.resolution_status = data.resolution_status as any;
+								note = { ...note, resolution_status: data.resolution_status as any };
 							}
 							break;
 						case "assign":
 							if (data.note_id === note.id) {
-								note.assigned_to_id = data.assigned_to_id;
-								note.assigned_to = data.assigned_to;
+								note = { ...note, assigned_to_id: data.assigned_to_id, assigned_to: data.assigned_to };
 							}
 							break;
 						case "follow":
 							if (data.note_id === note.id) {
-								note.followers = data.followers;
+								note = { ...note, followers: data.followers };
 							}
 							break;
 						case "add_message":
 							if (data.note_id === note.id) {
-								if (note.messages) {
-									note.messages.push(data.message);
-								} else {
-									note.messages = [data.message];
-								}
-								note = note;
+								const nextMessages = [...(note.messages ?? []), data.message];
+								note = { ...note, messages: nextMessages };
 							}
 							break;
 						case "edit_message":
 							if (data.note_id === note.id && note.messages) {
-								note.messages = note.messages.map((m) =>
-									m.id === data.message.id ? { ...m, text: data.message.text } : m,
-								);
+								note = {
+									...note,
+									messages: note.messages.map((m) => (m.id === data.message.id ? { ...m, text: data.message.text } : m)),
+								};
 							}
 							break;
 						case "delete_message":
 							if (data.note_id === note.id && note.messages) {
-								note.messages = note.messages.filter((m) => m.id !== data.message_id);
+								note = { ...note, messages: note.messages.filter((m) => m.id !== data.message_id) };
 							}
 							break;
 						default:

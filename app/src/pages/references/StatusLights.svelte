@@ -132,6 +132,33 @@
 								</table>
 							</td>
 						</tr>
+						<tr>
+							<td>
+								<table class="section-table">
+									<tbody>
+										<tr>
+											<td colspan="2" class="bold">Powered + Configured + Unable to Ping Field</td>
+										</tr>
+										<tr>
+											<td class="green led"> </td>
+											<td>Power</td>
+										</tr>
+										<tr>
+											<td
+												class="{blinkClass('2Blink', [
+													'green',
+													'black',
+													'green',
+													'black',
+													'black',
+												])} led"
+											></td>
+											<td>System Status</td>
+										</tr>
+									</tbody>
+								</table>
+							</td>
+						</tr>
 
 						<tr>
 							<td>
@@ -153,7 +180,6 @@
 								</table>
 							</td>
 						</tr>
-
 						<tr>
 							<td>
 								<table class="section-table">
@@ -246,7 +272,37 @@
 								</table>
 							</td>
 						</tr>
-
+						<tr>
+							<td>
+								<table class="section-table">
+									<tbody>
+										<tr>
+											<td colspan="2" class="bold">No Robot Radio Link</td>
+										</tr>
+										<tr>
+											<td class="green led"> </td>
+											<td>Power</td>
+										</tr>
+										<tr>
+											<td class="green led"> </td>
+											<td>System Status</td>
+										</tr>
+										<tr>
+											<td class="black led"> </td>
+											<td>2.4GHz</td>
+										</tr>
+										<tr>
+											<td class="black led"> </td>
+											<td>6GHz</td>
+										</tr>
+										<tr>
+											<td class="black led"> </td>
+											<td>RIO Link</td>
+										</tr>
+									</tbody>
+								</table>
+							</td>
+						</tr>
 						<tr>
 							<td>
 								<table class="section-table">
@@ -312,7 +368,7 @@
 										</tr>
 										<tr>
 											<td>3</td>
-											<td>Enable 2.4 GHz Radio</td>
+											<td>No longer matters (software controlled)</td>
 										</tr>
 									</tbody>
 								</table>
@@ -516,6 +572,7 @@
 										</tr>
 									</tbody>
 								</table>
+								<p class="text-sm mt-2 italic">Note: Rapid or erratic RSL blinking may indicate insufficient power to the roboRIO.</p>
 							</td>
 						</tr>
 					</tbody>
@@ -1125,8 +1182,8 @@
 											<td>No Power</td>
 										</tr>
 										<tr>
-											<td class="blink-orange led"> </td>
-											<td class="blink-orange led"> </td>
+											<td class={LEDToggleState["3Hz"] === true ? "orange led" : "black led"}> </td>
+											<td class={LEDToggleState["3Hz"] === true ? "orange led" : "black led"}> </td>
 											<td>Valid CAN/PWM Signal, Robot is Disabled, Phoenix is Running </td>
 										</tr>
 										<tr>
@@ -1156,7 +1213,7 @@
 										<tr>
 											<td class="orange led"> </td>
 											<td class="orange led"> </td>
-											<td>Enabled with Nuetral Input</td>
+											<td>Enabled with Nuetral Output</td>
 										</tr>
 										<tr>
 											<td class={LEDToggleState["3Hz"] === true ? "red led" : "black led"}> </td>
@@ -1230,12 +1287,12 @@
 										</tr>
 										<tr>
 											<td class={LEDToggleState["3Hz"] === true ? "red led" : "green led"}> </td>
-											<td class={LEDToggleState["3Hz"] === false ? "green led" : "red led"}> </td>
+											<td class={LEDToggleState["3Hz"] === true ? "green led" : "red led"}> </td>
 											<td>Using Pro Command without License</td>
 										</tr>
 										<tr>
 											<td class={LEDToggleState["3Hz"] === true ? "red led" : "orange led"}> </td>
-											<td class={LEDToggleState["3Hz"] === false ? "orange led" : "red led"}>
+											<td class={LEDToggleState["3Hz"] === true ? "orange led" : "red led"}>
 											</td>
 											<td>Damaged Hardware</td>
 										</tr>
@@ -2144,6 +2201,9 @@
 	}
 	.black {
 		background-color: black;
+	}
+	.white {
+		background-color: #ffffff;
 	}
 	.dim-red {
 		background-color: #7a0000;

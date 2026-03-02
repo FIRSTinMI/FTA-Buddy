@@ -74,6 +74,7 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 	}
 
 	const noteUpdateEmitter = new TypedEmitter<NoteUpdateEvents>();
+	noteUpdateEmitter.setMaxListeners(100);
 
 	loadingEvents[eventCode] = new Promise(async (resolve) => {
 		const eventInMemory = events[eventCode];

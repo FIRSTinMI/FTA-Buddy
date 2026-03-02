@@ -193,7 +193,7 @@
 	function startSubscription() {
 		subscription?.unsubscribe();
 		subscription = trpc.notes.updateSubscription.subscribe(
-			{ eventToken: $userStore.eventToken },
+			{ eventToken: $userStore.eventToken, source: `${$userStore.username}.field` },
 			{
 				onError: console.error,
 				onData: (data: NoteUpdateEventData) => {

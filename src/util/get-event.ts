@@ -180,5 +180,5 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 
 export async function getListenerCount(event_token: string) {
 	const event = await getEvent(event_token);
-	console.log(`Update Listener Count - ${event.noteUpdateEmitter.listenerCount("status")}`);
+	console.log(`Update Listener Count - ${event.noteUpdateEmitter.listenerCount("note_update")}`);
 }

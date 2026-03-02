@@ -498,20 +498,7 @@ export interface FmsNoteMetadata {
 }
 
 export type NoteUpdateEvents = {
-	create: (data: { kind: "create"; note: Note; source?: "fms" }) => void;
-	edit: (data: { kind: "edit"; note: Note; source?: "fms" }) => void;
-	delete: (data: { kind: "delete"; note: Note; source?: "fms" }) => void;
-	status: (data: { kind: "status"; note_id: string; resolution_status: FTAEventNoteResolutionType }) => void;
-	assign: (data: {
-		kind: "assign";
-		note_id: string;
-		assigned_to_id: number | null;
-		assigned_to: Profile | null;
-	}) => void;
-	follow: (data: { kind: "follow"; note_id: string; followers: number[] }) => void;
-	add_message: (data: { kind: "add_message"; note_id: string; message: Message }) => void;
-	edit_message: (data: { kind: "edit_message"; note_id: string; message: Message }) => void;
-	delete_message: (data: { kind: "delete_message"; note_id: string; message_id: string }) => void;
+	note_update: (data: NoteUpdateEventData) => void;
 };
 
 export type NoteUpdateEventData =

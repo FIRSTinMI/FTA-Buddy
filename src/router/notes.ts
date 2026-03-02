@@ -7,7 +7,7 @@ import { notificationEmitter } from "..";
 import { formatTimeShortNoAgoMinutes } from "../../shared/formatTime";
 import { buildNotification, toNoteCtx } from "../../shared/notifications";
 import type { Notification } from "../../shared/types";
-import { FmsNoteMetadata, Message, Note, NoteUpdateEventData, NoteUpdateEvents, Profile } from "../../shared/types";
+import { FmsNoteMetadata, Message, Note, NoteUpdateEventData, Profile } from "../../shared/types";
 import { db } from "../db/db";
 import { events, matchLogs, messages, notes, pushSubscriptions, users } from "../db/schema";
 import { eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
@@ -280,7 +280,7 @@ const messagesSubRouter = router({
 
 			if (!insert[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Message" });
 
-			event.noteUpdateEmitter.emit("add_message", {
+			event.noteUpdateEmitter.emit("note_update", {
 				kind: "add_message",
 				note_id: note.id,
 				message: insert[0] as Message,
@@ -365,7 +365,7 @@ const messagesSubRouter = router({
 
 			if (!update[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Message" });
 
-			event.noteUpdateEmitter.emit("edit_message", {
+			event.noteUpdateEmitter.emit("note_update", {
 				kind: "edit_message",
 				note_id: note.id,
 				message: update[0] as Message,
@@ -416,7 +416,7 @@ const messagesSubRouter = router({
 			const result = await db.delete(messages).where(eq(messages.id, input.message_id));
 			if (!result) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to delete Message" });
 
-			event.noteUpdateEmitter.emit("delete_message", {
+			event.noteUpdateEmitter.emit("note_update", {
 				kind: "delete_message",
 				note_id: input.note_id,
 				message_id: message.id,
@@ -614,7 +614,7 @@ export const notesRouter = router({
 				.returning();
 			if (!insert[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Note" });
 
-			event.noteUpdateEmitter.emit("create", { kind: "create", note: insert[0] as Note });
+			event.noteUpdateEmitter.emit("note_update", { kind: "create", note: insert[0] as Note });
 
 			createNotification(
 				event.users.map((u) => u.id),
@@ -709,7 +709,7 @@ export const notesRouter = router({
 				.returning();
 			if (!insert[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Note" });
 
-			event.noteUpdateEmitter.emit("create", { kind: "create", note: insert[0] as Note });
+			event.noteUpdateEmitter.emit("note_update", { kind: "create", note: insert[0] as Note });
 
 			createNotification(
 				event.users.map((u) => u.id).filter((id) => id !== authorProfile[0].id),
@@ -773,7 +773,7 @@ export const notesRouter = router({
 			const update = await db.update(notes).set(setFields).where(eq(notes.id, input.id)).returning();
 			if (!update[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Note" });
 
-			event.noteUpdateEmitter.emit("edit", { kind: "edit", note: update[0] as Note });
+			event.noteUpdateEmitter.emit("note_update", { kind: "edit", note: update[0] as Note });
 
 			if (event.slackTeam && note.slack_ts && note.slack_channel) {
 				await updateSlackMessage(
@@ -811,7 +811,7 @@ export const notesRouter = router({
 		const result = await db.delete(notes).where(eq(notes.id, input.id));
 		if (!result) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to delete Note" });
 
-		event.noteUpdateEmitter.emit("delete", { kind: "delete", note: note as Note });
+		event.noteUpdateEmitter.emit("note_update", { kind: "delete", note: note as Note });
 
 		if (event.slackTeam && note.slack_ts && note.slack_channel) {
 			await deleteSlackMessage(note.slack_channel, event.slackTeam, note.slack_ts);
@@ -864,7 +864,7 @@ export const notesRouter = router({
 			if (!update[0])
 				throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update note status" });
 
-			event.noteUpdateEmitter.emit("status", {
+			event.noteUpdateEmitter.emit("note_update", {
 				kind: "status",
 				note_id: update[0].id,
 				resolution_status: update[0].resolution_status ?? "Open",
@@ -935,7 +935,7 @@ export const notesRouter = router({
 				.returning();
 			if (!update[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to assign User" });
 
-			event.noteUpdateEmitter.emit("assign", {
+			event.noteUpdateEmitter.emit("note_update", {
 				kind: "assign",
 				note_id: update[0].id,
 				assigned_to_id: update[0].assigned_to_id,
@@ -1016,7 +1016,7 @@ export const notesRouter = router({
 			if (!update[0])
 				throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update assignment" });
 
-			event.noteUpdateEmitter.emit("assign", {
+			event.noteUpdateEmitter.emit("note_update", {
 				kind: "assign",
 				note_id: update[0].id,
 				assigned_to_id: update[0].assigned_to_id,
@@ -1101,7 +1101,7 @@ export const notesRouter = router({
 				throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Note followers" });
 			}
 
-			event.noteUpdateEmitter.emit("follow", {
+			event.noteUpdateEmitter.emit("note_update", {
 				kind: "follow",
 				note_id: update[0].id,
 				followers: update[0].followers,
@@ -1204,7 +1204,7 @@ export const notesRouter = router({
 			if (!insert[0])
 				throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Note from FMS" });
 
-			event.noteUpdateEmitter.emit("create", { kind: "create", note: insert[0] as Note, source: "fms" });
+			event.noteUpdateEmitter.emit("note_update", { kind: "create", note: insert[0] as Note, source: "fms" });
 			return insert[0] as Note;
 		}),
 
@@ -1256,7 +1256,7 @@ export const notesRouter = router({
 			if (!update[0])
 				throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Note from FMS" });
 
-			event.noteUpdateEmitter.emit("edit", { kind: "edit", note: update[0] as Note, source: "fms" });
+			event.noteUpdateEmitter.emit("note_update", { kind: "edit", note: update[0] as Note, source: "fms" });
 			return update[0] as Note;
 		}),
 
@@ -1301,7 +1301,7 @@ export const notesRouter = router({
 		if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found for given FMS note ID" });
 		await db.delete(messages).where(eq(messages.note_id, note.id));
 		await db.delete(notes).where(eq(notes.id, note.id));
-		event.noteUpdateEmitter.emit("delete", { kind: "delete", note: note as Note, source: "fms" });
+		event.noteUpdateEmitter.emit("note_update", { kind: "delete", note: note as Note, source: "fms" });
 		return note.id;
 	}),
 
@@ -1332,57 +1332,29 @@ export const notesRouter = router({
 
 			const { push, drain } = subscriptionQueue<NoteUpdateEventData>(signal!);
 
-			// Build filtered push helper for note_id filtering
-			function filteredPush<K extends NoteUpdateEventData["kind"]>(
-				data: Extract<NoteUpdateEventData, { kind: K }>,
-			) {
-				if (!input.note_id) {
-					push(data);
-					return;
+			const opts = input.eventOptions;
+
+			const handler = (data: NoteUpdateEventData) => {
+				// eventOptions filtering
+				if (opts && (opts as Record<string, boolean | undefined>)[data.kind] === false) return;
+
+				// note_id filtering
+				if (input.note_id) {
+					if ("note" in data) {
+						if (data.note.id !== input.note_id) return;
+					} else if ("note_id" in data) {
+						if (data.note_id !== input.note_id) return;
+					}
 				}
-				// Filter by note_id for applicable kinds
-				if ("note" in data && data.note.id === input.note_id) {
-					push(data);
-				} else if ("note_id" in data && data.note_id === input.note_id) {
-					push(data);
-				}
-			}
 
-			const handlers: { event: keyof NoteUpdateEvents; fn: (...args: any[]) => void }[] = [];
-
-			function registerHandler<K extends keyof NoteUpdateEvents>(eventName: K, handler: NoteUpdateEvents[K]) {
-				handlers.push({ event: eventName, fn: handler as any });
-				event.noteUpdateEmitter.on(eventName, handler);
-			}
-
-			const opts = input.eventOptions ?? {
-				create: true,
-				edit: true,
-				delete: true,
-				status: true,
-				assign: true,
-				follow: true,
-				add_message: true,
-				edit_message: true,
-				delete_message: true,
+				push(data);
 			};
 
-			if (opts.create !== false) registerHandler("create", (data) => filteredPush(data));
-			if (opts.edit !== false) registerHandler("edit", (data) => filteredPush(data));
-			if (opts.delete !== false) registerHandler("delete", (data) => filteredPush(data));
-			if (opts.status !== false) registerHandler("status", (data) => filteredPush(data));
-			if (opts.assign !== false) registerHandler("assign", (data) => filteredPush(data));
-			if (opts.follow !== false) registerHandler("follow", (data) => filteredPush(data));
-			if (opts.add_message !== false) registerHandler("add_message", (data) => filteredPush(data));
-			if (opts.edit_message !== false) registerHandler("edit_message", (data) => filteredPush(data));
-			if (opts.delete_message !== false) registerHandler("delete_message", (data) => filteredPush(data));
-
+			event.noteUpdateEmitter.on("note_update", handler);
 			try {
 				yield* drain();
 			} finally {
-				for (const h of handlers) {
-					event.noteUpdateEmitter.off(h.event, h.fn as any);
-				}
+				event.noteUpdateEmitter.off("note_update", handler);
 			}
 		}),
 
@@ -1457,7 +1429,7 @@ export async function updateNoteStatusFromSlack(message_ts: string, resolved: bo
 
 	const event = await getEvent("", note.event_code);
 
-	event.noteUpdateEmitter.emit("status", {
+	event.noteUpdateEmitter.emit("note_update", {
 		kind: "status",
 		note_id: update[0].id,
 		resolution_status: update[0].resolution_status ?? "Open",
@@ -1499,7 +1471,7 @@ export async function updateNoteAssignmentFromSlack(message_ts: string, add: boo
 	const event = await getEvent("", note.event_code);
 
 	if (add) {
-		event.noteUpdateEmitter.emit("assign", {
+		event.noteUpdateEmitter.emit("note_update", {
 			kind: "assign",
 			note_id: update[0].id,
 			assigned_to_id: update[0].assigned_to_id,
@@ -1515,7 +1487,7 @@ export async function updateNoteAssignmentFromSlack(message_ts: string, add: boo
 			}),
 		);
 	} else {
-		event.noteUpdateEmitter.emit("assign", {
+		event.noteUpdateEmitter.emit("note_update", {
 			kind: "assign",
 			note_id: update[0].id,
 			assigned_to_id: update[0].assigned_to_id,
@@ -1567,7 +1539,7 @@ export async function addNoteMessageFromSlack(
 
 	const event = await getEvent("", note.event_code);
 
-	event.noteUpdateEmitter.emit("add_message", {
+	event.noteUpdateEmitter.emit("note_update", {
 		kind: "add_message",
 		note_id: note.id,
 		message: insert[0] as Message,

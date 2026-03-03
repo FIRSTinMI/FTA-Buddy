@@ -4,16 +4,8 @@
 	import type { NexusStatus } from "../../../../shared/types";
 	import { AUTO_EVENT_ISSUE_TYPES, type AutoEventIssueType, type EventAutoEventSettings } from "../../../../shared/types";
 	import { trpc } from "../../main";
-	import { navigate } from "../../router";
 	import { eventStore } from "../../stores/event";
 	import { userStore } from "../../stores/user";
-
-	let extensionDetected = $state(false);
-	let extensionEnabled = $state(false);
-	let signalREnabled = $state(false);
-	let extensionEventCode = $state("");
-	let extensionVersion = $state("unknown version");
-	let fmsDetected = $state(false);
 
 	// Nexus state
 	let nexusApiKey = $state("");
@@ -116,30 +108,7 @@
 		saveAutoEventSettings();
 	}
 
-	window.addEventListener("message", (event) => {
-		if (event.data.type === "pong") {
-			extensionDetected = true;
-			extensionVersion = "v" + event.data.version;
-			extensionEnabled = event.data.enabled;
-			extensionEventCode = event.data.eventCode;
-			signalREnabled = event.data.signalR;
-			fmsDetected = event.data.fms;
-		}
-	});
-
-	async function checkConnection() {
-		window.postMessage({ source: "page", type: "ping" }, "*");
-		await new Promise((resolve) => setTimeout(resolve, 3000));
-		if (!extensionDetected || !extensionEnabled || !signalREnabled || !fmsDetected) {
-			checkConnection();
-		} else {
-			// If everything is connected and good, still check every 10 seconds
-			setTimeout(checkConnection, 10000);
-		}
-	}
-
 	onMount(() => {
-		setTimeout(checkConnection, 200);
 		refreshNexusStatus();
 		nexusStatusInterval = setInterval(refreshNexusStatus, 30_000);
 		refreshFmsStatus();
@@ -226,69 +195,19 @@
 	}
 </script>
 
-<div class="container mx-auto md:max-w-5xl flex flex-col p-4 py-8 space-y-4">
-	<h1 class="text-3xl font-bold">Host a FTA Buddy Instance</h1>
+<div class="container mx-auto md:max-w-5xl flex flex-col p-4 py-8 space-y-3  h-full pb-12 overflow-y-auto">
+	<h1 class="text-2xl font-bold">Event Management</h1>
 	<span class="inline-flex gap-2 font-bold mx-auto">
-		{#if extensionDetected}
-			{#if extensionEnabled}
-				{#if signalREnabled}
-					<Indicator color="green" class="my-auto" />
-					<span class="text-green text-green-500">Extension Enabled ({extensionVersion})</span>
-					<button
-						class="text-gray-500 hover:text-gray-300 text-xs font-normal ml-1"
-						onclick={() =>
-							window.postMessage(
-								{
-									source: "page",
-									type: "eventCode",
-									code: $eventStore.code,
-									token: $userStore.eventToken,
-								},
-								"*",
-							)}>Reconfigure</button
-					>
-				{:else}
-					<Indicator color="red" class="my-auto" />
-					<span class="text-red-500">SignalR Not Enabled</span>
-					<button
-						class="text-blue-400 hover:underline"
-						onclick={() => window.postMessage({ source: "page", type: "enable" }, "*")}>Enable</button
-					>
-				{/if}
-			{:else}
-				<Indicator color="yellow" class="my-auto" />
-				<span class="text-yellow-300">Extension Not Enabled</span>
-				<button
-					class="text-blue-400 hover:underline"
-					onclick={() => {
-						window.postMessage({ source: "page", type: "enable" }, "*");
-					}}>Enable</button
-				>
+		<Indicator color={fmsExtensionConnected ? "green" : "red"} class="my-auto" />
+		{#if fmsExtensionConnected}
+			<span class="text-green-500">Extension Connected</span>
+			{#if fmsLastSeenAt}
+				<span class="text-yellow-500 text-xs font-normal my-auto">(last seen {fmsLastSeenAt.toLocaleTimeString()})</span>
 			{/if}
 		{:else}
-			<Indicator color="red" class="my-auto" />
-			<span class="text-red-500">Extension Not Detected</span>
-			<a
-				href="https://chromewebstore.google.com/detail/fta-buddy/kddnhihfpfnehnnhbkfajdldlgigohjc"
-				class="text-blue-400 hover:underline"
-				target="_blank">Install</a
-			>
+			<span class="text-red-400">No Extension Connected</span>
 		{/if}
 	</span>
-	<span class="inline-flex gap-2 font-bold mx-auto">
-		<Indicator color={fmsDetected ? "green" : "red"} class="my-auto" />
-		{#if fmsDetected}
-			<span class="text-green-500">FMS Detected</span>
-		{:else}
-			<span class="text-red-500">FMS Not Detected</span>
-		{/if}
-	</span>
-	<p class="text-lg">
-		FTA Buddy needs a host to send data to it from FMS. The extension must be installed and be able to communicate
-		with FMS at
-		<code class="bg-neutral-900 px-2 py-.75 rounded-xl">10.0.100.5</code>
-	</p>
-	<Button onclick={() => navigate("/")}>Go to FTA Buddy</Button>
 	<div class="flex flex-col border-t border-neutral-500 pt-5 gap-6">
 		<div class="border-b border-neutral-500 pb-5">
 			<div>
@@ -307,6 +226,8 @@
 			</div>
 		</div>
 
+        <h1 class="text-lg font-bold">Integrations</h1>
+        
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-2">
 			<div class="flex flex-col gap-3 rounded-xl border border-neutral-700 bg-neutral-900 p-5">
 				<h2 class="text-xl font-bold">Nexus Inspection API</h2>

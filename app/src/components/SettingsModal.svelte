@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { Button, Label, Modal, Range, Select, Toggle, type SelectOptionType } from "flowbite-svelte";
-	import { get } from "svelte/store";
 	import { audioQueuer } from "../field-monitor";
 	import { trpc } from "../main";
 	import { installPrompt } from "../stores/install-prompt";
@@ -16,9 +15,7 @@
 
 	let { settingsOpen = $bindable(false) } = $props();
 
-	let settings = get(settingsStore);
-	let user = get(userStore);
-	let loading = false;
+	let loading = $state(false);
 
 	const roleOptions: SelectOptionType<string>[] = [
 		{ value: "FTA", name: "FTA" },
@@ -27,20 +24,11 @@
 		{ value: "RI", name: "RI" },
 	];
 
-	function updateSettings() {
-		settingsStore.set(settings);
-	}
-
 	async function updateUser() {
 		try {
 			await trpc.user.changeRole.mutate({
-				newRole: user.role,
+				newRole: $userStore.role,
 			});
-
-			userStore.update((u) => {
-				return { ...u, role: user.role }; // Update the role in userStore
-			});
-
 			toast("Success", "Role changed successfully", "green-500");
 		} catch (err: any) {
 			console.error(err);
@@ -62,22 +50,19 @@
 
 	async function requestNotificationPermissions() {
 		try {
-			if (settings.notifications) {
+			if ($settingsStore.notifications) {
 				if (Notification.permission !== "granted") {
 					Notification.requestPermission().then(async (permission) => {
 						if (permission === "granted") {
-							updateSettings();
 							await subscribeToPush();
 						}
 					});
 				} else {
-					updateSettings();
 					await subscribeToPush();
 				}
 				startNotificationSubscription();
 			} else {
 				stopNotificationSubscription();
-				updateSettings();
 			}
 		} catch (e) {
 			console.error(e);
@@ -85,28 +70,9 @@
 		}
 	}
 
-	let rangeSlider: HTMLInputElement | undefined;
-
-	function setupRangeSlider(settingsOpen: boolean) {
-		if (!settingsOpen || rangeSlider) return;
-		setTimeout(() => {
-			rangeSlider = document.querySelector(".range") as HTMLInputElement;
-			console.log("range slider", rangeSlider);
-			if (rangeSlider) {
-				rangeSlider.addEventListener("mousemove", (evt) => {
-					if (!rangeSlider) return;
-					updateSettings();
-				});
-			}
-		}, 100);
-	}
-
-	$effect(() => {
-		setupRangeSlider(settingsOpen);
-	});
-
 	let testingMusic = $state(false);
 	let musicTestTimeout: NodeJS.Timeout | undefined;
+
 	function testMusic() {
 		testingMusic = true;
 		audioQueuer.playMusic([0]);
@@ -141,47 +107,41 @@
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-2">
 			<div class="grid grid-cols-subgrid gap-2 row-span-5">
 				<p class="text-gray-700 dark:text-gray-400">General</p>
-				<Toggle class="toggle" bind:checked={settings.vibrations} onchange={updateSettings}>Vibrations</Toggle>
-				<Toggle class="toggle" bind:checked={settings.fimSpecifics} onchange={updateSettings}
+				<Toggle class="toggle" bind:checked={$settingsStore.vibrations}>Vibrations</Toggle>
+				<Toggle class="toggle" bind:checked={$settingsStore.fimSpecifics}
 					>FIM Specific Field Manuals</Toggle
 				>
-				<Toggle class="toggle" bind:checked={settings.notificationsDoNotAsk} onchange={updateSettings}
+				<Toggle class="toggle" bind:checked={$settingsStore.notificationsDoNotAsk}
 					>Do Not Ask About Notifications</Toggle
 				>
-				<Toggle class="toggle" bind:checked={settings.notifications} onchange={requestNotificationPermissions}
+				<Toggle class="toggle" bind:checked={$settingsStore.notifications} onchange={requestNotificationPermissions}
 					>Enable Notifications</Toggle
 				>
 				<div class="pl-4 grid grid-cols-subgrid gap-2 row-span-5">
 					<Toggle
 						class="toggle"
-						bind:checked={settings.notificationCategories.create}
-						onchange={updateSettings}>New Tickets</Toggle
+						bind:checked={$settingsStore.notificationCategories.create}>New Tickets</Toggle
 					>
 					<Toggle
 						class="toggle"
-						bind:checked={settings.notificationCategories.follow}
-						onchange={updateSettings}>Followed Ticket Updates</Toggle
+						bind:checked={$settingsStore.notificationCategories.follow}>Followed Ticket Updates</Toggle
 					>
 					<Toggle
 						class="toggle"
-						bind:checked={settings.notificationCategories.assign}
-						onchange={updateSettings}>Assigned Ticket Updates</Toggle
+						bind:checked={$settingsStore.notificationCategories.assign}>Assigned Ticket Updates</Toggle
 					>
 					<Toggle
 						class="toggle"
-						bind:checked={settings.notificationCategories.robot}
-						onchange={updateSettings}>Robot Status Updates</Toggle
+						bind:checked={$settingsStore.notificationCategories.robot}>Robot Status Updates</Toggle
 					>
 				</div>
 			</div>
 			<div class="grid grid-cols-subgrid gap-2 row-span-3">
 				<p class="text-gray-700 dark:text-gray-400">Change My Role</p>
-				<Select items={roleOptions} bind:value={user.role} onchange={updateUser} />
+				<Select items={roleOptions} bind:value={$userStore.role} onchange={updateUser} />
 				<p class="text-gray-700 dark:text-gray-400">Audio Alerts</p>
-				<Toggle class="toggle" bind:checked={settings.soundAlerts} onchange={updateSettings}
-					>Robot Connection</Toggle
-				>
-				<Toggle class="toggle" bind:checked={settings.fieldGreen} onchange={updateSettings}>Field Green</Toggle>
+				<Toggle class="toggle" bind:checked={$settingsStore.soundAlerts}>Robot Connection</Toggle>
+				<Toggle class="toggle" bind:checked={$settingsStore.fieldGreen}>Field Green</Toggle>
 			</div>
 			<div class="grid grid-cols-subgrid gap-2 row-span-6">
 				<p class="text-gray-700 dark:text-gray-400">Music</p>
@@ -193,21 +153,19 @@
 						{ value: "minecraft", name: "C418 - Minecraft" },
 						{ value: "pokemon", name: "Pokemon" },
 					]}
-					bind:value={settings.musicType}
-					onchange={updateSettings}
+					bind:value={$settingsStore.musicType}
 				/>
 				<Label>Volume</Label>
 				<div class="flex">
 					<Range
-						bind:value={settings.musicVolume}
+						bind:value={$settingsStore.musicVolume}
 						min="0"
 						max="100"
-						onchange={updateSettings}
 						step="1"
 						class="range mt-2 bg-gray-400"
-						disabled={settings.musicType === "none"}
+						disabled={$settingsStore.musicType === "none"}
 					/>
-					<div class="w-12 text-right text-gray-700 dark:text-gray-400">{settings.musicVolume}%</div>
+					<div class="w-12 text-right text-gray-700 dark:text-gray-400">{$settingsStore.musicVolume}%</div>
 				</div>
 				<Button
 					onclick={() => (testingMusic ? stopMusic : testMusic)()}
@@ -217,29 +175,24 @@
 			</div>
 			<div class="grid grid-cols-subgrid gap-2 row-span-4">
 				<p class="text-gray-700 dark:text-gray-400">Appearance</p>
-				<Toggle class="toggle" bind:checked={settings.darkMode} onchange={updateSettings}>Dark Theme</Toggle>
-				<Toggle class="toggle" bind:checked={settings.roundGreen} onchange={updateSettings}
-					>Round Green Indicators</Toggle
-				>
-				<Toggle class="toggle" bind:checked={settings.inspectionAlerts} onchange={updateSettings}
+				<Toggle class="toggle" bind:checked={$settingsStore.darkMode}>Dark Theme</Toggle>
+				<Toggle class="toggle" bind:checked={$settingsStore.roundGreen}>Round Green Indicators</Toggle>
+				<Toggle class="toggle" bind:checked={$settingsStore.inspectionAlerts}
 					>🔍 Missing inspection icon on field monitor</Toggle
 				>
 			</div>
 			<div class="grid grid-cols-subgrid gap-2 row-span-4">
 				<p class="text-gray-700 dark:text-gray-400">Developer</p>
-				<Toggle class="toggle" bind:checked={settings.developerMode} onchange={updateSettings}
-					>Developer Mode</Toggle
-				>
+				<Toggle class="toggle" bind:checked={$settingsStore.developerMode}>Developer Mode</Toggle>
 				<Toggle
-					class="toggle {!settings.developerMode ? 'hidden' : ''}"
-					bind:checked={settings.forceCloud}
-					onchange={updateSettings}>Force cloud server</Toggle
+					class="toggle {!$settingsStore.developerMode ? 'hidden' : ''}"
+					bind:checked={$settingsStore.forceCloud}>Force cloud server</Toggle
 				>
 				<Button
-					class={!settings.developerMode || !user.admin ? "hidden" : ""}
+					class={!$settingsStore.developerMode || !$userStore.admin ? "hidden" : ""}
 					onclick={async () => {
 						try {
-							const res = await trpc.event.notification.query({ eventToken: user.eventToken });
+							const res = await trpc.event.notification.query({ eventToken: $userStore.eventToken });
 							toast("Notification Test", `Sent to ${res.sent} user(s)`, "green-500");
 						} catch (err: any) {
 							toast("Notification Test Failed", err.message);
@@ -268,7 +221,7 @@
 			<h1 class="text-lg">About</h1>
 			<p>Author: Filip Kin</p>
 			<p>Contributors: Kelly Malone, Cole H, Brandon McDonald</p>
-			<p>Version: {settings.version}</p>
+			<p>Version: {$settingsStore.version}</p>
 			<a href="https://github.com/FIRSTinMI/FTA-Buddy" class="underline text-blue-400">GitHub</a>
 		</div>
 	{/snippet}

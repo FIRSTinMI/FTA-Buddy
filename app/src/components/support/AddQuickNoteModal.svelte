@@ -43,6 +43,7 @@
 	});
 
 	import type { FTAEventNoteIssueType } from "../../../../shared/fmsApiTypes";
+	import { displayTeam } from "../../util/team-name";
 
 	const QUICK_LABELS: { label: string; issueType: FTAEventNoteIssueType }[] = [
 		{ label: "Radio reboot", issueType: "RadioIssue" },
@@ -114,7 +115,7 @@
 		<div class="flex items-center gap-2">
 			<span class="inline-block w-2.5 h-2.5 rounded-full {alliance === 'blue' ? 'bg-blue-500' : 'bg-red-500'}"
 			></span>
-			<span class="font-bold">#{teamNumber}{teamName ? ` – ${teamName}` : ""}</span>
+			<span class="font-bold">{displayTeam(teamNumber)}</span>
 			{#if matchLabel}
 				<span class="text-sm text-gray-500 font-normal">{matchLabel}</span>
 			{/if}

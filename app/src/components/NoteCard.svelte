@@ -9,6 +9,7 @@
 	import { eventStore } from "../stores/event";
 	import { userStore } from "../stores/user";
 	import { toast } from "../util/toast";
+	import { displayTeam } from "../util/team-name";
 
 	let event = get(eventStore);
 	let user = get(userStore);
@@ -144,9 +145,11 @@
 		<div class="flex items-start justify-between gap-3">
 			<div class="flex items-center flex-wrap gap-1.5 min-w-0">
 				{#if note.team !== null}
-					<span class="font-bold text-base">#{note.team}</span>
+					<span class="font-bold text-base">{displayTeam(note.team)}</span>
 				{/if}
-				<Badge color={noteTypeColor[note.note_type]}>{noteTypeLabel[note.note_type]}</Badge>
+                {#if note.note_type !== "TeamIssue"}
+				    <Badge color={noteTypeColor[note.note_type]}>{noteTypeLabel[note.note_type]}</Badge>
+                {/if}
 				{#if note.match_number !== null}
 					<Badge color="teal">
 						{note.tournament_level === "Qualification"

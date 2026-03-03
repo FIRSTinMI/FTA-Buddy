@@ -16,6 +16,7 @@
 	import { userStore } from "../../stores/user";
 	import { clearNotificationsForNote } from "../../util/notifications";
 	import { toast } from "../../util/toast";
+	import { displayTeam } from "../../util/team-name";
 
 	const { id: noteId } = route.getParams("/notepad/view/:id");
 
@@ -556,9 +557,7 @@
 						</span>
 						{#if note.team}
 							<div class="justify-center text-center sm:justify-start sm:text-left">
-								Team #{note.team}{get(eventStore).teams?.find((t) => parseInt(t.number) === note?.team)?.name
-									? ` - ${get(eventStore).teams?.find((t) => parseInt(t.number) === note?.team)?.name}`
-									: ""}
+                                Team {displayTeam(note.team)}
 							</div>
 						{/if}
 						<div class="justify-center text-center sm:justify-start sm:text-left text-xs text-gray-400 dark:text-gray-500">
@@ -614,7 +613,7 @@
 						</div>
 					</div>
 
-					<div class="w-full rounded-xl bg-white dark:bg-neutral-800 shadow-sm py-3 mt-1 w-full">
+					<div class="w-full rounded-xl bg-white dark:bg-neutral-800 shadow-sm py-3 mt-1">
 						<form class="flex flex-row gap-2 w-full" style="width: 100%" onsubmit={postMessage}>
 							<label for="chat-input" class="sr-only">Reply</label>
 							<div class="flex-1 min-w-0 [&_textarea]:w-full">

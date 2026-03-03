@@ -7,6 +7,7 @@
 	import { navigate } from "../router";
 	import { toast } from "../util/toast";
 	import type { ComponentProps } from "svelte";
+	import { displayTeam } from "../util/team-name";
 
 	interface Props {
 		matchEvent: MatchEvent;
@@ -125,9 +126,8 @@
 			<div class="flex items-start justify-between gap-3">
 				<div class="flex items-center flex-wrap gap-1.5 min-w-0">
 					{#if matchEvent.team !== null}
-						<span class="font-bold text-base">#{matchEvent.team}</span>
+						<span class="font-bold text-base">{displayTeam(matchEvent.team)}</span>
 					{/if}
-					<Badge color="cyan">Match Event</Badge>
 					<Badge color={ISSUE_COLORS[matchEvent.issue] ?? "gray"}>{matchEvent.issue}</Badge>
 					{#if matchEvent.match_number !== null}
 						<Badge color="teal">
@@ -167,7 +167,7 @@
 							{converting ? "Converting…" : "Note"}
 						</Button>
 						<Button size="xs" color="green" onclick={viewLog} disabled={viewingLog}>
-							<Icon icon="mdi:eye-outline" class="size-3.5 mr-1" />
+							<Icon icon="mdi:graph-outline" class="size-3.5 mr-1" />
 							{viewingLog ? "Loading…" : "Log"}
 						</Button>
 					</div>

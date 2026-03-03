@@ -7,8 +7,8 @@
 	}
 
 	let { notesPolicyOpen = $bindable(false) }: Props = $props();
-	let resolve: () => void = $state();
-	let reject: () => void = $state();
+	let resolve: () => void = $state(() => void 0);
+	let reject: () => void = $state(() => void 0);
 	export function confirmPolicy() {
 		notesPolicyOpen = true;
 		return new Promise((_resolve, _reject) => {

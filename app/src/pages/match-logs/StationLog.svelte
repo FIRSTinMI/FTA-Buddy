@@ -25,6 +25,7 @@
 	import { navigate, route } from "../../router";
 	import { userStore } from "../../stores/user";
 	import { decompressStationLog } from "../../util/log-compression";
+	import { displayTeam } from "../../util/team-name";
 
 	const { matchid, station } = route.getParams("/logs/:matchid/:station");
 	let actualStation: ROBOT;
@@ -166,7 +167,7 @@
 			<p>{formatTimeNoAgo(new Date(match.start_time))}</p>
 			<h2 class="text-lg">
 				{(actualStation.startsWith("blue") ? "Blue " : "Red ") + actualStation.charAt(actualStation.length - 1)} -
-				Team #{team}
+				{displayTeam(team)}
 			</h2>
 			<p class="md:hidden text-gray-600 text-sm">View on desktop for more detail</p>
 		</div>

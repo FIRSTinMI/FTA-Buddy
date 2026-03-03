@@ -337,41 +337,55 @@ export async function logAnalysisLoop(limit: number) {
 					)
 					.execute();
 
-				// Generate match events for enabled issue types
+				// Generate match events for enabled issue types, grouped by issue
 				const serverEvent = events[log.event];
 				if (serverEvent) {
 					const settings = serverEvent.autoEventSettings ?? {};
+
+					// Group analyzed events by issue type so we create one match event per issue
+					const groupedByIssue = new Map<string, DisconnectionEvent[]>();
 					for (const evt of analyzedLog) {
 						const issueType = evt.issue as AutoEventIssueType;
-						// Default to enabled if not explicitly set to false
 						const isEnabled = settings[issueType] !== false;
 						if (isEnabled) {
-							const matchEventId = randomUUID();
-							const [inserted] = await db
-								.insert(matchEvents)
-								.values({
-									id: matchEventId,
-									match_id: log.id,
-									event_code: log.event,
-									team: teamNumber,
-									alliance,
-									issue: evt.issue as (typeof issueEnum.enumValues)[number],
-									match_number: log.match_number,
-									play_number: log.play_number,
-									level: log.level,
-									start_time: evt.startTime,
-									end_time: evt.endTime,
-									duration: evt.duration,
-									status: "active",
-								})
-								.returning()
-								.execute();
-
-							serverEvent.matchEventEmitter.emit("create", {
-								kind: "match_event_create",
-								matchEvent: inserted,
-							});
+							const group = groupedByIssue.get(evt.issue) ?? [];
+							group.push(evt);
+							groupedByIssue.set(evt.issue, group);
 						}
+					}
+
+					for (const [issue, evts] of groupedByIssue) {
+						// Consolidate all occurrences into one event
+						// Match time counts down, so max startTime = earliest, min endTime = latest
+						const startTime = Math.max(...evts.map((e) => e.startTime));
+						const endTime = Math.min(...evts.map((e) => e.endTime));
+						const totalDuration = evts.reduce((sum, e) => sum + Math.abs(e.duration), 0);
+
+						const matchEventId = randomUUID();
+						const [inserted] = await db
+							.insert(matchEvents)
+							.values({
+								id: matchEventId,
+								match_id: log.id,
+								event_code: log.event,
+								team: teamNumber,
+								alliance,
+								issue: issue as (typeof issueEnum.enumValues)[number],
+								match_number: log.match_number,
+								play_number: log.play_number,
+								level: log.level,
+								start_time: startTime,
+								end_time: endTime,
+								duration: totalDuration,
+								status: "active",
+							})
+							.returning()
+							.execute();
+
+						serverEvent.matchEventEmitter.emit("create", {
+							kind: "match_event_create",
+							matchEvent: inserted,
+						});
 					}
 				}
 			}

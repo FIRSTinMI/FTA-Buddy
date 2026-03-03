@@ -37,10 +37,11 @@
 	};
 
 	async function dismiss() {
+		const id = matchEvent.id;
 		dismissing = true;
 		try {
-			await trpc.matchEvents.dismiss.mutate({ id: matchEvent.id });
-			onDismiss?.(matchEvent.id);
+			await trpc.matchEvents.dismiss.mutate({ id });
+			onDismiss?.(id);
 		} catch (err: any) {
 			toast("Error dismissing event", err.message);
 			console.error(err);
@@ -50,11 +51,12 @@
 	}
 
 	async function convertToNote() {
+		const id = matchEvent.id;
 		converting = true;
 		try {
-			const res = await trpc.matchEvents.convertToNote.mutate({ id: matchEvent.id });
+			const res = await trpc.matchEvents.convertToNote.mutate({ id });
 			toast("Converted to note", "", "green-500");
-			onConvert?.(matchEvent.id, res.noteId);
+			onConvert?.(id, res.noteId);
 			navigate(`/notepad/view/${res.noteId}`);
 		} catch (err: any) {
 			toast("Error converting to note", err.message);
@@ -103,7 +105,7 @@
 		<span class="text-gray-500">{durationStr}</span>
 		<button
 			class="ml-auto text-gray-400 hover:text-red-400 transition-colors p-0.5"
-			onclick={dismiss}
+			onclick={(e) => { e.stopPropagation(); dismiss(); }}
 			disabled={dismissing}
 			title="Dismiss"
 		>
@@ -111,7 +113,7 @@
 		</button>
 		<button
 			class="text-gray-400 hover:text-blue-400 transition-colors p-0.5"
-			onclick={convertToNote}
+			onclick={(e) => { e.stopPropagation(); convertToNote(); }}
 			disabled={converting}
 			title="Convert to note"
 		>
@@ -144,7 +146,7 @@
 			</div>
 
 			<p class="text-sm text-black dark:text-white leading-snug">
-				{matchEvent.issue} for {durationStr}
+				{matchEvent.issue} for {durationStr} total
 				{#if matchEvent.start_time !== null && matchEvent.end_time !== null}
 					({matchEvent.start_time.toFixed(0)}s → {matchEvent.end_time.toFixed(0)}s match time)
 				{/if}

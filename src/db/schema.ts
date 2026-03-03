@@ -283,6 +283,23 @@ export const matchEvents = pgTable("match_events", {
 
 export type MatchEvent = typeof matchEvents.$inferSelect;
 
+export const aiReportStatusEnum = pgEnum("ai_report_status", ["pending", "generating", "ready", "error"]);
+
+export const aiEventReports = pgTable("ai_event_reports", {
+	id: uuid("id").primaryKey(),
+	event_code: varchar("event_code")
+		.references(() => events.code)
+		.notNull()
+		.unique(),
+	status: aiReportStatusEnum("status").notNull().default("pending"),
+	file_path: varchar("file_path"),
+	error_message: varchar("error_message"),
+	created_at: timestamp("created_at").notNull().defaultNow(),
+	completed_at: timestamp("completed_at"),
+});
+
+export type AiEventReport = typeof aiEventReports.$inferSelect;
+
 export const pushSubscriptions = pgTable("push_subscriptions", {
 	id: serial("id").primaryKey(),
 	user_id: serial("user_id")

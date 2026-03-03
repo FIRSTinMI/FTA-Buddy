@@ -139,7 +139,7 @@ export async function getTeamNotesInfo(event_code: string, team: number): Promis
 	const longestNoteOpenTime = getLongestNoteOpenTime(teamNotes);
 	const longestNote = getLongestNote(teamNotes);
 	const avgOpenTime = getAvgOpenTimeByNotes(teamNotes);
-	const noteLinks = teamNotes.map((n) => `https://www.ftabuddy.com/notepad/view/${n.id}`).join(", ");
+	const noteLinks = teamNotes.map((n) => `https://ftabuddy.com/notepad/view/${n.id}`).join(", ");
 	const noteSubjects = teamNotes.map((n) => n.text.substring(0, 60)).join(", ");
 	const totalOpenTime = getTotalOpenTime(teamNotes);
 

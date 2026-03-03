@@ -21,6 +21,7 @@ import { cycleRouter } from "./router/cycles";
 import { eventRouter } from "./router/event";
 import { fieldMonitorRouter } from "./router/field-monitor";
 import { matchRouter } from "./router/logs";
+import { aiReportRouter } from "./router/ai-report";
 import { matchEventsRouter } from "./router/match-events";
 import {
 	addNoteMessageFromSlack,
@@ -77,6 +78,7 @@ const appRouter = router({
 	cycles: cycleRouter,
 	notes: notesRouter,
 	matchEvents: matchEventsRouter,
+	aiReport: aiReportRouter,
 	app: router({
 		version: publicProcedure.query(() => {
 			return pjson.version ?? "dev";

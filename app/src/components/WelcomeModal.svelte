@@ -6,19 +6,20 @@
 	import { installPrompt } from "../stores/install-prompt";
 	import { gestureEvents } from "../util/gestureDetection";
 
+	const LAST_STEP = 6;
+
 	let { welcomeOpen = $bindable(false), closeModal = () => {}, openChangelog = () => {} } = $props();
 
 	onMount(() => {
 		step = 0;
 		gestureEvents.addEventListener("swipeLeft", () => {
-			if (step < 6) step++;
+			if (step < LAST_STEP) step++;
 		});
 		gestureEvents.addEventListener("swipeRight", () => {
 			if (step > 0) step--;
 		});
 	});
 
-	let notificationsGranted = "Notification" in window && Notification.permission === "granted";
 	let step = $state(0);
 	let matchCount: Awaited<ReturnType<typeof trpc.match.getNumberOfMatches.query>> | undefined = $state();
 
@@ -46,11 +47,10 @@
 			</p>
 			<ul class="list-disc ml-10 py-1">
 				<li>Live match monitoring and cycle times</li>
-				<li>Match logs with detailed data graphs</li>
-				<li>CSA ticketing with messaging and team notes</li>
-				<li>Shared radio/inspection checklist</li>
+				<li>Match logs with graphs and auto-detected events</li>
+				<li>Notepad with notes, auto-detected events, and field view</li>
+				<li>Shared checklist with Nexus and radio kiosk sync</li>
 				<li>Reference materials and diagrams</li>
-				<li>Optional public ticket submission</li>
 			</ul>
 			<p class="py-1">You can access all features through the sidebar or bottom navigation.</p>
 			{#if $installPrompt}
@@ -77,66 +77,98 @@
 		{:else if step === 1}
 			<h2 class="font-bold">Monitor & Cycle Times</h2>
 			<p class="py-1">
-				Track real-time team connections, RIO status, and radio status. Icons help highlight common problems.
+				Track real-time team connections, RIO status, and radio status. Warning icons highlight common problems
+				at a glance.
 			</p>
 			<p class="py-1">
 				Cycle time data shows how quickly the field is turning matches. "C" is last cycle time, "T" is current
 				cycle length.
 			</p>
 
-			<h2 class="font-bold py-1">Emojis</h2>
+			<h2 class="font-bold py-1">Warning Icons</h2>
 			<ul class="list-disc ml-10 py-1">
-				<li><span class="text-2xl">👀</span>Something is taking longer than expected to connect.</li>
-				<li><span class="text-2xl">🕑</span>This team frequently takes a long time to get connected.</li>
-				<li><span class="text-2xl">🔍</span>Team has not passed inspection.</li>
-				<li><span class="text-2xl">🛜</span>Team has not flashed radio.</li>
+				<li><span class="text-2xl">👀</span> Something is taking longer than expected to connect.</li>
+				<li><span class="text-2xl">🕑</span> This team frequently takes a long time to get connected.</li>
+				<li><span class="text-2xl">🔍</span> Team has not passed inspection.</li>
+				<li><span class="text-2xl">🛜</span> Team has not had their radio programmed.</li>
+				<li><span class="text-2xl">📝</span> Team has an open or recently resolved note.</li>
+				<li><span class="text-2xl">⚙️</span> Team had an auto-detected issue in a previous match.</li>
 			</ul>
 
 			<img src="/tutorial/monitor.png" alt="Monitor" class="sm:max-w-xl w-fit mx-auto py-1" />
 			<img src="/tutorial/cycles.png" alt="Cycles" class="sm:max-w-xl w-fit mx-auto py-1" />
 		{:else if step === 2}
-			<h2 class="font-bold">CSA Tickets & Team Notes</h2>
+			<h2 class="font-bold">Notepad Feed View</h2>
 			<p class="py-1">
-				Create and assign tickets to track team issues. Collaborate with CSAs through ticket messages.
+				The Notepad is your hub for tracking team issues. The <strong>Feed</strong> view shows all notes and
+				auto-detected match events in a scrollable list. Use the filter tabs to show All, Notes only, or Events only.
 			</p>
 			<p class="py-1">
-				Use notes to record helpful team info that carries across events, such as unresolved issues or key
-				behavior.
+				Create notes to track team issues, they can be assigned to volunteers, followed for update notifications,
+				and include threaded messages for collaboration. Note types include <strong>Team Notes</strong>,
+				<strong>Event Notes</strong>, and <strong>Match Notes</strong>. Team notes can be marked as Open or
+				Resolved and carry across events.
 			</p>
-			<img src="/tutorial/ticket_list.png" alt="Tickets" class="sm:max-w-xl w-fit mx-auto py-1" />
-			<img src="/tutorial/notes.png" alt="Notes" class="sm:max-w-xl w-fit mx-auto py-1" />
+			<h2 class="font-bold py-1">Public Note Submission</h2>
+			<p class="py-1">
+				Teams can submit their own notes via QR code or kiosk link, reducing the need for paper and speeding
+				up support. Public submission can be toggled on or off at any time from event settings.
+			</p>
+			<img src="/tutorial/notepad_feed.png" alt="Notepad Feed" class="sm:max-w-xl w-fit mx-auto py-1" />
 		{:else if step === 3}
-			<h2 class="font-bold">Checklist & Logs</h2>
+			<h2 class="font-bold">Notepad Field View</h2>
 			<p class="py-1">
-				Track which teams have flashed radios and passed inspection. The checklist syncs across all users in the
-				event.
+				The <strong>Field</strong> view shows a card for each of the six teams on the field, organized by
+				alliance. Each card displays the team's notes and active match events, with live DS, radio, RIO, and
+				code status indicators when connected to the field monitor.
 			</p>
 			<p class="py-1">
-				Match logs include detailed connection and radio data per alliance and team. View graphs, share links,
-				and export data.
+				You can quickly create notes, view station logs, and dismiss or convert match events directly from
+				each team card. Navigate between matches with the arrow buttons, or enable auto-advance to
+				automatically follow the current match on prestart.
+			</p>
+			<p class="py-1">
+				Click a team number to jump to their full note history in the Feed view.
+			</p>
+			<img src="/tutorial/notepad_field.png" alt="Notepad Field View" class="sm:max-w-xl w-fit mx-auto py-1" />
+		{:else if step === 4}
+			<h2 class="font-bold">Match Logs & Auto-Detected Events</h2>
+			<p class="py-1">
+				Match logs show detailed per-team connection data including DS, radio, RIO, code status, battery
+				voltage, ping, bandwidth utilization, signal strength, and more. View interactive graphs, share
+				links with QR codes, and export to CSV.
+			</p>
+			<h2 class="font-bold py-1">Auto-Detected Events</h2>
+			<p class="py-1">
+				After each match, logs are automatically analyzed for issues such as code disconnects, RIO disconnects,
+				radio disconnects, DS disconnects, brownouts, ping spikes, sustained high ping, low signal, and high
+				bandwidth usage.
+			</p>
+			<p class="py-1">
+				Detected events appear in the Notepad feed alongside notes. You can <strong>dismiss</strong> events
+				that don't need follow-up or <strong>convert</strong> them into full notes for tracking. Each issue type
+				can be toggled on or off per event from the event management page.
+			</p>
+			<img src="/tutorial/logs.png" alt="Logs" class="sm:max-w-xl w-fit mx-auto py-1" />
+		{:else if step === 5}
+			<h2 class="font-bold">Checklist & Sync</h2>
+			<p class="py-1">
+				Track which teams are present, have passed inspection, programmed their radio, and completed connection
+				testing. The checklist syncs in real-time across all users in the event.
+			</p>
+			<h2 class="font-bold py-1">Nexus Inspection Sync</h2>
+			<p class="py-1">
+				Connect a Nexus API key in event settings to automatically sync inspection status from frc.nexus.
+				The server polls Nexus and updates the checklist automatically. The browser extension can also
+				provide bi-directional sync when installed on a computer with Nexus open.
+			</p>
+			<h2 class="font-bold py-1">Radio Kiosk Sync</h2>
+			<p class="py-1">
+				Install the FTA Buddy browser extension on the WPA Kiosk computer to automatically mark teams as
+				radio-programmed when their radio is successfully flashed. Visit the Kiosk page in event
+				management to set it up.
 			</p>
 			<img src="/tutorial/checklist.png" alt="Checklist" class="sm:max-w-xl w-fit mx-auto py-1" />
-			<img src="/tutorial/logs.png" alt="Logs" class="sm:max-w-xl w-fit mx-auto py-1" />
-		{:else if step === 4}
-			<h2 class="font-bold">Public Ticket Creation</h2>
-			<p class="py-1">
-				Allow teams to submit their own tickets via QR code or kiosk link. This reduces the need for paper and
-				speeds up support.
-			</p>
-			<p class="py-1">Public ticketing can be turned off at any time if abused.</p>
-			<img
-				src="/tutorial/public_ticket_modal.png"
-				alt="Public Ticketing"
-				class="sm:max-w-xl w-fit mx-auto py-1"
-			/>
-		{:else if step === 5}
-			<h2 class="font-bold">Notifications</h2>
-			<p class="py-1">
-				Receive push notifications for new tickets, updates to tickets you're following or assigned to, and
-				robot status changes.
-			</p>
-			<p class="py-1">You can customize which notifications you receive in the settings page.</p>
-			<img src="/tutorial/notifications_list.png" alt="Notifications" class="sm:max-w-xl w-fit mx-auto py-1" />
 		{:else if step === 6}
 			<h2 class="font-bold">Learn More</h2>
 			<p class="py-1">
@@ -162,10 +194,10 @@
 			<Button color="dark" class="p-1" onclick={() => step--} disabled={step <= 0}
 				><Icon icon="mdi:arrow-left" class="w-6 h-6" /></Button
 			>
-			{#each Array(7) as _, i}
+			{#each Array(LAST_STEP + 1) as _, i}
 				<Indicator color={step >= i ? "purple" : "gray"} class="my-auto" />
 			{/each}
-			<Button color="dark" class="p-1" onclick={() => step++} disabled={step >= 6}
+			<Button color="dark" class="p-1" onclick={() => step++} disabled={step >= LAST_STEP}
 				><Icon icon="mdi:arrow-right" class="w-6 h-6" /></Button
 			>
 		</div>

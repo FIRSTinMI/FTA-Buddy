@@ -267,7 +267,7 @@
 		<div class="flex flex-col w-full">
 			<h1 class="text-lg">About</h1>
 			<p>Author: Filip Kin</p>
-			<p>Contributors: Kelly Malone, Cole H</p>
+			<p>Contributors: Kelly Malone, Cole H, Brandon McDonald</p>
 			<p>Version: {settings.version}</p>
 			<a href="https://github.com/FIRSTinMI/FTA-Buddy" class="underline text-blue-400">GitHub</a>
 		</div>

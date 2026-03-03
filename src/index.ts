@@ -138,7 +138,7 @@ app.get("/serviceworker.js", async (req, res) => {
 	res.send(serviceWorkerFile);
 });
 
-app.use("/report", express.static("reports"));
+app.use("/report", express.static("/data/reports"));
 
 app.get("/slack/oauth", async (req, res) => {
 	const code = req.query.code as string;

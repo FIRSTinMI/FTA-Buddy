@@ -68,11 +68,11 @@ export async function generateReport(format: ReportFormat, data: (string | numbe
 		});
 	}
 
-	if (!existsSync("reports")) {
-		mkdirSync("reports");
+	if (!existsSync("/data/reports")) {
+		mkdirSync("/data/reports", { recursive: true });
 	}
 
 	// Save the PDF file
-	await doc.save(`reports/${format.fileName}-${eventCode}.pdf`);
+	await doc.save(`/data/reports/${format.fileName}-${eventCode}.pdf`);
 	return `/report/${format.fileName}-${eventCode}.pdf`;
 }

@@ -267,8 +267,8 @@ function renderNarrativePdf(text: string, eventName: string, eventCode: string):
         }
     }
 
-    if (!existsSync("reports")) mkdirSync("reports");
-    const filePath = `reports/ai-summary-${eventCode}.pdf`;
+    if (!existsSync("/data/reports")) mkdirSync("/data/reports", { recursive: true });
+    const filePath = `/data/reports/ai-summary-${eventCode}.pdf`;
     doc.save(filePath);
     return `/report/ai-summary-${eventCode}.pdf`;
 }

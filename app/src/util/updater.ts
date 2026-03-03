@@ -11,6 +11,22 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.0.0": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.0.0</h1>
+        <ul>
+        <li>Auto-generated match events: detected issues from match log analysis now appear on the notepad feed</li>
+        <li>AI-generated event report summarizing field issues across the whole event</li>
+        <li>Push notifications are now working reliably</li>
+        <li>Updated 2026 status light reference</li>
+        <li>Updated field manual references</li>
+        <li>Improved match log charts</li>
+        <li>Added FMS FTA App sync</li>
+        <li>Added Nexus inspection status sync</li>
+        <li>Mobile UI fixes for iOS and Android</li>
+        <li>Settings pages cleaned up</li>
+        </ul>`,
+	},
 	"2.6.9.0": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.6.9.0</h1>

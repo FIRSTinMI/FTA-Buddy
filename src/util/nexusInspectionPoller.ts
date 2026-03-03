@@ -34,7 +34,7 @@ const activePollers = new Map<string, ReturnType<typeof setTimeout>>();
 
 /** Start polling for an event. Safe to call even if already running (will restart). */
 export function startForEvent(event: ServerEvent): void {
-	if (!event.nexusApiKey || !event.endDate) {
+	if (!event.nexusApiKey) {
 		event.nexus.state = "not_configured";
 		return;
 	}

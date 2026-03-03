@@ -592,7 +592,7 @@ export const eventRouter = router({
 
 	getNexusStatus: eventProcedure.query(async ({ ctx }) => {
 		const event = await getEvent(ctx.event.token);
-		return event.nexus;
+		return { ...event.nexus, nexusApiKeyIsSet: !!event.nexusApiKey };
 	}),
 
 	setFmsEventPassword: eventProcedure

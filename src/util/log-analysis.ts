@@ -1,11 +1,20 @@
 import { asc, eq } from "drizzle-orm";
 import { compressSync, decompressSync } from "fflate";
 import { randomUUID } from "node:crypto";
-import type { AutoEventIssueType, DisconnectionEvent, FMSLogFrame } from "../../shared/types";
+import type { AutoEventIssueType, DisconnectionEvent, EventAutoEventSettings, FMSLogFrame } from "../../shared/types";
 import { ROBOT } from "../../shared/types";
 import { db } from "../db/db";
-import { analyzedLogs, issueEnum, matchEvents, matchLogs } from "../db/schema";
+import { analyzedLogs, events as eventsTable, issueEnum, matchEvents, matchLogs } from "../db/schema";
 import { events } from "../index";
+
+/**
+ * Global cache of autoEventSettings keyed by event code.
+ * Populated from the database on the first logAnalysisLoop run and kept in sync
+ * with any in-memory server events so that log analysis works for all events,
+ * not just those currently loaded into memory.
+ */
+export const autoEventSettingsCache = new Map<string, EventAutoEventSettings>();
+let autoEventSettingsCacheInitialized = false;
 
 export function analyzeLog(log: FMSLogFrame[]): DisconnectionEvent[] {
 	const events: DisconnectionEvent[] = [];
@@ -272,6 +281,18 @@ export function analyzeLog(log: FMSLogFrame[]): DisconnectionEvent[] {
 export async function logAnalysisLoop(limit: number) {
 	if (!db) return;
 
+	// On the first call, populate the cache from the database for every known event
+	if (!autoEventSettingsCacheInitialized) {
+		const allEvents = await db
+			.select({ code: eventsTable.code, autoEventSettings: eventsTable.autoEventSettings })
+			.from(eventsTable)
+			.execute();
+		for (const ev of allEvents) {
+			autoEventSettingsCache.set(ev.code, (ev.autoEventSettings ?? {}) as EventAutoEventSettings);
+		}
+		autoEventSettingsCacheInitialized = true;
+	}
+
 	const logsToAnalyze = await db
 		.select()
 		.from(matchLogs)
@@ -337,51 +358,52 @@ export async function logAnalysisLoop(limit: number) {
 					)
 					.execute();
 
-				// Generate match events for enabled issue types, grouped by issue
+				// Generate match events for enabled issue types, grouped by issue.
 				const serverEvent = events[log.event];
-				if (serverEvent) {
-					const settings = serverEvent.autoEventSettings ?? {};
+				const settings = autoEventSettingsCache.get(log.event) ?? {};
 
-					// Group analyzed events by issue type so we create one match event per issue
-					const groupedByIssue = new Map<string, DisconnectionEvent[]>();
-					for (const evt of analyzedLog) {
-						const issueType = evt.issue as AutoEventIssueType;
-						const isEnabled = settings[issueType] !== false;
-						if (isEnabled) {
-							const group = groupedByIssue.get(evt.issue) ?? [];
-							group.push(evt);
-							groupedByIssue.set(evt.issue, group);
-						}
+				// Group analyzed events by issue type so we create one match event per issue
+				const groupedByIssue = new Map<string, DisconnectionEvent[]>();
+				for (const evt of analyzedLog) {
+					const issueType = evt.issue as AutoEventIssueType;
+					const isEnabled = settings[issueType] !== false;
+					if (isEnabled) {
+						const group = groupedByIssue.get(evt.issue) ?? [];
+						group.push(evt);
+						groupedByIssue.set(evt.issue, group);
 					}
+				}
 
-					for (const [issue, evts] of groupedByIssue) {
-						// Consolidate all occurrences into one event
-						// Match time counts down, so max startTime = earliest, min endTime = latest
-						const startTime = Math.max(...evts.map((e) => e.startTime));
-						const endTime = Math.min(...evts.map((e) => e.endTime));
-						const totalDuration = evts.reduce((sum, e) => sum + Math.abs(e.duration), 0);
+				for (const [issue, evts] of groupedByIssue) {
+					// Consolidate all occurrences into one event
+					// Match time counts down, so max startTime = earliest, min endTime = latest
+					const startTime = Math.max(...evts.map((e) => e.startTime));
+					const endTime = Math.min(...evts.map((e) => e.endTime));
+					const totalDuration = evts.reduce((sum, e) => sum + Math.abs(e.duration), 0);
 
-						const matchEventId = randomUUID();
-						const [inserted] = await db
-							.insert(matchEvents)
-							.values({
-								id: matchEventId,
-								match_id: log.id,
-								event_code: log.event,
-								team: teamNumber,
-								alliance,
-								issue: issue as (typeof issueEnum.enumValues)[number],
-								match_number: log.match_number,
-								play_number: log.play_number,
-								level: log.level,
-								start_time: startTime,
-								end_time: endTime,
-								duration: totalDuration,
-								status: "active",
-							})
-							.returning()
-							.execute();
+					const matchEventId = randomUUID();
+					const [inserted] = await db
+						.insert(matchEvents)
+						.values({
+							id: matchEventId,
+							match_id: log.id,
+							event_code: log.event,
+							team: teamNumber,
+							alliance,
+							issue: issue as (typeof issueEnum.enumValues)[number],
+							match_number: log.match_number,
+							play_number: log.play_number,
+							level: log.level,
+							start_time: startTime,
+							end_time: endTime,
+							duration: totalDuration,
+							status: "active",
+						})
+						.returning()
+						.execute();
 
+					// Only emit real-time notifications if the event is currently in memory
+					if (serverEvent) {
 						serverEvent.matchEventEmitter.emit("create", {
 							kind: "match_event_create",
 							matchEvent: inserted,

@@ -148,7 +148,7 @@
 				{/if}
 				<Badge color={noteTypeColor[note.note_type]}>{noteTypeLabel[note.note_type]}</Badge>
 				{#if note.match_number !== null}
-					<Badge>
+					<Badge color="teal">
 						{note.tournament_level === "Qualification"
 							? "Qual"
 							: note.tournament_level === "Playoff"
@@ -162,12 +162,10 @@
 				{#if note.issue_type && note.issue_type !== "Other"}
 					<Badge color="purple">{ISSUE_TYPE_LABELS[note.issue_type] ?? note.issue_type}</Badge>
 				{/if}
-				{#if canToggleStatus}
-					<span
-						class="text-sm font-semibold {isOpen ? 'text-green-500' : 'text-gray-400 dark:text-gray-500'}"
-					>
-						{isOpen ? "Open" : "Closed"}
-					</span>
+				{#if canToggleStatus && isOpen}
+					<Badge color="green">Open</Badge>
+				{:else if canToggleStatus}
+					<Badge color="gray">Closed</Badge>
 				{/if}
 			</div>
 			<div class="shrink-0 text-right text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
@@ -188,13 +186,9 @@
 				{/if}
 			</p>
 			{#if note.assigned_to}
-				<span
-					class="text-xs rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 px-2 py-0.5 shrink-0"
-				>
-					Assigned: {note.assigned_to.username}
-				</span>
-			{:else}
-				<span class="text-xs text-gray-400 dark:text-gray-500 shrink-0">Unassigned</span>
+				<Badge color="yellow">Assigned: {note.assigned_to.username}</Badge>
+			{:else if canToggleStatus}
+				<Badge color="red">Unassigned</Badge>
 			{/if}
 		</div>
 
@@ -202,11 +196,11 @@
 			{@const latestMsg = note.messages.reduce((a, b) =>
 				new Date(a.created_at).getTime() > new Date(b.created_at).getTime() ? a : b,
 			)}
-			<div class="rounded-lg bg-gray-50 dark:bg-neutral-600 px-3 py-2 flex items-start gap-2">
+			<div class="rounded-lg text-left bg-gray-50 dark:bg-neutral-600 px-3 py-2 flex items-start gap-2">
 				<Icon icon="mdi:reply" class="size-3.5 mt-0.5 text-gray-400 dark:text-gray-500 shrink-0" />
 				<div class="min-w-0">
-					<span class="text-xs font-semibold text-gray-500 dark:text-gray-400">
-						{latestMsg.author?.username ?? "Unknown"}:
+					<span class="text-xs text-left font-semibold text-gray-500 dark:text-gray-400">
+						{latestMsg.author?.username ?? "Unknown"} {note.author.username !== note.author.role ? ` · ${note.author.role}` : ""}:
 					</span>
 					<span class="text-xs text-gray-500 dark:text-gray-400 ml-1 line-clamp-1">{latestMsg.text}</span>
 				</div>
@@ -221,7 +215,6 @@
 		{#if canEditOrDelete || canToggleStatus}
 			<div
 				role="presentation"
-				class="flex flex-wrap gap-1 pt-1"
 				onclick={(e) => {
 					e.preventDefault();
 					e.stopPropagation();
@@ -231,17 +224,33 @@
 				}}
 			>
 				{#if canToggleStatus}
-					<Button size="xs" color={isOpen ? "green" : "blue"} onclick={toggleStatus}>
-						{isOpen ? "Close" : "Reopen"}
-					</Button>
-				{/if}
-				{#if canEditOrDelete}
-					<Button size="xs" color="alternative" onclick={() => (editNoteView = true)}>
-						<Icon icon="mdi:pencil" class="size-3.5" />
-					</Button>
-					<Button size="xs" color="red" onclick={() => (deleteNotePopup = true)}>
-						<Icon icon="mdi:trash-can-outline" class="size-3.5" />
-					</Button>
+					<div class="flex flex-row gap-1 justify-between">
+						<Button size="xs" color={isOpen ? "green" : "blue"} onclick={toggleStatus}>
+							{isOpen ? "Close" : "Reopen"}
+						</Button>
+
+						{#if canEditOrDelete}
+							<div class="flex gap-1">
+								<Button size="xs" color="alternative" onclick={() => (editNoteView = true)}>
+									<Icon icon="mdi:pencil" class="size-3.5" />
+								</Button>
+								<Button size="xs" color="red" onclick={() => (deleteNotePopup = true)}>
+									<Icon icon="mdi:trash-can-outline" class="size-3.5" />
+								</Button>
+							</div>
+						{/if}
+					</div>
+				{:else}
+					{#if canEditOrDelete}
+						<div class="flex flex-row gap-1 justify-end">
+							<Button size="xs" color="alternative" onclick={() => (editNoteView = true)}>
+								<Icon icon="mdi:pencil" class="size-3.5" />
+							</Button>
+							<Button size="xs" color="red" onclick={() => (deleteNotePopup = true)}>
+								<Icon icon="mdi:trash-can-outline" class="size-3.5" />
+							</Button>
+						</div>
+					{/if}
 				{/if}
 			</div>
 		{/if}

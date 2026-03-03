@@ -524,7 +524,7 @@
 										color={note.assigned_to_id === user.id
 											? "alternative"
 											: note.assigned_to_id
-												? "red"
+												? "yellow"
 												: "green"}
 										onclick={assignSelf}
 									>

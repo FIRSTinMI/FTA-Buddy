@@ -127,9 +127,10 @@
 					{#if matchEvent.team !== null}
 						<span class="font-bold text-base">#{matchEvent.team}</span>
 					{/if}
+					<Badge color="cyan">Match Event</Badge>
 					<Badge color={ISSUE_COLORS[matchEvent.issue] ?? "gray"}>{matchEvent.issue}</Badge>
 					{#if matchEvent.match_number !== null}
-						<Badge>
+						<Badge color="teal">
 							{levelLabel} M{matchEvent.match_number}{matchEvent.play_number && matchEvent.play_number > 1
 								? ` P${matchEvent.play_number}`
 								: ""}
@@ -150,9 +151,7 @@
 			</p>
 
 			<div class="flex items-center justify-between gap-2">
-				<p class="text-xs text-gray-400 dark:text-gray-500">
-					{matchEvent.alliance} alliance
-				</p>
+				<Badge color={matchEvent.alliance === "blue" ? "blue" : matchEvent.alliance === "red" ? "red" : "gray"} class="ml-1 text-[10px]">{matchEvent.alliance} alliance</Badge>
 				{#if matchEvent.status === "dismissed"}
 					<Badge color="gray">Dismissed</Badge>
 				{:else if matchEvent.status === "converted"}
@@ -161,18 +160,20 @@
 			</div>
 
 			{#if matchEvent.status === "active"}
-				<div class="flex flex-wrap gap-1 pt-1">
-					<Button size="xs" color="blue" onclick={convertToNote} disabled={converting}>
-						<Icon icon="mdi:note-plus-outline" class="size-3.5 mr-1" />
-						{converting ? "Converting…" : "Make Note"}
-					</Button>
-					<Button size="xs" color="green" onclick={viewLog} disabled={viewingLog}>
-						<Icon icon="mdi:file-document-outline" class="size-3.5 mr-1" />
-						{viewingLog ? "Loading…" : "View Log"}
-					</Button>
+				<div class="flex flex-wrap justify-between sm:justify-end gap-1 pt-1">
+					<div class="gap-1">
+						<Button size="xs" color="blue" onclick={convertToNote} disabled={converting}>
+							<Icon icon="akar-icons:plus" class="size-3.5 mr-1" />
+							{converting ? "Converting…" : "Note"}
+						</Button>
+						<Button size="xs" color="green" onclick={viewLog} disabled={viewingLog}>
+							<Icon icon="mdi:eye-outline" class="size-3.5 mr-1" />
+							{viewingLog ? "Loading…" : "Log"}
+						</Button>
+					</div>
 					<Button size="xs" color="alternative" onclick={dismiss} disabled={dismissing}>
 						<Icon icon="mdi:close" class="size-3.5 mr-1" />
-						{dismissing ? "Dismissing…" : "Dismiss"}
+						{dismissing ? "Dismissing…" : "Dismiss for All"}
 					</Button>
 				</div>
 			{:else}

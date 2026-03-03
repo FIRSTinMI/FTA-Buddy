@@ -3,6 +3,7 @@ import { createHash, randomUUID } from "crypto";
 import { desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { AUTO_EVENT_ISSUE_TYPES, AutoEventIssueType, EventAutoEventSettings, EventChecklist, Profile, TeamList, TournamentLevel } from "../../shared/types";
+import { autoEventSettingsCache } from "../util/log-analysis";
 import { db } from "../db/db";
 import { events, users } from "../db/schema";
 import { adminProcedure, eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
@@ -591,7 +592,7 @@ export const eventRouter = router({
 
 	getNexusStatus: eventProcedure.query(async ({ ctx }) => {
 		const event = await getEvent(ctx.event.token);
-		return event.nexus;
+		return { ...event.nexus, nexusApiKeyIsSet: !!event.nexusApiKey };
 	}),
 
 	setFmsEventPassword: eventProcedure
@@ -674,6 +675,9 @@ export const eventRouter = router({
 				.set({ autoEventSettings: newSettings })
 				.where(eq(events.code, event.code));
 			event.autoEventSettings = newSettings;
+			// Keep the global cache in sync so log analysis picks up the change
+			// even for events that run across multiple analysis cycles
+			autoEventSettingsCache.set(event.code, newSettings);
 			return { success: true };
 		}),
 

@@ -11,7 +11,7 @@
 	let nexusApiKey = $state("");
 	let nexusSaving = $state(false);
 	let nexusSaveError = $state("");
-	let nexusStatus: NexusStatus | null = $state(null);
+	let nexusStatus: (NexusStatus & { nexusApiKeyIsSet: boolean }) | null = $state(null);
 	let nexusStatusInterval: ReturnType<typeof setInterval> | null = $state(null);
 
 	// FMS Event Password state
@@ -140,11 +140,11 @@
 		}
 	}
 
-	function nexusStateLabel(status: NexusStatus | null): string {
+	function nexusStateLabel(status: (NexusStatus & { nexusApiKeyIsSet?: boolean }) | null): string {
 		if (!status) return "Loading...";
 		switch (status.state) {
 			case "not_configured":
-				return "Not configured";
+				return status.nexusApiKeyIsSet ? "API key set - event has no end date" : "Not configured";
 			case "polling":
 				return "Polling every 2 min";
 			case "polling_slow":
@@ -245,7 +245,7 @@
 						<Input
 							id="nexus-key"
 							type="password"
-							placeholder="Paste your Nexus API key here"
+							placeholder={nexusStatus?.nexusApiKeyIsSet ? "••••••••" : "Paste your Nexus API key here"}
 							bind:value={nexusApiKey}
 							autocomplete="off"
 							onkeydown={(e) => {

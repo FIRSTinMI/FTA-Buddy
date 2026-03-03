@@ -440,7 +440,7 @@
 							{#if $user.eventToken}
 								<Button onclick={() => navigate("/")} class="w-full mt-4">Open Field Monitor</Button>
 								<Button onclick={() => navigate("/manage/event-created")} class="w-full mt-4"
-									>See Event Pin</Button
+									>Event Management</Button
 								>
 								<Button onclick={() => navigate("/manage/host")} class="w-full mt-4"
 									>Host New Event</Button
@@ -545,7 +545,7 @@
 						user.set({ ...$user, eventToken: "" })
 					)}>Leave Event</Button
 				>
-				<Button outline onclick={() => navigate("/manage/event-created")}>See Event Pin</Button>
+				<Button outline onclick={() => navigate("/manage/event-created")}>Event Management</Button>
 			</div>
 
 			<!-- No event selected -->

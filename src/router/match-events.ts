@@ -1,11 +1,12 @@
 import { TRPCError } from "@trpc/server";
 import { randomUUID } from "crypto";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, ne } from "drizzle-orm";
 import { z } from "zod";
 import type { MatchEvent, MatchEventUpdateEventData, Note, Profile } from "../../shared/types";
 import { db } from "../db/db";
 import { matchEvents, notes, users } from "../db/schema";
 import { eventProcedure, publicProcedure, router } from "../trpc";
+import { generateReport } from "../util/report-generator";
 import { getEvent } from "../util/get-event";
 import { subscriptionQueue } from "../util/subscription";
 
@@ -194,6 +195,96 @@ export const matchEventsRouter = router({
         }
 
         return { dismissed: dismissed.length };
+    }),
+
+    /** Generate a per-team summary PDF of match events for the event (Qual + Playoff, excludes Bypassed). */
+    generateRobotEventReport: eventProcedure.query(async ({ ctx }) => {
+        const abbrev: Record<string, string> = {
+            "Code disconnect": "Code",
+            "RIO disconnect": "RIO",
+            "Radio disconnect": "Radio",
+            "DS disconnect": "DS",
+            "Large spike in ping": "Ping Spike",
+            "Sustained high ping": "High Ping",
+            "Low signal": "Low Sig",
+            "High BWU": "High BWU",
+            "Brownout": "Brownout",
+        };
+
+        const rows = await db
+            .select({
+                team: matchEvents.team,
+                issue: matchEvents.issue,
+                status: matchEvents.status,
+                note_resolution: notes.resolution_status,
+            })
+            .from(matchEvents)
+            .leftJoin(notes, eq(matchEvents.converted_note_id, notes.id))
+            .where(
+                and(
+                    eq(matchEvents.event_code, ctx.event.code),
+                    inArray(matchEvents.level, ["Qualification", "Playoff"]),
+                    ne(matchEvents.issue, "Bypassed"),
+                ),
+            )
+            .execute();
+
+        // Aggregate by team
+        const teamMap = new Map<
+            number,
+            {
+                total: number;
+                dismissed: number;
+                converted: number;
+                resolved: number;
+                unresolved: number;
+                issueCounts: Map<string, number>;
+            }
+        >();
+
+        for (const row of rows) {
+            if (!teamMap.has(row.team)) {
+                teamMap.set(row.team, {
+                    total: 0,
+                    dismissed: 0,
+                    converted: 0,
+                    resolved: 0,
+                    unresolved: 0,
+                    issueCounts: new Map(),
+                });
+            }
+            const t = teamMap.get(row.team)!;
+            t.total++;
+            if (row.status === "dismissed") t.dismissed++;
+            if (row.status === "converted") {
+                t.converted++;
+                if (row.note_resolution === "Resolved") t.resolved++;
+                else if (row.note_resolution === "Open") t.unresolved++;
+            }
+            const label = abbrev[row.issue] ?? row.issue;
+            t.issueCounts.set(label, (t.issueCounts.get(label) ?? 0) + 1);
+        }
+
+        // Sort teams by total issues descending
+        const sorted = Array.from(teamMap.entries()).sort((a, b) => b[1].total - a[1].total);
+
+        const report = await generateReport(
+            {
+                title: "Robot Event Report",
+                description: "Per-team match event summary (Qual + Playoff, excludes Bypassed)",
+                headers: ["Team", "Total", "Dismissed", "→Note", "Resolved", "Unresolved", "Top Issue", "Issue Breakdown"],
+                fileName: "robot-events",
+            },
+            sorted.map(([team, data]) => {
+                const sortedIssues = Array.from(data.issueCounts.entries()).sort((a, b) => b[1] - a[1]);
+                const topIssue = sortedIssues[0]?.[0] ?? "-";
+                const breakdown = sortedIssues.map(([label, count]) => `${label} x${count}`).join(", ");
+                return [team, data.total, data.dismissed, data.converted, data.resolved, data.unresolved, topIssue, breakdown];
+            }),
+            ctx.event.code,
+        );
+
+        return { path: report };
     }),
 
     /** Real-time subscription for match event updates. */

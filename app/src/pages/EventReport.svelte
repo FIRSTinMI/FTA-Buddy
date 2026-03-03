@@ -41,6 +41,19 @@
 			toast("Failed to download report", err.message);
 		}
 	}
+
+	async function downloadRobotEventReport() {
+		try {
+			const pdf = await trpc.matchEvents.generateRobotEventReport.query();
+			const a = document.createElement("a");
+			a.href = window.location.origin + pdf.path;
+			a.download = pdf.path.split("/").pop() ?? "RobotEventReport.pdf";
+			a.click();
+		} catch (err: any) {
+			console.error(err);
+			toast("Failed to download report", err.message);
+		}
+	}
 </script>
 
 <div class="container flex flex-col gap-2 p-4 mx-auto max-w-4xl">
@@ -56,5 +69,9 @@
 	<div class="flex flex-col items-start">
 		<p>Notes Report</p>
 		<Button onclick={downloadNotesReport} class="mt-2">Download</Button>
+	</div>
+	<div class="flex flex-col items-start">
+		<p>Robot Event Report</p>
+		<Button onclick={downloadRobotEventReport} class="mt-2">Download</Button>
 	</div>
 </div>

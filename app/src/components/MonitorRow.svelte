@@ -125,6 +125,9 @@
 			{:else if robot.warnings.includes(RobotWarnings.RECENT_NOTE)}
 				<span>📝</span>
 			{/if}
+			{#if robot.warnings.includes(RobotWarnings.PREVIOUS_MATCH_EVENT)}
+				<span>⚙️</span>
+			{/if}
 		</p>
 	</button>
 	<button

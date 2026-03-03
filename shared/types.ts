@@ -75,6 +75,7 @@ export enum RobotWarnings {
 	SLOW,
 	OPEN_NOTE,
 	RECENT_NOTE,
+	PREVIOUS_MATCH_EVENT,
 }
 
 export enum ROBOT {

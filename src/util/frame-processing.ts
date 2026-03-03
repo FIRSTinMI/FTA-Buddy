@@ -14,7 +14,7 @@ import {
 	StateChangeType,
 } from "../../shared/types";
 import { db } from "../db/db";
-import { events, notes, robotCycleLogs } from "../db/schema";
+import { events, matchEvents, notes, robotCycleLogs } from "../db/schema";
 import { getEvent } from "./get-event";
 
 export function detectRadioNoDs(currentFrame: PartialMonitorFrame, pastFrames: MonitorFrame[]) {
@@ -189,6 +189,25 @@ export async function processTeamWarnings(eventCode: string, frame: MonitorFrame
 				}
 			}
 
+			// Check for active match events from the team's most recent match
+			const lastMatchEvent = await db
+				.select()
+				.from(matchEvents)
+				.where(
+					and(
+						eq(matchEvents.event_code, event.code),
+						eq(matchEvents.team, robot.number),
+						eq(matchEvents.status, "active"),
+					),
+				)
+				.orderBy(desc(matchEvents.created_at))
+				.limit(1)
+				.execute();
+
+			if (lastMatchEvent.length > 0 && lastMatchEvent[0].match_number !== frame.match) {
+				robot.warnings.push(RobotWarnings.PREVIOUS_MATCH_EVENT);
+			}
+
 			// Then copy the warnings from the previous frame until the match ends
 		} else if (!(frame.field === FieldState.MATCH_OVER || frame.field === FieldState.MATCH_ABORTED)) {
 			const previousFrameWarnings = previousFrame[station as keyof MonitorFrame] as RobotInfo;
@@ -197,6 +216,8 @@ export async function processTeamWarnings(eventCode: string, frame: MonitorFrame
 				robot.warnings.push(RobotWarnings.OPEN_NOTE);
 			if (previousFrameWarnings.warnings.includes(RobotWarnings.RECENT_NOTE))
 				robot.warnings.push(RobotWarnings.RECENT_NOTE);
+			if (previousFrameWarnings.warnings.includes(RobotWarnings.PREVIOUS_MATCH_EVENT))
+				robot.warnings.push(RobotWarnings.PREVIOUS_MATCH_EVENT);
 		}
 	}
 

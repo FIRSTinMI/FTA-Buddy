@@ -108,10 +108,13 @@ export const matchEventsRouter = router({
             }
 
             // Look up the current user from token
+            if (!ctx.token) {
+                throw new TRPCError({ code: "UNAUTHORIZED", message: "Missing auth token, please log in" });
+            }
             const authorProfile = (await db
                 .select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
                 .from(users)
-                .where(eq(users.token, ctx.token as string))) as Profile[];
+                .where(eq(users.token, ctx.token))) as Profile[];
             if (!authorProfile[0])
                 throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author profile" });
 

@@ -28,7 +28,11 @@
 	});
 	let typeFilter: string = $state("all");
 	let statusFilter: string = $state("all");
-	let feedFilter: string = $state("all"); // "all" | "notes" | "events"
+	let feedFilter: string = $state($settingsStore.supportFeedFilter ?? "all");
+
+	$effect(() => {
+		$settingsStore.supportFeedFilter = feedFilter as "all" | "notes" | "events";
+	});
 
 	let notes: Note[] = $state([]);
 	let matchEvents: MatchEvent[] = $state([]);

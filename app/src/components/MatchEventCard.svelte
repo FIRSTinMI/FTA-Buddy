@@ -5,6 +5,7 @@
 	import { formatTimeNoAgoHourMins } from "../../../shared/formatTime";
 	import type { MatchEvent } from "../../../shared/types";
 	import { trpc } from "../main";
+	import { navigate } from "../router";
 	import { eventStore } from "../stores/event";
 	import { toast } from "../util/toast";
 
@@ -62,6 +63,27 @@
 		}
 	}
 
+	let viewingLog = $state(false);
+
+	async function viewLog() {
+		viewingLog = true;
+		try {
+			const match = await trpc.match.getMatch.query({ id: matchEvent.match_id });
+			const stations = ["blue1", "blue2", "blue3", "red1", "red2", "red3"] as const;
+			const station = stations.find((s) => match[s] === matchEvent.team);
+			if (station) {
+				navigate(`/logs/${matchEvent.match_id}/${station}`);
+			} else {
+				navigate(`/logs/${matchEvent.match_id}`);
+			}
+		} catch (err: any) {
+			toast("Error loading match log", err.message);
+			console.error(err);
+		} finally {
+			viewingLog = false;
+		}
+	}
+
 	let durationStr = $derived.by(() => {
 		const dur = Math.abs(matchEvent.duration ?? 0);
 		if (dur >= 60) return `${(dur / 60).toFixed(1)}m`;
@@ -105,7 +127,6 @@
 					{#if matchEvent.team !== null}
 						<span class="font-bold text-base">#{matchEvent.team}</span>
 					{/if}
-					<Badge color="yellow">Auto Event</Badge>
 					<Badge color={ISSUE_COLORS[matchEvent.issue] ?? "gray"}>{matchEvent.issue}</Badge>
 					{#if matchEvent.match_number !== null}
 						<Badge>
@@ -145,9 +166,20 @@
 						<Icon icon="mdi:note-plus-outline" class="size-3.5 mr-1" />
 						{converting ? "Converting…" : "Make Note"}
 					</Button>
+					<Button size="xs" color="green" onclick={viewLog} disabled={viewingLog}>
+						<Icon icon="mdi:file-document-outline" class="size-3.5 mr-1" />
+						{viewingLog ? "Loading…" : "View Log"}
+					</Button>
 					<Button size="xs" color="alternative" onclick={dismiss} disabled={dismissing}>
 						<Icon icon="mdi:close" class="size-3.5 mr-1" />
 						{dismissing ? "Dismissing…" : "Dismiss"}
+					</Button>
+				</div>
+			{:else}
+				<div class="flex flex-wrap gap-1 pt-1">
+					<Button size="xs" color="green" onclick={viewLog} disabled={viewingLog}>
+						<Icon icon="mdi:file-document-outline" class="size-3.5 mr-1" />
+						{viewingLog ? "Loading…" : "View Log"}
 					</Button>
 				</div>
 			{/if}

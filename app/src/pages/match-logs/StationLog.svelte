@@ -120,15 +120,15 @@
 	const analysisEventColors: {
 		[key: string]: ComponentProps<typeof Alert>["color"];
 	} = {
-		"Code disconnect": "yellow",
-		"RIO disconnect": "red",
-		"Radio disconnect": "red",
-		"DS disconnect": "red",
-		"Large spike in ping": "red",
-		"High BWU": "blue",
-		"Sustained high ping": "yellow",
-		"Low signal": "yellow",
-		Brownout: "teal",
+		"Code disconnect": "purple",
+		"RIO disconnect": "yellow",
+		"Radio disconnect": "teal",
+		"DS disconnect": "teal",
+		"Large spike in ping": "blue",
+		"High BWU": "teal",
+		"Sustained high ping": "blue",
+		"Low signal": "indigo",
+		Brownout: "red",
 	};
 </script>
 

@@ -411,7 +411,7 @@
 			selectedLabel = undefined;
 			matchId = undefined;
 			await tick();
-			navigate(`/notepad/view/${createdNote.id}`);
+			navigate('/notepad/view/:id', { params: { id: createdNote.id }});
 		} catch (err: any) {
 			toast("Error creating note", err.message);
 			console.error(err);

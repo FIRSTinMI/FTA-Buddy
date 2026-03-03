@@ -167,7 +167,7 @@
 							{converting ? "Converting…" : "Note"}
 						</Button>
 						<Button size="xs" color="green" onclick={viewLog} disabled={viewingLog}>
-							<Icon icon="mdi:graph-outline" class="size-3.5 mr-1" />
+							<Icon icon="mdi:chart-line" class="size-3.5 mr-1" />
 							{viewingLog ? "Loading…" : "Log"}
 						</Button>
 					</div>
@@ -179,7 +179,7 @@
 			{:else}
 				<div class="flex flex-wrap gap-1 pt-1">
 					<Button size="xs" color="green" onclick={viewLog} disabled={viewingLog}>
-						<Icon icon="mdi:file-document-outline" class="size-3.5 mr-1" />
+						<Icon icon="mdi:chart-line" class="size-3.5 mr-1" />
 						{viewingLog ? "Loading…" : "View Log"}
 					</Button>
 				</div>

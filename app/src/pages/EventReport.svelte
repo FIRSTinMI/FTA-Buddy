@@ -136,27 +136,21 @@
 		<Button onclick={downloadRobotEventReport} class="mt-2">Download</Button>
 	</div>
 
-	<hr class="w-full border-gray-300 dark:border-gray-600" />
-
-	<div class="flex flex-col gap-2">
-		<h2 class="text-xl font-semibold">AI Event Summary</h2>
-		<div class="rounded-lg border border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 px-4 py-3 text-sm text-yellow-800 dark:text-yellow-300">
-			<strong>One-time report:</strong> This AI-generated summary can only be created once per event. Make sure the event is fully complete before generating it.
-		</div>
-
+	<div class="flex flex-col items-start">
+		<p>AI Event Report</p>
 		{#if aiStatus === null}
-			<Button onclick={startAiReport} class="w-fit">Generate AI Summary</Button>
+			<Button onclick={startAiReport} class="mt-2">Generate</Button>
 		{:else if aiStatus === 'pending' || aiStatus === 'generating'}
-			<Button disabled class="w-fit flex items-center gap-2">
+			<Button disabled class="mt-2 flex items-center gap-2">
 				<Spinner size="4" />
 				Generating…
 			</Button>
-			<p class="text-sm text-gray-500">This may take up to a minute. You can leave and come back.</p>
 		{:else if aiStatus === 'ready'}
-			<Button onclick={downloadAiReport} class="w-fit">Download AI Summary</Button>
+			<Button onclick={downloadAiReport} class="mt-2">Download</Button>
 		{:else if aiStatus === 'error'}
-			<p class="text-sm text-red-600 dark:text-red-400">Generation failed: {aiError}</p>
-			<Button onclick={startAiReport} color="red" class="w-fit">Try Again</Button>
+			<p class="mt-1 text-sm text-red-600 dark:text-red-400">Generation failed: {aiError}</p>
+			<Button onclick={startAiReport} color="red" class="mt-2">Try Again</Button>
 		{/if}
+		<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">This report can only be generated once per event, make sure the event is completed before proceeding.</p>
 	</div>
 </div>

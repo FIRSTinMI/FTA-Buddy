@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { createHash, randomUUID } from "crypto";
 import { desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
-import { AUTO_EVENT_ISSUE_TYPES, EventAutoEventSettings, EventChecklist, Profile, TeamList, TournamentLevel } from "../../shared/types";
+import { AUTO_EVENT_ISSUE_TYPES, AutoEventIssueType, EventAutoEventSettings, EventChecklist, Profile, TeamList, TournamentLevel } from "../../shared/types";
 import { db } from "../db/db";
 import { events, users } from "../db/schema";
 import { adminProcedure, eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
@@ -655,12 +655,20 @@ export const eventRouter = router({
 	setAutoEventSettings: eventProcedure
 		.input(
 			z.object({
-				settings: z.record(z.string(), z.boolean()),
+				settings: z
+					.object(Object.fromEntries(AUTO_EVENT_ISSUE_TYPES.map((k) => [k, z.boolean()])) as Record<AutoEventIssueType, z.ZodBoolean>)
+					.partial(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
 			const event = await getEvent(ctx.event.token);
-			const newSettings = input.settings as EventAutoEventSettings;
+			// Only persist keys that belong to the known issue type set
+			const newSettings: EventAutoEventSettings = {};
+			for (const issue of AUTO_EVENT_ISSUE_TYPES) {
+				if (issue in input.settings) {
+					newSettings[issue] = input.settings[issue];
+				}
+			}
 			await db
 				.update(events)
 				.set({ autoEventSettings: newSettings })

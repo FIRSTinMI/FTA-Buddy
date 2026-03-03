@@ -204,7 +204,7 @@ export async function processTeamWarnings(eventCode: string, frame: MonitorFrame
 				.limit(1)
 				.execute();
 
-			if (lastMatchEvent.length > 0 && lastMatchEvent[0].match_number !== frame.match) {
+			if (lastMatchEvent.length > 0 && lastMatchEvent[0].match_number !== frame.match && lastMatchEvent[0].play_number !== frame.play) {
 				robot.warnings.push(RobotWarnings.PREVIOUS_MATCH_EVENT);
 			}
 

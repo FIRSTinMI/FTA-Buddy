@@ -134,36 +134,39 @@ export const matchEventsRouter = router({
             const noteText =
                 input.text || `[Auto] ${matchEvent.issue} detected in match ${matchEvent.match_number} (${Math.abs(matchEvent.duration ?? 0).toFixed(0)}s)`;
 
-            const noteId = randomUUID();
-            const [newNote] = await db
-                .insert(notes)
-                .values({
-                    id: noteId,
-                    text: noteText,
-                    author_id: authorProfile[0].id,
-                    author: authorProfile[0],
-                    team: matchEvent.team,
-                    note_type: "TeamIssue",
-                    resolution_status: "Open",
-                    issue_type: (issueTypeMap[matchEvent.issue] ?? "Other") as any,
-                    match_number: matchEvent.match_number,
-                    play_number: matchEvent.play_number,
-                    tournament_level: matchEvent.level as any,
-                    event_code: event.code,
-                    match_id: matchEvent.match_id,
-                })
-                .returning()
-                .execute();
+            const { noteId, newNote } = await db.transaction(async (tx) => {  
+                const newNoteId = randomUUID();  
+                const [insertedNote] = await tx  
+                    .insert(notes)  
+                    .values({  
+                        id: newNoteId,  
+                        text: noteText,  
+                        author_id: authorProfile[0].id,  
+                        author: authorProfile[0],  
+                        team: matchEvent.team,  
+                        note_type: "TeamIssue",  
+                        resolution_status: "Open",  
+                        issue_type: (issueTypeMap[matchEvent.issue] ?? "Other") as any,  
+                        match_number: matchEvent.match_number,  
+                        play_number: matchEvent.play_number,  
+                        tournament_level: matchEvent.level as any,  
+                        event_code: event.code,  
+                        match_id: matchEvent.match_id,  
+                    })  
+                    .returning()  
+                    .execute();  
 
-            // Update match event status
-            await db
-                .update(matchEvents)
-                .set({ status: "converted", converted_note_id: noteId })
-                .where(eq(matchEvents.id, input.id))
-                .execute();
+                await tx  
+                    .update(matchEvents)  
+                    .set({ status: "converted", converted_note_id: newNoteId })  
+                    .where(eq(matchEvents.id, input.id))  
+                    .execute();  
+
+                return { noteId: newNoteId, newNote: insertedNote };  
+            });  
 
             // Emit events
-            event.noteUpdateEmitter.emit("create", { kind: "create", note: newNote as Note });
+            event.noteUpdateEmitter.emit("note_update", { kind: "create", note: newNote as Note });
             event.matchEventEmitter.emit("convert", {
                 kind: "match_event_convert",
                 id: input.id,

@@ -465,7 +465,7 @@
 					</div>
 				{/if}
 				{#if allItems.length > 0}
-					{#each allItems as item}
+					{#each allItems as item (item.kind === "note" ? `n-${item.note.id}` : `e-${item.matchEvent.id}`)}
 						{#if item.kind === "note"}
 							<button
 								class="w-full text-left pt-1 mt-1 hover:bg-gray-50 dark:hover:bg-neutral-700 rounded px-0.5"

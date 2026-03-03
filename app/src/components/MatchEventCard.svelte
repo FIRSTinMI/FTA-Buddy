@@ -8,6 +8,7 @@
 	import { navigate } from "../router";
 	import { eventStore } from "../stores/event";
 	import { toast } from "../util/toast";
+	import type { ComponentProps } from "svelte";
 
 	let event = get(eventStore);
 
@@ -24,12 +25,12 @@
 	let dismissing = $state(false);
 	let converting = $state(false);
 
-	const ISSUE_COLORS: Record<string, string> = {
+	const ISSUE_COLORS: Record<string, ComponentProps<typeof Badge>["color"]> = {
 		"Code disconnect": "red",
 		"RIO disconnect": "red",
 		"Radio disconnect": "yellow",
 		"DS disconnect": "purple",
-		Brownout: "dark",
+		Brownout: "gray",
 		"Large spike in ping": "yellow",
 		"Sustained high ping": "yellow",
 		"Low signal": "indigo",
@@ -57,7 +58,7 @@
 			const res = await trpc.matchEvents.convertToNote.mutate({ id });
 			toast("Converted to note", "", "green-500");
 			onConvert?.(id, res.noteId);
-			navigate(`/notepad/view/${res.noteId}`);
+			navigate('/notepad/view/:id', { params: { id: res.noteId } });
 		} catch (err: any) {
 			toast("Error converting to note", err.message);
 			console.error(err);
@@ -75,9 +76,9 @@
 			const stations = ["blue1", "blue2", "blue3", "red1", "red2", "red3"] as const;
 			const station = stations.find((s) => match[s] === matchEvent.team);
 			if (station) {
-				navigate(`/logs/${matchEvent.match_id}/${station}`);
+				navigate('/logs/:matchid/:station', { params: { matchid: matchEvent.match_id, station } });
 			} else {
-				navigate(`/logs/${matchEvent.match_id}`);
+				navigate('/logs/:matchid', { params: { matchid: matchEvent.match_id } });
 			}
 		} catch (err: any) {
 			toast("Error loading match log", err.message);
@@ -157,7 +158,7 @@
 					{matchEvent.alliance} alliance
 				</p>
 				{#if matchEvent.status === "dismissed"}
-					<Badge color="dark">Dismissed</Badge>
+					<Badge color="gray">Dismissed</Badge>
 				{:else if matchEvent.status === "converted"}
 					<Badge color="green">Converted to Note</Badge>
 				{/if}

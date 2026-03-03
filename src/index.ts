@@ -366,7 +366,7 @@ if (process.env.NODE_ENV === "dev") {
 }
 
 connect().then(async () => {
-	if (true) { //change to process.env.NODE_ENV != "dev" to disable auto event loading in dev
+	if (process.env.NODE_ENV !== "dev") {
 		// Log analysis loop
 		new Promise(async () => {
 			while (true) {

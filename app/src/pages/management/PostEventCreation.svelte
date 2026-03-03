@@ -8,28 +8,28 @@
 	import { eventStore } from "../../stores/event";
 	import { userStore } from "../../stores/user";
 
-	let extensionDetected = false;
-	let extensionEnabled = false;
-	let signalREnabled = false;
-	let extensionEventCode = "";
-	let extensionVersion = "unknown version";
-	let fmsDetected = false;
+	let extensionDetected = $state(false);
+	let extensionEnabled = $state(false);
+	let signalREnabled = $state(false);
+	let extensionEventCode = $state("");
+	let extensionVersion = $state("unknown version");
+	let fmsDetected = $state(false);
 
 	// Nexus state
-	let nexusApiKey = "";
-	let nexusSaving = false;
-	let nexusSaveError = "";
-	let nexusStatus: NexusStatus | null = null;
-	let nexusStatusInterval: ReturnType<typeof setInterval> | null = null;
+	let nexusApiKey = $state("");
+	let nexusSaving = $state(false);
+	let nexusSaveError = $state("");
+	let nexusStatus: NexusStatus | null = $state(null);
+	let nexusStatusInterval: ReturnType<typeof setInterval> | null = $state(null);
 
 	// FMS Event Password state
-	let fmsEventPassword = "";
-	let fmsPasswordSaving = false;
-	let fmsPasswordSaveError = "";
-	let fmsPasswordIsSet = false;
-	let fmsExtensionConnected = false;
-	let fmsLastSeenAt: Date | null = null;
-	let fmsStatusInterval: ReturnType<typeof setInterval> | null = null;
+	let fmsEventPassword = $state("");
+	let fmsPasswordSaving = $state(false);
+	let fmsPasswordSaveError = $state("");
+	let fmsPasswordIsSet = $state(false);
+	let fmsExtensionConnected = $state(false);
+	let fmsLastSeenAt: Date | null = $state(null);
+	let fmsStatusInterval: ReturnType<typeof setInterval> | null = $state(null);
 
 	async function saveNexusApiKey() {
 		nexusSaving = true;
@@ -431,7 +431,7 @@
 							<Toggle
 								size="small"
 								checked={autoEventSettings[issue] !== false}
-								on:change={() => toggleIssue(issue)}
+								onchange={() => toggleIssue(issue)}
 							/>
 						</div>
 					{/each}

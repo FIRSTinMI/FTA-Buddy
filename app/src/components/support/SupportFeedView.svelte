@@ -103,9 +103,9 @@
 		}
 
 		// Notes first (newest on top), then events (newest on top)
-		const noteItems = items.filter((i) => i.kind === "note").sort((a, b) => b.date.getTime() - a.date.getTime());
-		const eventItems = items.filter((i) => i.kind === "event").sort((a, b) => b.date.getTime() - a.date.getTime());
-		filteredFeed = [...noteItems, ...eventItems];
+		const noteItems = items.filter((i) => i.kind === "note");
+		const eventItems = items.filter((i) => i.kind === "event");
+		filteredFeed = [...noteItems, ...eventItems].sort((a, b) => b.date.getTime() - a.date.getTime());
 	}
 
 	$effect(() => {

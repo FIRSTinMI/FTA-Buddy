@@ -1,16 +1,12 @@
 <script lang="ts">
 	import Icon from "@iconify/svelte";
 	import { Badge, Button } from "flowbite-svelte";
-	import { get } from "svelte/store";
 	import { formatTimeNoAgoHourMins } from "../../../shared/formatTime";
 	import type { MatchEvent } from "../../../shared/types";
 	import { trpc } from "../main";
 	import { navigate } from "../router";
-	import { eventStore } from "../stores/event";
 	import { toast } from "../util/toast";
 	import type { ComponentProps } from "svelte";
-
-	let event = get(eventStore);
 
 	interface Props {
 		matchEvent: MatchEvent;

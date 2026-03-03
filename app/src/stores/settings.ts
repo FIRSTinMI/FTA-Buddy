@@ -21,6 +21,7 @@ export interface Settings {
 	musicVolume: number;
 	musicType: "none" | "jazz" | "lofi";
 	acknowledgedNotesPolicy: boolean;
+	supportFeedFilter: "all" | "notes" | "events";
 	notificationCategories: {
 		create: boolean;
 		follow: boolean;
@@ -48,6 +49,7 @@ const defaultSettings: Settings = {
 	musicVolume: 12,
 	musicType: "none",
 	acknowledgedNotesPolicy: false,
+	supportFeedFilter: "all",
 	notificationCategories: {
 		create: true,
 		follow: true,

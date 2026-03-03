@@ -9,7 +9,7 @@ import { buildNotification, toNoteCtx } from "../../shared/notifications";
 import type { Notification } from "../../shared/types";
 import { FmsNoteMetadata, Message, Note, NoteUpdateEventData, Profile } from "../../shared/types";
 import { db } from "../db/db";
-import { events, matchLogs, messages, notes, pushSubscriptions, users } from "../db/schema";
+import { events, matchEvents, matchLogs, messages, notes, pushSubscriptions, users } from "../db/schema";
 import { eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
 import { getEvent } from "../util/get-event";
 import { createNotification } from "../util/push-notifications";
@@ -808,6 +808,10 @@ export const notesRouter = router({
 		if (!currentUserProfile[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Current User not found" });
 
 		await db.delete(messages).where(eq(messages.note_id, input.id));
+		await db
+			.update(matchEvents)
+			.set({ converted_note_id: null, status: "active" })
+			.where(eq(matchEvents.converted_note_id, input.id));
 		const result = await db.delete(notes).where(eq(notes.id, input.id));
 		if (!result) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to delete Note" });
 

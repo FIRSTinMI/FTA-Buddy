@@ -122,11 +122,14 @@
 		</div>
 	</div>
 	<!-- Body -->
-	<p class="text-sm text-black dark:text-white text-wrap leading-relaxed">
-		{#if simple}
-			{message.text.slice(0, 240) + (message.text.length > 240 ? "…" : "")}
-		{:else}
-			{message.text}
-		{/if}
-	</p>
+	<div class="flex flex-row pr-1">
+		<Icon icon="ci:arrow-sub-down-right" class="flex size-4 shrink-0 text-gray-500" />
+		<p class="flex text-sm text-black dark:text-white text-wrap leading-relaxed text-left pl-1 pb-1">
+			{#if simple}
+				{message.text.slice(0, 240) + (message.text.length > 240 ? "…" : "")}
+			{:else}
+				{message.text}
+			{/if}
+		</p>
+	</div>
 </div>

@@ -439,200 +439,203 @@
 			{#if !note}
 				<p class="text-red-500">Note not found</p>
 			{:else}
-				{#if user.id === note.author_id}
-					<div class="shrink-0 flex items-center justify-between gap-2 flex-wrap pb-2 mb-3">
-						<div class="flex items-center gap-1.5 flex-wrap">
-							<Button size="sm" color="alternative" onclick={back}>
-								<Icon icon="mdi:arrow-left" class="size-4 mr-1" />Back
-							</Button>
-							<Button size="sm" color="alternative" onclick={toggleFollowNote}>
-								<Icon
-									icon={note.followers.includes(user.id)
-										? "simple-line-icons:user-unfollow"
-										: "simple-line-icons:user-following"}
-									class="size-4 mr-1"
-								/>
-								{note.followers.includes(user.id) ? "Unfollow" : "Follow"}
-							</Button>
+				<div class="flex flex-col flex-1 min-h-0 overflow-hidden gap-2 px-4">
+					{#if user.id === note.author_id}
+						<div class="shrink-0 flex justify-center sm:justify-between flex-wrap gap-2 md:gap-3 pb-2 mb-3">
+							<div class="flex gap-2 md:gap-3">
+								<Button size="sm" color="alternative" onclick={back}>
+									<Icon icon="mdi:arrow-left" class="size-4" />
+								</Button>
+								<Button size="sm" color="alternative" onclick={toggleFollowNote}>
+									<Icon
+										icon={note.followers.includes(user.id)
+											? "simple-line-icons:user-unfollow"
+											: "simple-line-icons:user-following"}
+										class="size-4 mr-1"
+									/>
+									{note.followers.includes(user.id) ? "Unfollow" : "Follow"}
+								</Button>
+								<Button size="sm" color="alternative" onclick={openEditNote}>
+									<Icon icon="mdi:pencil" class="size-4" />
+								</Button>
+								<Button size="sm" color="red" onclick={() => (deleteNotePopup = true)}>
+									<Icon icon="mdi:trash-can" class="size-4" />
+								</Button>
+							</div>
+							<div class="flex gap-2 md:gap-3">
+								{#if note.resolution_status !== "NotApplicable"}
+									<Button size="sm" color={isOpen ? "blue" : "green"} onclick={changeOpenStatus}>
+										{isOpen ? "Resolve" : "Reopen"}
+									</Button>
+								{/if}
+								{#if user}
+									<Button
+										class="shrink-0"
+										size="sm"
+										color={note.assigned_to_id === user.id
+											? "alternative"
+											: note.assigned_to_id
+												? "red"
+												: "green"}
+										onclick={assignSelf}
+									>
+										{#if note.assigned_to_id === user.id}
+											Unclaim
+										{:else if note.assigned_to_id === null || note.assigned_to_id === undefined}
+											👀 Claim
+										{:else}
+											❌ Assigned
+										{/if}
+									</Button>
+								{/if}
+								{#if match}
+									<Button size="sm" color="alternative" onclick={viewLog}>
+										<Icon icon="mdi:chart-line" class="size-4 mr-1" />Log
+									</Button>
+								{/if}
+							</div>
 						</div>
-						<div class="flex items-center gap-1.5 flex-wrap justify-end">
-							{#if note.resolution_status !== "NotApplicable"}
-								<Button size="sm" color={isOpen ? "blue" : "green"} onclick={changeOpenStatus}>
-									{isOpen ? "Resolve" : "Reopen"}
-								</Button>
-							{/if}
-							{#if user}
-								<Button
-									size="sm"
-									color={note.assigned_to_id === user.id
-										? "alternative"
-										: note.assigned_to_id
-											? "red"
-											: "green"}
-									onclick={assignSelf}
-								>
-									{#if note.assigned_to_id === user.id}
-										Unclaim
-									{:else if note.assigned_to_id === null || note.assigned_to_id === undefined}
-										👀 Claim
-									{:else}
-										❌ Assigned
-									{/if}
-								</Button>
-							{/if}
-							{#if match}
-								<Button size="sm" color="alternative" onclick={viewLog}>
-									<Icon icon="mdi:chart-line" class="size-4 mr-1" />Log
-								</Button>
-							{/if}
-							<Button size="sm" color="alternative" onclick={openEditNote}>
-								<Icon icon="mdi:pencil" class="size-4" />
-							</Button>
-							<Button size="sm" color="red" onclick={() => (deleteNotePopup = true)}>
-								<Icon icon="mdi:trash-can" class="size-4" />
-							</Button>
-						</div>
-					</div>
-				{:else}
-					<div class="shrink-0 flex items-center justify-between gap-2 flex-wrap pb-2 mb-3">
-						<div class="flex items-center gap-1.5 flex-wrap">
-							<Button size="sm" color="alternative" onclick={back}>
-								<Icon icon="mdi:arrow-left" class="size-4 mr-1" />Back
-							</Button>
-							<Button size="sm" color="alternative" onclick={toggleFollowNote}>
-								<Icon
-									icon={note.followers.includes(user.id)
-										? "simple-line-icons:user-unfollow"
-										: "simple-line-icons:user-following"}
-									class="size-4 mr-1"
-								/>
-								{note.followers.includes(user.id) ? "Unfollow" : "Follow"}
-							</Button>
-						</div>
-						<div class="flex items-center gap-1.5 flex-wrap justify-end">
-							{#if note.resolution_status !== "NotApplicable"}
-								<Button size="sm" color={isOpen ? "blue" : "green"} onclick={changeOpenStatus}>
-									{isOpen ? "Resolve" : "Reopen"}
-								</Button>
-							{/if}
-							{#if user}
-								<Button
-									size="sm"
-									color={note.assigned_to_id === user.id
-										? "alternative"
-										: note.assigned_to_id
-											? "red"
-											: "green"}
-									onclick={assignSelf}
-								>
-									{#if note.assigned_to_id === user.id}
-										Unclaim
-									{:else if note.assigned_to_id === null || note.assigned_to_id === undefined}
-										👀 Claim
-									{:else}
-										❌ Assigned
-									{/if}
-								</Button>
-							{/if}
-							{#if match}
-								<Button size="sm" color="alternative" onclick={viewLog}>
-									<Icon icon="mdi:chart-line" class="size-4 mr-1" />Log
-								</Button>
-							{/if}
-						</div>
-					</div>
-				{/if}
-
-				<div class="shrink-0 flex flex-wrap items-center gap-2 mb-3">
-					<span class="font-bold text-2xl text-black dark:text-white">
-						{note.note_type === "TeamIssue"
-							? "Team Issue"
-							: note.note_type === "EventNote"
-								? "Event Note"
-								: "Match Note"}
-					</span>
-					{#if isOpen}
-						<Badge color="green">Open</Badge>
-					{:else if note.resolution_status === "Resolved"}
-						<Badge color="gray">Resolved</Badge>
 					{:else}
-						<Badge color="gray">N/A</Badge>
+						<div class="shrink-0 flex justify-center sm:justify-between flex-wrap gap-2 md:gap-3 pb-2 mb-3">
+							<div class="flex gap-2 md:gap-3">
+								<Button size="sm" color="alternative" onclick={back}>
+									<Icon icon="mdi:arrow-left" class="size-4" />
+								</Button>
+								<Button size="sm" color="alternative" onclick={toggleFollowNote}>
+									<Icon
+										icon={note.followers.includes(user.id)
+											? "simple-line-icons:user-unfollow"
+											: "simple-line-icons:user-following"}
+										class="size-4 mr-1"
+									/>
+									{note.followers.includes(user.id) ? "Unfollow" : "Follow"}
+								</Button>
+							</div>
+							<div class="flex gap-2 md:gap-3">
+								{#if note.resolution_status !== "NotApplicable"}
+									<Button size="sm" color={isOpen ? "blue" : "green"} onclick={changeOpenStatus}>
+										{isOpen ? "Resolve" : "Reopen"}
+									</Button>
+								{/if}
+								{#if user}
+									<Button
+										class="shrink-0"
+										size="sm"
+										color={note.assigned_to_id === user.id
+											? "alternative"
+											: note.assigned_to_id
+												? "red"
+												: "green"}
+										onclick={assignSelf}
+									>
+										{#if note.assigned_to_id === user.id}
+											Unclaim
+										{:else if note.assigned_to_id === null || note.assigned_to_id === undefined}
+											👀 Claim
+										{:else}
+											❌ Assigned
+										{/if}
+									</Button>
+								{/if}
+								{#if match}
+									<Button size="sm" color="alternative" onclick={viewLog}>
+										<Icon icon="mdi:chart-line" class="size-4 mr-1" />Log
+									</Button>
+								{/if}
+							</div>
+						</div>
 					{/if}
-					{#if match}
-						<Badge>
-							{match.level === "Qualification"
-								? "Qual"
-								: match.level === "Playoff"
-									? "Playoff"
-									: (match.level ?? "")} M{match.match_number}{match.play_number &&
-							match.play_number > 1
-								? ` P${match.play_number}`
-								: ""}
-						</Badge>
-					{/if}
-					{#if note.issue_type && note.issue_type !== "Other"}
-						<Badge color="purple">{note.issue_type}</Badge>
-					{/if}
-					{#if note.assigned_to}
-						<Badge color="yellow">Assigned: {note.assigned_to.username}</Badge>
-					{:else}
-						<Badge color="gray">Unassigned</Badge>
-					{/if}
-					{#if $userStore.meshedEventToken && $eventStore.subEvents}
-						<Badge color="indigo">
-							{$eventStore.subEvents.find((e) => e.code === note?.event_code)?.label ?? note.event_code}
-						</Badge>
-					{/if}
-				</div>
-				{#if note.team}
-					<div>
-						Team #{note.team}{get(eventStore).teams?.find((t) => parseInt(t.number) === note?.team)?.name
-							? ` - ${get(eventStore).teams?.find((t) => parseInt(t.number) === note?.team)?.name}`
-							: ""}
-					</div>
-				{/if}
-				<div class="text-xs text-gray-400 dark:text-gray-500">
-					<FormattedTime date={note.created_at} formatter={formatTimeNoAgoHourMins} /> ago by {note.author
-						.username}
-				</div>
 
-				<div class="flex flex-col flex-1 min-h-0 overflow-y-auto gap-3 pb-20">
-					<div class="border-b border-gray-400 dark:border-gray-700 px-4 py-3">
-						<p class="text-black dark:text-white whitespace-pre-wrap leading-relaxed">{note.text}</p>
-					</div>
-
-					<div class="flex flex-col gap-2" id="chat">
-						{#if !sortedMessages || sortedMessages.length === 0}
-							<p class="text-center text-xs text-gray-400 dark:text-gray-500 py-2">No replies yet</p>
-						{:else}
-							{#each sortedMessages as message}
-								<MessageCard {message} />
-							{/each}
+					<div class="flex flex-col flex-1 min-h-0 overflow-y-auto gap-3">
+						<span class="flex font-bold justify-center sm:justify-start text-xl text-black dark:text-white">
+							{note.note_type === "TeamIssue"
+								? "Team Issue"
+								: note.note_type === "EventNote"
+									? "Event Note"
+									: "Match Note"}
+						</span>
+						{#if note.team}
+							<div class="justify-center text-center sm:justify-start sm:text-left">
+								Team #{note.team}{get(eventStore).teams?.find((t) => parseInt(t.number) === note?.team)?.name
+									? ` - ${get(eventStore).teams?.find((t) => parseInt(t.number) === note?.team)?.name}`
+									: ""}
+							</div>
 						{/if}
+						<div class="justify-center text-center sm:justify-start sm:text-left text-xs text-gray-400 dark:text-gray-500">
+							<FormattedTime date={note.created_at} formatter={formatTimeNoAgoHourMins} /> ago by {note.author
+								.username}
+						</div>
+						<div class="flex flex-wrap gap-2 justify-center sm:justify-start">
+							{#if isOpen}
+								<Badge color="green">Open</Badge>
+							{:else if note.resolution_status === "Resolved"}
+								<Badge color="gray">Resolved</Badge>
+							{:else}
+								<Badge color="gray">N/A</Badge>
+							{/if}
+							{#if match}
+								<Badge color="teal">
+									{match.level === "Qualification"
+										? "Qual"
+										: match.level === "Playoff"
+											? "Playoff"
+											: (match.level ?? "")} M{match.match_number}{match.play_number &&
+									match.play_number > 1
+										? ` P${match.play_number}`
+										: ""}
+								</Badge>
+							{/if}
+							{#if note.issue_type && note.issue_type !== "Other"}
+								<Badge color="purple">{note.issue_type}</Badge>
+							{/if}
+							{#if note.assigned_to}
+								<Badge color="yellow">Assigned: {note.assigned_to.username}</Badge>
+							{:else}
+								<Badge color="red">Unassigned</Badge>
+							{/if}
+							{#if $userStore.meshedEventToken && $eventStore.subEvents}
+								<Badge color="indigo">
+									{$eventStore.subEvents.find((e) => e.code === note?.event_code)?.label ?? note.event_code}
+								</Badge>
+							{/if}
+						</div>
+						<div class="border-b border-gray-400 dark:border-gray-700 py-3">
+							<p class="text-center sm:text-left text-black dark:text-white whitespace-pre-wrap leading-relaxed">{note.text}</p>
+						</div>
+
+						<div class="flex flex-col gap-2" id="chat">
+							{#if !sortedMessages || sortedMessages.length === 0}
+								<p class="text-center text-xs text-gray-400 dark:text-gray-500 py-2">No replies yet</p>
+							{:else}
+								{#each sortedMessages as message}
+									<MessageCard {message} />
+								{/each}
+							{/if}
+						</div>
+					</div>
+
+					<div class="w-full rounded-xl bg-white dark:bg-neutral-800 shadow-sm py-3 mt-1 w-full">
+						<form class="flex flex-row gap-2 w-full" style="width: 100%" onsubmit={postMessage}>
+							<label for="chat-input" class="sr-only">Reply</label>
+							<div class="flex-1 min-w-0 [&_textarea]:w-full">
+								<Textarea
+									id="chat-input"
+									class="flex-1 min-w-0 "
+									rows={2}
+									placeholder="Write a reply…"
+									onkeydown={sendKey}
+									bind:value={message_text}
+								/>
+								</div>
+							<div class="flex flex-none items-center">
+								<Button type="submit" size="sm" color="blue" disabled={!message_text.trim()}>
+									<Icon icon="mdi:send" class="size-4" />
+								</Button>
+							</div>
+						</form>
 					</div>
 				</div>
 
-				<div class="shrink-0 rounded-xl bg-white dark:bg-neutral-800 shadow-sm p-3 mt-1">
-					<form class="w-full flex flex-col gap-2" onsubmit={postMessage}>
-						<label for="chat-input" class="sr-only">Reply</label>
-						<Textarea
-							id="chat-input"
-							class="w-full"
-							rows={2}
-							placeholder="Write a reply…"
-							onkeydown={sendKey}
-							bind:value={message_text}
-						/>
-						<div class="flex items-center justify-between">
-							<span class="text-xs text-gray-400 dark:text-gray-500"
-								>Enter to send · Shift+Enter for newline</span
-							>
-							<Button type="submit" size="sm" color="blue" disabled={!message_text.trim()}>
-								<Icon icon="mdi:send" class="size-4 mr-1" />Send
-							</Button>
-						</div>
-					</form>
-				</div>
 			{/if}
 		{/await}
 	</div>

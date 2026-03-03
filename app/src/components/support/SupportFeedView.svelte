@@ -420,14 +420,14 @@
 	</form>
 </Modal>
 
-<div class="flex flex-col gap-2 h-full">
+<div class="flex flex-col gap-2 px-1 h-full">
 	<div class="flex items-center gap-2 max-w-4xl w-full mx-auto">
-		<Button size="sm" color="primary" class="shrink-0" onclick={openCreateModal}>
+		<Button size="sm" color="primary" class="shrink-0 px-3" onclick={openCreateModal}>
 			<Icon icon="mdi:plus" class="size-4 mr-1" />New Note
 		</Button>
 
 		<div class="relative grow">
-			<Input class="ps-8 pe-2.5 py-1.5 h-9" type="text" placeholder="Team #, Name, Text" bind:value={search}>
+			<Input class="ps-8 pe-2.5 py-1.5 h-9" type="text" placeholder="Search by Team #, Name, Text" bind:value={search}>
 				{#snippet left()}
 					<Icon icon="mdi:magnify" />
 				{/snippet}

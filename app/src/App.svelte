@@ -766,7 +766,7 @@
 		</div>
 	{/if}
 
-	<div class="flex-1 min-h-0 overflow-y-auto">
+	<div class="flex-1 min-h-0 overflow-hidden">
 		<SvRouter />
 	</div>
 

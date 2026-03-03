@@ -1,9 +1,10 @@
 <script lang="ts">
 	import Icon from "@iconify/svelte";
 	import { Button, Input, Label, Modal, Select, Textarea } from "flowbite-svelte";
-	import { onDestroy, onMount } from "svelte";
+	import { onDestroy, onMount, tick } from "svelte";
 	import type { MatchEvent, MatchEventUpdateEventData, Note, NoteUpdateEventData, TournamentLevel } from "../../../../shared/types";
 	import { trpc } from "../../main";
+	import { navigate } from "../../router";
 	import { eventStore } from "../../stores/event";
 	import { settingsStore } from "../../stores/settings";
 	import { userStore } from "../../stores/user";
@@ -101,7 +102,10 @@
 			items.push(...evts.map((e) => ({ kind: "event" as const, matchEvent: e, date: new Date(e.created_at) })));
 		}
 
-		filteredFeed = items.sort((a, b) => b.date.getTime() - a.date.getTime());
+		// Notes first (newest on top), then events (newest on top)
+		const noteItems = items.filter((i) => i.kind === "note").sort((a, b) => b.date.getTime() - a.date.getTime());
+		const eventItems = items.filter((i) => i.kind === "event").sort((a, b) => b.date.getTime() - a.date.getTime());
+		filteredFeed = [...noteItems, ...eventItems];
 	}
 
 	$effect(() => {
@@ -394,19 +398,20 @@
 				}
 			}
 
-			await trpc.notes.create.mutate({
+			const createdNote = await trpc.notes.create.mutate({
 				team: newNoteType === "TeamIssue" ? (newTeam ?? null) : null,
 				text: newNoteText,
 				note_type: newNoteType,
 				issue_type: newNoteType === "TeamIssue" ? (issueType ?? null) : null,
 				...matchDetails,
 			});
-			// live subscription will push the new note into the feed automatically
 			createModalOpen = false;
 			newNoteText = "";
 			issueType = undefined;
 			selectedLabel = undefined;
 			matchId = undefined;
+			await tick();
+			navigate(`/notepad/view/${createdNote.id}`);
 		} catch (err: any) {
 			toast("Error creating note", err.message);
 			console.error(err);

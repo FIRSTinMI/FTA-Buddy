@@ -55,6 +55,7 @@
 			const res = await trpc.matchEvents.convertToNote.mutate({ id: matchEvent.id });
 			toast("Converted to note", "", "green-500");
 			onConvert?.(matchEvent.id, res.noteId);
+			navigate(`/notepad/view/${res.noteId}`);
 		} catch (err: any) {
 			toast("Error converting to note", err.message);
 			console.error(err);

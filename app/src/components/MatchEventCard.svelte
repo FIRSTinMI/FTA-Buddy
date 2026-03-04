@@ -42,14 +42,17 @@
 	async function dismiss() {
 		dismissing = true;
 		try {
-			if (bypassGroup && bypassGroup.length > 1) {
-				for (const evt of bypassGroup) {
-					await trpc.matchEvents.dismiss.mutate({ id: evt.id });
-					onDismiss?.(evt.id);
-				}
-			} else {
-				await trpc.matchEvents.dismiss.mutate({ id: matchEvent.id });
-				onDismiss?.(matchEvent.id);
+			const eventIds = bypassGroup && bypassGroup.length > 1
+				? bypassGroup.map((evt) => evt?.id).filter((id): id is string => Boolean(id))
+				: [matchEvent?.id].filter((id): id is string => Boolean(id));
+
+			if (eventIds.length === 0) {
+				throw new Error("Missing match event id");
+			}
+
+			for (const id of eventIds) {
+				await trpc.matchEvents.dismiss.mutate({ id });
+				onDismiss?.(id);
 			}
 		} catch (err: any) {
 			toast("Error dismissing event", err.message);
@@ -60,7 +63,11 @@
 	}
 
 	async function convertToNote() {
-		const id = matchEvent.id;
+		const id = matchEvent?.id;
+		if (!id) {
+			toast("Error converting to note", "Missing match event id");
+			return;
+		}
 		converting = true;
 		try {
 			const res = await trpc.matchEvents.convertToNote.mutate({ id });
@@ -69,9 +76,10 @@
 			// If consolidated bypass, dismiss the other events
 			if (bypassGroup && bypassGroup.length > 1) {
 				for (const evt of bypassGroup) {
-					if (evt.id !== id) {
-						await trpc.matchEvents.dismiss.mutate({ id: evt.id });
-						onDismiss?.(evt.id);
+					const evtId = evt?.id;
+					if (evtId && evtId !== id) {
+						await trpc.matchEvents.dismiss.mutate({ id: evtId });
+						onDismiss?.(evtId);
 					}
 				}
 			}

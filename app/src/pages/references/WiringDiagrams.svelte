@@ -2,7 +2,7 @@
 	import { Accordion, AccordionItem } from "flowbite-svelte";
 </script>
 
-<div class="container mx-auto p-2 pr-3 w-full">
+<div class="container mx-auto p-2 pr-3 w-full h-full overflow-y-auto">
 	<h1 class="text-3xl" style="font-weight: bold">Wiring Diagrams</h1>
 	<Accordion flush class="text-left">
 		<AccordionItem class="text-black dark:text-white">

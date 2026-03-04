@@ -117,7 +117,7 @@
 	}
 </script>
 
-<div class="container flex flex-col gap-2 p-4 mx-auto max-w-4xl">
+<div class="container flex flex-col gap-2 p-4 mx-auto max-w-4xl h-full overflow-y-auto">
 	<h1 class="text-3xl font-bold">Event Reports</h1>
 	<div class="flex flex-col items-start">
 		<p>Cycle Time Report</p>

@@ -86,6 +86,7 @@
 	}
 </script>
 
+<div class="h-full overflow-y-auto">
 <div class="max-w-2xl mx-auto flex flex-col gap-2 p-4">
 	<p>Start Known Issue</p>
 	<Input type="text" placeholder="Message" bind:value={message} class="mb-2" />
@@ -135,4 +136,5 @@
 			{/each}
 		</div>
 	{/each}
+</div>
 </div>

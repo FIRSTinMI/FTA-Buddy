@@ -48,7 +48,7 @@
 	}
 </script>
 
-<div class="container mx-auto md:max-w-4xl flex flex-col justify-center p-4 h-full gap-4">
+<div class="container mx-auto md:max-w-4xl flex flex-col justify-center p-4 h-full gap-4 overflow-y-auto">
 	<h1 class="text-3xl font-bold">Create Meshed Event</h1>
 	<p class="text-lg">A meshed event combines multiple events into one</p>
 	<p class="text-lg">

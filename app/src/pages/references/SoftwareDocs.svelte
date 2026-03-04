@@ -35,7 +35,7 @@
 	});
 </script>
 
-<div class="container mx-auto p-2 pr-3 w-full">
+<div class="container mx-auto p-2 pr-3 w-full h-full overflow-y-auto">
 	<h1 class="text-3xl font-bold">Software Documentation</h1>
 	<p>To visit the links, please click or scan the QR Codes</p>
 

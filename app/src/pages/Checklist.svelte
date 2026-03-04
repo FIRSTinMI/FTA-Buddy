@@ -117,7 +117,7 @@
 	});
 </script>
 
-<div class="container w-full flex flex-col py-2 h-full mx-auto gap-2">
+<div class="container w-full flex flex-col py-2 h-full mx-auto gap-2 overflow-y-auto">
 	{#await checklistPromise}
 		<Spinner />
 	{:then c}

@@ -54,7 +54,7 @@
 	});
 </script>
 
-<div class="container mx-auto p-2 w-full">
+<div class="container mx-auto p-2 w-full h-full overflow-y-auto">
 	<h1 class="text-3xl font-bold p-2">Event Match Logs</h1>
 	<Tabs
 		tabStyle="none"

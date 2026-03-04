@@ -57,7 +57,7 @@
 	<Spinner />
 {/if}
 
-<div class="container mx-auto md:max-w-3xl flex flex-col justify-center p-4 h-full space-y-4">
+<div class="container mx-auto md:max-w-3xl flex flex-col justify-center p-4 h-full space-y-4 overflow-y-auto">
 	<h1 class="text-3xl">Welcome to FTA Buddy</h1>
 	<h2 class="text-xl">Finish Creating Account</h2>
 	<form class="flex flex-col space-y-2 mt-2 text-left" onsubmit={createGoogleUser}>

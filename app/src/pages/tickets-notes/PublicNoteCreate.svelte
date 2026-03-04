@@ -71,7 +71,7 @@
 	>
 </Modal>
 
-<div class="container max-w-6xl mx-auto px-2 pt-2 h-full flex flex-col gap-2">
+<div class="container max-w-6xl mx-auto px-2 pt-2 h-full flex flex-col gap-2 overflow-y-auto">
 	{#if noteCreated === false}
 		<h1 class="text-3xl font-bold text-black dark:text-white">Submit a Note</h1>
 		<form class="text-left flex flex-col gap-4" onsubmit={createNote}>

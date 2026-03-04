@@ -82,7 +82,6 @@
 	}
 
 	let teamData: Record<number, TeamData> = $state({});
-	let overflowing: Record<number, boolean> = $state({});
 
 	// Modal state
 	let modalOpen = $state(false);
@@ -124,7 +123,6 @@
 		if (key && key !== lastTeamKey) {
 			lastTeamKey = key;
 			teamData = {};
-			overflowing = {};
 			if (teams) {
 				const nums = [teams.blue1, teams.blue2, teams.blue3, teams.red1, teams.red2, teams.red3];
 				for (const n of nums) {
@@ -321,23 +319,6 @@
 		if (ds === DSState.BYPASS) return "bg-orange-400";
 		return "bg-green-500";
 	}
-
-	function overflowCheck(node: HTMLDivElement, teamNum: number) {
-		function check() {
-			overflowing[teamNum] = node.scrollHeight > node.clientHeight;
-		}
-		const ro = new ResizeObserver(check);
-		const mo = new MutationObserver(check);
-		ro.observe(node);
-		mo.observe(node, { childList: true, subtree: true });
-		check();
-		return {
-			destroy() {
-				ro.disconnect();
-				mo.disconnect();
-			},
-		};
-	}
 </script>
 
 {#snippet teamCard(teamNum: number, alliance: "blue" | "red", slot: 1 | 2 | 3)}
@@ -452,7 +433,7 @@
 				>
 			</div>
 		{/if}
-		<div class="min-h-0 overflow-y-hidden px-3" use:overflowCheck={teamNum}>
+		<div class="min-h-0 overflow-hidden px-3">
 			{#if td?.loading}
 				<div class="flex justify-center py-2"><Spinner /></div>
 			{:else}
@@ -465,7 +446,7 @@
 					</div>
 				{/if}
 				{#if allItems.length > 0}
-					{#each allItems as item (item.kind === "note" ? `n-${item.note.id}` : `e-${item.matchEvent.id}`)}
+					{#each allItems.slice(0, 2) as item (item.kind === "note" ? `n-${item.note.id}` : `e-${item.matchEvent.id}`)}
 						{#if item.kind === "note"}
 							<button
 								class="w-full text-left pt-1 mt-1 hover:bg-gray-50 dark:hover:bg-neutral-700 rounded px-0.5"
@@ -503,12 +484,12 @@
 			<Icon icon="mdi:plus-circle-outline" class="size-3.5 shrink-0" />
 			{allItems.length === 0 ? "No notes yet - click to add" : "Click to add note"}
 		</button>
-		{#if overflowing[teamNum]}
+		{#if allItems.length > 2}
 			<button
 				class="shrink-0 text-xs text-blue-500 hover:underline py-1 text-center w-full border-t border-gray-200 dark:border-gray-700"
 				onclick={() => navigate("/notepad/team/:team", { params: { team: String(teamNum) } })}
 			>
-				See All
+				See more (+{allItems.length - 2})
 			</button>
 		{/if}
 	</div>

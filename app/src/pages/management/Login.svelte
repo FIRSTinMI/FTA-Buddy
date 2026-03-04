@@ -356,7 +356,7 @@
 	<Spinner />
 {/if}
 
-<div class="container mx-auto max-w-xl md:max-w-3xl flex flex-col justify-center min-h-full gap-4">
+<div class="container mx-auto max-w-xl md:max-w-3xl flex flex-col justify-center h-full overflow-y-auto gap-4">
 	{#if !user || !$user.token}
 		<!-- Create Account -->
 		{#if view === "create"}

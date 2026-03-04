@@ -119,7 +119,7 @@
 	}
 </script>
 
-<div class="container mx-auto p-2 w-full flex flex-col gap-4">
+<div class="container mx-auto p-2 w-full flex flex-col gap-4 h-full overflow-y-auto">
 	<div class="flex gap-2">
 		<Button onclick={back} class="w-fit">Back</Button>
 	</div>

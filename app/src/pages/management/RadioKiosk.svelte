@@ -94,7 +94,7 @@
 {/if}
 
 <div
-	class="container mx-auto md:max-w-4xl flex flex-col justify-center p-4 h-full space-y-4 {waitingForFirstConnectionTest
+	class="container mx-auto md:max-w-4xl flex flex-col justify-center p-4 h-full space-y-4 overflow-y-auto {waitingForFirstConnectionTest
 		? 'blur-sm'
 		: ''}"
 >

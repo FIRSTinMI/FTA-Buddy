@@ -482,7 +482,13 @@ export const matchRouter = router({
 				fileName: "bypassed-teams",
 			},
 			[...bypassedTeams]
-				.sort((a, b) => a.team - b.team)
+				.sort((a, b) => {
+					if (a.level !== b.level) {
+						const levelOrder: Record<string, number> = { Practice: 0, Qualification: 1, Playoff: 2 };
+						return (levelOrder[a.level] ?? 99) - (levelOrder[b.level] ?? 99);
+					}
+					return a.team - b.team;
+				})
 				.map((team) => [team.level, team.match_number, team.play_number, team.team]),
 			ctx.event.code,
 		);

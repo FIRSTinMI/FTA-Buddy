@@ -51,6 +51,7 @@ interface EventContext {
 		most_common_issues: Array<{ issue: string; count: number }>;
 		most_active_threads: Array<{ team: number | null; text_preview: string; message_count: number }>;
 		teams_with_most_issues: Array<{ team: number; note_count: number }>;
+        teams_with_most_match_events: Array<{ team: number; total: number }>;
 	};
 }
 
@@ -130,6 +131,29 @@ async function collectEventData(
 	}
 	const matchEventSummaries = Array.from(meSummaryMap.values()).sort((a, b) => b.total - a.total);
 
+    const HIGH_IMPACT_ISSUES = new Set([
+    "Bypassed",
+    "RIO disconnect",
+    "Radio disconnect",
+    "Communication loss",
+    "Lost comms",
+    "Comms loss",
+    ]);
+
+    const teamsWithMostMatchEvents = matchEventSummaries
+    .slice(0, 5)
+    .map((s) => ({ team: s.team, total: s.total }));
+
+    const teamsWithMostHighImpactMatchEvents = matchEventSummaries
+    .map((s) => {
+        const hi = Object.entries(s.issue_breakdown).reduce((acc, [issue, count]) => {
+        return acc + (HIGH_IMPACT_ISSUES.has(issue) ? count : 0);
+        }, 0);
+        return { team: s.team, high_impact_total: hi };
+    })
+    .sort((a, b) => b.high_impact_total - a.high_impact_total)
+    .slice(0, 5);
+
 	// Derived stats
 	const teamIssueNotes = noteContexts.filter((n) => n.note_type === "TeamIssue");
 	const resolvedNotes = noteContexts.filter((n) => n.resolution_status === "Resolved").length;
@@ -182,6 +206,7 @@ async function collectEventData(
 			most_common_issues: mostCommonIssues,
 			most_active_threads: mostActiveThreads,
 			teams_with_most_issues: teamsWithMostIssues,
+            teams_with_most_match_events: teamsWithMostMatchEvents,
 		},
 	};
 }
@@ -200,13 +225,21 @@ Do NOT describe minor issues as major failures.
 
 Use precise FRC terminology without defining acronyms.
 
+TARGET LENGTH: ~1.0-1.5 pages of text when rendered to PDF (letter). If match event volume is high, use additional detail.
+
 Structure the report using ONLY these section headings (ALL CAPS):
 
 EVENT METRICS
 Provide team count, total notes, breakdown by note type, open vs resolved, CSA involvement, and total match events. Clearly distinguish dismissed match events from those that resulted in a formal note.
+If match events exist but dismissed=0 and follow-up notes=0, explicitly state that no match-event triage/escalation occurred in the data.
 
 ISSUE BREAKDOWN
-Summarize issue types with counts and relative frequency. Focus on recurring patterns across teams. Avoid editorial commentary.
+Summarize issue types with counts and relative frequency.
+Explicitly list the top 5 teams by:
+- total match events
+- high-impact match events (bypass + RIO disconnect + radio disconnect/comm loss)
+Also list teams with the most formal notes (if any), and the single most active note thread (if any).
+Keep this factual (counts, team numbers, event types). No editorial commentary.
 
 MATCH EVENT REVIEW
 Summarize brownouts, disconnects, and high BWU occurrences. Clearly state:
@@ -334,8 +367,8 @@ Do not include calibration notes in the report.
 				content: buildPrompt(ctx),
 			},
 		],
-		max_tokens: 2000,
-		temperature: 0.2,
+		max_tokens: 3200,
+		temperature: 0.15,
 	});
 
 	const reportText = completion.choices[0]?.message?.content ?? "No report generated.";

@@ -150,7 +150,7 @@
 					</tr>
 					<tr>
 						<td>
-							<h3>On-Field Static IP Configuration</h3>
+							<h3>On-Field Static IP DS Configuration</h3>
 							<table class="section-table">
 								<tbody>
 									<tr>
@@ -164,6 +164,10 @@
 									<tr>
 										<td>Subnet Mask</td>
 										<td>255.255.255.0</td>
+									</tr>
+									<tr>
+										<td>DNS (if required)</td>
+										<td>10.TE.AM.4</td>
 									</tr>
 								</tbody>
 							</table>

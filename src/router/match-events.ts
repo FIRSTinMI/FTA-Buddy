@@ -58,6 +58,26 @@ export const matchEventsRouter = router({
             return rows as MatchEvent[];
         }),
 
+    /** Get ALL match events for a team (including dismissed/converted) for team history page. */
+    getAllByTeam: eventProcedure
+        .input(z.object({ team_number: z.number() }))
+        .query(async ({ ctx, input }) => {
+            const event = await getEvent(ctx.event.token);
+            const rows = await db
+                .select()
+                .from(matchEvents)
+                .where(
+                    and(
+                        eq(matchEvents.event_code, event.code),
+                        eq(matchEvents.team, input.team_number),
+                    ),
+                )
+                .orderBy(desc(matchEvents.created_at))
+                .execute();
+
+            return rows as MatchEvent[];
+        }),
+
     /** Dismiss a match event (mark as not needing follow-up). */
     dismiss: eventProcedure
         .input(z.object({ id: z.uuid() }))

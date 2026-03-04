@@ -10,7 +10,6 @@
 	import { eventStore } from "../../stores/event";
 	import { userStore } from "../../stores/user";
 	import type { MonitorEvent } from "../../util/monitorFrameHandler";
-	import MatchEventCard from "../MatchEventCard.svelte";
 	import Spinner from "../Spinner.svelte";
 	import AddQuickNoteModal from "./AddQuickNoteModal.svelte";
 
@@ -87,16 +86,7 @@
 	let modalOpen = $state(false);
 	let modalTeamNum = $state(0);
 
-	// Consolidate bypass events into a single entry
-	function consolidateBypassEvents(events: MatchEvent[]): { matchEvent: MatchEvent; bypassGroup?: MatchEvent[] }[] {
-		const nonBypass = events.filter((e) => e.issue !== "Bypassed").map((e) => ({ matchEvent: e }));
-		const bypass = events.filter((e) => e.issue === "Bypassed");
-		if (bypass.length > 0) {
-			const sorted = [...bypass].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-			nonBypass.push({ matchEvent: sorted[0], bypassGroup: bypass.length > 1 ? bypass : undefined });
-		}
-		return nonBypass;
-	}
+
 
 	// Notes for a team
 	async function loadTeamData(teamNumber: number) {
@@ -338,13 +328,7 @@
 	{@const currentMatchId = matchIndex >= 0 ? allMatches[matchIndex]?.id : undefined}
 	{@const td = teamData[teamNum]}
 	{@const teamName = $eventStore.teams.find((t) => t.number === String(teamNum))?.name ?? ""}
-	{@const allItems =
-		td && !td.loading
-			? [
-				...td.notes.map((n) => ({ kind: "note" as const, date: n.updated_at, note: n })),
-				...consolidateBypassEvents(td.matchEvents).map((e) => ({ kind: "event" as const, date: new Date(e.matchEvent.created_at), matchEvent: e.matchEvent, bypassGroup: e.bypassGroup })),
-			].sort((a, b) => b.date.getTime() - a.date.getTime())
-			: []}
+	{@const itemCount = td && !td.loading ? td.notes.length + td.matchEvents.length : 0}
 	{@const eventSummaries = td && !td.loading && td.matchEvents.length > 0
 		? Object.entries(
 			td.matchEvents.reduce<Record<string, number>>((acc, e) => {
@@ -356,30 +340,30 @@
 	<div class="flex-1 min-h-0 flex flex-col rounded-lg overflow-hidden shadow dark:bg-neutral-800 bg-white">
 		<div class="shrink-0 flex {alliance === 'blue' ? 'bg-blue-600' : 'bg-red-600'}">
 			<button
-				class="flex-1 px-3 py-1.5 font-bold text-white text-left flex items-center gap-2"
+				class="flex-1 px-2.5 sm:px-3 py-1 sm:py-1.5 font-bold text-white text-left flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base lg:text-lg"
 				onclick={() => navigate("/notepad/team/:team", { params: { team: String(teamNum) } })}
 			>
-				#{teamNum}
+				<span class="leading-none">#{teamNum}</span>
 				{#if teamName}
-					<span class="text-sm font-normal opacity-80">{teamName}</span>
+					<span class="text-[11px] sm:text-sm lg:text-base font-normal opacity-80 truncate">{teamName}</span>
 				{/if}
 			</button>
 			{#if currentMatchId}
 				<button
-					class="px-2 py-1.5 text-white hover:bg-white/20 flex items-center gap-1 text-xs border-l border-white/20"
+					class="px-1.5 sm:px-2 py-1 sm:py-1.5 text-white hover:bg-white/20 flex items-center gap-1 text-[10px] sm:text-xs lg:text-sm border-l border-white/20"
 					onclick={() =>
 						navigate("/logs/:matchid/:station", {
 							params: { matchid: currentMatchId, station: stationKey },
 						})}
 					title="View station log"
 				>
-					<Icon icon="mdi:chart-line" class="size-3.5" />Log
+					<Icon icon="mdi:chart-line" class="size-3 sm:size-3.5 lg:size-4" />Log
 				</button>
 			{/if}
 		</div>
 		{#if liveRobot && isLive}
 			<div
-				class="shrink-0 flex items-center gap-1 sm:gap-2 px-2 py-1 sm:py-1.5 border-b border-gray-200 dark:border-gray-700 text-xs"
+				class="shrink-0 flex items-center gap-1 sm:gap-2 px-2 py-1 sm:py-1.5 border-b border-gray-200 dark:border-gray-700 text-[11px] sm:text-xs lg:text-sm"
 			>
 				<div
 					class="size-4 sm:size-6 rounded-sm flex items-center justify-center text-black font-bold text-[9px] sm:text-[10px] shrink-0 {dsColor(
@@ -427,19 +411,19 @@
 					{#if liveRobot.rio && !liveRobot.code}X{/if}
 				</div>
 				<span
-					class="tabular-nums font-mono text-[10px] sm:text-xs text-black dark:text-white shrink-0"
+					class="tabular-nums font-mono text-[9px] sm:text-xs lg:text-sm text-black dark:text-white shrink-0"
 					title="Battery voltage">{liveRobot.battery.toFixed(1)}v</span
 				>
 				<span
-					class="tabular-nums font-mono text-[10px] sm:text-xs text-black dark:text-white shrink-0"
+					class="tabular-nums font-mono text-[9px] sm:text-xs lg:text-sm text-black dark:text-white shrink-0"
 					title="Round-trip ping">{liveRobot.ping}ms</span
 				>
 				<span
-					class="tabular-nums font-mono text-[10px] sm:text-xs text-black dark:text-white shrink-0"
+					class="tabular-nums font-mono text-[9px] sm:text-xs lg:text-sm text-black dark:text-white shrink-0"
 					title="Bandwidth utilization">{liveRobot.bwu.toFixed(2)}</span
 				>
 				<span
-					class="tabular-nums font-mono text-[10px] sm:text-xs text-black dark:text-white shrink-0"
+					class="tabular-nums font-mono text-[9px] sm:text-xs lg:text-sm text-black dark:text-white shrink-0"
 					title="Signal strength">{liveRobot.signal ?? 0}dBm</span
 				>
 			</div>
@@ -449,60 +433,31 @@
 				<div class="flex justify-center py-2"><Spinner /></div>
 			{:else}
 				{#if eventSummaries.length > 0}
-					<div class="py-1 border-b border-amber-200 dark:border-amber-800/40">
-						<div class="flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400">
-							<Icon icon="mdi:alert-circle-outline" class="size-3 shrink-0" />
-							<span class="font-semibold truncate">{eventSummaries.join(", ")}</span>
+					<div class="py-1.5">
+						<div class="flex items-center gap-1.5 text-xs sm:text-sm lg:text-base text-amber-700 dark:text-amber-400 font-semibold">
+							<Icon icon="mdi:alert-circle-outline" class="size-3.5 sm:size-4 lg:size-5 shrink-0" />
+							<span class="truncate">{eventSummaries.join(", ")}</span>
 						</div>
 					</div>
 				{/if}
-				{#if allItems.length > 0}
-					{#each allItems.slice(0, 2) as item (item.kind === "note" ? `n-${item.note.id}` : `e-${item.matchEvent.id}`)}
-						{#if item.kind === "note"}
-							<button
-								class="w-full text-left pt-1 mt-1 hover:bg-gray-50 dark:hover:bg-neutral-700 rounded px-0.5"
-								onclick={() => navigate("/notepad/view/:id", { params: { id: item.note.id } })}
-							>
-								<div class="flex items-center gap-1 text-xs">
-									<Badge color="blue" class="text-xs">Note</Badge>
-									{#if item.note.resolution_status === "Open"}
-										<span class="text-green-500 font-bold">Open</span>
-									{:else if item.note.resolution_status === "Resolved"}
-										<span class="text-gray-500">Resolved</span>
-									{/if}
-									{#if item.note.match_number}
-										<span class="text-gray-400">M{item.note.match_number}</span>
-									{/if}
-								</div>
-								<p class="text-sm text-black dark:text-white truncate">{item.note.text}</p>
-							</button>
-						{:else}
-							<div class="pt-1 mt-1 px-0.5">
-								<MatchEventCard matchEvent={item.matchEvent} bypassGroup={item.bypassGroup} compact
-									onDismiss={(id) => { if (td) td.matchEvents = td.matchEvents.filter((e) => e.id !== id); }}
-									onConvert={(id) => { if (td) td.matchEvents = td.matchEvents.filter((e) => e.id !== id); }}
-								/>
-							</div>
-						{/if}
-					{/each}
+				{#if itemCount > 0 || eventSummaries.length > 0}
+					<button
+						class="shrink-0 w-full text-left py-1.5 text-[11px] sm:text-xs lg:text-sm text-blue-500 hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-neutral-700 rounded flex items-center gap-1.5 transition-colors"
+						onclick={() => navigate("/notepad/team/:team", { params: { team: String(teamNum) } })}
+					>
+						<Icon icon="mdi:open-in-new" class="size-3 sm:size-3.5 lg:size-4 shrink-0" />
+						See more{itemCount > 0 ? ` (${itemCount})` : ""}
+					</button>
 				{/if}
 			{/if}
 		</div>
 		<button
-			class="shrink-0 w-full text-left px-3 py-1.5 text-xs text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-neutral-700 flex items-center gap-1.5 transition-colors"
+			class="shrink-0 w-full text-left px-3 py-1.5 text-[11px] sm:text-xs lg:text-sm text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-neutral-700 flex items-center gap-1.5 transition-colors"
 			onclick={() => openNoteModal(teamNum)}
 		>
-			<Icon icon="mdi:plus-circle-outline" class="size-3.5 shrink-0" />
-			{allItems.length === 0 ? "No notes yet - click to add" : "Click to add note"}
+			<Icon icon="mdi:plus-circle-outline" class="size-3 sm:size-3.5 lg:size-4 shrink-0" />
+			Add note
 		</button>
-		{#if allItems.length > 2}
-			<button
-				class="shrink-0 text-xs text-blue-500 hover:underline py-1 text-center w-full border-t border-gray-200 dark:border-gray-700"
-				onclick={() => navigate("/notepad/team/:team", { params: { team: String(teamNum) } })}
-			>
-				See more (+{allItems.length - 2})
-			</button>
-		{/if}
 	</div>
 {/snippet}
 
@@ -533,12 +488,12 @@
 		<div class="shrink-0 px-3 pt-2 pb-1">
 			<div class="flex items-center justify-between gap-2">
 				<Button size="sm" color="alternative" onclick={goToPrevMatch} disabled={matchIndex === 0}>
-					<Icon icon="mdi:chevron-left" class="size-5" />
+					<Icon icon="mdi:chevron-left" class="size-4 sm:size-5" />
 				</Button>
 
 				<div class="flex flex-col items-center min-w-0">
 					<p
-						class="font-bold text-lg sm:text-2xl leading-tight text-black dark:text-white text-center truncate"
+						class="font-bold text-base sm:text-xl lg:text-3xl leading-tight text-black dark:text-white text-center truncate"
 					>
 						{matchLabel}
 					</p>
@@ -556,12 +511,12 @@
 					onclick={goToNextMatch}
 					disabled={isLive || matchIndex >= allMatches.length - 1}
 				>
-					<Icon icon="mdi:chevron-right" class="size-5" />
+					<Icon icon="mdi:chevron-right" class="size-4 sm:size-5" />
 				</Button>
 			</div>
 			<div class="flex justify-end items-center gap-1.5 mt-1">
 				<Toggle size="small" bind:checked={autoAdvance} />
-				<span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">Current match</span>
+				<span class="text-[11px] sm:text-xs lg:text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">Current match</span>
 			</div>
 		</div>
 

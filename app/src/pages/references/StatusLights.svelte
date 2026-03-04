@@ -1057,7 +1057,7 @@
 		<!-- REV Pneumatics Hub -->
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.revpneumaticshub}>
 			{#snippet header()}
-				REV Pneumatics Hub
+				REV Pneumatic Hub
 			{/snippet}
 
 			{#if openState.revpneumaticshub === true || loadedState.revpneumaticshub === true}
@@ -1163,7 +1163,7 @@
 		<!-- CTRE Talon FX -->
 		<AccordionItem class="text-black dark:text-white" bind:open={openState.ctretalonfx}>
 			{#snippet header()}
-				CTRE Talon FX
+				CTRE Talon FX & FXS
 			{/snippet}
 
 			{#if openState.ctretalonfx === true || loadedState.ctretalonfx === true}

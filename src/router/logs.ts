@@ -481,9 +481,9 @@ export const matchRouter = router({
 				headers: ["Level", "Match Number", "Play Number", "Team"],
 				fileName: "bypassed-teams",
 			},
-			bypassedTeams.map((team) => {
-				return [team.level, team.match_number, team.play_number, team.team];
-			}),
+			[...bypassedTeams]
+				.sort((a, b) => a.team - b.team)
+				.map((team) => [team.level, team.match_number, team.play_number, team.team]),
 			ctx.event.code,
 		);
 

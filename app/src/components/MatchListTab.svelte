@@ -96,37 +96,37 @@
 						class="px-1 bg-blue-400 dark:bg-blue-600 hover:bg-opacity-50 hover:underline"
 						onclick={() =>
 							navigate("/logs/:matchid/:station", { params: { matchid: match.id, station: "blue1" } })}
-						>{match.blue1 ?? "None"}</TableBodyCell
+						>{match.blue1 ?? "None"}{#if match.blue1_has_event}<span class="ml-1">⚙️</span>{/if}{#if match.blue1_bypassed}<span class="ml-1">🚫</span>{/if}</TableBodyCell
 					>
 					<TableBodyCell
 						class="px-1 bg-blue-400 dark:bg-blue-600 hover:bg-opacity-50 hover:underline"
 						onclick={() =>
 							navigate("/logs/:matchid/:station", { params: { matchid: match.id, station: "blue2" } })}
-						>{match.blue2 ?? "None"}</TableBodyCell
+						>{match.blue2 ?? "None"}{#if match.blue2_has_event}<span class="ml-1">⚙️</span>{/if}{#if match.blue2_bypassed}<span class="ml-1">🚫</span>{/if}</TableBodyCell
 					>
 					<TableBodyCell
 						class="px-1 bg-blue-400 dark:bg-blue-600 hover:bg-opacity-50 hover:underline"
 						onclick={() =>
 							navigate("/logs/:matchid/:station", { params: { matchid: match.id, station: "blue3" } })}
-						>{match.blue3 ?? "None"}</TableBodyCell
+						>{match.blue3 ?? "None"}{#if match.blue3_has_event}<span class="ml-1">⚙️</span>{/if}{#if match.blue3_bypassed}<span class="ml-1">🚫</span>{/if}</TableBodyCell
 					>
 					<TableBodyCell
 						class="px-1 bg-red-400 dark:bg-red-600 hover:bg-opacity-50 hover:underline"
 						onclick={() =>
 							navigate("/logs/:matchid/:station", { params: { matchid: match.id, station: "red1" } })}
-						>{match.red1 ?? "None"}</TableBodyCell
+						>{match.red1 ?? "None"}{#if match.red1_has_event}<span class="ml-1">⚙️</span>{/if}{#if match.red1_bypassed}<span class="ml-1">🚫</span>{/if}</TableBodyCell
 					>
 					<TableBodyCell
 						class="px-1 bg-red-400 dark:bg-red-600 hover:bg-opacity-50 hover:underline"
 						onclick={() =>
 							navigate("/logs/:matchid/:station", { params: { matchid: match.id, station: "red2" } })}
-						>{match.red2 ?? "None"}</TableBodyCell
+						>{match.red2 ?? "None"}{#if match.red2_has_event}<span class="ml-1">⚙️</span>{/if}{#if match.red2_bypassed}<span class="ml-1">🚫</span>{/if}</TableBodyCell
 					>
 					<TableBodyCell
 						class="px-1 bg-red-400 dark:bg-red-600 hover:bg-opacity-50 hover:underline"
 						onclick={() =>
 							navigate("/logs/:matchid/:station", { params: { matchid: match.id, station: "red3" } })}
-						>{match.red3 ?? "None"}</TableBodyCell
+						>{match.red3 ?? "None"}{#if match.red3_has_event}<span class="ml-1">⚙️</span>{/if}{#if match.red3_bypassed}<span class="ml-1">🚫</span>{/if}</TableBodyCell
 					>
 					<TableBodyCell
 						class="dark:bg-neutral-700 hover:bg-opacity-50 hover:underline"

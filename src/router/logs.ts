@@ -1,6 +1,6 @@
 import { inferRouterOutputs } from "@trpc/server";
 import { randomUUID } from "crypto";
-import { and, asc, count, eq, or } from "drizzle-orm";
+import { and, asc, count, eq, inArray, or } from "drizzle-orm";
 import { z } from "zod";
 import { DisconnectionEvent, FMSLogFrame, ROBOT } from "../../shared/types";
 import { db } from "../db/db";
@@ -189,7 +189,7 @@ export const matchRouter = router({
 					eq(matchLogs.red3, input.team),
 				);
 
-			return await db
+			const matches = await db
 				.select({
 					id: matchLogs.id,
 					match_number: matchLogs.match_number,
@@ -206,6 +206,48 @@ export const matchRouter = router({
 				.from(matchLogs)
 				.where(and(...filters))
 				.orderBy(asc(matchLogs.start_time));
+
+			if (matches.length === 0) return matches;
+
+			const analysisRows = await db
+				.select({
+					match_id: analyzedLogs.match_id,
+					team: analyzedLogs.team,
+					issue: analyzedLogs.issue,
+				})
+				.from(analyzedLogs)
+				.where(
+					and(
+						eq(analyzedLogs.event, ctx.event.code),
+						inArray(
+							analyzedLogs.match_id,
+							matches.map((match) => match.id),
+						),
+					),
+				);
+
+			const teamsWithEvents = new Set(
+				analysisRows.filter((row) => row.issue !== "Bypassed").map((row) => `${row.match_id}:${row.team}`),
+			);
+			const bypassedTeams = new Set(
+				analysisRows.filter((row) => row.issue === "Bypassed").map((row) => `${row.match_id}:${row.team}`),
+			);
+
+			return matches.map((match) => ({
+				...match,
+				blue1_has_event: match.blue1 ? teamsWithEvents.has(`${match.id}:${match.blue1}`) : false,
+				blue2_has_event: match.blue2 ? teamsWithEvents.has(`${match.id}:${match.blue2}`) : false,
+				blue3_has_event: match.blue3 ? teamsWithEvents.has(`${match.id}:${match.blue3}`) : false,
+				red1_has_event: match.red1 ? teamsWithEvents.has(`${match.id}:${match.red1}`) : false,
+				red2_has_event: match.red2 ? teamsWithEvents.has(`${match.id}:${match.red2}`) : false,
+				red3_has_event: match.red3 ? teamsWithEvents.has(`${match.id}:${match.red3}`) : false,
+				blue1_bypassed: match.blue1 ? bypassedTeams.has(`${match.id}:${match.blue1}`) : false,
+				blue2_bypassed: match.blue2 ? bypassedTeams.has(`${match.id}:${match.blue2}`) : false,
+				blue3_bypassed: match.blue3 ? bypassedTeams.has(`${match.id}:${match.blue3}`) : false,
+				red1_bypassed: match.red1 ? bypassedTeams.has(`${match.id}:${match.red1}`) : false,
+				red2_bypassed: match.red2 ? bypassedTeams.has(`${match.id}:${match.red2}`) : false,
+				red3_bypassed: match.red3 ? bypassedTeams.has(`${match.id}:${match.red3}`) : false,
+			}));
 		}),
 
 	getMatch: eventProcedure
@@ -417,7 +459,7 @@ export const matchRouter = router({
 				matchId: fmsGuid,
 			}),
 		)
-		.query(async ({ input }) => {}),
+		.query(async ({ input }) => { }),
 
 	getNumberOfMatches: publicProcedure.query(async ({ ctx }) => {
 		return {

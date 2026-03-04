@@ -74,6 +74,7 @@
 	let autoEventSaving = $state(false);
 
 	const ISSUE_LABELS: Record<AutoEventIssueType, string> = {
+		"Bypassed": "Bypassed",
 		"Code disconnect": "Code Disconnect",
 		"RIO disconnect": "RIO Disconnect",
 		"Radio disconnect": "Radio Disconnect",

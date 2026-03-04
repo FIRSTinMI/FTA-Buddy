@@ -37,7 +37,7 @@
 
 	let notes: Note[] = $state([]);
 	let matchEvents: MatchEvent[] = $state([]);
-	type FeedItem = { kind: "note"; note: Note; date: Date } | { kind: "event"; matchEvent: MatchEvent; date: Date };
+	type FeedItem = { kind: "note"; note: Note; date: Date } | { kind: "event"; matchEvent: MatchEvent; date: Date; bypassGroup?: MatchEvent[] };
 	let filteredFeed: FeedItem[] = $state([]);
 
 	let loading = $state(true);
@@ -99,7 +99,25 @@
 				});
 			}
 
-			items.push(...evts.map((e) => ({ kind: "event" as const, matchEvent: e, date: new Date(e.created_at) })));
+			items.push(...evts.filter((e) => e.issue !== "Bypassed").map((e) => ({ kind: "event" as const, matchEvent: e, date: new Date(e.created_at) })));
+
+			// Consolidate bypass events by team into single cards
+			const bypassByTeam = new Map<number, MatchEvent[]>();
+			for (const evt of evts.filter((e) => e.issue === "Bypassed")) {
+				if (evt.team !== null) {
+					if (!bypassByTeam.has(evt.team)) bypassByTeam.set(evt.team, []);
+					bypassByTeam.get(evt.team)!.push(evt);
+				}
+			}
+			for (const [, teamBypasses] of bypassByTeam) {
+				const sorted = [...teamBypasses].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+				items.push({
+					kind: "event" as const,
+					matchEvent: sorted[0],
+					date: new Date(sorted[0].created_at),
+					bypassGroup: teamBypasses.length > 1 ? teamBypasses : undefined,
+				});
+			}
 		}
 
 		// Notes first (newest on top), then events (newest on top)
@@ -581,6 +599,7 @@
 				{:else}
 					<MatchEventCard
 						matchEvent={item.matchEvent}
+						bypassGroup={item.bypassGroup}
 						onDismiss={(id) => { matchEvents = matchEvents.filter((e) => e.id !== id); }}
 						onConvert={(id) => { matchEvents = matchEvents.filter((e) => e.id !== id); }}
 					/>

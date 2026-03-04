@@ -87,6 +87,17 @@
 	let modalOpen = $state(false);
 	let modalTeamNum = $state(0);
 
+	// Consolidate bypass events into a single entry
+	function consolidateBypassEvents(events: MatchEvent[]): { matchEvent: MatchEvent; bypassGroup?: MatchEvent[] }[] {
+		const nonBypass = events.filter((e) => e.issue !== "Bypassed").map((e) => ({ matchEvent: e }));
+		const bypass = events.filter((e) => e.issue === "Bypassed");
+		if (bypass.length > 0) {
+			const sorted = [...bypass].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+			nonBypass.push({ matchEvent: sorted[0], bypassGroup: bypass.length > 1 ? bypass : undefined });
+		}
+		return nonBypass;
+	}
+
 	// Notes for a team
 	async function loadTeamData(teamNumber: number) {
 		if (teamNumber === 0) return;
@@ -331,7 +342,7 @@
 		td && !td.loading
 			? [
 				...td.notes.map((n) => ({ kind: "note" as const, date: n.updated_at, note: n })),
-				...td.matchEvents.map((e) => ({ kind: "event" as const, date: new Date(e.created_at), matchEvent: e })),
+				...consolidateBypassEvents(td.matchEvents).map((e) => ({ kind: "event" as const, date: new Date(e.matchEvent.created_at), matchEvent: e.matchEvent, bypassGroup: e.bypassGroup })),
 			].sort((a, b) => b.date.getTime() - a.date.getTime())
 			: []}
 	{@const eventSummaries = td && !td.loading && td.matchEvents.length > 0
@@ -467,7 +478,7 @@
 							</button>
 						{:else}
 							<div class="pt-1 mt-1 px-0.5">
-								<MatchEventCard matchEvent={item.matchEvent} compact
+								<MatchEventCard matchEvent={item.matchEvent} bypassGroup={item.bypassGroup} compact
 									onDismiss={(id) => { if (td) td.matchEvents = td.matchEvents.filter((e) => e.id !== id); }}
 									onConvert={(id) => { if (td) td.matchEvents = td.matchEvents.filter((e) => e.id !== id); }}
 								/>

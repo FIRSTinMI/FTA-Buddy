@@ -11,12 +11,16 @@
 
 	interface Props {
 		matchEvent: MatchEvent;
+		bypassGroup?: MatchEvent[];
 		onDismiss?: (id: string) => void;
 		onConvert?: (id: string, noteId: string) => void;
 		compact?: boolean;
 	}
 
-	let { matchEvent, onDismiss, onConvert, compact = false }: Props = $props();
+	let { matchEvent, bypassGroup, onDismiss, onConvert, compact = false }: Props = $props();
+
+	let isBypass = $derived(matchEvent.issue === "Bypassed");
+	let bypassCount = $derived(bypassGroup ? bypassGroup.length : (isBypass ? 1 : 0));
 
 	let time = $derived(formatTimeNoAgoHourMins(matchEvent.created_at));
 	let dismissing = $state(false);
@@ -32,14 +36,21 @@
 		"Sustained high ping": "yellow",
 		"Low signal": "indigo",
 		"High BWU": "indigo",
+		"Bypassed": "pink",
 	};
 
 	async function dismiss() {
-		const id = matchEvent.id;
 		dismissing = true;
 		try {
-			await trpc.matchEvents.dismiss.mutate({ id });
-			onDismiss?.(id);
+			if (bypassGroup && bypassGroup.length > 1) {
+				for (const evt of bypassGroup) {
+					await trpc.matchEvents.dismiss.mutate({ id: evt.id });
+					onDismiss?.(evt.id);
+				}
+			} else {
+				await trpc.matchEvents.dismiss.mutate({ id: matchEvent.id });
+				onDismiss?.(matchEvent.id);
+			}
 		} catch (err: any) {
 			toast("Error dismissing event", err.message);
 			console.error(err);
@@ -55,6 +66,15 @@
 			const res = await trpc.matchEvents.convertToNote.mutate({ id });
 			toast("Converted to note", "", "green-500");
 			onConvert?.(id, res.noteId);
+			// If consolidated bypass, dismiss the other events
+			if (bypassGroup && bypassGroup.length > 1) {
+				for (const evt of bypassGroup) {
+					if (evt.id !== id) {
+						await trpc.matchEvents.dismiss.mutate({ id: evt.id });
+						onDismiss?.(evt.id);
+					}
+				}
+			}
 			navigate('/notepad/view/:id', { params: { id: res.noteId } });
 		} catch (err: any) {
 			toast("Error converting to note", err.message);
@@ -99,8 +119,14 @@
 {#if compact}
 	<div class="flex items-center gap-1 text-xs py-0.5">
 		<Badge color={ISSUE_COLORS[matchEvent.issue] ?? "gray"} class="text-[10px]">{matchEvent.issue}</Badge>
-		<span class="text-gray-400">M{matchEvent.match_number}</span>
-		<span class="text-gray-500">{durationStr}</span>
+		{#if isBypass && bypassGroup && bypassGroup.length > 1}
+			<span class="text-gray-400">{bypassGroup.length} matches</span>
+		{:else}
+			<span class="text-gray-400">M{matchEvent.match_number}</span>
+			{#if !isBypass}
+				<span class="text-gray-500">{durationStr}</span>
+			{/if}
+		{/if}
 		<button
 			class="ml-auto text-gray-400 hover:text-red-400 transition-colors p-0.5"
 			onclick={(e) => { e.stopPropagation(); dismiss(); }}
@@ -129,7 +155,15 @@
 						<span class="font-bold text-base">{displayTeam(matchEvent.team)}</span>
 					{/if}
 					<Badge color={ISSUE_COLORS[matchEvent.issue] ?? "gray"}>{matchEvent.issue}</Badge>
-					{#if matchEvent.match_number !== null}
+					{#if bypassGroup && bypassGroup.length > 1}
+						{#each bypassGroup as bp}
+							<Badge color="teal">
+								{bp.level === "Qualification" ? "Qual" : bp.level === "Playoff" ? "Playoff" : (bp.level ?? "")} M{bp.match_number}{bp.play_number && bp.play_number > 1
+									? ` P${bp.play_number}`
+									: ""}
+							</Badge>
+						{/each}
+					{:else if matchEvent.match_number !== null}
 						<Badge color="teal">
 							{levelLabel} M{matchEvent.match_number}{matchEvent.play_number && matchEvent.play_number > 1
 								? ` P${matchEvent.play_number}`
@@ -144,14 +178,24 @@
 			</div>
 
 			<p class="text-sm text-black dark:text-white leading-snug">
-				{matchEvent.issue} for {durationStr} total
-				{#if matchEvent.start_time !== null && matchEvent.end_time !== null}
-					({matchEvent.start_time.toFixed(0)}s → {matchEvent.end_time.toFixed(0)}s match time)
+				{#if isBypass}
+					{#if bypassCount > 1}
+						Team was Bypassed for {bypassCount} Matches
+					{:else}
+						Team was Bypassed
+					{/if}
+				{:else}
+					{matchEvent.issue} for {durationStr} total
+					{#if matchEvent.start_time !== null && matchEvent.end_time !== null}
+						({matchEvent.start_time.toFixed(0)}s → {matchEvent.end_time.toFixed(0)}s match time)
+					{/if}
 				{/if}
 			</p>
 
 			<div class="flex items-center justify-between gap-2">
-				<Badge color={matchEvent.alliance === "blue" ? "blue" : matchEvent.alliance === "red" ? "red" : "gray"} class="ml-1 text-[10px]">{matchEvent.alliance} alliance</Badge>
+				{#if !isBypass}
+					<Badge color={matchEvent.alliance === "blue" ? "blue" : matchEvent.alliance === "red" ? "red" : "gray"} class="ml-1 text-[10px]">{matchEvent.alliance} alliance</Badge>
+				{/if}
 				{#if matchEvent.status === "dismissed"}
 					<Badge color="gray">Dismissed</Badge>
 				{:else if matchEvent.status === "converted"}

@@ -175,6 +175,33 @@ export const matchRouter = router({
 				team: z.number().optional(),
 			}),
 		)
+        .output(
+            z.array(z.object({
+                id: z.string(),
+                match_number: z.number(),
+                play_number: z.number(),
+                level: z.string(),
+                start_time: z.date(),
+                blue1: z.number().nullable(),
+                blue2: z.number().nullable(),
+                blue3: z.number().nullable(),
+                red1: z.number().nullable(),
+                red2: z.number().nullable(),
+                red3: z.number().nullable(),
+                blue1_has_event: z.boolean(),
+                blue2_has_event: z.boolean(),
+                blue3_has_event: z.boolean(),
+                red1_has_event: z.boolean(),
+                red2_has_event: z.boolean(),
+                red3_has_event: z.boolean(),
+                blue1_bypassed: z.boolean(),
+                blue2_bypassed: z.boolean(),
+                blue3_bypassed: z.boolean(),
+                red1_bypassed: z.boolean(),
+                red2_bypassed: z.boolean(),
+                red3_bypassed: z.boolean(),
+            })),
+        )
 		.query(async ({ input, ctx }) => {
 			const filters = [eq(matchLogs.event, ctx.event.code)];
 
@@ -207,7 +234,7 @@ export const matchRouter = router({
 				.where(and(...filters))
 				.orderBy(asc(matchLogs.start_time));
 
-			if (matches.length === 0) return matches;
+			if (matches.length === 0) return [];
 
 			const analysisRows = await db
 				.select({

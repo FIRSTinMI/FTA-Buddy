@@ -368,15 +368,14 @@ if (process.env.NODE_ENV === "dev") {
 }
 
 connect().then(async () => {
-	if (process.env.NODE_ENV !== "dev") {
-		// Log analysis loop
-		new Promise(async () => {
-			while (true) {
-				await logAnalysisLoop(3);
-				await new Promise((resolve) => setTimeout(resolve, 3e3));
-			}
-		});
-	}
+	// Log analysis loop
+	new Promise(async () => {
+		while (true) {
+			await logAnalysisLoop(3);
+			await new Promise((resolve) => setTimeout(resolve, 3e3));
+		}
+	});
+
 
 	// Start Nexus pollers for any events that already have a key configured
 	try {

@@ -632,6 +632,7 @@ export interface DisconnectionEvent {
  * Used as keys in EventAutoEventSettings.
  */
 export const AUTO_EVENT_ISSUE_TYPES = [
+	"Bypassed",
 	"Code disconnect",
 	"RIO disconnect",
 	"Radio disconnect",

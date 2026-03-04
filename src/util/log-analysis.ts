@@ -314,9 +314,14 @@ export async function logAnalysisLoop(limit: number) {
 			// Skip bypassed teams in test match
 			if (log.level === "None" && logData.length < 1) continue;
 
+			// Skip bypassed teams in practice match
+			if (log.level === "Practice" && logData.length < 1) continue;
+
 			const isBypassed = logData.length < 1;
 			const analyzedLog = analyzeLog(logData);
 			const alliance = station.startsWith("blue") ? "blue" : "red";
+			const serverEvent = events[log.event];
+			const settings = autoEventSettingsCache.get(log.event) ?? {};
 
 			if (isBypassed) {
 				// Insert a single "Bypassed" row
@@ -334,6 +339,34 @@ export async function logAnalysisLoop(limit: number) {
 						issue: "Bypassed",
 					})
 					.execute();
+
+				const bypassEnabled = settings.Bypassed !== false;
+				if (bypassEnabled) {
+					const matchEventId = randomUUID();
+					const [inserted] = await db
+						.insert(matchEvents)
+						.values({
+							id: matchEventId,
+							match_id: log.id,
+							event_code: log.event,
+							team: teamNumber,
+							alliance,
+							issue: "Bypassed",
+							match_number: log.match_number,
+							play_number: log.play_number,
+							level: log.level,
+							status: "active",
+						})
+						.returning()
+						.execute();
+
+					if (serverEvent) {
+						serverEvent.matchEventEmitter.emit("create", {
+							kind: "match_event_create",
+							matchEvent: inserted,
+						});
+					}
+				}
 			} else if (analyzedLog.length > 0) {
 				// Insert one row per event
 				await db
@@ -359,9 +392,6 @@ export async function logAnalysisLoop(limit: number) {
 					.execute();
 
 				// Generate match events for enabled issue types, grouped by issue.
-				const serverEvent = events[log.event];
-				const settings = autoEventSettingsCache.get(log.event) ?? {};
-
 				// Group analyzed events by issue type so we create one match event per issue
 				const groupedByIssue = new Map<string, DisconnectionEvent[]>();
 				for (const evt of analyzedLog) {
@@ -380,6 +410,9 @@ export async function logAnalysisLoop(limit: number) {
 					const startTime = Math.max(...evts.map((e) => e.startTime));
 					const endTime = Math.min(...evts.map((e) => e.endTime));
 					const totalDuration = evts.reduce((sum, e) => sum + Math.abs(e.duration), 0);
+
+					// Skip brownouts with less than 10 seconds total duration
+					if (issue === "Brownout" && totalDuration < 10) continue;
 
 					const matchEventId = randomUUID();
 					const [inserted] = await db

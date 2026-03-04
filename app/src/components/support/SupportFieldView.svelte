@@ -86,7 +86,17 @@
 	let modalOpen = $state(false);
 	let modalTeamNum = $state(0);
 
-
+	// Consolidate bypass events into a single entry
+    type BypassGroup = { matchEvent: MatchEvent; bypassGroup?: MatchEvent[] };
+	function consolidateBypassEvents(events: MatchEvent[]): BypassGroup[] {
+		const nonBypass: BypassGroup[] = events.filter((e) => e.issue !== "Bypassed").map((e) => ({ matchEvent: e }));
+		const bypass = events.filter((e) => e.issue === "Bypassed");
+		if (bypass.length > 0) {
+			const sorted = [...bypass].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+			nonBypass.push({ matchEvent: sorted[0], bypassGroup: bypass.length > 1 ? bypass : undefined });
+		}
+		return nonBypass;
+	}
 
 	// Notes for a team
 	async function loadTeamData(teamNumber: number) {

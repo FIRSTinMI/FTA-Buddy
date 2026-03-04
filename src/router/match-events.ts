@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { randomUUID } from "crypto";
-import { and, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, count, desc, eq, inArray, ne } from "drizzle-orm";
 import { z } from "zod";
 import type { MatchEvent, MatchEventUpdateEventData, Note, Profile } from "../../shared/types";
 import { db } from "../db/db";
@@ -229,11 +229,27 @@ export const matchEventsRouter = router({
             )
             .execute();
 
+        // Count bypassed matches per team
+        const bypassRows = await db
+            .select({ team: matchEvents.team, count: count() })
+            .from(matchEvents)
+            .where(
+                and(
+                    eq(matchEvents.event_code, ctx.event.code),
+                    inArray(matchEvents.level, ["Qualification", "Playoff"]),
+                    eq(matchEvents.issue, "Bypassed"),
+                ),
+            )
+            .groupBy(matchEvents.team)
+            .execute();
+        const bypassCountByTeam = new Map<number, number>(bypassRows.map((r) => [r.team, r.count]));
+
         // Aggregate by team
         const teamMap = new Map<
             number,
             {
                 total: number;
+                untouched: number;
                 dismissed: number;
                 converted: number;
                 resolved: number;
@@ -246,6 +262,7 @@ export const matchEventsRouter = router({
             if (!teamMap.has(row.team)) {
                 teamMap.set(row.team, {
                     total: 0,
+                    untouched: 0,
                     dismissed: 0,
                     converted: 0,
                     resolved: 0,
@@ -255,6 +272,7 @@ export const matchEventsRouter = router({
             }
             const t = teamMap.get(row.team)!;
             t.total++;
+            if (row.status === "active") t.untouched++;
             if (row.status === "dismissed") t.dismissed++;
             if (row.status === "converted") {
                 t.converted++;
@@ -272,14 +290,14 @@ export const matchEventsRouter = router({
             {
                 title: "Robot Event Report",
                 description: "Per-team match event summary (Qual + Playoff, excludes Bypassed)",
-                headers: ["Team", "Total", "Dismissed", "→Note", "Resolved", "Unresolved", "Top Issue", "Issue Breakdown"],
+                headers: ["Team", "Total", "Untouched", "Dismissed", "Notes", "Resolved", "Unresolved", "Bypassed", "Top Issue", "Issue Breakdown"],
                 fileName: "robot-events",
             },
             sorted.map(([team, data]) => {
                 const sortedIssues = Array.from(data.issueCounts.entries()).sort((a, b) => b[1] - a[1]);
                 const topIssue = sortedIssues[0]?.[0] ?? "-";
-                const breakdown = sortedIssues.map(([label, count]) => `${label} x${count}`).join(", ");
-                return [team, data.total, data.dismissed, data.converted, data.resolved, data.unresolved, topIssue, breakdown];
+                const breakdown = sortedIssues.map(([label, cnt]) => `${label} x${cnt}`).join(", ");
+                return [team, data.total, data.untouched, data.dismissed, data.converted, data.resolved, data.unresolved, bypassCountByTeam.get(team) ?? 0, topIssue, breakdown];
             }),
             ctx.event.code,
         );

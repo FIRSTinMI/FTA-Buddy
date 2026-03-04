@@ -5,12 +5,6 @@
 		Label,
 		Modal,
 		MultiSelect,
-		Table,
-		TableBody,
-		TableBodyCell,
-		TableBodyRow,
-		TableHead,
-		TableHeadCell,
 		type SelectOptionType,
 	} from "flowbite-svelte";
 	import { json2csv } from "json-2-csv";
@@ -148,7 +142,7 @@
 	</div>
 </Modal>
 
-<div class="container mx-auto p-2 lg:max-w-7xl w-full flex flex-col gap-2 md:gap-4 h-full overflow-y-auto">
+<div class="container mx-auto p-2 lg:max-w-7xl w-full flex flex-col gap-2 md:gap-4 h-full overflow-auto">
 	<div class="flex">
 		{#if $userStore.eventToken}
 			<Button onclick={back} class="w-fit mx-1.5">Back</Button>
@@ -193,62 +187,52 @@
 			<MultiSelect items={columns} bind:value={selectedColumns} size="sm" class="mt-2" />
 		</Label>
 
-		<Table class="log-table" divClass="relative overflow-x-auto">
-			<TableHead class="sticky top-0">
-				<TableHeadCell class="px-6 py-4">Time</TableHeadCell>
-				{#each selectedColumns as col}
-					<TableHeadCell class="px-6 py-4">{columns.find((c) => c.value === col)?.name}</TableHeadCell>
-				{/each}
-			</TableHead>
-			<TableBody>
-				{#if match}
-					{#each log as frame}
-						<TableBodyRow>
-							<TableBodyCell>{frame.matchTime}</TableBodyCell>
-							{#each selectedColumns as col}
-								{#if col === "enabled"}
-									{#if frame.eStopPressed}
-										<TableBodyCell class="bg-red-500">E</TableBodyCell>
-									{:else if frame.aStopPressed}
-										<TableBodyCell class="bg-orange-500">A</TableBodyCell>
-									{:else if !frame.enabled}
-										<TableBodyCell class="bg-red-500">N</TableBodyCell>
-									{:else if frame.auto}
-										<TableBodyCell>A</TableBodyCell>
+		<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+				<thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+					<tr>
+						<th class="px-4 py-3">Time</th>
+						{#each selectedColumns as col}
+							<th class="px-4 py-3">{columns.find((c) => c.value === col)?.name}</th>
+						{/each}
+					</tr>
+				</thead>
+				<tbody>
+					{#if match}
+						{#each log as frame}
+							<tr class="border-b dark:border-gray-700 odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800">
+								<td class="px-4 py-2">{frame.matchTime}</td>
+								{#each selectedColumns as col}
+									{#if col === "enabled"}
+										{#if frame.eStopPressed}
+											<td class="px-4 py-2 bg-red-500 text-white">E</td>
+										{:else if frame.aStopPressed}
+											<td class="px-4 py-2 bg-orange-500 text-white">A</td>
+										{:else if !frame.enabled}
+											<td class="px-4 py-2 bg-red-500 text-white">N</td>
+										{:else if frame.auto}
+											<td class="px-4 py-2">A</td>
+										{:else}
+											<td class="px-4 py-2">T</td>
+										{/if}
+									{:else if col === "battery"}
+										<td
+											class="px-4 py-2"
+											style="background-color: rgba(255,0,0,{frame.battery < 11 && frame.battery > 0
+												? (-1.5 * frame.battery ** 2 - 6.6 * frame.battery + 255) / 255
+												: 0})"
+										>{typeof frame.battery === "number" ? frame.battery.toFixed(2) : frame.battery}</td>
+									{:else if ["averageTripTime", "lostPackets", "sentPackets", "signal", "noise", "txMCS", "rxMCS"].includes(col)}
+										<td class="px-4 py-2">{typeof frame[col] === "number" ? frame[col].toFixed(0) : frame[col]}</td>
+									{:else if ["dataRateTotal", "txRate", "rxRate"].includes(col)}
+										<td class="px-4 py-2">{typeof frame[col] === "number" ? frame[col].toFixed(2) : frame[col]}</td>
 									{:else}
-										<TableBodyCell>T</TableBodyCell>
+										<td class="px-4 py-2{frame[col] ? '' : ' bg-red-500 text-white'}">{frame[col] ? "Y" : "N"}</td>
 									{/if}
-								{:else if col === "battery"}
-									<TableBodyCell
-										style="background-color: rgba(255,0,0,{frame.battery < 11 && frame.battery > 0
-											? (-1.5 * frame.battery ** 2 - 6.6 * frame.battery + 255) / 255
-											: 0})"
-										>{typeof frame.battery === "number"
-											? frame.battery.toFixed(2)
-											: frame.battery}</TableBodyCell
-									>
-								{:else if ["averageTripTime", "lostPackets", "sentPackets", "signal", "noise", "txMCS", "rxMCS"].includes(col)}
-									<TableBodyCell
-										>{typeof frame[col] === "number"
-											? frame[col].toFixed(0)
-											: frame[col]}</TableBodyCell
-									>
-								{:else if ["dataRateTotal", "txRate", "rxRate"].includes(col)}
-									<TableBodyCell
-										>{typeof frame[col] === "number"
-											? frame[col].toFixed(2)
-											: frame[col]}</TableBodyCell
-									>
-								{:else}
-									<TableBodyCell class={frame[col] ? "" : "bg-red-500"}
-										>{frame[col] ? "Y" : "N"}</TableBodyCell
-									>
-								{/if}
-							{/each}
-						</TableBodyRow>
-					{/each}
-				{/if}
-			</TableBody>
-		</Table>
+								{/each}
+							</tr>
+						{/each}
+					{/if}
+				</tbody>
+		</table>
 	{/await}
 </div>

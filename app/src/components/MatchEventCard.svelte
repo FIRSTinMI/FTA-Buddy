@@ -210,10 +210,12 @@
 							<Icon icon="akar-icons:plus" class="size-3.5 mr-1" />
 							{converting ? "Converting…" : "Note"}
 						</Button>
-						<Button size="xs" color="green" onclick={viewLog} disabled={viewingLog}>
-							<Icon icon="mdi:chart-line" class="size-3.5 mr-1" />
-							{viewingLog ? "Loading…" : "Log"}
-						</Button>
+                        {#if !isBypass}
+                            <Button size="xs" color="green" onclick={viewLog} disabled={viewingLog}>
+                                <Icon icon="mdi:chart-line" class="size-3.5 mr-1" />
+                                {viewingLog ? "Loading…" : "Log"}
+                            </Button>
+                        {/if}
 					</div>
 					<Button size="xs" color="alternative" onclick={dismiss} disabled={dismissing}>
 						<Icon icon="mdi:close" class="size-3.5 mr-1" />
@@ -222,10 +224,12 @@
 				</div>
 			{:else}
 				<div class="flex flex-wrap gap-1 pt-1">
+                {#if !isBypass}
 					<Button size="xs" color="green" onclick={viewLog} disabled={viewingLog}>
 						<Icon icon="mdi:chart-line" class="size-3.5 mr-1" />
 						{viewingLog ? "Loading…" : "View Log"}
 					</Button>
+                {/if}
 				</div>
 			{/if}
 		</div>

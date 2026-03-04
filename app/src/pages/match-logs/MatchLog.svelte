@@ -95,8 +95,6 @@
 	let lostPacketsOpen = false;
 	let signalOpen = false;
 	let noiseOpen = false;
-	let txMCSOpen = false;
-	let rxMCSOpen = false;
 
 	if (window.location.hash === "#battery") {
 		batteryOpen = true;
@@ -110,10 +108,6 @@
 		signalOpen = true;
 	} else if (window.location.hash === "#noise") {
 		noiseOpen = true;
-	} else if (window.location.hash === "#txMCS") {
-		txMCSOpen = true;
-	} else if (window.location.hash === "#rxMCS") {
-		rxMCSOpen = true;
 	} else {
 		averageTripTimeOpen = true;
 	}
@@ -171,12 +165,6 @@
 				</TabItem>
 				<TabItem open={noiseOpen} class="w-full" onclick={() => tabClick("noise")} title="Noise">
 					<MatchGraph {data} log={data.log} stat="noise" />
-				</TabItem>
-				<TabItem open={txMCSOpen} class="w-full" onclick={() => tabClick("txMCS")} title="TX MCS">
-					<MatchGraph {data} log={data.log} stat="txMCS" />
-				</TabItem>
-				<TabItem open={rxMCSOpen} class="w-full" onclick={() => tabClick("rxMCS")} title="RX MCS">
-					<MatchGraph {data} log={data.log} stat="rxMCS" />
 				</TabItem>
 			</Tabs>
 			<h2>View a Team's Specific Log</h2>

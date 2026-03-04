@@ -438,25 +438,41 @@
 				>
 			</div>
 		{/if}
-		<div class="min-h-0 overflow-hidden px-3">
+		<div class="min-h-0 overflow-y-auto px-2 sm:px-3 flex-1">
 			{#if td?.loading}
 				<div class="flex justify-center py-2"><Spinner /></div>
 			{:else}
 				{#if eventSummaries.length > 0}
-					<div class="py-1.5">
+					<div class="py-1">
 						<div class="flex items-center gap-1.5 text-xs sm:text-sm lg:text-base text-amber-700 dark:text-amber-400 font-semibold">
 							<Icon icon="mdi:alert-circle-outline" class="size-3.5 sm:size-4 lg:size-5 shrink-0" />
 							<span class="truncate">{eventSummaries.join(", ")}</span>
 						</div>
 					</div>
 				{/if}
-				{#if itemCount > 0 || eventSummaries.length > 0}
+				{#if td && td.notes.length > 0}
+					{#each td.notes as note}
+						<button
+							class="w-full text-left py-1 border-b border-gray-100 dark:border-neutral-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-neutral-700/50 rounded transition-colors"
+							onclick={() => navigate("/notepad/view/:id", { params: { id: note.id } })}
+						>
+							<p class="text-[11px] sm:text-xs lg:text-sm text-black dark:text-white line-clamp-2 leading-snug">{note.text}</p>
+							<div class="flex items-center gap-1.5 mt-0.5">
+								<span class="text-[10px] sm:text-[11px] lg:text-xs {note.resolution_status === 'Open' ? 'text-green-500' : 'text-gray-400'}">{note.resolution_status}</span>
+								{#if note.author?.username}
+									<span class="text-[10px] sm:text-[11px] lg:text-xs text-gray-400">· {note.author.username}</span>
+								{/if}
+							</div>
+						</button>
+					{/each}
+				{/if}
+				{#if itemCount > 0}
 					<button
-						class="shrink-0 w-full text-left py-1.5 text-[11px] sm:text-xs lg:text-sm text-blue-500 hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-neutral-700 rounded flex items-center gap-1.5 transition-colors"
+						class="shrink-0 w-full text-left py-1 text-[10px] sm:text-[11px] lg:text-xs text-blue-500 hover:text-blue-400 rounded flex items-center gap-1 transition-colors"
 						onclick={() => navigate("/notepad/team/:team", { params: { team: String(teamNum) } })}
 					>
-						<Icon icon="mdi:open-in-new" class="size-3 sm:size-3.5 lg:size-4 shrink-0" />
-						See more{itemCount > 0 ? ` (${itemCount})` : ""}
+						<Icon icon="mdi:open-in-new" class="size-2.5 sm:size-3 shrink-0" />
+						Full history ({itemCount})
 					</button>
 				{/if}
 			{/if}

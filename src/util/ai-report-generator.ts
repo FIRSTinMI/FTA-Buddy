@@ -5,7 +5,7 @@ import OpenAI from "openai";
 import { db } from "../db/db";
 import { matchEvents, messages, notes } from "../db/schema";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_KEY });
+const openaiApiKey = process.env.OPENAI_API_KEY ?? process.env.OPENAI_KEY;
 const model = process.env.OPENAI_MODEL ?? "gpt-4o";
 
 interface NoteContext {
@@ -300,6 +300,11 @@ export async function generateAiEventReport(
 	endDate: string | null,
 	teamCount: number,
 ): Promise<string> {
+	if (!openaiApiKey) {
+		throw new Error("AI report generation is disabled: OPENAI_API_KEY is not configured.");
+	}
+
+	const openai = new OpenAI({ apiKey: openaiApiKey });
 	const ctx = await collectEventData(eventCode, eventName, startDate, endDate, teamCount);
 
 	const completion = await openai.chat.completions.create({

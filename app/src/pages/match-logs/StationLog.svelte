@@ -148,7 +148,8 @@
 	</div>
 </Modal>
 
-<div class="container mx-auto p-2 lg:max-w-7xl w-full flex flex-col gap-2 md:gap-4 h-full overflow-y-auto">
+<div class="h-full overflow-y-auto">
+<div class="container mx-auto p-2 lg:max-w-7xl w-full flex flex-col gap-2 md:gap-4 pb-4">
 	<div class="flex">
 		{#if $userStore.eventToken}
 			<Button onclick={back} class="w-fit mx-1.5">Back</Button>
@@ -251,4 +252,5 @@
 			</TableBody>
 		</Table>
 	{/await}
+</div>
 </div>

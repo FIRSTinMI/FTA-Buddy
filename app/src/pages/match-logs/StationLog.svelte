@@ -20,6 +20,7 @@
 	import { userStore } from "../../stores/user";
 	import { decompressStationLog } from "../../util/log-compression";
 	import { displayTeam } from "../../util/team-name";
+	import Icon from "@iconify/svelte";
 
 	const { matchid, station } = route.getParams("/logs/:matchid/:station");
 	let actualStation: ROBOT;
@@ -142,99 +143,107 @@
 	</div>
 </Modal>
 
-<div class="h-full overflow-y-auto">
-<div class="container mx-auto p-2 lg:max-w-7xl w-full flex flex-col gap-2 md:gap-4 pb-4">
-	<div class="flex">
-		{#if $userStore.eventToken}
-			<Button onclick={back} class="w-fit mx-1.5">Back</Button>
-			<Button onclick={share} class="w-fit mx-1.5">Share Log</Button>
-		{/if}
-		<Button onclick={exportLog} class="w-fit mx-1.5">Export CSV</Button>
-	</div>
-	{#await matchPromise}
-		<Spinner />
-	{:then}
-		<div>
-			<h1 class="text-xl">
-				{match.event.toUpperCase()}
-				{match.level === "None" ? "Test" : match.level} Match {match.match_number}/{match.play_number}
-			</h1>
-			<p>{formatTimeNoAgo(new Date(match.start_time))}</p>
-			<h2 class="text-lg">
-				{(actualStation.startsWith("blue") ? "Blue " : "Red ") + actualStation.charAt(actualStation.length - 1)} -
-				{displayTeam(team)}
-			</h2>
-			<p class="md:hidden text-gray-600 text-sm">View on desktop for more detail</p>
+<div class="container h-full overflow-y-auto">
+	<div class=" mx-auto p-2 lg:max-w-7xl w-full flex flex-col gap-2 md:gap-4 pb-4">
+		<div class="flex justify-between w-full">
+			{#if $userStore.eventToken}
+				<Button size="sm" color="alternative" onclick={back}>
+					<Icon icon="mdi:arrow-left" class="size-4 mr-1" />
+				</Button>
+				<Button size="sm" color="alternative" onclick={share}>
+					<Icon icon="ion:share-outline" class="size-4 mr-1" /> Share
+				</Button>
+			{/if}
+			<Button size="sm" color="alternative" onclick={exportLog}>
+				<Icon icon="mynaui:download" class="size-4 mr-1" /> Download
+			</Button>
 		</div>
+		{#await matchPromise}
+			<Spinner />
+		{:then}
+			<div>
+				<h1 class="text-xl">
+					{match.event.toUpperCase()}
+					{match.level === "None" ? "Test" : match.level} Match {match.match_number}/{match.play_number}
+				</h1>
+				<p>{formatTimeNoAgo(new Date(match.start_time))}</p>
+				<h2 class="text-lg">
+					{(actualStation.startsWith("blue") ? "Blue " : "Red ") + actualStation.charAt(actualStation.length - 1)} -
+					{displayTeam(team)}
+				</h2>
+				<p class="md:hidden text-gray-600 text-sm">View on desktop for more detail</p>
+			</div>
 
-		<LogGraph bind:this={logGraph} {log} />
+			<LogGraph bind:this={logGraph} {log} />
 
-		<div class="flex flex-col gap-2">
-			{#each match.analysis as logEvent}
-				<button
-					class="w-full text-left cursor-pointer"
-					onclick={() => logGraph?.zoomToRange(logEvent.startIndex, logEvent.endIndex)}
-				>
-					<Alert class="text-left" color={analysisEventColors[logEvent.issue]} border>
-						<span class="font-medium">{logEvent.issue}</span>
-						Started at {logEvent.startTime}s lasting {formatTimeShortNoAgoSeconds(logEvent.duration * 1000)}
-					</Alert>
-				</button>
-			{/each}
-		</div>
+			<div class="flex flex-col gap-2">
+				{#each match.analysis as logEvent}
+					<button
+						class="w-full text-left cursor-pointer"
+						onclick={() => logGraph?.zoomToRange(logEvent.startIndex, logEvent.endIndex)}
+					>
+						<Alert class="text-left" color={analysisEventColors[logEvent.issue]} border>
+							<span class="font-medium">{logEvent.issue}</span>
+							Started at {logEvent.startTime}s lasting {formatTimeShortNoAgoSeconds(logEvent.duration * 1000)}
+						</Alert>
+					</button>
+				{/each}
+			</div>
 
-		<Label class="text-left">
-			Select Columns
-			<MultiSelect items={columns} bind:value={selectedColumns} size="sm" class="mt-2" />
-		</Label>
+			<Label class="text-left">
+				Select Columns
+				<MultiSelect items={columns} bind:value={selectedColumns} size="sm" class="mt-2" />
+			</Label>
 
-		<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-				<thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-					<tr>
-						<th class="px-4 py-3">Time</th>
-						{#each selectedColumns as col}
-							<th class="px-4 py-3">{columns.find((c) => c.value === col)?.name}</th>
-						{/each}
-					</tr>
-				</thead>
-				<tbody>
-					{#if match}
-						{#each log as frame}
-							<tr class="border-b dark:border-gray-700 odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800">
-								<td class="px-4 py-2">{frame.matchTime}</td>
-								{#each selectedColumns as col}
-									{#if col === "enabled"}
-										{#if frame.eStopPressed}
-											<td class="px-4 py-2 bg-red-500 text-white">E</td>
-										{:else if frame.aStopPressed}
-											<td class="px-4 py-2 bg-orange-500 text-white">A</td>
-										{:else if !frame.enabled}
-											<td class="px-4 py-2 bg-red-500 text-white">N</td>
-										{:else if frame.auto}
-											<td class="px-4 py-2">A</td>
+			<div class="overflow-x-auto text-center w-full">
+				<table class="relative overflow-x-auto text-sm text-left text-gray-500 dark:text-gray-400">
+					<thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-black dark:text-white">
+						<tr>
+							<th class="px-4 py-3 sticky bg-black left-0">Time</th>
+							{#each selectedColumns as col}
+								<th class="px-4 py-3">{columns.find((c) => c.value === col)?.name}</th>
+							{/each}
+						</tr>
+					</thead>
+					<tbody>
+						{#if match}
+							{#each log as frame}
+								<tr class="border-b text-center dark:border-gray-700 odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800">
+									<td class="px-4 py-2 text-white text-center sticky left-0 bg-gray-40 dark:bg-black">{frame.matchTime}</td>
+									{#each selectedColumns as col}
+										{#if col === "enabled"}
+											{#if frame.eStopPressed}
+												<td class="px-4 py-2 bg-red-500 text-white">E</td>
+											{:else if frame.aStopPressed}
+												<td class="px-4 py-2 bg-orange-500 text-white">A</td>
+											{:else if !frame.enabled}
+												<td class="px-4 py-2 bg-red-500 text-white">N</td>
+											{:else if frame.auto}
+												<td class="px-4 py-2">A</td>
+											{:else}
+												<td class="px-4 py-2">T</td>
+											{/if}
+										{:else if col === "battery"}
+											<td
+												class="px-4 py-2"
+												style="background-color: rgba(255,0,0,{frame.battery < 11 && frame.battery > 0
+													? (-1.5 * frame.battery ** 2 - 6.6 * frame.battery + 255) / 255
+													: 0})"
+											>{typeof frame.battery === "number" ? frame.battery.toFixed(2) : frame.battery}</td>
+										{:else if ["averageTripTime", "lostPackets", "sentPackets", "signal", "noise", "txMCS", "rxMCS"].includes(col)}
+											<td class="px-4 py-2">{typeof frame[col] === "number" ? frame[col].toFixed(0) : frame[col]}</td>
+										{:else if ["dataRateTotal", "txRate", "rxRate"].includes(col)}
+											<td class="px-4 py-2">{typeof frame[col] === "number" ? frame[col].toFixed(2) : frame[col]}</td>
 										{:else}
-											<td class="px-4 py-2">T</td>
+											<td class="px-4 py-2{frame[col] ? '' : ' bg-red-500 text-white'}">{frame[col] ? "Y" : "N"}</td>
 										{/if}
-									{:else if col === "battery"}
-										<td
-											class="px-4 py-2"
-											style="background-color: rgba(255,0,0,{frame.battery < 11 && frame.battery > 0
-												? (-1.5 * frame.battery ** 2 - 6.6 * frame.battery + 255) / 255
-												: 0})"
-										>{typeof frame.battery === "number" ? frame.battery.toFixed(2) : frame.battery}</td>
-									{:else if ["averageTripTime", "lostPackets", "sentPackets", "signal", "noise", "txMCS", "rxMCS"].includes(col)}
-										<td class="px-4 py-2">{typeof frame[col] === "number" ? frame[col].toFixed(0) : frame[col]}</td>
-									{:else if ["dataRateTotal", "txRate", "rxRate"].includes(col)}
-										<td class="px-4 py-2">{typeof frame[col] === "number" ? frame[col].toFixed(2) : frame[col]}</td>
-									{:else}
-										<td class="px-4 py-2{frame[col] ? '' : ' bg-red-500 text-white'}">{frame[col] ? "Y" : "N"}</td>
-									{/if}
-								{/each}
-							</tr>
-						{/each}
-					{/if}
-				</tbody>
-		</table>
-	{/await}
-</div>
+									{/each}
+								</tr>
+							{/each}
+						{/if}
+					</tbody>
+				</table>
+			</div>
+		{/await}
+	</div>
 </div>

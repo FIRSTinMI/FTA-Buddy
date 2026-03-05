@@ -117,15 +117,15 @@
 	});
 </script>
 
-<div class="container w-full flex flex-col py-2 h-full mx-auto gap-2 overflow-y-auto">
+<div class="container w-full flex flex-col h-full mx-auto gap-2 overflow-y-auto">
 	{#await checklistPromise}
 		<Spinner />
 	{:then c}
-		<div class="flex w-full justify-center">
+		<div class="flex w-full justify-center py-2">
 			<div class="flex flex-col gap-2">
 				<h1 class="font-bold text-3xl">Team Checklist</h1>
 				{#if nexusStatus && nexusStatus.state !== "not_configured"}
-					<div class="flex flex-row gap-2 items-center text-sm">
+					<div class="flex flex-row gap-2 justify-center items-center text-sm">
 						<Indicator
 							color={nexusStatus.state === "complete" || nexusStatus.state === "polling_slow"
 								? "green"
@@ -183,51 +183,50 @@
 				</div>
 			</div>
 		</div>
-		<Table class="text-center pt-2">
-			<TableHead class="sticky top-0 z-10">
-				<TableHeadCell class="p-1 md:p-2">Team</TableHeadCell>
-				<TableHeadCell class="hidden sm:table-cell p-1 md:p-2">Name</TableHeadCell>
-				<TableHeadCell class="p-1 md:p-2">Present</TableHeadCell>
-				<TableHeadCell class="p-1 md:p-2">Inspected</TableHeadCell>
-				<TableHeadCell class="p-1 md:p-2">Radio</TableHeadCell>
-				<TableHeadCell class="p-1 md:p-2">Connection</TableHeadCell>
-			</TableHead>
-			<TableBody>
+		<table class="text-center pt-2">
+			<thead class="sticky top-0 z-20 bg-gray-100 dark:bg-gray-700 font-bold">
+				<tr>
+					<td class="sticky left-0 z-30 p-1 md:p-2 bg-gray-100 dark:bg-gray-700">Team</td>
+					<td class="hidden sm:table-cell p-1 md:p-2">Name</td>
+					<td class="p-1 md:p-2">Present</td>
+					<td class="p-1 md:p-2">Inspected</td>
+					<td class="p-1 md:p-2">Radio</td>
+					<td class="p-1 md:p-2">Connection</td>
+				</tr>
+			</thead>
+			<tbody>
 				{#each Object.entries(checklist) as [team, items]}
-					<TableBodyRow>
-						<TableBodyCell>{team}</TableBodyCell>
-						<TableBodyCell class="hidden sm:table-cell">{teamNames[team]}</TableBodyCell>
-						<TableBodyCell
-							><Checkbox
+					<tr class="border-b-1 border-gray-600">
+						<td class="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 px-6 py-4">{team}</td>
+						<td class="hidden sm:table-cell">{teamNames[team]}</td>
+						<td>
+							<Checkbox
 								class="justify-center"
 								bind:checked={items.present}
 								onchange={() => updateChecklist(team, "present", items.present)}
-							/></TableBodyCell
-						>
-						<TableBodyCell
-							><Checkbox
+							/></td>
+						<td>
+							<Checkbox
 								class="justify-center"
 								bind:checked={items.inspected}
 								onchange={() => updateChecklist(team, "inspected", items.inspected)}
-							/></TableBodyCell
-						>
-						<TableBodyCell
-							><Checkbox
+							/></td>
+						<td>
+							<Checkbox
 								class="justify-center"
 								bind:checked={items.radioProgrammed}
 								onchange={() => updateChecklist(team, "radioProgrammed", items.radioProgrammed)}
-							/></TableBodyCell
-						>
-						<TableBodyCell
-							><Checkbox
+							/></td>
+						<td>
+							<Checkbox
 								class="justify-center"
 								bind:checked={items.connectionTested}
 								onchange={() => updateChecklist(team, "connectionTested", items.connectionTested)}
-							/></TableBodyCell
-						>
-					</TableBodyRow>
+							/></td>
+					</tr>
 				{/each}
-			</TableBody>
-		</Table>
+			</tbody>
+		</table>
+
 	{/await}
 </div>

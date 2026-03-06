@@ -297,6 +297,7 @@ export const eventRouter = router({
 					users: [user?.id],
 					startDate: eventData.start_date ?? null,
 					endDate: eventData.end_date ?? null,
+					autoEventSettings: Object.fromEntries(AUTO_EVENT_ISSUE_TYPES.map((t) => [t, true])) as EventAutoEventSettings,
 				})
 				.returning();
 

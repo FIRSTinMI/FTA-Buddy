@@ -234,17 +234,40 @@
 
 <div class="container mx-auto md:max-w-5xl flex flex-col p-4 py-8 space-y-3  h-full pb-12 overflow-y-auto">
 	<h1 class="text-2xl font-bold">Event Management</h1>
-	<span class="inline-flex gap-2 font-bold mx-auto">
-		<Indicator color={fmsExtensionConnected ? "green" : "red"} class="my-auto" />
-		{#if fmsExtensionConnected}
-			<span class="text-green-500">Extension Connected</span>
-			{#if fmsLastSeenAt}
-				<span class="text-yellow-500 text-xs font-normal my-auto">(last seen {fmsLastSeenAt.toLocaleTimeString()})</span>
+	<div class="flex flex-col items-center gap-1">
+		<span class="inline-flex gap-2 font-bold">
+			<Indicator color={fmsExtensionConnected ? "green" : "red"} class="my-auto" />
+			{#if fmsExtensionConnected}
+				<span class="text-green-500">Extension Connected</span>
+				{#if fmsLastSeenAt}
+					<span class="text-yellow-500 text-xs font-normal my-auto">(last seen {fmsLastSeenAt.toLocaleTimeString()})</span>
+				{/if}
+			{:else}
+				<span class="text-red-400">No Extension Connected</span>
 			{/if}
+		</span>
+		{#if extensionDetected}
+			<span class="text-xs text-gray-500">
+				{#if !extensionEnabled}
+					Extension not enabled —
+				{:else if !extensionFieldMonitor}
+					Field monitor off —
+				{:else}
+					Field monitor on ·
+				{/if}
+				<button
+					class="text-blue-400 hover:underline disabled:opacity-50"
+					disabled={extensionConfiguring}
+					onclick={configureExtension}
+				>{extensionConfiguring ? "Configuring…" : extensionConfigured ? "Reconfigure extension" : "Configure extension"}</button>
+			</span>
 		{:else}
-			<span class="text-red-400">No Extension Connected</span>
+			<span class="text-xs text-gray-500">
+				No extension detected on this computer —
+				<a href="https://chromewebstore.google.com/detail/fta-buddy/kddnhihfpfnehnnhbkfajdldlgigohjc" target="_blank" class="text-blue-400 hover:underline">Install</a>
+			</span>
 		{/if}
-	</span>
+	</div>
 	<div class="flex flex-col border-t border-neutral-500 pt-5 gap-6">
 		<div class="border-b border-neutral-500 pb-5">
 			<div>
@@ -266,58 +289,6 @@
         <h1 class="text-lg font-bold">Integrations</h1>
         
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-			<!-- Browser Extension -->
-			<div class="flex flex-col gap-3 rounded-xl border border-neutral-700 bg-neutral-900 p-5">
-				<h2 class="text-xl font-bold">Browser Extension</h2>
-				<p class="text-sm text-gray-400">
-					Configure the FTA Buddy extension on this computer to send field monitor data for this event.
-				</p>
-				{#if !extensionDetected}
-					<span class="inline-flex items-center gap-2 text-sm">
-						<Indicator color="red" class="shrink-0" />
-						<span>Extension not detected</span>
-						<a
-							href="https://chromewebstore.google.com/detail/fta-buddy/kddnhihfpfnehnnhbkfajdldlgigohjc"
-							target="_blank"
-							class="text-blue-400 hover:underline">Install</a
-						>
-					</span>
-				{:else}
-					<div class="flex flex-col gap-1 py-2 border-t border-neutral-700 mt-1">
-						<span class="inline-flex items-center gap-2 text-sm">
-							<Indicator color={extensionEnabled ? (extensionFieldMonitor ? "green" : "yellow") : "red"} class="shrink-0" />
-							{#if !extensionEnabled}
-								<span>Extension not enabled</span>
-							{:else if !extensionFieldMonitor}
-								<span>Enabled — field monitor off</span>
-							{:else}
-								<span class="text-green-400">Enabled + field monitor on</span>
-							{/if}
-							{#if extensionOutdated}
-								<span class="text-yellow-400 text-xs">(update available: {LATEST_EXTENSION_VERSION})</span>
-							{:else if extensionVersion}
-								<span class="text-gray-500 text-xs">v{extensionVersion}</span>
-							{/if}
-						</span>
-					</div>
-				{/if}
-				<Button
-					onclick={configureExtension}
-					disabled={!extensionDetected || extensionConfiguring}
-				>
-					{#if extensionConfiguring}
-						Configuring…
-					{:else if extensionConfigured}
-						Reconfigure Extension
-					{:else}
-						Configure Extension
-					{/if}
-				</Button>
-				{#if extensionConfigured}
-					<Helper color="green">Extension configured with field monitor enabled.</Helper>
-				{/if}
-			</div>
-
 			<div class="flex flex-col gap-3 rounded-xl border border-neutral-700 bg-neutral-900 p-5">
 				<h2 class="text-xl font-bold">Nexus Inspection API</h2>
 				<p class="text-sm text-gray-400">

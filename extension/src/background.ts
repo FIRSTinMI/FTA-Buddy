@@ -59,6 +59,7 @@ export let eventToken: string;
 export let url: string;
 export let id: string;
 export let enabled: boolean;
+export let fieldMonitor: boolean = false;
 export let cloud: boolean;
 export let useDev: boolean;
 export let changed: number;
@@ -77,7 +78,7 @@ async function start() {
 
 	await new Promise((resolve) => {
 		chrome.storage.local.get(
-			["url", "cloud", "useDev", "event", "changed", "enabled", "id", "eventToken"],
+			["url", "cloud", "useDev", "event", "changed", "enabled", "fieldMonitor", "id", "eventToken"],
 			(item) => {
 				if (!item.id) chrome.storage.local.set({ id: crypto.randomUUID() });
 
@@ -96,6 +97,7 @@ async function start() {
 						event: item.event || "2024event",
 						changed: item.changed || new Date().getTime(),
 						enabled: item.enabled ?? false,
+						fieldMonitor: item.fieldMonitor ?? false,
 						eventToken: item.eventToken || "",
 						id: item.id || crypto.randomUUID(),
 					};
@@ -108,6 +110,7 @@ async function start() {
 				eventCode = String(item.event);
 				changed = Number(item.changed);
 				enabled = Boolean(item.enabled);
+				fieldMonitor = Boolean(item.fieldMonitor);
 				eventToken = String(item.eventToken);
 				id = String(item.id) || crypto.randomUUID();
 				if (id !== item.id) chrome.storage.local.set({ id });
@@ -190,6 +193,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 			eventCode,
 			eventToken,
 			enabled,
+			fieldMonitor,
 			id,
 			fmsApi,
 			version: manifestData.version,
@@ -406,6 +410,7 @@ function startOutboundNoteSync() {
 }
 
 async function sendFrame(data: any) {
+	if (!fieldMonitor) return;
 	await trpc.field.post.mutate(
 		eventToken ? { eventToken, ...data, extensionId: id } : { eventCode, ...data, extensionId: id },
 	);
@@ -415,6 +420,7 @@ async function sendCycletime(
 	type: "lastCycleTime" | "prestart" | "start" | "end" | "refsDone" | "scoresPosted",
 	data: string,
 ) {
+	if (!fieldMonitor) return;
 	const { matchNumber, playNumber, level } = await getCurrentMatch();
 	await trpc.cycles.postCycleTime.mutate({
 		eventToken,

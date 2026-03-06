@@ -3,7 +3,7 @@ import { eventStore } from "../stores/event";
 import { settingsStore } from "../stores/settings";
 import { userStore } from "../stores/user";
 
-export const LATEST_EXTENSION_VERSION = "1.26.0";
+export const LATEST_EXTENSION_VERSION = "1.26.1";
 
 interface Version {
 	changelog?: string;

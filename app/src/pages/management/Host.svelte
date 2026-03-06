@@ -96,7 +96,7 @@
 				users: res.users as Profile[],
 			});
 
-			window.postMessage({ source: "page", type: "eventCode", code: eventCode, token: res.token }, "*");
+			window.postMessage({ source: "page", type: "eventCode", code: eventCode, token: res.token, fieldMonitor: true }, "*");
 
 			await new Promise((resolve) => setTimeout(resolve, 500));
 
@@ -204,7 +204,7 @@
 					<button
 						class="text-blue-400 hover:underline"
 						onclick={async () => {
-							await window.postMessage({ source: "page", type: "enable" }, "*");
+							await window.postMessage({ source: "page", type: "enable", fieldMonitor: true }, "*");
 						}}>Enable</button
 					>
 				{/if}

@@ -6,6 +6,7 @@
 	import { trpc } from "../../main";
 	import { eventStore } from "../../stores/event";
 	import { userStore } from "../../stores/user";
+	import { LATEST_EXTENSION_VERSION } from "../../util/updater";
 
 	// Nexus state
 	let nexusApiKey = $state("");
@@ -109,7 +110,42 @@
 		saveAutoEventSettings();
 	}
 
+	// Extension state
+	let extensionDetected = $state(false);
+	let extensionEnabled = $state(false);
+	let extensionFieldMonitor = $state(false);
+	let extensionVersion = $state("");
+	let extensionOutdated = $state(false);
+	let extensionConfiguring = $state(false);
+	let extensionConfigured = $state(false);
+
+	window.addEventListener("message", (event) => {
+		if (event.data?.type === "pong") {
+			extensionDetected = true;
+			extensionVersion = event.data.version ?? "";
+			extensionEnabled = event.data.enabled ?? false;
+			extensionFieldMonitor = event.data.fieldMonitor ?? false;
+			extensionOutdated = extensionVersion < LATEST_EXTENSION_VERSION;
+		}
+	});
+
+	async function configureExtension() {
+		extensionConfiguring = true;
+		extensionConfigured = false;
+		try {
+			window.postMessage(
+				{ source: "page", type: "eventCode", code: $eventStore.code, token: $userStore.eventToken, fieldMonitor: true },
+				"*"
+			);
+			await new Promise((resolve) => setTimeout(resolve, 600));
+			extensionConfigured = true;
+		} finally {
+			extensionConfiguring = false;
+		}
+	}
+
 	onMount(() => {
+		window.postMessage({ source: "page", type: "ping" }, "*");
 		refreshNexusStatus();
 		nexusStatusInterval = setInterval(refreshNexusStatus, 30_000);
 		refreshFmsStatus();
@@ -230,6 +266,58 @@
         <h1 class="text-lg font-bold">Integrations</h1>
         
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+			<!-- Browser Extension -->
+			<div class="flex flex-col gap-3 rounded-xl border border-neutral-700 bg-neutral-900 p-5">
+				<h2 class="text-xl font-bold">Browser Extension</h2>
+				<p class="text-sm text-gray-400">
+					Configure the FTA Buddy extension on this computer to send field monitor data for this event.
+				</p>
+				{#if !extensionDetected}
+					<span class="inline-flex items-center gap-2 text-sm">
+						<Indicator color="red" class="shrink-0" />
+						<span>Extension not detected</span>
+						<a
+							href="https://chromewebstore.google.com/detail/fta-buddy/kddnhihfpfnehnnhbkfajdldlgigohjc"
+							target="_blank"
+							class="text-blue-400 hover:underline">Install</a
+						>
+					</span>
+				{:else}
+					<div class="flex flex-col gap-1 py-2 border-t border-neutral-700 mt-1">
+						<span class="inline-flex items-center gap-2 text-sm">
+							<Indicator color={extensionEnabled ? (extensionFieldMonitor ? "green" : "yellow") : "red"} class="shrink-0" />
+							{#if !extensionEnabled}
+								<span>Extension not enabled</span>
+							{:else if !extensionFieldMonitor}
+								<span>Enabled — field monitor off</span>
+							{:else}
+								<span class="text-green-400">Enabled + field monitor on</span>
+							{/if}
+							{#if extensionOutdated}
+								<span class="text-yellow-400 text-xs">(update available: {LATEST_EXTENSION_VERSION})</span>
+							{:else if extensionVersion}
+								<span class="text-gray-500 text-xs">v{extensionVersion}</span>
+							{/if}
+						</span>
+					</div>
+				{/if}
+				<Button
+					onclick={configureExtension}
+					disabled={!extensionDetected || extensionConfiguring}
+				>
+					{#if extensionConfiguring}
+						Configuring…
+					{:else if extensionConfigured}
+						Reconfigure Extension
+					{:else}
+						Configure Extension
+					{/if}
+				</Button>
+				{#if extensionConfigured}
+					<Helper color="green">Extension configured with field monitor enabled.</Helper>
+				{/if}
+			</div>
+
 			<div class="flex flex-col gap-3 rounded-xl border border-neutral-700 bg-neutral-900 p-5">
 				<h2 class="text-xl font-bold">Nexus Inspection API</h2>
 				<p class="text-sm text-gray-400">

@@ -11,6 +11,23 @@ import { generateReport } from "../util/report-generator";
 import { getEvent } from "../util/get-event";
 import { subscriptionQueue } from "../util/subscription";
 
+interface TBASimpleMatch {
+    key: string;
+    comp_level: "qm" | "ef" | "qf" | "sf" | "f";
+    set_number: number;
+    match_number: number;
+    alliances: {
+        red: { score: number; team_keys: string[] };
+        blue: { score: number; team_keys: string[] };
+    };
+    winning_alliance: "red" | "blue" | "" | null;
+    event_key: string;
+    time: number | null;
+    actual_time: number | null;
+    predicted_time: number | null;
+    post_result_time: number | null;
+}
+
 export const matchEventsRouter = router({
     /** Get all match events for the current event, filtered by status. */
     getAll: eventProcedure
@@ -77,6 +94,39 @@ export const matchEventsRouter = router({
                 .execute();
 
             return rows as MatchEvent[];
+        }),
+
+    /** Get the next unplayed match for a team from TBA (not stored, fetched on demand). */
+    getNextMatchForTeam: eventProcedure
+        .input(z.object({ team_number: z.number() }))
+        .query(async ({ ctx, input }) => {
+            const event = await getEvent(ctx.event.token);
+            const tbaKey = process.env.TBA_API_KEY;
+            if (!tbaKey) return null;
+
+            try {
+                const res = await fetch(
+                    `https://www.thebluealliance.com/api/v3/team/frc${input.team_number}/event/${event.code}/matches/simple`,
+                    { headers: { "X-TBA-Auth-Key": tbaKey } },
+                );
+                if (!res.ok) return null;
+                const matches: TBASimpleMatch[] = await res.json();
+                if (!Array.isArray(matches)) return null;
+
+                const now = Math.floor(Date.now() / 1000);
+                // Unplayed = actual_time is null or 0
+                const upcoming = matches
+                    .filter((m) => !m.actual_time)
+                    .sort((a, b) => {
+                        const ta = a.predicted_time ?? a.time ?? 0;
+                        const tb = b.predicted_time ?? b.time ?? 0;
+                        return ta - tb;
+                    });
+
+                return upcoming[0] ?? null;
+            } catch {
+                return null;
+            }
         }),
 
     /** Dismiss a match event (mark as not needing follow-up). */

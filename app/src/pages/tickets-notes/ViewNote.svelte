@@ -56,6 +56,29 @@
 	let editNoteView = $state(false);
 	let editNoteText: string = $state("");
 
+	type TBANextMatch = Awaited<ReturnType<typeof trpc.matchEvents.getNextMatchForTeam.query>>;
+	let nextMatch: TBANextMatch = $state(null);
+
+	function formatNextMatch(m: NonNullable<TBANextMatch>): string {
+		const levelMap: Record<string, string> = { qm: "Qual", qf: "QF", sf: "SF", f: "Final", ef: "EF" };
+		const level = levelMap[m.comp_level] ?? m.comp_level.toUpperCase();
+		if (m.comp_level === "qm") return `${level} ${m.match_number}`;
+		return `${level} ${m.set_number}-${m.match_number}`;
+	}
+
+	function nextMatchAlliance(m: NonNullable<TBANextMatch>, teamNumber: number): "red" | "blue" | null {
+		const key = `frc${teamNumber}`;
+		if (m.alliances.red.team_keys.includes(key)) return "red";
+		if (m.alliances.blue.team_keys.includes(key)) return "blue";
+		return null;
+	}
+
+	function formatMatchTime(m: NonNullable<TBANextMatch>): string {
+		const epoch = m.predicted_time ?? m.time;
+		if (!epoch) return "";
+		return new Date(epoch * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+	}
+
 	async function getNoteAndMatch() {
 		notePromise = trpc.notes.getByIdWithMessages.query({
 			id: noteId,
@@ -64,6 +87,11 @@
 		note = await notePromise;
 
 		if (note) {
+			if (note.team) {
+				trpc.matchEvents.getNextMatchForTeam.query({ team_number: note.team }).then((m) => {
+					nextMatch = m;
+				}).catch(() => {});
+			}
 			if (note.match_id) {
 				match_id = note.match_id;
 				matchPromise = trpc.match.getMatch.query({ id: match_id });
@@ -558,8 +586,31 @@
 						{#if note.team}
 							<div class="justify-center text-center sm:justify-start sm:text-left">
                                 Team {displayTeam(note.team)}
+							</div>						{#if nextMatch}
+							{@const alliance = nextMatchAlliance(nextMatch, note.team)}
+							{@const partners = (alliance === "red" ? nextMatch.alliances.red.team_keys : nextMatch.alliances.blue.team_keys)
+								.filter((k) => k !== `frc${note!.team}`)
+								.map((k) => k.replace("frc", ""))
+								.join(" & ")}
+							<div class="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm
+								{alliance === 'red' ? 'bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800' :
+								 alliance === 'blue' ? 'bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800' :
+								 'bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700'}">
+								<Icon icon="mdi:flag-checkered" class="size-4 shrink-0
+									{alliance === 'red' ? 'text-red-500' : alliance === 'blue' ? 'text-blue-500' : 'text-gray-400'}" />
+								<span class="font-semibold text-black dark:text-white">Next: {formatNextMatch(nextMatch)}</span>
+								{#if alliance}
+									<span class="font-medium capitalize
+										{alliance === 'red' ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}">{alliance}</span>
+								{/if}
+								{#if partners}
+									<span class="text-gray-500 dark:text-gray-400">w/ {partners}</span>
+								{/if}
+								{#if formatMatchTime(nextMatch)}
+									<span class="ml-1 text-gray-400 dark:text-gray-500">{formatMatchTime(nextMatch)}</span>
+								{/if}
 							</div>
-						{/if}
+						{/if}						{/if}
 						<div class="justify-center text-center sm:justify-start sm:text-left text-xs text-gray-400 dark:text-gray-500">
 							<FormattedTime date={note.created_at} formatter={formatTimeNoAgoHourMins} /> ago by {note.author
 								.username}

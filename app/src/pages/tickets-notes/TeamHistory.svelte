@@ -12,8 +12,11 @@
 	const { team } = route.getParams("/notepad/team/:team");
 	const teamNumber = parseInt(team, 10);
 
+	type TBANextMatch = Awaited<ReturnType<typeof trpc.matchEvents.getNextMatchForTeam.query>>;
+
 	let notes: Note[] = $state([]);
 	let matchEvents: MatchEvent[] = $state([]);
+	let nextMatch: TBANextMatch = $state(null);
 	let loading = $state(true);
 	let error: string | null = $state(null);
 
@@ -21,17 +24,39 @@
 		loading = true;
 		error = null;
 		try {
-			const [fetchedNotes, fetchedEvents] = await Promise.all([
+			const [fetchedNotes, fetchedEvents, fetchedNext] = await Promise.all([
 				trpc.notes.getAllByTeam.query({ team_number: teamNumber }),
 				trpc.matchEvents.getAllByTeam.query({ team_number: teamNumber }),
+				trpc.matchEvents.getNextMatchForTeam.query({ team_number: teamNumber }),
 			]);
 			notes = fetchedNotes;
 			matchEvents = fetchedEvents;
+			nextMatch = fetchedNext;
 		} catch (err: any) {
 			error = err?.message ?? "Unknown error";
 		} finally {
 			loading = false;
 		}
+	}
+
+	function formatNextMatch(m: NonNullable<TBANextMatch>): string {
+		const levelMap: Record<string, string> = { qm: "Qual", qf: "QF", sf: "SF", f: "Final", ef: "EF" };
+		const level = levelMap[m.comp_level] ?? m.comp_level.toUpperCase();
+		if (m.comp_level === "qm") return `${level} ${m.match_number}`;
+		return `${level} ${m.set_number}-${m.match_number}`;
+	}
+
+	function nextMatchAlliance(m: NonNullable<TBANextMatch>): "red" | "blue" | null {
+		const key = `frc${teamNumber}`;
+		if (m.alliances.red.team_keys.includes(key)) return "red";
+		if (m.alliances.blue.team_keys.includes(key)) return "blue";
+		return null;
+	}
+
+	function formatMatchTime(m: NonNullable<TBANextMatch>): string {
+		const epoch = m.predicted_time ?? m.time;
+		if (!epoch) return "";
+		return new Date(epoch * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 	}
 
 	fetchAll();
@@ -116,6 +141,36 @@
 				</Button>
 			</div>
 		{:else}
+			{#if nextMatch}
+				{@const alliance = nextMatchAlliance(nextMatch)}
+				{@const partners = (alliance === "red" ? nextMatch.alliances.red.team_keys : nextMatch.alliances.blue.team_keys)
+					.filter((k) => k !== `frc${teamNumber}`)
+					.map((k) => k.replace("frc", ""))
+					.join(" & ")}
+				<div class="mx-2 mb-4 rounded-xl px-4 py-3 flex items-center justify-between gap-3
+					{alliance === 'red' ? 'bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800' :
+					 alliance === 'blue' ? 'bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800' :
+					 'bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700'}">
+					<div class="flex items-center gap-2">
+						<Icon icon="mdi:flag-checkered" class="size-4 shrink-0
+							{alliance === 'red' ? 'text-red-500' : alliance === 'blue' ? 'text-blue-500' : 'text-gray-400'}" />
+						<div>
+							<span class="text-sm font-semibold text-black dark:text-white">Next: {formatNextMatch(nextMatch)}</span>
+							{#if alliance}
+								<span class="ml-2 text-xs font-medium capitalize
+									{alliance === 'red' ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}">{alliance}</span>
+							{/if}
+							{#if partners}
+								<p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">with {partners}</p>
+							{/if}
+						</div>
+					</div>
+					{#if formatMatchTime(nextMatch)}
+						<span class="text-xs text-gray-500 dark:text-gray-400 shrink-0">{formatMatchTime(nextMatch)}</span>
+					{/if}
+				</div>
+			{/if}
+
 			<!-- Stats bar -->
 			<div class="flex flex-wrap items-center gap-x-4 gap-y-1 px-2 pb-4 text-sm text-gray-500 dark:text-gray-400">
 				<div class="flex items-center gap-1.5">

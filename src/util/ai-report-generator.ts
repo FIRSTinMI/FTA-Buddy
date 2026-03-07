@@ -135,11 +135,6 @@ function humanizeIssueType(value: string | null | undefined): string | null {
 		.trim();
 }
 
-function countFollowUpNotesForTeam(team: number | null, noteContexts: NoteContext[]): number {
-	if (team === null) return 0;
-	return noteContexts.filter((n) => n.team === team && n.note_type === "TeamIssue").length;
-}
-
 async function collectEventData(
 	eventCode: string,
 	eventName: string,
@@ -149,7 +144,7 @@ async function collectEventData(
 	options: CollectEventDataOptions = {},
 ): Promise<EventContext> {
 	const { includeTestMatches = true } = options;
-	const includedLevels: readonly ("None" | "Qualification" | "Playoff")[] = includeTestMatches ? ["None", "Qualification", "Playoff"] : ["Qualification", "Playoff"];
+	const includedLevels: readonly ("None" | "Practice" | "Qualification" | "Playoff")[] = includeTestMatches ? ["None", "Practice", "Qualification", "Playoff"] : ["Qualification", "Playoff"];
 
 	// Fetch all notes with their messages
 	const allNotes = await db.select().from(notes).where(eq(notes.event_code, eventCode)).execute();
@@ -223,6 +218,7 @@ async function collectEventData(
 		summary.total++;
 
 		if (me.status === "dismissed") summary.dismissed++;
+		if (me.status === "converted") summary.follow_up_note_count++;
 
 		const levelLabel = me.level ?? "Unknown";
 		summary.levels[levelLabel] = (summary.levels[levelLabel] ?? 0) + 1;
@@ -232,11 +228,6 @@ async function collectEventData(
 			const issueLabel = humanizeIssueType(detail.issue) ?? "Unknown";
 			summary.issue_breakdown[issueLabel] = (summary.issue_breakdown[issueLabel] ?? 0) + 1;
 		}
-	}
-
-	// Approximate follow-up note counts by team presence
-	for (const summary of meSummaryMap.values()) {
-		summary.follow_up_note_count = countFollowUpNotesForTeam(summary.team, noteContexts);
 	}
 
 	const matchEventSummaries = Array.from(meSummaryMap.values()).sort((a, b) => b.total - a.total);
@@ -263,7 +254,7 @@ async function collectEventData(
 	const notesWithCsa = noteContexts.filter((n) => n.assigned_to !== null).length;
 
 	const totalMatchEvents = allMatchEvents.length;
-	const testMatchEvents = allMatchEvents.filter((e) => e.level === "None").length;
+	const testMatchEvents = allMatchEvents.filter((e) => e.level === "None" || e.level === "Practice").length;
 	const officialMatchEvents = allMatchEvents.filter(
 		(e) => e.level === "Qualification" || e.level === "Playoff",
 	).length;

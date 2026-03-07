@@ -113,7 +113,6 @@ export const matchEventsRouter = router({
                 const matches: TBASimpleMatch[] = await res.json();
                 if (!Array.isArray(matches)) return null;
 
-                const now = Math.floor(Date.now() / 1000);
                 // Unplayed = actual_time is null or 0
                 const upcoming = matches
                     .filter((m) => !m.actual_time)

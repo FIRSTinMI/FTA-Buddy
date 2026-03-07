@@ -116,10 +116,12 @@
 		{:else}
 			{#if nextMatch}
 				{@const alliance = nextMatchAlliance(nextMatch)}
-				{@const partners = (alliance === "red" ? nextMatch.alliances.red.team_keys : nextMatch.alliances.blue.team_keys)
-					.filter((k) => k !== `frc${teamNumber}`)
-					.map((k) => k.replace("frc", ""))
-					.join(" & ")}
+				{@const partners = alliance !== null
+					? (alliance === "red" ? nextMatch.alliances.red.team_keys : nextMatch.alliances.blue.team_keys)
+						.filter((k) => k !== `frc${teamNumber}`)
+						.map((k) => k.replace("frc", ""))
+						.join(" & ")
+					: null}
 				<div class="mx-2 mb-4 rounded-xl px-4 py-3 flex items-center justify-between gap-3
 					{alliance === 'red' ? 'bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800' :
 					 alliance === 'blue' ? 'bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800' :

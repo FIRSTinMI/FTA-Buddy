@@ -52,7 +52,7 @@ export const matchEventsRouter = router({
                 .orderBy(desc(matchEvents.created_at))
                 .execute();
 
-            return rows as unknown as MatchEvent[];
+            return rows as MatchEvent[];
         }),
 
     /** Get match events for a specific team across all their matches (for field view summaries). */
@@ -188,6 +188,19 @@ export const matchEventsRouter = router({
                 .where(eq(users.token, ctx.token))) as Profile[];
             if (!authorProfile[0])
                 throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author profile" });
+
+            // Map log issue types to note issue types
+            const issueTypeMap: Record<string, string> = {
+                "Code disconnect": "RoboRioIssue",
+                "RIO disconnect": "RoboRioIssue",
+                "Radio disconnect": "RadioIssue",
+                "DS disconnect": "DSIssue",
+                "Brownout": "RobotPwrIssue",
+                "Large spike in ping": "RadioIssue",
+                "Sustained high ping": "RadioIssue",
+                "Low signal": "RadioIssue",
+                "High BWU": "RadioIssue",
+            };
 
             // Build note text from all issues in a combined event
             const issueList = (matchEvent.issues as { issue: string; duration: number | null }[] | null) ?? [

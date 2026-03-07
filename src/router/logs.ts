@@ -1,6 +1,6 @@
 import { inferRouterOutputs } from "@trpc/server";
 import { randomUUID } from "crypto";
-import { and, asc, count, eq, inArray, or } from "drizzle-orm";
+import { and, asc, count, eq, gt, inArray, ne, or } from "drizzle-orm";
 import { z } from "zod";
 import { DisconnectionEvent, FMSLogFrame, ROBOT } from "../../shared/types";
 import { db } from "../db/db";
@@ -174,6 +174,45 @@ export const matchRouter = router({
 						),
 					),
 				);
+		}),
+
+	/** Returns matches a team has played since a given date, optionally excluding one match by id. */
+	getMatchesSince: eventProcedure
+		.input(
+			z.object({
+				team: z.number(),
+				since: z.date(),
+				exclude_match_id: z.string().optional(),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const teamFilter = or(
+				eq(matchLogs.blue1, input.team),
+				eq(matchLogs.blue2, input.team),
+				eq(matchLogs.blue3, input.team),
+				eq(matchLogs.red1, input.team),
+				eq(matchLogs.red2, input.team),
+				eq(matchLogs.red3, input.team),
+			);
+			const filters = [
+				eq(matchLogs.event, ctx.event.code),
+				gt(matchLogs.start_time, input.since),
+				teamFilter,
+			];
+			if (input.exclude_match_id) {
+				filters.push(ne(matchLogs.id, input.exclude_match_id));
+			}
+			return await db
+				.select({
+					id: matchLogs.id,
+					match_number: matchLogs.match_number,
+					play_number: matchLogs.play_number,
+					level: matchLogs.level,
+					start_time: matchLogs.start_time,
+				})
+				.from(matchLogs)
+				.where(and(...filters))
+				.orderBy(asc(matchLogs.start_time));
 		}),
 
 	getMatches: eventProcedure

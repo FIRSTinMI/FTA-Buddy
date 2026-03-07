@@ -567,20 +567,6 @@
 						<Icon icon="mdi:account-switch" class="size-8" />
 					{/snippet}
 				</SidebarItem>
-				{#if $user.admin}
-					<SidebarItem
-						label="App Management"
-						class="text-sm"
-						onclick={() => {
-							drawerOpen = false;
-							navigate("/manage");
-						}}
-					>
-						{#snippet icon()}
-							<Icon icon="mdi:shield-crown-outline" class="size-8" />
-						{/snippet}
-					</SidebarItem>
-				{/if}
 				<SidebarItem
 					label="References"
 					onclick={() => {
@@ -702,6 +688,20 @@
 						<Icon icon="mdi:information" class="size-8" />
 					{/snippet}
 				</SidebarItem>
+				{#if $user.admin}
+					<SidebarItem
+						label="App Management"
+						class="text-sm"
+						onclick={() => {
+							drawerOpen = false;
+							navigate("/manage");
+						}}
+					>
+						{#snippet icon()}
+							<Icon icon="mdi:shield-crown-outline" class="size-8" />
+						{/snippet}
+					</SidebarItem>
+				{/if}
 			</SidebarGroup>
 		</SidebarWrapper>
 	</Sidebar>

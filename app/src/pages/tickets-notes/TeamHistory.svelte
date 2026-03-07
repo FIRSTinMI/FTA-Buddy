@@ -116,34 +116,14 @@
 		{:else}
 			{#if nextMatch}
 				{@const alliance = nextMatchAlliance(nextMatch)}
-				{@const partners = alliance !== null
-					? (alliance === "red" ? nextMatch.alliances.red.team_keys : nextMatch.alliances.blue.team_keys)
-						.filter((k) => k !== `frc${teamNumber}`)
-						.map((k) => k.replace("frc", ""))
-						.join(" & ")
-					: null}
-				<div class="mx-2 mb-4 rounded-xl px-4 py-3 flex items-center justify-between gap-3
-					{alliance === 'red' ? 'bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800' :
-					 alliance === 'blue' ? 'bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800' :
-					 'bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700'}">
-					<div class="flex items-center gap-2">
-						<Icon icon="mdi:flag-checkered" class="size-4 shrink-0
-							{alliance === 'red' ? 'text-red-500' : alliance === 'blue' ? 'text-blue-500' : 'text-gray-400'}" />
-						<div>
-							<span class="text-sm font-semibold text-black dark:text-white">Next: {formatNextMatch(nextMatch)}</span>
-							{#if alliance}
-								<span class="ml-2 text-xs font-medium capitalize
-									{alliance === 'red' ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}">{alliance}</span>
-							{/if}
-							{#if partners}
-								<p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">with {partners}</p>
-							{/if}
-						</div>
-					</div>
+				<p class="text-xs px-2 mb-4">
+					<span class="font-semibold {alliance === 'red' ? 'text-red-600 dark:text-red-400' : alliance === 'blue' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}">
+						Next: {formatNextMatch(nextMatch)}{#if alliance} <span class="capitalize">{alliance}</span>{/if}
+					</span>
 					{#if formatMatchTime(nextMatch)}
-						<span class="text-xs text-gray-500 dark:text-gray-400 shrink-0">{formatMatchTime(nextMatch)}</span>
+						<span class="text-gray-400 dark:text-gray-500"> {formatMatchTime(nextMatch)}</span>
 					{/if}
-				</div>
+				</p>
 			{/if}
 
 			<!-- Stats bar -->

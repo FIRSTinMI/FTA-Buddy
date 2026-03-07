@@ -603,9 +603,15 @@
 										: "Match Note"}
 							</span>
 							{#if note.note_type === "TeamIssue" && playedMatchesSince.length > 0}
-								<span class="text-xs text-gray-400 dark:text-gray-500 text-right shrink-0 mt-1">
-									Played since: {playedMatchesSince.map(formatMatchLabel).join(", ")}
-								</span>
+							<div class="flex flex-col items-end gap-0.5 shrink-0 mt-1">
+								<span class="text-xs text-gray-400 dark:text-gray-500">Played since:</span>
+								{#each playedMatchesSince as pm}
+									<button
+										class="text-xs text-blue-500 hover:underline"
+										onclick={() => navigate("/logs/:matchid", { params: { matchid: pm.id } })}
+									>{formatMatchLabel(pm)}</button>
+								{/each}
+							</div>
 							{/if}
 						</div>
 						{#if note.team}
@@ -614,30 +620,14 @@
 							</div>
 							{#if nextMatch}
 								{@const alliance = nextMatchAlliance(nextMatch, note.team)}
-								{@const partners = alliance !== null
-									? (alliance === "red" ? nextMatch.alliances.red.team_keys : nextMatch.alliances.blue.team_keys)
-										.filter((k) => k !== `frc${note!.team}`)
-										.map((k) => k.replace("frc", ""))
-										.join(" & ")
-									: null}
-								<div class="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm
-									{alliance === 'red' ? 'bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800' :
-									 alliance === 'blue' ? 'bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800' :
-									 'bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700'}">
-									<Icon icon="mdi:flag-checkered" class="size-4 shrink-0
-										{alliance === 'red' ? 'text-red-500' : alliance === 'blue' ? 'text-blue-500' : 'text-gray-400'}" />
-									<span class="font-semibold text-black dark:text-white">Next: {formatNextMatch(nextMatch)}</span>
-									{#if alliance}
-										<span class="font-medium capitalize
-											{alliance === 'red' ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}">{alliance}</span>
-									{/if}
-									{#if partners}
-										<span class="text-gray-500 dark:text-gray-400">w/ {partners}</span>
-									{/if}
+								<p class="text-xs">
+									<span class="font-semibold {alliance === 'red' ? 'text-red-600 dark:text-red-400' : alliance === 'blue' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}">
+										Next: {formatNextMatch(nextMatch)}{#if alliance} <span class="capitalize">{alliance}</span>{/if}
+									</span>
 									{#if formatMatchTime(nextMatch)}
-										<span class="ml-1 text-gray-400 dark:text-gray-500">{formatMatchTime(nextMatch)}</span>
+										<span class="text-gray-400 dark:text-gray-500"> {formatMatchTime(nextMatch)}</span>
 									{/if}
-								</div>
+								</p>
 							{/if}
 						{/if}
 						<div class="justify-center text-center sm:justify-start sm:text-left text-xs text-gray-400 dark:text-gray-500">

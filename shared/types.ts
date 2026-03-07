@@ -654,6 +654,14 @@ export type EventAutoEventSettings = Partial<Record<AutoEventIssueType, boolean>
 
 export type MatchEventStatus = "active" | "dismissed" | "converted";
 
+/** Detail for a single issue within a combined match event. */
+export interface MatchEventIssueDetail {
+	issue: string;
+	start_time: number | null;
+	end_time: number | null;
+	duration: number | null;
+}
+
 /**
  * A match event auto-generated from log analysis.
  * Can be dismissed or converted into a full note.
@@ -665,6 +673,7 @@ export interface MatchEvent {
 	team: number;
 	alliance: string;
 	issue: string;
+	issues: MatchEventIssueDetail[] | null;
 	match_number: number;
 	play_number: number;
 	level: string;

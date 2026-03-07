@@ -270,6 +270,7 @@ export const matchEvents = pgTable("match_events", {
 	team: integer("team").notNull(),
 	alliance: varchar("alliance").notNull(),
 	issue: issueEnum("issue").notNull(),
+	issues: jsonb("issues").$type<import("../../shared/types").MatchEventIssueDetail[]>(),
 	match_number: integer("match_number").notNull(),
 	play_number: integer("play_number").notNull(),
 	level: levelEnum("level").notNull(),

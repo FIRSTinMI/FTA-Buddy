@@ -22,7 +22,7 @@
 	import type { MonitorEvent } from "../util/monitorFrameHandler";
 	import { updateScheduleText } from "../util/schedule-detail-formatter";
 
-	let monitorFrame: MonitorFrame | undefined = frameHandler.getFrame();
+	let monitorFrame: MonitorFrame | undefined = $state(frameHandler.getFrame());
 	let cycleSubscription: ReturnType<typeof trpc.cycles.subscription.subscribe>;
 
 	let user = get(userStore);
@@ -40,18 +40,18 @@
 		monitorFrame = (evt as MonitorEvent).detail.frame;
 	});
 
-	let lastCycleTime = "";
+	let lastCycleTime = $state("");
 	let lastCycleTimeMS = 0;
 	let matchStartTime = new Date();
 	let bestCycleTimeMS = 0;
-	let currentCycleIsBest = false;
-	let averageCycleTimeMS = 8 * 60 * 1000; // Default to 7 minutes
-	let currentCycleTimeRedness = 0;
-	let currentCycleTime = "";
+	let currentCycleIsBest = $state(false);
+	let averageCycleTimeMS = $state(8 * 60 * 1000); // Default to 7 minutes
+	let currentCycleTimeRedness = $state(0);
+	let currentCycleTime = $state("");
 	let calculatedCycleTime: number | undefined | null = 0;
 
 	let scheduleDetails: ScheduleDetails | undefined;
-	let scheduleText = "";
+	let scheduleText = $state("");
 
 	onMount(async () => {
 		subscribeToFieldMonitor();
@@ -206,8 +206,8 @@
 		11: "Match Not Ready",
 	};
 
-	let modalOpen = false;
-	let modalStation: ROBOT = ROBOT.blue1;
+	let modalOpen = $state(false);
+	let modalStation: ROBOT = $state(ROBOT.blue1);
 
 	function detailView(evt: Event) {
 		let target = evt.target as HTMLElement;
@@ -218,7 +218,8 @@
 
 	const stations: ROBOT[] = Object.values(ROBOT);
 
-	let loading = true;
+	let loading = $state(true);
+
 </script>
 
 {#if monitorFrame}
@@ -229,74 +230,78 @@
 	<Spinner />
 </div>
 
-<div
-	class="grid grid-cols-fieldmonitor 2xl:grid-cols-fieldmonitor-large gap-0.5 md:gap-1 2xl:gap-2 mx-auto justify-center"
-	class:fullscreen={$fullscreen}
-	class:hidden={loading}
+<div 
+  class="flex-1 min-h-0 overflow-hidden"
 >
-	{#key monitorFrame}
-		{#if monitorFrame}
-			<div
-				class="col-span-6 lg:col-span-9 flex text-lg md:text-2xl font-semibold"
-				class:lg:text-5xl={$fullscreen}
-			>
-				<div class="px-2">M: {monitorFrame.match}</div>
-				<div class="flex-1 px-2 text-center">{FieldStates[monitorFrame.field]}</div>
-				<div class="px-2">{monitorFrame.exactAheadBehind || monitorFrame.time}</div>
-				<button
-					class="text-sm fixed top-12 right-0 z-50 hidden md:block"
-					onclick={(evt) => {
-						evt.preventDefault();
-						$fullscreen = !$fullscreen;
-						if ($fullscreen) {
-							document.documentElement.requestFullscreen();
-						} else {
-							document.exitFullscreen();
-						}
-					}}
+  <div
+		class="grid grid-cols-fieldmonitor 2xl:grid-cols-fieldmonitor-large gap-0.5 md:gap-1 2xl:gap-2 mx-auto justify-center"
+		class:fullscreen={$fullscreen}
+		class:hidden={loading}
+    >
+		{#key monitorFrame}
+			{#if monitorFrame}
+				<div
+					class="col-span-6 lg:col-span-9 flex text-lg md:text-2xl font-semibold"
+					class:lg:text-5xl={$fullscreen}
 				>
-					{#if $fullscreen}
-						<Icon icon="mdi:fullscreen-exit" class="w-8 h-8" />
-					{:else}
-						<Icon icon="mdi:fullscreen" class="w-8 h-8" />
-					{/if}
-				</button>
-			</div>
-			<p>Team</p>
-			<p>DS</p>
-			<p>Radio</p>
-			<p>Rio</p>
-			<p>Battery</p>
-			<p class="hidden lg:flex">Ping (ms)</p>
-			<p class="hidden lg:flex">BWU (mbps)</p>
-			<p class="hidden lg:flex">Signal (dBm)</p>
-			<p class="hidden lg:flex">Last Change</p>
-			<p class="lg:hidden">Net</p>
-			{#each stations as station}
-				<MonitorRow {station} {monitorFrame} {detailView} />
-			{/each}
-		{/if}
-		<div
-			class="col-span-6 lg:col-span-9 flex text-lg md:text-2xl font-semibold tabular-nums"
-			class:lg:text-4xl={$fullscreen}
-		>
-			<div class="text-left" class:text-4xl={$fullscreen} class:text-green-500={currentCycleIsBest}>
-				C: {lastCycleTime} (A: {formatTimeShortNoAgoSeconds(averageCycleTimeMS)})
-			</div>
-			<div class="grow" class:text-4xl={$fullscreen}>
-				<span class="hidden sm:inline">{scheduleText}</span>
-			</div>
+					<div class="px-2">M: {monitorFrame.match}</div>
+					<div class="flex-1 px-2 text-center">{FieldStates[monitorFrame.field]}</div>
+					<div class="px-2">{monitorFrame.exactAheadBehind || monitorFrame.time}</div>
+					<button
+						class="text-sm fixed top-12 right-0 z-50 hidden md:block"
+						onclick={(evt) => {
+							evt.preventDefault();
+							$fullscreen = !$fullscreen;
+							if ($fullscreen) {
+								document.documentElement.requestFullscreen();
+							} else {
+								document.exitFullscreen();
+							}
+						}}
+					>
+						{#if $fullscreen}
+							<Icon icon="mdi:fullscreen-exit" class="w-8 h-8" />
+						{:else}
+							<Icon icon="mdi:fullscreen" class="w-8 h-8" />
+						{/if}
+					</button>
+				</div>
+				<p>Team</p>
+				<p>DS</p>
+				<p>Radio</p>
+				<p>Rio</p>
+				<p>Battery</p>
+				<p class="hidden lg:flex">Ping (ms)</p>
+				<p class="hidden lg:flex">BWU (mbps)</p>
+				<p class="hidden lg:flex">Signal (dBm)</p>
+				<p class="hidden lg:flex">Last Change</p>
+				<p class="lg:hidden">Net</p>
+				{#each stations as station}
+					<MonitorRow {station} {monitorFrame} {detailView} />
+				{/each}
+			{/if}
 			<div
-				class="text-right"
-				class:text-4xl={$fullscreen}
-				style="color: rgba({75 * currentCycleTimeRedness + 180}, {180 * (1 - currentCycleTimeRedness)}, {180 *
-					(1 - currentCycleTimeRedness)}, 1)"
+				class="col-span-6 lg:col-span-9 flex text-lg md:text-2xl font-semibold tabular-nums"
+				class:lg:text-4xl={$fullscreen}
 			>
-				T: {currentCycleTime}
+				<div class="text-left" class:text-4xl={$fullscreen} class:text-green-500={currentCycleIsBest}>
+					C: {lastCycleTime} (A: {formatTimeShortNoAgoSeconds(averageCycleTimeMS)})
+				</div>
+				<div class="grow" class:text-4xl={$fullscreen}>
+					<span class="hidden sm:inline">{scheduleText}</span>
+				</div>
+				<div
+					class="text-right"
+					class:text-4xl={$fullscreen}
+					style="color: rgba({75 * currentCycleTimeRedness + 180}, {180 * (1 - currentCycleTimeRedness)}, {180 *
+						(1 - currentCycleTimeRedness)}, 1)"
+				>
+					T: {currentCycleTime}
+				</div>
 			</div>
-		</div>
-	{/key}
-	{#if !monitorFrame}
-		<p>Requires Chrome Extension to be setup on field network</p>
-	{/if}
+		{/key}
+		{#if !monitorFrame}
+			<p>Requires Chrome Extension to be setup on field network</p>
+		{/if}
+	</div>
 </div>

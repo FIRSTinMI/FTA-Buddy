@@ -7,6 +7,7 @@ const urlContainer = document.getElementById("url-container") as HTMLDivElement;
 const eventInput = document.getElementById("event") as HTMLInputElement;
 const eventContainer = document.getElementById("event-container") as HTMLDivElement;
 const enabledInput = document.getElementById("enabled") as HTMLInputElement;
+const fieldMonitorInput = document.getElementById("fieldMonitor") as HTMLInputElement;
 const tokenInput = document.getElementById("eventToken") as HTMLInputElement;
 const saveButton = document.getElementById("save") as HTMLButtonElement;
 
@@ -50,7 +51,7 @@ async function bgGetStatuses(): Promise<{ signalrStatus: string }> {
 }
 
 function load() {
-	chrome.storage.local.get(["url", "cloud", "useDev", "event", "eventToken", "changed", "enabled"], (item) => {
+	chrome.storage.local.get(["url", "cloud", "useDev", "event", "eventToken", "changed", "enabled", "fieldMonitor"], (item) => {
 		if (
 			item.url == undefined ||
 			item.cloud == undefined ||
@@ -66,6 +67,7 @@ function load() {
 				event: item.event || "2024event",
 				changed: item.changed || new Date().getTime(),
 				enabled: item.enabled ?? false,
+				fieldMonitor: item.fieldMonitor ?? false,
 				eventToken: item.eventToken || "",
 			};
 			chrome.storage.local.set(item);
@@ -77,6 +79,7 @@ function load() {
 		urlInput.value = String(item.url);
 		eventInput.value = String(item.event);
 		enabledInput.checked = Boolean(item.enabled);
+		fieldMonitorInput.checked = Boolean(item.fieldMonitor);
 		tokenInput.value = String(item.eventToken);
 		let changed = Number(item.changed);
 
@@ -89,6 +92,7 @@ function load() {
 
 		cloudCheckbox.addEventListener("input", handleUpdate);
 		enabledInput.addEventListener("input", handleUpdate);
+		fieldMonitorInput.addEventListener("input", handleUpdate);
 		if (useDevCheckbox) useDevCheckbox.addEventListener("input", handleUpdate);
 		saveButton.addEventListener("click", handleUpdate);
 		refreshButton.addEventListener("click", () => chrome.runtime.reload());
@@ -207,6 +211,7 @@ function handleUpdate() {
 		event: eventInput.value,
 		changed: new Date().getTime(),
 		enabled: enabledInput.checked,
+		fieldMonitor: fieldMonitorInput.checked,
 		eventToken: tokenInput.value,
 	});
 
@@ -215,7 +220,7 @@ function handleUpdate() {
 }
 
 function updatePopup(
-	setting: "url" | "cloud" | "useDev" | "enabled" | "event" | "eventToken",
+	setting: "url" | "cloud" | "useDev" | "enabled" | "fieldMonitor" | "event" | "eventToken",
 	value: boolean | string,
 ) {
 	const elm = document?.getElementById(setting);
@@ -231,7 +236,7 @@ chrome.storage.local.onChanged.addListener((changes) => {
 	for (const key of Object.keys(changes)) {
 		if (key === "changed") continue;
 		updatePopup(
-			key as "url" | "cloud" | "useDev" | "enabled" | "event" | "eventToken",
+			key as "url" | "cloud" | "useDev" | "enabled" | "fieldMonitor" | "event" | "eventToken",
 			changes[key].newValue as string | boolean,
 		);
 	}

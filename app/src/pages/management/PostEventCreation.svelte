@@ -6,6 +6,7 @@
 	import { trpc } from "../../main";
 	import { eventStore } from "../../stores/event";
 	import { userStore } from "../../stores/user";
+	import { LATEST_EXTENSION_VERSION } from "../../util/updater";
 
 	// Nexus state
 	let nexusApiKey = $state("");
@@ -109,7 +110,42 @@
 		saveAutoEventSettings();
 	}
 
+	// Extension state
+	let extensionDetected = $state(false);
+	let extensionEnabled = $state(false);
+	let extensionFieldMonitor = $state(false);
+	let extensionVersion = $state("");
+	let extensionOutdated = $state(false);
+	let extensionConfiguring = $state(false);
+	let extensionConfigured = $state(false);
+
+	window.addEventListener("message", (event) => {
+		if (event.data?.type === "pong") {
+			extensionDetected = true;
+			extensionVersion = event.data.version ?? "";
+			extensionEnabled = event.data.enabled ?? false;
+			extensionFieldMonitor = event.data.fieldMonitor ?? false;
+			extensionOutdated = extensionVersion < LATEST_EXTENSION_VERSION;
+		}
+	});
+
+	async function configureExtension() {
+		extensionConfiguring = true;
+		extensionConfigured = false;
+		try {
+			window.postMessage(
+				{ source: "page", type: "eventCode", code: $eventStore.code, token: $userStore.eventToken, fieldMonitor: true },
+				"*"
+			);
+			await new Promise((resolve) => setTimeout(resolve, 600));
+			extensionConfigured = true;
+		} finally {
+			extensionConfiguring = false;
+		}
+	}
+
 	onMount(() => {
+		window.postMessage({ source: "page", type: "ping" }, "*");
 		refreshNexusStatus();
 		nexusStatusInterval = setInterval(refreshNexusStatus, 30_000);
 		refreshFmsStatus();
@@ -198,17 +234,40 @@
 
 <div class="container mx-auto md:max-w-5xl flex flex-col p-4 py-8 space-y-3  h-full pb-12 overflow-y-auto">
 	<h1 class="text-2xl font-bold">Event Management</h1>
-	<span class="inline-flex gap-2 font-bold mx-auto">
-		<Indicator color={fmsExtensionConnected ? "green" : "red"} class="my-auto" />
-		{#if fmsExtensionConnected}
-			<span class="text-green-500">Extension Connected</span>
-			{#if fmsLastSeenAt}
-				<span class="text-yellow-500 text-xs font-normal my-auto">(last seen {fmsLastSeenAt.toLocaleTimeString()})</span>
+	<div class="flex flex-col items-center gap-1">
+		<span class="inline-flex gap-2 font-bold">
+			<Indicator color={fmsExtensionConnected ? "green" : "red"} class="my-auto" />
+			{#if fmsExtensionConnected}
+				<span class="text-green-500">Extension Connected</span>
+				{#if fmsLastSeenAt}
+					<span class="text-yellow-500 text-xs font-normal my-auto">(last seen {fmsLastSeenAt.toLocaleTimeString()})</span>
+				{/if}
+			{:else}
+				<span class="text-red-400">No Extension Connected</span>
 			{/if}
+		</span>
+		{#if extensionDetected}
+			<span class="text-xs text-gray-500">
+				{#if !extensionEnabled}
+					Extension not enabled —
+				{:else if !extensionFieldMonitor}
+					Field monitor off —
+				{:else}
+					Field monitor on ·
+				{/if}
+				<button
+					class="text-blue-400 hover:underline disabled:opacity-50"
+					disabled={extensionConfiguring}
+					onclick={configureExtension}
+				>{extensionConfiguring ? "Configuring…" : extensionConfigured ? "Reconfigure extension" : "Configure extension"}</button>
+			</span>
 		{:else}
-			<span class="text-red-400">No Extension Connected</span>
+			<span class="text-xs text-gray-500">
+				No extension detected on this computer —
+				<a href="https://chromewebstore.google.com/detail/fta-buddy/kddnhihfpfnehnnhbkfajdldlgigohjc" target="_blank" class="text-blue-400 hover:underline">Install</a>
+			</span>
 		{/if}
-	</span>
+	</div>
 	<div class="flex flex-col border-t border-neutral-500 pt-5 gap-6">
 		<div class="border-b border-neutral-500 pb-5">
 			<div>

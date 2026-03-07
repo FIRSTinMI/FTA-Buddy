@@ -308,6 +308,10 @@ export async function logAnalysisLoop(limit: number) {
 		for (const station in ROBOT) {
 			//@ts-ignore
 			const teamNumber: number = log[station];
+
+			// Skip stations with no team (e.g. empty stations in test matches)
+			if (!teamNumber) continue;
+
 			//@ts-ignore
 			const logData = decompressStationLog(log[`${station}_log`]);
 

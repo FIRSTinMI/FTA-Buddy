@@ -3,7 +3,7 @@ import { eventStore } from "../stores/event";
 import { settingsStore } from "../stores/settings";
 import { userStore } from "../stores/user";
 
-export const LATEST_EXTENSION_VERSION = "1.26.0";
+export const LATEST_EXTENSION_VERSION = "1.26.2";
 
 interface Version {
 	changelog?: string;
@@ -11,6 +11,17 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+    "2.7.0.1": {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.7.0.1</h1>
+        <p>Week 1 bug fixes</p>
+        <ul>
+        <li>Test matches with blank teams now have the log downloaded correctly</li>
+        <li>Fixed a bug with FTA App sync causing duplicate notes</li>
+        <li>Added a "Field Monitor" switch to the extension so you don't have multiple extensions pushing updates simultaneously</li>
+        <li>Fixed extension configuration from the web app</li>
+        </ul>`,
+    },
 	"2.7.0.0": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.0.0</h1>

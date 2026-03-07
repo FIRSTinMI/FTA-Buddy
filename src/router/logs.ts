@@ -28,12 +28,12 @@ export const matchRouter = router({
 				playNumber: z.number(),
 				level: z.enum(["None", "Practice", "Qualification", "Playoff"]),
 				actualStartTime: z.string(),
-				teamNumberBlue1: z.number().optional(),
-				teamNumberBlue2: z.number().optional(),
-				teamNumberBlue3: z.number().optional(),
-				teamNumberRed1: z.number().optional(),
-				teamNumberRed2: z.number().optional(),
-				teamNumberRed3: z.number().optional(),
+				teamNumberBlue1: z.number().nullish(),
+				teamNumberBlue2: z.number().nullish(),
+				teamNumberBlue3: z.number().nullish(),
+				teamNumberRed1: z.number().nullish(),
+				teamNumberRed2: z.number().nullish(),
+				teamNumberRed3: z.number().nullish(),
 				logs: z.object({
 					blue1: z.array(z.any()).optional(),
 					blue2: z.array(z.any()).optional(),
@@ -68,12 +68,12 @@ export const matchRouter = router({
 					red1: input.teamNumberRed1,
 					red2: input.teamNumberRed2,
 					red3: input.teamNumberRed3,
-					blue1_log: compressStationLog(input.logs.blue1 as FMSLogFrame[]),
-					blue2_log: compressStationLog(input.logs.blue2 as FMSLogFrame[]),
-					blue3_log: compressStationLog(input.logs.blue3 as FMSLogFrame[]),
-					red1_log: compressStationLog(input.logs.red1 as FMSLogFrame[]),
-					red2_log: compressStationLog(input.logs.red2 as FMSLogFrame[]),
-					red3_log: compressStationLog(input.logs.red3 as FMSLogFrame[]),
+					blue1_log: input.teamNumberBlue1 != null && input.logs.blue1 ? compressStationLog(input.logs.blue1 as FMSLogFrame[]) : null,
+					blue2_log: input.teamNumberBlue2 != null && input.logs.blue2 ? compressStationLog(input.logs.blue2 as FMSLogFrame[]) : null,
+					blue3_log: input.teamNumberBlue3 != null && input.logs.blue3 ? compressStationLog(input.logs.blue3 as FMSLogFrame[]) : null,
+					red1_log: input.teamNumberRed1 != null && input.logs.red1 ? compressStationLog(input.logs.red1 as FMSLogFrame[]) : null,
+					red2_log: input.teamNumberRed2 != null && input.logs.red2 ? compressStationLog(input.logs.red2 as FMSLogFrame[]) : null,
+					red3_log: input.teamNumberRed3 != null && input.logs.red3 ? compressStationLog(input.logs.red3 as FMSLogFrame[]) : null,
 				})
 				.execute();
 		}),
@@ -88,12 +88,12 @@ export const matchRouter = router({
 				playNumber: z.number(),
 				level: z.enum(["None", "Practice", "Qualification", "Playoff"]),
 				actualStartTime: z.string(),
-				teamNumberBlue1: z.number().optional(),
-				teamNumberBlue2: z.number().optional(),
-				teamNumberBlue3: z.number().optional(),
-				teamNumberRed1: z.number().optional(),
-				teamNumberRed2: z.number().optional(),
-				teamNumberRed3: z.number().optional(),
+				teamNumberBlue1: z.number().nullish(),
+				teamNumberBlue2: z.number().nullish(),
+				teamNumberBlue3: z.number().nullish(),
+				teamNumberRed1: z.number().nullish(),
+				teamNumberRed2: z.number().nullish(),
+				teamNumberRed3: z.number().nullish(),
 				logs: z.object({
 					blue1: z.string().optional(),
 					blue2: z.string().optional(),
@@ -128,12 +128,12 @@ export const matchRouter = router({
 					red1: input.teamNumberRed1,
 					red2: input.teamNumberRed2,
 					red3: input.teamNumberRed3,
-					blue1_log: input.logs.blue1,
-					blue2_log: input.logs.blue2,
-					blue3_log: input.logs.blue3,
-					red1_log: input.logs.red1,
-					red2_log: input.logs.red2,
-					red3_log: input.logs.red3,
+					blue1_log: input.teamNumberBlue1 != null ? input.logs.blue1 : null,
+					blue2_log: input.teamNumberBlue2 != null ? input.logs.blue2 : null,
+					blue3_log: input.teamNumberBlue3 != null ? input.logs.blue3 : null,
+					red1_log: input.teamNumberRed1 != null ? input.logs.red1 : null,
+					red2_log: input.teamNumberRed2 != null ? input.logs.red2 : null,
+					red3_log: input.teamNumberRed3 != null ? input.logs.red3 : null,
 				})
 				.execute();
 		}),
@@ -175,6 +175,33 @@ export const matchRouter = router({
 				team: z.number().optional(),
 			}),
 		)
+        .output(
+            z.array(z.object({
+                id: z.string(),
+                match_number: z.number(),
+                play_number: z.number(),
+                level: z.string(),
+                start_time: z.date(),
+                blue1: z.number().nullable(),
+                blue2: z.number().nullable(),
+                blue3: z.number().nullable(),
+                red1: z.number().nullable(),
+                red2: z.number().nullable(),
+                red3: z.number().nullable(),
+                blue1_has_event: z.boolean(),
+                blue2_has_event: z.boolean(),
+                blue3_has_event: z.boolean(),
+                red1_has_event: z.boolean(),
+                red2_has_event: z.boolean(),
+                red3_has_event: z.boolean(),
+                blue1_bypassed: z.boolean(),
+                blue2_bypassed: z.boolean(),
+                blue3_bypassed: z.boolean(),
+                red1_bypassed: z.boolean(),
+                red2_bypassed: z.boolean(),
+                red3_bypassed: z.boolean(),
+            })),
+        )
 		.query(async ({ input, ctx }) => {
 			const filters = [eq(matchLogs.event, ctx.event.code)];
 
@@ -207,7 +234,7 @@ export const matchRouter = router({
 				.where(and(...filters))
 				.orderBy(asc(matchLogs.start_time));
 
-			if (matches.length === 0) return matches;
+			if (matches.length === 0) return [];
 
 			const analysisRows = await db
 				.select({

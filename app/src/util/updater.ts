@@ -11,6 +11,18 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+    "2.7.0.5": {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.7.0.5</h1>
+        <ul>
+        <li>Back button on team history and note pages now correctly returns to the previous page</li>
+        <li>Next match details shown on note and team history view</li>
+        <li>Matches played since a note was created are shown on the view note page</li>
+        <li>AI event report improvements</li>
+        <li>SSE reconnects faster after connection loss</li>
+        <li>Fixed memory leaks on field monitor</li>
+        </ul>`,
+    },
     "2.7.0.4": {
         changelog: `
         <h1 class="text-lg font-bold">v2.7.0.4</h1>

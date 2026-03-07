@@ -13,6 +13,9 @@
 
 	let hearts: { [k: string]: boolean } = {};
 
+	type EventUserEntry = { id: number; username: string; role: string };
+	let eventUsers: Record<string, EventUserEntry[]> = {};
+
 	onMount(() => {
 		if (subscription) {
 			subscription.unsubscribe();
@@ -52,6 +55,10 @@
 				},
 			},
 		);
+
+		trpc.event.getAllWithUsers.query().then((data) => {
+			eventUsers = Object.fromEntries(data.map((e) => [e.code, e.users]));
+		});
 	});
 
 	const FieldStates = {
@@ -97,19 +104,15 @@
 	</div>
 </div>
 
-<div class="grid grid-cols-6 gap-2 mx-auto max-w-5xl">
+<div class="grid grid-cols-4 gap-2 mx-auto max-w-5xl">
 	<p>Name</p>
 	<p>Field State</p>
 	<p>Match</p>
-	<p>Ahead Behind</p>
-	<p>Exact</p>
 	<p>Heartbeat</p>
 	{#each events as event}
 		<p>{event.code} - {event.name}</p>
 		<p>{FieldStates[event.field]}</p>
 		<p>{event.level} - {event.match}</p>
-		<p>{event.aheadBehind}</p>
-		<p>{event.exactAheadBehind}</p>
 		<p>
 			<Icon
 				icon="mdi:favorite"
@@ -124,7 +127,7 @@
 				</div>
 			{/each}
 		</div>
-		<div class="col-span-4">
+		<div class="col-span-2">
 			{#each event.extensions as extension}
 				<div class="flex items-center gap-2">
 					<p>{extension.ip}</p>
@@ -135,6 +138,14 @@
 				</div>
 			{/each}
 		</div>
+		{#if eventUsers[event.code]?.length}
+			<div class="col-span-4 flex flex-wrap gap-1 pb-1 border-b border-neutral-300">
+				<span class="text-xs text-gray-500 mr-1">Users:</span>
+				{#each eventUsers[event.code] as u}
+					<span class="text-xs bg-neutral-100 dark:bg-neutral-700 rounded px-1.5 py-0.5">{u.username} <span class="text-gray-400">({u.role})</span></span>
+				{/each}
+			</div>
+		{/if}
 	{/each}
 </div>
 </div>

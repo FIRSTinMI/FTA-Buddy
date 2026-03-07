@@ -530,7 +530,6 @@
 				<Button onclick={() => navigate("/")}>Go to App</Button>
 				<Button outline onclick={() => navigate("/manage/event-created")}>Event Management</Button>
 				<Button outline href="/manage/meshed-event">Create Meshed Event</Button>
-				<Button outline href="/manage">App Management</Button>
 			</div>
 
 			<!-- Currently have an event selected -->

@@ -59,6 +59,15 @@
 	type TBANextMatch = Awaited<ReturnType<typeof trpc.matchEvents.getNextMatchForTeam.query>>;
 	let nextMatch: TBANextMatch = $state(null);
 
+	type PlayedMatch = { id: string; match_number: number; play_number: number; level: string };
+	let playedMatchesSince: PlayedMatch[] = $state([]);
+
+	function formatMatchLabel(m: PlayedMatch): string {
+		const prefix = m.level === "Qualification" ? "Q" : m.level === "Playoff" ? "PO" : m.level === "Practice" ? "P" : "M";
+		const suffix = m.play_number > 1 ? `/${m.play_number}` : "";
+		return `${prefix}${m.match_number}${suffix}`;
+	}
+
 	function formatNextMatch(m: NonNullable<TBANextMatch>): string {
 		const levelMap: Record<string, string> = { qm: "Qual", qf: "QF", sf: "SF", f: "Final", ef: "EF" };
 		const level = levelMap[m.comp_level] ?? m.comp_level.toUpperCase();
@@ -90,6 +99,15 @@
 			if (note.team) {
 				trpc.matchEvents.getNextMatchForTeam.query({ team_number: note.team }).then((m) => {
 					nextMatch = m;
+				}).catch(() => {});
+			}
+			if (note.note_type === "TeamIssue" && note.team) {
+				trpc.match.getMatchesSince.query({
+					team: note.team,
+					since: new Date(note.created_at),
+					exclude_match_id: note.match_id ?? undefined,
+				}).then((ms) => {
+					playedMatchesSince = ms;
 				}).catch(() => {});
 			}
 			if (note.match_id) {
@@ -576,16 +594,23 @@
 					{/if}
 
 					<div class="flex flex-col flex-1 min-h-0 overflow-y-auto gap-3">
-						<span class="flex font-bold justify-center sm:justify-start text-xl text-black dark:text-white">
-							{note.note_type === "TeamIssue"
-								? "Team Issue"
-								: note.note_type === "EventNote"
-									? "Event Note"
-									: "Match Note"}
-						</span>
+						<div class="flex items-start justify-between gap-4">
+							<span class="font-bold text-xl text-black dark:text-white">
+								{note.note_type === "TeamIssue"
+									? "Team Issue"
+									: note.note_type === "EventNote"
+										? "Event Note"
+										: "Match Note"}
+							</span>
+							{#if note.note_type === "TeamIssue" && playedMatchesSince.length > 0}
+								<span class="text-xs text-gray-400 dark:text-gray-500 text-right shrink-0 mt-1">
+									Played since: {playedMatchesSince.map(formatMatchLabel).join(", ")}
+								</span>
+							{/if}
+						</div>
 						{#if note.team}
 							<div class="justify-center text-center sm:justify-start sm:text-left">
-                                Team {displayTeam(note.team)}
+								Team {displayTeam(note.team)}
 							</div>						{#if nextMatch}
 							{@const alliance = nextMatchAlliance(nextMatch, note.team)}
 							{@const partners = (alliance === "red" ? nextMatch.alliances.red.team_keys : nextMatch.alliances.blue.team_keys)

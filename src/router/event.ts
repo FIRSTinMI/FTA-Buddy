@@ -316,6 +316,35 @@ export const eventRouter = router({
 			.orderBy(desc(events.created_at));
 	}),
 
+	getAllWithUsers: adminProcedure.query(async () => {
+		const eventsData = await db
+			.select({
+				code: events.code,
+				name: events.name,
+				users: events.users,
+			})
+			.from(events)
+			.where(eq(events.archived, false))
+			.orderBy(desc(events.created_at));
+
+		const allUserIds = Array.from(new Set(eventsData.flatMap((e) => (e.users as number[]) ?? [])));
+		const usersList =
+			allUserIds.length > 0
+				? await db
+						.select({ id: users.id, username: users.username, role: users.role })
+						.from(users)
+						.where(inArray(users.id, allUserIds))
+				: [];
+
+		return eventsData.map((event) => ({
+			code: event.code,
+			name: event.name,
+			users: ((event.users as number[]) ?? [])
+				.map((id) => usersList.find((u) => u.id === id))
+				.filter((u): u is NonNullable<typeof u> => u != null),
+		}));
+	}),
+
 	syncTeams: eventProcedure
 		.input(
 			z.object({

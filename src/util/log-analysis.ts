@@ -372,7 +372,7 @@ export async function logAnalysisLoop(limit: number) {
 					}
 				}
 			} else if (analyzedLog.length > 0) {
-				// Insert one row per event
+				// Insert one row per event into analyzed_logs
 				await db
 					.insert(analyzedLogs)
 					.values(
@@ -395,8 +395,7 @@ export async function logAnalysisLoop(limit: number) {
 					)
 					.execute();
 
-				// Generate match events for enabled issue types, grouped by issue.
-				// Group analyzed events by issue type so we create one match event per issue
+				// Collect all enabled issues, grouped by issue type, then combine into one match event
 				const groupedByIssue = new Map<string, DisconnectionEvent[]>();
 				for (const evt of analyzedLog) {
 					const issueType = evt.issue as AutoEventIssueType;
@@ -408,15 +407,25 @@ export async function logAnalysisLoop(limit: number) {
 					}
 				}
 
+				// Build per-issue detail entries for the combined event
+				const issueDetails: { issue: string; start_time: number | null; end_time: number | null; duration: number | null }[] = [];
 				for (const [issue, evts] of groupedByIssue) {
-					// Consolidate all occurrences into one event
-					// Match time counts down, so max startTime = earliest, min endTime = latest
 					const startTime = Math.max(...evts.map((e) => e.startTime));
 					const endTime = Math.min(...evts.map((e) => e.endTime));
 					const totalDuration = evts.reduce((sum, e) => sum + Math.abs(e.duration), 0);
 
 					// Skip brownouts with less than 10 seconds total duration
 					if (issue === "Brownout" && totalDuration < 10) continue;
+
+					issueDetails.push({ issue, start_time: startTime, end_time: endTime, duration: totalDuration });
+				}
+
+				if (issueDetails.length > 0) {
+					// Use the first issue as the primary for backward compat
+					const primaryIssue = issueDetails[0].issue;
+					const overallStartTime = Math.max(...issueDetails.map((d) => d.start_time ?? 0));
+					const overallEndTime = Math.min(...issueDetails.map((d) => d.end_time ?? 0));
+					const overallDuration = issueDetails.reduce((sum, d) => sum + Math.abs(d.duration ?? 0), 0);
 
 					const matchEventId = randomUUID();
 					const [inserted] = await db
@@ -427,19 +436,19 @@ export async function logAnalysisLoop(limit: number) {
 							event_code: log.event,
 							team: teamNumber,
 							alliance,
-							issue: issue as (typeof issueEnum.enumValues)[number],
+							issue: primaryIssue as (typeof issueEnum.enumValues)[number],
+							issues: issueDetails,
 							match_number: log.match_number,
 							play_number: log.play_number,
 							level: log.level,
-							start_time: startTime,
-							end_time: endTime,
-							duration: totalDuration,
+							start_time: overallStartTime,
+							end_time: overallEndTime,
+							duration: overallDuration,
 							status: "active",
 						})
 						.returning()
 						.execute();
 
-					// Only emit real-time notifications if the event is currently in memory
 					if (serverEvent) {
 						serverEvent.matchEventEmitter.emit("create", {
 							kind: "match_event_create",

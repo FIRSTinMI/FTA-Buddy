@@ -34,7 +34,7 @@ export const matchEventsRouter = router({
                 .orderBy(desc(matchEvents.created_at))
                 .execute();
 
-            return rows as MatchEvent[];
+            return rows as unknown as MatchEvent[];
         }),
 
     /** Get match events for a specific team across all their matches (for field view summaries). */
@@ -152,39 +152,44 @@ export const matchEventsRouter = router({
                 "High BWU": "RadioIssue",
             };
 
+            // Build note text from all issues in a combined event
+            const issueList = (matchEvent.issues as { issue: string; duration: number | null }[] | null) ?? [
+                { issue: matchEvent.issue, duration: matchEvent.duration },
+            ];
             const noteText =
-                input.text || `[Auto] ${matchEvent.issue} detected in match ${matchEvent.match_number} (${Math.abs(matchEvent.duration ?? 0).toFixed(0)}s)`;
+                input.text ||
+                `[Auto] ${issueList.map((d) => `${d.issue} (${Math.abs(d.duration ?? 0).toFixed(0)}s)`).join(", ")} in match ${matchEvent.match_number}`;
 
-            const { noteId, newNote } = await db.transaction(async (tx) => {  
-                const newNoteId = randomUUID();  
-                const [insertedNote] = await tx  
-                    .insert(notes)  
-                    .values({  
-                        id: newNoteId,  
-                        text: noteText,  
-                        author_id: authorProfile[0].id,  
-                        author: authorProfile[0],  
-                        team: matchEvent.team,  
-                        note_type: "TeamIssue",  
-                        resolution_status: "Open",  
-                        issue_type: (issueTypeMap[matchEvent.issue] ?? "Other") as any,  
-                        match_number: matchEvent.match_number,  
-                        play_number: matchEvent.play_number,  
-                        tournament_level: matchEvent.level as any,  
-                        event_code: event.code,  
-                        match_id: matchEvent.match_id,  
-                    })  
-                    .returning()  
-                    .execute();  
+            const { noteId, newNote } = await db.transaction(async (tx) => {
+                const newNoteId = randomUUID();
+                const [insertedNote] = await tx
+                    .insert(notes)
+                    .values({
+                        id: newNoteId,
+                        text: noteText,
+                        author_id: authorProfile[0].id,
+                        author: authorProfile[0],
+                        team: matchEvent.team,
+                        note_type: "TeamIssue",
+                        resolution_status: "Open",
+                        issue_type: (issueTypeMap[matchEvent.issue] ?? "Other") as any,
+                        match_number: matchEvent.match_number,
+                        play_number: matchEvent.play_number,
+                        tournament_level: matchEvent.level as any,
+                        event_code: event.code,
+                        match_id: matchEvent.match_id,
+                    })
+                    .returning()
+                    .execute();
 
-                await tx  
-                    .update(matchEvents)  
-                    .set({ status: "converted", converted_note_id: newNoteId })  
-                    .where(eq(matchEvents.id, input.id))  
-                    .execute();  
+                await tx
+                    .update(matchEvents)
+                    .set({ status: "converted", converted_note_id: newNoteId })
+                    .where(eq(matchEvents.id, input.id))
+                    .execute();
 
-                return { noteId: newNoteId, newNote: insertedNote };  
-            });  
+                return { noteId: newNoteId, newNote: insertedNote };
+            });
 
             // Emit events
             event.noteUpdateEmitter.emit("note_update", { kind: "create", note: newNote as Note });
@@ -235,6 +240,7 @@ export const matchEventsRouter = router({
             .select({
                 team: matchEvents.team,
                 issue: matchEvents.issue,
+                issues: matchEvents.issues,
                 status: matchEvents.status,
                 note_resolution: notes.resolution_status,
             })
@@ -299,8 +305,12 @@ export const matchEventsRouter = router({
                 if (row.note_resolution === "Resolved") t.resolved++;
                 else if (row.note_resolution === "Open") t.unresolved++;
             }
-            const label = abbrev[row.issue] ?? row.issue;
-            t.issueCounts.set(label, (t.issueCounts.get(label) ?? 0) + 1);
+            // Count each sub-issue in a combined event
+            const details = (row.issues as { issue: string }[] | null) ?? [{ issue: row.issue }];
+            for (const d of details) {
+                const label = abbrev[d.issue] ?? d.issue;
+                t.issueCounts.set(label, (t.issueCounts.get(label) ?? 0) + 1);
+            }
         }
 
         // Sort teams by total issues descending

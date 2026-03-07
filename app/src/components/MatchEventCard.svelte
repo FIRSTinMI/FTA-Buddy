@@ -2,7 +2,7 @@
 	import Icon from "@iconify/svelte";
 	import { Badge, Button } from "flowbite-svelte";
 	import { formatTimeNoAgoHourMins } from "../../../shared/formatTime";
-	import type { MatchEvent } from "../../../shared/types";
+	import type { MatchEvent, MatchEventIssueDetail } from "../../../shared/types";
 	import { trpc } from "../main";
 	import { navigate } from "../router";
 	import { toast } from "../util/toast";
@@ -113,6 +113,19 @@
 		}
 	}
 
+	/** Resolved list of issue details – uses `issues` array if present, otherwise falls back to the single issue. */
+	let issueList: MatchEventIssueDetail[] = $derived(
+		matchEvent.issues && matchEvent.issues.length > 0
+			? matchEvent.issues
+			: [{ issue: matchEvent.issue, start_time: matchEvent.start_time, end_time: matchEvent.end_time, duration: matchEvent.duration }],
+	);
+
+	function formatDuration(dur: number | null) {
+		const d = Math.abs(dur ?? 0);
+		if (d >= 60) return `${(d / 60).toFixed(1)}m`;
+		return `${d.toFixed(0)}s`;
+	}
+
 	let durationStr = $derived.by(() => {
 		const dur = Math.abs(matchEvent.duration ?? 0);
 		if (dur >= 60) return `${(dur / 60).toFixed(1)}m`;
@@ -126,7 +139,9 @@
 
 {#if compact}
 	<div class="flex items-center gap-1 text-xs py-0.5">
-		<Badge color={ISSUE_COLORS[matchEvent.issue] ?? "gray"} class="text-[10px]">{matchEvent.issue}</Badge>
+		{#each issueList as detail}
+			<Badge color={ISSUE_COLORS[detail.issue] ?? "gray"} class="text-[10px]">{detail.issue}</Badge>
+		{/each}
 		{#if isBypass && bypassGroup && bypassGroup.length > 1}
 			<span class="text-gray-400">{bypassGroup.length} matches</span>
 		{:else}
@@ -162,7 +177,9 @@
 					{#if matchEvent.team !== null}
 						<span class="font-bold text-base">{displayTeam(matchEvent.team)}</span>
 					{/if}
-					<Badge color={ISSUE_COLORS[matchEvent.issue] ?? "gray"}>{matchEvent.issue}</Badge>
+					{#each issueList as detail}
+						<Badge color={ISSUE_COLORS[detail.issue] ?? "gray"}>{detail.issue}</Badge>
+					{/each}
 					{#if bypassGroup && bypassGroup.length > 1}
 						{#each bypassGroup as bp}
 							<Badge color="teal">
@@ -185,20 +202,26 @@
 				</div>
 			</div>
 
-			<p class="text-sm text-black dark:text-white leading-snug">
+			<div class="text-sm text-black dark:text-white leading-snug">
 				{#if isBypass}
-					{#if bypassCount > 1}
-						Team was Bypassed for {bypassCount} Matches
-					{:else}
-						Team was Bypassed
-					{/if}
+					<p>
+						{#if bypassCount > 1}
+							Team was Bypassed for {bypassCount} Matches
+						{:else}
+							Team was Bypassed
+						{/if}
+					</p>
 				{:else}
-					{matchEvent.issue} for {durationStr} total
-					{#if matchEvent.start_time !== null && matchEvent.end_time !== null}
-						({matchEvent.start_time.toFixed(0)}s → {matchEvent.end_time.toFixed(0)}s match time)
-					{/if}
+					{#each issueList as detail}
+						<p>
+							{detail.issue} for {formatDuration(detail.duration)} total
+							{#if detail.start_time !== null && detail.end_time !== null}
+								({detail.start_time.toFixed(0)}s → {detail.end_time.toFixed(0)}s match time)
+							{/if}
+						</p>
+					{/each}
 				{/if}
-			</p>
+			</div>
 
 			<div class="flex items-center justify-between gap-2">
 				{#if !isBypass}

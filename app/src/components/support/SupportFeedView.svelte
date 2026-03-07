@@ -27,12 +27,18 @@
 	$effect(() => {
 		if (teamParam) search = teamParam;
 	});
-	let typeFilter: string = $state("all");
-	let statusFilter: string = $state("all");
+	let typeFilter: string = $state($settingsStore.supportFeedTypeFilter ?? "all");
+	let statusFilter: string = $state($settingsStore.supportFeedStatusFilter ?? "all");
 	let feedFilter: string = $state($settingsStore.supportFeedFilter ?? "all");
 
 	$effect(() => {
 		$settingsStore.supportFeedFilter = feedFilter as "all" | "notes" | "events";
+	});
+	$effect(() => {
+		$settingsStore.supportFeedTypeFilter = typeFilter as "all" | "TeamIssue" | "EventNote" | "MatchNote";
+	});
+	$effect(() => {
+		$settingsStore.supportFeedStatusFilter = statusFilter as "all" | "Open" | "Resolved";
 	});
 
 	let notes: Note[] = $state([]);

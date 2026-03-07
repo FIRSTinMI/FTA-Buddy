@@ -51,7 +51,7 @@ interface EventContext {
 		most_common_issues: Array<{ issue: string; count: number }>;
 		most_active_threads: Array<{ team: number | null; text_preview: string; message_count: number }>;
 		teams_with_most_issues: Array<{ team: number; note_count: number }>;
-        teams_with_most_match_events: Array<{ team: number; total: number }>;
+		teams_with_most_match_events: Array<{ team: number; total: number }>;
 	};
 }
 
@@ -79,6 +79,7 @@ async function collectEventData(
 		.select({
 			team: matchEvents.team,
 			issue: matchEvents.issue,
+			issues: matchEvents.issues,
 			status: matchEvents.status,
 		})
 		.from(matchEvents)
@@ -127,32 +128,35 @@ async function collectEventData(
 		s.total++;
 		if (me.status === "dismissed") s.dismissed++;
 		if (me.status === "converted") s.converted++;
-		s.issue_breakdown[me.issue] = (s.issue_breakdown[me.issue] ?? 0) + 1;
+		const details = (me.issues as { issue: string }[] | null) ?? [{ issue: me.issue }];
+		for (const d of details) {
+			s.issue_breakdown[d.issue] = (s.issue_breakdown[d.issue] ?? 0) + 1;
+		}
 	}
 	const matchEventSummaries = Array.from(meSummaryMap.values()).sort((a, b) => b.total - a.total);
 
-    const HIGH_IMPACT_ISSUES = new Set([
-    "Bypassed",
-    "RIO disconnect",
-    "Radio disconnect",
-    "Communication loss",
-    "Lost comms",
-    "Comms loss",
-    ]);
+	const HIGH_IMPACT_ISSUES = new Set([
+		"Bypassed",
+		"RIO disconnect",
+		"Radio disconnect",
+		"Communication loss",
+		"Lost comms",
+		"Comms loss",
+	]);
 
-    const teamsWithMostMatchEvents = matchEventSummaries
-    .slice(0, 5)
-    .map((s) => ({ team: s.team, total: s.total }));
+	const teamsWithMostMatchEvents = matchEventSummaries
+		.slice(0, 5)
+		.map((s) => ({ team: s.team, total: s.total }));
 
-    const teamsWithMostHighImpactMatchEvents = matchEventSummaries
-    .map((s) => {
-        const hi = Object.entries(s.issue_breakdown).reduce((acc, [issue, count]) => {
-        return acc + (HIGH_IMPACT_ISSUES.has(issue) ? count : 0);
-        }, 0);
-        return { team: s.team, high_impact_total: hi };
-    })
-    .sort((a, b) => b.high_impact_total - a.high_impact_total)
-    .slice(0, 5);
+	const teamsWithMostHighImpactMatchEvents = matchEventSummaries
+		.map((s) => {
+			const hi = Object.entries(s.issue_breakdown).reduce((acc, [issue, count]) => {
+				return acc + (HIGH_IMPACT_ISSUES.has(issue) ? count : 0);
+			}, 0);
+			return { team: s.team, high_impact_total: hi };
+		})
+		.sort((a, b) => b.high_impact_total - a.high_impact_total)
+		.slice(0, 5);
 
 	// Derived stats
 	const teamIssueNotes = noteContexts.filter((n) => n.note_type === "TeamIssue");
@@ -206,7 +210,7 @@ async function collectEventData(
 			most_common_issues: mostCommonIssues,
 			most_active_threads: mostActiveThreads,
 			teams_with_most_issues: teamsWithMostIssues,
-            teams_with_most_match_events: teamsWithMostMatchEvents,
+			teams_with_most_match_events: teamsWithMostMatchEvents,
 		},
 	};
 }

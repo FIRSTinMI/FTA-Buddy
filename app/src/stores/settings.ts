@@ -22,6 +22,8 @@ export interface Settings {
 	musicType: "none" | "jazz" | "lofi";
 	acknowledgedNotesPolicy: boolean;
 	supportFeedFilter: "all" | "notes" | "events";
+	supportFeedTypeFilter: "all" | "TeamIssue" | "EventNote" | "MatchNote";
+	supportFeedStatusFilter: "all" | "Open" | "Resolved";
 	notificationCategories: {
 		create: boolean;
 		follow: boolean;
@@ -50,6 +52,8 @@ const defaultSettings: Settings = {
 	musicType: "none",
 	acknowledgedNotesPolicy: false,
 	supportFeedFilter: "all",
+	supportFeedTypeFilter: "all",
+	supportFeedStatusFilter: "all",
 	notificationCategories: {
 		create: true,
 		follow: true,

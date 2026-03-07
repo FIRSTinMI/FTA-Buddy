@@ -60,8 +60,13 @@ const stops: { [key in ROBOT]: { a: boolean; e: boolean } } = {
 // let robotStateSubscription: ReturnType<typeof trpc.field.robotStatus.subscribe>;
 
 let combinedSubscription: ReturnType<typeof trpc.field.combinedSubscription.subscribe>;
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
 export async function subscribeToFieldMonitor() {
+	if (reconnectTimer) {
+		clearTimeout(reconnectTimer);
+		reconnectTimer = null;
+	}
 	combinedSubscription?.unsubscribe();
 	// subscription?.unsubscribe();
 	// fieldStateSubscription?.unsubscribe();
@@ -86,6 +91,10 @@ export async function subscribeToFieldMonitor() {
 				} else {
 					frameHandler.fieldStatusChange(data as FieldState);
 				}
+			},
+			onError: (err) => {
+				console.error("Field monitor subscription lost, reconnecting in 5s...", err);
+				reconnectTimer = setTimeout(() => subscribeToFieldMonitor(), 5000);
 			},
 		},
 	);

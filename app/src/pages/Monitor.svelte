@@ -26,7 +26,7 @@
 	let cycleSubscription: ReturnType<typeof trpc.cycles.subscription.subscribe>;
 
 	let user = get(userStore);
-	userStore.subscribe((value) => {
+	const unsubscribeUserStore = userStore.subscribe((value) => {
 		if (user.eventToken !== value.eventToken) {
 			user = value;
 			subscribeToFieldMonitor();
@@ -35,10 +35,10 @@
 		}
 	});
 
-	frameHandler.addEventListener("frame", (evt) => {
+	function onFrameEvent(evt: Event) {
 		loading = false;
 		monitorFrame = (evt as MonitorEvent).detail.frame;
-	});
+	}
 
 	let lastCycleTime = $state("");
 	let lastCycleTimeMS = 0;
@@ -54,6 +54,8 @@
 	let scheduleText = $state("");
 
 	onMount(async () => {
+		frameHandler.addEventListener("frame", onFrameEvent);
+		frameHandler.addEventListener("match-start", onMatchStart);
 		subscribeToFieldMonitor();
 		const lastPrestart = await trpc.cycles.getLastPrestart.query();
 		const lastMatchStart = await trpc.cycles.getLastMatchStart.query();
@@ -125,12 +127,15 @@
 	});
 
 	onDestroy(() => {
+		frameHandler.removeEventListener("frame", onFrameEvent);
+		frameHandler.removeEventListener("match-start", onMatchStart);
+		unsubscribeUserStore();
 		if (cycleSubscription) cycleSubscription.unsubscribe();
 		clearInterval(interval);
 		clearInterval(lastCycleTimeInterval);
 	});
 
-	frameHandler.addEventListener("match-start", async (evt) => {
+	async function onMatchStart(_evt: Event) {
 		console.log("match-start");
 		currentCycleIsBest = false;
 		calculatedCycleTime = calculatedCycleTime || frameHandler.getLastCycleTime();
@@ -167,7 +172,7 @@
 
 		// Reset the cycle time so it doesn't screw up the next match's cycle time
 		calculatedCycleTime = undefined;
-	});
+	}
 
 	let interval = setInterval(() => {
 		const currentTime = new Date().getTime() - matchStartTime.getTime();

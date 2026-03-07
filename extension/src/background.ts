@@ -143,8 +143,10 @@ async function start() {
 		const { fmsEventPassword } = await trpc.event.getFmsEventPassword.query();
 		signalRConnection.setFmsEventPassword(fmsEventPassword);
 		setFmsEventPassword(fmsEventPassword);
-		signalRConnection.setNoteChangedCallback(handleFmsNoteChanged);
-		startOutboundNoteSync();
+		if (fieldMonitor) {
+			signalRConnection.setNoteChangedCallback(handleFmsNoteChanged);
+			startOutboundNoteSync();
+		}
 	} catch (err) {
 		console.warn("Could not fetch FMS event password:", err);
 	}

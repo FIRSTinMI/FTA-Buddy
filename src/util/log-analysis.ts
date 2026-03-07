@@ -2,6 +2,7 @@ import { asc, eq } from "drizzle-orm";
 import { compressSync, decompressSync } from "fflate";
 import { randomUUID } from "node:crypto";
 import type { AutoEventIssueType, DisconnectionEvent, EventAutoEventSettings, FMSLogFrame } from "../../shared/types";
+import { ISSUE_SEVERITY } from "../../shared/issue-severity";
 import { ROBOT } from "../../shared/types";
 import { db } from "../db/db";
 import { analyzedLogs, events as eventsTable, issueEnum, matchEvents, matchLogs } from "../db/schema";
@@ -421,8 +422,10 @@ export async function logAnalysisLoop(limit: number) {
 				}
 
 				if (issueDetails.length > 0) {
-					// Use the first issue as the primary for backward compat
-					const primaryIssue = issueDetails[0].issue;
+					// Select primary issue deterministically by severity (DS > Radio > RIO > Code > others)
+					const primaryIssue = issueDetails.reduce((best, d) =>
+						(ISSUE_SEVERITY[d.issue] ?? 4) < (ISSUE_SEVERITY[best.issue] ?? 4) ? d : best
+					).issue;
 					const overallStartTime = Math.max(...issueDetails.map((d) => d.start_time ?? 0));
 					const overallEndTime = Math.min(...issueDetails.map((d) => d.end_time ?? 0));
 					const overallDuration = issueDetails.reduce((sum, d) => sum + Math.abs(d.duration ?? 0), 0);

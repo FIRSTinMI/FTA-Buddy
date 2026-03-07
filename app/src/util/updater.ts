@@ -11,6 +11,15 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+    "2.7.0.3": {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.7.0.3</h1>
+        <ul>
+        <li>Fixed most recent reply showing wrong role on note cards</li>
+        <li>Issue severity is now used to determine the primary issue type on match events (DS > Radio > RIO > Code > others)</li>
+        <li>Match logs with no teams assigned are now discarded</li>
+        </ul>`,
+    },
     "2.7.0.2": {
         changelog: `
         <h1 class="text-lg font-bold">v2.7.0.2</h1>

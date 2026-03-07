@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import { and, count, desc, eq, inArray, ne } from "drizzle-orm";
 import { z } from "zod";
 import type { MatchEvent, MatchEventUpdateEventData, Note, Profile } from "../../shared/types";
+import { ISSUE_SEVERITY, ISSUE_TYPE_MAP } from "../../shared/issue-severity";
 import { db } from "../db/db";
 import { matchEvents, notes, users } from "../db/schema";
 import { eventProcedure, publicProcedure, router } from "../trpc";
@@ -139,23 +140,15 @@ export const matchEventsRouter = router({
             if (!authorProfile[0])
                 throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author profile" });
 
-            // Map log issue types to note issue types
-            const issueTypeMap: Record<string, string> = {
-                "Code disconnect": "RoboRioIssue",
-                "RIO disconnect": "RoboRioIssue",
-                "Radio disconnect": "RadioIssue",
-                "DS disconnect": "DSIssue",
-                "Brownout": "RobotPwrIssue",
-                "Large spike in ping": "RadioIssue",
-                "Sustained high ping": "RadioIssue",
-                "Low signal": "RadioIssue",
-                "High BWU": "RadioIssue",
-            };
-
             // Build note text from all issues in a combined event
             const issueList = (matchEvent.issues as { issue: string; duration: number | null }[] | null) ?? [
                 { issue: matchEvent.issue, duration: matchEvent.duration },
             ];
+
+            // Pick the highest-severity issue from the full list for note classification
+            const primaryIssueFromList = issueList.reduce((best, d) =>
+                (ISSUE_SEVERITY[d.issue] ?? 4) < (ISSUE_SEVERITY[best.issue] ?? 4) ? d : best
+            ).issue;
             const noteText =
                 input.text ||
                 `[Auto] ${issueList.map((d) => `${d.issue} (${Math.abs(d.duration ?? 0).toFixed(0)}s)`).join(", ")} in match ${matchEvent.match_number}`;
@@ -172,7 +165,7 @@ export const matchEventsRouter = router({
                         team: matchEvent.team,
                         note_type: "TeamIssue",
                         resolution_status: "Open",
-                        issue_type: (issueTypeMap[matchEvent.issue] ?? "Other") as any,
+                        issue_type: (ISSUE_TYPE_MAP[primaryIssueFromList] ?? "Other") as any,
                         match_number: matchEvent.match_number,
                         play_number: matchEvent.play_number,
                         tournament_level: matchEvent.level as any,

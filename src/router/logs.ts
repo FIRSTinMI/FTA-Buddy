@@ -52,6 +52,10 @@ export const matchRouter = router({
 				.execute();
 			if (existing.length > 0) return;
 
+			// Discard logs where no team station is populated (e.g. empty practice slots)
+			if (input.teamNumberBlue1 == null && input.teamNumberBlue2 == null && input.teamNumberBlue3 == null &&
+				input.teamNumberRed1 == null && input.teamNumberRed2 == null && input.teamNumberRed3 == null) return;
+
 			await db
 				.insert(matchLogs)
 				.values({
@@ -111,6 +115,10 @@ export const matchRouter = router({
 				.where(eq(matchLogs.id, input.fmsMatchId))
 				.execute();
 			if (existing.length > 0) return;
+
+			// Discard logs where no team station is populated (e.g. empty practice slots)
+			if (input.teamNumberBlue1 == null && input.teamNumberBlue2 == null && input.teamNumberBlue3 == null &&
+				input.teamNumberRed1 == null && input.teamNumberRed2 == null && input.teamNumberRed3 == null) return;
 
 			await db
 				.insert(matchLogs)

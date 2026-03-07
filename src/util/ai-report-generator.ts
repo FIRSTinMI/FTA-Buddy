@@ -135,28 +135,9 @@ async function collectEventData(
 	}
 	const matchEventSummaries = Array.from(meSummaryMap.values()).sort((a, b) => b.total - a.total);
 
-	const HIGH_IMPACT_ISSUES = new Set([
-		"Bypassed",
-		"RIO disconnect",
-		"Radio disconnect",
-		"Communication loss",
-		"Lost comms",
-		"Comms loss",
-	]);
-
 	const teamsWithMostMatchEvents = matchEventSummaries
 		.slice(0, 5)
 		.map((s) => ({ team: s.team, total: s.total }));
-
-	const teamsWithMostHighImpactMatchEvents = matchEventSummaries
-		.map((s) => {
-			const hi = Object.entries(s.issue_breakdown).reduce((acc, [issue, count]) => {
-				return acc + (HIGH_IMPACT_ISSUES.has(issue) ? count : 0);
-			}, 0);
-			return { team: s.team, high_impact_total: hi };
-		})
-		.sort((a, b) => b.high_impact_total - a.high_impact_total)
-		.slice(0, 5);
 
 	// Derived stats
 	const teamIssueNotes = noteContexts.filter((n) => n.note_type === "TeamIssue");

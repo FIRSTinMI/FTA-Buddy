@@ -72,21 +72,13 @@ interface EventContext {
 		}>;
 		teams_with_most_issues: Array<{ team: number; note_count: number }>;
 		teams_with_most_match_events: Array<{ team: number; total: number }>;
-		teams_with_most_high_impact_match_events: Array<{ team: number; total: number }>;
-		closed_note_details: ClosedNoteDetail[];
+        closed_note_details: ClosedNoteDetail[];
 	};
 }
 
 interface CollectEventDataOptions {
 	includeTestMatches?: boolean;
 }
-
-const HIGH_IMPACT_ISSUES = new Set([
-	"Bypass",
-	"roboRIO Disconnect",
-	"Radio Disconnect",
-	"Communication Loss",
-]);
 
 function humanizeIssueType(value: string | null | undefined): string | null {
 	if (!value) return null;
@@ -134,6 +126,8 @@ function humanizeIssueType(value: string | null | undefined): string | null {
 		.replace(/\bDs\b/g, "DS")
 		.trim();
 }
+
+
 
 async function collectEventData(
 	eventCode: string,
@@ -213,7 +207,6 @@ async function collectEventData(
 				levels: {},
 			});
 		}
-
 		const summary = meSummaryMap.get(me.team)!;
 		summary.total++;
 
@@ -234,18 +227,8 @@ async function collectEventData(
 
 	const teamsWithMostMatchEvents = matchEventSummaries
 		.slice(0, 5)
-		.map((summary) => ({ team: summary.team, total: summary.total }));
+		.map((s) => ({ team: s.team, total: s.total }));
 
-	const teamsWithMostHighImpactMatchEvents = matchEventSummaries
-		.map((summary) => {
-			const total = Object.entries(summary.issue_breakdown).reduce((acc, [issue, count]) => {
-				return HIGH_IMPACT_ISSUES.has(issue) ? acc + count : acc;
-			}, 0);
-			return { team: summary.team, total };
-		})
-		.filter((entry) => entry.total > 0)
-		.sort((a, b) => b.total - a.total)
-		.slice(0, 5);
 
 	// Derived stats
 	const teamIssueNotes = noteContexts.filter((n) => n.note_type === "TeamIssue");
@@ -335,8 +318,7 @@ async function collectEventData(
 			most_active_threads: mostActiveThreads,
 			teams_with_most_issues: teamsWithMostIssues,
 			teams_with_most_match_events: teamsWithMostMatchEvents,
-			teams_with_most_high_impact_match_events: teamsWithMostHighImpactMatchEvents,
-			closed_note_details: closedNoteDetails,
+            closed_note_details: closedNoteDetails,
 		},
 	};
 }

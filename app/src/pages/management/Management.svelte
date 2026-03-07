@@ -56,9 +56,13 @@
 			},
 		);
 
-		trpc.event.getAllWithUsers.query().then((data) => {
-			eventUsers = Object.fromEntries(data.map((e) => [e.code, e.users]));
-		});
+		if ($userStore.admin) {
+			trpc.event.getAllWithUsers.query().then((data) => {
+				eventUsers = Object.fromEntries(data.map((e) => [e.code, e.users]));
+			}).catch((err) => {
+				console.error("[Management] getAllWithUsers failed:", err);
+			});
+		}
 	});
 
 	const FieldStates = {

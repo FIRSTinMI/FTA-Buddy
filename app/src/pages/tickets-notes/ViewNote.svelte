@@ -611,31 +611,35 @@
 						{#if note.team}
 							<div class="justify-center text-center sm:justify-start sm:text-left">
 								Team {displayTeam(note.team)}
-							</div>						{#if nextMatch}
-							{@const alliance = nextMatchAlliance(nextMatch, note.team)}
-							{@const partners = (alliance === "red" ? nextMatch.alliances.red.team_keys : nextMatch.alliances.blue.team_keys)
-								.filter((k) => k !== `frc${note!.team}`)
-								.map((k) => k.replace("frc", ""))
-								.join(" & ")}
-							<div class="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm
-								{alliance === 'red' ? 'bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800' :
-								 alliance === 'blue' ? 'bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800' :
-								 'bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700'}">
-								<Icon icon="mdi:flag-checkered" class="size-4 shrink-0
-									{alliance === 'red' ? 'text-red-500' : alliance === 'blue' ? 'text-blue-500' : 'text-gray-400'}" />
-								<span class="font-semibold text-black dark:text-white">Next: {formatNextMatch(nextMatch)}</span>
-								{#if alliance}
-									<span class="font-medium capitalize
-										{alliance === 'red' ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}">{alliance}</span>
-								{/if}
-								{#if partners}
-									<span class="text-gray-500 dark:text-gray-400">w/ {partners}</span>
-								{/if}
-								{#if formatMatchTime(nextMatch)}
-									<span class="ml-1 text-gray-400 dark:text-gray-500">{formatMatchTime(nextMatch)}</span>
-								{/if}
 							</div>
-						{/if}						{/if}
+							{#if nextMatch}
+								{@const alliance = nextMatchAlliance(nextMatch, note.team)}
+								{@const partners = alliance !== null
+									? (alliance === "red" ? nextMatch.alliances.red.team_keys : nextMatch.alliances.blue.team_keys)
+										.filter((k) => k !== `frc${note!.team}`)
+										.map((k) => k.replace("frc", ""))
+										.join(" & ")
+									: null}
+								<div class="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm
+									{alliance === 'red' ? 'bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800' :
+									 alliance === 'blue' ? 'bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800' :
+									 'bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700'}">
+									<Icon icon="mdi:flag-checkered" class="size-4 shrink-0
+										{alliance === 'red' ? 'text-red-500' : alliance === 'blue' ? 'text-blue-500' : 'text-gray-400'}" />
+									<span class="font-semibold text-black dark:text-white">Next: {formatNextMatch(nextMatch)}</span>
+									{#if alliance}
+										<span class="font-medium capitalize
+											{alliance === 'red' ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}">{alliance}</span>
+									{/if}
+									{#if partners}
+										<span class="text-gray-500 dark:text-gray-400">w/ {partners}</span>
+									{/if}
+									{#if formatMatchTime(nextMatch)}
+										<span class="ml-1 text-gray-400 dark:text-gray-500">{formatMatchTime(nextMatch)}</span>
+									{/if}
+								</div>
+							{/if}
+						{/if}
 						<div class="justify-center text-center sm:justify-start sm:text-left text-xs text-gray-400 dark:text-gray-500">
 							<FormattedTime date={note.created_at} formatter={formatTimeNoAgoHourMins} /> ago by {note.author
 								.username}

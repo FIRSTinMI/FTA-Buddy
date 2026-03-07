@@ -336,11 +336,12 @@ export const eventRouter = router({
 						.where(inArray(users.id, allUserIds))
 				: [];
 
+		const usersMap = new Map(usersList.map((u) => [u.id, u]));
 		return eventsData.map((event) => ({
 			code: event.code,
 			name: event.name,
 			users: ((event.users as number[]) ?? [])
-				.map((id) => usersList.find((u) => u.id === id))
+				.map((id) => usersMap.get(id))
 				.filter((u): u is NonNullable<typeof u> => u != null),
 		}));
 	}),

@@ -11,6 +11,14 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+    "2.7.0.2": {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.7.0.2</h1>
+        <ul>
+        <li>Combine multiple match events into one card</li>
+        <li>Save filters on the notes page</li>
+        </ul>`,
+    },
     "2.7.0.1": {
         changelog: `
         <h1 class="text-lg font-bold">v2.7.0.1</h1>

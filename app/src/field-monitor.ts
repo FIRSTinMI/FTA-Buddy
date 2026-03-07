@@ -61,6 +61,39 @@ const stops: { [key in ROBOT]: { a: boolean; e: boolean } } = {
 
 let combinedSubscription: ReturnType<typeof trpc.field.combinedSubscription.subscribe>;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+let lastReceivedAt = 0;
+
+// How long without data before we consider the connection stale (ms).
+// Frames arrive every ~0.5s at an event, so 30s is very conservative.
+const STALE_THRESHOLD_MS = 30_000;
+
+// Watchdog: while the page is visible, check every 15s whether we've gone
+// stale and reconnect if so.
+setInterval(() => {
+	if (document.visibilityState !== "visible") return;
+	if (lastReceivedAt === 0) return; // never connected yet
+	if (Date.now() - lastReceivedAt > STALE_THRESHOLD_MS) {
+		console.warn("Field monitor watchdog: connection stale, reconnecting…");
+		subscribeToFieldMonitor();
+	}
+}, 15_000);
+
+// Reconnect immediately when the tab becomes visible again after being hidden
+// (covers PWA sleep / switching apps on mobile).
+document.addEventListener("visibilitychange", () => {
+	if (document.visibilityState !== "visible") return;
+	if (lastReceivedAt === 0) return;
+	if (Date.now() - lastReceivedAt > STALE_THRESHOLD_MS) {
+		console.info("Field monitor: tab resumed with stale connection, reconnecting…");
+		subscribeToFieldMonitor();
+	}
+});
+
+// Reconnect when the device regains network connectivity.
+window.addEventListener("online", () => {
+	console.info("Field monitor: network online, reconnecting…");
+	subscribeToFieldMonitor();
+});
 
 export async function subscribeToFieldMonitor() {
 	if (reconnectTimer) {
@@ -82,6 +115,7 @@ export async function subscribeToFieldMonitor() {
 		},
 		{
 			onData: (data) => {
+				lastReceivedAt = Date.now();
 				if (typeof data === "object") {
 					if ("field" in data) {
 						frameHandler.feed(data);
@@ -93,7 +127,7 @@ export async function subscribeToFieldMonitor() {
 				}
 			},
 			onError: (err) => {
-				console.error("Field monitor subscription lost, reconnecting in 5s...", err);
+				console.error("Field monitor subscription lost, reconnecting in 5s…", err);
 				reconnectTimer = setTimeout(() => subscribeToFieldMonitor(), 5000);
 			},
 		},

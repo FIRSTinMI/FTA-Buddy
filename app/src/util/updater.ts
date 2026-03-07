@@ -11,6 +11,14 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+    "2.7.0.4": {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.7.0.4</h1>
+        <ul>
+        <li>Fix BWU being off scale on match logs</li>
+        <li>Hopefully make fullscreen detection work better</li>
+        </ul>`,
+    },
     "2.7.0.3": {
         changelog: `
         <h1 class="text-lg font-bold">v2.7.0.3</h1>

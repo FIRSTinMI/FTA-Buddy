@@ -249,13 +249,19 @@
 					<div class="px-2">{monitorFrame.exactAheadBehind || monitorFrame.time}</div>
 					<button
 						class="text-sm fixed top-12 right-0 z-50 hidden md:block"
-						onclick={(evt) => {
+						onclick={async (evt) => {
 							evt.preventDefault();
-							$fullscreen = !$fullscreen;
 							if ($fullscreen) {
-								document.documentElement.requestFullscreen();
+								const exit: (() => Promise<void>) | undefined =
+									document.exitFullscreen?.bind(document) ??
+									(document as any).webkitExitFullscreen?.bind(document);
+								await exit?.();
 							} else {
-								document.exitFullscreen();
+								const el = document.documentElement;
+								const enter: (() => Promise<void>) | undefined =
+									el.requestFullscreen?.bind(el) ??
+									(el as any).webkitRequestFullscreen?.bind(el);
+								await enter?.();
 							}
 						}}
 					>

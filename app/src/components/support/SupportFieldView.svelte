@@ -463,7 +463,7 @@
 					</div>
 				{/if}
 				{#if td && td.notes.length > 0}
-					{#each td.notes as note}
+					{#each [...td.notes].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()) as note}
 						<button
 							class="w-full text-left {isShortScreen ? 'py-0.5' : 'py-1'} border-b border-gray-100 dark:border-neutral-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-neutral-700/50 rounded transition-colors"
 							onclick={() => navigate("/notepad/view/:id", { params: { id: note.id } })}

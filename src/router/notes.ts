@@ -443,7 +443,7 @@ export const notesRouter = router({
 
 		const eventNotes = await db.query.notes.findMany({
 			where: inArray(notes.event_code, eventCodes),
-			orderBy: [asc(notes.created_at)],
+			orderBy: [desc(notes.updated_at)],
 		});
 		if (!eventNotes) throw new TRPCError({ code: "NOT_FOUND", message: "Notes not found" });
 		return eventNotes as Note[];
@@ -459,7 +459,7 @@ export const notesRouter = router({
 
 		const eventNotes = await db.query.notes.findMany({
 			where: inArray(notes.event_code, eventCodes),
-			orderBy: [asc(notes.created_at)],
+			orderBy: [desc(notes.updated_at)],
 			with: { messages: { orderBy: [asc(messages.id)] } },
 		});
 		if (!eventNotes) throw new TRPCError({ code: "NOT_FOUND", message: "Notes not found" });
@@ -496,7 +496,7 @@ export const notesRouter = router({
 
 			const results = await db.query.notes.findMany({
 				where: and(...query),
-				orderBy: [asc(notes.created_at)],
+				orderBy: [desc(notes.updated_at)],
 				with: { messages: { orderBy: [asc(messages.id)] } },
 			});
 			if (!results) throw new TRPCError({ code: "NOT_FOUND", message: "No Notes found" });
@@ -506,7 +506,7 @@ export const notesRouter = router({
 	getAllByAuthor: eventProcedure.input(z.object({ author_id: z.number() })).query(async ({ ctx, input }) => {
 		const notesByAuthor = await db.query.notes.findMany({
 			where: eq(notes.author_id, input.author_id),
-			orderBy: [asc(notes.created_at)],
+			orderBy: [desc(notes.updated_at)],
 		});
 		if (!notesByAuthor) throw new TRPCError({ code: "NOT_FOUND", message: "No Notes found by provided user" });
 		return notesByAuthor as Note[];
@@ -518,7 +518,7 @@ export const notesRouter = router({
 			.from(notes)
 			.leftJoin(events, eq(notes.event_code, events.code))
 			.where(and(eq(notes.team, input.team_number), eq(events.archived, false)))
-			.orderBy(asc(notes.created_at));
+			.orderBy(desc(notes.updated_at));
 		if (!notesByTeam) throw new TRPCError({ code: "NOT_FOUND", message: "No Notes found for provided team" });
 		return notesByTeam.map((row) => row.notes) as Note[];
 	}),

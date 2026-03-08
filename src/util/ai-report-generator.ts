@@ -21,7 +21,9 @@ interface NoteContext {
 	assigned_to: string | null;
 	open_time_minutes: number | null;
 	message_count: number;
+	is_auto_note: boolean;
 	messages: string[];
+	timeline_excerpt: string[];
 }
 
 interface MatchEventSummary {
@@ -40,6 +42,7 @@ interface ClosedNoteDetail {
 	message_count: number;
 	open_time_minutes: number | null;
 	thread_excerpt: string[];
+	timeline_excerpt: string[];
 }
 
 interface EventContext {
@@ -69,16 +72,36 @@ interface EventContext {
 			text_preview: string;
 			message_count: number;
 			thread_excerpt: string[];
+			timeline_excerpt: string[];
 		}>;
 		teams_with_most_issues: Array<{ team: number; note_count: number }>;
 		teams_with_most_match_events: Array<{ team: number; total: number }>;
-        closed_note_details: ClosedNoteDetail[];
+		teams_with_most_high_impact_match_events: Array<{ team: number; total: number }>;
+		closed_note_details: ClosedNoteDetail[];
+		open_note_details: Array<{
+			team: number | null;
+			issue_type: string | null;
+			text: string;
+			message_count: number;
+			open_time_minutes: number | null;
+			thread_excerpt: string[];
+			timeline_excerpt: string[];
+			match_number: number | null;
+			tournament_level: string | null;
+		}>;
 	};
 }
 
 interface CollectEventDataOptions {
 	includeTestMatches?: boolean;
 }
+
+const HIGH_IMPACT_ISSUES = new Set([
+	"Bypass",
+	"roboRIO Disconnect",
+	"Radio Disconnect",
+	"Communication Loss",
+]);
 
 function humanizeIssueType(value: string | null | undefined): string | null {
 	if (!value) return null;
@@ -97,10 +120,12 @@ function humanizeIssueType(value: string | null | undefined): string | null {
 		PDHIssue: "PDH Issue",
 		PDPIssue: "PDP Issue",
 		PowerIssue: "Power Issue",
+		RobotPwrIssue: "Robot Power Issue",
 		CANIssue: "CAN Issue",
 		WiringIssue: "Wiring Issue",
 		MechanicalIssue: "Mechanical Issue",
 		ControlSystemIssue: "Control System Issue",
+		Other: "Other",
 
 		// Match event issues
 		Brownout: "Brownout",
@@ -127,7 +152,15 @@ function humanizeIssueType(value: string | null | undefined): string | null {
 		.trim();
 }
 
+function formatTimestamp(value: Date | null | undefined): string | null {
+	if (!value) return null;
+	return value.toISOString().replace("T", " ").slice(0, 16);
+}
 
+function truncate(value: string, max = 240): string {
+	if (value.length <= max) return value;
+	return `${value.slice(0, max - 1)}…`;
+}
 
 async function collectEventData(
 	eventCode: string,
@@ -138,7 +171,9 @@ async function collectEventData(
 	options: CollectEventDataOptions = {},
 ): Promise<EventContext> {
 	const { includeTestMatches = true } = options;
-	const includedLevels: readonly ("None" | "Practice" | "Qualification" | "Playoff")[] = includeTestMatches ? ["None", "Practice", "Qualification", "Playoff"] : ["Qualification", "Playoff"];
+	const includedLevels: readonly ("None" | "Practice" | "Qualification" | "Playoff")[] = includeTestMatches
+		? ["None", "Practice", "Qualification", "Playoff"]
+		: ["Qualification", "Playoff"];
 
 	// Fetch all notes with their messages
 	const allNotes = await db.select().from(notes).where(eq(notes.event_code, eventCode)).execute();
@@ -177,20 +212,34 @@ async function collectEventData(
 			openTimeMinutes = Math.round((n.closed_at.getTime() - n.created_at.getTime()) / 60000);
 		}
 
+		const messageLines = noteMessages.map((m) => {
+			const ts = formatTimestamp(m.created_at);
+			const author = (m.author as any)?.username ?? "?";
+			return `[${ts ?? "?"}] ${author}: ${truncate(m.text, 400)}`;
+		});
+
+		const timelineExcerpt = [
+			`Opened: ${formatTimestamp(n.created_at) ?? "unknown"}`,
+			...(n.closed_at ? [`Closed: ${formatTimestamp(n.closed_at)}`] : []),
+			...messageLines.slice(0, 8),
+		];
+
 		return {
 			id: n.id,
 			team: n.team ?? null,
 			note_type: n.note_type ?? "TeamIssue",
 			issue_type: humanizeIssueType(n.issue_type),
 			resolution_status: n.resolution_status ?? null,
-			text: n.text.slice(0, 300),
+			text: n.text,
 			match_number: n.match_number ?? null,
 			tournament_level: n.tournament_level ?? null,
 			author: (n.author as any)?.username ?? "unknown",
 			assigned_to: (n.assigned_to as any)?.username ?? null,
 			open_time_minutes: openTimeMinutes,
 			message_count: noteMessages.length,
-			messages: noteMessages.map((m) => `[${(m.author as any)?.username ?? "?"}]: ${m.text.slice(0, 200)}`),
+			is_auto_note: n.text.trim().startsWith("[Auto]"),
+			messages: messageLines,
+			timeline_excerpt: timelineExcerpt,
 		};
 	});
 
@@ -207,6 +256,7 @@ async function collectEventData(
 				levels: {},
 			});
 		}
+
 		const summary = meSummaryMap.get(me.team)!;
 		summary.total++;
 
@@ -227,8 +277,18 @@ async function collectEventData(
 
 	const teamsWithMostMatchEvents = matchEventSummaries
 		.slice(0, 5)
-		.map((s) => ({ team: s.team, total: s.total }));
+		.map((summary) => ({ team: summary.team, total: summary.total }));
 
+	const teamsWithMostHighImpactMatchEvents = matchEventSummaries
+		.map((summary) => {
+			const total = Object.entries(summary.issue_breakdown).reduce((acc, [issue, count]) => {
+				return HIGH_IMPACT_ISSUES.has(issue) ? acc + count : acc;
+			}, 0);
+			return { team: summary.team, total };
+		})
+		.filter((entry) => entry.total > 0)
+		.sort((a, b) => b.total - a.total)
+		.slice(0, 5);
 
 	// Derived stats
 	const teamIssueNotes = noteContexts.filter((n) => n.note_type === "TeamIssue");
@@ -261,9 +321,10 @@ async function collectEventData(
 		.slice(0, 5)
 		.map((n) => ({
 			team: n.team,
-			text_preview: n.text.slice(0, 120),
+			text_preview: truncate(n.text, 160),
 			message_count: n.message_count,
 			thread_excerpt: n.messages.slice(0, 6),
+			timeline_excerpt: n.timeline_excerpt.slice(0, 8),
 		}));
 
 	// Teams with most notes
@@ -283,14 +344,33 @@ async function collectEventData(
 			if (b.message_count !== a.message_count) return b.message_count - a.message_count;
 			return (b.open_time_minutes ?? 0) - (a.open_time_minutes ?? 0);
 		})
-		.slice(0, 8)
+		.slice(0, 12)
 		.map((n) => ({
 			team: n.team,
 			issue_type: n.issue_type,
 			text: n.text,
 			message_count: n.message_count,
 			open_time_minutes: n.open_time_minutes,
-			thread_excerpt: n.messages.slice(0, 6),
+			thread_excerpt: n.messages.slice(0, 8),
+			timeline_excerpt: n.timeline_excerpt.slice(0, 10),
+		}));
+
+	const openNoteDetails = noteContexts
+		.filter((n) => n.resolution_status === "Open")
+		.sort((a, b) => {
+			if (b.message_count !== a.message_count) return b.message_count - a.message_count;
+			return (b.open_time_minutes ?? 0) - (a.open_time_minutes ?? 0);
+		})
+		.map((n) => ({
+			team: n.team,
+			issue_type: n.issue_type,
+			text: n.text,
+			message_count: n.message_count,
+			open_time_minutes: n.open_time_minutes,
+			thread_excerpt: n.messages.slice(0, 8),
+			timeline_excerpt: n.timeline_excerpt.slice(0, 10),
+			match_number: n.match_number,
+			tournament_level: n.tournament_level,
 		}));
 
 	return {
@@ -318,7 +398,9 @@ async function collectEventData(
 			most_active_threads: mostActiveThreads,
 			teams_with_most_issues: teamsWithMostIssues,
 			teams_with_most_match_events: teamsWithMostMatchEvents,
-            closed_note_details: closedNoteDetails,
+			teams_with_most_high_impact_match_events: teamsWithMostHighImpactMatchEvents,
+			closed_note_details: closedNoteDetails,
+			open_note_details: openNoteDetails,
 		},
 	};
 }
@@ -346,7 +428,8 @@ Provide team count, total notes, breakdown by note type, open vs resolved, CSA i
 Separate official match events (Qualification + Playoff) from test-match events when both are present.
 Clearly distinguish dismissed match events from those that resulted in a formal follow-up note.
 If match events exist only in test matches, explicitly state that rather than saying no match events were recorded.
-If match events exist but dismissed=0 and follow-up notes=0, explicitly state that no match-event triage/escalation occurred in the data.
+If dismissed match events > 0 and follow-up match events > 0, state both counts plainly and do NOT say that no triage/escalation occurred.
+Only say that no match-event triage/escalation occurred if follow-up_match_events is exactly 0.
 
 ISSUE BREAKDOWN
 Summarize issue types with counts and relative frequency using human-readable issue labels.
@@ -366,14 +449,24 @@ If official match-event volume is zero but test-match events exist, state that c
 
 RESOLUTION STATUS
 Summarize resolution rate numerically.
-Identify open items and whether any represent elevated risk based on thread activity or playoff context.
+Identify open items and whether any represent elevated risk based on thread activity, recurrence, bypass history, or playoff context.
 Also summarize the substance of resolved notes:
-- describe the issue types involved
+- describe the actual issue/failure mode using the wording from the notes/messages when possible
 - note whether resolution was quick or extended if open_time_minutes exists
 - include concise thread-level detail from message history when available
 - mention notable troubleshooting steps or closure outcomes stated in the note thread
-Prefer concrete thread details over generic statements like "progress was made."
-Do not speculate beyond provided data.
+- prefer concrete thread details over generic statements like "power issue" or "made adjustments"
+
+CRITICAL GROUNDING RULES:
+- Base the narrative primarily on note text and thread/message content, not just issue_type buckets.
+- If the note says "main breaker blew", say "main breaker blew" or "repeated main-breaker trips" rather than generic "power issue".
+- If the thread says "positive power lead fell out", "loose RIO power wire", "blown radio fuse", "PhotonVision web GUI open", "duplicate CAN IDs", "CAN leads into the PDH were loose", "controller only connects via Bluetooth", or similar, use those specifics.
+- Do not invent causes or fixes. Only state causes/fixes explicitly present in the notes or messages.
+- Do not rewrite a specific field failure into a vague summary if a concrete detail exists.
+- Manual notes and message threads are usually more informative than auto-generated note titles. Use auto note titles mainly for count context unless the thread adds real detail.
+- When multiple updates show recurrence, say so explicitly (for example "recurred in Q35 and Q30" or "breaker tripped again later in quals") if that is supported by the thread.
+- When a note remains open, describe the exact unresolved condition from the note/thread.
+- Avoid bland phrases like "implemented current limits" unless the note actually says current limits were added or lowered.
 
 Write in a concise, technical, operations-focused tone.
 Use complete sentences.
@@ -414,7 +507,12 @@ function renderNarrativePdf(text: string, eventName: string, eventCode: string):
 			continue;
 		}
 
-		const isHeading = line.length >= 4 && line === line.toUpperCase() && /[A-Z]/.test(line);
+		const cleanedLine = line.replace(/\*\*/g, "");
+		const isHeading =
+			cleanedLine.length >= 4 &&
+			cleanedLine === cleanedLine.toUpperCase() &&
+			/[A-Z]/.test(cleanedLine) &&
+			!cleanedLine.startsWith("-");
 
 		if (isHeading) {
 			if (y > doc.internal.pageSize.getHeight() - 30) {
@@ -424,12 +522,12 @@ function renderNarrativePdf(text: string, eventName: string, eventCode: string):
 			y += paragraphGap;
 			doc.setFontSize(12);
 			doc.setFont("helvetica", "bold");
-			doc.text(line, marginLeft, y);
+			doc.text(cleanedLine, marginLeft, y);
 			y += lineHeight + 2;
 			doc.setFontSize(10);
 			doc.setFont("helvetica", "normal");
 		} else {
-			const wrapped = doc.splitTextToSize(line, usableWidth) as string[];
+			const wrapped = doc.splitTextToSize(cleanedLine, usableWidth) as string[];
 			for (const wrappedLine of wrapped) {
 				if (y > doc.internal.pageSize.getHeight() - 20) {
 					doc.addPage();
@@ -480,11 +578,20 @@ Use the following severity hierarchy when determining impact tone:
 - dismissed match events = low significance
 
 This hierarchy is for internal reasoning only and must never be printed in the output.
+
 Do not include recommendations.
 Do not speculate.
 Do not include calibration notes in the report.
+
+Most important instruction:
+Prefer exact factual language from note text and message history over generic categorization.
+If the data says "main breaker blew", "breaker wide open", "loose RIO power wire", "blown radio fuse", "PhotonVision web GUI open", "duplicate CAN IDs", "controller only connects via Bluetooth", or similar, use that specific wording in the narrative.
+Do not flatten concrete failures into vague phrases like "power issue" or "code issue" when more specific information exists.
+
 When resolved notes contain message history, include concise factual detail about what troubleshooting occurred and how the issue was closed.
 Prefer concrete thread details over generic statements.
+If the thread shows recurrence across multiple matches, state that explicitly.
+If a cause is uncertain in the thread, say it was unclear rather than presenting a definitive cause.
 `,
 			},
 			{
@@ -493,7 +600,7 @@ Prefer concrete thread details over generic statements.
 			},
 		],
 		max_tokens: 3200,
-		temperature: 0.15,
+		temperature: 0.1,
 	});
 
 	const reportText = completion.choices[0]?.message?.content ?? "No report generated.";

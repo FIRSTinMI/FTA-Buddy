@@ -64,10 +64,10 @@ let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let lastReceivedAt = 0;
 
 // How long without data before we consider the connection stale (ms).
-// Frames arrive every ~0.5s at an event, so 30s is very conservative.
-const STALE_THRESHOLD_MS = 30_000;
+// Frames arrive every ~0.5s at an event, so 2.5s without data is clearly broken.
+const STALE_THRESHOLD_MS = 2500;
 
-// Watchdog: while the page is visible, check every 15s whether we've gone
+// Watchdog: while the page is visible, check every 5s whether we've gone
 // stale and reconnect if so.
 setInterval(() => {
 	if (document.visibilityState !== "visible") return;
@@ -76,13 +76,15 @@ setInterval(() => {
 		console.warn("Field monitor watchdog: connection stale, reconnecting…");
 		subscribeToFieldMonitor();
 	}
-}, 15_000);
+}, 5_000);
 
-// Reconnect immediately when the tab becomes visible again after being hidden
+// Reconnect when the tab becomes visible again after being hidden
 // (covers PWA sleep / switching apps on mobile).
+// Only reconnect if data is stale — normal tab switches (< STALE_THRESHOLD_MS)
+// don't close the SSE connection so no reconnect is needed.
 document.addEventListener("visibilitychange", () => {
 	if (document.visibilityState !== "visible") return;
-	if (lastReceivedAt === 0) return;
+	if (lastReceivedAt === 0) return; // never had a connection, nothing to restore
 	if (Date.now() - lastReceivedAt > STALE_THRESHOLD_MS) {
 		console.info("Field monitor: tab resumed with stale connection, reconnecting…");
 		subscribeToFieldMonitor();

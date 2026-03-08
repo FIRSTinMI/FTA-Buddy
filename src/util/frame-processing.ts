@@ -10,6 +10,7 @@ import {
 	ROBOT,
 	RobotInfo,
 	RobotWarnings,
+	ScheduleDetails,
 	StateChange,
 	StateChangeType,
 } from "../../shared/types";
@@ -311,4 +312,64 @@ export async function processTeamCycles(eventCode: string, frame: MonitorFrame, 
 				cycle.timeDS = cycle.lastDS.getTime() - event.robotCycleTracking.prestart.getTime();
 		}
 	}
+}
+
+/**
+ * Compute the total duration of overnight gaps that fall entirely between
+ * scheduledStart and actualStart.  When a multi-day event carries unplayed
+ * matches to the next day, the raw delta (scheduledStart − actualStart)
+ * includes the overnight break as lateness.  Adding the gap back yields the
+ * true within-session offset.
+ *
+ * A gap runs from the end of one schedule day to the start of the next.
+ * "End of day" is days[i].endTime if available, otherwise the scheduled
+ * start of the last match on that day (days[i].end).
+ * "Start of next day" is the scheduled start of the first match on days[i+1]
+ * (days[i+1].start).
+ *
+ * @returns milliseconds to ADD back to the raw (scheduledStart − actualStart)
+ *          delta, always >= 0.
+ */
+export function computeOvernightOffset(
+	scheduledStart: Date,
+	actualStart: Date,
+	scheduleDetails: ScheduleDetails,
+): number {
+	if (!scheduleDetails.days || scheduleDetails.days.length < 2) return 0;
+	if (!scheduleDetails.matches || scheduleDetails.matches.length === 0) return 0;
+
+	let offset = 0;
+
+	for (let i = 0; i < scheduleDetails.days.length - 1; i++) {
+		const today = scheduleDetails.days[i];
+		const tomorrow = scheduleDetails.days[i + 1];
+
+		// Determine gap start: endTime of current day, or scheduled start of last match
+		let gapStart: Date | null = today.endTime ? new Date(today.endTime) : null;
+		if (!gapStart) {
+			const lastMatchOfDay = scheduleDetails.matches.find(
+				(m) => m.match === today.end,
+			);
+			if (!lastMatchOfDay) continue;
+			gapStart = new Date(lastMatchOfDay.scheduledStartTime);
+		}
+
+		// Determine gap end: scheduled start of first match of next day
+		const firstMatchOfNextDay = scheduleDetails.matches.find(
+			(m) => m.match === tomorrow.start,
+		);
+		if (!firstMatchOfNextDay) continue;
+		const gapEnd = new Date(firstMatchOfNextDay.scheduledStartTime);
+
+		if (gapEnd <= gapStart) continue;
+
+		// Only subtract this gap if scheduledStart was before (or at) the gap
+		// and actualStart was after (or at) the gap end — meaning the gap was
+		// "crossed" between the scheduled and actual match start times.
+		if (scheduledStart <= gapStart && actualStart >= gapEnd) {
+			offset += gapEnd.getTime() - gapStart.getTime();
+		}
+	}
+
+	return offset;
 }

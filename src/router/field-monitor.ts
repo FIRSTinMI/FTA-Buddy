@@ -12,6 +12,7 @@ import {
 	processFrameForTeamData,
 	processTeamCycles,
 	processTeamWarnings,
+	computeOvernightOffset,
 } from "../util/frame-processing";
 import { getEvent } from "../util/get-event";
 import { subscriptionQueue } from "../util/subscription";
@@ -121,8 +122,11 @@ export const fieldMonitorRouter = router({
 							}
 							let timeDelta =
 								processed.currentFrame.matchScheduledStartTime.getTime() -
-								event.lastMatchStart.getTime();
-							exactAheadBehind =
+								event.lastMatchStart.getTime();								timeDelta += computeOvernightOffset(
+									processed.currentFrame.matchScheduledStartTime,
+									event.lastMatchStart,
+									event.scheduleDetails,
+								);							exactAheadBehind =
 								formatTimeShortNoAgoSeconds(timeDelta) + (timeDelta >= 0 ? " ahead" : " behind");
 							console.log(
 								processed.currentFrame.matchScheduledStartTime,

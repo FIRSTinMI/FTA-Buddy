@@ -43,6 +43,17 @@
 		} else if ($userStore.meshedEventToken) {
 			events = $eventStore.subEvents?.map((e) => e.code) || [];
 			window.history.replaceState({}, "", `?events=${events.join(",")}`);
+		} else if (events.length === 0) {
+			// Auto-open any events that currently have an active FMS connection.
+			try {
+				const active = await trpc.event.getActive.query();
+				if (active.length > 0) {
+					events = active.map((e) => e.code);
+					window.history.replaceState({}, "", `?events=${events.join(",")}`);
+				}
+			} catch {
+				// Silently ignore — user can still add events manually.
+			}
 		}
 
 		await loadEventOptions();

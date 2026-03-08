@@ -182,6 +182,9 @@
 		if (matchIndex >= 0 && matchIndex < allMatches.length - 1) {
 			autoAdvance = false;
 			matchIndex++;
+		} else if (matchIndex >= allMatches.length - 1) {
+			// At the last match with no next — go back to current/live
+			matchIndex = -1;
 		}
 	}
 
@@ -555,7 +558,7 @@
 					size="sm"
 					color="alternative"
 					onclick={goToNextMatch}
-					disabled={isLive || matchIndex >= allMatches.length - 1}
+					disabled={isLive}
 				>
 					<Icon icon="mdi:chevron-right" class="size-4 sm:size-5" />
 				</Button>

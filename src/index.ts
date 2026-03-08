@@ -13,7 +13,7 @@ import { gfmHeadingId } from "marked-gfm-heading-id";
 import { markedHighlight } from "marked-highlight";
 import { join } from "path";
 import sanitizeHtml from "sanitize-html";
-import { NotificationEvents, ROBOT, ServerEvent, TournamentLevel } from "../shared/types";
+import { ROBOT, TournamentLevel } from "../shared/types";
 import { connect, db } from "./db/db";
 import { cycleLogs, logPublishing, matchLogs } from "./db/schema";
 import { checklistRouter } from "./router/checklist";
@@ -32,8 +32,6 @@ import {
 import { userRouter } from "./router/user";
 import { adminProcedure, createContext, publicProcedure, router } from "./trpc";
 
-import { EventEmitter } from "events";
-import { TypedEmitter } from "tiny-typed-emitter";
 import { z } from "zod";
 import { initializePushNotifications } from "../src/util/push-notifications";
 import schema from "./db/schema";
@@ -42,18 +40,15 @@ import { getEvent } from "./util/get-event";
 import { decompressStationLog, logAnalysisLoop } from "./util/log-analysis";
 import { linkChannel, slackOAuth } from "./util/slack";
 import { getTeamAverageCycle } from "./util/team-cycles";
+import { events, eventCodes, notificationEmitter, newEventEmitter } from "./state";
+
+export { events, eventCodes, notificationEmitter, newEventEmitter };
 
 const pjson = require("../package.json") as { version: string };
 
 const port = parseInt(process.env.PORT || "3001");
 
-export const events: { [key: string]: ServerEvent } = {};
-export const eventCodes: { [key: string]: string } = {};
-
 initializePushNotifications();
-// event emitter for all notifications
-export const notificationEmitter = new TypedEmitter<NotificationEvents>();
-export const newEventEmitter = new EventEmitter();
 export let knownIssue: {
 	current: boolean;
 	message: string;

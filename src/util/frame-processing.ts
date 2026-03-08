@@ -363,11 +363,16 @@ export function computeOvernightOffset(
 
 		if (gapEnd <= gapStart) continue;
 
-		// Only subtract this gap if scheduledStart was before (or at) the gap
-		// and actualStart was after (or at) the gap end — meaning the gap was
-		// "crossed" between the scheduled and actual match start times.
-		if (scheduledStart <= gapStart && actualStart >= gapEnd) {
-			offset += gapEnd.getTime() - gapStart.getTime();
+		// Subtract however much of the gap overlaps with the window
+		// [scheduledStart, actualStart].  This covers three cases:
+		//   1. Gap fully crossed  (scheduledStart before gap, actualStart after)
+		//   2. actualStart lands inside the gap (match carried into sleep window but
+		//      started before the official next-day start)
+		//   3. Gap partially overlaps at the start (uncommon but handled)
+		const overlapStart = Math.max(scheduledStart.getTime(), gapStart.getTime());
+		const overlapEnd = Math.min(actualStart.getTime(), gapEnd.getTime());
+		if (overlapEnd > overlapStart) {
+			offset += overlapEnd - overlapStart;
 		}
 	}
 

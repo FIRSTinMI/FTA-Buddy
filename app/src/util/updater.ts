@@ -11,6 +11,13 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+    "2.7.0.7": {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.7.0.7</h1>
+        <ul>
+        <li>Subtract overnight hours from ahead/behind calculation</li>
+        </ul>`,
+    },
     "2.7.0.6": {
         changelog: '',
     },

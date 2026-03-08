@@ -351,13 +351,16 @@
 	{@const td = teamData[teamNum]}
 	{@const teamName = $eventStore.teams.find((t) => t.number === String(teamNum))?.name ?? ""}
 	{@const itemCount = td && !td.loading ? td.notes.length + td.matchEvents.length : 0}
+	{@const activeEvents = td && !td.loading ? td.matchEvents.filter(e => e.status === "active") : []}
 	{@const eventSummaries = td && !td.loading && td.matchEvents.length > 0
 		? Object.entries(
-			td.matchEvents.reduce<Record<string, number>>((acc, e) => {
-				acc[e.issue] = (acc[e.issue] ?? 0) + 1;
+			td.matchEvents.reduce<Record<string, { total: number; active: number }>>((acc, e) => {
+				if (!acc[e.issue]) acc[e.issue] = { total: 0, active: 0 };
+				acc[e.issue].total += 1;
+				if (e.status === "active") acc[e.issue].active += 1;
 				return acc;
 			}, {})
-		).map(([issue, count]) => `${issue} x${count}`)
+		).map(([issue, { total, active }]) => ({ issue, total, active }))
 		: []}
 	<div class="flex-1 min-h-0 flex flex-col rounded-lg overflow-hidden shadow dark:bg-neutral-800 bg-white">
 		<div class="shrink-0 flex {alliance === 'blue' ? 'bg-blue-600' : 'bg-red-600'}">
@@ -455,10 +458,12 @@
 				<div class="flex justify-center py-2"><Spinner /></div>
 			{:else}
 				{#if eventSummaries.length > 0}
-					<div class="{isShortScreen ? 'py-0.5' : 'py-1'}">
-						<div class="flex items-center gap-1.5 {isShortScreen ? 'text-[10px]' : 'text-xs sm:text-sm lg:text-base'} text-amber-700 dark:text-amber-400 font-semibold">
-							<Icon icon="mdi:alert-circle-outline" class="size-3.5 sm:size-4 lg:size-5 shrink-0" />
-							<span class="truncate">{eventSummaries.join(", ")}</span>
+					<div class="py-1">
+						<div class="flex items-center gap-1.5 text-xs sm:text-sm lg:text-base font-semibold flex-wrap">
+							<Icon icon="mdi:alert-circle-outline" class="size-3.5 sm:size-4 lg:size-5 shrink-0 text-amber-700 dark:text-amber-400" />
+							{#each eventSummaries as { issue, total, active }, i}
+								<span class="{active > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-gray-400 dark:text-gray-500'}">{issue} x{total}{#if active > 0 && active < total} ({active} active){/if}{#if active === 0} (resolved){/if}</span>{#if i < eventSummaries.length - 1}<span class="text-gray-400">,</span>{/if}
+							{/each}
 						</div>
 					</div>
 				{/if}

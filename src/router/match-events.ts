@@ -55,7 +55,7 @@ export const matchEventsRouter = router({
             return rows as MatchEvent[];
         }),
 
-    /** Get match events for a specific team across all their matches (for field view summaries). */
+    /** Get match events for a specific team across all their matches (for field view summaries). Includes dismissed/converted events. */
     getByTeam: eventProcedure
         .input(z.object({ team_number: z.number() }))
         .query(async ({ ctx, input }) => {
@@ -67,7 +67,6 @@ export const matchEventsRouter = router({
                     and(
                         eq(matchEvents.event_code, event.code),
                         eq(matchEvents.team, input.team_number),
-                        eq(matchEvents.status, "active"),
                     ),
                 )
                 .orderBy(desc(matchEvents.created_at))

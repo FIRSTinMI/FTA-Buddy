@@ -7,6 +7,7 @@ import { autoEventSettingsCache } from "../util/log-analysis";
 import { db } from "../db/db";
 import { events, users } from "../db/schema";
 import { adminProcedure, eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
+import { events as inMemoryEvents } from "..";
 import { getEvent } from "../util/get-event";
 import * as nexusPoller from "../util/nexusInspectionPoller";
 import { createNotification } from "../util/push-notifications";
@@ -303,6 +304,17 @@ export const eventRouter = router({
 
 			return event[0];
 		}),
+
+	// Returns codes of events that have an active FMS extension connection
+	// (last frame received within 60 seconds).
+	getActive: publicProcedure.query(() => {
+		const cutoff = Date.now() - 60_000;
+		return Object.values(inMemoryEvents)
+			.filter((e) =>
+				e.stats.extensions.some((ext) => ext.lastFrame && ext.lastFrame.getTime() > cutoff),
+			)
+			.map((e) => ({ code: e.code, name: e.name }));
+	}),
 
 	getAll: publicProcedure.query(async () => {
 		return await db

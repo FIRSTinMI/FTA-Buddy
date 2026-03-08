@@ -85,6 +85,7 @@
 			match = cycleData.match;
 			level = cycleData.level;
 			aheadBehind = cycleData.exactAheadBehind || cycleData.aheadBehind;
+			fieldState = cycleData.state;
 		}
 
 		if (cycleSubscription) cycleSubscription.unsubscribe();

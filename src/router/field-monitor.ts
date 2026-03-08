@@ -111,7 +111,7 @@ export const fieldMonitorRouter = router({
 					let exactAheadBehind = undefined;
 					if (event.scheduleDetails.matches) {
 						processed.currentFrame.matchScheduledStartTime = event.scheduleDetails.matches.find(
-							(m) => m.match === event.monitorFrame.match && m.level === event.monitorFrame.level,
+								(m) => m.match === processed.currentFrame.match && m.level === processed.currentFrame.level,
 						)?.scheduledStartTime;
 						console.log(processed.currentFrame.matchScheduledStartTime);
 						if (processed.currentFrame.matchScheduledStartTime !== undefined) {

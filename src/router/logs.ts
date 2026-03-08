@@ -209,6 +209,12 @@ export const matchRouter = router({
 					play_number: matchLogs.play_number,
 					level: matchLogs.level,
 					start_time: matchLogs.start_time,
+					blue1: matchLogs.blue1,
+					blue2: matchLogs.blue2,
+					blue3: matchLogs.blue3,
+					red1: matchLogs.red1,
+					red2: matchLogs.red2,
+					red3: matchLogs.red3,
 				})
 				.from(matchLogs)
 				.where(and(...filters))

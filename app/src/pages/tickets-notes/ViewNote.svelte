@@ -59,7 +59,7 @@
 	type TBANextMatch = Awaited<ReturnType<typeof trpc.matchEvents.getNextMatchForTeam.query>>;
 	let nextMatch: TBANextMatch = $state(null);
 
-	type PlayedMatch = { id: string; match_number: number; play_number: number; level: string };
+	type PlayedMatch = { id: string; match_number: number; play_number: number; level: string; blue1: number | null; blue2: number | null; blue3: number | null; red1: number | null; red2: number | null; red3: number | null };
 	let playedMatchesSince: PlayedMatch[] = $state([]);
 
 	function formatMatchLabel(m: PlayedMatch): string {
@@ -606,9 +606,10 @@
 							<div class="flex flex-col items-end gap-0.5 shrink-0 mt-1">
 								<span class="text-xs text-gray-400 dark:text-gray-500">Played since:</span>
 								{#each playedMatchesSince as pm}
-									<button
-										class="text-xs text-blue-500 hover:underline"
-										onclick={() => navigate("/logs/:matchid", { params: { matchid: pm.id } })}
+								{@const pmStation = note.team === pm.blue1 ? 'blue1' : note.team === pm.blue2 ? 'blue2' : note.team === pm.blue3 ? 'blue3' : note.team === pm.red1 ? 'red1' : note.team === pm.red2 ? 'red2' : note.team === pm.red3 ? 'red3' : undefined}
+								<button
+									class="text-xs text-blue-500 hover:underline"
+									onclick={() => pmStation ? navigate("/logs/:matchid/:station", { params: { matchid: pm.id, station: pmStation } }) : navigate("/logs/:matchid", { params: { matchid: pm.id } })}
 									>{formatMatchLabel(pm)}</button>
 								{/each}
 							</div>

@@ -82,6 +82,10 @@
 
 	let teamData: Record<number, TeamData> = $state({});
 
+	function sortNotes(notes: Note[]): Note[] {
+		return notes.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+	}
+
 	// Modal state
 	let modalOpen = $state(false);
 	let modalTeamNum = $state(0);
@@ -112,7 +116,7 @@
 			]);
 			teamData[teamNumber] = {
 				teamNumber,
-				notes: teamNotes,
+				notes: sortNotes(teamNotes),
 				matchEvents: teamMatchEvents,
 				loading: false,
 			};
@@ -218,7 +222,7 @@
 						case "create": {
 							const teamNum = data.note.team;
 							if (teamNum !== null && teamData[teamNum]) {
-								teamData[teamNum].notes = [...teamData[teamNum].notes, data.note];
+								teamData[teamNum].notes = sortNotes([...teamData[teamNum].notes, data.note]);
 							}
 							break;
 						}
@@ -459,7 +463,7 @@
 					</div>
 				{/if}
 				{#if td && td.notes.length > 0}
-					{#each [...td.notes].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) as note}
+					{#each td.notes as note}
 						<button
 							class="w-full text-left {isShortScreen ? 'py-0.5' : 'py-1'} border-b border-gray-100 dark:border-neutral-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-neutral-700/50 rounded transition-colors"
 							onclick={() => navigate("/notepad/view/:id", { params: { id: note.id } })}

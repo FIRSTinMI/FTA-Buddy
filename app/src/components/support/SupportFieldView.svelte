@@ -184,7 +184,7 @@
 			matchIndex++;
 		} else if (matchIndex >= allMatches.length - 1) {
 			// At the last match with no next — go back to current/live
-			matchIndex = -1;
+			goToLive();
 		}
 	}
 

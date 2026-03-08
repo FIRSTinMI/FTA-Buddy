@@ -7,7 +7,7 @@ import { autoEventSettingsCache } from "../util/log-analysis";
 import { db } from "../db/db";
 import { events, users } from "../db/schema";
 import { adminProcedure, eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
-import { events as inMemoryEvents } from "..";
+import { events as inMemoryEvents } from "../state";
 import { getEvent } from "../util/get-event";
 import * as nexusPoller from "../util/nexusInspectionPoller";
 import { createNotification } from "../util/push-notifications";

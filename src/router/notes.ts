@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { on } from "events";
 import { z } from "zod";
-import { notificationEmitter } from "..";
+import { notificationEmitter } from "../state";
 import { formatTimeShortNoAgoMinutes } from "../../shared/formatTime";
 import { buildNotification, toNoteCtx } from "../../shared/notifications";
 import type { Notification } from "../../shared/types";

@@ -23,11 +23,11 @@ export function updateScheduleText(
 	// <= today's UTC calendar date.
 	{
 		const now = new Date();
-		const todayUTC = `${now.getUTCFullYear()}-${now.getUTCMonth()}-${now.getUTCDate()}`;
+		const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
 		currentScheduleDay = 0;
 		for (let i = 0; i < scheduleDetails.days.length; i++) {
 			const d = new Date(scheduleDetails.days[i].date);
-			const dayUTC = `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`;
+			const dayUTC = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 			if (dayUTC <= todayUTC) {
 				currentScheduleDay = i;
 			}

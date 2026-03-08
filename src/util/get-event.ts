@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { eq, inArray } from "drizzle-orm";
 import { EventEmitter } from "events";
 import { TypedEmitter } from "tiny-typed-emitter";
-import { eventCodes, events, newEventEmitter } from "..";
+import { eventCodes, events, newEventEmitter } from "../state";
 import { DEFAULT_MONITOR } from "../../shared/constants";
 import {
 	EventAutoEventSettings,

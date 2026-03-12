@@ -2,10 +2,10 @@ import { get } from "svelte/store";
 import type { Notification } from "../../../shared/types";
 import { trpc } from "../main";
 import {
-    addNotification,
-    checkIfNotificationExists,
-    notificationsStore,
-    removeNotification,
+	addNotification,
+	checkIfNotificationExists,
+	notificationsStore,
+	removeNotification,
 } from "../stores/notifications";
 import { settingsStore } from "../stores/settings";
 import { userStore } from "../stores/user";

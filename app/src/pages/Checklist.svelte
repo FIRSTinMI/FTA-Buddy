@@ -204,29 +204,32 @@
 								class="justify-center"
 								bind:checked={items.present}
 								onchange={() => updateChecklist(team, "present", items.present)}
-							/></td>
+							/></td
+						>
 						<td>
 							<Checkbox
 								class="justify-center"
 								bind:checked={items.inspected}
 								onchange={() => updateChecklist(team, "inspected", items.inspected)}
-							/></td>
+							/></td
+						>
 						<td>
 							<Checkbox
 								class="justify-center"
 								bind:checked={items.radioProgrammed}
 								onchange={() => updateChecklist(team, "radioProgrammed", items.radioProgrammed)}
-							/></td>
+							/></td
+						>
 						<td>
 							<Checkbox
 								class="justify-center"
 								bind:checked={items.connectionTested}
 								onchange={() => updateChecklist(team, "connectionTested", items.connectionTested)}
-							/></td>
+							/></td
+						>
 					</tr>
 				{/each}
 			</tbody>
 		</table>
-
 	{/await}
 </div>

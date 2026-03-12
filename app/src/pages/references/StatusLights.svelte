@@ -137,7 +137,8 @@
 								<table class="section-table">
 									<tbody>
 										<tr>
-											<td colspan="2" class="bold">Powered + Configured + Unable to Ping Field</td>
+											<td colspan="2" class="bold">Powered + Configured + Unable to Ping Field</td
+											>
 										</tr>
 										<tr>
 											<td class="green led"> </td>
@@ -572,7 +573,9 @@
 										</tr>
 									</tbody>
 								</table>
-								<p class="text-sm mt-2 italic">Note: Rapid or erratic RSL blinking may indicate insufficient power to the roboRIO.</p>
+								<p class="text-sm mt-2 italic">
+									Note: Rapid or erratic RSL blinking may indicate insufficient power to the roboRIO.
+								</p>
 							</td>
 						</tr>
 					</tbody>
@@ -1182,8 +1185,10 @@
 											<td>No Power</td>
 										</tr>
 										<tr>
-											<td class={LEDToggleState["3Hz"] === true ? "orange led" : "black led"}> </td>
-											<td class={LEDToggleState["3Hz"] === true ? "orange led" : "black led"}> </td>
+											<td class={LEDToggleState["3Hz"] === true ? "orange led" : "black led"}>
+											</td>
+											<td class={LEDToggleState["3Hz"] === true ? "orange led" : "black led"}>
+											</td>
 											<td>Valid CAN/PWM Signal, Robot is Disabled, Phoenix is Running </td>
 										</tr>
 										<tr>
@@ -1292,8 +1297,7 @@
 										</tr>
 										<tr>
 											<td class={LEDToggleState["3Hz"] === true ? "red led" : "orange led"}> </td>
-											<td class={LEDToggleState["3Hz"] === true ? "orange led" : "red led"}>
-											</td>
+											<td class={LEDToggleState["3Hz"] === true ? "orange led" : "red led"}> </td>
 											<td>Damaged Hardware</td>
 										</tr>
 										<tr>

@@ -111,7 +111,7 @@ export const fieldMonitorRouter = router({
 					let exactAheadBehind = undefined;
 					if (event.scheduleDetails.matches) {
 						processed.currentFrame.matchScheduledStartTime = event.scheduleDetails.matches.find(
-								(m) => m.match === processed.currentFrame.match && m.level === processed.currentFrame.level,
+							(m) => m.match === processed.currentFrame.match && m.level === processed.currentFrame.level,
 						)?.scheduledStartTime;
 						console.log(processed.currentFrame.matchScheduledStartTime);
 						if (processed.currentFrame.matchScheduledStartTime !== undefined) {
@@ -122,11 +122,13 @@ export const fieldMonitorRouter = router({
 							}
 							let timeDelta =
 								processed.currentFrame.matchScheduledStartTime.getTime() -
-								event.lastMatchStart.getTime();								timeDelta += computeOvernightOffset(
-									processed.currentFrame.matchScheduledStartTime,
-									event.lastMatchStart,
-									event.scheduleDetails,
-								);							exactAheadBehind =
+								event.lastMatchStart.getTime();
+							timeDelta += computeOvernightOffset(
+								processed.currentFrame.matchScheduledStartTime,
+								event.lastMatchStart,
+								event.scheduleDetails,
+							);
+							exactAheadBehind =
 								formatTimeShortNoAgoSeconds(timeDelta) + (timeDelta >= 0 ? " ahead" : " behind");
 							console.log(
 								processed.currentFrame.matchScheduledStartTime,

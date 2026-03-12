@@ -11,18 +11,21 @@ const appExtensionData = chrome.runtime.getManifest();
 		id: string;
 
 	await new Promise((resolve) => {
-		chrome.storage.local.get(["url", "cloud", "event", "changed", "enabled", "fieldMonitor", "eventToken", "id"], (item) => {
-			console.log(item);
-			url = String(item.url);
-			cloud = Boolean(item.cloud);
-			eventCode = String(item.event);
-			changed = Number(item.changed);
-			enabled = Boolean(item.enabled);
-			fieldMonitor = Boolean(item.fieldMonitor);
-			eventToken = String(item.eventToken);
-			id = String(item.id);
-			resolve(void 0);
-		});
+		chrome.storage.local.get(
+			["url", "cloud", "event", "changed", "enabled", "fieldMonitor", "eventToken", "id"],
+			(item) => {
+				console.log(item);
+				url = String(item.url);
+				cloud = Boolean(item.cloud);
+				eventCode = String(item.event);
+				changed = Number(item.changed);
+				enabled = Boolean(item.enabled);
+				fieldMonitor = Boolean(item.fieldMonitor);
+				eventToken = String(item.eventToken);
+				id = String(item.id);
+				resolve(void 0);
+			},
+		);
 	});
 
 	function sendPong(extra?: Record<string, any>) {

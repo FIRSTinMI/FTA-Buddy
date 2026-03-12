@@ -2,7 +2,11 @@
 	import { Button, Helper, Indicator, Input, Label, Toggle } from "flowbite-svelte";
 	import { onDestroy, onMount } from "svelte";
 	import type { NexusStatus } from "../../../../shared/types";
-	import { AUTO_EVENT_ISSUE_TYPES, type AutoEventIssueType, type EventAutoEventSettings } from "../../../../shared/types";
+	import {
+		AUTO_EVENT_ISSUE_TYPES,
+		type AutoEventIssueType,
+		type EventAutoEventSettings,
+	} from "../../../../shared/types";
 	import { trpc } from "../../main";
 	import { eventStore } from "../../stores/event";
 	import { userStore } from "../../stores/user";
@@ -75,12 +79,12 @@
 	let autoEventSaving = $state(false);
 
 	const ISSUE_LABELS: Record<AutoEventIssueType, string> = {
-		"Bypassed": "Bypassed",
+		Bypassed: "Bypassed",
 		"Code disconnect": "Code Disconnect",
 		"RIO disconnect": "RIO Disconnect",
 		"Radio disconnect": "Radio Disconnect",
 		"DS disconnect": "DS Disconnect",
-		"Brownout": "Brownout",
+		Brownout: "Brownout",
 		"Large spike in ping": "Large Spike in Ping",
 		"Sustained high ping": "Sustained High Ping",
 		"Low signal": "Low Signal",
@@ -90,7 +94,9 @@
 	async function loadAutoEventSettings() {
 		try {
 			autoEventSettings = await trpc.event.getAutoEventSettings.query();
-		} catch { /* ignore */ }
+		} catch {
+			/* ignore */
+		}
 	}
 
 	async function saveAutoEventSettings() {
@@ -134,8 +140,14 @@
 		extensionConfigured = false;
 		try {
 			window.postMessage(
-				{ source: "page", type: "eventCode", code: $eventStore.code, token: $userStore.eventToken, fieldMonitor: true },
-				"*"
+				{
+					source: "page",
+					type: "eventCode",
+					code: $eventStore.code,
+					token: $userStore.eventToken,
+					fieldMonitor: true,
+				},
+				"*",
 			);
 			await new Promise((resolve) => setTimeout(resolve, 600));
 			extensionConfigured = true;
@@ -232,7 +244,7 @@
 	}
 </script>
 
-<div class="container mx-auto md:max-w-5xl flex flex-col p-4 py-8 space-y-3  h-full pb-12 overflow-y-auto">
+<div class="container mx-auto md:max-w-5xl flex flex-col p-4 py-8 space-y-3 h-full pb-12 overflow-y-auto">
 	<h1 class="text-2xl font-bold">Event Management</h1>
 	<div class="flex flex-col items-center gap-1">
 		<span class="inline-flex gap-2 font-bold">
@@ -240,7 +252,9 @@
 			{#if fmsExtensionConnected}
 				<span class="text-green-500">Extension Connected</span>
 				{#if fmsLastSeenAt}
-					<span class="text-yellow-500 text-xs font-normal my-auto">(last seen {fmsLastSeenAt.toLocaleTimeString()})</span>
+					<span class="text-yellow-500 text-xs font-normal my-auto"
+						>(last seen {fmsLastSeenAt.toLocaleTimeString()})</span
+					>
 				{/if}
 			{:else}
 				<span class="text-red-400">No Extension Connected</span>
@@ -259,12 +273,21 @@
 					class="text-blue-400 hover:underline disabled:opacity-50"
 					disabled={extensionConfiguring}
 					onclick={configureExtension}
-				>{extensionConfiguring ? "Configuring…" : extensionConfigured ? "Reconfigure extension" : "Configure extension"}</button>
+					>{extensionConfiguring
+						? "Configuring…"
+						: extensionConfigured
+							? "Reconfigure extension"
+							: "Configure extension"}</button
+				>
 			</span>
 		{:else}
 			<span class="text-xs text-gray-500">
 				No extension detected on this computer —
-				<a href="https://chromewebstore.google.com/detail/fta-buddy/kddnhihfpfnehnnhbkfajdldlgigohjc" target="_blank" class="text-blue-400 hover:underline">Install</a>
+				<a
+					href="https://chromewebstore.google.com/detail/fta-buddy/kddnhihfpfnehnnhbkfajdldlgigohjc"
+					target="_blank"
+					class="text-blue-400 hover:underline">Install</a
+				>
 			</span>
 		{/if}
 	</div>
@@ -286,8 +309,8 @@
 			</div>
 		</div>
 
-        <h1 class="text-lg font-bold">Integrations</h1>
-        
+		<h1 class="text-lg font-bold">Integrations</h1>
+
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-2">
 			<div class="flex flex-col gap-3 rounded-xl border border-neutral-700 bg-neutral-900 p-5">
 				<h2 class="text-xl font-bold">Nexus Inspection API</h2>
@@ -403,7 +426,8 @@
 			<div class="flex flex-col gap-3 rounded-xl border border-neutral-700 bg-neutral-900 p-5">
 				<h2 class="text-xl font-bold">Auto Match Events</h2>
 				<p class="text-sm text-gray-400">
-					Automatically generate events in the Notepad feed when log analysis detects issues. Toggle which issue types create events.
+					Automatically generate events in the Notepad feed when log analysis detects issues. Toggle which
+					issue types create events.
 				</p>
 				<div class="flex flex-col gap-2 mt-1">
 					{#each AUTO_EVENT_ISSUE_TYPES as issue}

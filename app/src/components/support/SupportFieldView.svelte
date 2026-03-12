@@ -2,7 +2,14 @@
 	import Icon from "@iconify/svelte";
 	import { Badge, Button, Toggle } from "flowbite-svelte";
 	import { onDestroy, onMount } from "svelte";
-	import type { MatchEvent, MatchEventUpdateEventData, MonitorFrame, Note, NoteUpdateEventData, RobotInfo } from "../../../../shared/types";
+	import type {
+		MatchEvent,
+		MatchEventUpdateEventData,
+		MonitorFrame,
+		Note,
+		NoteUpdateEventData,
+		RobotInfo,
+	} from "../../../../shared/types";
 	import { DSState, ROBOT } from "../../../../shared/types";
 	import { frameHandler, subscribeToFieldMonitor } from "../../field-monitor";
 	import { trpc } from "../../main";
@@ -91,12 +98,14 @@
 	let modalTeamNum = $state(0);
 
 	// Consolidate bypass events into a single entry
-    type BypassGroup = { matchEvent: MatchEvent; bypassGroup?: MatchEvent[] };
+	type BypassGroup = { matchEvent: MatchEvent; bypassGroup?: MatchEvent[] };
 	function consolidateBypassEvents(events: MatchEvent[]): BypassGroup[] {
 		const nonBypass: BypassGroup[] = events.filter((e) => e.issue !== "Bypassed").map((e) => ({ matchEvent: e }));
 		const bypass = events.filter((e) => e.issue === "Bypassed");
 		if (bypass.length > 0) {
-			const sorted = [...bypass].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+			const sorted = [...bypass].sort(
+				(a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+			);
 			nonBypass.push({ matchEvent: sorted[0], bypassGroup: bypass.length > 1 ? bypass : undefined });
 		}
 		return nonBypass;
@@ -354,21 +363,26 @@
 	{@const td = teamData[teamNum]}
 	{@const teamName = $eventStore.teams.find((t) => t.number === String(teamNum))?.name ?? ""}
 	{@const itemCount = td && !td.loading ? td.notes.length + td.matchEvents.length : 0}
-	{@const activeEvents = td && !td.loading ? td.matchEvents.filter(e => e.status === "active") : []}
-	{@const eventSummaries = td && !td.loading && td.matchEvents.length > 0
-		? Object.entries(
-			td.matchEvents.reduce<Record<string, { total: number; active: number }>>((acc, e) => {
-				if (!acc[e.issue]) acc[e.issue] = { total: 0, active: 0 };
-				acc[e.issue].total += 1;
-				if (e.status === "active") acc[e.issue].active += 1;
-				return acc;
-			}, {})
-		).map(([issue, { total, active }]) => ({ issue, total, active }))
-		: []}
+	{@const activeEvents = td && !td.loading ? td.matchEvents.filter((e) => e.status === "active") : []}
+	{@const eventSummaries =
+		td && !td.loading && td.matchEvents.length > 0
+			? Object.entries(
+					td.matchEvents.reduce<Record<string, { total: number; active: number }>>((acc, e) => {
+						if (!acc[e.issue]) acc[e.issue] = { total: 0, active: 0 };
+						acc[e.issue].total += 1;
+						if (e.status === "active") acc[e.issue].active += 1;
+						return acc;
+					}, {}),
+				).map(([issue, { total, active }]) => ({ issue, total, active }))
+			: []}
 	<div class="flex-1 min-h-0 flex flex-col rounded-lg overflow-hidden shadow dark:bg-neutral-800 bg-white">
 		<div class="shrink-0 flex {alliance === 'blue' ? 'bg-blue-600' : 'bg-red-600'}">
 			<button
-				class="flex-1 px-2.5 sm:px-3 {isShortScreen ? 'py-0.5 sm:py-1' : 'py-1 sm:py-1.5'} font-bold text-white text-left flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base {isShortScreen ? '' : 'lg:text-lg'}"
+				class="flex-1 px-2.5 sm:px-3 {isShortScreen
+					? 'py-0.5 sm:py-1'
+					: 'py-1 sm:py-1.5'} font-bold text-white text-left flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base {isShortScreen
+					? ''
+					: 'lg:text-lg'}"
 				onclick={() => navigate("/notepad/team/:team", { params: { team: String(teamNum) } })}
 			>
 				<span class="leading-none">#{teamNum}</span>
@@ -378,7 +392,9 @@
 			</button>
 			{#if currentMatchId}
 				<button
-					class="px-1.5 sm:px-2 {isShortScreen ? 'py-0.5' : 'py-1 sm:py-1.5'} text-white hover:bg-white/20 flex items-center gap-1 text-[10px] sm:text-xs lg:text-sm border-l border-white/20"
+					class="px-1.5 sm:px-2 {isShortScreen
+						? 'py-0.5'
+						: 'py-1 sm:py-1.5'} text-white hover:bg-white/20 flex items-center gap-1 text-[10px] sm:text-xs lg:text-sm border-l border-white/20"
 					onclick={() =>
 						navigate("/logs/:matchid/:station", {
 							params: { matchid: currentMatchId, station: stationKey },
@@ -391,10 +407,14 @@
 		</div>
 		{#if liveRobot && isLive}
 			<div
-				class="shrink-0 flex items-center gap-1 sm:gap-2 px-2 {isShortScreen ? 'py-0.5' : 'py-1 sm:py-1.5'} border-b border-gray-200 dark:border-gray-700 text-[11px] sm:text-xs lg:text-sm"
+				class="shrink-0 flex items-center gap-1 sm:gap-2 px-2 {isShortScreen
+					? 'py-0.5'
+					: 'py-1 sm:py-1.5'} border-b border-gray-200 dark:border-gray-700 text-[11px] sm:text-xs lg:text-sm"
 			>
 				<div
-					class="{isShortScreen ? 'size-3.5' : 'size-4 sm:size-6'} rounded-sm flex items-center justify-center text-black font-bold text-[9px] sm:text-[10px] shrink-0 {dsColor(
+					class="{isShortScreen
+						? 'size-3.5'
+						: 'size-4 sm:size-6'} rounded-sm flex items-center justify-center text-black font-bold text-[9px] sm:text-[10px] shrink-0 {dsColor(
 						liveRobot.ds,
 					)}"
 					title="Driver Station: {liveRobot.ds === DSState.GREEN_X
@@ -421,7 +441,8 @@
 					{/if}
 				</div>
 				<div
-					class="{isShortScreen ? 'size-3.5' : 'size-4 sm:size-6'} rounded-sm shrink-0 {liveRobot.radio || liveRobot.radioConnected
+					class="{isShortScreen ? 'size-3.5' : 'size-4 sm:size-6'} rounded-sm shrink-0 {liveRobot.radio ||
+					liveRobot.radioConnected
 						? 'bg-green-500'
 						: 'bg-red-600'}"
 					title="Radio: {liveRobot.radio
@@ -431,7 +452,9 @@
 							: 'No radio'}"
 				></div>
 				<div
-					class="{isShortScreen ? 'size-3.5' : 'size-4 sm:size-6'} rounded-sm flex items-center justify-center text-black text-[9px] sm:text-[10px] font-bold shrink-0 {liveRobot.rio
+					class="{isShortScreen
+						? 'size-3.5'
+						: 'size-4 sm:size-6'} rounded-sm flex items-center justify-center text-black text-[9px] sm:text-[10px] font-bold shrink-0 {liveRobot.rio
 						? 'bg-green-500'
 						: 'bg-red-600'}"
 					title="RoboRIO: {liveRobot.rio ? (liveRobot.code ? 'Code running' : 'No code') : 'Not connected'}"
@@ -463,9 +486,19 @@
 				{#if eventSummaries.length > 0}
 					<div class="py-1">
 						<div class="flex items-center gap-1.5 text-xs sm:text-sm lg:text-base font-semibold flex-wrap">
-							<Icon icon="mdi:alert-circle-outline" class="size-3.5 sm:size-4 lg:size-5 shrink-0 text-amber-700 dark:text-amber-400" />
+							<Icon
+								icon="mdi:alert-circle-outline"
+								class="size-3.5 sm:size-4 lg:size-5 shrink-0 text-amber-700 dark:text-amber-400"
+							/>
 							{#each eventSummaries as { issue, total, active }, i}
-								<span class="{active > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-gray-400 dark:text-gray-500'}">{issue} x{total}{#if active > 0 && active < total} ({active} active){/if}{#if active === 0} (resolved){/if}</span>{#if i < eventSummaries.length - 1}<span class="text-gray-400">,</span>{/if}
+								<span
+									class={active > 0
+										? "text-amber-700 dark:text-amber-400"
+										: "text-gray-400 dark:text-gray-500"}
+									>{issue} x{total}{#if active > 0 && active < total}
+										({active} active){/if}{#if active === 0}
+										(resolved){/if}</span
+								>{#if i < eventSummaries.length - 1}<span class="text-gray-400">,</span>{/if}
 							{/each}
 						</div>
 					</div>
@@ -473,17 +506,42 @@
 				{#if td && td.notes.length > 0}
 					{#each [...td.notes].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()) as note}
 						<button
-							class="w-full text-left {isShortScreen ? 'py-0.5' : 'py-1'} border-b border-gray-100 dark:border-neutral-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-neutral-700/50 rounded transition-colors {note.resolution_status === 'Resolved' ? 'opacity-50' : ''}"
+							class="w-full text-left {isShortScreen
+								? 'py-0.5'
+								: 'py-1'} border-b border-gray-100 dark:border-neutral-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-neutral-700/50 rounded transition-colors {note.resolution_status ===
+							'Resolved'
+								? 'opacity-50'
+								: ''}"
 							onclick={() => navigate("/notepad/view/:id", { params: { id: note.id } })}
 						>
-							<p class="text-[11px] sm:text-xs lg:text-sm text-black dark:text-white {isShortScreen ? 'line-clamp-1' : 'line-clamp-2'} leading-snug">{note.text}</p>
+							<p
+								class="text-[11px] sm:text-xs lg:text-sm text-black dark:text-white {isShortScreen
+									? 'line-clamp-1'
+									: 'line-clamp-2'} leading-snug"
+							>
+								{note.text}
+							</p>
 							<div class="flex items-center gap-1.5 {isShortScreen ? 'mt-0' : 'mt-0.5'}">
-								<span class="text-[10px] sm:text-[11px] lg:text-xs {note.resolution_status === 'Open' ? 'text-green-500' : 'text-gray-400'}">{note.resolution_status}</span>
+								<span
+									class="text-[10px] sm:text-[11px] lg:text-xs {note.resolution_status === 'Open'
+										? 'text-green-500'
+										: 'text-gray-400'}">{note.resolution_status}</span
+								>
 								{#if note.match_number}
-									<span class="text-[10px] sm:text-[11px] lg:text-xs text-gray-400">· {note.tournament_level === 'Qualification' ? 'Q' : note.tournament_level === 'Playoff' ? 'PO' : note.tournament_level === 'Practice' ? 'P' : ''}{note.match_number}</span>
+									<span class="text-[10px] sm:text-[11px] lg:text-xs text-gray-400"
+										>· {note.tournament_level === "Qualification"
+											? "Q"
+											: note.tournament_level === "Playoff"
+												? "PO"
+												: note.tournament_level === "Practice"
+													? "P"
+													: ""}{note.match_number}</span
+									>
 								{/if}
 								{#if note.author?.username && !isShortScreen}
-									<span class="text-[10px] sm:text-[11px] lg:text-xs text-gray-400">· {note.author.username}</span>
+									<span class="text-[10px] sm:text-[11px] lg:text-xs text-gray-400"
+										>· {note.author.username}</span
+									>
 								{/if}
 							</div>
 						</button>
@@ -491,7 +549,9 @@
 				{/if}
 				{#if itemCount > 0}
 					<button
-						class="shrink-0 w-full text-left {isShortScreen ? 'py-0' : 'py-1'} text-[10px] sm:text-[11px] lg:text-xs text-blue-500 hover:text-blue-400 rounded flex items-center gap-1 transition-colors"
+						class="shrink-0 w-full text-left {isShortScreen
+							? 'py-0'
+							: 'py-1'} text-[10px] sm:text-[11px] lg:text-xs text-blue-500 hover:text-blue-400 rounded flex items-center gap-1 transition-colors"
 						onclick={() => navigate("/notepad/team/:team", { params: { team: String(teamNum) } })}
 					>
 						<Icon icon="mdi:open-in-new" class="size-2.5 sm:size-3 shrink-0" />
@@ -501,7 +561,9 @@
 			{/if}
 		</div>
 		<button
-			class="shrink-0 w-full text-left px-3 {isShortScreen ? 'py-0.5' : 'py-1.5'} text-[11px] sm:text-xs lg:text-sm text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-neutral-700 flex items-center gap-1.5 transition-colors"
+			class="shrink-0 w-full text-left px-3 {isShortScreen
+				? 'py-0.5'
+				: 'py-1.5'} text-[11px] sm:text-xs lg:text-sm text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-neutral-700 flex items-center gap-1.5 transition-colors"
 			onclick={() => openNoteModal(teamNum)}
 		>
 			<Icon icon="mdi:plus-circle-outline" class="size-3 sm:size-3.5 lg:size-4 shrink-0" />
@@ -537,12 +599,14 @@
 		<div class="shrink-0 px-3 {isShortScreen ? 'py-0.5' : 'pt-2 pb-1'}">
 			<div class="flex items-center justify-between gap-2">
 				<Button size="xs" color="alternative" onclick={goToPrevMatch} disabled={matchIndex === 0}>
-					<Icon icon="mdi:chevron-left" class="{isShortScreen ? 'size-3.5' : 'size-4 sm:size-5'}" />
+					<Icon icon="mdi:chevron-left" class={isShortScreen ? "size-3.5" : "size-4 sm:size-5"} />
 				</Button>
 
 				<div class="flex flex-col items-center min-w-0">
 					<p
-						class="font-bold {isShortScreen ? 'text-sm' : 'text-base sm:text-xl lg:text-3xl'} leading-tight text-black dark:text-white text-center truncate"
+						class="font-bold {isShortScreen
+							? 'text-sm'
+							: 'text-base sm:text-xl lg:text-3xl'} leading-tight text-black dark:text-white text-center truncate"
 					>
 						{matchLabel}
 					</p>
@@ -562,12 +626,14 @@
 					onclick={goToNextMatch}
 					disabled={isLive}
 				>
-					<Icon icon="mdi:chevron-right" class="{isShortScreen ? 'size-3.5' : 'size-4 sm:size-5'}" />
+					<Icon icon="mdi:chevron-right" class={isShortScreen ? "size-3.5" : "size-4 sm:size-5"} />
 				</Button>
 			</div>
 			<div class="flex justify-end items-center gap-1.5 {isShortScreen ? 'mt-0' : 'mt-1'}">
 				<Toggle size="small" bind:checked={autoAdvance} />
-				<span class="text-[11px] sm:text-xs lg:text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">Current match</span>
+				<span class="text-[11px] sm:text-xs lg:text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap"
+					>Current match</span
+				>
 			</div>
 		</div>
 

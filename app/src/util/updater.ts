@@ -11,21 +11,21 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
-    "2.7.0.8": {
-        changelog: ''
-    },
-    "2.7.0.7": {
-        changelog: `
+	"2.7.0.8": {
+		changelog: "",
+	},
+	"2.7.0.7": {
+		changelog: `
         <h1 class="text-lg font-bold">v2.7.0.7</h1>
         <ul>
         <li>Subtract overnight hours from ahead/behind calculation</li>
         </ul>`,
-    },
-    "2.7.0.6": {
-        changelog: '',
-    },
-    "2.7.0.5": {
-        changelog: `
+	},
+	"2.7.0.6": {
+		changelog: "",
+	},
+	"2.7.0.5": {
+		changelog: `
         <h1 class="text-lg font-bold">v2.7.0.5</h1>
         <ul>
         <li>Back button on team history and note pages now correctly returns to the previous page</li>
@@ -35,34 +35,34 @@ export const VERSIONS: { [key: string]: Version } = {
         <li>SSE reconnects faster after connection loss</li>
         <li>Fixed memory leaks on field monitor</li>
         </ul>`,
-    },
-    "2.7.0.4": {
-        changelog: `
+	},
+	"2.7.0.4": {
+		changelog: `
         <h1 class="text-lg font-bold">v2.7.0.4</h1>
         <ul>
         <li>Fix BWU being off scale on match logs</li>
         <li>Hopefully make fullscreen detection work better</li>
         </ul>`,
-    },
-    "2.7.0.3": {
-        changelog: `
+	},
+	"2.7.0.3": {
+		changelog: `
         <h1 class="text-lg font-bold">v2.7.0.3</h1>
         <ul>
         <li>Fixed most recent reply showing wrong role on note cards</li>
         <li>Issue severity is now used to determine the primary issue type on match events (DS > Radio > RIO > Code > others)</li>
         <li>Match logs with no teams assigned are now discarded</li>
         </ul>`,
-    },
-    "2.7.0.2": {
-        changelog: `
+	},
+	"2.7.0.2": {
+		changelog: `
         <h1 class="text-lg font-bold">v2.7.0.2</h1>
         <ul>
         <li>Combine multiple match events into one card</li>
         <li>Save filters on the notes page</li>
         </ul>`,
-    },
-    "2.7.0.1": {
-        changelog: `
+	},
+	"2.7.0.1": {
+		changelog: `
         <h1 class="text-lg font-bold">v2.7.0.1</h1>
         <p>Week 1 bug fixes</p>
         <ul>
@@ -71,7 +71,7 @@ export const VERSIONS: { [key: string]: Version } = {
         <li>Added a "Field Monitor" switch to the extension so you don't have multiple extensions pushing updates simultaneously</li>
         <li>Fixed extension configuration from the web app</li>
         </ul>`,
-    },
+	},
 	"2.7.0.0": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.0.0</h1>

@@ -205,7 +205,11 @@ export async function processTeamWarnings(eventCode: string, frame: MonitorFrame
 				.limit(1)
 				.execute();
 
-			if (lastMatchEvent.length > 0 && lastMatchEvent[0].match_number !== frame.match && lastMatchEvent[0].play_number !== frame.play) {
+			if (
+				lastMatchEvent.length > 0 &&
+				lastMatchEvent[0].match_number !== frame.match &&
+				lastMatchEvent[0].play_number !== frame.play
+			) {
 				robot.warnings.push(RobotWarnings.PREVIOUS_MATCH_EVENT);
 			}
 
@@ -347,17 +351,13 @@ export function computeOvernightOffset(
 		// Determine gap start: endTime of current day, or scheduled start of last match
 		let gapStart: Date | null = today.endTime ? new Date(today.endTime) : null;
 		if (!gapStart) {
-			const lastMatchOfDay = scheduleDetails.matches.find(
-				(m) => m.match === today.end,
-			);
+			const lastMatchOfDay = scheduleDetails.matches.find((m) => m.match === today.end);
 			if (!lastMatchOfDay) continue;
 			gapStart = new Date(lastMatchOfDay.scheduledStartTime);
 		}
 
 		// Determine gap end: scheduled start of first match of next day
-		const firstMatchOfNextDay = scheduleDetails.matches.find(
-			(m) => m.match === tomorrow.start,
-		);
+		const firstMatchOfNextDay = scheduleDetails.matches.find((m) => m.match === tomorrow.start);
 		if (!firstMatchOfNextDay) continue;
 		const gapEnd = new Date(firstMatchOfNextDay.scheduledStartTime);
 

@@ -96,7 +96,10 @@
 				users: res.users as Profile[],
 			});
 
-			window.postMessage({ source: "page", type: "eventCode", code: eventCode, token: res.token, fieldMonitor: true }, "*");
+			window.postMessage(
+				{ source: "page", type: "eventCode", code: eventCode, token: res.token, fieldMonitor: true },
+				"*",
+			);
 
 			await new Promise((resolve) => setTimeout(resolve, 500));
 

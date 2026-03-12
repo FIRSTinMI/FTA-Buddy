@@ -2,7 +2,13 @@
 	import Icon from "@iconify/svelte";
 	import { Button, Input, Label, Modal, Select, Textarea } from "flowbite-svelte";
 	import { onDestroy, onMount, tick } from "svelte";
-	import type { MatchEvent, MatchEventUpdateEventData, Note, NoteUpdateEventData, TournamentLevel } from "../../../../shared/types";
+	import type {
+		MatchEvent,
+		MatchEventUpdateEventData,
+		Note,
+		NoteUpdateEventData,
+		TournamentLevel,
+	} from "../../../../shared/types";
 	import { trpc } from "../../main";
 	import { navigate } from "../../router";
 	import { eventStore } from "../../stores/event";
@@ -43,7 +49,9 @@
 
 	let notes: Note[] = $state([]);
 	let matchEvents: MatchEvent[] = $state([]);
-	type FeedItem = { kind: "note"; note: Note; date: Date } | { kind: "event"; matchEvent: MatchEvent; date: Date; bypassGroup?: MatchEvent[] };
+	type FeedItem =
+		| { kind: "note"; note: Note; date: Date }
+		| { kind: "event"; matchEvent: MatchEvent; date: Date; bypassGroup?: MatchEvent[] };
 	let filteredFeed: FeedItem[] = $state([]);
 
 	let loading = $state(true);
@@ -97,15 +105,16 @@
 					const teamStr = e.team?.toString() ?? "";
 					const teamName = e.team !== null ? (teamNames[e.team]?.toLowerCase() ?? "") : "";
 					return tokenized.every(
-						(tok) =>
-							teamStr.includes(tok) ||
-							teamName.includes(tok) ||
-							e.issue.toLowerCase().includes(tok),
+						(tok) => teamStr.includes(tok) || teamName.includes(tok) || e.issue.toLowerCase().includes(tok),
 					);
 				});
 			}
 
-			items.push(...evts.filter((e) => e.issue !== "Bypassed").map((e) => ({ kind: "event" as const, matchEvent: e, date: new Date(e.created_at) })));
+			items.push(
+				...evts
+					.filter((e) => e.issue !== "Bypassed")
+					.map((e) => ({ kind: "event" as const, matchEvent: e, date: new Date(e.created_at) })),
+			);
 
 			// Consolidate bypass events by team into single cards
 			const bypassByTeam = new Map<number, MatchEvent[]>();
@@ -116,7 +125,9 @@
 				}
 			}
 			for (const [, teamBypasses] of bypassByTeam) {
-				const sorted = [...teamBypasses].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+				const sorted = [...teamBypasses].sort(
+					(a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+				);
 				items.push({
 					kind: "event" as const,
 					matchEvent: sorted[0],
@@ -291,7 +302,6 @@
 
 	let createModalOpen = $state(false);
 
-
 	const teamOptions = $eventStore.teams
 		.sort((a, b) => parseInt(a.number) - parseInt(b.number))
 		.map((v) => ({ value: parseInt(v.number), name: `${v.number} – ${v.name}` }));
@@ -434,7 +444,7 @@
 			selectedLabel = undefined;
 			matchId = undefined;
 			await tick();
-			navigate('/notepad/view/:id', { params: { id: createdNote.id }});
+			navigate("/notepad/view/:id", { params: { id: createdNote.id } });
 		} catch (err: any) {
 			toast("Error creating note", err.message);
 			console.error(err);
@@ -526,7 +536,12 @@
 		</Button>
 
 		<div class="relative grow">
-			<Input class="ps-8 pe-2.5 py-1.5 h-9" type="text" placeholder="Search by Team #, Name, Text" bind:value={search}>
+			<Input
+				class="ps-8 pe-2.5 py-1.5 h-9"
+				type="text"
+				placeholder="Search by Team #, Name, Text"
+				bind:value={search}
+			>
 				{#snippet left()}
 					<Icon icon="mdi:magnify" />
 				{/snippet}
@@ -605,8 +620,12 @@
 					<MatchEventCard
 						matchEvent={item.matchEvent}
 						bypassGroup={item.bypassGroup}
-						onDismiss={(id) => { matchEvents = matchEvents.filter((e) => e.id !== id); }}
-						onConvert={(id) => { matchEvents = matchEvents.filter((e) => e.id !== id); }}
+						onDismiss={(id) => {
+							matchEvents = matchEvents.filter((e) => e.id !== id);
+						}}
+						onConvert={(id) => {
+							matchEvents = matchEvents.filter((e) => e.id !== id);
+						}}
 					/>
 				{/if}
 			{/each}

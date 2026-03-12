@@ -79,10 +79,7 @@ export function updateScheduleText(
 		// minutes "Late" just because the reference point is hours in the past.
 		const scheduledDayEnd = new Date(scheduleDetails.days[currentScheduleDay].endTime ?? fallbackEndOfDay);
 		const nextDay = scheduleDetails.days[currentScheduleDay + 1];
-		const referenceTime =
-			scheduledDayEnd < new Date() && nextDay
-				? new Date(nextDay.date)
-				: scheduledDayEnd;
+		const referenceTime = scheduledDayEnd < new Date() && nextDay ? new Date(nextDay.date) : scheduledDayEnd;
 
 		let endTimeFormatted = endTime.toLocaleTimeString().split(":").slice(0, 2).join(":");
 		let end = formatTimeShortNoAgoMinutesOnly(endTime, referenceTime);

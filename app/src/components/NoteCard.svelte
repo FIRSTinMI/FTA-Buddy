@@ -61,6 +61,7 @@
 
 	let isTeamIssue = $derived(note.note_type === "TeamIssue");
 	let isOpen = $derived(note.resolution_status === "Open");
+	let isResolved = $derived(note.resolution_status === "Resolved");
 	let canToggleStatus = $derived(
 		isTeamIssue && note.resolution_status !== "NotApplicable" && note.resolution_status !== null,
 	);
@@ -139,7 +140,7 @@
 
 <a
 	href="/notepad/view/{note.id}"
-	class="block w-full rounded-xl bg-white dark:bg-neutral-700 shadow-sm hover:shadow-md transition-shadow p-4 text-black dark:text-white no-underline"
+	class="block w-full rounded-xl {isResolved ? 'bg-gray-100 dark:bg-neutral-800 opacity-60' : 'bg-white dark:bg-neutral-700'} shadow-sm hover:shadow-md transition-shadow p-4 text-black dark:text-white no-underline"
 >
 	<div class="flex flex-col gap-2.5">
 		<div class="flex items-start justify-between gap-3">

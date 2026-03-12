@@ -83,7 +83,7 @@
 	let teamData: Record<number, TeamData> = $state({});
 
 	function sortNotes(notes: Note[]): Note[] {
-		return notes.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+		return notes.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
 	}
 
 	// Modal state
@@ -534,33 +534,35 @@
 	</div>
 {:else}
 	<div class="flex flex-col h-full">
-		<div class="shrink-0 px-3 {isShortScreen ? 'py-1' : 'pt-2 pb-1'}">
+		<div class="shrink-0 px-3 {isShortScreen ? 'py-0.5' : 'pt-2 pb-1'}">
 			<div class="flex items-center justify-between gap-2">
-				<Button size="sm" color="alternative" onclick={goToPrevMatch} disabled={matchIndex === 0}>
-					<Icon icon="mdi:chevron-left" class="size-4 sm:size-5" />
+				<Button size="xs" color="alternative" onclick={goToPrevMatch} disabled={matchIndex === 0}>
+					<Icon icon="mdi:chevron-left" class="{isShortScreen ? 'size-3.5' : 'size-4 sm:size-5'}" />
 				</Button>
 
 				<div class="flex flex-col items-center min-w-0">
 					<p
-						class="font-bold {isShortScreen ? 'text-base sm:text-lg' : 'text-base sm:text-xl lg:text-3xl'} leading-tight text-black dark:text-white text-center truncate"
+						class="font-bold {isShortScreen ? 'text-sm' : 'text-base sm:text-xl lg:text-3xl'} leading-tight text-black dark:text-white text-center truncate"
 					>
 						{matchLabel}
 					</p>
-					<Badge
-						color="green"
-						class="text-xs {isShortScreen ? '' : 'mt-0.5'} transition-opacity {isLive
-							? 'opacity-100'
-							: 'opacity-0 pointer-events-none'}">LIVE</Badge
-					>
+					{#if !isShortScreen}
+						<Badge
+							color="green"
+							class="text-xs mt-0.5 transition-opacity {isLive
+								? 'opacity-100'
+								: 'opacity-0 pointer-events-none'}">LIVE</Badge
+						>
+					{/if}
 				</div>
 
 				<Button
-					size="sm"
+					size={isShortScreen ? "xs" : "sm"}
 					color="alternative"
 					onclick={goToNextMatch}
 					disabled={isLive}
 				>
-					<Icon icon="mdi:chevron-right" class="size-4 sm:size-5" />
+					<Icon icon="mdi:chevron-right" class="{isShortScreen ? 'size-3.5' : 'size-4 sm:size-5'}" />
 				</Button>
 			</div>
 			<div class="flex justify-end items-center gap-1.5 {isShortScreen ? 'mt-0' : 'mt-1'}">

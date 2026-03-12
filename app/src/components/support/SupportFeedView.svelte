@@ -126,10 +126,8 @@
 			}
 		}
 
-		// Notes first (newest on top), then events (newest on top)
-		const noteItems = items.filter((i) => i.kind === "note");
-		const eventItems = items.filter((i) => i.kind === "event");
-		filteredFeed = [...noteItems, ...eventItems].sort((a, b) => b.date.getTime() - a.date.getTime());
+		// Sort all items together by date (most recent activity first)
+		filteredFeed = items.sort((a, b) => b.date.getTime() - a.date.getTime());
 	}
 
 	$effect(() => {
@@ -292,6 +290,7 @@
 	let filterModalOpen = $state(false);
 
 	let createModalOpen = $state(false);
+
 
 	const teamOptions = $eventStore.teams
 		.sort((a, b) => parseInt(a.number) - parseInt(b.number))

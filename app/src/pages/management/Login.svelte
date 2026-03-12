@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { Button, Input, Label, Modal, Select, type SelectOptionType } from "flowbite-svelte";
 	import { tick } from "svelte";
-	import { get } from "svelte/store";
 	import type { Profile, TeamList } from "../../../../shared/types";
 	import Spinner from "../../components/Spinner.svelte";
 	import { trpc } from "../../main";
@@ -110,7 +109,10 @@
 			toast("Success", "Logged in successfully", "green-500");
 
 			const redirect = sessionStorage.getItem("redirectAfterLogin");
-			if (redirect) { sessionStorage.removeItem("redirectAfterLogin"); navigate(redirect as any); }
+			if (redirect) {
+				sessionStorage.removeItem("redirectAfterLogin");
+				navigate(redirect as any);
+			}
 		} catch (err: any) {
 			toast("Error Logging In", err.message);
 			console.error("[AUTH] login error:", err);
@@ -239,8 +241,10 @@
 
 				await tick();
 				const redirect = sessionStorage.getItem("redirectAfterLogin");
-				if (redirect) { sessionStorage.removeItem("redirectAfterLogin"); navigate(redirect as any); }
-				else navigate("/dashboard");
+				if (redirect) {
+					sessionStorage.removeItem("redirectAfterLogin");
+					navigate(redirect as any);
+				} else navigate("/dashboard");
 			} else {
 				user.set({ ...$user, eventToken: res.token });
 				eventStore.set({
@@ -259,8 +263,10 @@
 
 				await tick();
 				const redirect = sessionStorage.getItem("redirectAfterLogin");
-				if (redirect) { sessionStorage.removeItem("redirectAfterLogin"); navigate(redirect as any); }
-				else navigate($user.role === "FTA" || $user.role === "FTAA" ? "/monitor" : "/notepad");
+				if (redirect) {
+					sessionStorage.removeItem("redirectAfterLogin");
+					navigate(redirect as any);
+				} else navigate($user.role === "FTA" || $user.role === "FTAA" ? "/monitor" : "/notepad");
 			}
 			toast("Success", "Event joined successfully", "green-500");
 		} catch (err: any) {
@@ -318,7 +324,7 @@
 		Object.values($savedEventsStore).map((e) => ({
 			value: e.code,
 			name: e.label ? `${e.code} — ${e.label}` : e.code,
-		}))
+		})),
 	);
 
 	let previousEventSelection = $state("");
@@ -351,7 +357,11 @@
 		}
 
 		const redirect = sessionStorage.getItem("redirectAfterLogin");
-		if (redirect) { sessionStorage.removeItem("redirectAfterLogin"); navigate(redirect as any); return; }
+		if (redirect) {
+			sessionStorage.removeItem("redirectAfterLogin");
+			navigate(redirect as any);
+			return;
+		}
 		navigate($user.role === "FTA" || $user.role === "FTAA" ? "/monitor" : "/notepad");
 	}
 

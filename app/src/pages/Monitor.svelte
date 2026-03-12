@@ -299,8 +299,8 @@
 			<div
 				class="text-right"
 				class:text-4xl={$fullscreen}
-				style="color: rgba({75 * currentCycleTimeRedness + 180}, {180 *
-					(1 - currentCycleTimeRedness)}, {180 * (1 - currentCycleTimeRedness)}, 1)"
+				style="color: rgba({75 * currentCycleTimeRedness + 180}, {180 * (1 - currentCycleTimeRedness)}, {180 *
+					(1 - currentCycleTimeRedness)}, 1)"
 			>
 				T: {currentCycleTime}
 			</div>

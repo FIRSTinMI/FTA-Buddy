@@ -24,7 +24,15 @@ export function subscriptionQueue<T>(signal: AbortSignal) {
 			}
 			await new Promise<void>((resolve) => {
 				notify = resolve;
-				signal.addEventListener("abort", () => resolve(), { once: true });
+				// Clean up the abort listener when resolved by push(),
+				// otherwise it would leak one listener per iteration.
+				const onAbort = () => resolve();
+				signal.addEventListener("abort", onAbort, { once: true });
+				const origNotify = notify;
+				notify = () => {
+					signal.removeEventListener("abort", onAbort);
+					origNotify?.();
+				};
 			});
 		}
 	}

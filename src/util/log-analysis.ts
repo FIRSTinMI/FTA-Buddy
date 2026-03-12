@@ -7,6 +7,7 @@ import { ROBOT } from "../../shared/types";
 import { db } from "../db/db";
 import { analyzedLogs, events as eventsTable, issueEnum, matchEvents, matchLogs } from "../db/schema";
 import { events } from "../index";
+import { tryAutoLinkNewMatchEvent } from "./auto-link-events";
 
 /**
  * Global cache of autoEventSettings keyed by event code.
@@ -370,6 +371,7 @@ export async function logAnalysisLoop(limit: number) {
 							kind: "match_event_create",
 							matchEvent: inserted,
 						});
+						await tryAutoLinkNewMatchEvent(inserted, log.event, serverEvent);
 					}
 				}
 			} else if (analyzedLog.length > 0) {
@@ -457,6 +459,7 @@ export async function logAnalysisLoop(limit: number) {
 							kind: "match_event_create",
 							matchEvent: inserted,
 						});
+						await tryAutoLinkNewMatchEvent(inserted, log.event, serverEvent);
 					}
 				}
 			}

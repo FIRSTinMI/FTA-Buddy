@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { randomUUID } from "crypto";
-import { and, asc, desc, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { on } from "events";
 import { z } from "zod";
 import { notificationEmitter } from "../state";
@@ -22,6 +22,7 @@ import {
 	updateSlackMessage,
 } from "../util/slack";
 import { subscriptionQueue } from "../util/subscription";
+import { autoLinkEventsToNote } from "../util/auto-link-events";
 
 /**
  * Given an event code and match number (plus optional play number / level),
@@ -710,6 +711,24 @@ export const notesRouter = router({
 			if (!insert[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Note" });
 
 			event.noteUpdateEmitter.emit("note_update", { kind: "create", note: insert[0] as Note });
+
+			// Auto-attach all active match events for the same team + match
+			if (input.note_type === "TeamIssue" && insert[0].team !== null && insert[0].match_number !== null) {
+				const activeEvents = await db
+					.select()
+					.from(matchEvents)
+					.where(
+						and(
+							eq(matchEvents.event_code, event.code),
+							eq(matchEvents.team, insert[0].team),
+							eq(matchEvents.match_number, insert[0].match_number),
+							eq(matchEvents.status, "active"),
+						),
+					)
+					.execute();
+
+				await autoLinkEventsToNote(noteId, activeEvents, event);
+			}
 
 			createNotification(
 				event.users.map((u) => u.id).filter((id) => id !== authorProfile[0].id),

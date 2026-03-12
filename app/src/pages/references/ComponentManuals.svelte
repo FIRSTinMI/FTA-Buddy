@@ -72,9 +72,9 @@
 				<span class="font-bold">roboRio 2</span>
 			{/snippet}
 			{#if openState.roborio === true || loadedState.roborio === true}
-				<a href="https://www.ni.com/docs/en-US/bundle/roborio-20-umanual/page/umanual.html" target="_blank"
+				<a href="https://www.ni.com/docs/en-US/bundle/roborio-20-umanual/page/user-manual-welcome.html" target="_blank"
 					><QrCode
-						value="https://www.ni.com/docs/en-US/bundle/roborio-20-umanual/page/umanual.html"
+						value="https://www.ni.com/docs/en-US/bundle/roborio-20-umanual/page/user-manual-welcome.html"
 						padding={12}
 					/></a
 				>

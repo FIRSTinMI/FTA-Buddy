@@ -22,11 +22,14 @@ export const { p, navigate, isActive, preload, route } = createRouter({
 	"/manage/meshed-event": () => import("./pages/management/MeshedEvent.svelte"),
 
 	"/logs": () => import("./pages/match-logs/MatchLogsList.svelte"),
+	"/logs/:eventCode/:matchid/:station": () => import("./pages/EventSwitchRedirect.svelte"),
+	"/logs/:eventCode/:matchid": () => import("./pages/EventSwitchRedirect.svelte"),
 	"/logs/:matchid": () => import("./pages/match-logs/MatchLog.svelte"),
 	"/logs/:matchid/:station": () => import("./pages/match-logs/StationLog.svelte"),
 
 	"/notepad": () => import("./pages/SupportBoard.svelte"),
 	"/notepad/team/:team": () => import("./pages/tickets-notes/TeamHistory.svelte"),
+	"/notepad/view/:eventCode/:id": () => import("./pages/EventSwitchRedirect.svelte"),
 	"/notepad/view/:id": () => import("./pages/tickets-notes/ViewNote.svelte"),
 	"/notepad/submit/:eventCode": () => import("./pages/tickets-notes/PublicNoteCreate.svelte"),
 

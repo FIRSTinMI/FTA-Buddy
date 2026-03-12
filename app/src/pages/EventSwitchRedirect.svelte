@@ -1,0 +1,93 @@
+<script lang="ts">
+	import { get } from "svelte/store";
+	import { onMount } from "svelte";
+	import type { Profile } from "../../../shared/types";
+	import EventJoinPrompt from "../components/EventJoinPrompt.svelte";
+	import Spinner from "../components/Spinner.svelte";
+	import { navigate } from "../router";
+	import { eventStore } from "../stores/event";
+	import { userStore } from "../stores/user";
+	import { savedEventsStore, saveEvent } from "../stores/savedEvents";
+
+	// sv-router passes route params as props. All possible param combos across the three routes:
+	interface Props {
+		eventCode: string;
+		// notepad/view/:eventCode/:id
+		id?: string;
+		// logs/:eventCode/:matchid and logs/:eventCode/:matchid/:station
+		matchid?: string;
+		station?: string;
+	}
+
+	let { eventCode, id, matchid, station }: Props = $props();
+
+	// Build the target path (event-code-less equivalent)
+	const redirectPath: string = (() => {
+		if (id) return `/notepad/view/${id}`;
+		if (matchid && station) return `/logs/${matchid}/${station}`;
+		if (matchid) return `/logs/${matchid}`;
+		return "/";
+	})();
+
+	let showPrompt = $state(false);
+
+	onMount(() => {
+		const user = get(userStore);
+		const event = get(eventStore);
+		const saved = get(savedEventsStore);
+
+		// Already on the right event — just redirect
+		if (event.code === eventCode) {
+			navigate(redirectPath as any);
+			return;
+		}
+
+		// We have a saved token for this event — restore silently and redirect
+		const savedEntry = saved[eventCode];
+		if (savedEntry) {
+			if (savedEntry.subEvents) {
+				userStore.update((u) => ({
+					...u,
+					eventToken: savedEntry.token,
+					meshedEventToken: savedEntry.token,
+				}));
+				eventStore.set({
+					code: savedEntry.code,
+					pin: savedEntry.pin,
+					teams: savedEntry.teams,
+					users: savedEntry.users,
+					subEvents: savedEntry.subEvents,
+					meshedEventCode: savedEntry.meshedEventCode,
+					label: savedEntry.label,
+				});
+			} else {
+				userStore.update((u) => ({ ...u, eventToken: savedEntry.token, meshedEventToken: undefined }));
+				eventStore.set({
+					code: savedEntry.code,
+					pin: savedEntry.pin,
+					teams: savedEntry.teams,
+					users: savedEntry.users,
+					label: savedEntry.label,
+				});
+			}
+			navigate(redirectPath as any);
+			return;
+		}
+
+		// No saved entry. If user has a personal account token, show the inline PIN prompt.
+		if (user.token) {
+			showPrompt = true;
+			return;
+		}
+
+		// Not logged in at all — send them to login and come back after
+		sessionStorage.setItem("redirectAfterLogin", redirectPath);
+		navigate("/manage/login");
+	});
+</script>
+
+{#if showPrompt}
+	<EventJoinPrompt {eventCode} onSuccess={() => navigate(redirectPath as any)} />
+{:else}
+	<Spinner />
+{/if}

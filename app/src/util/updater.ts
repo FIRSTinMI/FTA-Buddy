@@ -11,6 +11,15 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+    "2.7.1.1": {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.7.1.1</h1>
+        <ul>
+        <li>Removed duplicate text on slack messages</li>
+        <li>Added event code to URLs so your app switches to the correct event</li>
+        <li>Added a previous event selector on the login page</li>
+        </ul>`,
+    },
     "2.7.1.0": {
         changelog: `
         <h1 class="text-lg font-bold">v2.7.1.0</h1>

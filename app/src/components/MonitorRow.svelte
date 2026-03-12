@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Icon from "@iconify/svelte";
+	import { onDestroy, onMount } from "svelte";
 	import { formatTimeShortNoAgoSecondsOnly } from "../../../shared/formatTime";
 	import {
 		DSState,
@@ -56,18 +57,11 @@
 		2: "bg-green-500" + ($settingsStore.roundGreen ? " rounded-full" : ""),
 	};
 
-	let parsedData = $state(
-		// svelte-ignore state_referenced_locally
-		frameHandler.getHistory(station, "battery", 20).map((d, i) => ({ time: i, data: d as number })),
-	);
-	let parsedPingData = $state(
-		// svelte-ignore state_referenced_locally
-		frameHandler.getHistory(station, "ping", 20).map((d, i) => ({ time: i, data: d as number })),
-	);
-	let signalData = $state(
-		// svelte-ignore state_referenced_locally
-		processSignalStrengthForGraph(frameHandler.getHistory(station, "signal", 20) as number[]),
-	);
+	// Initial values are empty; the $effect below populates them on first run.
+	// The previous pattern computed history here AND in the $effect, wasting work on mount.
+	let parsedData = $state<{ time: number; data: number }[]>([]);
+	let parsedPingData = $state<{ time: number; data: number }[]>([]);
+	let signalData = $state<{ time: number; data: number }[]>([]);
 
 	let percentileVoltage = $state(0);
 
@@ -81,8 +75,20 @@
 
 	let matchStart = new Date();
 
-	frameHandler.addEventListener("match-start", () => {
+	// Use a named function so onDestroy can remove the exact same reference.
+	// Previously this was registered at the top level of the component (outside
+	// onMount), so each of the 6 per-row instances accumulated a new anonymous
+	// listener on every mount without ever cleaning them up.
+	function onMatchStart() {
 		matchStart = new Date();
+	}
+
+	onMount(() => {
+		frameHandler.addEventListener("match-start", onMatchStart);
+	});
+
+	onDestroy(() => {
+		frameHandler.removeEventListener("match-start", onMatchStart);
 	});
 </script>
 

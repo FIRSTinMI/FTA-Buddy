@@ -11,6 +11,15 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+    "2.7.1.0": {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.7.1.0</h1>
+        <ul>
+        <li>Probably fixed the memory leak</li>
+        <li>Auto-link newly created match events to an existing open note for the same team/match</li>
+        <li>Sort notes/feed by updated_at and gray out resolved notes</li>
+        </ul>`,
+    },
 	"2.7.0.8": {
 		changelog: "",
 	},

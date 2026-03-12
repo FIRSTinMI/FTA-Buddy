@@ -62,6 +62,11 @@ const stops: { [key in ROBOT]: { a: boolean; e: boolean } } = {
 let combinedSubscription: ReturnType<typeof trpc.field.combinedSubscription.subscribe>;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let lastReceivedAt = 0;
+// Monotonically-increasing counter; each subscribeToFieldMonitor() invocation
+// claims a generation and checks it hasn't been superseded before completing
+// any async step.  This prevents overlapping reconnect triggers (watchdog +
+// visibilitychange + online + token change) from leaving two live subscriptions.
+let subscriptionGeneration = 0;
 
 // How long without data before we consider the connection stale (ms).
 // Frames arrive every ~0.5s at an event, so 2.5s without data is clearly broken.
@@ -109,7 +114,13 @@ export async function subscribeToFieldMonitor() {
 
 	if (!get(userStore).eventToken) return;
 
+	// Claim a generation before the first await.  If another call fires concurrently
+	// (e.g. watchdog and visibilitychange both trigger at the same time) only the
+	// latest caller proceeds past each checkpoint.
+	const generation = ++subscriptionGeneration;
+
 	frameHandler.setHistory(await trpc.field.history.query());
+	if (generation !== subscriptionGeneration) return; // superseded by a newer call
 
 	combinedSubscription = await trpc.field.combinedSubscription.subscribe(
 		{

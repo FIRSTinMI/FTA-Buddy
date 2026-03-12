@@ -240,73 +240,71 @@
 		class:fullscreen={$fullscreen}
 		class:hidden={loading}
 	>
-		{#key monitorFrame}
-			{#if monitorFrame}
-				<div
-					class="col-span-6 lg:col-span-9 flex text-lg md:text-2xl font-semibold"
-					class:lg:text-5xl={$fullscreen}
-				>
-					<div class="px-2">M: {monitorFrame.match}</div>
-					<div class="flex-1 px-2 text-center">{FieldStates[monitorFrame.field]}</div>
-					<div class="px-2">{monitorFrame.exactAheadBehind || monitorFrame.time}</div>
-					<button
-						class="text-sm fixed top-12 right-0 z-50 hidden md:block"
-						onclick={async (evt) => {
-							evt.preventDefault();
-							if ($fullscreen) {
-								const exit: (() => Promise<void>) | undefined =
-									document.exitFullscreen?.bind(document) ??
-									(document as any).webkitExitFullscreen?.bind(document);
-								await exit?.();
-							} else {
-								const el = document.documentElement;
-								const enter: (() => Promise<void>) | undefined =
-									el.requestFullscreen?.bind(el) ?? (el as any).webkitRequestFullscreen?.bind(el);
-								await enter?.();
-							}
-						}}
-					>
-						{#if $fullscreen}
-							<Icon icon="mdi:fullscreen-exit" class="w-8 h-8" />
-						{:else}
-							<Icon icon="mdi:fullscreen" class="w-8 h-8" />
-						{/if}
-					</button>
-				</div>
-				<p>Team</p>
-				<p>DS</p>
-				<p>Radio</p>
-				<p>Rio</p>
-				<p>Battery</p>
-				<p class="hidden lg:flex">Ping (ms)</p>
-				<p class="hidden lg:flex">BWU (mbps)</p>
-				<p class="hidden lg:flex">Signal (dBm)</p>
-				<p class="hidden lg:flex">Last Change</p>
-				<p class="lg:hidden">Net</p>
-				{#each stations as station}
-					<MonitorRow {station} {monitorFrame} {detailView} />
-				{/each}
-			{/if}
+		{#if monitorFrame}
 			<div
-				class="col-span-6 lg:col-span-9 flex text-lg md:text-2xl font-semibold tabular-nums"
-				class:lg:text-4xl={$fullscreen}
+				class="col-span-6 lg:col-span-9 flex text-lg md:text-2xl font-semibold"
+				class:lg:text-5xl={$fullscreen}
 			>
-				<div class="text-left" class:text-4xl={$fullscreen} class:text-green-500={currentCycleIsBest}>
-					C: {lastCycleTime} (A: {formatTimeShortNoAgoSeconds(averageCycleTimeMS)})
-				</div>
-				<div class="grow" class:text-4xl={$fullscreen}>
-					<span class="hidden sm:inline">{scheduleText}</span>
-				</div>
-				<div
-					class="text-right"
-					class:text-4xl={$fullscreen}
-					style="color: rgba({75 * currentCycleTimeRedness + 180}, {180 *
-						(1 - currentCycleTimeRedness)}, {180 * (1 - currentCycleTimeRedness)}, 1)"
+				<div class="px-2">M: {monitorFrame.match}</div>
+				<div class="flex-1 px-2 text-center">{FieldStates[monitorFrame.field]}</div>
+				<div class="px-2">{monitorFrame.exactAheadBehind || monitorFrame.time}</div>
+				<button
+					class="text-sm fixed top-12 right-0 z-50 hidden md:block"
+					onclick={async (evt) => {
+						evt.preventDefault();
+						if ($fullscreen) {
+							const exit: (() => Promise<void>) | undefined =
+								document.exitFullscreen?.bind(document) ??
+								(document as any).webkitExitFullscreen?.bind(document);
+							await exit?.();
+						} else {
+							const el = document.documentElement;
+							const enter: (() => Promise<void>) | undefined =
+								el.requestFullscreen?.bind(el) ?? (el as any).webkitRequestFullscreen?.bind(el);
+							await enter?.();
+						}
+					}}
 				>
-					T: {currentCycleTime}
-				</div>
+					{#if $fullscreen}
+						<Icon icon="mdi:fullscreen-exit" class="w-8 h-8" />
+					{:else}
+						<Icon icon="mdi:fullscreen" class="w-8 h-8" />
+					{/if}
+				</button>
 			</div>
-		{/key}
+			<p>Team</p>
+			<p>DS</p>
+			<p>Radio</p>
+			<p>Rio</p>
+			<p>Battery</p>
+			<p class="hidden lg:flex">Ping (ms)</p>
+			<p class="hidden lg:flex">BWU (mbps)</p>
+			<p class="hidden lg:flex">Signal (dBm)</p>
+			<p class="hidden lg:flex">Last Change</p>
+			<p class="lg:hidden">Net</p>
+			{#each stations as station}
+				<MonitorRow {station} {monitorFrame} {detailView} />
+			{/each}
+		{/if}
+		<div
+			class="col-span-6 lg:col-span-9 flex text-lg md:text-2xl font-semibold tabular-nums"
+			class:lg:text-4xl={$fullscreen}
+		>
+			<div class="text-left" class:text-4xl={$fullscreen} class:text-green-500={currentCycleIsBest}>
+				C: {lastCycleTime} (A: {formatTimeShortNoAgoSeconds(averageCycleTimeMS)})
+			</div>
+			<div class="grow" class:text-4xl={$fullscreen}>
+				<span class="hidden sm:inline">{scheduleText}</span>
+			</div>
+			<div
+				class="text-right"
+				class:text-4xl={$fullscreen}
+				style="color: rgba({75 * currentCycleTimeRedness + 180}, {180 *
+					(1 - currentCycleTimeRedness)}, {180 * (1 - currentCycleTimeRedness)}, 1)"
+			>
+				T: {currentCycleTime}
+			</div>
+		</div>
 		{#if !monitorFrame}
 			<p>Requires Chrome Extension to be setup on field network</p>
 		{/if}

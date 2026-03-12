@@ -166,7 +166,7 @@ export class AudioQueuer {
 
 			if (remove) {
 				existingClip.audio.pause();
-				this.queue.slice(this.queue.indexOf(existingClip), 1);
+				this.queue.splice(this.queue.indexOf(existingClip), 1);
 			}
 		}
 

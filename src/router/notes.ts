@@ -140,7 +140,7 @@ export async function getTeamNotesInfo(event_code: string, team: number): Promis
 	const longestNoteOpenTime = getLongestNoteOpenTime(teamNotes);
 	const longestNote = getLongestNote(teamNotes);
 	const avgOpenTime = getAvgOpenTimeByNotes(teamNotes);
-	const noteLinks = teamNotes.map((n) => `https://ftabuddy.com/notepad/view/${n.id}`).join(", ");
+	const noteLinks = teamNotes.map((n) => `https://ftabuddy.com/notepad/view/${event_code}/${n.id}`).join(", ");
 	const noteSubjects = teamNotes.map((n) => n.text.substring(0, 60)).join(", ");
 	const totalOpenTime = getTotalOpenTime(teamNotes);
 
@@ -166,61 +166,85 @@ export async function getAllTeamNotesInfo(event_code: string, teamNumbers: numbe
 
 // #region Slack Integration
 
+type SlackElements = {
+    type: string;
+    text?: string | {
+        type: string;
+        text: string;
+        style?: { bold?: boolean };
+        emoji?: boolean;
+    };
+    style?: { bold?: boolean };
+    emoji?: boolean;
+    elements?: SlackElements[];
+}
+
 export function createSlackNoteMessage(
 	note_id: string,
 	team_number: number | null,
+	team_name: string | null,
 	author: string,
-	subject: string,
 	body: string,
+	event_code: string,
 	match_id?: string,
 ) {
 	const buttons: any[] = [];
 	buttons.push({
 		type: "button",
 		text: { type: "plain_text", text: "View Note", emoji: true },
-		url: `https://ftabuddy.com/notepad/view/${note_id}`,
+		url: `https://ftabuddy.com/notepad/view/${event_code}/${note_id}`,
 	});
 	if (match_id) {
 		buttons.push({
 			type: "button",
 			text: { type: "plain_text", text: "View Match Log", emoji: true },
-			url: `https://ftabuddy.com/logs/${match_id}`,
+			url: `https://ftabuddy.com/logs/${event_code}/${match_id}`,
 		});
 	}
-	return {
-		blocks: [
-			{
-				type: "header",
-				text: {
-					type: "plain_text",
-					text: `New Note${team_number ? ` For Team ${team_number}` : ""}`,
-					emoji: true,
+	const blocks: SlackElements[] = [
+		{
+			type: "header",
+			text: {
+				type: "plain_text",
+				text: `New Note${team_number ? ` For Team ${team_number}${team_name ? ` ${team_name}` : ""}` : ""}`,
+				emoji: true,
+			},
+		},
+		{
+			type: "context",
+			elements: [{ type: "plain_text", text: `Created by: ${author}`, emoji: true }],
+		},
+	];
+
+	if (team_name) {
+		blocks.push({
+			type: "rich_text",
+			elements: [
+				{
+					type: "rich_text_section",
+					elements: [{ type: "text", text: team_name, style: { bold: true } }],
 				},
-			},
+			],
+		});
+	}
+
+	blocks.push({
+		type: "rich_text",
+		elements: [
 			{
-				type: "context",
-				elements: [{ type: "plain_text", text: `Created by: ${author}`, emoji: true }],
+				type: "rich_text_section",
+				elements: [{ type: "text", text: body }],
 			},
-			{
-				type: "rich_text",
-				elements: [
-					{
-						type: "rich_text_section",
-						elements: [{ type: "text", text: subject, style: { bold: true } }],
-					},
-				],
-			},
-			{
-				type: "rich_text",
-				elements: [
-					{
-						type: "rich_text_section",
-						elements: [{ type: "text", text: body }],
-					},
-				],
-			},
-			{ type: "actions", elements: buttons },
 		],
+	});
+
+	blocks.push({
+		type: "actions",
+		elements: buttons,
+	});
+
+	return {
+		blocks,
 	};
 }
 
@@ -633,9 +657,10 @@ export const notesRouter = router({
 					createSlackNoteMessage(
 						insert[0].id,
 						insert[0].team,
+						event.teams.find((t) => parseInt(t.number) === insert[0].team)?.name ?? null,
 						"Team Submission",
-						insert[0].text.substring(0, 60),
 						insert[0].text,
+						event.code,
 					),
 				);
 				await db
@@ -756,9 +781,10 @@ export const notesRouter = router({
 					createSlackNoteMessage(
 						insert[0].id,
 						insert[0].team,
+						event.teams.find((t) => parseInt(t.number) === insert[0].team)?.name ?? null,
 						authorProfile[0].username,
-						insert[0].text.substring(0, 60),
 						insert[0].text,
+						event.code,
 						insert[0].match_id ?? undefined,
 					),
 				);
@@ -812,9 +838,10 @@ export const notesRouter = router({
 					createSlackNoteMessage(
 						update[0].id,
 						update[0].team,
+						event.teams.find((t) => parseInt(t.number) === update[0].team)?.name ?? null,
 						update[0].author?.username ?? "Unknown",
-						update[0].text.substring(0, 60),
 						update[0].text,
+						event.code,
 						update[0].match_id ?? undefined,
 					),
 				);

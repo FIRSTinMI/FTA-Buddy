@@ -1,12 +1,14 @@
 <script lang="ts">
 	import { Button, Input, Label, Modal, Select, type SelectOptionType } from "flowbite-svelte";
 	import { tick } from "svelte";
+	import { get } from "svelte/store";
 	import type { Profile, TeamList } from "../../../../shared/types";
 	import Spinner from "../../components/Spinner.svelte";
 	import { trpc } from "../../main";
 	import { navigate } from "../../router";
 	import { eventStore } from "../../stores/event";
 	import { installPrompt } from "../../stores/install-prompt";
+	import { savedEventsStore, saveEvent } from "../../stores/savedEvents";
 	import { settingsStore } from "../../stores/settings";
 	import { userStore as user } from "../../stores/user";
 	import { subscribeToPush } from "../../util/notifications";
@@ -106,6 +108,9 @@
 			});
 
 			toast("Success", "Logged in successfully", "green-500");
+
+			const redirect = sessionStorage.getItem("redirectAfterLogin");
+			if (redirect) { sessionStorage.removeItem("redirectAfterLogin"); navigate(redirect as any); }
 		} catch (err: any) {
 			toast("Error Logging In", err.message);
 			console.error("[AUTH] login error:", err);
@@ -165,10 +170,26 @@
 					subEvents: res.subEvents,
 					meshedEventCode: res.code,
 				});
+				saveEvent({
+					code: $eventStore.code,
+					token: res.token,
+					pin: res.pin,
+					teams: res.teams as TeamList,
+					users: res.users as Profile[],
+					subEvents: res.subEvents,
+					meshedEventCode: res.code,
+				});
 			} else {
 				user.set({ ...$user, eventToken: res.token });
 				eventStore.set({
 					code: $eventStore.code,
+					pin: res.pin,
+					teams: res.teams as TeamList,
+					users: res.users as Profile[],
+				});
+				saveEvent({
+					code: $eventStore.code,
+					token: res.token,
 					pin: res.pin,
 					teams: res.teams as TeamList,
 					users: res.users as Profile[],
@@ -206,9 +227,20 @@
 					subEvents: res.subEvents,
 					meshedEventCode: res.code,
 				});
+				saveEvent({
+					code: eventCode,
+					token: res.token,
+					pin: res.pin,
+					teams: res.teams as TeamList,
+					users: res.users as Profile[],
+					subEvents: res.subEvents,
+					meshedEventCode: res.code,
+				});
 
 				await tick();
-				navigate("/dashboard");
+				const redirect = sessionStorage.getItem("redirectAfterLogin");
+				if (redirect) { sessionStorage.removeItem("redirectAfterLogin"); navigate(redirect as any); }
+				else navigate("/dashboard");
 			} else {
 				user.set({ ...$user, eventToken: res.token });
 				eventStore.set({
@@ -217,9 +249,18 @@
 					teams: res.teams as TeamList,
 					users: res.users as Profile[],
 				});
+				saveEvent({
+					code: eventCode,
+					token: res.token,
+					pin: eventPin,
+					teams: res.teams as TeamList,
+					users: res.users as Profile[],
+				});
 
 				await tick();
-				navigate($user.role === "FTA" || $user.role === "FTAA" ? "/monitor" : "/notepad");
+				const redirect = sessionStorage.getItem("redirectAfterLogin");
+				if (redirect) { sessionStorage.removeItem("redirectAfterLogin"); navigate(redirect as any); }
+				else navigate($user.role === "FTA" || $user.role === "FTAA" ? "/monitor" : "/notepad");
 			}
 			toast("Success", "Event joined successfully", "green-500");
 		} catch (err: any) {
@@ -271,6 +312,48 @@
 	};
 
 	let notificationModalOpen = $state(false);
+
+	// Build a list of previously-joined events for the quick-switch selector
+	let previousEventList = $derived(
+		Object.values($savedEventsStore).map((e) => ({
+			value: e.code,
+			name: e.label ? `${e.code} — ${e.label}` : e.code,
+		}))
+	);
+
+	let previousEventSelection = $state("");
+
+	function switchToPreviousEvent() {
+		if (!previousEventSelection) return;
+		const saved = $savedEventsStore[previousEventSelection];
+		if (!saved) return;
+
+		if (saved.subEvents) {
+			user.set({ ...$user, eventToken: saved.token, meshedEventToken: saved.token });
+			eventStore.set({
+				code: saved.code,
+				pin: saved.pin,
+				teams: saved.teams,
+				users: saved.users,
+				subEvents: saved.subEvents,
+				meshedEventCode: saved.meshedEventCode,
+				label: saved.label,
+			});
+		} else {
+			user.set({ ...$user, eventToken: saved.token, meshedEventToken: undefined });
+			eventStore.set({
+				code: saved.code,
+				pin: saved.pin,
+				teams: saved.teams,
+				users: saved.users,
+				label: saved.label,
+			});
+		}
+
+		const redirect = sessionStorage.getItem("redirectAfterLogin");
+		if (redirect) { sessionStorage.removeItem("redirectAfterLogin"); navigate(redirect as any); return; }
+		navigate($user.role === "FTA" || $user.role === "FTAA" ? "/monitor" : "/notepad");
+	}
 
 	const ios = () => {
 		if (typeof window === `undefined` || typeof navigator === `undefined`) return false;
@@ -549,6 +632,20 @@
 
 			<!-- No event selected -->
 		{:else}
+			{#if previousEventList.length > 0}
+				<div class="flex flex-col border-t border-neutral-500 pt-4 gap-2">
+					<h3 class="text-lg font-semibold">Previous Events</h3>
+					<div class="flex gap-2">
+						<Select
+							class="flex-1"
+							items={previousEventList}
+							bind:value={previousEventSelection}
+							placeholder="Select a previous event"
+						/>
+						<Button onclick={switchToPreviousEvent} disabled={!previousEventSelection}>Switch</Button>
+					</div>
+				</div>
+			{/if}
 			<div class="flex flex-col border-t border-neutral-500 pt-4">
 				<h3 class="text-lg">Join Event</h3>
 				{#if !desktop}<p class="text-gray-600 text-sm">

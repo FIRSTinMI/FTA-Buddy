@@ -371,7 +371,6 @@ connect().then(async () => {
 		}
 	});
 
-
 	// Start Nexus pollers for any events that already have a key configured
 	try {
 		const eventsWithNexus = await db

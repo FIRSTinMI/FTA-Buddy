@@ -367,11 +367,13 @@ export async function logAnalysisLoop(limit: number) {
 						.execute();
 
 					if (serverEvent) {
-						serverEvent.matchEventEmitter.emit("create", {
-							kind: "match_event_create",
-							matchEvent: inserted,
-						});
-						await tryAutoLinkNewMatchEvent(inserted, log.event, serverEvent);
+						const wasAutoLinked = await tryAutoLinkNewMatchEvent(inserted, log.event, serverEvent);
+						if (!wasAutoLinked) {
+							serverEvent.matchEventEmitter.emit("create", {
+								kind: "match_event_create",
+								matchEvent: inserted,
+							});
+						}
 					}
 				}
 			} else if (analyzedLog.length > 0) {
@@ -411,7 +413,12 @@ export async function logAnalysisLoop(limit: number) {
 				}
 
 				// Build per-issue detail entries for the combined event
-				const issueDetails: { issue: string; start_time: number | null; end_time: number | null; duration: number | null }[] = [];
+				const issueDetails: {
+					issue: string;
+					start_time: number | null;
+					end_time: number | null;
+					duration: number | null;
+				}[] = [];
 				for (const [issue, evts] of groupedByIssue) {
 					const startTime = Math.max(...evts.map((e) => e.startTime));
 					const endTime = Math.min(...evts.map((e) => e.endTime));
@@ -426,7 +433,7 @@ export async function logAnalysisLoop(limit: number) {
 				if (issueDetails.length > 0) {
 					// Select primary issue deterministically by severity (DS > Radio > RIO > Code > others)
 					const primaryIssue = issueDetails.reduce((best, d) =>
-						(ISSUE_SEVERITY[d.issue] ?? 4) < (ISSUE_SEVERITY[best.issue] ?? 4) ? d : best
+						(ISSUE_SEVERITY[d.issue] ?? 4) < (ISSUE_SEVERITY[best.issue] ?? 4) ? d : best,
 					).issue;
 					const overallStartTime = Math.max(...issueDetails.map((d) => d.start_time ?? 0));
 					const overallEndTime = Math.min(...issueDetails.map((d) => d.end_time ?? 0));
@@ -455,11 +462,13 @@ export async function logAnalysisLoop(limit: number) {
 						.execute();
 
 					if (serverEvent) {
-						serverEvent.matchEventEmitter.emit("create", {
-							kind: "match_event_create",
-							matchEvent: inserted,
-						});
-						await tryAutoLinkNewMatchEvent(inserted, log.event, serverEvent);
+						const wasAutoLinked = await tryAutoLinkNewMatchEvent(inserted, log.event, serverEvent);
+						if (!wasAutoLinked) {
+							serverEvent.matchEventEmitter.emit("create", {
+								kind: "match_event_create",
+								matchEvent: inserted,
+							});
+						}
 					}
 				}
 			}

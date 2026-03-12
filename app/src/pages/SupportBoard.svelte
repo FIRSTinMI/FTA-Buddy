@@ -19,7 +19,11 @@
 	onDestroy(() => window.removeEventListener("resize", handleResize));
 </script>
 
-<div class="container max-w-7xl mx-auto px-1 {isShortScreen ? 'pt-1' : 'pt-2'} h-full flex flex-col {isShortScreen ? 'gap-1' : 'gap-2'}">
+<div
+	class="container max-w-7xl mx-auto px-1 {isShortScreen ? 'pt-1' : 'pt-2'} h-full flex flex-col {isShortScreen
+		? 'gap-1'
+		: 'gap-2'}"
+>
 	<div class="flex items-center justify-between px-2 {isShortScreen ? 'pt-1' : 'pt-2'}">
 		<h1 class="{isShortScreen ? 'text-xl' : 'text-3xl'} font-bold text-black dark:text-white">Notepad</h1>
 		<ButtonGroup>

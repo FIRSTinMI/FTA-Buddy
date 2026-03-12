@@ -108,31 +108,27 @@
 			<div class="grid grid-cols-subgrid gap-2 row-span-5">
 				<p class="text-gray-700 dark:text-gray-400">General</p>
 				<Toggle class="toggle" bind:checked={$settingsStore.vibrations}>Vibrations</Toggle>
-				<Toggle class="toggle" bind:checked={$settingsStore.fimSpecifics}
-					>FIM Specific Field Manuals</Toggle
-				>
+				<Toggle class="toggle" bind:checked={$settingsStore.fimSpecifics}>FIM Specific Field Manuals</Toggle>
 				<Toggle class="toggle" bind:checked={$settingsStore.notificationsDoNotAsk}
 					>Do Not Ask About Notifications</Toggle
 				>
-				<Toggle class="toggle" bind:checked={$settingsStore.notifications} onchange={requestNotificationPermissions}
-					>Enable Notifications</Toggle
+				<Toggle
+					class="toggle"
+					bind:checked={$settingsStore.notifications}
+					onchange={requestNotificationPermissions}>Enable Notifications</Toggle
 				>
 				<div class="pl-4 grid grid-cols-subgrid gap-2 row-span-5">
-					<Toggle
-						class="toggle"
-						bind:checked={$settingsStore.notificationCategories.create}>New Tickets</Toggle
+					<Toggle class="toggle" bind:checked={$settingsStore.notificationCategories.create}
+						>New Tickets</Toggle
 					>
-					<Toggle
-						class="toggle"
-						bind:checked={$settingsStore.notificationCategories.follow}>Followed Ticket Updates</Toggle
+					<Toggle class="toggle" bind:checked={$settingsStore.notificationCategories.follow}
+						>Followed Ticket Updates</Toggle
 					>
-					<Toggle
-						class="toggle"
-						bind:checked={$settingsStore.notificationCategories.assign}>Assigned Ticket Updates</Toggle
+					<Toggle class="toggle" bind:checked={$settingsStore.notificationCategories.assign}
+						>Assigned Ticket Updates</Toggle
 					>
-					<Toggle
-						class="toggle"
-						bind:checked={$settingsStore.notificationCategories.robot}>Robot Status Updates</Toggle
+					<Toggle class="toggle" bind:checked={$settingsStore.notificationCategories.robot}
+						>Robot Status Updates</Toggle
 					>
 				</div>
 			</div>

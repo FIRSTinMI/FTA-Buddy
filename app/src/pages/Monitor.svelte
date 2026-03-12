@@ -224,7 +224,6 @@
 	const stations: ROBOT[] = Object.values(ROBOT);
 
 	let loading = $state(true);
-
 </script>
 
 {#if monitorFrame}
@@ -235,14 +234,12 @@
 	<Spinner />
 </div>
 
-<div 
-  class="flex-1 min-h-0 overflow-hidden"
->
-  <div
+<div class="flex-1 min-h-0 overflow-hidden">
+	<div
 		class="grid grid-cols-fieldmonitor 2xl:grid-cols-fieldmonitor-large gap-0.5 md:gap-1 2xl:gap-2 mx-auto justify-center"
 		class:fullscreen={$fullscreen}
 		class:hidden={loading}
-    >
+	>
 		{#key monitorFrame}
 			{#if monitorFrame}
 				<div
@@ -264,8 +261,7 @@
 							} else {
 								const el = document.documentElement;
 								const enter: (() => Promise<void>) | undefined =
-									el.requestFullscreen?.bind(el) ??
-									(el as any).webkitRequestFullscreen?.bind(el);
+									el.requestFullscreen?.bind(el) ?? (el as any).webkitRequestFullscreen?.bind(el);
 								await enter?.();
 							}
 						}}
@@ -304,8 +300,8 @@
 				<div
 					class="text-right"
 					class:text-4xl={$fullscreen}
-					style="color: rgba({75 * currentCycleTimeRedness + 180}, {180 * (1 - currentCycleTimeRedness)}, {180 *
-						(1 - currentCycleTimeRedness)}, 1)"
+					style="color: rgba({75 * currentCycleTimeRedness + 180}, {180 *
+						(1 - currentCycleTimeRedness)}, {180 * (1 - currentCycleTimeRedness)}, 1)"
 				>
 					T: {currentCycleTime}
 				</div>

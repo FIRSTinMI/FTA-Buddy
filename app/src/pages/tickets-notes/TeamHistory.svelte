@@ -60,9 +60,7 @@
 
 	fetchAll();
 
-	type FeedItem =
-		| { kind: "note"; note: Note; date: Date }
-		| { kind: "event"; matchEvent: MatchEvent; date: Date };
+	type FeedItem = { kind: "note"; note: Note; date: Date } | { kind: "event"; matchEvent: MatchEvent; date: Date };
 
 	let feed = $derived.by(() => {
 		const items: FeedItem[] = [
@@ -117,8 +115,15 @@
 			{#if nextMatch}
 				{@const alliance = nextMatchAlliance(nextMatch)}
 				<p class="text-xs px-2 mb-4">
-					<span class="font-semibold {alliance === 'red' ? 'text-red-600 dark:text-red-400' : alliance === 'blue' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}">
-						Next: {formatNextMatch(nextMatch)}{#if alliance} <span class="capitalize">{alliance}</span>{/if}
+					<span
+						class="font-semibold {alliance === 'red'
+							? 'text-red-600 dark:text-red-400'
+							: alliance === 'blue'
+								? 'text-blue-600 dark:text-blue-400'
+								: 'text-gray-500 dark:text-gray-400'}"
+					>
+						Next: {formatNextMatch(nextMatch)}{#if alliance}
+							<span class="capitalize">{alliance}</span>{/if}
 					</span>
 					{#if formatMatchTime(nextMatch)}
 						<span class="text-gray-400 dark:text-gray-500"> {formatMatchTime(nextMatch)}</span>
@@ -189,5 +194,6 @@
 					{/each}
 				</div>
 			{/if}
-		{/if}	</div>
+		{/if}
+	</div>
 </div>

@@ -1,12 +1,5 @@
 <script lang="ts">
-	import {
-		Alert,
-		Button,
-		Label,
-		Modal,
-		MultiSelect,
-		type SelectOptionType,
-	} from "flowbite-svelte";
+	import { Alert, Button, Label, Modal, MultiSelect, type SelectOptionType } from "flowbite-svelte";
 	import { json2csv } from "json-2-csv";
 	import type { ComponentProps } from "svelte";
 	import QrCode from "svelte-qrcode";
@@ -168,7 +161,8 @@
 				</h1>
 				<p>{formatTimeNoAgo(new Date(match.start_time))}</p>
 				<h2 class="text-lg">
-					{(actualStation.startsWith("blue") ? "Blue " : "Red ") + actualStation.charAt(actualStation.length - 1)} -
+					{(actualStation.startsWith("blue") ? "Blue " : "Red ") +
+						actualStation.charAt(actualStation.length - 1)} -
 					{displayTeam(team)}
 				</h2>
 				<p class="md:hidden text-gray-600 text-sm">View on desktop for more detail</p>
@@ -184,7 +178,9 @@
 					>
 						<Alert class="text-left" color={analysisEventColors[logEvent.issue]} border>
 							<span class="font-medium">{logEvent.issue}</span>
-							Started at {logEvent.startTime}s lasting {formatTimeShortNoAgoSeconds(logEvent.duration * 1000)}
+							Started at {logEvent.startTime}s lasting {formatTimeShortNoAgoSeconds(
+								logEvent.duration * 1000,
+							)}
 						</Alert>
 					</button>
 				{/each}
@@ -208,8 +204,12 @@
 					<tbody>
 						{#if match}
 							{#each log as frame}
-								<tr class="border-b text-center dark:border-gray-700 odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800">
-									<td class="px-4 py-2 text-white text-center sticky left-0 bg-gray-40 dark:bg-black">{frame.matchTime}</td>
+								<tr
+									class="border-b text-center dark:border-gray-700 odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800"
+								>
+									<td class="px-4 py-2 text-white text-center sticky left-0 bg-gray-40 dark:bg-black"
+										>{frame.matchTime}</td
+									>
 									{#each selectedColumns as col}
 										{#if col === "enabled"}
 											{#if frame.eStopPressed}
@@ -226,16 +226,30 @@
 										{:else if col === "battery"}
 											<td
 												class="px-4 py-2"
-												style="background-color: rgba(255,0,0,{frame.battery < 11 && frame.battery > 0
+												style="background-color: rgba(255,0,0,{frame.battery < 11 &&
+												frame.battery > 0
 													? (-1.5 * frame.battery ** 2 - 6.6 * frame.battery + 255) / 255
 													: 0})"
-											>{typeof frame.battery === "number" ? frame.battery.toFixed(2) : frame.battery}</td>
+												>{typeof frame.battery === "number"
+													? frame.battery.toFixed(2)
+													: frame.battery}</td
+											>
 										{:else if ["averageTripTime", "lostPackets", "sentPackets", "signal", "noise", "txMCS", "rxMCS"].includes(col)}
-											<td class="px-4 py-2">{typeof frame[col] === "number" ? frame[col].toFixed(0) : frame[col]}</td>
+											<td class="px-4 py-2"
+												>{typeof frame[col] === "number"
+													? frame[col].toFixed(0)
+													: frame[col]}</td
+											>
 										{:else if ["dataRateTotal", "txRate", "rxRate"].includes(col)}
-											<td class="px-4 py-2">{typeof frame[col] === "number" ? frame[col].toFixed(2) : frame[col]}</td>
+											<td class="px-4 py-2"
+												>{typeof frame[col] === "number"
+													? frame[col].toFixed(2)
+													: frame[col]}</td
+											>
 										{:else}
-											<td class="px-4 py-2{frame[col] ? '' : ' bg-red-500 text-white'}">{frame[col] ? "Y" : "N"}</td>
+											<td class="px-4 py-2{frame[col] ? '' : ' bg-red-500 text-white'}"
+												>{frame[col] ? "Y" : "N"}</td
+											>
 										{/if}
 									{/each}
 								</tr>

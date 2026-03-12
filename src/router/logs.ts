@@ -53,8 +53,15 @@ export const matchRouter = router({
 			if (existing.length > 0) return;
 
 			// Discard logs where no team station is populated (e.g. empty practice slots)
-			if (input.teamNumberBlue1 == null && input.teamNumberBlue2 == null && input.teamNumberBlue3 == null &&
-				input.teamNumberRed1 == null && input.teamNumberRed2 == null && input.teamNumberRed3 == null) return;
+			if (
+				input.teamNumberBlue1 == null &&
+				input.teamNumberBlue2 == null &&
+				input.teamNumberBlue3 == null &&
+				input.teamNumberRed1 == null &&
+				input.teamNumberRed2 == null &&
+				input.teamNumberRed3 == null
+			)
+				return;
 
 			await db
 				.insert(matchLogs)
@@ -72,12 +79,30 @@ export const matchRouter = router({
 					red1: input.teamNumberRed1,
 					red2: input.teamNumberRed2,
 					red3: input.teamNumberRed3,
-					blue1_log: input.teamNumberBlue1 != null && input.logs.blue1 ? compressStationLog(input.logs.blue1 as FMSLogFrame[]) : null,
-					blue2_log: input.teamNumberBlue2 != null && input.logs.blue2 ? compressStationLog(input.logs.blue2 as FMSLogFrame[]) : null,
-					blue3_log: input.teamNumberBlue3 != null && input.logs.blue3 ? compressStationLog(input.logs.blue3 as FMSLogFrame[]) : null,
-					red1_log: input.teamNumberRed1 != null && input.logs.red1 ? compressStationLog(input.logs.red1 as FMSLogFrame[]) : null,
-					red2_log: input.teamNumberRed2 != null && input.logs.red2 ? compressStationLog(input.logs.red2 as FMSLogFrame[]) : null,
-					red3_log: input.teamNumberRed3 != null && input.logs.red3 ? compressStationLog(input.logs.red3 as FMSLogFrame[]) : null,
+					blue1_log:
+						input.teamNumberBlue1 != null && input.logs.blue1
+							? compressStationLog(input.logs.blue1 as FMSLogFrame[])
+							: null,
+					blue2_log:
+						input.teamNumberBlue2 != null && input.logs.blue2
+							? compressStationLog(input.logs.blue2 as FMSLogFrame[])
+							: null,
+					blue3_log:
+						input.teamNumberBlue3 != null && input.logs.blue3
+							? compressStationLog(input.logs.blue3 as FMSLogFrame[])
+							: null,
+					red1_log:
+						input.teamNumberRed1 != null && input.logs.red1
+							? compressStationLog(input.logs.red1 as FMSLogFrame[])
+							: null,
+					red2_log:
+						input.teamNumberRed2 != null && input.logs.red2
+							? compressStationLog(input.logs.red2 as FMSLogFrame[])
+							: null,
+					red3_log:
+						input.teamNumberRed3 != null && input.logs.red3
+							? compressStationLog(input.logs.red3 as FMSLogFrame[])
+							: null,
 				})
 				.execute();
 		}),
@@ -117,8 +142,15 @@ export const matchRouter = router({
 			if (existing.length > 0) return;
 
 			// Discard logs where no team station is populated (e.g. empty practice slots)
-			if (input.teamNumberBlue1 == null && input.teamNumberBlue2 == null && input.teamNumberBlue3 == null &&
-				input.teamNumberRed1 == null && input.teamNumberRed2 == null && input.teamNumberRed3 == null) return;
+			if (
+				input.teamNumberBlue1 == null &&
+				input.teamNumberBlue2 == null &&
+				input.teamNumberBlue3 == null &&
+				input.teamNumberRed1 == null &&
+				input.teamNumberRed2 == null &&
+				input.teamNumberRed3 == null
+			)
+				return;
 
 			await db
 				.insert(matchLogs)
@@ -194,11 +226,7 @@ export const matchRouter = router({
 				eq(matchLogs.red2, input.team),
 				eq(matchLogs.red3, input.team),
 			);
-			const filters = [
-				eq(matchLogs.event, ctx.event.code),
-				gt(matchLogs.start_time, input.since),
-				teamFilter,
-			];
+			const filters = [eq(matchLogs.event, ctx.event.code), gt(matchLogs.start_time, input.since), teamFilter];
 			if (input.exclude_match_id) {
 				filters.push(ne(matchLogs.id, input.exclude_match_id));
 			}
@@ -228,33 +256,35 @@ export const matchRouter = router({
 				team: z.number().optional(),
 			}),
 		)
-        .output(
-            z.array(z.object({
-                id: z.string(),
-                match_number: z.number(),
-                play_number: z.number(),
-                level: z.string(),
-                start_time: z.date(),
-                blue1: z.number().nullable(),
-                blue2: z.number().nullable(),
-                blue3: z.number().nullable(),
-                red1: z.number().nullable(),
-                red2: z.number().nullable(),
-                red3: z.number().nullable(),
-                blue1_has_event: z.boolean(),
-                blue2_has_event: z.boolean(),
-                blue3_has_event: z.boolean(),
-                red1_has_event: z.boolean(),
-                red2_has_event: z.boolean(),
-                red3_has_event: z.boolean(),
-                blue1_bypassed: z.boolean(),
-                blue2_bypassed: z.boolean(),
-                blue3_bypassed: z.boolean(),
-                red1_bypassed: z.boolean(),
-                red2_bypassed: z.boolean(),
-                red3_bypassed: z.boolean(),
-            })),
-        )
+		.output(
+			z.array(
+				z.object({
+					id: z.string(),
+					match_number: z.number(),
+					play_number: z.number(),
+					level: z.string(),
+					start_time: z.date(),
+					blue1: z.number().nullable(),
+					blue2: z.number().nullable(),
+					blue3: z.number().nullable(),
+					red1: z.number().nullable(),
+					red2: z.number().nullable(),
+					red3: z.number().nullable(),
+					blue1_has_event: z.boolean(),
+					blue2_has_event: z.boolean(),
+					blue3_has_event: z.boolean(),
+					red1_has_event: z.boolean(),
+					red2_has_event: z.boolean(),
+					red3_has_event: z.boolean(),
+					blue1_bypassed: z.boolean(),
+					blue2_bypassed: z.boolean(),
+					blue3_bypassed: z.boolean(),
+					red1_bypassed: z.boolean(),
+					red2_bypassed: z.boolean(),
+					red3_bypassed: z.boolean(),
+				}),
+			),
+		)
 		.query(async ({ input, ctx }) => {
 			const filters = [eq(matchLogs.event, ctx.event.code)];
 
@@ -539,7 +569,7 @@ export const matchRouter = router({
 				matchId: fmsGuid,
 			}),
 		)
-		.query(async ({ input }) => { }),
+		.query(async ({ input }) => {}),
 
 	getNumberOfMatches: publicProcedure.query(async ({ ctx }) => {
 		return {

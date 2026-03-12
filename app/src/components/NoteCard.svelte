@@ -140,7 +140,9 @@
 
 <a
 	href="/notepad/view/{note.id}"
-	class="block w-full rounded-xl {isResolved ? 'bg-gray-100 dark:bg-neutral-800 opacity-60' : 'bg-white dark:bg-neutral-700'} shadow-sm hover:shadow-md transition-shadow p-4 text-black dark:text-white no-underline"
+	class="block w-full rounded-xl {isResolved
+		? 'bg-gray-100 dark:bg-neutral-800 opacity-60'
+		: 'bg-white dark:bg-neutral-700'} shadow-sm hover:shadow-md transition-shadow p-4 text-black dark:text-white no-underline"
 >
 	<div class="flex flex-col gap-2.5">
 		<div class="flex items-start justify-between gap-3">
@@ -148,9 +150,9 @@
 				{#if note.team !== null}
 					<span class="font-bold text-base">{displayTeam(note.team)}</span>
 				{/if}
-                {#if note.note_type !== "TeamIssue"}
-				    <Badge color={noteTypeColor[note.note_type]}>{noteTypeLabel[note.note_type]}</Badge>
-                {/if}
+				{#if note.note_type !== "TeamIssue"}
+					<Badge color={noteTypeColor[note.note_type]}>{noteTypeLabel[note.note_type]}</Badge>
+				{/if}
 				{#if note.match_number !== null}
 					<Badge color="teal">
 						{note.tournament_level === "Qualification"
@@ -204,7 +206,9 @@
 				<Icon icon="mdi:reply" class="size-3.5 mt-0.5 text-gray-400 dark:text-gray-500 shrink-0" />
 				<div class="min-w-0">
 					<span class="text-xs text-left font-semibold text-gray-500 dark:text-gray-400">
-						{latestMsg.author?.username ?? "Unknown"}{latestMsg.author?.username !== latestMsg.author?.role ? ` · ${latestMsg.author?.role}` : ""}:
+						{latestMsg.author?.username ?? "Unknown"}{latestMsg.author?.username !== latestMsg.author?.role
+							? ` · ${latestMsg.author?.role}`
+							: ""}:
 					</span>
 					<span class="text-xs text-gray-500 dark:text-gray-400 ml-1 line-clamp-1">{latestMsg.text}</span>
 				</div>
@@ -244,17 +248,15 @@
 							</div>
 						{/if}
 					</div>
-				{:else}
-					{#if canEditOrDelete}
-						<div class="flex flex-row gap-1 justify-end">
-							<Button size="xs" color="alternative" onclick={() => (editNoteView = true)}>
-								<Icon icon="mdi:pencil" class="size-3.5" />
-							</Button>
-							<Button size="xs" color="red" onclick={() => (deleteNotePopup = true)}>
-								<Icon icon="mdi:trash-can-outline" class="size-3.5" />
-							</Button>
-						</div>
-					{/if}
+				{:else if canEditOrDelete}
+					<div class="flex flex-row gap-1 justify-end">
+						<Button size="xs" color="alternative" onclick={() => (editNoteView = true)}>
+							<Icon icon="mdi:pencil" class="size-3.5" />
+						</Button>
+						<Button size="xs" color="red" onclick={() => (deleteNotePopup = true)}>
+							<Icon icon="mdi:trash-can-outline" class="size-3.5" />
+						</Button>
+					</div>
 				{/if}
 			</div>
 		{/if}

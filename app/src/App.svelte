@@ -316,7 +316,7 @@
 	});
 
 	let keyboardOpen = $state(false);
-	let initialWindowHeight = 0; 
+	let initialWindowHeight = 0;
 
 	function updateAppHeight() {
 		const vv = window.visualViewport;
@@ -334,7 +334,7 @@
 	let isMobile = $state(false);
 
 	onMount(() => {
-		isMobile = window.matchMedia('(pointer: coarse)').matches;
+		isMobile = window.matchMedia("(pointer: coarse)").matches;
 		updateAppHeight();
 		window.addEventListener("resize", updateAppHeight);
 		window.visualViewport?.addEventListener("resize", updateAppHeight);
@@ -708,10 +708,7 @@
 </Drawer>
 
 <!-- App.svelte -->
-<main
-    class="bg-white dark:bg-neutral-800 flex flex-col"
-    style="height: 100dvh; max-height: 100dvh; overflow: hidden;"
->
+<main class="bg-white dark:bg-neutral-800 flex flex-col" style="height: 100dvh; max-height: 100dvh; overflow: hidden;">
 	{#if !$fullscreen}
 		<div
 			class="shrink-0 bg-primary-700 dark:bg-primary-500 flex w-full justify-between px-2"
@@ -752,7 +749,7 @@
 						<Icon icon="fluent:notepad-16-regular" class="size-8" />
 					</button>
 					<!-- Gonna trial having the notepad button here instead of notifications -->
-                    <!-- <button class="p-2 relative" onclick={() => navigate("/notifications")}>
+					<!-- <button class="p-2 relative" onclick={() => navigate("/notifications")}>
                         <Icon icon="fluent:alert-on-16-filled" class="size-8" />
                         {#if $notificationsStore.length > 0}
                             <Indicator color="red" border size="xl" placement="top-left">
@@ -782,7 +779,6 @@
 			{/if}
 		</div>
 	{/if}
-
 </main>
 
 <style>

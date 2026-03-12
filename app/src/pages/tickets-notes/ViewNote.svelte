@@ -39,15 +39,11 @@
 
 	let station: ROBOT | undefined = $state(undefined);
 
-	let assignedToUser = $derived(
-		note ? note.assigned_to_id === user.id : false
-	);
-	
+	let assignedToUser = $derived(note ? note.assigned_to_id === user.id : false);
+
 	let sortedMessages: Message[] = $derived(
 		note?.messages
-			? note.messages.toSorted(
-					(a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-			)
+			? note.messages.toSorted((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
 			: [],
 	);
 
@@ -59,11 +55,23 @@
 	type TBANextMatch = Awaited<ReturnType<typeof trpc.matchEvents.getNextMatchForTeam.query>>;
 	let nextMatch: TBANextMatch = $state(null);
 
-	type PlayedMatch = { id: string; match_number: number; play_number: number; level: string; blue1: number | null; blue2: number | null; blue3: number | null; red1: number | null; red2: number | null; red3: number | null };
+	type PlayedMatch = {
+		id: string;
+		match_number: number;
+		play_number: number;
+		level: string;
+		blue1: number | null;
+		blue2: number | null;
+		blue3: number | null;
+		red1: number | null;
+		red2: number | null;
+		red3: number | null;
+	};
 	let playedMatchesSince: PlayedMatch[] = $state([]);
 
 	function formatMatchLabel(m: PlayedMatch): string {
-		const prefix = m.level === "Qualification" ? "Q" : m.level === "Playoff" ? "PO" : m.level === "Practice" ? "P" : "M";
+		const prefix =
+			m.level === "Qualification" ? "Q" : m.level === "Playoff" ? "PO" : m.level === "Practice" ? "P" : "M";
 		const suffix = m.play_number > 1 ? `/${m.play_number}` : "";
 		return `${prefix}${m.match_number}${suffix}`;
 	}
@@ -97,18 +105,24 @@
 
 		if (note) {
 			if (note.team) {
-				trpc.matchEvents.getNextMatchForTeam.query({ team_number: note.team }).then((m) => {
-					nextMatch = m;
-				}).catch(() => {});
+				trpc.matchEvents.getNextMatchForTeam
+					.query({ team_number: note.team })
+					.then((m) => {
+						nextMatch = m;
+					})
+					.catch(() => {});
 			}
 			if (note.note_type === "TeamIssue" && note.team) {
-				trpc.match.getMatchesSince.query({
-					team: note.team,
-					since: new Date(note.created_at),
-					exclude_match_id: note.match_id ?? undefined,
-				}).then((ms) => {
-					playedMatchesSince = ms;
-				}).catch(() => {});
+				trpc.match.getMatchesSince
+					.query({
+						team: note.team,
+						since: new Date(note.created_at),
+						exclude_match_id: note.match_id ?? undefined,
+					})
+					.then((ms) => {
+						playedMatchesSince = ms;
+					})
+					.catch(() => {});
 			}
 			if (note.match_id) {
 				match_id = note.match_id;
@@ -201,7 +215,7 @@
 			navigate("/notepad");
 		} else {
 			window.history.back();
-		}	
+		}
 	}
 
 	function sendKey(event: KeyboardEvent) {
@@ -271,7 +285,7 @@
 				note = {
 					...note,
 					text: editNoteText,
-					match_id: matchIdVal ?? null
+					match_id: matchIdVal ?? null,
 				};
 				// Refresh match display if match_id changed
 				if (matchIdVal) {
@@ -385,7 +399,9 @@
 							if (data.note_id === note.id && note.messages) {
 								note = {
 									...note,
-									messages: note.messages.map((m) => (m.id === data.message.id ? { ...m, text: data.message.text } : m)),
+									messages: note.messages.map((m) =>
+										m.id === data.message.id ? { ...m, text: data.message.text } : m,
+									),
 								};
 							}
 							break;
@@ -417,14 +433,14 @@
 			matches = result
 				.toSorted(
 					(a, b) =>
-					levelToSort(b.level) - levelToSort(a.level) ||
-					b.match_number - a.match_number ||
-					b.play_number - a.play_number,
+						levelToSort(b.level) - levelToSort(a.level) ||
+						b.match_number - a.match_number ||
+						b.play_number - a.play_number,
 				)
 				.map((m) => ({
 					value: m.id,
 					name: `${m.level} ${m.match_number}/${m.play_number}`,
-			}));
+				}));
 		}
 	}
 
@@ -603,16 +619,35 @@
 										: "Match Note"}
 							</span>
 							{#if note.note_type === "TeamIssue" && playedMatchesSince.length > 0}
-							<div class="flex flex-col items-end gap-0.5 shrink-0 mt-1">
-								<span class="text-xs text-gray-400 dark:text-gray-500">Played since:</span>
-								{#each playedMatchesSince as pm}
-								{@const pmStation = note.team === pm.blue1 ? 'blue1' : note.team === pm.blue2 ? 'blue2' : note.team === pm.blue3 ? 'blue3' : note.team === pm.red1 ? 'red1' : note.team === pm.red2 ? 'red2' : note.team === pm.red3 ? 'red3' : undefined}
-								<button
-									class="text-xs text-blue-500 hover:underline"
-									onclick={() => pmStation ? navigate("/logs/:matchid/:station", { params: { matchid: pm.id, station: pmStation } }) : navigate("/logs/:matchid", { params: { matchid: pm.id } })}
-									>{formatMatchLabel(pm)}</button>
-								{/each}
-							</div>
+								<div class="flex flex-col items-end gap-0.5 shrink-0 mt-1">
+									<span class="text-xs text-gray-400 dark:text-gray-500">Played since:</span>
+									{#each playedMatchesSince as pm}
+										{@const pmStation =
+											note.team === pm.blue1
+												? "blue1"
+												: note.team === pm.blue2
+													? "blue2"
+													: note.team === pm.blue3
+														? "blue3"
+														: note.team === pm.red1
+															? "red1"
+															: note.team === pm.red2
+																? "red2"
+																: note.team === pm.red3
+																	? "red3"
+																	: undefined}
+										<button
+											class="text-xs text-blue-500 hover:underline"
+											onclick={() =>
+												pmStation
+													? navigate("/logs/:matchid/:station", {
+															params: { matchid: pm.id, station: pmStation },
+														})
+													: navigate("/logs/:matchid", { params: { matchid: pm.id } })}
+											>{formatMatchLabel(pm)}</button
+										>
+									{/each}
+								</div>
 							{/if}
 						</div>
 						{#if note.team}
@@ -622,18 +657,29 @@
 							{#if nextMatch}
 								{@const alliance = nextMatchAlliance(nextMatch, note.team)}
 								<p class="text-xs">
-									<span class="font-semibold {alliance === 'red' ? 'text-red-600 dark:text-red-400' : alliance === 'blue' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}">
-										Next: {formatNextMatch(nextMatch)}{#if alliance} <span class="capitalize">{alliance}</span>{/if}
+									<span
+										class="font-semibold {alliance === 'red'
+											? 'text-red-600 dark:text-red-400'
+											: alliance === 'blue'
+												? 'text-blue-600 dark:text-blue-400'
+												: 'text-gray-500 dark:text-gray-400'}"
+									>
+										Next: {formatNextMatch(nextMatch)}{#if alliance}
+											<span class="capitalize">{alliance}</span>{/if}
 									</span>
 									{#if formatMatchTime(nextMatch)}
-										<span class="text-gray-400 dark:text-gray-500"> {formatMatchTime(nextMatch)}</span>
+										<span class="text-gray-400 dark:text-gray-500">
+											{formatMatchTime(nextMatch)}</span
+										>
 									{/if}
 								</p>
 							{/if}
 						{/if}
-						<div class="justify-center text-center sm:justify-start sm:text-left text-xs text-gray-400 dark:text-gray-500">
-							<FormattedTime date={note.created_at} formatter={formatTimeNoAgoHourMins} /> ago by {note.author
-								.username}
+						<div
+							class="justify-center text-center sm:justify-start sm:text-left text-xs text-gray-400 dark:text-gray-500"
+						>
+							<FormattedTime date={note.created_at} formatter={formatTimeNoAgoHourMins} /> ago by {note
+								.author.username}
 						</div>
 						<div class="flex flex-wrap gap-2 justify-center sm:justify-start">
 							{#if isOpen}
@@ -665,12 +711,17 @@
 							{/if}
 							{#if $userStore.meshedEventToken && $eventStore.subEvents}
 								<Badge color="indigo">
-									{$eventStore.subEvents.find((e) => e.code === note?.event_code)?.label ?? note.event_code}
+									{$eventStore.subEvents.find((e) => e.code === note?.event_code)?.label ??
+										note.event_code}
 								</Badge>
 							{/if}
 						</div>
 						<div class="border-b border-gray-400 dark:border-gray-700 py-3">
-							<p class="text-center sm:text-left text-black dark:text-white whitespace-pre-wrap leading-relaxed">{note.text}</p>
+							<p
+								class="text-center sm:text-left text-black dark:text-white whitespace-pre-wrap leading-relaxed"
+							>
+								{note.text}
+							</p>
 						</div>
 
 						<div class="flex flex-col gap-2" id="chat">
@@ -696,7 +747,7 @@
 									onkeydown={sendKey}
 									bind:value={message_text}
 								/>
-								</div>
+							</div>
 							<div class="flex flex-none items-center">
 								<Button type="submit" size="sm" color="blue" disabled={!message_text.trim()}>
 									<Icon icon="mdi:send" class="size-4" />
@@ -705,7 +756,6 @@
 						</form>
 					</div>
 				</div>
-
 			{/if}
 		{/await}
 	</div>

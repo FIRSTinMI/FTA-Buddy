@@ -51,61 +51,64 @@ async function bgGetStatuses(): Promise<{ signalrStatus: string }> {
 }
 
 function load() {
-	chrome.storage.local.get(["url", "cloud", "useDev", "event", "eventToken", "changed", "enabled", "fieldMonitor"], (item) => {
-		if (
-			item.url == undefined ||
-			item.cloud == undefined ||
-			item.event == undefined ||
-			item.changed == undefined ||
-			item.enabled == undefined ||
-			item.eventToken == undefined
-		) {
-			item = {
-				url: item.url || "http://localhost:3001",
-				cloud: item.cloud ?? true,
-				useDev: item.useDev ?? false,
-				event: item.event || "2024event",
-				changed: item.changed || new Date().getTime(),
-				enabled: item.enabled ?? false,
-				fieldMonitor: item.fieldMonitor ?? false,
-				eventToken: item.eventToken || "",
-			};
-			chrome.storage.local.set(item);
-		}
+	chrome.storage.local.get(
+		["url", "cloud", "useDev", "event", "eventToken", "changed", "enabled", "fieldMonitor"],
+		(item) => {
+			if (
+				item.url == undefined ||
+				item.cloud == undefined ||
+				item.event == undefined ||
+				item.changed == undefined ||
+				item.enabled == undefined ||
+				item.eventToken == undefined
+			) {
+				item = {
+					url: item.url || "http://localhost:3001",
+					cloud: item.cloud ?? true,
+					useDev: item.useDev ?? false,
+					event: item.event || "2024event",
+					changed: item.changed || new Date().getTime(),
+					enabled: item.enabled ?? false,
+					fieldMonitor: item.fieldMonitor ?? false,
+					eventToken: item.eventToken || "",
+				};
+				chrome.storage.local.set(item);
+			}
 
-		cloudCheckbox.checked = Boolean(item.cloud);
-		const useDevCheckbox = document.getElementById("useDev") as HTMLInputElement;
-		if (useDevCheckbox) useDevCheckbox.checked = Boolean(item.useDev);
-		urlInput.value = String(item.url);
-		eventInput.value = String(item.event);
-		enabledInput.checked = Boolean(item.enabled);
-		fieldMonitorInput.checked = Boolean(item.fieldMonitor);
-		tokenInput.value = String(item.eventToken);
-		let changed = Number(item.changed);
+			cloudCheckbox.checked = Boolean(item.cloud);
+			const useDevCheckbox = document.getElementById("useDev") as HTMLInputElement;
+			if (useDevCheckbox) useDevCheckbox.checked = Boolean(item.useDev);
+			urlInput.value = String(item.url);
+			eventInput.value = String(item.event);
+			enabledInput.checked = Boolean(item.enabled);
+			fieldMonitorInput.checked = Boolean(item.fieldMonitor);
+			tokenInput.value = String(item.eventToken);
+			let changed = Number(item.changed);
 
-		urlContainer.style.display = Boolean(item.cloud) ? "none" : "block";
+			urlContainer.style.display = Boolean(item.cloud) ? "none" : "block";
 
-		if (changed + 1000 * 60 * 60 * 24 * 4 < new Date().getTime()) {
-			enabledInput.checked = false;
-			chrome.storage.local.set({ enabled: false });
-		}
+			if (changed + 1000 * 60 * 60 * 24 * 4 < new Date().getTime()) {
+				enabledInput.checked = false;
+				chrome.storage.local.set({ enabled: false });
+			}
 
-		cloudCheckbox.addEventListener("input", handleUpdate);
-		enabledInput.addEventListener("input", handleUpdate);
-		fieldMonitorInput.addEventListener("input", handleUpdate);
-		if (useDevCheckbox) useDevCheckbox.addEventListener("input", handleUpdate);
-		saveButton.addEventListener("click", handleUpdate);
-		refreshButton.addEventListener("click", () => chrome.runtime.reload());
+			cloudCheckbox.addEventListener("input", handleUpdate);
+			enabledInput.addEventListener("input", handleUpdate);
+			fieldMonitorInput.addEventListener("input", handleUpdate);
+			if (useDevCheckbox) useDevCheckbox.addEventListener("input", handleUpdate);
+			saveButton.addEventListener("click", handleUpdate);
+			refreshButton.addEventListener("click", () => chrome.runtime.reload());
 
-		matchimportButton.addEventListener("click", async () => {
-			const level = matchLevelInput.value as TournamentLevel;
-			const matchNumber = parseInt(matchNumberInput.value);
-			const playNumber = parseInt(matchPlayInput.value);
-			await uploadMatchLogsForMatch(matchNumber, playNumber, level);
-		});
+			matchimportButton.addEventListener("click", async () => {
+				const level = matchLevelInput.value as TournamentLevel;
+				const matchNumber = parseInt(matchNumberInput.value);
+				const playNumber = parseInt(matchPlayInput.value);
+				await uploadMatchLogsForMatch(matchNumber, playNumber, level);
+			});
 
-		updateStatusIndicators();
-	});
+			updateStatusIndicators();
+		},
+	);
 }
 
 async function updateStatusIndicators() {

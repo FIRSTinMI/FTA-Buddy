@@ -111,12 +111,7 @@ interface CollectEventDataOptions {
 	includeTestMatches?: boolean;
 }
 
-const HIGH_IMPACT_ISSUES = new Set([
-	"Bypass",
-	"roboRIO Disconnect",
-	"Radio Disconnect",
-	"Communication Loss",
-]);
+const HIGH_IMPACT_ISSUES = new Set(["Bypass", "roboRIO Disconnect", "Radio Disconnect", "Communication Loss"]);
 
 const ISSUE_SEVERITY: Record<string, number> = {
 	Bypass: 5,
@@ -126,7 +121,7 @@ const ISSUE_SEVERITY: Record<string, number> = {
 	"Communication Loss": 4,
 	"Robot Power Issue": 4,
 	"Radio Issue": 3,
-	"Brownout": 3,
+	Brownout: 3,
 	"Code Issue": 3,
 	"Driver Station Issue": 3,
 	"CAN Issue": 3,
@@ -430,10 +425,8 @@ async function collectEventData(
 			const bOpen = b.resolution_status === "Open" ? 1 : 0;
 			if (bOpen !== aOpen) return bOpen - aOpen;
 
-			const aOfficial =
-				a.tournament_level === "Playoff" || a.tournament_level === "Qualification" ? 1 : 0;
-			const bOfficial =
-				b.tournament_level === "Playoff" || b.tournament_level === "Qualification" ? 1 : 0;
+			const aOfficial = a.tournament_level === "Playoff" || a.tournament_level === "Qualification" ? 1 : 0;
+			const bOfficial = b.tournament_level === "Playoff" || b.tournament_level === "Qualification" ? 1 : 0;
 			if (bOfficial !== aOfficial) return bOfficial - aOfficial;
 
 			return (b.open_time_minutes ?? 0) - (a.open_time_minutes ?? 0);

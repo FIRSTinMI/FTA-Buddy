@@ -714,17 +714,27 @@ export const notesRouter = router({
 
 			// Auto-attach all active match events for the same team + match
 			if (input.note_type === "TeamIssue" && insert[0].team !== null && insert[0].match_number !== null) {
+				// Prefer matching on match_id for precision; fall back to match_number + play_number + tournament_level
+				const matchEventFilters = [
+					eq(matchEvents.event_code, event.code),
+					eq(matchEvents.team, insert[0].team),
+					eq(matchEvents.status, "active"),
+				];
+				if (insert[0].match_id !== null) {
+					matchEventFilters.push(eq(matchEvents.match_id, insert[0].match_id));
+				} else {
+					matchEventFilters.push(eq(matchEvents.match_number, insert[0].match_number));
+					if (insert[0].play_number !== null) {
+						matchEventFilters.push(eq(matchEvents.play_number, insert[0].play_number));
+					}
+					if (insert[0].tournament_level !== null) {
+						matchEventFilters.push(eq(matchEvents.level, insert[0].tournament_level));
+					}
+				}
 				const activeEvents = await db
 					.select()
 					.from(matchEvents)
-					.where(
-						and(
-							eq(matchEvents.event_code, event.code),
-							eq(matchEvents.team, insert[0].team),
-							eq(matchEvents.match_number, insert[0].match_number),
-							eq(matchEvents.status, "active"),
-						),
-					)
+					.where(and(...matchEventFilters))
 					.execute();
 
 				await autoLinkEventsToNote(noteId, activeEvents, event);

@@ -2,7 +2,15 @@ import { TRPCError } from "@trpc/server";
 import { createHash, randomUUID } from "crypto";
 import { desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
-import { AUTO_EVENT_ISSUE_TYPES, AutoEventIssueType, EventAutoEventSettings, EventChecklist, Profile, TeamList, TournamentLevel } from "../../shared/types";
+import {
+	AUTO_EVENT_ISSUE_TYPES,
+	AutoEventIssueType,
+	EventAutoEventSettings,
+	EventChecklist,
+	Profile,
+	TeamList,
+	TournamentLevel,
+} from "../../shared/types";
 import { autoEventSettingsCache } from "../util/log-analysis";
 import { db } from "../db/db";
 import { events, users } from "../db/schema";
@@ -298,7 +306,9 @@ export const eventRouter = router({
 					users: [user?.id],
 					startDate: eventData.start_date ?? null,
 					endDate: eventData.end_date ?? null,
-					autoEventSettings: Object.fromEntries(AUTO_EVENT_ISSUE_TYPES.map((t) => [t, true])) as EventAutoEventSettings,
+					autoEventSettings: Object.fromEntries(
+						AUTO_EVENT_ISSUE_TYPES.map((t) => [t, true]),
+					) as EventAutoEventSettings,
 				})
 				.returning();
 
@@ -310,9 +320,7 @@ export const eventRouter = router({
 	getActive: publicProcedure.query(() => {
 		const cutoff = Date.now() - 60_000;
 		return Object.values(inMemoryEvents)
-			.filter((e) =>
-				e.stats.extensions.some((ext) => ext.lastFrame && ext.lastFrame.getTime() > cutoff),
-			)
+			.filter((e) => e.stats.extensions.some((ext) => ext.lastFrame && ext.lastFrame.getTime() > cutoff))
 			.map((e) => ({ code: e.code, name: e.name }));
 	}),
 
@@ -700,7 +708,12 @@ export const eventRouter = router({
 		.input(
 			z.object({
 				settings: z
-					.object(Object.fromEntries(AUTO_EVENT_ISSUE_TYPES.map((k) => [k, z.boolean()])) as Record<AutoEventIssueType, z.ZodBoolean>)
+					.object(
+						Object.fromEntries(AUTO_EVENT_ISSUE_TYPES.map((k) => [k, z.boolean()])) as Record<
+							AutoEventIssueType,
+							z.ZodBoolean
+						>,
+					)
 					.partial(),
 			}),
 		)
@@ -713,10 +726,7 @@ export const eventRouter = router({
 					newSettings[issue] = input.settings[issue];
 				}
 			}
-			await db
-				.update(events)
-				.set({ autoEventSettings: newSettings })
-				.where(eq(events.code, event.code));
+			await db.update(events).set({ autoEventSettings: newSettings }).where(eq(events.code, event.code));
 			event.autoEventSettings = newSettings;
 			// Keep the global cache in sync so log analysis picks up the change
 			// even for events that run across multiple analysis cycles

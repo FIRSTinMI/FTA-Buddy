@@ -57,11 +57,14 @@
 		);
 
 		if ($userStore.admin) {
-			trpc.event.getAllWithUsers.query().then((data) => {
-				eventUsers = Object.fromEntries(data.map((e) => [e.code, e.users]));
-			}).catch((err) => {
-				console.error("[Management] getAllWithUsers failed:", err);
-			});
+			trpc.event.getAllWithUsers
+				.query()
+				.then((data) => {
+					eventUsers = Object.fromEntries(data.map((e) => [e.code, e.users]));
+				})
+				.catch((err) => {
+					console.error("[Management] getAllWithUsers failed:", err);
+				});
 		}
 	});
 
@@ -98,58 +101,60 @@
 </script>
 
 <div class="h-full overflow-y-auto">
-<div class="max-w-2xl mx-auto flex flex-col gap-2 p-4">
-	<p>Start Known Issue</p>
-	<Input type="text" placeholder="Message" bind:value={message} class="mb-2" />
-	<Input type="text" placeholder="Effected Events" bind:value={effectedEvents} class="mb-2" />
-	<div class="flex gap-2">
-		<Button onclick={() => startIssue(message, effectedEvents.split(","))}>Start</Button>
-		<Button onclick={endIssue}>End Known Issue</Button>
+	<div class="max-w-2xl mx-auto flex flex-col gap-2 p-4">
+		<p>Start Known Issue</p>
+		<Input type="text" placeholder="Message" bind:value={message} class="mb-2" />
+		<Input type="text" placeholder="Effected Events" bind:value={effectedEvents} class="mb-2" />
+		<div class="flex gap-2">
+			<Button onclick={() => startIssue(message, effectedEvents.split(","))}>Start</Button>
+			<Button onclick={endIssue}>End Known Issue</Button>
+		</div>
 	</div>
-</div>
 
-<div class="grid grid-cols-4 gap-2 mx-auto max-w-5xl">
-	<p>Name</p>
-	<p>Field State</p>
-	<p>Match</p>
-	<p>Heartbeat</p>
-	{#each events as event}
-		<p>{event.code} - {event.name}</p>
-		<p>{FieldStates[event.field]}</p>
-		<p>{event.level} - {event.match}</p>
-		<p>
-			<Icon
-				icon="mdi:favorite"
-				class="w-8 h-full py-2 mx-auto {hearts[event.code] ? 'text-green-600' : 'text-gray-500'}"
-			/>
-		</p>
-		<div class="col-span-2">
-			{#each event.clients as client}
-				<div class="flex items-center gap-2">
-					<p>{client.ip}</p>
-					<p>{client.userAgent}</p>
-				</div>
-			{/each}
-		</div>
-		<div class="col-span-2">
-			{#each event.extensions as extension}
-				<div class="flex items-center gap-2">
-					<p>{extension.ip}</p>
-					<p>{formatTime(extension.connected)}</p>
-					<p>{extension.frames}</p>
-					<p>{formatTime(extension.lastFrame)}</p>
-					<p>{extension.checklistUpdates}</p>
-				</div>
-			{/each}
-		</div>
-		{#if eventUsers[event.code]?.length}
-			<div class="col-span-4 flex flex-wrap gap-1 pb-1 border-b border-neutral-300">
-				<span class="text-xs text-gray-500 mr-1">Users:</span>
-				{#each eventUsers[event.code] as u}
-					<span class="text-xs bg-neutral-100 dark:bg-neutral-700 rounded px-1.5 py-0.5">{u.username} <span class="text-gray-400">({u.role})</span></span>
+	<div class="grid grid-cols-4 gap-2 mx-auto max-w-5xl">
+		<p>Name</p>
+		<p>Field State</p>
+		<p>Match</p>
+		<p>Heartbeat</p>
+		{#each events as event}
+			<p>{event.code} - {event.name}</p>
+			<p>{FieldStates[event.field]}</p>
+			<p>{event.level} - {event.match}</p>
+			<p>
+				<Icon
+					icon="mdi:favorite"
+					class="w-8 h-full py-2 mx-auto {hearts[event.code] ? 'text-green-600' : 'text-gray-500'}"
+				/>
+			</p>
+			<div class="col-span-2">
+				{#each event.clients as client}
+					<div class="flex items-center gap-2">
+						<p>{client.ip}</p>
+						<p>{client.userAgent}</p>
+					</div>
 				{/each}
 			</div>
-		{/if}
-	{/each}
-</div>
+			<div class="col-span-2">
+				{#each event.extensions as extension}
+					<div class="flex items-center gap-2">
+						<p>{extension.ip}</p>
+						<p>{formatTime(extension.connected)}</p>
+						<p>{extension.frames}</p>
+						<p>{formatTime(extension.lastFrame)}</p>
+						<p>{extension.checklistUpdates}</p>
+					</div>
+				{/each}
+			</div>
+			{#if eventUsers[event.code]?.length}
+				<div class="col-span-4 flex flex-wrap gap-1 pb-1 border-b border-neutral-300">
+					<span class="text-xs text-gray-500 mr-1">Users:</span>
+					{#each eventUsers[event.code] as u}
+						<span class="text-xs bg-neutral-100 dark:bg-neutral-700 rounded px-1.5 py-0.5"
+							>{u.username} <span class="text-gray-400">({u.role})</span></span
+						>
+					{/each}
+				</div>
+			{/if}
+		{/each}
+	</div>
 </div>

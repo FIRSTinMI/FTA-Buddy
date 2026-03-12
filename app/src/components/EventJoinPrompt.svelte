@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Button, Input, Label } from "flowbite-svelte";
-	import type { Profile, TeamList } from "../../../shared/types";
+	import type { Profile } from "../../../shared/types";
 	import Spinner from "./Spinner.svelte";
 	import { trpc } from "../main";
 	import { eventStore } from "../stores/event";
@@ -77,7 +77,8 @@
 <div class="flex flex-col gap-4 max-w-sm mx-auto mt-8">
 	<h2 class="text-xl font-bold">Join Event</h2>
 	<p class="text-gray-600 text-sm">
-		This link is for event <span class="font-mono font-semibold">{eventCode}</span>. Enter the event PIN to switch to it.
+		This link is for event <span class="font-mono font-semibold">{eventCode}</span>. Enter the event PIN to switch
+		to it.
 	</p>
 	<form class="flex flex-col gap-3" onsubmit={join}>
 		<div>

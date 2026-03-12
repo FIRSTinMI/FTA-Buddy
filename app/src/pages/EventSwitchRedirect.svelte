@@ -1,13 +1,12 @@
 <script lang="ts">
 	import { get } from "svelte/store";
 	import { onMount } from "svelte";
-	import type { Profile } from "../../../shared/types";
 	import EventJoinPrompt from "../components/EventJoinPrompt.svelte";
 	import Spinner from "../components/Spinner.svelte";
 	import { navigate } from "../router";
 	import { eventStore } from "../stores/event";
 	import { userStore } from "../stores/user";
-	import { savedEventsStore, saveEvent } from "../stores/savedEvents";
+	import { savedEventsStore } from "../stores/savedEvents";
 
 	// sv-router passes route params as props. All possible param combos across the three routes:
 	interface Props {
@@ -81,7 +80,9 @@
 		}
 
 		// Not logged in at all — send them to login and come back after
-		sessionStorage.setItem("redirectAfterLogin", redirectPath);
+		// Store the full event-scoped URL so after login we re-enter this redirect
+		// component, which will then handle the event switch before forwarding on.
+		sessionStorage.setItem("redirectAfterLogin", window.location.pathname);
 		navigate("/manage/login");
 	});
 </script>

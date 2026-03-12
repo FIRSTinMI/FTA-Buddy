@@ -167,17 +167,19 @@ export async function getAllTeamNotesInfo(event_code: string, teamNumbers: numbe
 // #region Slack Integration
 
 type SlackElements = {
-    type: string;
-    text?: string | {
-        type: string;
-        text: string;
-        style?: { bold?: boolean };
-        emoji?: boolean;
-    };
-    style?: { bold?: boolean };
-    emoji?: boolean;
-    elements?: SlackElements[];
-}
+	type: string;
+	text?:
+		| string
+		| {
+				type: string;
+				text: string;
+				style?: { bold?: boolean };
+				emoji?: boolean;
+		  };
+	style?: { bold?: boolean };
+	emoji?: boolean;
+	elements?: SlackElements[];
+};
 
 export function createSlackNoteMessage(
 	note_id: string,
@@ -198,7 +200,7 @@ export function createSlackNoteMessage(
 		buttons.push({
 			type: "button",
 			text: { type: "plain_text", text: "View Match Log", emoji: true },
-			url: `https://ftabuddy.com/logs/${event_code}/${match_id}`,
+			url: `https://ftabuddy.com/logs/event/${event_code}/${match_id}`,
 		});
 	}
 	const blocks: SlackElements[] = [
@@ -206,7 +208,7 @@ export function createSlackNoteMessage(
 			type: "header",
 			text: {
 				type: "plain_text",
-				text: `New Note${team_number ? ` For Team ${team_number}${team_name ? ` ${team_name}` : ""}` : ""}`,
+				text: `New Note${team_number ? ` For Team ${team_number}` : ""}`,
 				emoji: true,
 			},
 		},

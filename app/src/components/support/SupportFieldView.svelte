@@ -302,6 +302,7 @@
 								const note = td.notes.find((n) => n.id === data.note_id);
 								if (note) {
 									note.resolution_status = data.resolution_status;
+									note.resolved_by = data.resolved_by;
 									note.updated_at = new Date();
 									td.notes = [...td.notes];
 									break;
@@ -575,7 +576,7 @@
 								<span
 									class="text-[10px] sm:text-[11px] lg:text-xs {note.resolution_status === 'Open'
 										? 'text-green-500'
-										: 'text-gray-400'}">{note.resolution_status}</span
+										: 'text-gray-400'}">{note.resolution_status}{#if note.resolution_status === 'Resolved' && note.resolved_by} by {note.resolved_by.username}{/if}</span
 								>
 								{#if note.match_number}
 									<span class="text-[10px] sm:text-[11px] lg:text-xs text-gray-400"

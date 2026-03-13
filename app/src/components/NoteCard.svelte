@@ -175,7 +175,7 @@
 				{#if canToggleStatus && isOpen}
 					<Badge color="green">Open</Badge>
 				{:else if canToggleStatus}
-					<Badge color="gray">Closed</Badge>
+					<Badge color="gray">Closed{note.resolved_by ? ` by ${note.resolved_by.username}` : ''}</Badge>
 				{/if}
 			</div>
 			<div class="shrink-0 text-right text-xs text-gray-400 dark:text-gray-500 leading-relaxed">

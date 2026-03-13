@@ -376,7 +376,7 @@
 							break;
 						case "status":
 							if (data.note_id === note.id) {
-								note = { ...note, resolution_status: data.resolution_status as any };
+								note = { ...note, resolution_status: data.resolution_status as any, resolved_by: data.resolved_by };
 							}
 							break;
 						case "assign":
@@ -688,7 +688,7 @@
 							{#if isOpen}
 								<Badge color="green">Open</Badge>
 							{:else if note.resolution_status === "Resolved"}
-								<Badge color="gray">Resolved</Badge>
+								<Badge color="gray">Resolved{note.resolved_by ? ` by ${note.resolved_by.username}` : ''}</Badge>
 							{:else}
 								<Badge color="gray">N/A</Badge>
 							{/if}

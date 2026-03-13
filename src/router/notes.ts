@@ -917,6 +917,8 @@ export const notesRouter = router({
 				.set({
 					resolution_status: input.new_status as any,
 					closed_at: isResolving ? new Date() : null,
+					resolved_by_id: isResolving ? currentUserProfile[0].id : null,
+					resolved_by: isResolving ? currentUserProfile[0] : null,
 					fms_metadata: note.fms_metadata
 						? { ...(note.fms_metadata as FmsNoteMetadata), resolutionStatus: input.new_status }
 						: null,
@@ -931,6 +933,7 @@ export const notesRouter = router({
 				kind: "status",
 				note_id: update[0].id,
 				resolution_status: update[0].resolution_status ?? "Open",
+				resolved_by: isResolving ? currentUserProfile[0] : null,
 			});
 
 			createNotification(
@@ -1484,9 +1487,21 @@ export async function getEventMessages(event_code: string) {
 	return eventMessages;
 }
 
-export async function updateNoteStatusFromSlack(message_ts: string, resolved: boolean) {
+export async function updateNoteStatusFromSlack(message_ts: string, resolved: boolean, slackUserId?: string) {
 	const note = await db.query.notes.findFirst({ where: eq(notes.slack_ts, message_ts) });
 	if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
+
+	const event = await getEvent("", note.event_code);
+
+	// Resolve who performed the action
+	let resolverProfile: Profile | null = null;
+	if (resolved && slackUserId && event.slackTeam) {
+		try {
+			resolverProfile = await resolveSlackUserProfile(slackUserId, event.slackTeam);
+		} catch {
+			resolverProfile = { id: -1, role: "CSA", admin: false, username: "Slack User", source: "Slack" };
+		}
+	}
 
 	const newStatus = resolved ? "Resolved" : "Open";
 	const update = await db
@@ -1494,17 +1509,18 @@ export async function updateNoteStatusFromSlack(message_ts: string, resolved: bo
 		.set({
 			resolution_status: newStatus as any,
 			closed_at: resolved ? new Date() : null,
+			resolved_by_id: resolved ? (resolverProfile?.id ?? null) : null,
+			resolved_by: resolved ? resolverProfile : null,
 			updated_at: new Date(),
 		})
 		.where(eq(notes.id, note.id))
 		.returning();
 
-	const event = await getEvent("", note.event_code);
-
 	event.noteUpdateEmitter.emit("note_update", {
 		kind: "status",
 		note_id: update[0].id,
 		resolution_status: update[0].resolution_status ?? "Open",
+		resolved_by: resolved ? resolverProfile : null,
 	});
 
 	createNotification(
@@ -1513,7 +1529,7 @@ export async function updateNoteStatusFromSlack(message_ts: string, resolved: bo
 			kind: "note.statusChanged",
 			note: toNoteCtx(note as any),
 			newStatus: newStatus as "Open" | "Resolved",
-			actor: "FMS",
+			actor: resolverProfile?.username ?? "Slack",
 		}),
 	);
 

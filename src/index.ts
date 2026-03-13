@@ -206,7 +206,7 @@ app.post("/slack/events", async (req, res) => {
 			console.log(event);
 			// Only listen to reactions on messages from the bot
 			if (event.reaction === "white_check_mark" && event.item.user === "U08FVV94LPR") {
-				await updateNoteStatusFromSlack(event.item.ts, event.type === "reaction_added");
+				await updateNoteStatusFromSlack(event.item.ts, event.type === "reaction_added", event.user);
 			} else if (event.reaction === "eyes" && event.item.user === "U08FVV94LPR") {
 				await updateNoteAssignmentFromSlack(event.item.ts, event.type === "reaction_added", event.user);
 			} else if (event.type === "message" && event.thread_ts && !event.subtype && !event.bot_id) {

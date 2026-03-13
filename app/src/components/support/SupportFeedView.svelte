@@ -191,6 +191,7 @@
 							const note = notes.find((n) => n.id === data.note_id);
 							if (note) {
 								note.resolution_status = data.resolution_status;
+								note.resolved_by = data.resolved_by;
 								note.updated_at = new Date();
 							}
 							notes = [...notes];

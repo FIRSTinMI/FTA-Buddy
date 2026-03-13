@@ -124,6 +124,8 @@ export const notes = pgTable("notes", {
 	slack_ts: varchar("slack_ts"),
 	slack_channel: varchar("slack_channel"),
 	match_id: uuid("match_id").references(() => matchLogs.id),
+	resolved_by_id: integer("resolved_by_id").references(() => users.id),
+	resolved_by: jsonb("resolved_by").$type<Profile>(),
 });
 
 export const noteMessagesRelations = relations(notes, ({ many }) => ({

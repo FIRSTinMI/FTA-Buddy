@@ -11,6 +11,14 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+    "2.7.1.3": {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.7.1.3</h1>
+        <ul>
+        <li>Fixed message duplication from Slack sync</li>
+        <li>Extension update: On-Site column detected correctly in Nexus</li>
+        </ul>`,
+    },
     "2.7.1.2": {
         changelog: `
         <h1 class="text-lg font-bold">v2.7.1.2</h1>

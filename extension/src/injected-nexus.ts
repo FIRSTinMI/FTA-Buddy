@@ -57,7 +57,7 @@ function getColumnIndex() {
 		const text = headerDiv.children[i].textContent?.toLowerCase();
 		if (text?.includes("inspect")) {
 			inspectionCol = i;
-		} else if (text?.includes("here") || text?.includes("on site")) {
+		} else if (text?.includes("here") || text?.includes("on site") || text?.includes("on-site")) {
 			hereCol = i;
 		} else if (text?.includes("radio")) {
 			radioCol = i;

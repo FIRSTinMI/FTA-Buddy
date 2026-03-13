@@ -22,7 +22,7 @@
 
 	// Match index for prev/next navigation
 	interface MatchInfo {
-		id: string;
+		id: string | null; // null for unplayed/scheduled matches not yet in DB
 		match_number: number;
 		play_number: number;
 		level: string;
@@ -32,6 +32,7 @@
 		red1: number | null;
 		red2: number | null;
 		red3: number | null;
+		isPlayed: boolean;
 	}
 
 	let allMatches: MatchInfo[] = $state([]);
@@ -170,7 +171,7 @@
 	// Match navigation
 	async function loadMatchIndex() {
 		try {
-			allMatches = await trpc.match.getMatches.query({});
+			allMatches = await trpc.match.getScheduledMatches.query();
 		} catch {
 			allMatches = [];
 		}
@@ -191,10 +192,8 @@
 		if (matchIndex >= 0 && matchIndex < allMatches.length - 1) {
 			autoAdvance = false;
 			matchIndex++;
-		} else if (matchIndex >= allMatches.length - 1) {
-			// At the last match with no next — go back to current/live
-			goToLive();
 		}
+		// At the last scheduled match — stay here (use the toggle to return to live)
 	}
 
 	// When autoAdvance is turned on (via toggle), immediately snap back to live
@@ -359,10 +358,13 @@
 {#snippet teamCard(teamNum: number, alliance: "blue" | "red", slot: 1 | 2 | 3)}
 	{@const stationKey = `${alliance}${slot}` as ROBOT}
 	{@const liveRobot = monitorFrame?.[stationKey] as RobotInfo | undefined}
-	{@const currentMatchId = matchIndex >= 0 ? allMatches[matchIndex]?.id : undefined}
+	{@const currentMatchId = matchIndex >= 0 ? (allMatches[matchIndex]?.id ?? undefined) : undefined}
 	{@const td = teamData[teamNum]}
 	{@const teamName = $eventStore.teams.find((t) => t.number === String(teamNum))?.name ?? ""}
-	{@const itemCount = td && !td.loading ? td.notes.length + td.matchEvents.length : 0}
+	{@const currentEventCodes = [$eventStore.code, ...($eventStore.subEvents?.map((se) => se.code) ?? [])]}
+	{@const currentNotes = td && !td.loading ? td.notes.filter((n) => currentEventCodes.includes(n.event_code)) : []}
+	{@const hasOpenNote = currentNotes.some((n) => n.resolution_status === "Open" || n.resolution_status === null)}
+	{@const itemCount = td && !td.loading ? currentNotes.length + td.matchEvents.length : 0}
 	{@const activeEvents = td && !td.loading ? td.matchEvents.filter((e) => e.status === "active") : []}
 	{@const eventSummaries =
 		td && !td.loading && td.matchEvents.length > 0
@@ -388,6 +390,12 @@
 				<span class="leading-none">#{teamNum}</span>
 				{#if teamName}
 					<span class="text-[11px] sm:text-sm lg:text-base font-normal opacity-80 truncate">{teamName}</span>
+				{/if}
+				{#if hasOpenNote}
+					<Icon
+						icon="mdi:alert"
+						class="ml-auto shrink-0 {isShortScreen ? 'size-3.5' : 'size-4'} text-yellow-300"
+					/>
 				{/if}
 			</button>
 			{#if currentMatchId}
@@ -503,8 +511,8 @@
 						</div>
 					</div>
 				{/if}
-				{#if td && td.notes.length > 0}
-					{#each [...td.notes].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()) as note}
+				{#if currentNotes.length > 0}
+					{#each [...currentNotes].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()) as note}
 						<button
 							class="w-full text-left {isShortScreen
 								? 'py-0.5'
@@ -611,12 +619,11 @@
 						{matchLabel}
 					</p>
 					{#if !isShortScreen}
-						<Badge
-							color="green"
-							class="text-xs mt-0.5 transition-opacity {isLive
-								? 'opacity-100'
-								: 'opacity-0 pointer-events-none'}">LIVE</Badge
-						>
+						{#if isLive}
+							<Badge color="green" class="text-xs mt-0.5">LIVE</Badge>
+						{:else if matchIndex >= 0 && !allMatches[matchIndex]?.isPlayed}
+							<Badge color="yellow" class="text-xs mt-0.5">SCHEDULED</Badge>
+						{/if}
 					{/if}
 				</div>
 
@@ -624,7 +631,7 @@
 					size={isShortScreen ? "xs" : "sm"}
 					color="alternative"
 					onclick={goToNextMatch}
-					disabled={isLive}
+					disabled={isLive || matchIndex === allMatches.length - 1}
 				>
 					<Icon icon="mdi:chevron-right" class={isShortScreen ? "size-3.5" : "size-4 sm:size-5"} />
 				</Button>

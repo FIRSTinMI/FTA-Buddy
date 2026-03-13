@@ -360,6 +360,129 @@ export const matchRouter = router({
 			}));
 		}),
 
+	/**
+	 * Returns played matches (from DB) merged with unplayed qualifying matches from TBA.
+	 * Unplayed matches have id=null and isPlayed=false.
+	 */
+	getScheduledMatches: eventProcedure
+		.output(
+			z.array(
+				z.object({
+					id: z.string().nullable(),
+					match_number: z.number(),
+					play_number: z.number(),
+					level: z.string(),
+					blue1: z.number().nullable(),
+					blue2: z.number().nullable(),
+					blue3: z.number().nullable(),
+					red1: z.number().nullable(),
+					red2: z.number().nullable(),
+					red3: z.number().nullable(),
+					isPlayed: z.boolean(),
+				}),
+			),
+		)
+		.query(async ({ ctx }) => {
+			const tbaKey = process.env.TBA_API_KEY;
+
+			// Load all played matches from DB with full team data
+			const playedMatches = await db
+				.select({
+					id: matchLogs.id,
+					match_number: matchLogs.match_number,
+					play_number: matchLogs.play_number,
+					level: matchLogs.level,
+					blue1: matchLogs.blue1,
+					blue2: matchLogs.blue2,
+					blue3: matchLogs.blue3,
+					red1: matchLogs.red1,
+					red2: matchLogs.red2,
+					red3: matchLogs.red3,
+				})
+				.from(matchLogs)
+				.where(eq(matchLogs.event, ctx.event.code))
+				.orderBy(asc(matchLogs.start_time));
+
+			type ScheduledMatch = {
+				id: string | null;
+				match_number: number;
+				play_number: number;
+				level: string;
+				blue1: number | null;
+				blue2: number | null;
+				blue3: number | null;
+				red1: number | null;
+				red2: number | null;
+				red3: number | null;
+				isPlayed: boolean;
+			};
+
+			const result: ScheduledMatch[] = playedMatches.map((m) => ({ ...m, isPlayed: true }));
+
+			if (!tbaKey) return result;
+
+			try {
+				const tbaRes = await fetch(
+					`https://www.thebluealliance.com/api/v3/event/${ctx.event.code}/matches/simple`,
+					{ headers: { "X-TBA-Auth-Key": tbaKey } },
+				);
+				if (!tbaRes.ok) return result;
+
+				const tbaMatches: {
+					comp_level: string;
+					match_number: number;
+					alliances: {
+						blue: { team_keys: string[] };
+						red: { team_keys: string[] };
+					} | null;
+				}[] = await tbaRes.json();
+
+				// Set of already-played qual match numbers (from DB)
+				const playedQualNums = new Set(
+					playedMatches.filter((m) => m.level === "Qualification").map((m) => m.match_number),
+				);
+
+				const tbaTeamNum = (key: string): number | null => {
+					const n = parseInt(key.replace("frc", ""), 10);
+					return isNaN(n) ? null : n;
+				};
+
+				// Add unplayed qualifying matches from TBA
+				for (const m of tbaMatches) {
+					if (m.comp_level !== "qm") continue;
+					if (playedQualNums.has(m.match_number)) continue;
+					const blue = m.alliances?.blue?.team_keys ?? [];
+					const red = m.alliances?.red?.team_keys ?? [];
+					result.push({
+						id: null,
+						match_number: m.match_number,
+						play_number: 1,
+						level: "Qualification",
+						blue1: tbaTeamNum(blue[0] ?? ""),
+						blue2: tbaTeamNum(blue[1] ?? ""),
+						blue3: tbaTeamNum(blue[2] ?? ""),
+						red1: tbaTeamNum(red[0] ?? ""),
+						red2: tbaTeamNum(red[1] ?? ""),
+						red3: tbaTeamNum(red[2] ?? ""),
+						isPlayed: false,
+					});
+				}
+
+				// Sort: level order, then match_number, then play_number
+				const levelOrder: Record<string, number> = { None: 0, Practice: 1, Qualification: 2, Playoff: 3 };
+				result.sort((a, b) => {
+					const lo = (levelOrder[a.level] ?? 4) - (levelOrder[b.level] ?? 4);
+					if (lo !== 0) return lo;
+					if (a.match_number !== b.match_number) return a.match_number - b.match_number;
+					return a.play_number - b.play_number;
+				});
+			} catch {
+				// TBA fetch failed — return played matches only (already in result)
+			}
+
+			return result;
+		}),
+
 	getMatch: eventProcedure
 		.input(
 			z.object({

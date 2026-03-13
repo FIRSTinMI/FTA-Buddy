@@ -17,9 +17,7 @@ export const VERSIONS: { [key: string]: Version } = {
         <ul>
         <li>Fixed event link redirects not recognizing the current event</li>
         <li>Fixed support field view DS colors to match field monitor</li>
-        </ul>`,
-    },
-    "2.7.1.4": {
+        <li>See future matches in notepad field view</li>
         changelog: `
         <h1 class="text-lg font-bold">v2.7.1.4</h1>
         <ul>

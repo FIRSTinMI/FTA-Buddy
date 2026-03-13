@@ -215,7 +215,7 @@
 	}
 
 	function back() {
-		if (window.history.state === null) {
+		if (window.history.length <= 1) {
 			navigate("/notepad");
 		} else {
 			window.history.back();

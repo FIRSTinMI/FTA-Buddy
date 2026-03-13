@@ -218,6 +218,7 @@
 			matchIndex--;
 		}
 		snapToLiveIfMatched();
+		updateMatchUrl();
 	}
 
 	function goToNextMatch() {
@@ -236,6 +237,7 @@
 			matchIndex++;
 		}
 		snapToLiveIfMatched();
+		updateMatchUrl();
 	}
 
 	// When autoAdvance is turned on (via toggle), immediately snap back to live
@@ -246,7 +248,41 @@
 	function goToLive() {
 		matchIndex = -1;
 		autoAdvance = true;
+		updateMatchUrl();
 	}
+
+	/** Persist or clear the current match in the URL so back-navigation restores it. */
+	function updateMatchUrl() {
+		if (typeof window === 'undefined') return;
+		const url = new URL(window.location.href);
+		if (matchIndex === -1 || !allMatches[matchIndex]) {
+			url.searchParams.delete('m');
+		} else {
+			const m = allMatches[matchIndex];
+			url.searchParams.set('m', `${m.level}:${m.match_number}:${m.play_number}`);
+		}
+		window.history.replaceState(null, '', url.toString());
+	}
+
+	// Restore match from URL once the match list loads (e.g. after back-nav from ViewNote)
+	let matchRestoredFromUrl = false;
+	$effect(() => {
+		if (allMatches.length > 0 && !matchRestoredFromUrl) {
+			matchRestoredFromUrl = true;
+			const mKey = new URLSearchParams(window.location.search).get('m');
+			if (mKey) {
+				const [level, numStr, playStr] = mKey.split(':');
+				const num = parseInt(numStr), play = parseInt(playStr);
+				const idx = allMatches.findIndex(
+					(x) => x.level === level && x.match_number === num && x.play_number === play,
+				);
+				if (idx >= 0) {
+					matchIndex = idx;
+					autoAdvance = false;
+				}
+			}
+		}
+	});
 
 	function openNoteModal(teamNumber: number) {
 		modalTeamNum = teamNumber;

@@ -16,6 +16,9 @@ export const VERSIONS: { [key: string]: Version } = {
         <h1 class="text-lg font-bold">v2.7.1.8</h1>
         <ul>
         <li>Assign notes to any user who has joined the event</li>
+        <li>Back button now works correctly when opening notes or logs from Slack links</li>
+        <li>Navigating back from a note in field view returns to the same match you were viewing</li>
+        <li>Match log button added to Slack message when a match is attached to a note after creation</li>
         </ul>`,
     },
     "2.7.1.7": {

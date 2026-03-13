@@ -45,7 +45,7 @@
 		if (!eventCode) {
 			console.warn("[EventSwitchRedirect] eventCode prop is undefined. Props:", { eventCode, id, matchid, station });
 			console.warn("[EventSwitchRedirect] Falling back to redirectPath:", redirectPath);
-			navigate(redirectPath as any);
+			navigate(redirectPath as any, { replace: true });
 			return;
 		}
 
@@ -53,7 +53,7 @@
 
 		// Already on the right event — just redirect
 		if (event.code?.toLowerCase() === normalizedCode) {
-			navigate(redirectPath as any);
+			navigate(redirectPath as any, { replace: true });
 			return;
 		}
 
@@ -63,7 +63,7 @@
 			if (subEvent) {
 				userStore.update((u) => ({ ...u, eventToken: subEvent.token }));
 				eventStore.set({ ...event, ...subEvent });
-				navigate(redirectPath as any);
+				navigate(redirectPath as any, { replace: true });
 				return;
 			}
 		}
@@ -96,7 +96,7 @@
 					label: savedEntry.label,
 				});
 			}
-			navigate(redirectPath as any);
+			navigate(redirectPath as any, { replace: true });
 			return;
 		}
 
@@ -120,7 +120,7 @@
 					meshedEventCode: savedEvent.meshedEventCode,
 					label: subEvent.label,
 				});
-				navigate(redirectPath as any);
+				navigate(redirectPath as any, { replace: true });
 				return;
 			}
 		}
@@ -140,7 +140,7 @@
 </script>
 
 {#if showPrompt}
-	<EventJoinPrompt eventCode={eventCode!} onSuccess={() => navigate(redirectPath as any)} />
+	<EventJoinPrompt eventCode={eventCode!} onSuccess={() => navigate(redirectPath as any, { replace: true })} />
 {:else}
 	<Spinner />
 {/if}

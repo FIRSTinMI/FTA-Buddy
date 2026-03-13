@@ -766,6 +766,17 @@ export const notesRouter = router({
 					.execute();
 
 				await autoLinkEventsToNote(noteId, activeEvents, event);
+
+				// If the note had no match_id yet but the linked events share a single match_id,
+				// back-fill it so the Slack message below includes the "View Match Log" button
+				if (insert[0].match_id === null && activeEvents.length > 0) {
+					const uniqueMatchIds = [...new Set(activeEvents.map((e) => e.match_id).filter(Boolean))];
+					if (uniqueMatchIds.length === 1) {
+						const resolvedMatchId = uniqueMatchIds[0];
+						await db.update(notes).set({ match_id: resolvedMatchId }).where(eq(notes.id, noteId)).execute();
+						(insert[0] as any).match_id = resolvedMatchId;
+					}
+				}
 			}
 
 			createNotification(

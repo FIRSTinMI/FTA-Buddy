@@ -43,7 +43,7 @@
 	});
 
 	function back() {
-		if (window.history.state === null) {
+		if (window.history.length <= 1) {
 			navigate("/logs");
 		} else {
 			window.history.back();

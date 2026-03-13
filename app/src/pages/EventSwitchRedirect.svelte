@@ -3,22 +3,29 @@
 	import { onMount } from "svelte";
 	import EventJoinPrompt from "../components/EventJoinPrompt.svelte";
 	import Spinner from "../components/Spinner.svelte";
-	import { navigate } from "../router";
+	import { navigate, route } from "../router";
 	import { eventStore } from "../stores/event";
 	import { userStore } from "../stores/user";
 	import { savedEventsStore } from "../stores/savedEvents";
 
-	// sv-router passes route params as props. All possible param combos across the three routes:
-	interface Props {
-		eventCode: string;
-		// notepad/view/:eventCode/:id
-		id?: string;
-		// logs/:eventCode/:matchid and logs/:eventCode/:matchid/:station
-		matchid?: string;
-		station?: string;
+	// Extract route params — this component serves 3 routes, try each pattern
+	function getRouteParams() {
+		try {
+			const p = route.getParams("/notepad/view/:eventCode/:id");
+			if (p.eventCode) return { eventCode: p.eventCode, id: p.id, matchid: undefined, station: undefined };
+		} catch {}
+		try {
+			const p = route.getParams("/logs/event/:eventCode/:matchid/:station");
+			if (p.eventCode) return { eventCode: p.eventCode, id: undefined, matchid: p.matchid, station: p.station };
+		} catch {}
+		try {
+			const p = route.getParams("/logs/event/:eventCode/:matchid");
+			if (p.eventCode) return { eventCode: p.eventCode, id: undefined, matchid: p.matchid, station: undefined };
+		} catch {}
+		return { eventCode: undefined, id: undefined, matchid: undefined, station: undefined };
 	}
 
-	let { eventCode, id, matchid, station }: Props = $props();
+	const { eventCode, id, matchid, station } = getRouteParams();
 
 	// Build the target path (event-code-less equivalent)
 	const redirectPath: string = (() => {
@@ -34,10 +41,18 @@
 		const user = get(userStore);
 		const event = get(eventStore);
 		const saved = get(savedEventsStore);
+
+		if (!eventCode) {
+			console.warn("[EventSwitchRedirect] eventCode prop is undefined. Props:", { eventCode, id, matchid, station });
+			console.warn("[EventSwitchRedirect] Falling back to redirectPath:", redirectPath);
+			navigate(redirectPath as any);
+			return;
+		}
+
 		const normalizedCode = eventCode.toLowerCase();
 
 		// Already on the right event — just redirect
-		if (event.code.toLowerCase() === normalizedCode) {
+		if (event.code?.toLowerCase() === normalizedCode) {
 			navigate(redirectPath as any);
 			return;
 		}
@@ -125,7 +140,7 @@
 </script>
 
 {#if showPrompt}
-	<EventJoinPrompt {eventCode} onSuccess={() => navigate(redirectPath as any)} />
+	<EventJoinPrompt eventCode={eventCode!} onSuccess={() => navigate(redirectPath as any)} />
 {:else}
 	<Spinner />
 {/if}

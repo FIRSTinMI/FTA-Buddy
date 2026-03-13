@@ -245,11 +245,17 @@ export async function resolveSlackUserProfile(slackUserId: string, teamId: strin
 		const data = await response.json();
 		if (data.ok && data.user) {
 			const displayName: string =
-				data.user.profile?.display_name || data.user.profile?.real_name || data.user.real_name || "Slack User";
+				data.user.profile?.display_name ||
+				data.user.profile?.real_name ||
+				data.user.real_name ||
+				data.user.name ||
+				"Slack User";
 			return { id: -1, role: "CSA", admin: false, username: displayName, source: "Slack" };
+		} else {
+			console.warn(`[Slack] users.info failed for ${slackUserId}:`, data.error ?? "unknown error");
 		}
-	} catch {
-		// ignore, fall through to default
+	} catch (err) {
+		console.warn(`[Slack] resolveSlackUserProfile error for ${slackUserId}:`, err);
 	}
 
 	return { id: -1, role: "CSA", admin: false, username: "Slack User", source: "Slack" };

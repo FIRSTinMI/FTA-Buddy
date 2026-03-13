@@ -17,7 +17,14 @@ export const VERSIONS: { [key: string]: Version } = {
         <ul>
         <li>Fixed event link redirects not recognizing the current event</li>
         <li>Fixed support field view DS colors to match field monitor</li>
-        <li>See future matches in notepad field view</li>
+        <li>Browse upcoming scheduled matches in notepad field view</li>
+        <li>Field view now only shows notes from the current event</li>
+        <li>Yellow warning badge on teams with open notes in field view</li>
+        <li>Click team name/number on a note to go to team history</li>
+        <li>Auto-detected events converted to notes now post to Slack</li>
+        </ul>`,
+    },
+    "2.7.1.4": {
         changelog: `
         <h1 class="text-lg font-bold">v2.7.1.4</h1>
         <ul>

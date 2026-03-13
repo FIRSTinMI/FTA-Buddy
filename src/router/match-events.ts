@@ -10,6 +10,8 @@ import { eventProcedure, publicProcedure, router } from "../trpc";
 import { generateReport } from "../util/report-generator";
 import { getEvent } from "../util/get-event";
 import { subscriptionQueue } from "../util/subscription";
+import { sendSlackMessage } from "../util/slack";
+import { createSlackNoteMessage } from "./notes";
 
 interface TBASimpleMatch {
 	key: string;
@@ -234,6 +236,32 @@ export const matchEventsRouter = router({
 				id: input.id,
 				note_id: noteId,
 			});
+
+			// Send Slack message now that this has been promoted to a real note
+			if (event.slackChannel && event.slackTeam) {
+				try {
+					const messageTS = await sendSlackMessage(
+						event.slackChannel,
+						event.slackTeam,
+						createSlackNoteMessage(
+							noteId,
+							newNote.team,
+							event.teams.find((t) => parseInt(t.number) === newNote.team)?.name ?? null,
+							authorProfile[0].username,
+							newNote.text,
+							event.code,
+							newNote.match_id ?? undefined,
+						),
+					);
+					await db
+						.update(notes)
+						.set({ slack_ts: messageTS, slack_channel: event.slackChannel })
+						.where(eq(notes.id, noteId))
+						.execute();
+				} catch (err) {
+					console.error("Failed to send Slack message for converted note:", err);
+				}
+			}
 
 			return { noteId, success: true };
 		}),

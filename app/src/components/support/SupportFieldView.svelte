@@ -342,10 +342,10 @@
 	});
 
 	function dsColor(ds: number): string {
-		if (ds === DSState.ESTOP || ds === DSState.ASTOP) return "bg-red-800";
+		if (ds === DSState.ESTOP || ds === DSState.BYPASS) return "bg-red-800";
+		if (ds === DSState.ASTOP) return "bg-green-600";
 		if (ds === DSState.RED) return "bg-red-600";
 		if (ds === DSState.MOVE_STATION || ds === DSState.WAITING) return "bg-yellow-400";
-		if (ds === DSState.BYPASS) return "bg-orange-400";
 		return "bg-green-500";
 	}
 

@@ -222,7 +222,7 @@
 			if (res.subEvents) {
 				user.set({ ...$user, eventToken: res.token, meshedEventToken: res.token });
 				eventStore.set({
-					code: eventCode,
+					code: res.code,
 					pin: res.pin,
 					teams: res.teams as TeamList,
 					users: res.users as Profile[],
@@ -230,7 +230,7 @@
 					meshedEventCode: res.code,
 				});
 				saveEvent({
-					code: eventCode,
+					code: res.code,
 					token: res.token,
 					pin: res.pin,
 					teams: res.teams as TeamList,
@@ -248,15 +248,15 @@
 			} else {
 				user.set({ ...$user, eventToken: res.token });
 				eventStore.set({
-					code: eventCode,
-					pin: eventPin,
+					code: res.code,
+					pin: res.pin,
 					teams: res.teams as TeamList,
 					users: res.users as Profile[],
 				});
 				saveEvent({
-					code: eventCode,
+					code: res.code,
 					token: res.token,
-					pin: eventPin,
+					pin: res.pin,
 					teams: res.teams as TeamList,
 					users: res.users as Profile[],
 				});

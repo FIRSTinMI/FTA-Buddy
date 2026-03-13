@@ -34,15 +34,27 @@
 		const user = get(userStore);
 		const event = get(eventStore);
 		const saved = get(savedEventsStore);
+		const normalizedCode = eventCode.toLowerCase();
 
 		// Already on the right event — just redirect
-		if (event.code === eventCode) {
+		if (event.code.toLowerCase() === normalizedCode) {
 			navigate(redirectPath as any);
 			return;
 		}
 
+		// Check if eventCode is a sub-event of the currently loaded meshed event
+		if (event.subEvents) {
+			const subEvent = event.subEvents.find((e) => e.code.toLowerCase() === normalizedCode);
+			if (subEvent) {
+				userStore.update((u) => ({ ...u, eventToken: subEvent.token }));
+				eventStore.set({ ...event, ...subEvent });
+				navigate(redirectPath as any);
+				return;
+			}
+		}
+
 		// We have a saved token for this event — restore silently and redirect
-		const savedEntry = saved[eventCode];
+		const savedEntry = saved[normalizedCode] ?? Object.values(saved).find((e) => e.code.toLowerCase() === normalizedCode);
 		if (savedEntry) {
 			if (savedEntry.subEvents) {
 				userStore.update((u) => ({
@@ -71,6 +83,31 @@
 			}
 			navigate(redirectPath as any);
 			return;
+		}
+
+		// Check if eventCode is a sub-event of any saved meshed event
+		for (const savedEvent of Object.values(saved)) {
+			if (!savedEvent.subEvents) continue;
+			const subEvent = savedEvent.subEvents.find((e) => e.code.toLowerCase() === normalizedCode);
+			if (subEvent) {
+				// Restore the parent meshed event, then switch to the specific sub-event
+				userStore.update((u) => ({
+					...u,
+					eventToken: subEvent.token,
+					meshedEventToken: savedEvent.token,
+				}));
+				eventStore.set({
+					code: subEvent.code,
+					pin: subEvent.pin,
+					teams: subEvent.teams,
+					users: savedEvent.users,
+					subEvents: savedEvent.subEvents,
+					meshedEventCode: savedEvent.meshedEventCode,
+					label: subEvent.label,
+				});
+				navigate(redirectPath as any);
+				return;
+			}
 		}
 
 		// No saved entry. If user has a personal account token, show the inline PIN prompt.

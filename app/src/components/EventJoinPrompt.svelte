@@ -27,7 +27,7 @@
 			if (res.subEvents) {
 				userStore.update((u) => ({ ...u, eventToken: res.token, meshedEventToken: res.token }));
 				eventStore.set({
-					code: eventCode,
+					code: res.code,
 					pin: res.pin,
 					teams: res.teams as { number: string; name: string; inspected: boolean }[],
 					users: res.users as Profile[],
@@ -35,7 +35,7 @@
 					meshedEventCode: res.code,
 				});
 				saveEvent({
-					code: eventCode,
+					code: res.code,
 					token: res.token,
 					pin: res.pin,
 					teams: res.teams as { number: string; name: string; inspected: boolean }[],
@@ -46,15 +46,15 @@
 			} else {
 				userStore.update((u) => ({ ...u, eventToken: res.token }));
 				eventStore.set({
-					code: eventCode,
-					pin,
+					code: res.code,
+					pin: res.pin,
 					teams: res.teams as { number: string; name: string; inspected: boolean }[],
 					users: res.users as Profile[],
 				});
 				saveEvent({
-					code: eventCode,
+					code: res.code,
 					token: res.token,
-					pin,
+					pin: res.pin,
 					teams: res.teams as { number: string; name: string; inspected: boolean }[],
 					users: res.users as Profile[],
 				});

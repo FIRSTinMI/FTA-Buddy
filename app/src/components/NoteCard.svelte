@@ -8,6 +8,7 @@
 	import { trpc } from "../main";
 	import { eventStore } from "../stores/event";
 	import { userStore } from "../stores/user";
+	import { navigate } from "../router";
 	import { toast } from "../util/toast";
 	import { displayTeam } from "../util/team-name";
 
@@ -148,7 +149,10 @@
 		<div class="flex items-start justify-between gap-3">
 			<div class="flex items-center flex-wrap gap-1.5 min-w-0">
 				{#if note.team !== null}
-					<span class="font-bold text-base">{displayTeam(note.team)}</span>
+					<button
+						class="font-bold text-base hover:underline"
+						onclick={(e) => { e.preventDefault(); e.stopPropagation(); navigate("/notepad/team/:team", { params: { team: String(note.team) } }); }}
+					>{displayTeam(note.team)}</button>
 				{/if}
 				{#if note.note_type !== "TeamIssue"}
 					<Badge color={noteTypeColor[note.note_type]}>{noteTypeLabel[note.note_type]}</Badge>

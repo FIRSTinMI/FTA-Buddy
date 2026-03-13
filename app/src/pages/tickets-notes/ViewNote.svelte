@@ -652,7 +652,10 @@
 						</div>
 						{#if note.team}
 							<div class="justify-center text-center sm:justify-start sm:text-left">
-								Team {displayTeam(note.team)}
+								<button
+									class="font-semibold hover:underline"
+									onclick={() => note && navigate("/notepad/team/:team", { params: { team: String(note.team) } })}
+								>Team {displayTeam(note.team)}</button>
 							</div>
 							{#if nextMatch}
 								{@const alliance = nextMatchAlliance(nextMatch, note.team)}

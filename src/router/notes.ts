@@ -18,6 +18,7 @@ import {
 	addSlackReaction,
 	deleteSlackMessage,
 	removeSlackReaction,
+	resolveSlackUserProfile,
 	sendSlackMessage,
 	updateSlackMessage,
 } from "../util/slack";
@@ -1527,7 +1528,10 @@ export async function updateNoteAssignmentFromSlack(message_ts: string, add: boo
 	const note = await db.query.notes.findFirst({ where: eq(notes.slack_ts, message_ts) });
 	if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
 
-	const profile: Profile = { id: -1, role: "CSA", admin: false, username: "Slack User" };
+	const event = await getEvent("", note.event_code);
+	const profile: Profile = event.slackTeam
+		? await resolveSlackUserProfile(slackUser, event.slackTeam)
+		: { id: -1, role: "CSA", admin: false, username: "Slack User" };
 
 	const update = await db
 		.update(notes)
@@ -1539,7 +1543,6 @@ export async function updateNoteAssignmentFromSlack(message_ts: string, add: boo
 		.where(eq(notes.id, note.id))
 		.returning();
 
-	const event = await getEvent("", note.event_code);
 
 	if (add) {
 		event.noteUpdateEmitter.emit("note_update", {
@@ -1590,7 +1593,15 @@ export async function addNoteMessageFromSlack(
 	const note = await db.query.notes.findFirst({ where: eq(notes.slack_ts, thread_ts) });
 	if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
 
-	const user: Profile = { id: -1, role: "CSA", admin: false, username: "Slack User", source: "Slack" };
+	// Deduplication: skip messages we already have (e.g. ones FTA-Buddy posted to Slack that echo back)
+	const existing = await db.query.messages.findFirst({ where: eq(messages.slack_ts, message_ts) });
+	if (existing) return;
+
+	const event = await getEvent("", note.event_code);
+	const user: Profile = event.slackTeam
+		? await resolveSlackUserProfile(author_id, event.slackTeam)
+		: { id: -1, role: "CSA", admin: false, username: "Slack User", source: "Slack" };
+	if (!user.source) user.source = "Slack";
 
 	const insert = await db
 		.insert(messages)
@@ -1607,8 +1618,6 @@ export async function addNoteMessageFromSlack(
 			slack_channel: channel_id,
 		})
 		.returning();
-
-	const event = await getEvent("", note.event_code);
 
 	event.noteUpdateEmitter.emit("note_update", {
 		kind: "add_message",

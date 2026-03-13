@@ -221,6 +221,7 @@ export const userRouter = router({
 							role: users.role,
 							id: users.id,
 							admin: users.admin,
+							slack_user_id: users.slack_user_id,
 						})
 						.from(users)
 						.where(eq(users.token, input.token))
@@ -238,6 +239,22 @@ export const userRouter = router({
 
 			return returnObj;
 		}),
+
+	linkSlackAccount: protectedProcedure
+		.input(
+			z.object({
+				slackUserId: z.string().regex(/^[UW][A-Z0-9]{6,}$/, "Invalid Slack member ID format"),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			await db.update(users).set({ slack_user_id: input.slackUserId }).where(eq(users.token, ctx.user.token));
+			return true;
+		}),
+
+	unlinkSlackAccount: protectedProcedure.mutation(async ({ ctx }) => {
+		await db.update(users).set({ slack_user_id: null }).where(eq(users.token, ctx.user.token));
+		return true;
+	}),
 });
 
 export function generateToken() {

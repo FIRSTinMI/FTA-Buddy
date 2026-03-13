@@ -38,6 +38,17 @@
 	import { registerToast } from "./util/toast";
 	import { update, VERSIONS } from "./util/updater";
 
+	window.addEventListener("error", function (event) {
+		if (
+			event?.message?.includes("Failed to fetch dynamically imported module") &&
+			!sessionStorage.getItem("reloaded")
+		) {
+			console.warn("Detected missing JS chunk. Reloading...");
+			sessionStorage.setItem("reloaded", "true");
+			window.location.reload();
+		}
+	});
+
 	// On mount check if the user's permissions have changed
 	onMount(async () => {
 		try {

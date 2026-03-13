@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, Label, Modal, Range, Select, Toggle, type SelectOptionType } from "flowbite-svelte";
+	import { Button, Input, Label, Modal, Range, Select, Toggle, type SelectOptionType } from "flowbite-svelte";
 	import { audioQueuer } from "../field-monitor";
 	import { trpc } from "../main";
 	import { installPrompt } from "../stores/install-prompt";
@@ -87,6 +87,36 @@
 		testingMusic = false;
 		audioQueuer.stopMusic();
 		clearTimeout(musicTestTimeout);
+	}
+
+	let slackUserIdInput = $state($userStore.slack_user_id ?? "");
+	let slackLinkLoading = $state(false);
+
+	async function linkSlack() {
+		slackLinkLoading = true;
+		try {
+			await trpc.user.linkSlackAccount.mutate({ slackUserId: slackUserIdInput.trim() });
+			userStore.update((u) => ({ ...u, slack_user_id: slackUserIdInput.trim() }));
+			toast("Success", "Slack account linked", "green-500");
+		} catch (err: any) {
+			toast("Error", err.message);
+		} finally {
+			slackLinkLoading = false;
+		}
+	}
+
+	async function unlinkSlack() {
+		slackLinkLoading = true;
+		try {
+			await trpc.user.unlinkSlackAccount.mutate();
+			slackUserIdInput = "";
+			userStore.update((u) => ({ ...u, slack_user_id: null }));
+			toast("Success", "Slack account unlinked", "green-500");
+		} catch (err: any) {
+			toast("Error", err.message);
+		} finally {
+			slackLinkLoading = false;
+		}
 	}
 </script>
 
@@ -198,6 +228,36 @@
 				>
 			</div>
 			<div class="grid gap-2 md:col-span-2">
+			{#if $userStore.token}
+				<p class="text-gray-700 dark:text-gray-400">Slack Account</p>
+				{#if $userStore.slack_user_id}
+					<p class="text-sm text-gray-500 dark:text-gray-400">
+						Linked: <span class="font-mono">{$userStore.slack_user_id}</span>
+					</p>
+					<Button onclick={unlinkSlack} size="xs" color="red" disabled={slackLinkLoading}>Unlink Slack</Button>
+				{:else}
+					<Label>
+						Slack Member ID
+						<Input
+							bind:value={slackUserIdInput}
+							placeholder="e.g. U012AB3CD"
+							size="sm"
+							class="mt-1 font-mono"
+						/>
+					</Label>
+					<p class="text-xs text-gray-500 dark:text-gray-400">
+						Find yours in Slack: click your name → View full profile → ··· → Copy member ID
+					</p>
+					<Button
+						onclick={linkSlack}
+						size="xs"
+						color="primary"
+						disabled={slackLinkLoading || !slackUserIdInput.trim()}
+					>Link Slack</Button>
+				{/if}
+			{/if}
+		</div>
+		<div class="grid gap-2 md:col-span-2">
 				{#if $installPrompt}
 					<Button
 						color="primary"

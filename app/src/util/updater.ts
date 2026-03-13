@@ -11,6 +11,14 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+    "2.7.1.4": {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.7.1.4</h1>
+        <ul>
+        <li>Ability to link your FTA Buddy and Slack accounts</li>
+        <li>Or it falls back to your Slack nickname</li>
+        </ul>`,
+    },
     "2.7.1.3": {
         changelog: `
         <h1 class="text-lg font-bold">v2.7.1.3</h1>

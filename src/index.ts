@@ -209,9 +209,10 @@ app.post("/slack/events", async (req, res) => {
 				await updateNoteStatusFromSlack(event.item.ts, event.type === "reaction_added");
 			} else if (event.reaction === "eyes" && event.item.user === "U08FVV94LPR") {
 				await updateNoteAssignmentFromSlack(event.item.ts, event.type === "reaction_added", event.user);
-			} else if (event.type === "message" && event.thread_ts && !event.subtype) {
+			} else if (event.type === "message" && event.thread_ts && !event.subtype && !event.bot_id) {
 				// event.subtype is set for bot_message, message_changed, message_deleted, etc.
-				// Only handle genuine human-authored messages to prevent echoing bot-posted syncs back into FTABuddy
+				// event.bot_id is set for any bot-authored message (including FTA-Buddy's own thread replies).
+				// Both guards together prevent echoing bot-posted syncs back into FTA-Buddy.
 				await addNoteMessageFromSlack(event.channel, event.ts, event.thread_ts, event.text, event.user);
 			}
 		}

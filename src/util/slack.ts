@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "../db/db";
-import { events, slackServers } from "../db/schema";
+import { events, slackServers, users } from "../db/schema";
+import { Profile } from "../../shared/types";
 import { getEvent } from "./get-event";
 
 export async function slackOAuth(code: string) {
@@ -218,4 +219,38 @@ export async function removeSlackReaction(
 		},
 		body: JSON.stringify({ channel: channel_id, timestamp: message_ts, name: reaction }),
 	});
+}
+
+/**
+ * Resolves a Slack user ID to an FTA-Buddy Profile.
+ * First checks if the Slack user has linked their FTA-Buddy account.
+ * Falls back to fetching their display name from the Slack API.
+ */
+export async function resolveSlackUserProfile(slackUserId: string, teamId: string): Promise<Profile> {
+	// Check for a linked FTA-Buddy account
+	const linked = await db.query.users.findFirst({ where: eq(users.slack_user_id, slackUserId) });
+	if (linked) {
+		return { id: linked.id, username: linked.username, role: linked.role, admin: linked.admin };
+	}
+
+	// Fall back to Slack display name via users.info
+	try {
+		const token = await getTokenByTeam(teamId);
+		const response = await fetch(`https://slack.com/api/users.info?user=${encodeURIComponent(slackUserId)}`, {
+			headers: {
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json",
+			},
+		});
+		const data = await response.json();
+		if (data.ok && data.user) {
+			const displayName: string =
+				data.user.profile?.display_name || data.user.profile?.real_name || data.user.real_name || "Slack User";
+			return { id: -1, role: "CSA", admin: false, username: displayName, source: "Slack" };
+		}
+	} catch {
+		// ignore, fall through to default
+	}
+
+	return { id: -1, role: "CSA", admin: false, username: "Slack User", source: "Slack" };
 }

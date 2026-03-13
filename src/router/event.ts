@@ -692,6 +692,17 @@ export const eventRouter = router({
 		return { fmsEventPassword: event.fmsEventPassword ?? null };
 	}),
 
+	/** Returns the list of users currently joined to this event. */
+	getUsers: eventProcedure.query(async ({ ctx }) => {
+		const event = await getEvent(ctx.event.token);
+		return (event.users as Profile[]).map((u) => ({
+			id: u.id,
+			username: u.username,
+			role: u.role,
+			admin: u.admin,
+		})) as Profile[];
+	}),
+
 	/** Get the auto-event settings for this event. Missing keys default to true (enabled). */
 	getAutoEventSettings: eventProcedure.query(async ({ ctx }) => {
 		const event = await getEvent(ctx.event.token);

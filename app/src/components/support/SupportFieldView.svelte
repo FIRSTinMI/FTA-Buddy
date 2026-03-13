@@ -177,23 +177,65 @@
 		}
 	}
 
+	/** Find the index in allMatches that corresponds to the current live/field-monitor match. */
+	function findLiveMatchIndex(): number {
+		if (!monitorFrame || allMatches.length === 0) return -1;
+		const idx = allMatches.findIndex(
+			(m) =>
+				m.match_number === monitorFrame!.match &&
+				m.play_number === monitorFrame!.play &&
+				m.level === monitorFrame!.level,
+		);
+		return idx;
+	}
+
+	let liveIdx = $derived(findLiveMatchIndex());
+
+	/** If the current matchIndex lands on the live match, snap back to live mode. */
+	function snapToLiveIfMatched() {
+		const li = findLiveMatchIndex();
+		if (li >= 0 && matchIndex === li) {
+			matchIndex = -1;
+			autoAdvance = true;
+		}
+	}
+
 	function goToPrevMatch() {
 		autoAdvance = false;
 		if (matchIndex === -1) {
-			if (allMatches.length > 0) {
-				matchIndex = allMatches.length - 1;
+			// From live, go to the match right before the current one
+			const li = findLiveMatchIndex();
+			if (li > 0) {
+				matchIndex = li - 1;
+			} else if (li === 0) {
+				matchIndex = 0; // already at the first match
+			} else if (allMatches.length > 0) {
+				// Couldn't find live match — fall back to last played
+				const lastPlayed = allMatches.findLastIndex((m) => m.isPlayed);
+				matchIndex = lastPlayed >= 0 ? lastPlayed : allMatches.length - 1;
 			}
 		} else if (matchIndex > 0) {
 			matchIndex--;
 		}
+		snapToLiveIfMatched();
 	}
 
 	function goToNextMatch() {
-		if (matchIndex >= 0 && matchIndex < allMatches.length - 1) {
-			autoAdvance = false;
+		autoAdvance = false;
+		if (matchIndex === -1) {
+			// From live, go to the match right after the current one
+			const li = findLiveMatchIndex();
+			if (li >= 0 && li < allMatches.length - 1) {
+				matchIndex = li + 1;
+			} else if (li === -1 && allMatches.length > 0) {
+				// Couldn't find live match — go to first unplayed
+				const firstUnplayed = allMatches.findIndex((m) => !m.isPlayed);
+				matchIndex = firstUnplayed >= 0 ? firstUnplayed : allMatches.length - 1;
+			}
+		} else if (matchIndex < allMatches.length - 1) {
 			matchIndex++;
 		}
-		// At the last scheduled match — stay here (use the toggle to return to live)
+		snapToLiveIfMatched();
 	}
 
 	// When autoAdvance is turned on (via toggle), immediately snap back to live
@@ -606,7 +648,7 @@
 	<div class="flex flex-col h-full">
 		<div class="shrink-0 px-3 {isShortScreen ? 'py-0.5' : 'pt-2 pb-1'}">
 			<div class="flex items-center justify-between gap-2">
-				<Button size="xs" color="alternative" onclick={goToPrevMatch} disabled={matchIndex === 0}>
+				<Button size="xs" color="alternative" onclick={goToPrevMatch} disabled={matchIndex === 0 || (isLive && liveIdx <= 0)}>
 					<Icon icon="mdi:chevron-left" class={isShortScreen ? "size-3.5" : "size-4 sm:size-5"} />
 				</Button>
 
@@ -619,11 +661,13 @@
 						{matchLabel}
 					</p>
 					{#if !isShortScreen}
+						<div class="h-5 flex items-center">
 						{#if isLive}
-							<Badge color="green" class="text-xs mt-0.5">LIVE</Badge>
+							<Badge color="green" class="text-xs">LIVE</Badge>
 						{:else if matchIndex >= 0 && !allMatches[matchIndex]?.isPlayed}
-							<Badge color="yellow" class="text-xs mt-0.5">SCHEDULED</Badge>
+							<Badge color="yellow" class="text-xs">SCHEDULED</Badge>
 						{/if}
+						</div>
 					{/if}
 				</div>
 
@@ -631,7 +675,7 @@
 					size={isShortScreen ? "xs" : "sm"}
 					color="alternative"
 					onclick={goToNextMatch}
-					disabled={isLive || matchIndex === allMatches.length - 1}
+					disabled={matchIndex === allMatches.length - 1 || (isLive && (liveIdx === -1 || liveIdx === allMatches.length - 1))}
 				>
 					<Icon icon="mdi:chevron-right" class={isShortScreen ? "size-3.5" : "size-4 sm:size-5"} />
 				</Button>

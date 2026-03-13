@@ -4,7 +4,7 @@
 		"app",
 		"extension"
 	],
-	"version": "2.7.1.5",
+	"version": "2.7.1.6",
 	"description": "",
 	"scripts": {
 		"start": "bun run ./src/index.ts",

@@ -6,7 +6,7 @@ import { db } from "../db/db";
 import { matchEvents, messages, notes } from "../db/schema";
 
 const openaiApiKey = process.env.OPENAI_API_KEY ?? process.env.OPENAI_KEY;
-const model = process.env.OPENAI_MODEL ?? "gpt-4o";
+const model = process.env.OPENAI_MODEL ?? "gpt-4.1";
 
 interface NoteContext {
 	id: string;
@@ -22,8 +22,12 @@ interface NoteContext {
 	open_time_minutes: number | null;
 	message_count: number;
 	is_auto_note: boolean;
-	messages: string[];
+	recurrence_score: number;
+	recurrence_matches: string[];
+	resolution_excerpt: string[];
+	diagnostic_excerpt: string[];
 	timeline_excerpt: string[];
+	priority_score: number;
 }
 
 interface MatchEventSummary {
@@ -35,28 +39,36 @@ interface MatchEventSummary {
 	levels: Record<string, number>;
 }
 
-interface ClosedNoteDetail {
-	team: number | null;
-	issue_type: string | null;
-	text: string;
-	message_count: number;
-	open_time_minutes: number | null;
-	thread_excerpt: string[];
-	timeline_excerpt: string[];
-}
-
 interface TicketDigestEntry {
+	id: string;
 	team: number | null;
-	issue_type: string | null;
-	severity: number;
+	note_type: string;
+	resolution_status: string | null;
 	match_number: number | null;
 	tournament_level: string | null;
 	text: string;
-	thread_excerpt: string[];
-	timeline_excerpt: string[];
+	message_count: number;
 	open_time_minutes: number | null;
-	resolution_status: string | null;
+	has_csa: boolean;
 	is_auto_note: boolean;
+	recurrence_score: number;
+	recurrence_matches: string[];
+	priority_score: number;
+	issue_type_hint: string | null;
+	diagnostic_excerpt: string[];
+	resolution_excerpt: string[];
+	timeline_excerpt: string[];
+}
+
+interface ClosedNoteDetail {
+	team: number | null;
+	text: string;
+	message_count: number;
+	open_time_minutes: number | null;
+	recurrence_score: number;
+	recurrence_matches: string[];
+	diagnostic_excerpt: string[];
+	resolution_excerpt: string[];
 }
 
 interface EventContext {
@@ -65,8 +77,6 @@ interface EventContext {
 	start_date: string | null;
 	end_date: string | null;
 	team_count: number;
-	notes: NoteContext[];
-	match_event_summaries: MatchEventSummary[];
 	stats: {
 		total_notes: number;
 		team_issue_notes: number;
@@ -85,8 +95,10 @@ interface EventContext {
 			team: number | null;
 			text_preview: string;
 			message_count: number;
-			thread_excerpt: string[];
-			timeline_excerpt: string[];
+			open_time_minutes: number | null;
+			recurrence_score: number;
+			recurrence_matches: string[];
+			resolution_excerpt: string[];
 		}>;
 		teams_with_most_issues: Array<{ team: number; note_count: number }>;
 		teams_with_most_match_events: Array<{ team: number; total: number }>;
@@ -94,47 +106,32 @@ interface EventContext {
 		closed_note_details: ClosedNoteDetail[];
 		open_note_details: Array<{
 			team: number | null;
-			issue_type: string | null;
 			text: string;
 			message_count: number;
 			open_time_minutes: number | null;
-			thread_excerpt: string[];
-			timeline_excerpt: string[];
+			recurrence_score: number;
+			recurrence_matches: string[];
+			resolution_excerpt: string[];
+			diagnostic_excerpt: string[];
 			match_number: number | null;
 			tournament_level: string | null;
+			issue_type_hint: string | null;
 		}>;
 		ticket_digest: TicketDigestEntry[];
 	};
+	match_event_summaries: MatchEventSummary[];
 }
 
 interface CollectEventDataOptions {
 	includeTestMatches?: boolean;
 }
 
-const HIGH_IMPACT_ISSUES = new Set(["Bypass", "roboRIO Disconnect", "Radio Disconnect", "Communication Loss"]);
-
-const ISSUE_SEVERITY: Record<string, number> = {
-	Bypass: 5,
-	"roboRIO Disconnect": 5,
-	"roboRIO Issue": 4,
-	"Radio Disconnect": 4,
-	"Communication Loss": 4,
-	"Robot Power Issue": 4,
-	"Radio Issue": 3,
-	Brownout: 3,
-	"Code Issue": 3,
-	"Driver Station Issue": 3,
-	"CAN Issue": 3,
-	"Mechanical Issue": 2,
-	"Wiring Issue": 2,
-	"PDH Issue": 2,
-	"PDP Issue": 2,
-	"Power Issue": 2,
-	"Battery Issue": 2,
-	"Control System Issue": 2,
-	"High BWU": 1,
-	Other: 1,
-};
+const HIGH_IMPACT_MATCH_EVENT_ISSUES = new Set([
+	"Bypass",
+	"roboRIO Disconnect",
+	"Radio Disconnect",
+	"Communication Loss",
+]);
 
 function humanizeIssueType(value: string | null | undefined): string | null {
 	if (!value) return null;
@@ -143,7 +140,6 @@ function humanizeIssueType(value: string | null | undefined): string | null {
 	if (!normalized) return null;
 
 	const explicitMap: Record<string, string> = {
-		// Note issue types
 		RoboRioIssue: "roboRIO Issue",
 		RioIssue: "roboRIO Issue",
 		RadioIssue: "Radio Issue",
@@ -160,7 +156,6 @@ function humanizeIssueType(value: string | null | undefined): string | null {
 		ControlSystemIssue: "Control System Issue",
 		Other: "Other",
 
-		// Match event issues
 		Brownout: "Brownout",
 		HighBWU: "High BWU",
 		HighBandwidthUtilization: "High BWU",
@@ -185,9 +180,14 @@ function humanizeIssueType(value: string | null | undefined): string | null {
 		.trim();
 }
 
-function getSeverity(issue: string | null): number {
-	if (!issue) return 1;
-	return ISSUE_SEVERITY[issue] ?? 1;
+function truncate(value: string, max = 320): string {
+	if (!value) return "";
+	if (value.length <= max) return value;
+	return `${value.slice(0, max - 1)}…`;
+}
+
+function cleanLine(value: string): string {
+	return value.replace(/\s+/g, " ").trim();
 }
 
 function formatTimestamp(value: Date | null | undefined): string | null {
@@ -195,9 +195,135 @@ function formatTimestamp(value: Date | null | undefined): string | null {
 	return value.toISOString().replace("T", " ").slice(0, 16);
 }
 
-function truncate(value: string, max = 240): string {
-	if (value.length <= max) return value;
-	return `${value.slice(0, max - 1)}…`;
+function extractMatchRefs(text: string): string[] {
+	const matches = text.match(/\b(?:Q|QM|P|SF|F|M)\s*\d+\b/gi) ?? [];
+	const normalized = matches
+		.map((m) => m.replace(/\s+/g, "").toUpperCase())
+		.filter(Boolean);
+
+	return [...new Set(normalized)];
+}
+
+function detectRecurrence(noteText: string, messageTexts: string[]): { score: number; matches: string[] } {
+	const recurrencePatterns = [
+		/\bhappened again\b/i,
+		/\bguess what happened again\b/i,
+		/\bagain in\b/i,
+		/\brecur/i,
+		/\bstill happening\b/i,
+		/\bcontinues?\b/i,
+		/\breappeared\b/i,
+		/\bsame issue\b/i,
+		/\banother (?:one|disconnect|brownout|trip|failure)\b/i,
+		/\bsecond match\b/i,
+		/\bthird match\b/i,
+		/\bblew it again\b/i,
+		/\blost power again\b/i,
+	];
+
+	let score = 0;
+	const allTexts = [noteText, ...messageTexts];
+
+	for (const text of allTexts) {
+		if (recurrencePatterns.some((pattern) => pattern.test(text))) {
+			score += 1;
+		}
+	}
+
+	const matchRefs = [...new Set(allTexts.flatMap((text) => extractMatchRefs(text)))];
+	if (matchRefs.length >= 2) {
+		score += Math.min(3, matchRefs.length - 1);
+	}
+
+	return { score, matches: matchRefs.slice(0, 8) };
+}
+
+function isResolutionLike(text: string): boolean {
+	return /\b(fixed|resolved|working|good in|better in|reconnected|replaced|swapped|secured|reseated|validated|added|lowered|closed|solved|executing|look much better|seem happy|tug test|planning to redo wiring)\b/i.test(
+		text,
+	);
+}
+
+function isDiagnosticLike(text: string): boolean {
+	return /\b(suspect|diagnosis|issue|problem|disconnect|brownout|breaker|blown|power lead|wire|wiring|radio|roborio|rio|can|cancoder|static|packet loss|cpu|bandwidth|bwu|controller|bluetooth|fuse|grounding strap|current limit|current limits|peak|peaks)\b/i.test(
+		text,
+	);
+}
+
+function selectMessageExcerpts(
+	noteText: string,
+	rawMessages: Array<{ text: string; created_at: Date; author: any }>,
+): {
+	diagnostic_excerpt: string[];
+	resolution_excerpt: string[];
+	timeline_excerpt: string[];
+} {
+	const sorted = [...rawMessages].sort((a, b) => a.created_at.getTime() - b.created_at.getTime());
+
+	const formatMessage = (m: { text: string; created_at: Date; author: any }, max = 220): string => {
+		const author = (m.author as any)?.username ?? "?";
+		const ts = formatTimestamp(m.created_at) ?? "?";
+		return `[${ts}] ${author}: ${truncate(cleanLine(m.text), max)}`;
+	};
+
+	const diagnosticCandidates = sorted
+		.filter((m) => isDiagnosticLike(m.text))
+		.slice(0, 2)
+		.map((m) => formatMessage(m));
+
+	const resolutionCandidates = [...sorted]
+		.reverse()
+		.filter((m) => isResolutionLike(m.text))
+		.slice(0, 3)
+		.reverse()
+		.map((m) => formatMessage(m));
+
+	const tailMessages = sorted.slice(-2).map((m) => formatMessage(m));
+
+	const timelineExcerpt = [
+		`Note: ${truncate(cleanLine(noteText), 360)}`,
+		...diagnosticCandidates,
+		...resolutionCandidates,
+		...tailMessages,
+	].filter((value, index, arr) => arr.indexOf(value) === index);
+
+	return {
+		diagnostic_excerpt: diagnosticCandidates.slice(0, 2),
+		resolution_excerpt: resolutionCandidates.slice(0, 3),
+		timeline_excerpt: timelineExcerpt.slice(0, 6),
+	};
+}
+
+function computePriorityScore(input: {
+	messageCount: number;
+	openMinutes: number | null;
+	recurrenceScore: number;
+	hasCsa: boolean;
+	isOpen: boolean;
+	isAutoNote: boolean;
+	tournamentLevel: string | null;
+	noteText: string;
+}): number {
+	let score = 0;
+
+	score += Math.min(input.messageCount, 12) * 2;
+	score += Math.min(input.recurrenceScore, 6) * 6;
+
+	if (input.openMinutes) {
+		score += Math.min(Math.floor(input.openMinutes / 30), 10);
+	}
+
+	if (input.hasCsa) score += 6;
+	if (input.isOpen) score += 8;
+	if (input.tournamentLevel === "Playoff") score += 8;
+	if (input.tournamentLevel === "Qualification") score += 3;
+	if (input.isAutoNote) score -= 4;
+
+	if (/\bbypass|bypassed\b/i.test(input.noteText)) score += 10;
+	if (/\broborio disconnect|rio disconnect|radio disconnect|comm/i.test(input.noteText)) score += 8;
+	if (/\bbreaker|brownout|lost power|power lead|fuse|weidmuller|can\b/i.test(input.noteText)) score += 5;
+
+	return score;
 }
 
 async function collectEventData(
@@ -245,17 +371,23 @@ async function collectEventData(
 			openTimeMinutes = Math.round((n.closed_at.getTime() - n.created_at.getTime()) / 60000);
 		}
 
-		const messageLines = noteMessages.map((m) => {
-			const ts = formatTimestamp(m.created_at);
-			const author = (m.author as any)?.username ?? "?";
-			return `[${ts ?? "?"}] ${author}: ${truncate(m.text, 400)}`;
-		});
+		const recurrence = detectRecurrence(
+			n.text,
+			noteMessages.map((m) => m.text),
+		);
 
-		const timelineExcerpt = [
-			`Opened: ${formatTimestamp(n.created_at) ?? "unknown"}`,
-			...(n.closed_at ? [`Closed: ${formatTimestamp(n.closed_at)}`] : []),
-			...messageLines.slice(0, 8),
-		];
+		const excerpts = selectMessageExcerpts(n.text, noteMessages);
+
+		const priorityScore = computePriorityScore({
+			messageCount: noteMessages.length,
+			openMinutes: openTimeMinutes,
+			recurrenceScore: recurrence.score,
+			hasCsa: n.assigned_to !== null,
+			isOpen: n.resolution_status === "Open",
+			isAutoNote: n.text.trim().startsWith("[Auto]"),
+			tournamentLevel: n.tournament_level ?? null,
+			noteText: n.text,
+		});
 
 		return {
 			id: n.id,
@@ -263,7 +395,7 @@ async function collectEventData(
 			note_type: n.note_type ?? "TeamIssue",
 			issue_type: humanizeIssueType(n.issue_type),
 			resolution_status: n.resolution_status ?? null,
-			text: n.text,
+			text: truncate(cleanLine(n.text), 420),
 			match_number: n.match_number ?? null,
 			tournament_level: n.tournament_level ?? null,
 			author: (n.author as any)?.username ?? "unknown",
@@ -271,8 +403,12 @@ async function collectEventData(
 			open_time_minutes: openTimeMinutes,
 			message_count: noteMessages.length,
 			is_auto_note: n.text.trim().startsWith("[Auto]"),
-			messages: messageLines,
-			timeline_excerpt: timelineExcerpt,
+			recurrence_score: recurrence.score,
+			recurrence_matches: recurrence.matches,
+			diagnostic_excerpt: excerpts.diagnostic_excerpt,
+			resolution_excerpt: excerpts.resolution_excerpt,
+			timeline_excerpt: excerpts.timeline_excerpt,
+			priority_score: priorityScore,
 		};
 	});
 
@@ -314,7 +450,7 @@ async function collectEventData(
 	const teamsWithMostHighImpactMatchEvents = matchEventSummaries
 		.map((summary) => {
 			const total = Object.entries(summary.issue_breakdown).reduce((acc, [issue, count]) => {
-				return HIGH_IMPACT_ISSUES.has(issue) ? acc + count : acc;
+				return HIGH_IMPACT_MATCH_EVENT_ISSUES.has(issue) ? acc + count : acc;
 			}, 0);
 			return { team: summary.team, total };
 		})
@@ -346,14 +482,20 @@ async function collectEventData(
 
 	const mostActiveThreads = [...noteContexts]
 		.filter((n) => n.message_count > 0)
-		.sort((a, b) => b.message_count - a.message_count)
+		.sort((a, b) => {
+			if (b.priority_score !== a.priority_score) return b.priority_score - a.priority_score;
+			if (b.message_count !== a.message_count) return b.message_count - a.message_count;
+			return (b.open_time_minutes ?? 0) - (a.open_time_minutes ?? 0);
+		})
 		.slice(0, 5)
 		.map((n) => ({
 			team: n.team,
-			text_preview: truncate(n.text, 160),
+			text_preview: truncate(n.text, 180),
 			message_count: n.message_count,
-			thread_excerpt: n.messages.slice(0, 6),
-			timeline_excerpt: n.timeline_excerpt.slice(0, 8),
+			open_time_minutes: n.open_time_minutes,
+			recurrence_score: n.recurrence_score,
+			recurrence_matches: n.recurrence_matches,
+			resolution_excerpt: n.resolution_excerpt,
 		}));
 
 	const teamNoteCounts = new Map<number, number>();
@@ -368,66 +510,70 @@ async function collectEventData(
 	const closedNoteDetails: ClosedNoteDetail[] = noteContexts
 		.filter((n) => n.resolution_status === "Resolved")
 		.sort((a, b) => {
-			const severityDiff = getSeverity(b.issue_type) - getSeverity(a.issue_type);
-			if (severityDiff !== 0) return severityDiff;
+			if (b.priority_score !== a.priority_score) return b.priority_score - a.priority_score;
 			if (b.message_count !== a.message_count) return b.message_count - a.message_count;
 			return (b.open_time_minutes ?? 0) - (a.open_time_minutes ?? 0);
 		})
-		.slice(0, 12)
+		.slice(0, 10)
 		.map((n) => ({
 			team: n.team,
-			issue_type: n.issue_type,
 			text: n.text,
 			message_count: n.message_count,
 			open_time_minutes: n.open_time_minutes,
-			thread_excerpt: n.messages.slice(0, 8),
-			timeline_excerpt: n.timeline_excerpt.slice(0, 10),
+			recurrence_score: n.recurrence_score,
+			recurrence_matches: n.recurrence_matches,
+			diagnostic_excerpt: n.diagnostic_excerpt,
+			resolution_excerpt: n.resolution_excerpt,
 		}));
 
 	const openNoteDetails = noteContexts
 		.filter((n) => n.resolution_status === "Open")
 		.sort((a, b) => {
-			const severityDiff = getSeverity(b.issue_type) - getSeverity(a.issue_type);
-			if (severityDiff !== 0) return severityDiff;
+			if (b.priority_score !== a.priority_score) return b.priority_score - a.priority_score;
 			if (b.message_count !== a.message_count) return b.message_count - a.message_count;
 			return (b.open_time_minutes ?? 0) - (a.open_time_minutes ?? 0);
 		})
 		.map((n) => ({
 			team: n.team,
-			issue_type: n.issue_type,
 			text: n.text,
 			message_count: n.message_count,
 			open_time_minutes: n.open_time_minutes,
-			thread_excerpt: n.messages.slice(0, 8),
-			timeline_excerpt: n.timeline_excerpt.slice(0, 10),
+			recurrence_score: n.recurrence_score,
+			recurrence_matches: n.recurrence_matches,
+			resolution_excerpt: n.resolution_excerpt,
+			diagnostic_excerpt: n.diagnostic_excerpt,
 			match_number: n.match_number,
 			tournament_level: n.tournament_level,
+			issue_type_hint: n.issue_type,
 		}));
 
 	const ticketDigest: TicketDigestEntry[] = [...noteContexts]
 		.map((n) => ({
+			id: n.id,
 			team: n.team,
-			issue_type: n.issue_type,
-			severity: getSeverity(n.issue_type),
+			note_type: n.note_type,
+			resolution_status: n.resolution_status,
 			match_number: n.match_number,
 			tournament_level: n.tournament_level,
-			text: truncate(n.text, 260),
-			thread_excerpt: n.messages.slice(0, 6),
-			timeline_excerpt: n.timeline_excerpt.slice(0, 8),
+			text: n.text,
+			message_count: n.message_count,
 			open_time_minutes: n.open_time_minutes,
-			resolution_status: n.resolution_status,
+			has_csa: n.assigned_to !== null,
 			is_auto_note: n.is_auto_note,
+			recurrence_score: n.recurrence_score,
+			recurrence_matches: n.recurrence_matches,
+			priority_score: n.priority_score,
+			issue_type_hint: n.issue_type,
+			diagnostic_excerpt: n.diagnostic_excerpt,
+			resolution_excerpt: n.resolution_excerpt,
+			timeline_excerpt: n.timeline_excerpt,
 		}))
 		.sort((a, b) => {
-			if (b.severity !== a.severity) return b.severity - a.severity;
+			if (b.priority_score !== a.priority_score) return b.priority_score - a.priority_score;
 
 			const aOpen = a.resolution_status === "Open" ? 1 : 0;
 			const bOpen = b.resolution_status === "Open" ? 1 : 0;
 			if (bOpen !== aOpen) return bOpen - aOpen;
-
-			const aOfficial = a.tournament_level === "Playoff" || a.tournament_level === "Qualification" ? 1 : 0;
-			const bOfficial = b.tournament_level === "Playoff" || b.tournament_level === "Qualification" ? 1 : 0;
-			if (bOfficial !== aOfficial) return bOfficial - aOfficial;
 
 			return (b.open_time_minutes ?? 0) - (a.open_time_minutes ?? 0);
 		});
@@ -438,8 +584,6 @@ async function collectEventData(
 		start_date: startDate,
 		end_date: endDate,
 		team_count: teamCount,
-		notes: noteContexts,
-		match_event_summaries: matchEventSummaries,
 		stats: {
 			total_notes: noteContexts.length,
 			team_issue_notes: teamIssueNotes.length,
@@ -462,6 +606,7 @@ async function collectEventData(
 			open_note_details: openNoteDetails,
 			ticket_digest: ticketDigest,
 		},
+		match_event_summaries: matchEventSummaries,
 	};
 }
 
@@ -474,82 +619,98 @@ This is an internal technical report.
 Do NOT include recommendations.
 Do NOT speculate.
 Do NOT include training suggestions.
-Do NOT include motivational or event atmosphere language.
-Do NOT describe minor issues as major failures.
+Do NOT include motivational language.
+Do NOT describe the event atmosphere.
+Use concise, operations-focused FRC language.
 
-Use precise FRC terminology without defining acronyms.
+VERY IMPORTANT INTERPRETATION RULES
 
-TARGET LENGTH: ~1.25-2.0 pages of text when rendered to PDF. Keep it concise, but include complete ticket coverage in the final section.
+MATCH EVENTS
+- Match events are automatic detections recorded during matches.
+- They are NOT matches themselves.
+- A single match can contain multiple match events.
+- Examples include brownouts, roboRIO disconnects, radio disconnects, high bandwidth utilization, and bypass events.
+- Some match events are dismissed and never become tickets.
+- Some match events result in a follow-up ticket and troubleshooting thread.
+- When discussing match events, distinguish clearly between:
+  1) raw automatic detections
+  2) dismissed detections
+  3) detections that resulted in follow-up notes
 
-Structure the report using ONLY these section headings (ALL CAPS):
+TICKET PRIORITIZATION
+Prioritize tickets using these signals:
+- many thread messages
+- long open time
+- recurrence across multiple matches
+- notes that explicitly say things like "happened again", "blew again", "again in Q23", or similar
+- CSA involvement
+- issues persisting late in quals or into playoffs
+- issues that affected match play
+- unresolved open tickets
+
+Treat tickets with many messages over a large timespan as high-interest incidents, even if their issue label is vague or inaccurate.
+
+CRITICAL GROUNDING RULES
+- Do NOT rely heavily on issue_type labels for interpretation or prioritization.
+- Issue labels are only hints and may be inaccurate.
+- Prefer note text, message excerpts, recurrence evidence, and resolution excerpts over issue labels.
+- If the note or message says "main breaker blew", "positive power lead fell out", "loose RIO power wire", "blown radio fuse", "PhotonVision web GUI open", "duplicate CAN IDs", "CAN leads into the PDH were loose", "controller only connects via Bluetooth", or similar, use that specific language.
+- Do not flatten concrete failures into generic phrases when specific wording exists.
+- Use resolution excerpts to describe how the issue was fixed or mitigated.
+- If the cause is uncertain in the thread, say that it was uncertain rather than asserting a definite cause.
+- If the thread shows recurrence, state that explicitly.
+- If a ticket remains open, state the exact unresolved condition from the note and excerpts.
+
+TARGET LENGTH
+Aim for approximately 1.5 to 2.5 pages of text when rendered to PDF.
+
+Use ONLY these section headings:
 
 EVENT METRICS
 Provide team count, total notes, breakdown by note type, open vs resolved, CSA involvement, and total match events.
-Separate official match events (Qualification + Playoff) from test-match events when both are present.
-Clearly distinguish dismissed match events from those that resulted in a formal follow-up note.
-If match events exist only in test matches, explicitly state that rather than saying no match events were recorded.
-If dismissed match events > 0 and follow-up match events > 0, state both counts plainly and do NOT say that no triage/escalation occurred.
-Only say that no match-event triage/escalation occurred if follow-up_match_events is exactly 0.
+Separate official match events from test-match events.
+Distinguish dismissed automatic detections from detections that produced follow-up notes.
 
 ISSUE BREAKDOWN
-Summarize issue types with counts and relative frequency using human-readable issue labels.
-Explicitly list the top 5 teams by:
-- total match events
-- high-impact match events (Bypass, roboRIO Disconnect, Radio Disconnect, Communication Loss)
-Also list teams with the most formal notes, and the single most active note thread if any.
-Keep this factual: counts, team numbers, issue categories, thread activity, and event types. No editorial commentary.
+Summarize issue categories factually, but do not over-trust the labels.
+List the top 5 teams by total match events.
+List the top 5 teams by high-impact match events.
+List teams with the most formal notes.
+Identify the most active troubleshooting threads.
 
 MATCH EVENT REVIEW
-Summarize brownouts, disconnects, high BWU, and bypasses where present.
-Clearly state:
-- total occurrences
-- how many were dismissed
-- how many resulted in a follow-up note
-If official match-event volume is zero but test-match events exist, state that clearly.
+Summarize the automatic match-event detections.
+State totals for brownouts, disconnects, high BWU, and bypasses where present.
+Clearly state how many were dismissed and how many produced follow-up notes.
+If official match-event volume is zero but test-match detections exist, state that clearly.
 
 RESOLUTION STATUS
 Summarize resolution rate numerically.
-Identify open items and whether any represent elevated risk based on thread activity, recurrence, bypass history, or playoff context.
-Also summarize the substance of resolved notes:
-- describe the actual issue/failure mode using the wording from the notes/messages when possible
-- note whether resolution was quick or extended if open_time_minutes exists
-- include concise thread-level detail from message history when available
-- mention notable troubleshooting steps or closure outcomes stated in the note thread
-- prefer concrete thread details over generic statements like "power issue" or "made adjustments"
+Identify open items and whether they appear operationally significant based on recurrence, thread length, or late-event context.
+Summarize the most important resolved tickets using the concrete thread details and fixes.
+
+KEY INCIDENTS
+Focus on the most operationally significant tickets.
+These are usually tickets with long threads, high recurrence, long open time, CSA involvement, or repeated match impact.
+Use the order already provided in stats.ticket_digest and discuss the highest-priority incidents first.
+This section should be selective and emphasize the tickets the reader would care most about.
 
 TICKET SUMMARY
-Provide a concise one-sentence summary for EVERY ticket in the dataset.
-Sort the ticket summaries in the exact order provided in stats.ticket_digest.
-Include severity order naturally by preserving that order, but do NOT print numeric severity values.
-For each ticket:
-- include the team number when present
-- include match number and level when useful
-- describe the concrete failure mode using note text and thread text
-- mention the specific troubleshooting step or resolution if present
-- mention if the issue recurred, if the thread shows recurrence
-- mention if the ticket remains open
-Keep each ticket to one sentence where possible.
+Provide a concise bullet summary for EVERY ticket in the dataset, using the exact order provided in stats.ticket_digest.
+Use one bullet per ticket.
+Each bullet should include:
+- team number when present
+- match number / level when useful
+- the concrete issue description from the note text
+- recurrence if supported
+- the key fix or outcome from resolution excerpts if present
+- whether the ticket remains open
 Do not omit any ticket.
-Do not merge multiple tickets into one bullet.
+Do not merge tickets.
 Use plain text bullets beginning with "- ".
 
-CRITICAL GROUNDING RULES:
-- Base the narrative primarily on note text and thread/message content, not just issue_type buckets.
-- If the note says "main breaker blew", say "main breaker blew" or "repeated main-breaker trips" rather than generic "power issue".
-- If the thread says "positive power lead fell out", "loose RIO power wire", "blown radio fuse", "PhotonVision web GUI open", "duplicate CAN IDs", "CAN leads into the PDH were loose", "controller only connects via Bluetooth", or similar, use those specifics.
-- Do not invent causes or fixes. Only state causes/fixes explicitly present in the notes or messages.
-- Do not rewrite a specific field failure into a vague summary if a concrete detail exists.
-- Manual notes and message threads are usually more informative than auto-generated note titles. Use auto note titles mainly for count context unless the thread adds real detail.
-- When multiple updates show recurrence, say so explicitly if supported by the thread.
-- When a note remains open, describe the exact unresolved condition from the note/thread.
-- Avoid bland phrases like "implemented current limits" unless the note actually says current limits were added or lowered.
-
-Write in a concise, technical, operations-focused tone.
-Use complete sentences.
-No recommendations section.
-
-EVENT DATA (JSON):
-${JSON.stringify(ctx, null, 2)}`;
+EVENT DATA (COMPACT JSON):
+${JSON.stringify(ctx)}`;
 }
 
 function renderNarrativePdf(text: string, eventName: string, eventCode: string): string {
@@ -573,7 +734,6 @@ function renderNarrativePdf(text: string, eventName: string, eventCode: string):
 	let y = marginTop + 20;
 	const lineHeight = 6;
 	const paragraphGap = 4;
-
 	const lines = text.split("\n");
 
 	for (const rawLine of lines) {
@@ -643,34 +803,18 @@ export async function generateAiEventReport(
 			{
 				role: "system",
 				content: `
-You are an FRC Field Technical Advisor writing a technical internal event summary for HQ.
+You are an experienced FRC FTA writing an internal technical event report.
 
-Use the following severity hierarchy when determining impact tone:
-- Bypass = match participation impact
-- roboRIO disconnect = high impact
-- radio disconnect = high impact
-- robot power issues are medium-high impact, especially when recurrent
-- brownout = low severity unless repeated
-- high BWU = informational
-- dismissed match events = low significance
-
-This hierarchy is for internal reasoning only and must never be printed in the output.
-
-Do not include recommendations.
-Do not speculate.
-Do not include calibration notes in the report.
-
-Most important instruction:
-Prefer exact factual language from note text and message history over generic categorization.
-If the data says "main breaker blew", "breaker wide open", "loose RIO power wire", "blown radio fuse", "PhotonVision web GUI open", "duplicate CAN IDs", "controller only connects via Bluetooth", or similar, use that specific wording in the narrative.
-Do not flatten concrete failures into vague phrases like "power issue" or "code issue" when more specific information exists.
-
-When resolved notes contain message history, include concise factual detail about what troubleshooting occurred and how the issue was closed.
-Prefer concrete thread details over generic statements.
-If the thread shows recurrence across multiple matches, state that explicitly.
-If a cause is uncertain in the thread, say it was unclear rather than presenting a definitive cause.
-
-In the TICKET SUMMARY section, cover every ticket, preserve the provided order exactly, and give one concise grounded summary per ticket.
+Your job is to identify the tickets the reader will care most about and explain them clearly.
+Prefer:
+- recurrence
+- long threads
+- long open time
+- CSA involvement
+- concrete diagnostics
+- concrete fixes
+Do not over-weight database issue labels. They are hints only and may be wrong.
+Use the note text and message excerpts as the primary source of truth.
 `,
 			},
 			{
@@ -678,7 +822,7 @@ In the TICKET SUMMARY section, cover every ticket, preserve the provided order e
 				content: buildPrompt(ctx),
 			},
 		],
-		max_tokens: 5200,
+		max_tokens: 2200,
 		temperature: 0.1,
 	});
 

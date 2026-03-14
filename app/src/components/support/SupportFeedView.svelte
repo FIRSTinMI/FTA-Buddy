@@ -299,6 +299,56 @@
 		matchEventSubscription?.unsubscribe();
 	});
 
+	// ── Pull-to-refresh ──────────────────────────────────────────────────────
+	let feedContainer: HTMLDivElement | undefined = $state();
+	let pullDelta = $state(0);
+	const PULL_THRESHOLD = 65;
+	const MAX_PULL = 100;
+
+	onMount(() => {
+		let startY = 0;
+		let pulling = false;
+
+		function handleTouchStart(e: TouchEvent) {
+			if (feedContainer && feedContainer.scrollTop === 0) {
+				startY = e.touches[0].clientY;
+				pulling = true;
+			}
+		}
+
+		function handleTouchMove(e: TouchEvent) {
+			if (!pulling) return;
+			if (feedContainer && feedContainer.scrollTop > 0) {
+				pulling = false;
+				pullDelta = 0;
+				return;
+			}
+			const delta = e.touches[0].clientY - startY;
+			if (delta > 0) {
+				pullDelta = Math.min(delta, MAX_PULL);
+				e.preventDefault();
+			}
+		}
+
+		function handleTouchEnd() {
+			if (pullDelta >= PULL_THRESHOLD && !loading) {
+				fetchAll();
+			}
+			pulling = false;
+			pullDelta = 0;
+		}
+
+		feedContainer?.addEventListener("touchstart", handleTouchStart, { passive: true });
+		feedContainer?.addEventListener("touchmove", handleTouchMove, { passive: false });
+		feedContainer?.addEventListener("touchend", handleTouchEnd, { passive: true });
+
+		return () => {
+			feedContainer?.removeEventListener("touchstart", handleTouchStart);
+			feedContainer?.removeEventListener("touchmove", handleTouchMove);
+			feedContainer?.removeEventListener("touchend", handleTouchEnd);
+		};
+	});
+
 	let filterModalOpen = $state(false);
 
 	let createModalOpen = $state(false);
@@ -608,7 +658,23 @@
 		</div>
 	</Modal>
 
-	<div class="flex flex-col grow gap-2 overflow-y-auto mt-2 pb-2">
+	<div class="flex flex-col grow gap-2 overflow-y-auto mt-2 pb-2" bind:this={feedContainer}>
+		<!-- Pull-to-refresh indicator -->
+		{#if pullDelta > 8 || loading}
+			<div
+				class="flex justify-center items-center transition-all duration-150 overflow-hidden"
+				style="height: {loading ? 36 : Math.min(pullDelta * 0.55, 36)}px; opacity: {loading ? 1 : Math.min(pullDelta / PULL_THRESHOLD, 1)}"
+			>
+				<div class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+					<Icon
+						icon="charm:refresh"
+						class="size-4 {loading ? 'animate-spin' : ''}"
+						style={loading ? '' : `transform: rotate(${(pullDelta / PULL_THRESHOLD) * 180}deg)`}
+					/>
+					<span>{loading ? "Refreshing…" : pullDelta >= PULL_THRESHOLD ? "Release to refresh" : "Pull to refresh"}</span>
+				</div>
+			</div>
+		{/if}
 		{#if loading}
 			<Spinner />
 		{:else if filteredFeed.length === 0}

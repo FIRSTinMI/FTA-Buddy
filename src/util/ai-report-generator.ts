@@ -581,13 +581,11 @@ async function collectEventData(
 			messages: n.messages,
 		}))
 		.sort((a, b) => {
-			if (b.priority_score !== a.priority_score) return b.priority_score - a.priority_score;
-
-			const aOpen = a.resolution_status === "Open" ? 1 : 0;
-			const bOpen = b.resolution_status === "Open" ? 1 : 0;
-			if (bOpen !== aOpen) return bOpen - aOpen;
-
-			return (b.open_time_minutes ?? 0) - (a.open_time_minutes ?? 0);
+			// Tickets without a team number go last
+			if (a.team === null && b.team === null) return 0;
+			if (a.team === null) return 1;
+			if (b.team === null) return -1;
+			return a.team - b.team;
 		});
 
 	return {
@@ -708,7 +706,7 @@ Use the order already provided in stats.ticket_digest and discuss the highest-pr
 This section should be selective and emphasize the tickets the reader would care most about.
 
 TICKET SUMMARY
-Provide a concise bullet summary for EVERY ticket in the dataset, using the exact order provided in stats.ticket_digest.
+Provide a concise bullet summary for EVERY ticket in the dataset, listed in ascending team number order (as already ordered in stats.ticket_digest). Tickets without a team number appear last.
 Use one bullet per ticket.
 Each bullet should include:
 - team number when present

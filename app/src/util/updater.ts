@@ -11,6 +11,16 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+    "2.7.1.9": {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.7.1.9</h1>
+        <ul>
+        <li>Fixed the field monitor on the stupid FTA Laptop screen</li>
+        <li>Improvements to the note report, and AI report</li>
+        <li>Linkify autodetected events</li>
+        <li>Wrong match in team history</li>
+        </ul>`,
+    },
     "2.7.1.8": {
         changelog: `
         <h1 class="text-lg font-bold">v2.7.1.8</h1>

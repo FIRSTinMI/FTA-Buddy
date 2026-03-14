@@ -193,7 +193,10 @@
 			<div class="flex items-start justify-between gap-3">
 				<div class="flex items-center flex-wrap gap-1.5 min-w-0">
 					{#if matchEvent.team !== null}
-						<span class="font-bold text-base">{displayTeam(matchEvent.team)}</span>
+						<button
+							class="font-bold text-base hover:underline"
+							onclick={(e) => { e.preventDefault(); e.stopPropagation(); navigate("/notepad/team/:team", { params: { team: String(matchEvent.team) } }); }}
+						>{displayTeam(matchEvent.team)}</button>
 					{/if}
 					{#each issueList as detail}
 						<Badge color={ISSUE_COLORS[detail.issue] ?? "gray"}>{detail.issue}</Badge>

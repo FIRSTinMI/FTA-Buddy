@@ -14,6 +14,7 @@ import { eventProcedure, protectedProcedure, publicProcedure, router } from "../
 import { getEvent } from "../util/get-event";
 import { createNotification } from "../util/push-notifications";
 import { generateReport } from "../util/report-generator";
+import { generateNotesReportPdf } from "../util/notes-report-generator";
 import {
 	addSlackReaction,
 	deleteSlackMessage,
@@ -542,13 +543,27 @@ export const notesRouter = router({
 
 	getAllByTeam: eventProcedure.input(z.object({ team_number: z.number() })).query(async ({ ctx, input }) => {
 		const notesByTeam = await db
-			.select()
+			.select({
+				notes,
+				matchLogMatchNumber: matchLogs.match_number,
+				matchLogPlayNumber: matchLogs.play_number,
+				matchLogLevel: matchLogs.level,
+			})
 			.from(notes)
 			.leftJoin(events, eq(notes.event_code, events.code))
+			.leftJoin(matchLogs, eq(notes.match_id, matchLogs.id))
 			.where(and(eq(notes.team, input.team_number), eq(events.archived, false)))
 			.orderBy(desc(notes.updated_at));
 		if (!notesByTeam) throw new TRPCError({ code: "NOT_FOUND", message: "No Notes found for provided team" });
-		return notesByTeam.map((row) => row.notes) as Note[];
+		// When a note has a match_id, prefer the match log's authoritative match details
+		// to keep NoteCard in team history consistent with the ViewNote badge (which also
+		// looks up match details via match_id).
+		return notesByTeam.map((row) => ({
+			...row.notes,
+			match_number: row.matchLogMatchNumber ?? row.notes.match_number,
+			play_number: row.matchLogPlayNumber ?? row.notes.play_number,
+			tournament_level: (row.matchLogLevel ?? row.notes.tournament_level) as Note["tournament_level"],
+		})) as Note[];
 	}),
 
 	getById: eventProcedure
@@ -1189,40 +1204,7 @@ export const notesRouter = router({
 
 	generateNotesReport: eventProcedure.query(async ({ ctx }) => {
 		const event = await getEvent(ctx.eventToken as string);
-
-		const totalAvgOpenTime = await getAllAvgOpenTime(event.code);
-		const teamNumbers = event.teams.map((t) => parseInt(t.number));
-		const allTeamsInfo = await getAllTeamNotesInfo(event.code, teamNumbers);
-
-		const path = await generateReport(
-			{
-				title: `Notes Report for ${event.code}`,
-				description: `Average Total Open Time: ${formatTimeShortNoAgoMinutes(totalAvgOpenTime)}`,
-				headers: [
-					"Team #",
-					"Total Open Time",
-					"# of Notes",
-					"Avg Open Time",
-					"Longest Open Time",
-					"Longest Text",
-					"All Texts",
-					"All Note Links",
-				],
-				fileName: "NotesReport",
-			},
-			allTeamsInfo.map((info) => [
-				info.team,
-				formatTimeShortNoAgoMinutes(info.totalOpenTime) ?? "None",
-				info.notes.length,
-				(info.avgOpenTime !== null ? formatTimeShortNoAgoMinutes(info.avgOpenTime) : "None") ?? "None",
-				formatTimeShortNoAgoMinutes(info.longestNoteOpenTime) ?? "None",
-				info.longestNote !== null ? info.longestNote.text.substring(0, 80) : "",
-				info.noteSubjects,
-				info.noteLinks ?? "None",
-			]),
-			event.code,
-		);
-
+		const path = await generateNotesReportPdf(event.code, event.name);
 		return { path };
 	}),
 

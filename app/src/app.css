@@ -167,18 +167,29 @@ body {
 @media screen and (min-width: 1024px) {
 	.grid-cols-fieldmonitor {
 		grid-template-columns:
-			minmax(auto, 1fr) 1fr 1fr 1fr auto minmax(auto, 1fr) minmax(auto, 1fr) minmax(auto, 1fr)
+			minmax(auto, 1fr) auto auto auto auto auto minmax(auto, 1fr) minmax(auto, 1fr)
 			auto;
 		width: fit-content;
 	}
 	.fieldmonitor-square-height {
-		height: calc((100vh - 264px) / 6);
+		height: calc((100vh - 200px) / 6);
 	}
 }
 
 @media screen and (min-height: 1200px) {
 	.fieldmonitor-square-height {
-		height: calc((1200px - 264px) / 6);
+		height: calc((1200px - 200px) / 6);
+	}
+}
+
+/* 2xl (≥1536px) fieldmonitor — wider gaps and slightly larger cells */
+@media screen and (min-width: 1536px) {
+	.grid-cols-fieldmonitor-large {
+		grid-template-columns:
+			minmax(auto, 1fr) auto auto auto auto minmax(auto, 1fr) minmax(auto, 1fr) minmax(auto, 1fr)
+			auto;
+		width: fit-content;
+		gap: 0.5rem;
 	}
 }
 

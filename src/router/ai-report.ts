@@ -18,7 +18,7 @@ export const aiReportRouter = router({
 		return row ?? null;
 	}),
 
-	/** Kick off AI report generation. One-time per event; retryable on error status. */
+	/** Kick off AI report generation. Retryable up to 5 times total per event. */
 	start: eventProcedure.mutation(async ({ ctx }) => {
 		const event = await getEvent(ctx.eventToken as string);
 
@@ -28,20 +28,22 @@ export const aiReportRouter = router({
 			.where(eq(aiEventReports.event_code, event.code))
 			.execute();
 
+		const currentCount = existing?.generation_count ?? 0;
+
 		if (existing) {
-			if (existing.status === "ready") {
-				throw new TRPCError({
-					code: "CONFLICT",
-					message: "Report has already been generated for this event.",
-				});
-			}
 			if (existing.status === "generating" || existing.status === "pending") {
 				throw new TRPCError({
 					code: "CONFLICT",
 					message: "Report generation is already in progress.",
 				});
 			}
-			// status === "error" — allow retry by deleting old row
+			if (currentCount >= 5) {
+				throw new TRPCError({
+					code: "CONFLICT",
+					message: "This report has already been regenerated the maximum number of times (5).",
+				});
+			}
+			// Delete old row and create a new one, carrying the count forward
 			await db.delete(aiEventReports).where(eq(aiEventReports.event_code, event.code)).execute();
 		}
 
@@ -52,6 +54,7 @@ export const aiReportRouter = router({
 				id: reportId,
 				event_code: event.code,
 				status: "pending",
+				generation_count: currentCount + 1,
 			})
 			.execute();
 

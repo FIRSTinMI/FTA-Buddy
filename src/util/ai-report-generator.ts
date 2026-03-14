@@ -6,7 +6,7 @@ import { db } from "../db/db";
 import { matchEvents, messages, notes } from "../db/schema";
 
 const openaiApiKey = process.env.OPENAI_API_KEY ?? process.env.OPENAI_KEY;
-const model = process.env.OPENAI_MODEL ?? "gpt-4.1";
+const model = process.env.OPENAI_MODEL ?? "gpt-5";
 
 interface NoteContext {
 	id: string;
@@ -28,6 +28,7 @@ interface NoteContext {
 	diagnostic_excerpt: string[];
 	timeline_excerpt: string[];
 	priority_score: number;
+	messages: Array<{ text: string; author: string; created_at: string | null }>;
 }
 
 interface MatchEventSummary {
@@ -48,6 +49,7 @@ interface TicketDigestEntry {
 	tournament_level: string | null;
 	text: string;
 	message_count: number;
+	messages: Array<{ text: string; author: string; created_at: string | null }>;
 	open_time_minutes: number | null;
 	has_csa: boolean;
 	is_auto_note: boolean;
@@ -69,6 +71,7 @@ interface ClosedNoteDetail {
 	recurrence_matches: string[];
 	diagnostic_excerpt: string[];
 	resolution_excerpt: string[];
+	messages: Array<{ text: string; author: string; created_at: string | null }>;
 }
 
 interface EventContext {
@@ -116,6 +119,7 @@ interface EventContext {
 			match_number: number | null;
 			tournament_level: string | null;
 			issue_type_hint: string | null;
+			messages: Array<{ text: string; author: string; created_at: string | null }>;
 		}>;
 		ticket_digest: TicketDigestEntry[];
 	};
@@ -409,6 +413,11 @@ async function collectEventData(
 			resolution_excerpt: excerpts.resolution_excerpt,
 			timeline_excerpt: excerpts.timeline_excerpt,
 			priority_score: priorityScore,
+			messages: noteMessages.map((m) => ({
+				text: truncate(cleanLine(m.text), 500),
+				author: (m.author as any)?.username ?? "unknown",
+				created_at: formatTimestamp(m.created_at),
+			})),
 		};
 	});
 
@@ -524,6 +533,7 @@ async function collectEventData(
 			recurrence_matches: n.recurrence_matches,
 			diagnostic_excerpt: n.diagnostic_excerpt,
 			resolution_excerpt: n.resolution_excerpt,
+			messages: n.messages,
 		}));
 
 	const openNoteDetails = noteContexts
@@ -545,6 +555,7 @@ async function collectEventData(
 			match_number: n.match_number,
 			tournament_level: n.tournament_level,
 			issue_type_hint: n.issue_type,
+			messages: n.messages,
 		}));
 
 	const ticketDigest: TicketDigestEntry[] = [...noteContexts]
@@ -567,6 +578,7 @@ async function collectEventData(
 			diagnostic_excerpt: n.diagnostic_excerpt,
 			resolution_excerpt: n.resolution_excerpt,
 			timeline_excerpt: n.timeline_excerpt,
+			messages: n.messages,
 		}))
 		.sort((a, b) => {
 			if (b.priority_score !== a.priority_score) return b.priority_score - a.priority_score;
@@ -797,12 +809,7 @@ export async function generateAiEventReport(
 		includeTestMatches: true,
 	});
 
-	const completion = await openai.chat.completions.create({
-		model,
-		messages: [
-			{
-				role: "system",
-				content: `
+	const systemPrompt = `
 You are an experienced FRC FTA writing an internal technical event report.
 
 Your job is to identify the tickets the reader will care most about and explain them clearly.
@@ -815,17 +822,23 @@ Prefer:
 - concrete fixes
 Do not over-weight database issue labels. They are hints only and may be wrong.
 Use the note text and message excerpts as the primary source of truth.
-`,
-			},
-			{
-				role: "user",
-				content: buildPrompt(ctx),
-			},
+`;
+
+	const completion = await openai.chat.completions.create({
+		model,
+		messages: [
+			{ role: "system", content: systemPrompt },
+			{ role: "user", content: buildPrompt(ctx) },
 		],
-		max_tokens: 2200,
-		temperature: 0.1,
+		max_completion_tokens: 4000,
+		temperature: 1,
 	});
 
-	const reportText = completion.choices[0]?.message?.content ?? "No report generated.";
+	const choice = completion.choices[0];
+	console.log("[AI Report] finish_reason:", choice?.finish_reason);
+	console.log("[AI Report] content:", choice?.message?.content);
+	console.log("[AI Report] refusal:", choice?.message?.refusal);
+
+	const reportText = choice?.message?.content ?? "No report generated.";
 	return renderNarrativePdf(reportText, eventName, eventCode);
 }

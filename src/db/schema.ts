@@ -298,6 +298,7 @@ export const aiEventReports = pgTable("ai_event_reports", {
 	status: aiReportStatusEnum("status").notNull().default("pending"),
 	file_path: varchar("file_path"),
 	error_message: varchar("error_message"),
+	generation_count: integer("generation_count").notNull().default(0),
 	created_at: timestamp("created_at").notNull().defaultNow(),
 	completed_at: timestamp("completed_at"),
 });

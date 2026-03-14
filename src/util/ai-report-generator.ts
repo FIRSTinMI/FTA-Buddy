@@ -822,21 +822,23 @@ Do not over-weight database issue labels. They are hints only and may be wrong.
 Use the note text and message excerpts as the primary source of truth.
 `;
 
-	const completion = await openai.chat.completions.create({
-		model,
-		messages: [
-			{ role: "system", content: systemPrompt },
-			{ role: "user", content: buildPrompt(ctx) },
-		],
-		max_completion_tokens: 4000,
-		temperature: 1,
-	});
+    const response = await openai.responses.create({
+        model,
+        input: [
+            {
+                role: "developer",
+                content: systemPrompt,
+            },
+            {
+                role: "user",
+                content: buildPrompt(ctx),
+            },
+        ],
+    });
 
-	const choice = completion.choices[0];
-	console.log("[AI Report] finish_reason:", choice?.finish_reason);
-	console.log("[AI Report] content:", choice?.message?.content);
-	console.log("[AI Report] refusal:", choice?.message?.refusal);
+    console.log("[AI Report] response:", JSON.stringify(response, null, 2));
 
-	const reportText = choice?.message?.content ?? "No report generated.";
+    const reportText = response.output_text?.trim() || "No report generated.";
+    
 	return renderNarrativePdf(reportText, eventName, eventCode);
 }

@@ -146,11 +146,11 @@ body {
 
 @media screen and (max-width: 1024px) {
 	.grid-cols-fieldmonitor {
-		grid-template-columns: auto 1fr 1fr 1fr calc((100vh - 104px) / 6) auto;
+		grid-template-columns: auto 1fr 1fr 1fr auto auto;
 		padding: 0 0.25rem;
 	}
 	.fieldmonitor-square-height {
-		height: calc((100vh - 216px) / 6);
+		height: calc((100dvh - 260px) / 6);
 	}
 }
 
@@ -160,7 +160,7 @@ body {
 		width: fit-content;
 	}
 	.fieldmonitor-square-height {
-		height: calc((100vh - 236px) / 6);
+		height: calc((100dvh - 280px) / 6);
 	}
 }
 
@@ -171,14 +171,22 @@ body {
 			auto;
 		width: fit-content;
 	}
+	/* Default: taller screens (16:10, 1080p, etc.) need more overhead for nav+rows+labels */
 	.fieldmonitor-square-height {
-		height: calc((100vh - 200px) / 6);
+		height: calc((100dvh - 275px) / 6);
+	}
+}
+
+/* Short screens (e.g. 1366×768 browser window) — smaller overhead fits more height */
+@media screen and (min-width: 1024px) and (max-height: 780px) {
+	.fieldmonitor-square-height {
+		height: calc((100dvh - 200px) / 6);
 	}
 }
 
 @media screen and (min-height: 1200px) {
 	.fieldmonitor-square-height {
-		height: calc((1200px - 200px) / 6);
+		height: calc((1200px - 275px) / 6);
 	}
 }
 
@@ -194,7 +202,7 @@ body {
 }
 
 .fullscreen .fieldmonitor-square-height {
-	height: calc((100vh - 200px) / 6);
+	height: calc((100dvh - 200px) / 6);
 }
 
 html:not(.dark) .fieldmonitor-square-height.bg-green-500 {

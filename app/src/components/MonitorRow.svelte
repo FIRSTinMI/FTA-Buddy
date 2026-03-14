@@ -99,7 +99,7 @@
 		)
 			? 'bg-blue-600'
 			: 'bg-red-600'}"
-		class:lg:text-5xl={$fullscreen}
+		class:lg:text-7xl={$fullscreen}
 		onclick={() => navigate("/notepad/team/:team", { params: { team: String(robot?.number) } })}
 	>
 		<p>{robot.number}</p>
@@ -180,7 +180,7 @@
 		{/if}
 	</button>
 	<button
-		class="fieldmonitor-square-height p-0 relative overflow-hidden aspect-square max-w-8 lg:max-w-24"
+		class="fieldmonitor-square-height p-0 relative overflow-hidden aspect-square"
 		onclick={detailView}
 		style="background-color: rgba(255,0,0,{robot.battery < 11 && robot.battery > 0
 			? (-1.5 * robot.battery ** 2 - 6.6 * robot.battery + 255) / 255
@@ -206,7 +206,7 @@
 	</button>
 	{#if !compact}
 		<button
-			class="fieldmonitor-square-height hidden lg:flex p-0 relative overflow-hidden aspect-square max-w-8 lg:max-w-24"
+			class="fieldmonitor-square-height hidden lg:flex p-0 relative overflow-hidden aspect-square"
 			onclick={detailView}
 			style="background-color: rgba(255,0,0,{robot.ping >= 20 && robot.ping < 100
 				? Math.log10(robot.ping / 25)

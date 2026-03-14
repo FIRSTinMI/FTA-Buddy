@@ -16,19 +16,24 @@ export function updateScheduleText(
 		return "";
 	}
 
-	// Determine which schedule day we're currently on by calendar date, not by
-	// match number range.  This ensures carry-over matches played the next morning
-	// still show today's endpoint (e.g. match 80) rather than yesterday's endpoint
-	// (e.g. match 54).  We pick the latest schedule day whose UTC calendar date is
-	// <= today's UTC calendar date.
+	// Determine which schedule day we're on using the schedule's own absolute
+	// timestamps.  Each day's `date` is the scheduled start time of the first
+	// match on that day (a UTC instant stored by the extension).  We pick the
+	// latest day whose scheduled start is <= now.  This is completely timezone-
+	// agnostic — it works correctly whether the viewer is at the venue, across
+	// the country, or the event runs past midnight UTC.
+	//
+	// Examples:
+	//   Day 0 starts 15:00 UTC Mar 13, Day 1 starts 13:30 UTC Mar 14.
+	//   • 00:30 UTC Mar 14 (event running late, still on Day 1 matches):
+	//     now < Day 1 start → stays on Day 0 ✓
+	//   • 14:00 UTC Mar 14 (Day 2 session underway):
+	//     now >= Day 1 start → advances to Day 1 ✓
 	{
-		const now = new Date();
-		const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+		const now = new Date().getTime();
 		currentScheduleDay = 0;
 		for (let i = 0; i < scheduleDetails.days.length; i++) {
-			const d = new Date(scheduleDetails.days[i].date);
-			const dayUTC = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
-			if (dayUTC <= todayUTC) {
+			if (new Date(scheduleDetails.days[i].date).getTime() <= now) {
 				currentScheduleDay = i;
 			}
 		}
@@ -73,13 +78,12 @@ export function updateScheduleText(
 		let fallbackEndOfDay = new Date();
 		fallbackEndOfDay.setHours(19, 0, 0, 0);
 
-		// If this day's scheduled end has already passed (carry-over matches being played
-		// the next morning), compare projected completion against the start of the next
-		// day rather than last night's stale endTime — otherwise we'd show hundreds of
-		// minutes "Late" just because the reference point is hours in the past.
-		const scheduledDayEnd = new Date(scheduleDetails.days[currentScheduleDay].endTime ?? fallbackEndOfDay);
-		const nextDay = scheduleDetails.days[currentScheduleDay + 1];
-		const referenceTime = scheduledDayEnd < new Date() && nextDay ? new Date(nextDay.date) : scheduledDayEnd;
+		// Always compare against this day's scheduled end time.  If the event is
+		// running late past that point, the projection will be after it and will
+		// correctly display "Xm Late".  Swapping the reference to the next day's
+		// start when the scheduled end has passed produces wildly wrong "Early"
+		// readings (e.g. 765m Early when actually 57m Late).
+		const referenceTime = new Date(scheduleDetails.days[currentScheduleDay].endTime ?? fallbackEndOfDay);
 
 		let endTimeFormatted = endTime.toLocaleTimeString().split(":").slice(0, 2).join(":");
 		let end = formatTimeShortNoAgoMinutesOnly(endTime, referenceTime);

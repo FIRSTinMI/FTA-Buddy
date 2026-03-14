@@ -363,12 +363,15 @@ export function computeOvernightOffset(
 
 		if (gapEnd <= gapStart) continue;
 
-		// Subtract however much of the gap overlaps with the window
-		// [scheduledStart, actualStart].  This covers three cases:
-		//   1. Gap fully crossed  (scheduledStart before gap, actualStart after)
-		//   2. actualStart lands inside the gap (match carried into sleep window but
-		//      started before the official next-day start)
-		//   3. Gap partially overlaps at the start (uncommon but handled)
+		// Only apply the overnight correction when the match truly carried over to
+		// the next day's session (actualStart >= gapEnd).  If the match merely ran
+		// slightly past midnight but before the next session began, it is simply
+		// late — no gap correction is needed and adding one would under-report the
+		// delay (e.g. 51m behind incorrectly shown as 24m behind).
+		if (actualStart.getTime() < gapEnd.getTime()) continue;
+
+		// Gap fully or partially crossed: subtract the portion of the gap that
+		// falls within [scheduledStart, actualStart].
 		const overlapStart = Math.max(scheduledStart.getTime(), gapStart.getTime());
 		const overlapEnd = Math.min(actualStart.getTime(), gapEnd.getTime());
 		if (overlapEnd > overlapStart) {

@@ -3,7 +3,7 @@ import { eventStore } from "../stores/event";
 import { settingsStore } from "../stores/settings";
 import { userStore } from "../stores/user";
 
-export const LATEST_EXTENSION_VERSION = "1.26.2";
+export const LATEST_EXTENSION_VERSION = "1.26.4";
 
 interface Version {
 	changelog?: string;
@@ -11,6 +11,16 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+    "2.7.2.0": {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.7.2.0</h1>
+        <ul>
+        <li>New step-by-step event creation flow</li>
+        <li>Notepad Only mode: Use FTA Buddy without SignalR integration</li>
+        <li>Extension now automatically uploads match logs that were missed</li>
+        <li>Event Settings page accessible from the sidebar at any time</li>
+        </ul>`,
+    },
     "2.7.1.9": {
         changelog: `
         <h1 class="text-lg font-bold">v2.7.1.9</h1>

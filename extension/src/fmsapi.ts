@@ -38,23 +38,20 @@ export async function getCurrentMatch() {
 }
 
 export async function getCompletedMatches(): Promise<FMSMatch[]> {
-	const response = await (await fetch(`http://${FMS}/api/v1.0/match/get/GetCurrentResults`)).json();
-
-	return response.map((match: any) => ({
-		fmsMatchId: match.matchId as string,
-		matchNumber: match.matchNumber as number,
-		playNumber: match.playNumber as number,
-		tournamentLevel: match.tournamentLevel as TournamentLevel,
-		fmsEventId: match.fmsEventId as string,
-		actualStartTime: new Date(match.actualStartTime),
-		description: match.description as string,
-		blueAutoScore: match.blueAutoScore as number,
-		bluePenalty: match.bluePenalty as number,
-		blueScore: match.blueScore as number,
-		redAutoScore: match.redAutoScore as number,
-		redPenalty: match.redPenalty as number,
-		redScore: match.redScore as number,
-	}));
+	// GetCurrentResults only returns the active tournament level.
+	// Query all levels individually and merge so quals and playoffs are always included.
+	const levels = [FMSEnums.Level.Practice, FMSEnums.Level.Qualification, FMSEnums.Level.Playoff];
+	const results = await Promise.all(
+		levels.map(async (level) => {
+			try {
+				return (await getMatches(level)) as FMSMatch[];
+			} catch {
+				return [] as FMSMatch[];
+			}
+		}),
+	);
+	// Only return matches that have actually been played (actualStartTime is set)
+	return results.flat().filter((m) => !!m.actualStartTime);
 }
 
 export async function getAllLogsForMatch(matchId: string) {

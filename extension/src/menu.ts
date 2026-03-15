@@ -1,5 +1,4 @@
-import { TournamentLevel } from "@shared/types";
-import { updateValues, uploadAllUnimportedMatchLogs, uploadMatchLogsForMatch } from "./trpc";
+import { updateValues } from "./trpc";
 
 const cloudCheckbox = document.getElementById("cloud") as HTMLInputElement;
 const urlInput = document.getElementById("url") as HTMLInputElement;
@@ -10,11 +9,6 @@ const enabledInput = document.getElementById("enabled") as HTMLInputElement;
 const fieldMonitorInput = document.getElementById("fieldMonitor") as HTMLInputElement;
 const tokenInput = document.getElementById("eventToken") as HTMLInputElement;
 const saveButton = document.getElementById("save") as HTMLButtonElement;
-
-const matchLevelInput = document.getElementById("match-level") as HTMLSelectElement;
-const matchNumberInput = document.getElementById("match-number") as HTMLInputElement;
-const matchPlayInput = document.getElementById("match-play") as HTMLInputElement;
-const matchimportButton = document.getElementById("import") as HTMLButtonElement;
 
 const extensionStatusIndicator = document.getElementById("extension-status") as HTMLDivElement;
 const fmsApiStatusIndicator = document.getElementById("fms-api-status") as HTMLDivElement;
@@ -98,39 +92,6 @@ function load() {
 			if (useDevCheckbox) useDevCheckbox.addEventListener("input", handleUpdate);
 			saveButton.addEventListener("click", handleUpdate);
 			refreshButton.addEventListener("click", () => chrome.runtime.reload());
-
-			matchimportButton.addEventListener("click", async () => {
-				const level = matchLevelInput.value as TournamentLevel;
-				const matchNumber = parseInt(matchNumberInput.value);
-				const playNumber = parseInt(matchPlayInput.value);
-				matchimportButton.disabled = true;
-				try {
-					await updateValues(); // ensure eventCode is populated from storage
-					await uploadMatchLogsForMatch(matchNumber, playNumber, level);
-				} finally {
-					matchimportButton.disabled = false;
-				}
-			});
-
-			const importAllButton = document.getElementById("import-all") as HTMLButtonElement;
-			importAllButton.addEventListener("click", async () => {
-				importAllButton.disabled = true;
-				const originalText = importAllButton.textContent ?? "Import All";
-				try {
-					await updateValues(); // ensure eventCode is populated from storage
-					await uploadAllUnimportedMatchLogs((current, total) => {
-						importAllButton.textContent = total > 0 ? `${current}/${total}` : "Importing…";
-					});
-					importAllButton.textContent = "Done!";
-					setTimeout(() => { importAllButton.textContent = originalText; }, 2000);
-				} catch (err) {
-					console.error(err);
-					importAllButton.textContent = "Error";
-					setTimeout(() => { importAllButton.textContent = originalText; }, 2000);
-				} finally {
-					importAllButton.disabled = false;
-				}
-			});
 
 			updateStatusIndicators();
 		},

@@ -20,9 +20,10 @@ import {
 	updateNote,
 } from "./fmsapi";
 import { SignalR } from "./signalR";
-import { trpc, updateValues } from "./trpc";
+import { trpc, updateValues, uploadAllUnimportedMatchLogs } from "./trpc";
 
 let teamPollInterval: ReturnType<typeof setInterval> | null = null;
+let matchImportInterval: ReturnType<typeof setInterval> | null = null;
 let qualsScheduleAvailable = false;
 let inboundSyncInProgress = false;
 
@@ -68,6 +69,7 @@ export let fmsApi: boolean = false;
 
 async function stop() {
 	stopTeamPolling();
+	stopMatchAutoImport();
 	outboundNoteSubscription?.unsubscribe();
 	outboundNoteSubscription = undefined;
 	await signalRConnection.stop();
@@ -129,6 +131,16 @@ async function start() {
 
 	await pingFMS();
 
+	if (!fieldMonitor) {
+		console.log("Field monitor disabled, skipping SignalR");
+		if (!(eventCode || eventToken)) return;
+		await updateValues();
+		sendScheduleDetails();
+		startTeamPolling();
+		startMatchAutoImport();
+		return;
+	}
+
 	console.log("Starting SignalR");
 	await signalRConnection.start();
 
@@ -137,6 +149,7 @@ async function start() {
 	await updateValues();
 	sendScheduleDetails();
 	startTeamPolling();
+	startMatchAutoImport();
 
 	// Fetch FMS event password from the server and propagate to SignalR + FTA App API
 	try {
@@ -478,6 +491,30 @@ function stopTeamPolling() {
 		clearInterval(teamPollInterval);
 		teamPollInterval = null;
 		console.log("Stopped team polling");
+	}
+}
+
+async function runMatchAutoImport() {
+	if (!enabled || !eventToken) return;
+	try {
+		await uploadAllUnimportedMatchLogs();
+	} catch (err) {
+		console.warn("Match auto-import error:", err);
+	}
+}
+
+function startMatchAutoImport() {
+	if (matchImportInterval) return;
+	runMatchAutoImport();
+	matchImportInterval = setInterval(runMatchAutoImport, 2 * 60 * 1000);
+	console.log("Started match auto-import (every 2 min)");
+}
+
+function stopMatchAutoImport() {
+	if (matchImportInterval) {
+		clearInterval(matchImportInterval);
+		matchImportInterval = null;
+		console.log("Stopped match auto-import");
 	}
 }
 

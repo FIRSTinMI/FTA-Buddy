@@ -1,4 +1,4 @@
-import { TournamentLevel } from "@shared/types";
+import { type FMSMatch, TournamentLevel } from "@shared/types";
 import { createTRPCClient, httpBatchLink, httpLink, httpSubscriptionLink, splitLink } from "@trpc/client";
 import { compressSync } from "fflate";
 import SuperJSON from "superjson";
@@ -67,38 +67,18 @@ function createTRPCConnection() {
 
 export let trpc = createTRPCConnection();
 
-export async function uploadMatchLogs() {
-	const matchNumber = await getCurrentMatch();
-	const match = await getMatch(matchNumber.matchNumber, matchNumber.playNumber, matchNumber.level);
-	const logs = await getAllLogsForMatch(match.fmsMatchId);
-	console.log(
-		`Trying to compress logs for match ${matchNumber.matchNumber} play ${matchNumber.playNumber} id ${match.fmsMatchId}`,
-	);
-	try {
-		const upload = {
-			event: eventCode,
-			level: match.tournamentLevel,
-			...match,
-			logs: {
-				red1: compressStationLog(logs.red1),
-				red2: compressStationLog(logs.red2),
-				red3: compressStationLog(logs.red3),
-				blue1: compressStationLog(logs.blue1),
-				blue2: compressStationLog(logs.blue2),
-				blue3: compressStationLog(logs.blue3),
-			},
-		};
+// Tracks fmsMatchIds currently being uploaded to prevent concurrent duplicate uploads
+// between the SignalR post-match trigger and the 2-minute auto-import timer.
+const inFlightMatchIds = new Set<string>();
 
-		console.debug(upload);
-		await trpc.match.putCompressedMatchLogs.mutate(upload);
-	} catch (err) {
-		console.error(err);
-		console.log(`Uploading logs uncompressed`);
-		const upload = { event: eventCode, level: match.tournamentLevel, ...match, logs };
-		console.debug(upload);
-		await trpc.match.putMatchLogs.mutate(upload);
+export async function uploadMatchLogs() {
+	const current = await getCurrentMatch();
+	const match = await getMatch(current.matchNumber, current.playNumber, current.level);
+	if (inFlightMatchIds.has(match.fmsMatchId)) {
+		console.log(`uploadMatchLogs: skipping ${match.fmsMatchId}, already in flight`);
+		return;
 	}
-	console.log("done");
+	await uploadMatchLogsByMatch(match);
 }
 
 export async function uploadAllUnimportedMatchLogs(onProgress?: (current: number, total: number) => void) {
@@ -110,31 +90,29 @@ export async function uploadAllUnimportedMatchLogs(onProgress?: (current: number
 		await trpc.match.getUploadedMatchIds.query({ ids: allIds })
 	);
 
-	const missing = completed.filter((m) => !uploadedIds.has(m.fmsMatchId));
+	// Also skip anything currently being uploaded by the SignalR trigger
+	const missing = completed.filter((m) => !uploadedIds.has(m.fmsMatchId) && !inFlightMatchIds.has(m.fmsMatchId));
 
 	for (let i = 0; i < missing.length; i++) {
 		onProgress?.(i, missing.length);
-		const { matchNumber, playNumber, tournamentLevel } = missing[i];
 		try {
-			await uploadMatchLogsForMatch(matchNumber, playNumber, tournamentLevel);
+			await uploadMatchLogsByMatch(missing[i]);
 		} catch (err) {
-			console.error(`Failed to import match ${matchNumber} play ${playNumber}:`, err);
+			console.error(`Failed to import match ${missing[i].matchNumber} play ${missing[i].playNumber}:`, err);
 		}
 	}
 	onProgress?.(missing.length, missing.length);
 }
 
-export function compressStationLog(log: any[]) {
-	const enc = new TextEncoder();
-	const buf = enc.encode(JSON.stringify(log));
-	const compressed = compressSync(buf, { level: 6, mem: 6 });
-	return btoa(String.fromCharCode(...compressed));
-}
-
-export async function uploadMatchLogsForMatch(matchNumber: number, playNumber: number, level: TournamentLevel) {
-	const match = await getMatch(matchNumber, playNumber, level);
+// Upload logs for a match using the fmsMatchId directly, bypassing number-based lookup.
+async function uploadMatchLogsByMatch(match: FMSMatch) {
+	if (inFlightMatchIds.has(match.fmsMatchId)) {
+		console.log(`uploadMatchLogsByMatch: skipping ${match.fmsMatchId}, already in flight`);
+		return;
+	}
+	inFlightMatchIds.add(match.fmsMatchId);
+	console.log(`Uploading match ${match.matchNumber} play ${match.playNumber} (${match.tournamentLevel}) id ${match.fmsMatchId}`);
 	const logs = await getAllLogsForMatch(match.fmsMatchId);
-	console.log(`Trying to compress logs for match ${matchNumber} play ${playNumber} id ${match.fmsMatchId}`);
 	try {
 		const upload = {
 			event: eventCode,
@@ -149,15 +127,27 @@ export async function uploadMatchLogsForMatch(matchNumber: number, playNumber: n
 				blue3: compressStationLog(logs.blue3),
 			},
 		};
-
-		console.debug(upload);
 		await trpc.match.putCompressedMatchLogs.mutate(upload);
 	} catch (err) {
 		console.error(err);
-		console.log(`Uploading logs uncompressed`);
+		console.log(`Uploading logs uncompressed for ${match.fmsMatchId}`);
 		const upload = { event: eventCode, level: match.tournamentLevel, ...match, logs };
-		console.debug(upload);
 		await trpc.match.putMatchLogs.mutate(upload);
+	} finally {
+		inFlightMatchIds.delete(match.fmsMatchId);
 	}
-	console.log("done");
+	console.log(`done ${match.fmsMatchId}`);
+}
+
+export function compressStationLog(log: any[]) {
+	const enc = new TextEncoder();
+	const buf = enc.encode(JSON.stringify(log));
+	const compressed = compressSync(buf, { level: 6, mem: 6 });
+	return btoa(String.fromCharCode(...compressed));
+}
+
+// uploadMatchLogsForMatch is kept for the SignalR path which resolves by match number.
+export async function uploadMatchLogsForMatch(matchNumber: number, playNumber: number, level: TournamentLevel) {
+	const match = await getMatch(matchNumber, playNumber, level);
+	await uploadMatchLogsByMatch(match);
 }

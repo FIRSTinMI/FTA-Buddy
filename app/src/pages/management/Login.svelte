@@ -135,6 +135,14 @@
 		window.location.reload();
 	}
 
+	function hostNavigate() {
+		if ($user.eventToken) {
+			eventStore.set({ code: "", pin: "", teams: [], users: [] });
+			user.set({ ...$user, eventToken: "" });
+		}
+		navigate("/manage/host");
+	}
+
 	user.subscribe((value) => {
 		updateEventList();
 	});
@@ -532,14 +540,14 @@
 							<h2 class="text-xl">Run FTA Buddy from this computer</h2>
 							{#if $user.eventToken}
 								<Button onclick={() => navigate("/")} class="w-full mt-4">Open Field Monitor</Button>
-								<Button onclick={() => navigate("/manage/event-created")} class="w-full mt-4"
+								<Button onclick={() => navigate("/manage/event-settings")} class="w-full mt-4"
 									>Event Management</Button
 								>
-								<Button onclick={() => navigate("/manage/host")} class="w-full mt-4"
-									>Host New Event</Button
-								>
-							{:else}
-								<Button onclick={() => navigate("/manage/host")} class="w-full mt-4">Host</Button>
+							<Button onclick={hostNavigate} class="w-full mt-4"
+								>Host New Event</Button
+							>
+						{:else}
+							<Button onclick={hostNavigate} class="w-full mt-4">Host</Button>
 							{/if}
 							<p class="text-gray-700 mt-2">Requires this computer to be on the field network</p>
 						</div>
@@ -599,7 +607,7 @@
 				<div class="flex border-t border-neutral-500 pt-4">
 					<div class="my-auto w-full">
 						<h2 class="text-2xl" style="font-weight: bold;">Run FTA Buddy from this computer</h2>
-						<Button onclick={() => navigate("/manage/host")} class="w-full mt-4">Host</Button>
+							<Button onclick={hostNavigate} class="w-full mt-4">Host</Button>
 						<p class="text-gray-700 mt-2">Requires this computer to be on the field network</p>
 					</div>
 				</div>
@@ -621,7 +629,7 @@
 					onchange={adminSelectEvent}
 				/>
 				<Button onclick={() => navigate("/")}>Go to App</Button>
-				<Button outline onclick={() => navigate("/manage/event-created")}>Event Management</Button>
+				<Button outline onclick={() => navigate("/manage/event-settings")}>Event Management</Button>
 				<Button outline href="/manage/meshed-event">Create Meshed Event</Button>
 			</div>
 
@@ -637,7 +645,7 @@
 						user.set({ ...$user, eventToken: "" })
 					)}>Leave Event</Button
 				>
-				<Button outline onclick={() => navigate("/manage/event-created")}>Event Management</Button>
+				<Button outline onclick={() => navigate("/manage/event-settings")}>Event Management</Button>
 			</div>
 
 			<!-- No event selected -->
@@ -677,7 +685,7 @@
 				<div class="flex border-t border-neutral-500 pt-4">
 					<div class="my-auto w-full">
 						<h2 class="text-xl">Run FTA Buddy from this computer</h2>
-						<Button onclick={() => navigate("/manage/host")} class="w-full mt-4">Host</Button>
+						<Button onclick={hostNavigate} class="w-full mt-4">Host</Button>
 						<p class="text-gray-700 mt-2">Requires this computer to be on the field network</p>
 					</div>
 				</div>

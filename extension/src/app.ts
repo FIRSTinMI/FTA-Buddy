@@ -54,9 +54,9 @@ const appExtensionData = chrome.runtime.getManifest();
 		} else if (evt.data.type === "enable") {
 			enabled = true;
 			const updates: Record<string, any> = { enabled };
-			if (evt.data.fieldMonitor) {
-				fieldMonitor = true;
-				updates.fieldMonitor = true;
+			if ("fieldMonitor" in evt.data) {
+				fieldMonitor = Boolean(evt.data.fieldMonitor);
+				updates.fieldMonitor = fieldMonitor;
 			}
 			await chrome.storage.local.set(updates);
 			// Storage change triggers background restart automatically
@@ -68,10 +68,9 @@ const appExtensionData = chrome.runtime.getManifest();
 			enabled = true;
 			changed = new Date().getTime();
 			const updates: Record<string, any> = { event: eventCode, eventToken, enabled, changed };
-			// If the page explicitly requests field monitor (e.g. Host.svelte on the FTA's computer), enable it
-			if (evt.data.fieldMonitor) {
-				fieldMonitor = true;
-				updates.fieldMonitor = true;
+			if ("fieldMonitor" in evt.data) {
+				fieldMonitor = Boolean(evt.data.fieldMonitor);
+				updates.fieldMonitor = fieldMonitor;
 			}
 			await chrome.storage.local.set(updates);
 			// Storage change triggers background restart automatically

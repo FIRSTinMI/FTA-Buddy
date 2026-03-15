@@ -16,8 +16,10 @@ export const { p, navigate, isActive, preload, route } = createRouter({
 	"/manage": () => import("./pages/management/Management.svelte"),
 	"/manage/login": () => import("./pages/management/Login.svelte"),
 	"/manage/host": () => import("./pages/management/Host.svelte"),
+	"/manage/host/create": () => import("./pages/management/Host.svelte"),
+	"/manage/host/integrations": () => import("./pages/management/Host.svelte"),
+	"/manage/event-settings": () => import("./pages/management/Host.svelte"),
 	"/manage/kiosk": () => import("./pages/management/RadioKiosk.svelte"),
-	"/manage/event-created": () => import("./pages/management/PostEventCreation.svelte"),
 	"/manage/google-signup": () => import("./pages/management/CompleteGoogleSignup.svelte"),
 	"/manage/meshed-event": () => import("./pages/management/MeshedEvent.svelte"),
 

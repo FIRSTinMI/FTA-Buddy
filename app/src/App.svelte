@@ -92,7 +92,9 @@
 		"/manage/login",
 		"/manage/google-signup",
 		"/manage/host",
-		"/manage/event-created",
+		"/manage/host/create",
+		"/manage/host/integrations",
+		"/manage/event-settings",
 		"/manage/meshed-event",
 		"/ftc",
 		"/references",
@@ -526,6 +528,17 @@
 								>
 							</Indicator>
 						{/if}
+					</SidebarItem>
+					<SidebarItem
+						label="Event Settings"
+						onclick={() => {
+							drawerOpen = false;
+							navigate("/manage/event-settings");
+						}}
+					>
+						{#snippet icon()}
+							<Icon icon="mdi:cog-outline" class="size-8" />
+						{/snippet}
 					</SidebarItem>
 				</SidebarGroup>
 			{:else if $user.eventToken}

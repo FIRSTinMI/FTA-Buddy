@@ -157,8 +157,7 @@ export const eventRouter = router({
 						checklist: events.checklist,
 						users: events.users,
 						archived: events.archived,
-						subEvents: events.meshedEvent,
-					})
+						subEvents: events.meshedEvent,					notepadOnly: events.notepadOnly,					})
 					.from(events)
 					.where(eq(events.code, input.code))
 			)[0];
@@ -212,6 +211,7 @@ export const eventRouter = router({
 				code: z.string().startsWith("202").min(6),
 				pin: z.string().min(4),
 				teams: z.array(z.number()).optional(),
+				notepadOnly: z.boolean().optional().default(false),
 			}),
 		)
 		.mutation(async ({ input, ctx }) => {
@@ -309,6 +309,7 @@ export const eventRouter = router({
 					autoEventSettings: Object.fromEntries(
 						AUTO_EVENT_ISSUE_TYPES.map((t) => [t, true]),
 					) as EventAutoEventSettings,
+					notepadOnly: input.notepadOnly ?? false,
 				})
 				.returning();
 

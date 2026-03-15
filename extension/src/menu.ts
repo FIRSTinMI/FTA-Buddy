@@ -1,5 +1,5 @@
 import { TournamentLevel } from "@shared/types";
-import { uploadMatchLogsForMatch } from "./trpc";
+import { updateValues, uploadAllUnimportedMatchLogs, uploadMatchLogsForMatch } from "./trpc";
 
 const cloudCheckbox = document.getElementById("cloud") as HTMLInputElement;
 const urlInput = document.getElementById("url") as HTMLInputElement;
@@ -103,7 +103,33 @@ function load() {
 				const level = matchLevelInput.value as TournamentLevel;
 				const matchNumber = parseInt(matchNumberInput.value);
 				const playNumber = parseInt(matchPlayInput.value);
-				await uploadMatchLogsForMatch(matchNumber, playNumber, level);
+				matchimportButton.disabled = true;
+				try {
+					await updateValues(); // ensure eventCode is populated from storage
+					await uploadMatchLogsForMatch(matchNumber, playNumber, level);
+				} finally {
+					matchimportButton.disabled = false;
+				}
+			});
+
+			const importAllButton = document.getElementById("import-all") as HTMLButtonElement;
+			importAllButton.addEventListener("click", async () => {
+				importAllButton.disabled = true;
+				const originalText = importAllButton.textContent ?? "Import All";
+				try {
+					await updateValues(); // ensure eventCode is populated from storage
+					await uploadAllUnimportedMatchLogs((current, total) => {
+						importAllButton.textContent = total > 0 ? `${current}/${total}` : "Importing…";
+					});
+					importAllButton.textContent = "Done!";
+					setTimeout(() => { importAllButton.textContent = originalText; }, 2000);
+				} catch (err) {
+					console.error(err);
+					importAllButton.textContent = "Error";
+					setTimeout(() => { importAllButton.textContent = originalText; }, 2000);
+				} finally {
+					importAllButton.disabled = false;
+				}
 			});
 
 			updateStatusIndicators();

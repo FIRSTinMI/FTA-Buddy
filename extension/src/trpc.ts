@@ -3,7 +3,7 @@ import { createTRPCClient, httpBatchLink, httpLink, httpSubscriptionLink, splitL
 import { compressSync } from "fflate";
 import SuperJSON from "superjson";
 import type { AppRouter } from "../../src/index";
-import { getAllLogsForMatch, getCurrentMatch, getMatch } from "./fmsapi";
+import { getAllLogsForMatch, getCompletedMatches, getCurrentMatch, getMatch } from "./fmsapi";
 
 let cloud: boolean = true;
 let useDev: boolean = false;
@@ -99,6 +99,29 @@ export async function uploadMatchLogs() {
 		await trpc.match.putMatchLogs.mutate(upload);
 	}
 	console.log("done");
+}
+
+export async function uploadAllUnimportedMatchLogs(onProgress?: (current: number, total: number) => void) {
+	const completed = await getCompletedMatches();
+
+	// Ask the server which FMS match IDs it already has so we skip them
+	const allIds = completed.map((m) => m.fmsMatchId);
+	const uploadedIds = new Set(
+		await trpc.match.getUploadedMatchIds.query({ ids: allIds })
+	);
+
+	const missing = completed.filter((m) => !uploadedIds.has(m.fmsMatchId));
+
+	for (let i = 0; i < missing.length; i++) {
+		onProgress?.(i, missing.length);
+		const { matchNumber, playNumber, tournamentLevel } = missing[i];
+		try {
+			await uploadMatchLogsForMatch(matchNumber, playNumber, tournamentLevel);
+		} catch (err) {
+			console.error(`Failed to import match ${matchNumber} play ${playNumber}:`, err);
+		}
+	}
+	onProgress?.(missing.length, missing.length);
 }
 
 export function compressStationLog(log: any[]) {

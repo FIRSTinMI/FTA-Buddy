@@ -37,14 +37,14 @@ export async function getCurrentMatch() {
 	};
 }
 
-export async function getCompletedMatches() {
+export async function getCompletedMatches(): Promise<FMSMatch[]> {
 	const response = await (await fetch(`http://${FMS}/api/v1.0/match/get/GetCurrentResults`)).json();
 
 	return response.map((match: any) => ({
-		matchId: match.matchId as string,
+		fmsMatchId: match.matchId as string,
 		matchNumber: match.matchNumber as number,
 		playNumber: match.playNumber as number,
-		level: match.tournamentLevel as TournamentLevel,
+		tournamentLevel: match.tournamentLevel as TournamentLevel,
 		fmsEventId: match.fmsEventId as string,
 		actualStartTime: new Date(match.actualStartTime),
 		description: match.description as string,

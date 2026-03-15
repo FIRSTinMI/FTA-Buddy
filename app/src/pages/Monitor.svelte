@@ -18,6 +18,7 @@
 	import { audioQueuer, frameHandler, subscribeToFieldMonitor } from "../field-monitor";
 	import { trpc } from "../main";
 	import { fullscreen } from "../stores/fullscreen";
+	import { eventStore } from "../stores/event";
 	import { userStore } from "../stores/user";
 	import type { MonitorEvent } from "../util/monitorFrameHandler";
 	import { updateScheduleText } from "../util/schedule-detail-formatter";
@@ -306,7 +307,11 @@
 			</div>
 		</div>
 		{#if !monitorFrame}
-			<p>Requires Chrome Extension to be setup on field network</p>
+			{#if $eventStore?.notepadOnly}
+				<p class="text-yellow-400">No live field data — running in Notepad Only mode</p>
+			{:else}
+				<p>Requires Chrome Extension to be setup on field network</p>
+			{/if}
 		{/if}
 	</div>
 </div>

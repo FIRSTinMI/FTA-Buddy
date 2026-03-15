@@ -21,7 +21,7 @@ export const matchRouter = router({
 	putMatchLogs: publicProcedure
 		.input(
 			z.object({
-				event: z.string(),
+				event: z.string().min(1, "event code must not be empty"),
 				fmsMatchId: z.string(),
 				fmsEventId: z.string(),
 				matchNumber: z.number(),
@@ -110,7 +110,7 @@ export const matchRouter = router({
 	putCompressedMatchLogs: publicProcedure
 		.input(
 			z.object({
-				event: z.string(),
+				event: z.string().min(1, "event code must not be empty"),
 				fmsMatchId: z.string(),
 				fmsEventId: z.string(),
 				matchNumber: z.number(),

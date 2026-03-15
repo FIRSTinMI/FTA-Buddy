@@ -307,6 +307,13 @@ export async function logAnalysisLoop(limit: number) {
 	console.log(`Analyzing ${logsToAnalyze.length} logs`);
 
 	for (const log of logsToAnalyze) {
+		try {
+		if (!log.event) {
+			console.warn(`Skipping log ${log.id}: empty event code (likely a manual import with no event set). Marking as analyzed to prevent crash loop.`);
+			await db.update(matchLogs).set({ analyzed: true }).where(eq(matchLogs.id, log.id)).execute();
+			continue;
+		}
+
 		for (const station in ROBOT) {
 			//@ts-ignore
 			const teamNumber: number = log[station];
@@ -475,6 +482,15 @@ export async function logAnalysisLoop(limit: number) {
 			// If no events and not bypassed, skip - don't insert anything
 		}
 		await db.update(matchLogs).set({ analyzed: true }).where(eq(matchLogs.id, log.id)).execute();
+		} catch (err) {
+			console.error(`Error analyzing log ${log.id} (event: "${log.event}"): ${err}`);
+			// Mark as analyzed so the server doesn't crash-loop retrying the same bad log
+			try {
+				await db.update(matchLogs).set({ analyzed: true }).where(eq(matchLogs.id, log.id)).execute();
+			} catch (markErr) {
+				console.error(`Failed to mark log ${log.id} as analyzed after error: ${markErr}`);
+			}
+		}
 	}
 }
 

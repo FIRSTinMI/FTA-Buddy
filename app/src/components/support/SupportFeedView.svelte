@@ -2,7 +2,13 @@
 	import Icon from "@iconify/svelte";
 	import { Button, Input, Label, Modal, Select, Textarea } from "flowbite-svelte";
 	import { onDestroy, onMount, tick } from "svelte";
-	import type { MatchEvent, MatchEventUpdateEventData, Note, NoteUpdateEventData, TournamentLevel } from "../../../../shared/types";
+	import type {
+		MatchEvent,
+		MatchEventUpdateEventData,
+		Note,
+		NoteUpdateEventData,
+		TournamentLevel,
+	} from "../../../../shared/types";
 	import { trpc } from "../../main";
 	import { navigate } from "../../router";
 	import { eventStore } from "../../stores/event";
@@ -27,17 +33,25 @@
 	$effect(() => {
 		if (teamParam) search = teamParam;
 	});
-	let typeFilter: string = $state("all");
-	let statusFilter: string = $state("all");
+	let typeFilter: string = $state($settingsStore.supportFeedTypeFilter ?? "all");
+	let statusFilter: string = $state($settingsStore.supportFeedStatusFilter ?? "all");
 	let feedFilter: string = $state($settingsStore.supportFeedFilter ?? "all");
 
 	$effect(() => {
 		$settingsStore.supportFeedFilter = feedFilter as "all" | "notes" | "events";
 	});
+	$effect(() => {
+		$settingsStore.supportFeedTypeFilter = typeFilter as "all" | "TeamIssue" | "EventNote" | "MatchNote";
+	});
+	$effect(() => {
+		$settingsStore.supportFeedStatusFilter = statusFilter as "all" | "Open" | "Resolved";
+	});
 
 	let notes: Note[] = $state([]);
 	let matchEvents: MatchEvent[] = $state([]);
-	type FeedItem = { kind: "note"; note: Note; date: Date } | { kind: "event"; matchEvent: MatchEvent; date: Date; bypassGroup?: MatchEvent[] };
+	type FeedItem =
+		| { kind: "note"; note: Note; date: Date }
+		| { kind: "event"; matchEvent: MatchEvent; date: Date; bypassGroup?: MatchEvent[] };
 	let filteredFeed: FeedItem[] = $state([]);
 
 	let loading = $state(true);
@@ -91,15 +105,16 @@
 					const teamStr = e.team?.toString() ?? "";
 					const teamName = e.team !== null ? (teamNames[e.team]?.toLowerCase() ?? "") : "";
 					return tokenized.every(
-						(tok) =>
-							teamStr.includes(tok) ||
-							teamName.includes(tok) ||
-							e.issue.toLowerCase().includes(tok),
+						(tok) => teamStr.includes(tok) || teamName.includes(tok) || e.issue.toLowerCase().includes(tok),
 					);
 				});
 			}
 
-			items.push(...evts.filter((e) => e.issue !== "Bypassed").map((e) => ({ kind: "event" as const, matchEvent: e, date: new Date(e.created_at) })));
+			items.push(
+				...evts
+					.filter((e) => e.issue !== "Bypassed")
+					.map((e) => ({ kind: "event" as const, matchEvent: e, date: new Date(e.created_at) })),
+			);
 
 			// Consolidate bypass events by team into single cards
 			const bypassByTeam = new Map<number, MatchEvent[]>();
@@ -110,7 +125,9 @@
 				}
 			}
 			for (const [, teamBypasses] of bypassByTeam) {
-				const sorted = [...teamBypasses].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+				const sorted = [...teamBypasses].sort(
+					(a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+				);
 				items.push({
 					kind: "event" as const,
 					matchEvent: sorted[0],
@@ -120,10 +137,8 @@
 			}
 		}
 
-		// Notes first (newest on top), then events (newest on top)
-		const noteItems = items.filter((i) => i.kind === "note");
-		const eventItems = items.filter((i) => i.kind === "event");
-		filteredFeed = [...noteItems, ...eventItems].sort((a, b) => b.date.getTime() - a.date.getTime());
+		// Sort all items together by date (most recent activity first)
+		filteredFeed = items.sort((a, b) => b.date.getTime() - a.date.getTime());
 	}
 
 	$effect(() => {
@@ -176,6 +191,7 @@
 							const note = notes.find((n) => n.id === data.note_id);
 							if (note) {
 								note.resolution_status = data.resolution_status;
+								note.resolved_by = data.resolved_by;
 								note.updated_at = new Date();
 							}
 							notes = [...notes];
@@ -281,6 +297,56 @@
 	onDestroy(() => {
 		subscription?.unsubscribe();
 		matchEventSubscription?.unsubscribe();
+	});
+
+	// ── Pull-to-refresh ──────────────────────────────────────────────────────
+	let feedContainer: HTMLDivElement | undefined = $state();
+	let pullDelta = $state(0);
+	const PULL_THRESHOLD = 65;
+	const MAX_PULL = 100;
+
+	onMount(() => {
+		let startY = 0;
+		let pulling = false;
+
+		function handleTouchStart(e: TouchEvent) {
+			if (feedContainer && feedContainer.scrollTop === 0) {
+				startY = e.touches[0].clientY;
+				pulling = true;
+			}
+		}
+
+		function handleTouchMove(e: TouchEvent) {
+			if (!pulling) return;
+			if (feedContainer && feedContainer.scrollTop > 0) {
+				pulling = false;
+				pullDelta = 0;
+				return;
+			}
+			const delta = e.touches[0].clientY - startY;
+			if (delta > 0) {
+				pullDelta = Math.min(delta, MAX_PULL);
+				e.preventDefault();
+			}
+		}
+
+		function handleTouchEnd() {
+			if (pullDelta >= PULL_THRESHOLD && !loading) {
+				fetchAll();
+			}
+			pulling = false;
+			pullDelta = 0;
+		}
+
+		feedContainer?.addEventListener("touchstart", handleTouchStart, { passive: true });
+		feedContainer?.addEventListener("touchmove", handleTouchMove, { passive: false });
+		feedContainer?.addEventListener("touchend", handleTouchEnd, { passive: true });
+
+		return () => {
+			feedContainer?.removeEventListener("touchstart", handleTouchStart);
+			feedContainer?.removeEventListener("touchmove", handleTouchMove);
+			feedContainer?.removeEventListener("touchend", handleTouchEnd);
+		};
 	});
 
 	let filterModalOpen = $state(false);
@@ -429,7 +495,7 @@
 			selectedLabel = undefined;
 			matchId = undefined;
 			await tick();
-			navigate('/notepad/view/:id', { params: { id: createdNote.id }});
+			navigate("/notepad/view/:id", { params: { id: createdNote.id } });
 		} catch (err: any) {
 			toast("Error creating note", err.message);
 			console.error(err);
@@ -521,7 +587,12 @@
 		</Button>
 
 		<div class="relative grow">
-			<Input class="ps-8 pe-2.5 py-1.5 h-9" type="text" placeholder="Search by Team #, Name, Text" bind:value={search}>
+			<Input
+				class="ps-8 pe-2.5 py-1.5 h-9"
+				type="text"
+				placeholder="Search by Team #, Name, Text"
+				bind:value={search}
+			>
 				{#snippet left()}
 					<Icon icon="mdi:magnify" />
 				{/snippet}
@@ -587,7 +658,23 @@
 		</div>
 	</Modal>
 
-	<div class="flex flex-col grow gap-2 overflow-y-auto mt-2 pb-2">
+	<div class="flex flex-col grow gap-2 overflow-y-auto mt-2 pb-2" bind:this={feedContainer}>
+		<!-- Pull-to-refresh indicator -->
+		{#if pullDelta > 8 || loading}
+			<div
+				class="flex justify-center items-center transition-all duration-150 overflow-hidden"
+				style="height: {loading ? 36 : Math.min(pullDelta * 0.55, 36)}px; opacity: {loading ? 1 : Math.min(pullDelta / PULL_THRESHOLD, 1)}"
+			>
+				<div class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+					<Icon
+						icon="charm:refresh"
+						class="size-4 {loading ? 'animate-spin' : ''}"
+						style={loading ? '' : `transform: rotate(${(pullDelta / PULL_THRESHOLD) * 180}deg)`}
+					/>
+					<span>{loading ? "Refreshing…" : pullDelta >= PULL_THRESHOLD ? "Release to refresh" : "Pull to refresh"}</span>
+				</div>
+			</div>
+		{/if}
 		{#if loading}
 			<Spinner />
 		{:else if filteredFeed.length === 0}
@@ -600,8 +687,12 @@
 					<MatchEventCard
 						matchEvent={item.matchEvent}
 						bypassGroup={item.bypassGroup}
-						onDismiss={(id) => { matchEvents = matchEvents.filter((e) => e.id !== id); }}
-						onConvert={(id) => { matchEvents = matchEvents.filter((e) => e.id !== id); }}
+						onDismiss={(id) => {
+							matchEvents = matchEvents.filter((e) => e.id !== id);
+						}}
+						onConvert={(id) => {
+							matchEvents = matchEvents.filter((e) => e.id !== id);
+						}}
 					/>
 				{/if}
 			{/each}

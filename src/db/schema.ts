@@ -27,6 +27,7 @@ export const users = pgTable("users", {
 	role: roleEnum("role").notNull().default("FTA"),
 	token: varchar("token").notNull().default(""),
 	admin: boolean("admin").notNull().default(false),
+	slack_user_id: varchar("slack_user_id"),
 });
 
 export type User = typeof users.$inferInsert;
@@ -51,6 +52,7 @@ export const events = pgTable("events", {
 	endDate: varchar("endDate"),
 	fmsEventPassword: varchar("fmsEventPassword"),
 	autoEventSettings: jsonb("autoEventSettings").$type<EventAutoEventSettings>().notNull().default({}),
+	notepadOnly: boolean("notepadOnly").notNull().default(false),
 });
 
 export type Event = typeof events.$inferInsert;
@@ -123,6 +125,8 @@ export const notes = pgTable("notes", {
 	slack_ts: varchar("slack_ts"),
 	slack_channel: varchar("slack_channel"),
 	match_id: uuid("match_id").references(() => matchLogs.id),
+	resolved_by_id: integer("resolved_by_id").references(() => users.id),
+	resolved_by: jsonb("resolved_by").$type<Profile>(),
 });
 
 export const noteMessagesRelations = relations(notes, ({ many }) => ({
@@ -270,6 +274,7 @@ export const matchEvents = pgTable("match_events", {
 	team: integer("team").notNull(),
 	alliance: varchar("alliance").notNull(),
 	issue: issueEnum("issue").notNull(),
+	issues: jsonb("issues").$type<import("../../shared/types").MatchEventIssueDetail[]>(),
 	match_number: integer("match_number").notNull(),
 	play_number: integer("play_number").notNull(),
 	level: levelEnum("level").notNull(),
@@ -294,6 +299,7 @@ export const aiEventReports = pgTable("ai_event_reports", {
 	status: aiReportStatusEnum("status").notNull().default("pending"),
 	file_path: varchar("file_path"),
 	error_message: varchar("error_message"),
+	generation_count: integer("generation_count").notNull().default(0),
 	created_at: timestamp("created_at").notNull().defaultNow(),
 	completed_at: timestamp("completed_at"),
 });

@@ -2,7 +2,7 @@
 	import Icon from "@iconify/svelte";
 	import { Badge, Button } from "flowbite-svelte";
 	import { formatTimeNoAgoHourMins } from "../../../shared/formatTime";
-	import type { MatchEvent } from "../../../shared/types";
+	import type { MatchEvent, MatchEventIssueDetail } from "../../../shared/types";
 	import { trpc } from "../main";
 	import { navigate } from "../router";
 	import { toast } from "../util/toast";
@@ -20,7 +20,7 @@
 	let { matchEvent, bypassGroup, onDismiss, onConvert, compact = false }: Props = $props();
 
 	let isBypass = $derived(matchEvent.issue === "Bypassed");
-	let bypassCount = $derived(bypassGroup ? bypassGroup.length : (isBypass ? 1 : 0));
+	let bypassCount = $derived(bypassGroup ? bypassGroup.length : isBypass ? 1 : 0);
 
 	let time = $derived(formatTimeNoAgoHourMins(matchEvent.created_at));
 	let dismissing = $state(false);
@@ -36,15 +36,16 @@
 		"Sustained high ping": "yellow",
 		"Low signal": "indigo",
 		"High BWU": "indigo",
-		"Bypassed": "pink",
+		Bypassed: "pink",
 	};
 
 	async function dismiss() {
 		dismissing = true;
 		try {
-			const eventIds = bypassGroup && bypassGroup.length > 1
-				? bypassGroup.map((evt) => evt?.id).filter((id): id is string => Boolean(id))
-				: [matchEvent?.id].filter((id): id is string => Boolean(id));
+			const eventIds =
+				bypassGroup && bypassGroup.length > 1
+					? bypassGroup.map((evt) => evt?.id).filter((id): id is string => Boolean(id))
+					: [matchEvent?.id].filter((id): id is string => Boolean(id));
 
 			if (eventIds.length === 0) {
 				throw new Error("Missing match event id");
@@ -83,7 +84,7 @@
 					}
 				}
 			}
-			navigate('/notepad/view/:id', { params: { id: res.noteId } });
+			navigate("/notepad/view/:id", { params: { id: res.noteId } });
 		} catch (err: any) {
 			toast("Error converting to note", err.message);
 			console.error(err);
@@ -101,9 +102,9 @@
 			const stations = ["blue1", "blue2", "blue3", "red1", "red2", "red3"] as const;
 			const station = stations.find((s) => match[s] === matchEvent.team);
 			if (station) {
-				navigate('/logs/:matchid/:station', { params: { matchid: matchEvent.match_id, station } });
+				navigate("/logs/:matchid/:station", { params: { matchid: matchEvent.match_id, station } });
 			} else {
-				navigate('/logs/:matchid', { params: { matchid: matchEvent.match_id } });
+				navigate("/logs/:matchid", { params: { matchid: matchEvent.match_id } });
 			}
 		} catch (err: any) {
 			toast("Error loading match log", err.message);
@@ -113,6 +114,26 @@
 		}
 	}
 
+	/** Resolved list of issue details – uses `issues` array if present, otherwise falls back to the single issue. */
+	let issueList: MatchEventIssueDetail[] = $derived(
+		matchEvent.issues && matchEvent.issues.length > 0
+			? matchEvent.issues
+			: [
+					{
+						issue: matchEvent.issue,
+						start_time: matchEvent.start_time,
+						end_time: matchEvent.end_time,
+						duration: matchEvent.duration,
+					},
+				],
+	);
+
+	function formatDuration(dur: number | null) {
+		const d = Math.abs(dur ?? 0);
+		if (d >= 60) return `${(d / 60).toFixed(1)}m`;
+		return `${d.toFixed(0)}s`;
+	}
+
 	let durationStr = $derived.by(() => {
 		const dur = Math.abs(matchEvent.duration ?? 0);
 		if (dur >= 60) return `${(dur / 60).toFixed(1)}m`;
@@ -120,13 +141,19 @@
 	});
 
 	let levelLabel = $derived(
-		matchEvent.level === "Qualification" ? "Qual" : matchEvent.level === "Playoff" ? "Playoff" : (matchEvent.level ?? ""),
+		matchEvent.level === "Qualification"
+			? "Qual"
+			: matchEvent.level === "Playoff"
+				? "Playoff"
+				: (matchEvent.level ?? ""),
 	);
 </script>
 
 {#if compact}
 	<div class="flex items-center gap-1 text-xs py-0.5">
-		<Badge color={ISSUE_COLORS[matchEvent.issue] ?? "gray"} class="text-[10px]">{matchEvent.issue}</Badge>
+		{#each issueList as detail}
+			<Badge color={ISSUE_COLORS[detail.issue] ?? "gray"} class="text-[10px]">{detail.issue}</Badge>
+		{/each}
 		{#if isBypass && bypassGroup && bypassGroup.length > 1}
 			<span class="text-gray-400">{bypassGroup.length} matches</span>
 		{:else}
@@ -137,7 +164,10 @@
 		{/if}
 		<button
 			class="ml-auto text-gray-400 hover:text-red-400 transition-colors p-0.5"
-			onclick={(e) => { e.stopPropagation(); dismiss(); }}
+			onclick={(e) => {
+				e.stopPropagation();
+				dismiss();
+			}}
 			disabled={dismissing}
 			title="Dismiss"
 		>
@@ -145,7 +175,10 @@
 		</button>
 		<button
 			class="text-gray-400 hover:text-blue-400 transition-colors p-0.5"
-			onclick={(e) => { e.stopPropagation(); convertToNote(); }}
+			onclick={(e) => {
+				e.stopPropagation();
+				convertToNote();
+			}}
 			disabled={converting}
 			title="Convert to note"
 		>
@@ -160,13 +193,22 @@
 			<div class="flex items-start justify-between gap-3">
 				<div class="flex items-center flex-wrap gap-1.5 min-w-0">
 					{#if matchEvent.team !== null}
-						<span class="font-bold text-base">{displayTeam(matchEvent.team)}</span>
+						<button
+							class="font-bold text-base hover:underline"
+							onclick={(e) => { e.preventDefault(); e.stopPropagation(); navigate("/notepad/team/:team", { params: { team: String(matchEvent.team) } }); }}
+						>{displayTeam(matchEvent.team)}</button>
 					{/if}
-					<Badge color={ISSUE_COLORS[matchEvent.issue] ?? "gray"}>{matchEvent.issue}</Badge>
+					{#each issueList as detail}
+						<Badge color={ISSUE_COLORS[detail.issue] ?? "gray"}>{detail.issue}</Badge>
+					{/each}
 					{#if bypassGroup && bypassGroup.length > 1}
 						{#each bypassGroup as bp}
 							<Badge color="teal">
-								{bp.level === "Qualification" ? "Qual" : bp.level === "Playoff" ? "Playoff" : (bp.level ?? "")} M{bp.match_number}{bp.play_number && bp.play_number > 1
+								{bp.level === "Qualification"
+									? "Qual"
+									: bp.level === "Playoff"
+										? "Playoff"
+										: (bp.level ?? "")} M{bp.match_number}{bp.play_number && bp.play_number > 1
 									? ` P${bp.play_number}`
 									: ""}
 							</Badge>
@@ -185,24 +227,33 @@
 				</div>
 			</div>
 
-			<p class="text-sm text-black dark:text-white leading-snug">
+			<div class="text-sm text-black dark:text-white leading-snug">
 				{#if isBypass}
-					{#if bypassCount > 1}
-						Team was Bypassed for {bypassCount} Matches
-					{:else}
-						Team was Bypassed
-					{/if}
+					<p>
+						{#if bypassCount > 1}
+							Team was Bypassed for {bypassCount} Matches
+						{:else}
+							Team was Bypassed
+						{/if}
+					</p>
 				{:else}
-					{matchEvent.issue} for {durationStr} total
-					{#if matchEvent.start_time !== null && matchEvent.end_time !== null}
-						({matchEvent.start_time.toFixed(0)}s → {matchEvent.end_time.toFixed(0)}s match time)
-					{/if}
+					{#each issueList as detail}
+						<p>
+							{detail.issue} for {formatDuration(detail.duration)} total
+							{#if detail.start_time !== null && detail.end_time !== null}
+								({detail.start_time.toFixed(0)}s → {detail.end_time.toFixed(0)}s match time)
+							{/if}
+						</p>
+					{/each}
 				{/if}
-			</p>
+			</div>
 
 			<div class="flex items-center justify-between gap-2">
 				{#if !isBypass}
-					<Badge color={matchEvent.alliance === "blue" ? "blue" : matchEvent.alliance === "red" ? "red" : "gray"} class="ml-1 text-[10px]">{matchEvent.alliance} alliance</Badge>
+					<Badge
+						color={matchEvent.alliance === "blue" ? "blue" : matchEvent.alliance === "red" ? "red" : "gray"}
+						class="ml-1 text-[10px]">{matchEvent.alliance} alliance</Badge
+					>
 				{/if}
 				{#if matchEvent.status === "dismissed"}
 					<Badge color="gray">Dismissed</Badge>
@@ -218,12 +269,12 @@
 							<Icon icon="akar-icons:plus" class="size-3.5 mr-1" />
 							{converting ? "Converting…" : "Note"}
 						</Button>
-                        {#if !isBypass}
-                            <Button size="xs" color="green" onclick={viewLog} disabled={viewingLog}>
-                                <Icon icon="mdi:chart-line" class="size-3.5 mr-1" />
-                                {viewingLog ? "Loading…" : "Log"}
-                            </Button>
-                        {/if}
+						{#if !isBypass}
+							<Button size="xs" color="green" onclick={viewLog} disabled={viewingLog}>
+								<Icon icon="mdi:chart-line" class="size-3.5 mr-1" />
+								{viewingLog ? "Loading…" : "Log"}
+							</Button>
+						{/if}
 					</div>
 					<Button size="xs" color="alternative" onclick={dismiss} disabled={dismissing}>
 						<Icon icon="mdi:close" class="size-3.5 mr-1" />
@@ -232,12 +283,12 @@
 				</div>
 			{:else}
 				<div class="flex flex-wrap gap-1 pt-1">
-                {#if !isBypass}
-					<Button size="xs" color="green" onclick={viewLog} disabled={viewingLog}>
-						<Icon icon="mdi:chart-line" class="size-3.5 mr-1" />
-						{viewingLog ? "Loading…" : "View Log"}
-					</Button>
-                {/if}
+					{#if !isBypass}
+						<Button size="xs" color="green" onclick={viewLog} disabled={viewingLog}>
+							<Icon icon="mdi:chart-line" class="size-3.5 mr-1" />
+							{viewingLog ? "Loading…" : "View Log"}
+						</Button>
+					{/if}
 				</div>
 			{/if}
 		</div>

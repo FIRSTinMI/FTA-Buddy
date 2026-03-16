@@ -10,6 +10,7 @@ export interface User {
 	admin: boolean;
 	googleToken?: string;
 	meshedEventToken?: string;
+	slack_user_id?: string | null;
 }
 
 let initialUser = typeof window !== "undefined" && window.localStorage ? localStorage.getItem("user") : null;

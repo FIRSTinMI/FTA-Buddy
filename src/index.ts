@@ -13,7 +13,7 @@ import { gfmHeadingId } from "marked-gfm-heading-id";
 import { markedHighlight } from "marked-highlight";
 import { join } from "path";
 import sanitizeHtml from "sanitize-html";
-import { NotificationEvents, ROBOT, ServerEvent, TournamentLevel } from "../shared/types";
+import { ROBOT, TournamentLevel } from "../shared/types";
 import { connect, db } from "./db/db";
 import { cycleLogs, logPublishing, matchLogs } from "./db/schema";
 import { checklistRouter } from "./router/checklist";
@@ -32,8 +32,6 @@ import {
 import { userRouter } from "./router/user";
 import { adminProcedure, createContext, publicProcedure, router } from "./trpc";
 
-import { EventEmitter } from "events";
-import { TypedEmitter } from "tiny-typed-emitter";
 import { z } from "zod";
 import { initializePushNotifications } from "../src/util/push-notifications";
 import schema from "./db/schema";
@@ -42,18 +40,15 @@ import { getEvent } from "./util/get-event";
 import { decompressStationLog, logAnalysisLoop } from "./util/log-analysis";
 import { linkChannel, slackOAuth } from "./util/slack";
 import { getTeamAverageCycle } from "./util/team-cycles";
+import { events, eventCodes, notificationEmitter, newEventEmitter } from "./state";
+
+export { events, eventCodes, notificationEmitter, newEventEmitter };
 
 const pjson = require("../package.json") as { version: string };
 
 const port = parseInt(process.env.PORT || "3001");
 
-export const events: { [key: string]: ServerEvent } = {};
-export const eventCodes: { [key: string]: string } = {};
-
 initializePushNotifications();
-// event emitter for all notifications
-export const notificationEmitter = new TypedEmitter<NotificationEvents>();
-export const newEventEmitter = new EventEmitter();
 export let knownIssue: {
 	current: boolean;
 	message: string;
@@ -211,10 +206,13 @@ app.post("/slack/events", async (req, res) => {
 			console.log(event);
 			// Only listen to reactions on messages from the bot
 			if (event.reaction === "white_check_mark" && event.item.user === "U08FVV94LPR") {
-				await updateNoteStatusFromSlack(event.item.ts, event.type === "reaction_added");
+				await updateNoteStatusFromSlack(event.item.ts, event.type === "reaction_added", event.user);
 			} else if (event.reaction === "eyes" && event.item.user === "U08FVV94LPR") {
 				await updateNoteAssignmentFromSlack(event.item.ts, event.type === "reaction_added", event.user);
-			} else if (event.type === "message" && event.thread_ts) {
+			} else if (event.type === "message" && event.thread_ts && !event.subtype && !event.bot_id) {
+				// event.subtype is set for bot_message, message_changed, message_deleted, etc.
+				// event.bot_id is set for any bot-authored message (including FTA-Buddy's own thread replies).
+				// Both guards together prevent echoing bot-posted syncs back into FTA-Buddy.
 				await addNoteMessageFromSlack(event.channel, event.ts, event.thread_ts, event.text, event.user);
 			}
 		}
@@ -375,7 +373,6 @@ connect().then(async () => {
 			await new Promise((resolve) => setTimeout(resolve, 3e3));
 		}
 	});
-
 
 	// Start Nexus pollers for any events that already have a key configured
 	try {

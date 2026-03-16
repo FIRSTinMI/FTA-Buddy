@@ -1,19 +1,21 @@
 <script lang="ts">
 	import Icon from "@iconify/svelte";
 	import { Badge, Button } from "flowbite-svelte";
-	import type { ComponentProps } from "svelte";
-	import { formatTimeNoAgoHourMins } from "../../../../shared/formatTime";
 	import type { MatchEvent, Note } from "../../../../shared/types";
 	import MatchEventCard from "../../components/MatchEventCard.svelte";
+	import NoteCard from "../../components/NoteCard.svelte";
 	import Spinner from "../../components/Spinner.svelte";
 	import { trpc } from "../../main";
-	import { navigate, route } from "../../router";
+	import { route } from "../../router";
 
 	const { team } = route.getParams("/notepad/team/:team");
 	const teamNumber = parseInt(team, 10);
 
+	type TBANextMatch = Awaited<ReturnType<typeof trpc.matchEvents.getNextMatchForTeam.query>>;
+
 	let notes: Note[] = $state([]);
 	let matchEvents: MatchEvent[] = $state([]);
+	let nextMatch: TBANextMatch = $state(null);
 	let loading = $state(true);
 	let error: string | null = $state(null);
 
@@ -21,12 +23,14 @@
 		loading = true;
 		error = null;
 		try {
-			const [fetchedNotes, fetchedEvents] = await Promise.all([
+			const [fetchedNotes, fetchedEvents, fetchedNext] = await Promise.all([
 				trpc.notes.getAllByTeam.query({ team_number: teamNumber }),
 				trpc.matchEvents.getAllByTeam.query({ team_number: teamNumber }),
+				trpc.matchEvents.getNextMatchForTeam.query({ team_number: teamNumber }),
 			]);
 			notes = fetchedNotes;
 			matchEvents = fetchedEvents;
+			nextMatch = fetchedNext;
 		} catch (err: any) {
 			error = err?.message ?? "Unknown error";
 		} finally {
@@ -34,11 +38,29 @@
 		}
 	}
 
+	function formatNextMatch(m: NonNullable<TBANextMatch>): string {
+		const levelMap: Record<string, string> = { qm: "Qual", qf: "QF", sf: "SF", f: "Final", ef: "EF" };
+		const level = levelMap[m.comp_level] ?? m.comp_level.toUpperCase();
+		if (m.comp_level === "qm") return `${level} ${m.match_number}`;
+		return `${level} ${m.set_number}-${m.match_number}`;
+	}
+
+	function nextMatchAlliance(m: NonNullable<TBANextMatch>): "red" | "blue" | null {
+		const key = `frc${teamNumber}`;
+		if (m.alliances.red.team_keys.includes(key)) return "red";
+		if (m.alliances.blue.team_keys.includes(key)) return "blue";
+		return null;
+	}
+
+	function formatMatchTime(m: NonNullable<TBANextMatch>): string {
+		const epoch = m.predicted_time ?? m.time;
+		if (!epoch) return "";
+		return new Date(epoch * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+	}
+
 	fetchAll();
 
-	type FeedItem =
-		| { kind: "note"; note: Note; date: Date }
-		| { kind: "event"; matchEvent: MatchEvent; date: Date };
+	type FeedItem = { kind: "note"; note: Note; date: Date } | { kind: "event"; matchEvent: MatchEvent; date: Date };
 
 	let feed = $derived.by(() => {
 		const items: FeedItem[] = [
@@ -54,34 +76,8 @@
 	let dismissedEvents = $derived(matchEvents.filter((e) => e.status === "dismissed").length);
 	let convertedEvents = $derived(matchEvents.filter((e) => e.status === "converted").length);
 
-	const noteTypeLabel: Record<Note["note_type"], string> = {
-		TeamIssue: "Team Note",
-		EventNote: "Event Note",
-		MatchNote: "Match Note",
-	};
-
-	const noteTypeColor: Record<Note["note_type"], ComponentProps<typeof Badge>["color"]> = {
-		TeamIssue: "blue",
-		EventNote: "yellow",
-		MatchNote: "green",
-	};
-
-	const ISSUE_TYPE_LABELS: Record<string, string> = {
-		RoboRioIssue: "RoboRIO Issue",
-		DSIssue: "Driver Station Issue",
-		NoRobot: "No Robot",
-		RadioIssue: "Radio Issue",
-		RobotPwrIssue: "Robot Power Issue",
-		OtherRobotIssue: "Other Robot Issue",
-		VenueIssue: "Venue Issue",
-		ElectricalIssue: "Electrical Issue",
-		MechanicalIssue: "Mechanical Issue",
-		VolunteerIssue: "Volunteer Issue",
-		Other: "Other",
-	};
-
 	function back() {
-		navigate("/notepad");
+		history.back();
 	}
 
 	function setMatchEventStatus(id: string, status: MatchEvent["status"]) {
@@ -116,6 +112,25 @@
 				</Button>
 			</div>
 		{:else}
+			{#if nextMatch}
+				{@const alliance = nextMatchAlliance(nextMatch)}
+				<p class="text-xs px-2 mb-4">
+					<span
+						class="font-semibold {alliance === 'red'
+							? 'text-red-600 dark:text-red-400'
+							: alliance === 'blue'
+								? 'text-blue-600 dark:text-blue-400'
+								: 'text-gray-500 dark:text-gray-400'}"
+					>
+						Next: {formatNextMatch(nextMatch)}{#if alliance}
+							<span class="capitalize">{alliance}</span>{/if}
+					</span>
+					{#if formatMatchTime(nextMatch)}
+						<span class="text-gray-400 dark:text-gray-500"> {formatMatchTime(nextMatch)}</span>
+					{/if}
+				</p>
+			{/if}
+
 			<!-- Stats bar -->
 			<div class="flex flex-wrap items-center gap-x-4 gap-y-1 px-2 pb-4 text-sm text-gray-500 dark:text-gray-400">
 				<div class="flex items-center gap-1.5">
@@ -168,106 +183,7 @@
 				<div class="flex flex-col gap-2 px-1">
 					{#each feed as item}
 						{#if item.kind === "note"}
-							{@const note = item.note}
-							{@const isOpen = note.resolution_status === "Open"}
-							{@const isApplicable = note.resolution_status !== "NotApplicable"}
-							<a
-								href="/notepad/view/{note.id}"
-								class="block w-full rounded-xl bg-white dark:bg-neutral-800 shadow-sm hover:shadow-md transition-shadow p-4 text-black dark:text-white no-underline"
-							>
-								<div class="flex flex-col gap-2.5">
-									<div class="flex items-start justify-between gap-3">
-										<div class="flex items-center flex-wrap gap-1.5 min-w-0">
-											<Badge color={noteTypeColor[note.note_type]}>
-												{noteTypeLabel[note.note_type]}
-											</Badge>
-											{#if note.match_number !== null}
-												<Badge>
-													{note.tournament_level === "Qualification"
-														? "Qual"
-														: note.tournament_level === "Playoff"
-															? "Playoff"
-															: (note.tournament_level ?? "")} M{note.match_number}{note.play_number &&
-													note.play_number > 1
-														? ` P${note.play_number}`
-														: ""}
-												</Badge>
-											{/if}
-											{#if note.issue_type && note.issue_type !== "Other"}
-												<Badge color="purple">
-													{ISSUE_TYPE_LABELS[note.issue_type] ?? note.issue_type}
-												</Badge>
-											{/if}
-											{#if isApplicable}
-												<span
-													class="text-sm font-semibold {isOpen
-														? 'text-green-500'
-														: 'text-gray-400 dark:text-gray-500'}"
-												>
-													{isOpen ? "Open" : "Closed"}
-												</span>
-											{/if}
-										</div>
-										<div
-											class="shrink-0 text-right text-xs text-gray-400 dark:text-gray-500 leading-relaxed"
-										>
-											<p>{formatTimeNoAgoHourMins(note.created_at)}</p>
-											{#if note.closed_at}
-												<p class="text-green-500">
-													✓ {formatTimeNoAgoHourMins(note.closed_at)}
-												</p>
-											{/if}
-										</div>
-									</div>
-
-									<p class="text-sm text-black dark:text-white line-clamp-3 leading-snug">
-										{note.text}
-									</p>
-
-									<div class="flex items-center justify-between gap-2">
-										<p class="text-xs text-gray-400 dark:text-gray-500">
-											{note.author?.username ?? "Unknown"}{note.author?.username !==
-											note.author?.role
-												? ` · ${note.author?.role}`
-												: ""}
-											{#if note.author?.source === "FMS"}
-												<Badge color="indigo" class="ml-1 text-[10px]">FMS</Badge>
-											{:else if note.author?.source === "Slack"}
-												<Badge color="purple" class="ml-1 text-[10px]">Slack</Badge>
-											{/if}
-										</p>
-										{#if note.assigned_to}
-											<span
-												class="text-xs rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 px-2 py-0.5 shrink-0"
-											>
-												Assigned: {note.assigned_to.username}
-											</span>
-										{:else}
-											<span class="text-xs text-gray-400 dark:text-gray-500 shrink-0">Unassigned</span>
-										{/if}
-									</div>
-
-									{#if note.messages && note.messages.length > 0}
-										{@const latestMsg = note.messages.reduce((a, b) =>
-											new Date(a.created_at).getTime() > new Date(b.created_at).getTime() ? a : b,
-										)}
-										<div class="rounded-lg bg-gray-50 dark:bg-neutral-700/50 px-3 py-2 flex items-start gap-2">
-											<Icon icon="mdi:reply" class="size-3.5 mt-0.5 text-gray-400 dark:text-gray-500 shrink-0" />
-											<div class="min-w-0">
-												<span class="text-xs font-semibold text-gray-500 dark:text-gray-400">
-													{latestMsg.author?.username ?? "Unknown"}:
-												</span>
-												<span class="text-xs text-gray-500 dark:text-gray-400 ml-1 line-clamp-1">{latestMsg.text}</span>
-											</div>
-											{#if note.messages.length > 1}
-												<span class="ml-auto text-xs text-gray-400 dark:text-gray-500 shrink-0">
-													{note.messages.length} replies
-												</span>
-											{/if}
-										</div>
-									{/if}
-								</div>
-							</a>
+							<NoteCard note={item.note} />
 						{:else}
 							<MatchEventCard
 								matchEvent={item.matchEvent}
@@ -278,5 +194,6 @@
 					{/each}
 				</div>
 			{/if}
-		{/if}	</div>
+		{/if}
+	</div>
 </div>

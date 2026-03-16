@@ -1,7 +1,7 @@
 import { and, eq, gt } from "drizzle-orm";
 import { on } from "events";
 import { z } from "zod";
-import { events, newEventEmitter } from "..";
+import { events, newEventEmitter } from "../state";
 import { formatTimeShortNoAgoSeconds } from "../../shared/formatTime";
 import { DSState, EnableState, FieldState, MonitorFrame, StateChange, TournamentLevel } from "../../shared/types";
 import { db } from "../db/db";
@@ -12,6 +12,7 @@ import {
 	processFrameForTeamData,
 	processTeamCycles,
 	processTeamWarnings,
+	computeOvernightOffset,
 } from "../util/frame-processing";
 import { getEvent } from "../util/get-event";
 import { subscriptionQueue } from "../util/subscription";
@@ -110,7 +111,7 @@ export const fieldMonitorRouter = router({
 					let exactAheadBehind = undefined;
 					if (event.scheduleDetails.matches) {
 						processed.currentFrame.matchScheduledStartTime = event.scheduleDetails.matches.find(
-							(m) => m.match === event.monitorFrame.match && m.level === event.monitorFrame.level,
+							(m) => m.match === processed.currentFrame.match && m.level === processed.currentFrame.level,
 						)?.scheduledStartTime;
 						console.log(processed.currentFrame.matchScheduledStartTime);
 						if (processed.currentFrame.matchScheduledStartTime !== undefined) {
@@ -122,6 +123,11 @@ export const fieldMonitorRouter = router({
 							let timeDelta =
 								processed.currentFrame.matchScheduledStartTime.getTime() -
 								event.lastMatchStart.getTime();
+							timeDelta += computeOvernightOffset(
+								processed.currentFrame.matchScheduledStartTime,
+								event.lastMatchStart,
+								event.scheduleDetails,
+							);
 							exactAheadBehind =
 								formatTimeShortNoAgoSeconds(timeDelta) + (timeDelta >= 0 ? " ahead" : " behind");
 							console.log(

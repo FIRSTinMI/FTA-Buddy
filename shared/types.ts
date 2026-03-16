@@ -519,7 +519,7 @@ export type NoteUpdateEventData =
 	| { kind: "create"; note: Note; source?: "fms" }
 	| { kind: "edit"; note: Note; source?: "fms" }
 	| { kind: "delete"; note: Note; source?: "fms" }
-	| { kind: "status"; note_id: string; resolution_status: FTAEventNoteResolutionType }
+	| { kind: "status"; note_id: string; resolution_status: FTAEventNoteResolutionType; resolved_by: Profile | null }
 	| { kind: "assign"; note_id: string; assigned_to_id: number | null; assigned_to: Profile | null }
 	| { kind: "follow"; note_id: string; followers: number[] }
 	| { kind: "add_message"; note_id: string; message: Message }
@@ -552,6 +552,8 @@ export interface Note {
 	match_id?: string | null;
 	slack_ts?: string | null;
 	slack_channel?: string | null;
+	resolved_by_id: number | null;
+	resolved_by: Profile | null;
 	messages?: Message[];
 }
 
@@ -654,6 +656,14 @@ export type EventAutoEventSettings = Partial<Record<AutoEventIssueType, boolean>
 
 export type MatchEventStatus = "active" | "dismissed" | "converted";
 
+/** Detail for a single issue within a combined match event. */
+export interface MatchEventIssueDetail {
+	issue: string;
+	start_time: number | null;
+	end_time: number | null;
+	duration: number | null;
+}
+
 /**
  * A match event auto-generated from log analysis.
  * Can be dismissed or converted into a full note.
@@ -665,6 +675,7 @@ export interface MatchEvent {
 	team: number;
 	alliance: string;
 	issue: string;
+	issues: MatchEventIssueDetail[] | null;
 	match_number: number;
 	play_number: number;
 	level: string;

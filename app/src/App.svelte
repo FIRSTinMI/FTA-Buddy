@@ -38,6 +38,17 @@
 	import { registerToast } from "./util/toast";
 	import { update, VERSIONS } from "./util/updater";
 
+	window.addEventListener("error", function (event) {
+		if (
+			event?.message?.includes("Failed to fetch dynamically imported module") &&
+			!sessionStorage.getItem("reloaded")
+		) {
+			console.warn("Detected missing JS chunk. Reloading...");
+			sessionStorage.setItem("reloaded", "true");
+			window.location.reload();
+		}
+	});
+
 	// On mount check if the user's permissions have changed
 	onMount(async () => {
 		try {
@@ -77,10 +88,13 @@
 
 	const publicPaths = [
 		"/",
+		"/manage",
 		"/manage/login",
 		"/manage/google-signup",
 		"/manage/host",
-		"/manage/event-created",
+		"/manage/host/create",
+		"/manage/host/integrations",
+		"/manage/event-settings",
 		"/manage/meshed-event",
 		"/ftc",
 		"/references",
@@ -314,90 +328,37 @@
 		clearInterval(statusPollInterval);
 	});
 
-	// let keyboardOpen = $state(false);
-	// let initialWindowHeight = 0; 
-
-	// function updateAppHeight() {
-	// 	const vv = window.visualViewport;
-	// 	if (!vv) {
-	// 		document.documentElement.style.setProperty("--app-height", `${window.innerHeight}px`);
-	// 		return;
-	// 	}
-
-	// 	keyboardOpen = vv.height < initialWindowHeight * 0.85;
-
-	// 	// On iOS PWA, when keyboard opens the visualViewport scrolls upward.
-	// 	// We counter this by applying a transform to the shell instead of
-	// 	// letting the body scroll, which causes the black area.
-	// 	document.documentElement.style.setProperty("--app-height", `${vv.height}px`);
-	// 	document.documentElement.style.setProperty("--vv-offset-top", `${vv.offsetTop}px`);
-	// }
-
-	// onMount(() => {
-	// 	updateAppHeight();
-	// 	window.addEventListener("resize", updateAppHeight);
-	// 	window.visualViewport?.addEventListener("resize", updateAppHeight);
-	// 	window.visualViewport?.addEventListener("scroll", updateAppHeight);
-	// });
-
-	// onDestroy(() => {
-	// 	window.removeEventListener("resize", updateAppHeight);
-	// 	window.visualViewport?.removeEventListener("resize", updateAppHeight);
-	// 	window.visualViewport?.removeEventListener("scroll", updateAppHeight);
-	// });
-
 	let keyboardOpen = $state(false);
-	let initialWindowHeight = window.innerHeight;
+	let initialWindowHeight = 0;
 
 	function updateAppHeight() {
-		const h = window.visualViewport?.height ?? window.innerHeight;
-		document.documentElement.style.setProperty("--app-height", `${h}px`);
-	}
-
-	function handleFocusIn(e: FocusEvent) {
-		const tag = (e.target as HTMLElement)?.tagName;
-		if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
-			keyboardOpen = true;
-			setTimeout(() => {
-				(e.target as HTMLElement)?.scrollIntoView({ 
-					behavior: 'smooth', 
-					block: 'nearest' 
-				});
-			}, 500); // wait for keyboard animation
+		const vv = window.visualViewport;
+		if (!vv) {
+			document.documentElement.style.setProperty("--app-height", `${window.innerHeight}px`);
+			return;
 		}
-	}
 
-	function handleFocusOut() {
-		// Small delay to avoid flicker when moving between inputs
-		setTimeout(() => {
-			if (!document.activeElement || 
-				!['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
-				keyboardOpen = false;
-			}
-		}, 100);
+		keyboardOpen = vv.height < initialWindowHeight * 0.85;
+
+		document.documentElement.style.setProperty("--app-height", `${vv.height}px`);
+		document.documentElement.style.setProperty("--vv-offset-top", `${vv.offsetTop}px`);
 	}
 
 	let isMobile = $state(false);
 
 	onMount(() => {
-		isMobile = window.matchMedia('(pointer: coarse)').matches;
-	});
-
-	onMount(() => {
+		isMobile = window.matchMedia("(pointer: coarse)").matches;
 		updateAppHeight();
+		window.addEventListener("resize", updateAppHeight);
 		window.visualViewport?.addEventListener("resize", updateAppHeight);
 		window.visualViewport?.addEventListener("scroll", updateAppHeight);
-		document.addEventListener('focusin', handleFocusIn);
-		document.addEventListener('focusout', handleFocusOut);
 	});
 
 	onDestroy(() => {
+		window.removeEventListener("resize", updateAppHeight);
 		window.visualViewport?.removeEventListener("resize", updateAppHeight);
 		window.visualViewport?.removeEventListener("scroll", updateAppHeight);
-		document.removeEventListener('focusin', handleFocusIn);
-		document.removeEventListener('focusout', handleFocusOut);
 	});
-	
 </script>
 
 {#if showToast}
@@ -567,6 +528,17 @@
 								>
 							</Indicator>
 						{/if}
+					</SidebarItem>
+					<SidebarItem
+						label="Event Settings"
+						onclick={() => {
+							drawerOpen = false;
+							navigate("/manage/event-settings");
+						}}
+					>
+						{#snippet icon()}
+							<Icon icon="mdi:cog-outline" class="size-8" />
+						{/snippet}
 					</SidebarItem>
 				</SidebarGroup>
 			{:else if $user.eventToken}
@@ -740,19 +712,30 @@
 						<Icon icon="mdi:information" class="size-8" />
 					{/snippet}
 				</SidebarItem>
+				{#if $user.admin}
+					<SidebarItem
+						label="App Management"
+						class="text-sm"
+						onclick={() => {
+							drawerOpen = false;
+							navigate("/manage");
+						}}
+					>
+						{#snippet icon()}
+							<Icon icon="mdi:shield-crown-outline" class="size-8" />
+						{/snippet}
+					</SidebarItem>
+				{/if}
 			</SidebarGroup>
 		</SidebarWrapper>
 	</Sidebar>
 </Drawer>
 
 <!-- App.svelte -->
-<main
-	class="bg-white dark:bg-neutral-800 flex flex-col overflow-hidden"
-	style="height: 100%;"
->
+<main class="bg-white dark:bg-neutral-800 flex flex-col" style="height: 100dvh; max-height: 100dvh; overflow: hidden;">
 	{#if !$fullscreen}
 		<div
-			class="bg-primary-700 dark:bg-primary-500 flex w-full justify-between px-2"
+			class="shrink-0 bg-primary-700 dark:bg-primary-500 flex w-full justify-between px-2"
 			style="padding-top: env(safe-area-inset-top, 0px)"
 		>
 			<button class="py-0 px-0 text-white" onclick={openMenu}>
@@ -766,14 +749,14 @@
 		</div>
 	{/if}
 
-	<div class="flex-1 min-h-0 overflow-hidden">
+	<div class="flex-1 min-h-0 overflow-auto pb-safe">
 		<SvRouter />
 	</div>
 
 	{#if (!keyboardOpen || !isMobile) && !$fullscreen}
 		<div
 			class="shrink-0 flex justify-around pt-2 bg-neutral-900 dark:bg-neutral-700 text-white"
-			style="padding-bottom: max(0.5rem, env(safe-area-inset-bottom))"
+			style="padding-bottom: max(0.5rem, env(safe-area-inset-bottom));"
 		>
 			{#if $user.token && $user.eventToken}
 				{#if $user?.role === "FTA" || $user?.role === "FTAA"}
@@ -790,7 +773,7 @@
 						<Icon icon="fluent:notepad-16-regular" class="size-8" />
 					</button>
 					<!-- Gonna trial having the notepad button here instead of notifications -->
-                    <!-- <button class="p-2 relative" onclick={() => navigate("/notifications")}>
+					<!-- <button class="p-2 relative" onclick={() => navigate("/notifications")}>
                         <Icon icon="fluent:alert-on-16-filled" class="size-8" />
                         {#if $notificationsStore.length > 0}
                             <Indicator color="red" border size="xl" placement="top-left">
@@ -832,6 +815,18 @@
 	}
 
 	:global(#app) {
+		height: 100%;
+		height: 100dvh;
+		display: flex;
+		flex-direction: column;
+	}
+
+	:global(:root) {
+		--sab: env(safe-area-inset-bottom);
+	}
+
+	:global([data-sv-router]),
+	:global(sv-router > div) {
 		height: 100%;
 	}
 

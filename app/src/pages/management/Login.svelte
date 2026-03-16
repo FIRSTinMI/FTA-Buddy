@@ -7,6 +7,7 @@
 	import { navigate } from "../../router";
 	import { eventStore } from "../../stores/event";
 	import { installPrompt } from "../../stores/install-prompt";
+	import { savedEventsStore, saveEvent } from "../../stores/savedEvents";
 	import { settingsStore } from "../../stores/settings";
 	import { userStore as user } from "../../stores/user";
 	import { subscribeToPush } from "../../util/notifications";
@@ -106,6 +107,12 @@
 			});
 
 			toast("Success", "Logged in successfully", "green-500");
+
+			const redirect = sessionStorage.getItem("redirectAfterLogin");
+			if (redirect) {
+				sessionStorage.removeItem("redirectAfterLogin");
+				navigate(redirect as any);
+			}
 		} catch (err: any) {
 			toast("Error Logging In", err.message);
 			console.error("[AUTH] login error:", err);
@@ -126,6 +133,14 @@
 			admin: false,
 		});
 		window.location.reload();
+	}
+
+	function hostNavigate() {
+		if ($user.eventToken) {
+			eventStore.set({ code: "", pin: "", teams: [], users: [] });
+			user.set({ ...$user, eventToken: "" });
+		}
+		navigate("/manage/host");
 	}
 
 	user.subscribe((value) => {
@@ -165,10 +180,26 @@
 					subEvents: res.subEvents,
 					meshedEventCode: res.code,
 				});
+				saveEvent({
+					code: $eventStore.code,
+					token: res.token,
+					pin: res.pin,
+					teams: res.teams as TeamList,
+					users: res.users as Profile[],
+					subEvents: res.subEvents,
+					meshedEventCode: res.code,
+				});
 			} else {
 				user.set({ ...$user, eventToken: res.token });
 				eventStore.set({
 					code: $eventStore.code,
+					pin: res.pin,
+					teams: res.teams as TeamList,
+					users: res.users as Profile[],
+				});
+				saveEvent({
+					code: $eventStore.code,
+					token: res.token,
 					pin: res.pin,
 					teams: res.teams as TeamList,
 					users: res.users as Profile[],
@@ -199,7 +230,16 @@
 			if (res.subEvents) {
 				user.set({ ...$user, eventToken: res.token, meshedEventToken: res.token });
 				eventStore.set({
-					code: eventCode,
+					code: res.code,
+					pin: res.pin,
+					teams: res.teams as TeamList,
+					users: res.users as Profile[],
+					subEvents: res.subEvents,
+					meshedEventCode: res.code,
+				});
+				saveEvent({
+					code: res.code,
+					token: res.token,
 					pin: res.pin,
 					teams: res.teams as TeamList,
 					users: res.users as Profile[],
@@ -208,18 +248,33 @@
 				});
 
 				await tick();
-				navigate("/dashboard");
+				const redirect = sessionStorage.getItem("redirectAfterLogin");
+				if (redirect) {
+					sessionStorage.removeItem("redirectAfterLogin");
+					navigate(redirect as any);
+				} else navigate("/dashboard");
 			} else {
 				user.set({ ...$user, eventToken: res.token });
 				eventStore.set({
-					code: eventCode,
-					pin: eventPin,
+					code: res.code,
+					pin: res.pin,
+					teams: res.teams as TeamList,
+					users: res.users as Profile[],
+				});
+				saveEvent({
+					code: res.code,
+					token: res.token,
+					pin: res.pin,
 					teams: res.teams as TeamList,
 					users: res.users as Profile[],
 				});
 
 				await tick();
-				navigate($user.role === "FTA" || $user.role === "FTAA" ? "/monitor" : "/notepad");
+				const redirect = sessionStorage.getItem("redirectAfterLogin");
+				if (redirect) {
+					sessionStorage.removeItem("redirectAfterLogin");
+					navigate(redirect as any);
+				} else navigate($user.role === "FTA" || $user.role === "FTAA" ? "/monitor" : "/notepad");
 			}
 			toast("Success", "Event joined successfully", "green-500");
 		} catch (err: any) {
@@ -271,6 +326,52 @@
 	};
 
 	let notificationModalOpen = $state(false);
+
+	// Build a list of previously-joined events for the quick-switch selector
+	let previousEventList = $derived(
+		Object.values($savedEventsStore).map((e) => ({
+			value: e.code,
+			name: e.label ? `${e.code} — ${e.label}` : e.code,
+		})),
+	);
+
+	let previousEventSelection = $state("");
+
+	function switchToPreviousEvent() {
+		if (!previousEventSelection) return;
+		const saved = $savedEventsStore[previousEventSelection];
+		if (!saved) return;
+
+		if (saved.subEvents) {
+			user.set({ ...$user, eventToken: saved.token, meshedEventToken: saved.token });
+			eventStore.set({
+				code: saved.code,
+				pin: saved.pin,
+				teams: saved.teams,
+				users: saved.users,
+				subEvents: saved.subEvents,
+				meshedEventCode: saved.meshedEventCode,
+				label: saved.label,
+			});
+		} else {
+			user.set({ ...$user, eventToken: saved.token, meshedEventToken: undefined });
+			eventStore.set({
+				code: saved.code,
+				pin: saved.pin,
+				teams: saved.teams,
+				users: saved.users,
+				label: saved.label,
+			});
+		}
+
+		const redirect = sessionStorage.getItem("redirectAfterLogin");
+		if (redirect) {
+			sessionStorage.removeItem("redirectAfterLogin");
+			navigate(redirect as any);
+			return;
+		}
+		navigate($user.role === "FTA" || $user.role === "FTAA" ? "/monitor" : "/notepad");
+	}
 
 	const ios = () => {
 		if (typeof window === `undefined` || typeof navigator === `undefined`) return false;
@@ -439,14 +540,14 @@
 							<h2 class="text-xl">Run FTA Buddy from this computer</h2>
 							{#if $user.eventToken}
 								<Button onclick={() => navigate("/")} class="w-full mt-4">Open Field Monitor</Button>
-								<Button onclick={() => navigate("/manage/event-created")} class="w-full mt-4"
+								<Button onclick={() => navigate("/manage/event-settings")} class="w-full mt-4"
 									>Event Management</Button
 								>
-								<Button onclick={() => navigate("/manage/host")} class="w-full mt-4"
-									>Host New Event</Button
-								>
-							{:else}
-								<Button onclick={() => navigate("/manage/host")} class="w-full mt-4">Host</Button>
+							<Button onclick={hostNavigate} class="w-full mt-4"
+								>Host New Event</Button
+							>
+						{:else}
+							<Button onclick={hostNavigate} class="w-full mt-4">Host</Button>
 							{/if}
 							<p class="text-gray-700 mt-2">Requires this computer to be on the field network</p>
 						</div>
@@ -506,7 +607,7 @@
 				<div class="flex border-t border-neutral-500 pt-4">
 					<div class="my-auto w-full">
 						<h2 class="text-2xl" style="font-weight: bold;">Run FTA Buddy from this computer</h2>
-						<Button onclick={() => navigate("/manage/host")} class="w-full mt-4">Host</Button>
+							<Button onclick={hostNavigate} class="w-full mt-4">Host</Button>
 						<p class="text-gray-700 mt-2">Requires this computer to be on the field network</p>
 					</div>
 				</div>
@@ -528,9 +629,8 @@
 					onchange={adminSelectEvent}
 				/>
 				<Button onclick={() => navigate("/")}>Go to App</Button>
-				<Button outline onclick={() => navigate("/manage/event-created")}>Event Management</Button>
+				<Button outline onclick={() => navigate("/manage/event-settings")}>Event Management</Button>
 				<Button outline href="/manage/meshed-event">Create Meshed Event</Button>
-				<Button outline href="/manage">App Management</Button>
 			</div>
 
 			<!-- Currently have an event selected -->
@@ -545,11 +645,25 @@
 						user.set({ ...$user, eventToken: "" })
 					)}>Leave Event</Button
 				>
-				<Button outline onclick={() => navigate("/manage/event-created")}>Event Management</Button>
+				<Button outline onclick={() => navigate("/manage/event-settings")}>Event Management</Button>
 			</div>
 
 			<!-- No event selected -->
 		{:else}
+			{#if previousEventList.length > 0}
+				<div class="flex flex-col border-t border-neutral-500 pt-4 gap-2">
+					<h3 class="text-lg font-semibold">Previous Events</h3>
+					<div class="flex gap-2">
+						<Select
+							class="flex-1"
+							items={previousEventList}
+							bind:value={previousEventSelection}
+							placeholder="Select a previous event"
+						/>
+						<Button onclick={switchToPreviousEvent} disabled={!previousEventSelection}>Switch</Button>
+					</div>
+				</div>
+			{/if}
 			<div class="flex flex-col border-t border-neutral-500 pt-4">
 				<h3 class="text-lg">Join Event</h3>
 				{#if !desktop}<p class="text-gray-600 text-sm">
@@ -571,7 +685,7 @@
 				<div class="flex border-t border-neutral-500 pt-4">
 					<div class="my-auto w-full">
 						<h2 class="text-xl">Run FTA Buddy from this computer</h2>
-						<Button onclick={() => navigate("/manage/host")} class="w-full mt-4">Host</Button>
+						<Button onclick={hostNavigate} class="w-full mt-4">Host</Button>
 						<p class="text-gray-700 mt-2">Requires this computer to be on the field network</p>
 					</div>
 				</div>

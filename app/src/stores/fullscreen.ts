@@ -1,16 +1,26 @@
 import { writable } from "svelte/store";
 
-export const fullscreen = writable(window.outerWidth > 1900 ? window.innerHeight === 1080 : false);
+function getBrowserFullscreenStatus(): boolean {
+	return !!(
+		document.fullscreenElement ||
+		(document as any).webkitFullscreenElement ||
+		(document as any).mozFullScreenElement ||
+		(document as any).webkitIsFullScreen ||
+		window.innerHeight === screen.height
+	);
+}
+
+export const fullscreen = writable(getBrowserFullscreenStatus());
 
 const updateFullscreen = () => {
-	if (window.outerWidth > 1900) {
-		fullscreen.set(window.innerHeight === 1080);
-	} else {
-		fullscreen.set(false);
-	}
+	fullscreen.set(getBrowserFullscreenStatus());
 };
 
-window.addEventListener("resize", updateFullscreen);
-window.addEventListener("fullscreenchange", updateFullscreen);
+// Standard + vendor-prefixed fullscreen change events (Chrome, Edge, Firefox, Safari)
+document.addEventListener("fullscreenchange", updateFullscreen);
+document.addEventListener("webkitfullscreenchange", updateFullscreen);
+document.addEventListener("mozfullscreenchange", updateFullscreen);
+document.addEventListener("MSFullscreenChange", updateFullscreen);
 
-updateFullscreen();
+// Fallback for F11 fullscreen where the Fullscreen API is not used
+window.addEventListener("resize", updateFullscreen);

@@ -4,11 +4,12 @@
 	import { trpc } from "../main";
 	import { toast } from "../util/toast";
 
-	type AiReportStatus = 'pending' | 'generating' | 'ready' | 'error' | null;
+	type AiReportStatus = "pending" | "generating" | "ready" | "error" | null;
 
 	let aiStatus: AiReportStatus = null;
 	let aiFilePath: string | null = null;
 	let aiError: string | null = null;
+	let regenCount: number = 0;
 	let pollInterval: ReturnType<typeof setInterval> | null = null;
 
 	onMount(async () => {
@@ -18,9 +19,12 @@
 				aiStatus = row.status as AiReportStatus;
 				aiFilePath = row.file_path ?? null;
 				aiError = row.error_message ?? null;
-				if (aiStatus === 'pending' || aiStatus === 'generating') startPolling();
+				regenCount = row.generation_count ?? 0;
+				if (aiStatus === "pending" || aiStatus === "generating") startPolling();
 			}
-		} catch { /* non-fatal */ }
+		} catch {
+			/* non-fatal */
+		}
 	});
 
 	onDestroy(() => stopPolling());
@@ -34,33 +38,39 @@
 					aiStatus = row.status as AiReportStatus;
 					aiFilePath = row.file_path ?? null;
 					aiError = row.error_message ?? null;
-					if (aiStatus === 'ready' || aiStatus === 'error') stopPolling();
+					regenCount = row.generation_count ?? 0;
+					if (aiStatus === "ready" || aiStatus === "error") stopPolling();
 				}
-			} catch { /* retry next tick */ }
+			} catch {
+				/* retry next tick */
+			}
 		}, 3000);
 	}
 
 	function stopPolling() {
-		if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+		if (pollInterval) {
+			clearInterval(pollInterval);
+			pollInterval = null;
+		}
 	}
 
 	async function startAiReport() {
 		try {
 			await trpc.aiReport.start.mutate();
-			aiStatus = 'pending';
+			aiStatus = "pending";
 			aiError = null;
 			startPolling();
 		} catch (err: any) {
 			console.error(err);
-			toast('Failed to start AI report', err.message);
+			toast("Failed to start AI report", err.message);
 		}
 	}
 
 	function downloadAiReport() {
 		if (!aiFilePath) return;
-		const a = document.createElement('a');
+		const a = document.createElement("a");
 		a.href = window.location.origin + aiFilePath;
-		a.download = aiFilePath.split('/').pop() ?? 'AiEventSummary.pdf';
+		a.download = aiFilePath.split("/").pop() ?? "AiEventSummary.pdf";
 		a.click();
 	}
 
@@ -140,17 +150,28 @@
 		<p>AI Event Report</p>
 		{#if aiStatus === null}
 			<Button onclick={startAiReport} class="mt-2">Generate</Button>
-		{:else if aiStatus === 'pending' || aiStatus === 'generating'}
+		{:else if aiStatus === "pending" || aiStatus === "generating"}
 			<Button disabled class="mt-2 flex items-center gap-2">
 				<Spinner size="4" />
 				Generating…
 			</Button>
-		{:else if aiStatus === 'ready'}
-			<Button onclick={downloadAiReport} class="mt-2">Download</Button>
-		{:else if aiStatus === 'error'}
+		{:else if aiStatus === "ready"}
+			<div class="flex gap-2 mt-2">
+				<Button onclick={downloadAiReport}>Download</Button>
+				{#if regenCount < 5}
+					<Button onclick={startAiReport} color="alternative">Regenerate ({regenCount}/5)</Button>
+				{/if}
+			</div>
+		{:else if aiStatus === "error"}
 			<p class="mt-1 text-sm text-red-600 dark:text-red-400">Generation failed: {aiError}</p>
-			<Button onclick={startAiReport} color="red" class="mt-2">Try Again</Button>
+			{#if regenCount < 5}
+				<Button onclick={startAiReport} color="red" class="mt-2">Try Again ({regenCount}/5)</Button>
+			{/if}
 		{/if}
-		<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">This report can only be generated once per event, make sure the event is completed before proceeding.</p>
+		{#if regenCount === 4}
+			<p class="mt-1 text-xs text-yellow-600 dark:text-yellow-400">
+				This is your last regeneration. Make sure the event is fully completed before proceeding.
+			</p>
+		{/if}
 	</div>
 </div>

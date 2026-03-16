@@ -2,11 +2,20 @@ import { TRPCError } from "@trpc/server";
 import { createHash, randomUUID } from "crypto";
 import { desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
-import { AUTO_EVENT_ISSUE_TYPES, AutoEventIssueType, EventAutoEventSettings, EventChecklist, Profile, TeamList, TournamentLevel } from "../../shared/types";
+import {
+	AUTO_EVENT_ISSUE_TYPES,
+	AutoEventIssueType,
+	EventAutoEventSettings,
+	EventChecklist,
+	Profile,
+	TeamList,
+	TournamentLevel,
+} from "../../shared/types";
 import { autoEventSettingsCache } from "../util/log-analysis";
 import { db } from "../db/db";
 import { events, users } from "../db/schema";
 import { adminProcedure, eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
+import { events as inMemoryEvents } from "../state";
 import { getEvent } from "../util/get-event";
 import * as nexusPoller from "../util/nexusInspectionPoller";
 import { createNotification } from "../util/push-notifications";
@@ -148,8 +157,7 @@ export const eventRouter = router({
 						checklist: events.checklist,
 						users: events.users,
 						archived: events.archived,
-						subEvents: events.meshedEvent,
-					})
+						subEvents: events.meshedEvent,					notepadOnly: events.notepadOnly,					})
 					.from(events)
 					.where(eq(events.code, input.code))
 			)[0];
@@ -203,6 +211,7 @@ export const eventRouter = router({
 				code: z.string().startsWith("202").min(6),
 				pin: z.string().min(4),
 				teams: z.array(z.number()).optional(),
+				notepadOnly: z.boolean().optional().default(false),
 			}),
 		)
 		.mutation(async ({ input, ctx }) => {
@@ -297,11 +306,24 @@ export const eventRouter = router({
 					users: [user?.id],
 					startDate: eventData.start_date ?? null,
 					endDate: eventData.end_date ?? null,
+					autoEventSettings: Object.fromEntries(
+						AUTO_EVENT_ISSUE_TYPES.map((t) => [t, true]),
+					) as EventAutoEventSettings,
+					notepadOnly: input.notepadOnly ?? false,
 				})
 				.returning();
 
 			return event[0];
 		}),
+
+	// Returns codes of events that have an active FMS extension connection
+	// (last frame received within 60 seconds).
+	getActive: publicProcedure.query(() => {
+		const cutoff = Date.now() - 60_000;
+		return Object.values(inMemoryEvents)
+			.filter((e) => e.stats.extensions.some((ext) => ext.lastFrame && ext.lastFrame.getTime() > cutoff))
+			.map((e) => ({ code: e.code, name: e.name }));
+	}),
 
 	getAll: publicProcedure.query(async () => {
 		return await db
@@ -313,6 +335,36 @@ export const eventRouter = router({
 			.from(events)
 			.where(eq(events.archived, false))
 			.orderBy(desc(events.created_at));
+	}),
+
+	getAllWithUsers: adminProcedure.query(async () => {
+		const eventsData = await db
+			.select({
+				code: events.code,
+				name: events.name,
+				users: events.users,
+			})
+			.from(events)
+			.where(eq(events.archived, false))
+			.orderBy(desc(events.created_at));
+
+		const allUserIds = Array.from(new Set(eventsData.flatMap((e) => (e.users as number[]) ?? [])));
+		const usersList =
+			allUserIds.length > 0
+				? await db
+						.select({ id: users.id, username: users.username, role: users.role })
+						.from(users)
+						.where(inArray(users.id, allUserIds))
+				: [];
+
+		const usersMap = new Map(usersList.map((u) => [u.id, u]));
+		return eventsData.map((event) => ({
+			code: event.code,
+			name: event.name,
+			users: ((event.users as number[]) ?? [])
+				.map((id) => usersMap.get(id))
+				.filter((u): u is NonNullable<typeof u> => u != null),
+		}));
 	}),
 
 	syncTeams: eventProcedure
@@ -641,6 +693,17 @@ export const eventRouter = router({
 		return { fmsEventPassword: event.fmsEventPassword ?? null };
 	}),
 
+	/** Returns the list of users currently joined to this event. */
+	getUsers: eventProcedure.query(async ({ ctx }) => {
+		const event = await getEvent(ctx.event.token);
+		return (event.users as Profile[]).map((u) => ({
+			id: u.id,
+			username: u.username,
+			role: u.role,
+			admin: u.admin,
+		})) as Profile[];
+	}),
+
 	/** Get the auto-event settings for this event. Missing keys default to true (enabled). */
 	getAutoEventSettings: eventProcedure.query(async ({ ctx }) => {
 		const event = await getEvent(ctx.event.token);
@@ -657,7 +720,12 @@ export const eventRouter = router({
 		.input(
 			z.object({
 				settings: z
-					.object(Object.fromEntries(AUTO_EVENT_ISSUE_TYPES.map((k) => [k, z.boolean()])) as Record<AutoEventIssueType, z.ZodBoolean>)
+					.object(
+						Object.fromEntries(AUTO_EVENT_ISSUE_TYPES.map((k) => [k, z.boolean()])) as Record<
+							AutoEventIssueType,
+							z.ZodBoolean
+						>,
+					)
 					.partial(),
 			}),
 		)
@@ -670,10 +738,7 @@ export const eventRouter = router({
 					newSettings[issue] = input.settings[issue];
 				}
 			}
-			await db
-				.update(events)
-				.set({ autoEventSettings: newSettings })
-				.where(eq(events.code, event.code));
+			await db.update(events).set({ autoEventSettings: newSettings }).where(eq(events.code, event.code));
 			event.autoEventSettings = newSettings;
 			// Keep the global cache in sync so log analysis picks up the change
 			// even for events that run across multiple analysis cycles

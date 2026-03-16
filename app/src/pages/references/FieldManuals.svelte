@@ -12,8 +12,8 @@
 			{#snippet header()}
 				<span class="font-bold">Pack Case 23/24 (Trench, Tower, Outpost)</span>
 			{/snippet}
-			<a href="https://roadcase.frc.tools/23/d" target="_blank"
-				><QrCode value="https://roadcase.frc.tools/23/d" padding={12} /></a
+			<a href="https://roadcase.frc.tools/23" target="_blank"
+				><QrCode value="https://roadcase.frc.tools/23" padding={12} /></a
 			>
 		</AccordionItem>
 
@@ -21,8 +21,8 @@
 			{#snippet header()}
 				<span class="font-bold">Pack Case 31 (Hub)</span>
 			{/snippet}
-			<a href="https://roadcase.frc.tools/31/d" target="_blank"
-				><QrCode value="https://roadcase.frc.tools/31/d" padding={12} /></a
+			<a href="https://roadcase.frc.tools/31" target="_blank"
+				><QrCode value="https://roadcase.frc.tools/31" padding={12} /></a
 			>
 		</AccordionItem>
 
@@ -30,8 +30,8 @@
 			{#snippet header()}
 				<span class="font-bold"> Pack Case 32 (Test Area)</span>
 			{/snippet}
-			<a href="https://roadcase.frc.tools/32/d" target="_blank"
-				><QrCode value="https://roadcase.frc.tools/32/d" padding={12} /></a
+			<a href="https://roadcase.frc.tools/32" target="_blank"
+				><QrCode value="https://roadcase.frc.tools/32" padding={12} /></a
 			>
 		</AccordionItem>
 
@@ -39,8 +39,8 @@
 			{#snippet header()}
 				<span class="font-bold">Border Cart</span>
 			{/snippet}
-			<a href="https://roadcase.frc.tools/BORDERCART/d" target="_blank"
-				><QrCode value="https://roadcase.frc.tools/BORDERCART/d" padding={12} /></a
+			<a href="https://roadcase.frc.tools/BORDERCART" target="_blank"
+				><QrCode value="https://roadcase.frc.tools/BORDERCART" padding={12} /></a
 			>
 		</AccordionItem>
 

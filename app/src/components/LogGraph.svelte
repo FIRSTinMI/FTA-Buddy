@@ -64,7 +64,7 @@
 	const yAxisDefaults = [
 		{ show: true, position: "left" as const, min: 6, max: 14, name: "Voltage", offset: 0 },
 		{ show: true, position: "right" as const, min: 0, max: 50, name: "Ping (ms)", offset: 0 },
-		{ show: true, position: "right" as const, min: 0, max: 4.5, name: "Bandwidth (Mbps)", offset: 60 },
+		{ show: true, position: "right" as const, min: 0, max: 8, name: "Bandwidth (Mbps)", offset: 60 },
 		{ show: false, position: "right" as const, min: -100, max: -30, name: "Signal (dBm)", offset: 120 },
 		{ show: false, position: "right" as const, min: -100, max: -30, name: "Noise (dBm)", offset: 180 },
 		{ show: false, position: "left" as const, min: 0, max: 1.02, name: "", offset: 0 }, // hidden lane axis

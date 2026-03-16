@@ -3,7 +3,7 @@ import { eventStore } from "../stores/event";
 import { settingsStore } from "../stores/settings";
 import { userStore } from "../stores/user";
 
-export const LATEST_EXTENSION_VERSION = "1.26.0";
+export const LATEST_EXTENSION_VERSION = "1.26.4";
 
 interface Version {
 	changelog?: string;
@@ -11,6 +11,166 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+    "2.7.2.0": {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.7.2.0</h1>
+        <ul>
+        <li>New step-by-step event creation flow</li>
+        <li>Notepad Only mode: Use FTA Buddy without SignalR integration</li>
+        <li>Extension now automatically uploads match logs that were missed</li>
+        <li>Event Settings page accessible from the sidebar at any time</li>
+        </ul>`,
+    },
+    "2.7.1.9": {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.7.1.9</h1>
+        <ul>
+        <li>Fixed the field monitor on the stupid FTA Laptop screen</li>
+        <li>Improvements to the note report, and AI report</li>
+        <li>Linkify autodetected events</li>
+        <li>Wrong match in team history</li>
+        </ul>`,
+    },
+    "2.7.1.8": {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.7.1.8</h1>
+        <ul>
+        <li>Assign notes to any user who has joined the event</li>
+        <li>Back button now works correctly when opening notes or logs from Slack links</li>
+        <li>Navigating back from a note in field view returns to the same match you were viewing</li>
+        <li>Match log button added to Slack message when a match is attached to a note after creation</li>
+        </ul>`,
+    },
+    "2.7.1.7": {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.7.1.7</h1>
+        <ul>
+        <li>Added a "Resolved by" field to notes so you can see who closed a note</li>
+        </ul>`,
+    },
+    "2.7.1.6": {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.7.1.6</h1>
+        <ul>
+        <li>Fixed field view match navigation (prev/next arrows)</li>
+        <li>Fixed layout shift from LIVE/SCHEDULED badge</li>
+        </ul>`,
+    },
+    "2.7.1.5": {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.7.1.5</h1>
+        <ul>
+        <li>Fixed event link redirects not recognizing the current event</li>
+        <li>Fixed support field view DS colors to match field monitor</li>
+        <li>Browse upcoming scheduled matches in notepad field view</li>
+        <li>Field view now only shows notes from the current event</li>
+        <li>Yellow warning badge on teams with open notes in field view</li>
+        <li>Click team name/number on a note to go to team history</li>
+        <li>Auto-detected events converted to notes now post to Slack</li>
+        </ul>`,
+    },
+    "2.7.1.4": {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.7.1.4</h1>
+        <ul>
+        <li>Ability to link your FTA Buddy and Slack accounts</li>
+        <li>Or it falls back to your Slack nickname</li>
+        </ul>`,
+    },
+    "2.7.1.3": {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.7.1.3</h1>
+        <ul>
+        <li>Fixed message duplication from Slack sync</li>
+        <li>Extension update: On-Site column detected correctly in Nexus</li>
+        </ul>`,
+    },
+    "2.7.1.2": {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.7.1.2</h1>
+        <ul>
+        <li>Fixed some QR Codes in the references section</li>
+        </ul>`,
+    },
+	"2.7.1.1": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.1.1</h1>
+        <ul>
+        <li>Removed duplicate text on Slack messages</li>
+        <li>Added event code to URLs so your app switches to the correct event</li>
+        <li>Added a previous event selector on the login page</li>
+        </ul>`,
+	},
+	"2.7.1.0": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.1.0</h1>
+        <ul>
+        <li>Probably fixed the memory leak</li>
+        <li>Auto-link newly created match events to an existing open note for the same team/match</li>
+        <li>Sort notes/feed by updated_at and gray out resolved notes</li>
+        </ul>`,
+	},
+	"2.7.0.8": {
+		changelog: "",
+	},
+	"2.7.0.7": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.0.7</h1>
+        <ul>
+        <li>Subtract overnight hours from ahead/behind calculation</li>
+        </ul>`,
+	},
+	"2.7.0.6": {
+		changelog: "",
+	},
+	"2.7.0.5": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.0.5</h1>
+        <ul>
+        <li>Back button on team history and note pages now correctly returns to the previous page</li>
+        <li>Next match details shown on note and team history view</li>
+        <li>Matches played since a note was created are shown on the view note page</li>
+        <li>AI event report improvements</li>
+        <li>SSE reconnects faster after connection loss</li>
+        <li>Fixed memory leaks on field monitor</li>
+        </ul>`,
+	},
+	"2.7.0.4": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.0.4</h1>
+        <ul>
+        <li>Fix BWU being off scale on match logs</li>
+        <li>Hopefully make fullscreen detection work better</li>
+        </ul>`,
+	},
+	"2.7.0.3": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.0.3</h1>
+        <ul>
+        <li>Fixed most recent reply showing wrong role on note cards</li>
+        <li>Issue severity is now used to determine the primary issue type on match events (DS > Radio > RIO > Code > others)</li>
+        <li>Match logs with no teams assigned are now discarded</li>
+        </ul>`,
+	},
+	"2.7.0.2": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.0.2</h1>
+        <ul>
+        <li>Combine multiple match events into one card</li>
+        <li>Save filters on the notes page</li>
+        </ul>`,
+	},
+	"2.7.0.1": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.0.1</h1>
+        <p>Week 1 bug fixes</p>
+        <ul>
+        <li>Test matches with blank teams now have the log downloaded correctly</li>
+        <li>Fixed a bug with FTA App sync causing duplicate notes</li>
+        <li>Added a "Field Monitor" switch to the extension so you don't have multiple extensions pushing updates simultaneously</li>
+        <li>Fixed extension configuration from the web app</li>
+        </ul>`,
+	},
 	"2.7.0.0": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.0.0</h1>

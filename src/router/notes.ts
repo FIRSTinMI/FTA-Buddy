@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { on } from "events";
 import { z } from "zod";
-import { notificationEmitter } from "..";
+import { notificationEmitter } from "../state";
 import { formatTimeShortNoAgoMinutes } from "../../shared/formatTime";
 import { buildNotification, toNoteCtx } from "../../shared/notifications";
 import type { Notification } from "../../shared/types";
@@ -14,14 +14,17 @@ import { eventProcedure, protectedProcedure, publicProcedure, router } from "../
 import { getEvent } from "../util/get-event";
 import { createNotification } from "../util/push-notifications";
 import { generateReport } from "../util/report-generator";
+import { generateNotesReportPdf } from "../util/notes-report-generator";
 import {
 	addSlackReaction,
 	deleteSlackMessage,
 	removeSlackReaction,
+	resolveSlackUserProfile,
 	sendSlackMessage,
 	updateSlackMessage,
 } from "../util/slack";
 import { subscriptionQueue } from "../util/subscription";
+import { autoLinkEventsToNote } from "../util/auto-link-events";
 
 /**
  * Given an event code and match number (plus optional play number / level),
@@ -139,7 +142,7 @@ export async function getTeamNotesInfo(event_code: string, team: number): Promis
 	const longestNoteOpenTime = getLongestNoteOpenTime(teamNotes);
 	const longestNote = getLongestNote(teamNotes);
 	const avgOpenTime = getAvgOpenTimeByNotes(teamNotes);
-	const noteLinks = teamNotes.map((n) => `https://ftabuddy.com/notepad/view/${n.id}`).join(", ");
+	const noteLinks = teamNotes.map((n) => `https://ftabuddy.com/notepad/view/${event_code}/${n.id}`).join(", ");
 	const noteSubjects = teamNotes.map((n) => n.text.substring(0, 60)).join(", ");
 	const totalOpenTime = getTotalOpenTime(teamNotes);
 
@@ -165,61 +168,87 @@ export async function getAllTeamNotesInfo(event_code: string, teamNumbers: numbe
 
 // #region Slack Integration
 
+type SlackElements = {
+	type: string;
+	text?:
+		| string
+		| {
+				type: string;
+				text: string;
+				style?: { bold?: boolean };
+				emoji?: boolean;
+		  };
+	style?: { bold?: boolean };
+	emoji?: boolean;
+	elements?: SlackElements[];
+};
+
 export function createSlackNoteMessage(
 	note_id: string,
 	team_number: number | null,
+	team_name: string | null,
 	author: string,
-	subject: string,
 	body: string,
+	event_code: string,
 	match_id?: string,
 ) {
 	const buttons: any[] = [];
 	buttons.push({
 		type: "button",
 		text: { type: "plain_text", text: "View Note", emoji: true },
-		url: `https://ftabuddy.com/notepad/view/${note_id}`,
+		url: `https://ftabuddy.com/notepad/view/${event_code}/${note_id}`,
 	});
 	if (match_id) {
 		buttons.push({
 			type: "button",
 			text: { type: "plain_text", text: "View Match Log", emoji: true },
-			url: `https://ftabuddy.com/logs/${match_id}`,
+			url: `https://ftabuddy.com/logs/event/${event_code}/${match_id}`,
 		});
 	}
-	return {
-		blocks: [
-			{
-				type: "header",
-				text: {
-					type: "plain_text",
-					text: `New Note${team_number ? ` For Team ${team_number}` : ""}`,
-					emoji: true,
+	const blocks: SlackElements[] = [
+		{
+			type: "header",
+			text: {
+				type: "plain_text",
+				text: `New Note${team_number ? ` For Team ${team_number}` : ""}`,
+				emoji: true,
+			},
+		},
+		{
+			type: "context",
+			elements: [{ type: "plain_text", text: `Created by: ${author}`, emoji: true }],
+		},
+	];
+
+	if (team_name) {
+		blocks.push({
+			type: "rich_text",
+			elements: [
+				{
+					type: "rich_text_section",
+					elements: [{ type: "text", text: team_name, style: { bold: true } }],
 				},
-			},
+			],
+		});
+	}
+
+	blocks.push({
+		type: "rich_text",
+		elements: [
 			{
-				type: "context",
-				elements: [{ type: "plain_text", text: `Created by: ${author}`, emoji: true }],
+				type: "rich_text_section",
+				elements: [{ type: "text", text: body }],
 			},
-			{
-				type: "rich_text",
-				elements: [
-					{
-						type: "rich_text_section",
-						elements: [{ type: "text", text: subject, style: { bold: true } }],
-					},
-				],
-			},
-			{
-				type: "rich_text",
-				elements: [
-					{
-						type: "rich_text_section",
-						elements: [{ type: "text", text: body }],
-					},
-				],
-			},
-			{ type: "actions", elements: buttons },
 		],
+	});
+
+	blocks.push({
+		type: "actions",
+		elements: buttons,
+	});
+
+	return {
+		blocks,
 	};
 }
 
@@ -443,7 +472,7 @@ export const notesRouter = router({
 
 		const eventNotes = await db.query.notes.findMany({
 			where: inArray(notes.event_code, eventCodes),
-			orderBy: [asc(notes.created_at)],
+			orderBy: [desc(notes.updated_at)],
 		});
 		if (!eventNotes) throw new TRPCError({ code: "NOT_FOUND", message: "Notes not found" });
 		return eventNotes as Note[];
@@ -459,7 +488,7 @@ export const notesRouter = router({
 
 		const eventNotes = await db.query.notes.findMany({
 			where: inArray(notes.event_code, eventCodes),
-			orderBy: [asc(notes.created_at)],
+			orderBy: [desc(notes.updated_at)],
 			with: { messages: { orderBy: [asc(messages.id)] } },
 		});
 		if (!eventNotes) throw new TRPCError({ code: "NOT_FOUND", message: "Notes not found" });
@@ -496,7 +525,7 @@ export const notesRouter = router({
 
 			const results = await db.query.notes.findMany({
 				where: and(...query),
-				orderBy: [asc(notes.created_at)],
+				orderBy: [desc(notes.updated_at)],
 				with: { messages: { orderBy: [asc(messages.id)] } },
 			});
 			if (!results) throw new TRPCError({ code: "NOT_FOUND", message: "No Notes found" });
@@ -506,7 +535,7 @@ export const notesRouter = router({
 	getAllByAuthor: eventProcedure.input(z.object({ author_id: z.number() })).query(async ({ ctx, input }) => {
 		const notesByAuthor = await db.query.notes.findMany({
 			where: eq(notes.author_id, input.author_id),
-			orderBy: [asc(notes.created_at)],
+			orderBy: [desc(notes.updated_at)],
 		});
 		if (!notesByAuthor) throw new TRPCError({ code: "NOT_FOUND", message: "No Notes found by provided user" });
 		return notesByAuthor as Note[];
@@ -514,13 +543,27 @@ export const notesRouter = router({
 
 	getAllByTeam: eventProcedure.input(z.object({ team_number: z.number() })).query(async ({ ctx, input }) => {
 		const notesByTeam = await db
-			.select()
+			.select({
+				notes,
+				matchLogMatchNumber: matchLogs.match_number,
+				matchLogPlayNumber: matchLogs.play_number,
+				matchLogLevel: matchLogs.level,
+			})
 			.from(notes)
 			.leftJoin(events, eq(notes.event_code, events.code))
+			.leftJoin(matchLogs, eq(notes.match_id, matchLogs.id))
 			.where(and(eq(notes.team, input.team_number), eq(events.archived, false)))
-			.orderBy(asc(notes.created_at));
+			.orderBy(desc(notes.updated_at));
 		if (!notesByTeam) throw new TRPCError({ code: "NOT_FOUND", message: "No Notes found for provided team" });
-		return notesByTeam.map((row) => row.notes) as Note[];
+		// When a note has a match_id, prefer the match log's authoritative match details
+		// to keep NoteCard in team history consistent with the ViewNote badge (which also
+		// looks up match details via match_id).
+		return notesByTeam.map((row) => ({
+			...row.notes,
+			match_number: row.matchLogMatchNumber ?? row.notes.match_number,
+			play_number: row.matchLogPlayNumber ?? row.notes.play_number,
+			tournament_level: (row.matchLogLevel ?? row.notes.tournament_level) as Note["tournament_level"],
+		})) as Note[];
 	}),
 
 	getById: eventProcedure
@@ -632,9 +675,10 @@ export const notesRouter = router({
 					createSlackNoteMessage(
 						insert[0].id,
 						insert[0].team,
+						event.teams.find((t) => parseInt(t.number) === insert[0].team)?.name ?? null,
 						"Team Submission",
-						insert[0].text.substring(0, 60),
 						insert[0].text,
+						event.code,
 					),
 				);
 				await db
@@ -711,6 +755,45 @@ export const notesRouter = router({
 
 			event.noteUpdateEmitter.emit("note_update", { kind: "create", note: insert[0] as Note });
 
+			// Auto-attach all active match events for the same team + match
+			if (input.note_type === "TeamIssue" && insert[0].team !== null && insert[0].match_number !== null) {
+				// Prefer matching on match_id for precision; fall back to match_number + play_number + tournament_level
+				const matchEventFilters = [
+					eq(matchEvents.event_code, event.code),
+					eq(matchEvents.team, insert[0].team),
+					eq(matchEvents.status, "active"),
+				];
+				if (insert[0].match_id !== null) {
+					matchEventFilters.push(eq(matchEvents.match_id, insert[0].match_id));
+				} else {
+					matchEventFilters.push(eq(matchEvents.match_number, insert[0].match_number));
+					if (insert[0].play_number !== null) {
+						matchEventFilters.push(eq(matchEvents.play_number, insert[0].play_number));
+					}
+					if (insert[0].tournament_level !== null) {
+						matchEventFilters.push(eq(matchEvents.level, insert[0].tournament_level));
+					}
+				}
+				const activeEvents = await db
+					.select()
+					.from(matchEvents)
+					.where(and(...matchEventFilters))
+					.execute();
+
+				await autoLinkEventsToNote(noteId, activeEvents, event);
+
+				// If the note had no match_id yet but the linked events share a single match_id,
+				// back-fill it so the Slack message below includes the "View Match Log" button
+				if (insert[0].match_id === null && activeEvents.length > 0) {
+					const uniqueMatchIds = [...new Set(activeEvents.map((e) => e.match_id).filter(Boolean))];
+					if (uniqueMatchIds.length === 1) {
+						const resolvedMatchId = uniqueMatchIds[0];
+						await db.update(notes).set({ match_id: resolvedMatchId }).where(eq(notes.id, noteId)).execute();
+						(insert[0] as any).match_id = resolvedMatchId;
+					}
+				}
+			}
+
 			createNotification(
 				event.users.map((u) => u.id).filter((id) => id !== authorProfile[0].id),
 				buildNotification({
@@ -727,9 +810,10 @@ export const notesRouter = router({
 					createSlackNoteMessage(
 						insert[0].id,
 						insert[0].team,
+						event.teams.find((t) => parseInt(t.number) === insert[0].team)?.name ?? null,
 						authorProfile[0].username,
-						insert[0].text.substring(0, 60),
 						insert[0].text,
+						event.code,
 						insert[0].match_id ?? undefined,
 					),
 				);
@@ -783,9 +867,10 @@ export const notesRouter = router({
 					createSlackNoteMessage(
 						update[0].id,
 						update[0].team,
+						event.teams.find((t) => parseInt(t.number) === update[0].team)?.name ?? null,
 						update[0].author?.username ?? "Unknown",
-						update[0].text.substring(0, 60),
 						update[0].text,
+						event.code,
 						update[0].match_id ?? undefined,
 					),
 				);
@@ -858,6 +943,8 @@ export const notesRouter = router({
 				.set({
 					resolution_status: input.new_status as any,
 					closed_at: isResolving ? new Date() : null,
+					resolved_by_id: isResolving ? currentUserProfile[0].id : null,
+					resolved_by: isResolving ? currentUserProfile[0] : null,
 					fms_metadata: note.fms_metadata
 						? { ...(note.fms_metadata as FmsNoteMetadata), resolutionStatus: input.new_status }
 						: null,
@@ -872,6 +959,7 @@ export const notesRouter = router({
 				kind: "status",
 				note_id: update[0].id,
 				resolution_status: update[0].resolution_status ?? "Open",
+				resolved_by: isResolving ? currentUserProfile[0] : null,
 			});
 
 			createNotification(
@@ -1116,40 +1204,7 @@ export const notesRouter = router({
 
 	generateNotesReport: eventProcedure.query(async ({ ctx }) => {
 		const event = await getEvent(ctx.eventToken as string);
-
-		const totalAvgOpenTime = await getAllAvgOpenTime(event.code);
-		const teamNumbers = event.teams.map((t) => parseInt(t.number));
-		const allTeamsInfo = await getAllTeamNotesInfo(event.code, teamNumbers);
-
-		const path = await generateReport(
-			{
-				title: `Notes Report for ${event.code}`,
-				description: `Average Total Open Time: ${formatTimeShortNoAgoMinutes(totalAvgOpenTime)}`,
-				headers: [
-					"Team #",
-					"Total Open Time",
-					"# of Notes",
-					"Avg Open Time",
-					"Longest Open Time",
-					"Longest Text",
-					"All Texts",
-					"All Note Links",
-				],
-				fileName: "NotesReport",
-			},
-			allTeamsInfo.map((info) => [
-				info.team,
-				formatTimeShortNoAgoMinutes(info.totalOpenTime) ?? "None",
-				info.notes.length,
-				(info.avgOpenTime !== null ? formatTimeShortNoAgoMinutes(info.avgOpenTime) : "None") ?? "None",
-				formatTimeShortNoAgoMinutes(info.longestNoteOpenTime) ?? "None",
-				info.longestNote !== null ? info.longestNote.text.substring(0, 80) : "",
-				info.noteSubjects,
-				info.noteLinks ?? "None",
-			]),
-			event.code,
-		);
-
+		const path = await generateNotesReportPdf(event.code, event.name);
 		return { path };
 	}),
 
@@ -1425,9 +1480,21 @@ export async function getEventMessages(event_code: string) {
 	return eventMessages;
 }
 
-export async function updateNoteStatusFromSlack(message_ts: string, resolved: boolean) {
+export async function updateNoteStatusFromSlack(message_ts: string, resolved: boolean, slackUserId?: string) {
 	const note = await db.query.notes.findFirst({ where: eq(notes.slack_ts, message_ts) });
 	if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
+
+	const event = await getEvent("", note.event_code);
+
+	// Resolve who performed the action
+	let resolverProfile: Profile | null = null;
+	if (resolved && slackUserId && event.slackTeam) {
+		try {
+			resolverProfile = await resolveSlackUserProfile(slackUserId, event.slackTeam);
+		} catch {
+			resolverProfile = { id: -1, role: "CSA", admin: false, username: "Slack User", source: "Slack" };
+		}
+	}
 
 	const newStatus = resolved ? "Resolved" : "Open";
 	const update = await db
@@ -1435,17 +1502,18 @@ export async function updateNoteStatusFromSlack(message_ts: string, resolved: bo
 		.set({
 			resolution_status: newStatus as any,
 			closed_at: resolved ? new Date() : null,
+			resolved_by_id: resolved ? (resolverProfile?.id ?? null) : null,
+			resolved_by: resolved ? resolverProfile : null,
 			updated_at: new Date(),
 		})
 		.where(eq(notes.id, note.id))
 		.returning();
 
-	const event = await getEvent("", note.event_code);
-
 	event.noteUpdateEmitter.emit("note_update", {
 		kind: "status",
 		note_id: update[0].id,
 		resolution_status: update[0].resolution_status ?? "Open",
+		resolved_by: resolved ? resolverProfile : null,
 	});
 
 	createNotification(
@@ -1454,7 +1522,7 @@ export async function updateNoteStatusFromSlack(message_ts: string, resolved: bo
 			kind: "note.statusChanged",
 			note: toNoteCtx(note as any),
 			newStatus: newStatus as "Open" | "Resolved",
-			actor: "FMS",
+			actor: resolverProfile?.username ?? "Slack",
 		}),
 	);
 
@@ -1469,7 +1537,10 @@ export async function updateNoteAssignmentFromSlack(message_ts: string, add: boo
 	const note = await db.query.notes.findFirst({ where: eq(notes.slack_ts, message_ts) });
 	if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
 
-	const profile: Profile = { id: -1, role: "CSA", admin: false, username: "Slack User" };
+	const event = await getEvent("", note.event_code);
+	const profile: Profile = event.slackTeam
+		? await resolveSlackUserProfile(slackUser, event.slackTeam)
+		: { id: -1, role: "CSA", admin: false, username: "Slack User" };
 
 	const update = await db
 		.update(notes)
@@ -1481,7 +1552,6 @@ export async function updateNoteAssignmentFromSlack(message_ts: string, add: boo
 		.where(eq(notes.id, note.id))
 		.returning();
 
-	const event = await getEvent("", note.event_code);
 
 	if (add) {
 		event.noteUpdateEmitter.emit("note_update", {
@@ -1532,7 +1602,15 @@ export async function addNoteMessageFromSlack(
 	const note = await db.query.notes.findFirst({ where: eq(notes.slack_ts, thread_ts) });
 	if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
 
-	const user: Profile = { id: -1, role: "CSA", admin: false, username: "Slack User", source: "Slack" };
+	// Deduplication: skip messages we already have (e.g. ones FTA-Buddy posted to Slack that echo back)
+	const existing = await db.query.messages.findFirst({ where: eq(messages.slack_ts, message_ts) });
+	if (existing) return;
+
+	const event = await getEvent("", note.event_code);
+	const user: Profile = event.slackTeam
+		? await resolveSlackUserProfile(author_id, event.slackTeam)
+		: { id: -1, role: "CSA", admin: false, username: "Slack User", source: "Slack" };
+	if (!user.source) user.source = "Slack";
 
 	const insert = await db
 		.insert(messages)
@@ -1549,8 +1627,6 @@ export async function addNoteMessageFromSlack(
 			slack_channel: channel_id,
 		})
 		.returning();
-
-	const event = await getEvent("", note.event_code);
 
 	event.noteUpdateEmitter.emit("note_update", {
 		kind: "add_message",

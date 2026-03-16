@@ -18,15 +18,16 @@
 	import { audioQueuer, frameHandler, subscribeToFieldMonitor } from "../field-monitor";
 	import { trpc } from "../main";
 	import { fullscreen } from "../stores/fullscreen";
+	import { eventStore } from "../stores/event";
 	import { userStore } from "../stores/user";
 	import type { MonitorEvent } from "../util/monitorFrameHandler";
 	import { updateScheduleText } from "../util/schedule-detail-formatter";
 
-	let monitorFrame: MonitorFrame | undefined = frameHandler.getFrame();
+	let monitorFrame: MonitorFrame | undefined = $state(frameHandler.getFrame());
 	let cycleSubscription: ReturnType<typeof trpc.cycles.subscription.subscribe>;
 
 	let user = get(userStore);
-	userStore.subscribe((value) => {
+	const unsubscribeUserStore = userStore.subscribe((value) => {
 		if (user.eventToken !== value.eventToken) {
 			user = value;
 			subscribeToFieldMonitor();
@@ -35,25 +36,27 @@
 		}
 	});
 
-	frameHandler.addEventListener("frame", (evt) => {
+	function onFrameEvent(evt: Event) {
 		loading = false;
 		monitorFrame = (evt as MonitorEvent).detail.frame;
-	});
+	}
 
-	let lastCycleTime = "";
+	let lastCycleTime = $state("");
 	let lastCycleTimeMS = 0;
 	let matchStartTime = new Date();
 	let bestCycleTimeMS = 0;
-	let currentCycleIsBest = false;
-	let averageCycleTimeMS = 8 * 60 * 1000; // Default to 7 minutes
-	let currentCycleTimeRedness = 0;
-	let currentCycleTime = "";
+	let currentCycleIsBest = $state(false);
+	let averageCycleTimeMS = $state(8 * 60 * 1000); // Default to 7 minutes
+	let currentCycleTimeRedness = $state(0);
+	let currentCycleTime = $state("");
 	let calculatedCycleTime: number | undefined | null = 0;
 
 	let scheduleDetails: ScheduleDetails | undefined;
-	let scheduleText = "";
+	let scheduleText = $state("");
 
 	onMount(async () => {
+		frameHandler.addEventListener("frame", onFrameEvent);
+		frameHandler.addEventListener("match-start", onMatchStart);
 		subscribeToFieldMonitor();
 		const lastPrestart = await trpc.cycles.getLastPrestart.query();
 		const lastMatchStart = await trpc.cycles.getLastMatchStart.query();
@@ -125,12 +128,15 @@
 	});
 
 	onDestroy(() => {
+		frameHandler.removeEventListener("frame", onFrameEvent);
+		frameHandler.removeEventListener("match-start", onMatchStart);
+		unsubscribeUserStore();
 		if (cycleSubscription) cycleSubscription.unsubscribe();
 		clearInterval(interval);
 		clearInterval(lastCycleTimeInterval);
 	});
 
-	frameHandler.addEventListener("match-start", async (evt) => {
+	async function onMatchStart(_evt: Event) {
 		console.log("match-start");
 		currentCycleIsBest = false;
 		calculatedCycleTime = calculatedCycleTime || frameHandler.getLastCycleTime();
@@ -167,7 +173,7 @@
 
 		// Reset the cycle time so it doesn't screw up the next match's cycle time
 		calculatedCycleTime = undefined;
-	});
+	}
 
 	let interval = setInterval(() => {
 		const currentTime = new Date().getTime() - matchStartTime.getTime();
@@ -206,8 +212,8 @@
 		11: "Match Not Ready",
 	};
 
-	let modalOpen = false;
-	let modalStation: ROBOT = ROBOT.blue1;
+	let modalOpen = $state(false);
+	let modalStation: ROBOT = $state(ROBOT.blue1);
 
 	function detailView(evt: Event) {
 		let target = evt.target as HTMLElement;
@@ -218,7 +224,7 @@
 
 	const stations: ROBOT[] = Object.values(ROBOT);
 
-	let loading = true;
+	let loading = $state(true);
 </script>
 
 {#if monitorFrame}
@@ -229,12 +235,12 @@
 	<Spinner />
 </div>
 
-<div
-	class="grid grid-cols-fieldmonitor 2xl:grid-cols-fieldmonitor-large gap-0.5 md:gap-1 2xl:gap-2 mx-auto justify-center"
-	class:fullscreen={$fullscreen}
-	class:hidden={loading}
->
-	{#key monitorFrame}
+<div class="flex-1 min-h-0 overflow-hidden">
+	<div
+		class="grid grid-cols-fieldmonitor 2xl:grid-cols-fieldmonitor-large gap-0.5 md:gap-1 2xl:gap-2 mx-auto justify-center"
+		class:fullscreen={$fullscreen}
+		class:hidden={loading}
+	>
 		{#if monitorFrame}
 			<div
 				class="col-span-6 lg:col-span-9 flex text-lg md:text-2xl font-semibold"
@@ -245,13 +251,18 @@
 				<div class="px-2">{monitorFrame.exactAheadBehind || monitorFrame.time}</div>
 				<button
 					class="text-sm fixed top-12 right-0 z-50 hidden md:block"
-					onclick={(evt) => {
+					onclick={async (evt) => {
 						evt.preventDefault();
-						$fullscreen = !$fullscreen;
 						if ($fullscreen) {
-							document.documentElement.requestFullscreen();
+							const exit: (() => Promise<void>) | undefined =
+								document.exitFullscreen?.bind(document) ??
+								(document as any).webkitExitFullscreen?.bind(document);
+							await exit?.();
 						} else {
-							document.exitFullscreen();
+							const el = document.documentElement;
+							const enter: (() => Promise<void>) | undefined =
+								el.requestFullscreen?.bind(el) ?? (el as any).webkitRequestFullscreen?.bind(el);
+							await enter?.();
 						}
 					}}
 				>
@@ -295,8 +306,12 @@
 				T: {currentCycleTime}
 			</div>
 		</div>
-	{/key}
-	{#if !monitorFrame}
-		<p>Requires Chrome Extension to be setup on field network</p>
-	{/if}
+		{#if !monitorFrame}
+			{#if $eventStore?.notepadOnly}
+				<p class="text-yellow-400">No live field data — running in Notepad Only mode</p>
+			{:else}
+				<p>Requires Chrome Extension to be setup on field network</p>
+			{/if}
+		{/if}
+	</div>
 </div>

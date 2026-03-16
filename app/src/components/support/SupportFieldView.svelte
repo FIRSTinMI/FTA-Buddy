@@ -2,7 +2,14 @@
 	import Icon from "@iconify/svelte";
 	import { Badge, Button, Toggle } from "flowbite-svelte";
 	import { onDestroy, onMount } from "svelte";
-	import type { MatchEvent, MatchEventUpdateEventData, MonitorFrame, Note, NoteUpdateEventData, RobotInfo } from "../../../../shared/types";
+	import type {
+		MatchEvent,
+		MatchEventUpdateEventData,
+		MonitorFrame,
+		Note,
+		NoteUpdateEventData,
+		RobotInfo,
+	} from "../../../../shared/types";
 	import { DSState, ROBOT } from "../../../../shared/types";
 	import { frameHandler, subscribeToFieldMonitor } from "../../field-monitor";
 	import { trpc } from "../../main";
@@ -15,7 +22,7 @@
 
 	// Match index for prev/next navigation
 	interface MatchInfo {
-		id: string;
+		id: string | null; // null for unplayed/scheduled matches not yet in DB
 		match_number: number;
 		play_number: number;
 		level: string;
@@ -25,6 +32,7 @@
 		red1: number | null;
 		red2: number | null;
 		red3: number | null;
+		isPlayed: boolean;
 	}
 
 	let allMatches: MatchInfo[] = $state([]);
@@ -82,17 +90,23 @@
 
 	let teamData: Record<number, TeamData> = $state({});
 
+	function sortNotes(notes: Note[]): Note[] {
+		return notes.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+	}
+
 	// Modal state
 	let modalOpen = $state(false);
 	let modalTeamNum = $state(0);
 
 	// Consolidate bypass events into a single entry
-    type BypassGroup = { matchEvent: MatchEvent; bypassGroup?: MatchEvent[] };
+	type BypassGroup = { matchEvent: MatchEvent; bypassGroup?: MatchEvent[] };
 	function consolidateBypassEvents(events: MatchEvent[]): BypassGroup[] {
 		const nonBypass: BypassGroup[] = events.filter((e) => e.issue !== "Bypassed").map((e) => ({ matchEvent: e }));
 		const bypass = events.filter((e) => e.issue === "Bypassed");
 		if (bypass.length > 0) {
-			const sorted = [...bypass].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+			const sorted = [...bypass].sort(
+				(a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+			);
 			nonBypass.push({ matchEvent: sorted[0], bypassGroup: bypass.length > 1 ? bypass : undefined });
 		}
 		return nonBypass;
@@ -112,7 +126,7 @@
 			]);
 			teamData[teamNumber] = {
 				teamNumber,
-				notes: teamNotes,
+				notes: sortNotes(teamNotes),
 				matchEvents: teamMatchEvents,
 				loading: false,
 			};
@@ -157,28 +171,73 @@
 	// Match navigation
 	async function loadMatchIndex() {
 		try {
-			allMatches = await trpc.match.getMatches.query({});
+			allMatches = await trpc.match.getScheduledMatches.query();
 		} catch {
 			allMatches = [];
+		}
+	}
+
+	/** Find the index in allMatches that corresponds to the current live/field-monitor match. */
+	function findLiveMatchIndex(): number {
+		if (!monitorFrame || allMatches.length === 0) return -1;
+		const idx = allMatches.findIndex(
+			(m) =>
+				m.match_number === monitorFrame!.match &&
+				m.play_number === monitorFrame!.play &&
+				m.level === monitorFrame!.level,
+		);
+		return idx;
+	}
+
+	let liveIdx = $derived(findLiveMatchIndex());
+
+	/** If the current matchIndex lands on the live match, snap back to live mode. */
+	function snapToLiveIfMatched() {
+		const li = findLiveMatchIndex();
+		if (li >= 0 && matchIndex === li) {
+			matchIndex = -1;
+			autoAdvance = true;
 		}
 	}
 
 	function goToPrevMatch() {
 		autoAdvance = false;
 		if (matchIndex === -1) {
-			if (allMatches.length > 0) {
-				matchIndex = allMatches.length - 1;
+			// From live, go to the match right before the current one
+			const li = findLiveMatchIndex();
+			if (li > 0) {
+				matchIndex = li - 1;
+			} else if (li === 0) {
+				matchIndex = 0; // already at the first match
+			} else if (allMatches.length > 0) {
+				// Couldn't find live match — fall back to last played
+				const lastPlayed = allMatches.findLastIndex((m) => m.isPlayed);
+				matchIndex = lastPlayed >= 0 ? lastPlayed : allMatches.length - 1;
 			}
 		} else if (matchIndex > 0) {
 			matchIndex--;
 		}
+		snapToLiveIfMatched();
+		updateMatchUrl();
 	}
 
 	function goToNextMatch() {
-		if (matchIndex >= 0 && matchIndex < allMatches.length - 1) {
-			autoAdvance = false;
+		autoAdvance = false;
+		if (matchIndex === -1) {
+			// From live, go to the match right after the current one
+			const li = findLiveMatchIndex();
+			if (li >= 0 && li < allMatches.length - 1) {
+				matchIndex = li + 1;
+			} else if (li === -1 && allMatches.length > 0) {
+				// Couldn't find live match — go to first unplayed
+				const firstUnplayed = allMatches.findIndex((m) => !m.isPlayed);
+				matchIndex = firstUnplayed >= 0 ? firstUnplayed : allMatches.length - 1;
+			}
+		} else if (matchIndex < allMatches.length - 1) {
 			matchIndex++;
 		}
+		snapToLiveIfMatched();
+		updateMatchUrl();
 	}
 
 	// When autoAdvance is turned on (via toggle), immediately snap back to live
@@ -189,7 +248,41 @@
 	function goToLive() {
 		matchIndex = -1;
 		autoAdvance = true;
+		updateMatchUrl();
 	}
+
+	/** Persist or clear the current match in the URL so back-navigation restores it. */
+	function updateMatchUrl() {
+		if (typeof window === 'undefined') return;
+		const url = new URL(window.location.href);
+		if (matchIndex === -1 || !allMatches[matchIndex]) {
+			url.searchParams.delete('m');
+		} else {
+			const m = allMatches[matchIndex];
+			url.searchParams.set('m', `${m.level}:${m.match_number}:${m.play_number}`);
+		}
+		window.history.replaceState(null, '', url.toString());
+	}
+
+	// Restore match from URL once the match list loads (e.g. after back-nav from ViewNote)
+	let matchRestoredFromUrl = false;
+	$effect(() => {
+		if (allMatches.length > 0 && !matchRestoredFromUrl) {
+			matchRestoredFromUrl = true;
+			const mKey = new URLSearchParams(window.location.search).get('m');
+			if (mKey) {
+				const [level, numStr, playStr] = mKey.split(':');
+				const num = parseInt(numStr), play = parseInt(playStr);
+				const idx = allMatches.findIndex(
+					(x) => x.level === level && x.match_number === num && x.play_number === play,
+				);
+				if (idx >= 0) {
+					matchIndex = idx;
+					autoAdvance = false;
+				}
+			}
+		}
+	});
 
 	function openNoteModal(teamNumber: number) {
 		modalTeamNum = teamNumber;
@@ -218,7 +311,7 @@
 						case "create": {
 							const teamNum = data.note.team;
 							if (teamNum !== null && teamData[teamNum]) {
-								teamData[teamNum].notes = [...teamData[teamNum].notes, data.note];
+								teamData[teamNum].notes = sortNotes([...teamData[teamNum].notes, data.note]);
 							}
 							break;
 						}
@@ -245,6 +338,7 @@
 								const note = td.notes.find((n) => n.id === data.note_id);
 								if (note) {
 									note.resolution_status = data.resolution_status;
+									note.resolved_by = data.resolved_by;
 									note.updated_at = new Date();
 									td.notes = [...td.notes];
 									break;
@@ -314,6 +408,7 @@
 		loadMatchIndex();
 		startSubscription();
 		startMatchEventSubscription();
+		window.addEventListener("resize", handleResize);
 	});
 
 	onDestroy(() => {
@@ -321,46 +416,72 @@
 		frameHandler.removeEventListener("prestart", onPrestart);
 		subscription?.unsubscribe();
 		matchEventSubscription?.unsubscribe();
+		window.removeEventListener("resize", handleResize);
 	});
 
 	function dsColor(ds: number): string {
-		if (ds === DSState.ESTOP || ds === DSState.ASTOP) return "bg-red-800";
+		if (ds === DSState.ESTOP || ds === DSState.BYPASS) return "bg-red-800";
+		if (ds === DSState.ASTOP) return "bg-green-600";
 		if (ds === DSState.RED) return "bg-red-600";
 		if (ds === DSState.MOVE_STATION || ds === DSState.WAITING) return "bg-yellow-400";
-		if (ds === DSState.BYPASS) return "bg-orange-400";
 		return "bg-green-500";
+	}
+
+	// Compact mode for shorter screens (e.g. 1366x768)
+	let isShortScreen = $state(typeof window !== "undefined" && window.innerHeight < 900);
+	function handleResize() {
+		isShortScreen = window.innerHeight < 900;
 	}
 </script>
 
 {#snippet teamCard(teamNum: number, alliance: "blue" | "red", slot: 1 | 2 | 3)}
 	{@const stationKey = `${alliance}${slot}` as ROBOT}
 	{@const liveRobot = monitorFrame?.[stationKey] as RobotInfo | undefined}
-	{@const currentMatchId = matchIndex >= 0 ? allMatches[matchIndex]?.id : undefined}
+	{@const currentMatchId = matchIndex >= 0 ? (allMatches[matchIndex]?.id ?? undefined) : undefined}
 	{@const td = teamData[teamNum]}
 	{@const teamName = $eventStore.teams.find((t) => t.number === String(teamNum))?.name ?? ""}
-	{@const itemCount = td && !td.loading ? td.notes.length + td.matchEvents.length : 0}
-	{@const eventSummaries = td && !td.loading && td.matchEvents.length > 0
-		? Object.entries(
-			td.matchEvents.reduce<Record<string, number>>((acc, e) => {
-				acc[e.issue] = (acc[e.issue] ?? 0) + 1;
-				return acc;
-			}, {})
-		).map(([issue, count]) => `${issue} x${count}`)
-		: []}
+	{@const currentEventCodes = [$eventStore.code, ...($eventStore.subEvents?.map((se) => se.code) ?? [])]}
+	{@const currentNotes = td && !td.loading ? td.notes.filter((n) => currentEventCodes.includes(n.event_code)) : []}
+	{@const hasOpenNote = currentNotes.some((n) => n.resolution_status === "Open" || n.resolution_status === null)}
+	{@const itemCount = td && !td.loading ? currentNotes.length + td.matchEvents.length : 0}
+	{@const activeEvents = td && !td.loading ? td.matchEvents.filter((e) => e.status === "active") : []}
+	{@const eventSummaries =
+		td && !td.loading && td.matchEvents.length > 0
+			? Object.entries(
+					td.matchEvents.reduce<Record<string, { total: number; active: number }>>((acc, e) => {
+						if (!acc[e.issue]) acc[e.issue] = { total: 0, active: 0 };
+						acc[e.issue].total += 1;
+						if (e.status === "active") acc[e.issue].active += 1;
+						return acc;
+					}, {}),
+				).map(([issue, { total, active }]) => ({ issue, total, active }))
+			: []}
 	<div class="flex-1 min-h-0 flex flex-col rounded-lg overflow-hidden shadow dark:bg-neutral-800 bg-white">
 		<div class="shrink-0 flex {alliance === 'blue' ? 'bg-blue-600' : 'bg-red-600'}">
 			<button
-				class="flex-1 px-2.5 sm:px-3 py-1 sm:py-1.5 font-bold text-white text-left flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base lg:text-lg"
+				class="flex-1 px-2.5 sm:px-3 {isShortScreen
+					? 'py-0.5 sm:py-1'
+					: 'py-1 sm:py-1.5'} font-bold text-white text-left flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base {isShortScreen
+					? ''
+					: 'lg:text-lg'}"
 				onclick={() => navigate("/notepad/team/:team", { params: { team: String(teamNum) } })}
 			>
 				<span class="leading-none">#{teamNum}</span>
 				{#if teamName}
 					<span class="text-[11px] sm:text-sm lg:text-base font-normal opacity-80 truncate">{teamName}</span>
 				{/if}
+				{#if hasOpenNote}
+					<Icon
+						icon="mdi:alert"
+						class="ml-auto shrink-0 {isShortScreen ? 'size-3.5' : 'size-4'} text-yellow-300"
+					/>
+				{/if}
 			</button>
 			{#if currentMatchId}
 				<button
-					class="px-1.5 sm:px-2 py-1 sm:py-1.5 text-white hover:bg-white/20 flex items-center gap-1 text-[10px] sm:text-xs lg:text-sm border-l border-white/20"
+					class="px-1.5 sm:px-2 {isShortScreen
+						? 'py-0.5'
+						: 'py-1 sm:py-1.5'} text-white hover:bg-white/20 flex items-center gap-1 text-[10px] sm:text-xs lg:text-sm border-l border-white/20"
 					onclick={() =>
 						navigate("/logs/:matchid/:station", {
 							params: { matchid: currentMatchId, station: stationKey },
@@ -373,10 +494,14 @@
 		</div>
 		{#if liveRobot && isLive}
 			<div
-				class="shrink-0 flex items-center gap-1 sm:gap-2 px-2 py-1 sm:py-1.5 border-b border-gray-200 dark:border-gray-700 text-[11px] sm:text-xs lg:text-sm"
+				class="shrink-0 flex items-center gap-1 sm:gap-2 px-2 {isShortScreen
+					? 'py-0.5'
+					: 'py-1 sm:py-1.5'} border-b border-gray-200 dark:border-gray-700 text-[11px] sm:text-xs lg:text-sm"
 			>
 				<div
-					class="size-4 sm:size-6 rounded-sm flex items-center justify-center text-black font-bold text-[9px] sm:text-[10px] shrink-0 {dsColor(
+					class="{isShortScreen
+						? 'size-3.5'
+						: 'size-4 sm:size-6'} rounded-sm flex items-center justify-center text-black font-bold text-[9px] sm:text-[10px] shrink-0 {dsColor(
 						liveRobot.ds,
 					)}"
 					title="Driver Station: {liveRobot.ds === DSState.GREEN_X
@@ -403,7 +528,8 @@
 					{/if}
 				</div>
 				<div
-					class="size-4 sm:size-6 rounded-sm shrink-0 {liveRobot.radio || liveRobot.radioConnected
+					class="{isShortScreen ? 'size-3.5' : 'size-4 sm:size-6'} rounded-sm shrink-0 {liveRobot.radio ||
+					liveRobot.radioConnected
 						? 'bg-green-500'
 						: 'bg-red-600'}"
 					title="Radio: {liveRobot.radio
@@ -413,7 +539,9 @@
 							: 'No radio'}"
 				></div>
 				<div
-					class="size-4 sm:size-6 rounded-sm flex items-center justify-center text-black text-[9px] sm:text-[10px] font-bold shrink-0 {liveRobot.rio
+					class="{isShortScreen
+						? 'size-3.5'
+						: 'size-4 sm:size-6'} rounded-sm flex items-center justify-center text-black text-[9px] sm:text-[10px] font-bold shrink-0 {liveRobot.rio
 						? 'bg-green-500'
 						: 'bg-red-600'}"
 					title="RoboRIO: {liveRobot.rio ? (liveRobot.code ? 'Code running' : 'No code') : 'Not connected'}"
@@ -444,23 +572,63 @@
 			{:else}
 				{#if eventSummaries.length > 0}
 					<div class="py-1">
-						<div class="flex items-center gap-1.5 text-xs sm:text-sm lg:text-base text-amber-700 dark:text-amber-400 font-semibold">
-							<Icon icon="mdi:alert-circle-outline" class="size-3.5 sm:size-4 lg:size-5 shrink-0" />
-							<span class="truncate">{eventSummaries.join(", ")}</span>
+						<div class="flex items-center gap-1.5 text-xs sm:text-sm lg:text-base font-semibold flex-wrap">
+							<Icon
+								icon="mdi:alert-circle-outline"
+								class="size-3.5 sm:size-4 lg:size-5 shrink-0 text-amber-700 dark:text-amber-400"
+							/>
+							{#each eventSummaries as { issue, total, active }, i}
+								<span
+									class={active > 0
+										? "text-amber-700 dark:text-amber-400"
+										: "text-gray-400 dark:text-gray-500"}
+									>{issue} x{total}{#if active > 0 && active < total}
+										({active} active){/if}{#if active === 0}
+										(resolved){/if}</span
+								>{#if i < eventSummaries.length - 1}<span class="text-gray-400">,</span>{/if}
+							{/each}
 						</div>
 					</div>
 				{/if}
-				{#if td && td.notes.length > 0}
-					{#each td.notes as note}
+				{#if currentNotes.length > 0}
+					{#each [...currentNotes].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()) as note}
 						<button
-							class="w-full text-left py-1 border-b border-gray-100 dark:border-neutral-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-neutral-700/50 rounded transition-colors"
+							class="w-full text-left {isShortScreen
+								? 'py-0.5'
+								: 'py-1'} border-b border-gray-100 dark:border-neutral-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-neutral-700/50 rounded transition-colors {note.resolution_status ===
+							'Resolved'
+								? 'opacity-50'
+								: ''}"
 							onclick={() => navigate("/notepad/view/:id", { params: { id: note.id } })}
 						>
-							<p class="text-[11px] sm:text-xs lg:text-sm text-black dark:text-white line-clamp-2 leading-snug">{note.text}</p>
-							<div class="flex items-center gap-1.5 mt-0.5">
-								<span class="text-[10px] sm:text-[11px] lg:text-xs {note.resolution_status === 'Open' ? 'text-green-500' : 'text-gray-400'}">{note.resolution_status}</span>
-								{#if note.author?.username}
-									<span class="text-[10px] sm:text-[11px] lg:text-xs text-gray-400">· {note.author.username}</span>
+							<p
+								class="text-[11px] sm:text-xs lg:text-sm text-black dark:text-white {isShortScreen
+									? 'line-clamp-1'
+									: 'line-clamp-2'} leading-snug"
+							>
+								{note.text}
+							</p>
+							<div class="flex items-center gap-1.5 {isShortScreen ? 'mt-0' : 'mt-0.5'}">
+								<span
+									class="text-[10px] sm:text-[11px] lg:text-xs {note.resolution_status === 'Open'
+										? 'text-green-500'
+										: 'text-gray-400'}">{note.resolution_status}{#if note.resolution_status === 'Resolved' && note.resolved_by} by {note.resolved_by.username}{/if}</span
+								>
+								{#if note.match_number}
+									<span class="text-[10px] sm:text-[11px] lg:text-xs text-gray-400"
+										>· {note.tournament_level === "Qualification"
+											? "Q"
+											: note.tournament_level === "Playoff"
+												? "PO"
+												: note.tournament_level === "Practice"
+													? "P"
+													: ""}{note.match_number}</span
+									>
+								{/if}
+								{#if note.author?.username && !isShortScreen}
+									<span class="text-[10px] sm:text-[11px] lg:text-xs text-gray-400"
+										>· {note.author.username}</span
+									>
 								{/if}
 							</div>
 						</button>
@@ -468,7 +636,9 @@
 				{/if}
 				{#if itemCount > 0}
 					<button
-						class="shrink-0 w-full text-left py-1 text-[10px] sm:text-[11px] lg:text-xs text-blue-500 hover:text-blue-400 rounded flex items-center gap-1 transition-colors"
+						class="shrink-0 w-full text-left {isShortScreen
+							? 'py-0'
+							: 'py-1'} text-[10px] sm:text-[11px] lg:text-xs text-blue-500 hover:text-blue-400 rounded flex items-center gap-1 transition-colors"
 						onclick={() => navigate("/notepad/team/:team", { params: { team: String(teamNum) } })}
 					>
 						<Icon icon="mdi:open-in-new" class="size-2.5 sm:size-3 shrink-0" />
@@ -478,7 +648,9 @@
 			{/if}
 		</div>
 		<button
-			class="shrink-0 w-full text-left px-3 py-1.5 text-[11px] sm:text-xs lg:text-sm text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-neutral-700 flex items-center gap-1.5 transition-colors"
+			class="shrink-0 w-full text-left px-3 {isShortScreen
+				? 'py-0.5'
+				: 'py-1.5'} text-[11px] sm:text-xs lg:text-sm text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-neutral-700 flex items-center gap-1.5 transition-colors"
 			onclick={() => openNoteModal(teamNum)}
 		>
 			<Icon icon="mdi:plus-circle-outline" class="size-3 sm:size-3.5 lg:size-4 shrink-0" />
@@ -511,48 +683,55 @@
 	</div>
 {:else}
 	<div class="flex flex-col h-full">
-		<div class="shrink-0 px-3 pt-2 pb-1">
+		<div class="shrink-0 px-3 {isShortScreen ? 'py-0.5' : 'pt-2 pb-1'}">
 			<div class="flex items-center justify-between gap-2">
-				<Button size="sm" color="alternative" onclick={goToPrevMatch} disabled={matchIndex === 0}>
-					<Icon icon="mdi:chevron-left" class="size-4 sm:size-5" />
+				<Button size="xs" color="alternative" onclick={goToPrevMatch} disabled={matchIndex === 0 || (isLive && liveIdx <= 0)}>
+					<Icon icon="mdi:chevron-left" class={isShortScreen ? "size-3.5" : "size-4 sm:size-5"} />
 				</Button>
 
 				<div class="flex flex-col items-center min-w-0">
 					<p
-						class="font-bold text-base sm:text-xl lg:text-3xl leading-tight text-black dark:text-white text-center truncate"
+						class="font-bold {isShortScreen
+							? 'text-sm'
+							: 'text-base sm:text-xl lg:text-3xl'} leading-tight text-black dark:text-white text-center truncate"
 					>
 						{matchLabel}
 					</p>
-					<Badge
-						color="green"
-						class="text-xs mt-0.5 transition-opacity {isLive
-							? 'opacity-100'
-							: 'opacity-0 pointer-events-none'}">LIVE</Badge
-					>
+					{#if !isShortScreen}
+						<div class="h-5 flex items-center">
+						{#if isLive}
+							<Badge color="green" class="text-xs">LIVE</Badge>
+						{:else if matchIndex >= 0 && !allMatches[matchIndex]?.isPlayed}
+							<Badge color="yellow" class="text-xs">SCHEDULED</Badge>
+						{/if}
+						</div>
+					{/if}
 				</div>
 
 				<Button
-					size="sm"
+					size={isShortScreen ? "xs" : "sm"}
 					color="alternative"
 					onclick={goToNextMatch}
-					disabled={isLive || matchIndex >= allMatches.length - 1}
+					disabled={matchIndex === allMatches.length - 1 || (isLive && (liveIdx === -1 || liveIdx === allMatches.length - 1))}
 				>
-					<Icon icon="mdi:chevron-right" class="size-4 sm:size-5" />
+					<Icon icon="mdi:chevron-right" class={isShortScreen ? "size-3.5" : "size-4 sm:size-5"} />
 				</Button>
 			</div>
-			<div class="flex justify-end items-center gap-1.5 mt-1">
+			<div class="flex justify-end items-center gap-1.5 {isShortScreen ? 'mt-0' : 'mt-1'}">
 				<Toggle size="small" bind:checked={autoAdvance} />
-				<span class="text-[11px] sm:text-xs lg:text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">Current match</span>
+				<span class="text-[11px] sm:text-xs lg:text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap"
+					>Current match</span
+				>
 			</div>
 		</div>
 
-		<div class="flex-1 min-h-0 grid grid-cols-2 gap-2 px-2 pb-2">
-			<div class="flex flex-col gap-2 min-h-0">
+		<div class="flex-1 min-h-0 grid grid-cols-2 {isShortScreen ? 'gap-1 px-1 pb-1' : 'gap-2 px-2 pb-2'}">
+			<div class="flex flex-col {isShortScreen ? 'gap-1' : 'gap-2'} min-h-0">
 				{#each [teams.blue1, teams.blue2, teams.blue3] as teamNum, i}
 					{@render teamCard(teamNum, "blue", (i + 1) as 1 | 2 | 3)}
 				{/each}
 			</div>
-			<div class="flex flex-col gap-2 min-h-0">
+			<div class="flex flex-col {isShortScreen ? 'gap-1' : 'gap-2'} min-h-0">
 				{#each [teams.red1, teams.red2, teams.red3] as teamNum, i}
 					{@render teamCard(teamNum, "red", (i + 1) as 1 | 2 | 3)}
 				{/each}

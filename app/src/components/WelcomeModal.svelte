@@ -100,43 +100,43 @@
 		{:else if step === 2}
 			<h2 class="font-bold">Notepad Feed View</h2>
 			<p class="py-1">
-				The Notepad is your hub for tracking team issues. The <strong>Feed</strong> view shows all notes and
-				auto-detected match events in a scrollable list. Use the filter tabs to show All, Notes only, or Events only.
+				The Notepad is your hub for tracking team issues. The <strong>Feed</strong> view shows all notes and auto-detected
+				match events in a scrollable list. Use the filter tabs to show All, Notes only, or Events only.
 			</p>
 			<p class="py-1">
-				Create notes to track team issues, they can be assigned to volunteers, followed for update notifications,
-				and include threaded messages for collaboration. Note types include <strong>Team Notes</strong>,
+				Create notes to track team issues, they can be assigned to volunteers, followed for update
+				notifications, and include threaded messages for collaboration. Note types include <strong
+					>Team Notes</strong
+				>,
 				<strong>Event Notes</strong>, and <strong>Match Notes</strong>. Team notes can be marked as Open or
 				Resolved and carry across events.
 			</p>
 			<h2 class="font-bold py-1">Public Note Submission</h2>
 			<p class="py-1">
-				Teams can submit their own notes via QR code or kiosk link, reducing the need for paper and speeding
-				up support. Public submission can be toggled on or off at any time from event settings.
+				Teams can submit their own notes via QR code or kiosk link, reducing the need for paper and speeding up
+				support. Public submission can be toggled on or off at any time from event settings.
 			</p>
 			<img src="/tutorial/notepad_feed.png" alt="Notepad Feed" class="sm:max-w-xl w-fit mx-auto py-1" />
 		{:else if step === 3}
 			<h2 class="font-bold">Notepad Field View</h2>
 			<p class="py-1">
-				The <strong>Field</strong> view shows a card for each of the six teams on the field, organized by
-				alliance. Each card displays the team's notes and active match events, with live DS, radio, RIO, and
-				code status indicators when connected to the field monitor.
+				The <strong>Field</strong> view shows a card for each of the six teams on the field, organized by alliance.
+				Each card displays the team's notes and active match events, with live DS, radio, RIO, and code status indicators
+				when connected to the field monitor.
 			</p>
 			<p class="py-1">
-				You can quickly create notes, view station logs, and dismiss or convert match events directly from
-				each team card. Navigate between matches with the arrow buttons, or enable auto-advance to
-				automatically follow the current match on prestart.
+				You can quickly create notes, view station logs, and dismiss or convert match events directly from each
+				team card. Navigate between matches with the arrow buttons, or enable auto-advance to automatically
+				follow the current match on prestart.
 			</p>
-			<p class="py-1">
-				Click a team number to jump to their full note history in the Feed view.
-			</p>
+			<p class="py-1">Click a team number to jump to their full note history in the Feed view.</p>
 			<img src="/tutorial/notepad_field.png" alt="Notepad Field View" class="sm:max-w-xl w-fit mx-auto py-1" />
 		{:else if step === 4}
 			<h2 class="font-bold">Match Logs & Auto-Detected Events</h2>
 			<p class="py-1">
 				Match logs show detailed per-team connection data including DS, radio, RIO, code status, battery
-				voltage, ping, bandwidth utilization, signal strength, and more. View interactive graphs, share
-				links with QR codes, and export to CSV.
+				voltage, ping, bandwidth utilization, signal strength, and more. View interactive graphs, share links
+				with QR codes, and export to CSV.
 			</p>
 			<h2 class="font-bold py-1">Auto-Detected Events</h2>
 			<p class="py-1">
@@ -145,9 +145,9 @@
 				bandwidth usage.
 			</p>
 			<p class="py-1">
-				Detected events appear in the Notepad feed alongside notes. You can <strong>dismiss</strong> events
-				that don't need follow-up or <strong>convert</strong> them into full notes for tracking. Each issue type
-				can be toggled on or off per event from the event management page.
+				Detected events appear in the Notepad feed alongside notes. You can <strong>dismiss</strong> events that
+				don't need follow-up or <strong>convert</strong> them into full notes for tracking. Each issue type can be
+				toggled on or off per event from the event management page.
 			</p>
 			<img src="/tutorial/logs.png" alt="Logs" class="sm:max-w-xl w-fit mx-auto py-1" />
 		{:else if step === 5}
@@ -158,15 +158,15 @@
 			</p>
 			<h2 class="font-bold py-1">Nexus Inspection Sync</h2>
 			<p class="py-1">
-				Connect a Nexus API key in event settings to automatically sync inspection status from frc.nexus.
-				The server polls Nexus and updates the checklist automatically. The browser extension can also
-				provide bi-directional sync when installed on a computer with Nexus open.
+				Connect a Nexus API key in event settings to automatically sync inspection status from frc.nexus. The
+				server polls Nexus and updates the checklist automatically. The browser extension can also provide
+				bi-directional sync when installed on a computer with Nexus open.
 			</p>
 			<h2 class="font-bold py-1">Radio Kiosk Sync</h2>
 			<p class="py-1">
 				Install the FTA Buddy browser extension on the WPA Kiosk computer to automatically mark teams as
-				radio-programmed when their radio is successfully flashed. Visit the Kiosk page in event
-				management to set it up.
+				radio-programmed when their radio is successfully flashed. Visit the Kiosk page in event management to
+				set it up.
 			</p>
 			<img src="/tutorial/checklist.png" alt="Checklist" class="sm:max-w-xl w-fit mx-auto py-1" />
 		{:else if step === 6}

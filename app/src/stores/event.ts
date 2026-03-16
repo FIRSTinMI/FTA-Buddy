@@ -9,6 +9,7 @@ export interface Event {
 	subEvents?: { code: string; label: string; token: string; pin: string; teams: TeamList }[];
 	meshedEventCode?: string;
 	label?: string;
+	notepadOnly?: boolean;
 }
 
 let initialEvent = localStorage.getItem("event");

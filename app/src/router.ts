@@ -16,17 +16,22 @@ export const { p, navigate, isActive, preload, route } = createRouter({
 	"/manage": () => import("./pages/management/Management.svelte"),
 	"/manage/login": () => import("./pages/management/Login.svelte"),
 	"/manage/host": () => import("./pages/management/Host.svelte"),
+	"/manage/host/create": () => import("./pages/management/Host.svelte"),
+	"/manage/host/integrations": () => import("./pages/management/Host.svelte"),
+	"/manage/event-settings": () => import("./pages/management/Host.svelte"),
 	"/manage/kiosk": () => import("./pages/management/RadioKiosk.svelte"),
-	"/manage/event-created": () => import("./pages/management/PostEventCreation.svelte"),
 	"/manage/google-signup": () => import("./pages/management/CompleteGoogleSignup.svelte"),
 	"/manage/meshed-event": () => import("./pages/management/MeshedEvent.svelte"),
 
 	"/logs": () => import("./pages/match-logs/MatchLogsList.svelte"),
+	"/logs/event/:eventCode/:matchid/:station": () => import("./pages/EventSwitchRedirect.svelte"),
+	"/logs/event/:eventCode/:matchid": () => import("./pages/EventSwitchRedirect.svelte"),
 	"/logs/:matchid": () => import("./pages/match-logs/MatchLog.svelte"),
 	"/logs/:matchid/:station": () => import("./pages/match-logs/StationLog.svelte"),
 
 	"/notepad": () => import("./pages/SupportBoard.svelte"),
 	"/notepad/team/:team": () => import("./pages/tickets-notes/TeamHistory.svelte"),
+	"/notepad/view/:eventCode/:id": () => import("./pages/EventSwitchRedirect.svelte"),
 	"/notepad/view/:id": () => import("./pages/tickets-notes/ViewNote.svelte"),
 	"/notepad/submit/:eventCode": () => import("./pages/tickets-notes/PublicNoteCreate.svelte"),
 

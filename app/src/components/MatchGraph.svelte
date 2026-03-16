@@ -30,7 +30,7 @@
 		dataRateTotal: {
 			label: "Bandwidth (MB/s)",
 			min: 0,
-			max: 4.5,
+			max: 8,
 		},
 		lostPackets: {
 			label: "Lost Packets",

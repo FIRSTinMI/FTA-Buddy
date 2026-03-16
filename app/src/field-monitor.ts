@@ -60,8 +60,53 @@ const stops: { [key in ROBOT]: { a: boolean; e: boolean } } = {
 // let robotStateSubscription: ReturnType<typeof trpc.field.robotStatus.subscribe>;
 
 let combinedSubscription: ReturnType<typeof trpc.field.combinedSubscription.subscribe>;
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+let lastReceivedAt = 0;
+// Monotonically-increasing counter; each subscribeToFieldMonitor() invocation
+// claims a generation and checks it hasn't been superseded before completing
+// any async step.  This prevents overlapping reconnect triggers (watchdog +
+// visibilitychange + online + token change) from leaving two live subscriptions.
+let subscriptionGeneration = 0;
+
+// How long without data before we consider the connection stale (ms).
+// Frames arrive every ~0.5s at an event, so 2.5s without data is clearly broken.
+const STALE_THRESHOLD_MS = 2500;
+
+// Watchdog: while the page is visible, check every 5s whether we've gone
+// stale and reconnect if so.
+setInterval(() => {
+	if (document.visibilityState !== "visible") return;
+	if (lastReceivedAt === 0) return; // never connected yet
+	if (Date.now() - lastReceivedAt > STALE_THRESHOLD_MS) {
+		console.warn("Field monitor watchdog: connection stale, reconnecting…");
+		subscribeToFieldMonitor();
+	}
+}, 5_000);
+
+// Reconnect when the tab becomes visible again after being hidden
+// (covers PWA sleep / switching apps on mobile).
+// Only reconnect if data is stale — normal tab switches (< STALE_THRESHOLD_MS)
+// don't close the SSE connection so no reconnect is needed.
+document.addEventListener("visibilitychange", () => {
+	if (document.visibilityState !== "visible") return;
+	if (lastReceivedAt === 0) return; // never had a connection, nothing to restore
+	if (Date.now() - lastReceivedAt > STALE_THRESHOLD_MS) {
+		console.info("Field monitor: tab resumed with stale connection, reconnecting…");
+		subscribeToFieldMonitor();
+	}
+});
+
+// Reconnect when the device regains network connectivity.
+window.addEventListener("online", () => {
+	console.info("Field monitor: network online, reconnecting…");
+	subscribeToFieldMonitor();
+});
 
 export async function subscribeToFieldMonitor() {
+	if (reconnectTimer) {
+		clearTimeout(reconnectTimer);
+		reconnectTimer = null;
+	}
 	combinedSubscription?.unsubscribe();
 	// subscription?.unsubscribe();
 	// fieldStateSubscription?.unsubscribe();
@@ -69,7 +114,13 @@ export async function subscribeToFieldMonitor() {
 
 	if (!get(userStore).eventToken) return;
 
+	// Claim a generation before the first await.  If another call fires concurrently
+	// (e.g. watchdog and visibilitychange both trigger at the same time) only the
+	// latest caller proceeds past each checkpoint.
+	const generation = ++subscriptionGeneration;
+
 	frameHandler.setHistory(await trpc.field.history.query());
+	if (generation !== subscriptionGeneration) return; // superseded by a newer call
 
 	combinedSubscription = await trpc.field.combinedSubscription.subscribe(
 		{
@@ -77,6 +128,7 @@ export async function subscribeToFieldMonitor() {
 		},
 		{
 			onData: (data) => {
+				lastReceivedAt = Date.now();
 				if (typeof data === "object") {
 					if ("field" in data) {
 						frameHandler.feed(data);
@@ -86,6 +138,10 @@ export async function subscribeToFieldMonitor() {
 				} else {
 					frameHandler.fieldStatusChange(data as FieldState);
 				}
+			},
+			onError: (err) => {
+				console.error("Field monitor subscription lost, reconnecting in 5s…", err);
+				reconnectTimer = setTimeout(() => subscribeToFieldMonitor(), 5000);
 			},
 		},
 	);

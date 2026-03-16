@@ -1,12 +1,16 @@
 <script lang="ts">
 	import Icon from "@iconify/svelte";
-	import { Badge, Button, Label, Modal, Select, Textarea, type SelectOptionType } from "flowbite-svelte";
+	import { Button, Label, Modal, Select, Textarea, type SelectOptionType } from "flowbite-svelte";
 	import { onMount, tick } from "svelte";
 	import { get } from "svelte/store";
 	import { formatTimeNoAgoHourMins } from "../../../../shared/formatTime";
-	import { ROBOT, type Message, type Note } from "../../../../shared/types";
+	import { ROBOT, type Message, type Note, type Profile } from "../../../../shared/types";
 	import FormattedTime from "../../components/FormattedTime.svelte";
 	import MessageCard from "../../components/MessageCard.svelte";
+	import NoteActionBar from "../../components/notes/NoteActionBar.svelte";
+	import NoteAssignModal from "../../components/notes/NoteAssignModal.svelte";
+	import NoteMatchInfo from "../../components/notes/NoteMatchInfo.svelte";
+	import NoteMetaBadges from "../../components/notes/NoteMetaBadges.svelte";
 	import NotesPolicy from "../../components/NotesPolicy.svelte";
 	import Spinner from "../../components/Spinner.svelte";
 	import { trpc } from "../../main";
@@ -16,7 +20,6 @@
 	import { userStore } from "../../stores/user";
 	import { clearNotificationsForNote } from "../../util/notifications";
 	import { toast } from "../../util/toast";
-	import { displayTeam } from "../../util/team-name";
 
 	const { id: noteId } = route.getParams("/notepad/view/:id");
 
@@ -39,15 +42,11 @@
 
 	let station: ROBOT | undefined = $state(undefined);
 
-	let assignedToUser = $derived(
-		note ? note.assigned_to_id === user.id : false
-	);
-	
+	let assignedToUser = $derived(note ? note.assigned_to_id === user.id : false);
+
 	let sortedMessages: Message[] = $derived(
 		note?.messages
-			? note.messages.toSorted(
-					(a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-			)
+			? note.messages.toSorted((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
 			: [],
 	);
 
@@ -55,6 +54,23 @@
 
 	let editNoteView = $state(false);
 	let editNoteText: string = $state("");
+
+	type TBANextMatch = Awaited<ReturnType<typeof trpc.matchEvents.getNextMatchForTeam.query>>;
+	let nextMatch: TBANextMatch = $state(null);
+
+	type PlayedMatch = {
+		id: string;
+		match_number: number;
+		play_number: number;
+		level: string;
+		blue1: number | null;
+		blue2: number | null;
+		blue3: number | null;
+		red1: number | null;
+		red2: number | null;
+		red3: number | null;
+	};
+	let playedMatchesSince: PlayedMatch[] = $state([]);
 
 	async function getNoteAndMatch() {
 		notePromise = trpc.notes.getByIdWithMessages.query({
@@ -64,6 +80,26 @@
 		note = await notePromise;
 
 		if (note) {
+			if (note.team) {
+				trpc.matchEvents.getNextMatchForTeam
+					.query({ team_number: note.team })
+					.then((m) => {
+						nextMatch = m;
+					})
+					.catch(() => {});
+			}
+			if (note.note_type === "TeamIssue" && note.team) {
+				trpc.match.getMatchesSince
+					.query({
+						team: note.team,
+						since: new Date(note.created_at),
+						exclude_match_id: note.match_id ?? undefined,
+					})
+					.then((ms) => {
+						playedMatchesSince = ms;
+					})
+					.catch(() => {});
+			}
 			if (note.match_id) {
 				match_id = note.match_id;
 				matchPromise = trpc.match.getMatch.query({ id: match_id });
@@ -130,18 +166,46 @@
 
 	async function assignSelf() {
 		if (!note) return;
-		// assignedToUser = note.assigned_to_id === user.id;
 		try {
 			if (note.assigned_to_id === user.id) {
 				await trpc.notes.unAssign.mutate({ note_id: note.id, event_code: event.code });
-				// assignedToUser = false;
 			} else {
 				await trpc.notes.assign.mutate({ id: note.id, user_id: user.id, event_code: event.code });
-				// assignedToUser = true;
 			}
 		} catch (err: any) {
 			toast("An error occurred while updating the note", err.message);
 			console.error(err);
+		}
+	}
+
+	let assignModalOpen = $state(false);
+	let eventUsers = $state<Profile[]>([]);
+	let assignPending = $state(false);
+
+	async function openAssignModal() {
+		assignModalOpen = true;
+		try {
+			eventUsers = await trpc.event.getUsers.query();
+		} catch (err: any) {
+			toast("Could not load event users", err.message);
+		}
+	}
+
+	async function assignTo(userId: number | null) {
+		if (!note) return;
+		assignPending = true;
+		try {
+			if (userId === null) {
+				await trpc.notes.unAssign.mutate({ note_id: note.id, event_code: event.code });
+			} else {
+				await trpc.notes.assign.mutate({ id: note.id, user_id: userId, event_code: event.code });
+			}
+			assignModalOpen = false;
+		} catch (err: any) {
+			toast("An error occurred while assigning the note", err.message);
+			console.error(err);
+		} finally {
+			assignPending = false;
 		}
 	}
 
@@ -151,11 +215,11 @@
 	}
 
 	function back() {
-		if (window.history.state === null) {
+		if (window.history.length <= 1) {
 			navigate("/notepad");
 		} else {
 			window.history.back();
-		}	
+		}
 	}
 
 	function sendKey(event: KeyboardEvent) {
@@ -225,7 +289,7 @@
 				note = {
 					...note,
 					text: editNoteText,
-					match_id: matchIdVal ?? null
+					match_id: matchIdVal ?? null,
 				};
 				// Refresh match display if match_id changed
 				if (matchIdVal) {
@@ -316,7 +380,7 @@
 							break;
 						case "status":
 							if (data.note_id === note.id) {
-								note = { ...note, resolution_status: data.resolution_status as any };
+								note = { ...note, resolution_status: data.resolution_status as any, resolved_by: data.resolved_by };
 							}
 							break;
 						case "assign":
@@ -339,7 +403,9 @@
 							if (data.note_id === note.id && note.messages) {
 								note = {
 									...note,
-									messages: note.messages.map((m) => (m.id === data.message.id ? { ...m, text: data.message.text } : m)),
+									messages: note.messages.map((m) =>
+										m.id === data.message.id ? { ...m, text: data.message.text } : m,
+									),
 								};
 							}
 							break;
@@ -371,14 +437,14 @@
 			matches = result
 				.toSorted(
 					(a, b) =>
-					levelToSort(b.level) - levelToSort(a.level) ||
-					b.match_number - a.match_number ||
-					b.play_number - a.play_number,
+						levelToSort(b.level) - levelToSort(a.level) ||
+						b.match_number - a.match_number ||
+						b.play_number - a.play_number,
 				)
 				.map((m) => ({
 					value: m.id,
 					name: `${m.level} ${m.match_number}/${m.play_number}`,
-			}));
+				}));
 		}
 	}
 
@@ -441,167 +507,44 @@
 				<p class="text-red-500">Note not found</p>
 			{:else}
 				<div class="flex flex-col flex-1 min-h-0 overflow-hidden gap-2 px-4">
-					{#if user.id === note.author_id}
-						<div class="shrink-0 flex justify-center sm:justify-between flex-wrap gap-2 md:gap-3 pb-2 mb-3">
-							<div class="flex gap-2 md:gap-3">
-								<Button size="sm" color="alternative" onclick={back}>
-									<Icon icon="mdi:arrow-left" class="size-4" />
-								</Button>
-								<Button size="sm" color="alternative" onclick={toggleFollowNote}>
-									<Icon
-										icon={note.followers.includes(user.id)
-											? "simple-line-icons:user-unfollow"
-											: "simple-line-icons:user-following"}
-										class="size-4 mr-1"
-									/>
-									{note.followers.includes(user.id) ? "Unfollow" : "Follow"}
-								</Button>
-								<Button size="sm" color="alternative" onclick={openEditNote}>
-									<Icon icon="mdi:pencil" class="size-4" />
-								</Button>
-								<Button size="sm" color="red" onclick={() => (deleteNotePopup = true)}>
-									<Icon icon="mdi:trash-can" class="size-4" />
-								</Button>
-							</div>
-							<div class="flex gap-2 md:gap-3">
-								{#if note.resolution_status !== "NotApplicable"}
-									<Button size="sm" color={isOpen ? "blue" : "green"} onclick={changeOpenStatus}>
-										{isOpen ? "Resolve" : "Reopen"}
-									</Button>
-								{/if}
-								{#if user}
-									<Button
-										class="shrink-0"
-										size="sm"
-										color={note.assigned_to_id === user.id
-											? "alternative"
-											: note.assigned_to_id
-												? "red"
-												: "green"}
-										onclick={assignSelf}
-									>
-										{#if note.assigned_to_id === user.id}
-											Unclaim
-										{:else if note.assigned_to_id === null || note.assigned_to_id === undefined}
-											👀 Claim
-										{:else}
-											❌ Assigned
-										{/if}
-									</Button>
-								{/if}
-								{#if match}
-									<Button size="sm" color="alternative" onclick={viewLog}>
-										<Icon icon="mdi:chart-line" class="size-4 mr-1" />Log
-									</Button>
-								{/if}
-							</div>
-						</div>
-					{:else}
-						<div class="shrink-0 flex justify-center sm:justify-between flex-wrap gap-2 md:gap-3 pb-2 mb-3">
-							<div class="flex gap-2 md:gap-3">
-								<Button size="sm" color="alternative" onclick={back}>
-									<Icon icon="mdi:arrow-left" class="size-4" />
-								</Button>
-								<Button size="sm" color="alternative" onclick={toggleFollowNote}>
-									<Icon
-										icon={note.followers.includes(user.id)
-											? "simple-line-icons:user-unfollow"
-											: "simple-line-icons:user-following"}
-										class="size-4 mr-1"
-									/>
-									{note.followers.includes(user.id) ? "Unfollow" : "Follow"}
-								</Button>
-							</div>
-							<div class="flex gap-2 md:gap-3">
-								{#if note.resolution_status !== "NotApplicable"}
-									<Button size="sm" color={isOpen ? "blue" : "green"} onclick={changeOpenStatus}>
-										{isOpen ? "Resolve" : "Reopen"}
-									</Button>
-								{/if}
-								{#if user}
-									<Button
-										class="shrink-0"
-										size="sm"
-										color={note.assigned_to_id === user.id
-											? "alternative"
-											: note.assigned_to_id
-												? "yellow"
-												: "green"}
-										onclick={assignSelf}
-									>
-										{#if note.assigned_to_id === user.id}
-											Unclaim
-										{:else if note.assigned_to_id === null || note.assigned_to_id === undefined}
-											👀 Claim
-										{:else}
-											❌ Assigned
-										{/if}
-									</Button>
-								{/if}
-								{#if match}
-									<Button size="sm" color="alternative" onclick={viewLog}>
-										<Icon icon="mdi:chart-line" class="size-4 mr-1" />Log
-									</Button>
-								{/if}
-							</div>
-						</div>
-					{/if}
+					<!-- Action bar -->
+					<NoteActionBar
+						{note}
+						userId={user.id}
+						isOwner={user.id === note.author_id}
+						{isOpen}
+						hasMatch={!!match}
+						onback={back}
+						ontogglefollow={toggleFollowNote}
+						onchangestatus={changeOpenStatus}
+						onassignself={assignSelf}
+						onopeneditnote={openEditNote}
+						ondelete={() => (deleteNotePopup = true)}
+						onopenassignmodal={openAssignModal}
+						onviewlog={viewLog}
+					/>
 
+					<!-- Scrollable content -->
 					<div class="flex flex-col flex-1 min-h-0 overflow-y-auto gap-3">
-						<span class="flex font-bold justify-center sm:justify-start text-xl text-black dark:text-white">
-							{note.note_type === "TeamIssue"
-								? "Team Issue"
-								: note.note_type === "EventNote"
-									? "Event Note"
-									: "Match Note"}
-						</span>
-						{#if note.team}
-							<div class="justify-center text-center sm:justify-start sm:text-left">
-                                Team {displayTeam(note.team)}
-							</div>
-						{/if}
+						<!-- Note type header + played-since + team + next match -->
+						<NoteMatchInfo {note} {nextMatch} {playedMatchesSince} />
+
+						<!-- Created at + author -->
 						<div class="justify-center text-center sm:justify-start sm:text-left text-xs text-gray-400 dark:text-gray-500">
-							<FormattedTime date={note.created_at} formatter={formatTimeNoAgoHourMins} /> ago by {note.author
-								.username}
-						</div>
-						<div class="flex flex-wrap gap-2 justify-center sm:justify-start">
-							{#if isOpen}
-								<Badge color="green">Open</Badge>
-							{:else if note.resolution_status === "Resolved"}
-								<Badge color="gray">Resolved</Badge>
-							{:else}
-								<Badge color="gray">N/A</Badge>
-							{/if}
-							{#if match}
-								<Badge color="teal">
-									{match.level === "Qualification"
-										? "Qual"
-										: match.level === "Playoff"
-											? "Playoff"
-											: (match.level ?? "")} M{match.match_number}{match.play_number &&
-									match.play_number > 1
-										? ` P${match.play_number}`
-										: ""}
-								</Badge>
-							{/if}
-							{#if note.issue_type && note.issue_type !== "Other"}
-								<Badge color="purple">{note.issue_type}</Badge>
-							{/if}
-							{#if note.assigned_to}
-								<Badge color="yellow">Assigned: {note.assigned_to.username}</Badge>
-							{:else}
-								<Badge color="red">Unassigned</Badge>
-							{/if}
-							{#if $userStore.meshedEventToken && $eventStore.subEvents}
-								<Badge color="indigo">
-									{$eventStore.subEvents.find((e) => e.code === note?.event_code)?.label ?? note.event_code}
-								</Badge>
-							{/if}
-						</div>
-						<div class="border-b border-gray-400 dark:border-gray-700 py-3">
-							<p class="text-center sm:text-left text-black dark:text-white whitespace-pre-wrap leading-relaxed">{note.text}</p>
+							<FormattedTime date={note.created_at} formatter={formatTimeNoAgoHourMins} /> ago by {note.author.username}
 						</div>
 
+						<!-- Status / match / assignment badges -->
+						<NoteMetaBadges {note} {isOpen} {match} />
+
+						<!-- Note text -->
+						<div class="border-b border-gray-400 dark:border-gray-700 py-3">
+							<p class="text-center sm:text-left text-black dark:text-white whitespace-pre-wrap leading-relaxed">
+								{note.text}
+							</p>
+						</div>
+
+						<!-- Thread messages -->
 						<div class="flex flex-col gap-2" id="chat">
 							{#if !sortedMessages || sortedMessages.length === 0}
 								<p class="text-center text-xs text-gray-400 dark:text-gray-500 py-2">No replies yet</p>
@@ -613,19 +556,20 @@
 						</div>
 					</div>
 
+					<!-- Reply form -->
 					<div class="w-full rounded-xl bg-white dark:bg-neutral-800 shadow-sm py-3 mt-1">
 						<form class="flex flex-row gap-2 w-full" style="width: 100%" onsubmit={postMessage}>
 							<label for="chat-input" class="sr-only">Reply</label>
 							<div class="flex-1 min-w-0 [&_textarea]:w-full">
 								<Textarea
 									id="chat-input"
-									class="flex-1 min-w-0 "
+									class="flex-1 min-w-0"
 									rows={2}
 									placeholder="Write a reply…"
 									onkeydown={sendKey}
 									bind:value={message_text}
 								/>
-								</div>
+							</div>
 							<div class="flex flex-none items-center">
 								<Button type="submit" size="sm" color="blue" disabled={!message_text.trim()}>
 									<Icon icon="mdi:send" class="size-4" />
@@ -634,8 +578,16 @@
 						</form>
 					</div>
 				</div>
-
 			{/if}
 		{/await}
 	</div>
 </div>
+
+<!-- Assign-to modal -->
+<NoteAssignModal
+	bind:open={assignModalOpen}
+	assignedToId={note?.assigned_to_id}
+	{eventUsers}
+	{assignPending}
+	onassign={assignTo}
+/>

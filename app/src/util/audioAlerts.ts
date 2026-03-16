@@ -138,6 +138,7 @@ export class AudioQueuer {
 	}[] = [];
 	private playing: boolean = false;
 	private music: HTMLAudioElement | undefined;
+	private musicEndedListener: (() => void) | undefined;
 
 	constructor() {}
 
@@ -165,7 +166,7 @@ export class AudioQueuer {
 
 			if (remove) {
 				existingClip.audio.pause();
-				this.queue.slice(this.queue.indexOf(existingClip), 1);
+				this.queue.splice(this.queue.indexOf(existingClip), 1);
 			}
 		}
 
@@ -192,28 +193,39 @@ export class AudioQueuer {
 	}
 
 	private async playNext() {
-		console.log("Playing next");
 		if (this.queue.length === 0) {
-			console.log("Queue empty");
 			this.playing = false;
 			return;
 		}
-		console.log("Playing next");
 
 		const audio = this.queue.shift();
 		if (!audio) return;
 
 		this.playing = true;
-		audio.audio.addEventListener("ended", () => this.playNext());
-		await this.tryToPlay(audio.audio);
+		// Attach the ended listener only after play() succeeds so that a
+		// retry-exhausted skip never leaves a dangling listener on the cached element.
+		const onEnded = () => this.playNext();
+		const played = await this.tryToPlay(audio.audio);
+		if (played) {
+			audio.audio.addEventListener("ended", onEnded, { once: true });
+		} else {
+			// Retries exhausted – advance to the next clip without a listener.
+			this.playNext();
+		}
 	}
 
-	private async tryToPlay(audio: HTMLAudioElement) {
+	/** Returns true if playback started successfully, false after retries are exhausted. */
+	private async tryToPlay(audio: HTMLAudioElement, retries = 3): Promise<boolean> {
 		try {
 			await audio.play();
+			return true;
 		} catch (err) {
+			if (retries <= 0) {
+				console.warn("AudioQueuer: failed to play clip after retries, skipping", err);
+				return false;
+			}
 			await new Promise((resolve) => setTimeout(resolve, 500));
-			this.tryToPlay(audio);
+			return this.tryToPlay(audio, retries - 1);
 		}
 	}
 
@@ -222,7 +234,11 @@ export class AudioQueuer {
 
 		if (this.music) {
 			this.music.pause();
-			this.music.removeEventListener("ended", () => this.playMusic(musicOrder));
+			// Remove by stored reference so the listener is actually detached.
+			if (this.musicEndedListener) {
+				this.music.removeEventListener("ended", this.musicEndedListener);
+				this.musicEndedListener = undefined;
+			}
 			this.music = undefined;
 		}
 
@@ -239,7 +255,9 @@ export class AudioQueuer {
 		while (newSong >= musicClipsGenre.length) newSong -= musicClipsGenre.length;
 
 		this.music = this.getClip(musicClipsGenre[newSong]);
-		this.music.addEventListener("ended", () => this.playMusic(musicOrder.slice(1)));
+		// Store the listener reference so stopMusic can actually remove it.
+		this.musicEndedListener = () => this.playMusic(musicOrder.slice(1));
+		this.music.addEventListener("ended", this.musicEndedListener, { once: true });
 		this.music.volume = settings.musicVolume / 100;
 		this.music.play();
 	}
@@ -247,7 +265,10 @@ export class AudioQueuer {
 	public stopMusic() {
 		if (this.music) {
 			this.music.pause();
-			this.music.removeEventListener("ended", () => this.playMusic([]));
+			if (this.musicEndedListener) {
+				this.music.removeEventListener("ended", this.musicEndedListener);
+				this.musicEndedListener = undefined;
+			}
 			this.music = undefined;
 		}
 	}

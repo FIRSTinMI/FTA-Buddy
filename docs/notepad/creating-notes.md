@@ -1,3 +1,5 @@
+[Home](./)
+
 # Creating Notes
 
 ## Creating a Note Manually

@@ -1,3 +1,5 @@
+[Home](../)
+
 # Field Monitor
 
 The Field Monitor is the main screen for FTAs and FTAAs. It shows live connection status for all six robot stations, updated in real time via the browser extension on the FMS computer.
@@ -15,7 +17,7 @@ Blue 1 | Blue 2 | Blue 3
 Red 1  | Red 2  | Red 3
 ```
 
-Each station shows a row of indicators. See [Indicators](./indicators.md) for a full explanation of what each one means.
+Each station shows a row of indicators. See [Indicators](./indicators) for a full explanation of what each one means.
 
 ### Team Number & Warning Icons
 
@@ -30,7 +32,7 @@ The leftmost cell in each row shows the team number. Small emoji icons appear be
 | 📝   | Team has an open or recent support note                                               |
 | ⚙️   | Team had an event logged in the previous match                                        |
 
-Tapping the team number cell opens the [Team Modal](./alerts.md#team-modal) with troubleshooting steps.
+Tapping the team number cell opens the [Team Modal](./alerts#team-modal) with troubleshooting steps.
 
 ---
 
@@ -69,5 +71,5 @@ If the event is behind or ahead of schedule, an indicator shows how many minutes
 
 ## Related Pages
 
-- [Indicators](./indicators.md) - what DS, Radio, RIO, Code, Battery, Ping, Signal, and BW mean
-- [Alerts & Troubleshooting](./alerts.md) - audio alerts and the Team Modal
+- [Indicators](./indicators) - what DS, Radio, RIO, Code, Battery, Ping, Signal, and BW mean
+- [Alerts & Troubleshooting](./alerts) - audio alerts and the Team Modal

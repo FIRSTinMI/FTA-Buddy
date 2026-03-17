@@ -1,3 +1,5 @@
+[Home](./)
+
 # Alerts & Troubleshooting
 
 ## Audio Alerts
@@ -10,7 +12,7 @@ To enable audio alerts:
 2. Under **Audio Alerts**, turn on **Robot Connection**.
 3. Optionally enable **Field Green** to also play a sound when the field goes green.
 
-Audio alerts are off by default. See [Settings](../settings.md) for all audio options, including background music.
+Audio alerts are off by default. See [Settings](../settings) for all audio options, including background music.
 
 ## Vibration Alerts
 

@@ -1,3 +1,5 @@
+[Home](../)
+
 # Match Logs
 
 After each match, FTA Buddy automatically imports the DS connection logs for all six stations. These logs let you review exactly what happened with a robot's connection during a match.
@@ -35,10 +37,10 @@ Tapping a match opens the **match overview**, which shows all six stations side 
 - Which team was in that station
 - Any notable events (disconnects, brownouts, etc.)
 
-Tap a station to drill into the [Station Log](./station-logs.md) for a detailed view of that robot's data.
+Tap a station to drill into the [Station Log](./station-logs) for a detailed view of that robot's data.
 
 ---
 
 ## Related Pages
 
-- [Station Logs](./station-logs.md) - detailed per-robot metrics, graphs, export, and sharing
+- [Station Logs](./station-logs) - detailed per-robot metrics, graphs, export, and sharing

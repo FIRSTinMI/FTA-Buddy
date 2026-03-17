@@ -1,3 +1,5 @@
+[Home](../)
+
 # Notepad
 
 The Notepad is where team support notes (tickets) live. FTAs, FTAAs, CSAs, and RIs all use it to track issues during the event - from robot problems to venue concerns.
@@ -41,6 +43,6 @@ Your last-used view is remembered between sessions.
 
 ## Related Pages
 
-- [Creating Notes](./creating-notes.md) - note types, issue categories, and how to log an issue
-- [Managing Notes](./managing-notes.md) - resolving, assigning, commenting, and history
-- [Team Ticket Submissions](./team-submissions.md) - letting teams submit their own tickets
+- [Creating Notes](./creating-notes) - note types, issue categories, and how to log an issue
+- [Managing Notes](./managing-notes) - resolving, assigning, commenting, and history
+- [Team Ticket Submissions](./team-submissions) - letting teams submit their own tickets

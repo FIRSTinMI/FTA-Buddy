@@ -1,3 +1,5 @@
+[Home](./)
+
 # Team Ticket Submissions
 
 Teams can submit their own support tickets without needing an FTA Buddy account. This is useful for allowing pit crew or drive teams to report issues directly.

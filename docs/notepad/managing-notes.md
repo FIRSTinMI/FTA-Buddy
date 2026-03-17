@@ -1,3 +1,5 @@
+[Home](./)
+
 # Managing Notes
 
 ## Note Status
@@ -70,7 +72,7 @@ The team history page shows all notes for that team, including resolved ones, an
 
 ## FTA App Sync
 
-If the [FTA App integration](../integrations.md#fta-app-sync) is configured, notes are synced bi-directionally with the official FMS FTA App in real time. Notes created in FTA Buddy appear in the FTA App and vice versa.
+If the [FTA App integration](../integrations#fta-app-sync) is configured, notes are synced bi-directionally with the official FMS FTA App in real time. Notes created in FTA Buddy appear in the FTA App and vice versa.
 
 ---
 
@@ -82,4 +84,4 @@ You can subscribe to notifications for:
 - **Notes you follow** being updated
 - **Notes assigned to you** being updated
 
-Notification preferences are in [Settings](../settings.md#notifications).
+Notification preferences are in [Settings](../settings#notifications).

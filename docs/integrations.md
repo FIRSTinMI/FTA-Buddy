@@ -1,3 +1,5 @@
+[Home](./)
+
 # Integrations
 
 Integrations are configured from the **Event Settings** page (`ftabuddy.com/manage/event-settings`), accessible to the event host.
@@ -35,7 +37,7 @@ FTA Buddy has a Slack bot integration that posts team issue notes to a designate
 
 To receive direct Slack mentions and notifications:
 
-1. Open [Settings](./settings.md#slack-account).
+1. Open [Settings](./settings#slack-account).
 2. Enter your Slack member ID and tap **Link Slack**.
 
 Once linked, you'll receive Slack DMs for notes assigned to you or that mention you.
@@ -48,7 +50,7 @@ Once linked, you'll receive Slack DMs for notes assigned to you or that mention 
 
 ### What it does
 
-- When a team completes a connection check via Nexus, their **Connection Tested** status in the [Checklist](./checklist.md) is updated automatically.
+- When a team completes a connection check via Nexus, their **Connection Tested** status in the [Checklist](./checklist) is updated automatically.
 
 ### Setup
 

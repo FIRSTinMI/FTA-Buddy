@@ -10,7 +10,7 @@
 				<span class="font-bold">CTRE + POE Diagram</span>
 			{/snippet}
 			<img
-				src="/frc-control-system-layout-ctre.svg"
+				src="/references/frc-control-system-layout-ctre.svg"
 				class="bg-white"
 				alt="Wiring Diagram Using CTRE Components and Power Over Ethernet"
 			/>
@@ -21,7 +21,7 @@
 				<span class="font-bold">REV + RPM Diagram</span>
 			{/snippet}
 			<img
-				src="/frc-control-system-layout-rev.svg"
+				src="/references/frc-control-system-layout-rev.svg"
 				alt="Wiring Diagram Using REV Components and Radio Power Module"
 			/>
 		</AccordionItem>

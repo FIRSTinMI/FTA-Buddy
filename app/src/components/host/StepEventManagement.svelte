@@ -80,9 +80,9 @@
 		{#if extensionDetected}
 			<span class="text-xs text-gray-500">
 				{#if !extensionEnabled}
-					Extension not enabled —
+					Extension not enabled -
 				{:else if !extensionFieldMonitor}
-					Field monitor off —
+					Field monitor off -
 				{:else}
 					Field monitor on ·
 				{/if}
@@ -91,12 +91,16 @@
 					disabled={extensionConfiguring}
 					onclick={configureExtension}
 				>
-					{extensionConfiguring ? "Configuring…" : extensionConfigured ? "Reconfigure extension" : "Configure extension"}
+					{extensionConfiguring
+						? "Configuring…"
+						: extensionConfigured
+							? "Reconfigure extension"
+							: "Configure extension"}
 				</button>
 			</span>
 		{:else}
 			<span class="text-xs text-gray-500">
-				No extension detected —
+				No extension detected -
 				<a
 					href="https://chromewebstore.google.com/detail/fta-buddy/kddnhihfpfnehnnhbkfajdldlgigohjc"
 					target="_blank"
@@ -113,17 +117,15 @@
 		<div class="flex items-center gap-2">
 			<span class="text-sm text-gray-400 w-24">Event Code</span>
 			<code class="bg-neutral-800 px-2 py-0.5 rounded-lg text-sm">{$eventStore.code}</code>
-			<button
-				class="text-xs text-blue-400 hover:underline"
-				onclick={() => copyToClipboard($eventStore.code)}>copy</button
+			<button class="text-xs text-blue-400 hover:underline" onclick={() => copyToClipboard($eventStore.code)}
+				>copy</button
 			>
 		</div>
 		<div class="flex items-center gap-2">
 			<span class="text-sm text-gray-400 w-24">Event Pin</span>
 			<code class="bg-neutral-800 px-2 py-0.5 rounded-lg text-sm">{$eventStore.pin}</code>
-			<button
-				class="text-xs text-blue-400 hover:underline"
-				onclick={() => copyToClipboard($eventStore.pin)}>copy</button
+			<button class="text-xs text-blue-400 hover:underline" onclick={() => copyToClipboard($eventStore.pin)}
+				>copy</button
 			>
 		</div>
 		{#if $userStore.eventToken}

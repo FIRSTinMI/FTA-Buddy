@@ -77,8 +77,8 @@
 <div class="flex flex-col gap-4 max-w-sm mx-auto mt-8">
 	<h2 class="text-xl font-bold">Join Event</h2>
 	<p class="text-gray-600 text-sm">
-		This link is for event <span class="font-mono font-semibold">{eventCode}</span>. Enter the event PIN to switch
-		to it.
+		This link is for event <span class="font-mono font-semibold">{eventCode}</span>. Enter the event password to
+		switch to it.
 	</p>
 	<form class="flex flex-col gap-3" onsubmit={join}>
 		<div>
@@ -86,8 +86,8 @@
 			<Input id="ejp-code" value={eventCode} disabled />
 		</div>
 		<div>
-			<Label for="ejp-pin">Event PIN</Label>
-			<Input id="ejp-pin" bind:value={pin} placeholder="1234" type="password" disabled={loading} />
+			<Label for="ejp-pin">Event Password</Label>
+			<Input id="ejp-pin" bind:value={pin} placeholder="robot-field-42" type="password" disabled={loading} />
 		</div>
 		<Button type="submit" disabled={loading}>Join Event</Button>
 	</form>

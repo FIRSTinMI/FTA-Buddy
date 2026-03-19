@@ -85,7 +85,7 @@ setInterval(() => {
 
 // Reconnect when the tab becomes visible again after being hidden
 // (covers PWA sleep / switching apps on mobile).
-// Only reconnect if data is stale — normal tab switches (< STALE_THRESHOLD_MS)
+// Only reconnect if data is stale - normal tab switches (< STALE_THRESHOLD_MS)
 // don't close the SSE connection so no reconnect is needed.
 document.addEventListener("visibilitychange", () => {
 	if (document.visibilityState !== "visible") return;

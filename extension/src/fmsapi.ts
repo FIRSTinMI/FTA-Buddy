@@ -14,12 +14,6 @@ export async function getMatches(level: FMSEnums.Level) {
 	).json()) as FMSMatch[];
 }
 
-export async function getMatchesByTeam(teamNumber: number) {
-	return (await (
-		await fetch(`http://${FMS}/api/v1.0/fieldmonitor/get/GetResultsByTeamNumber/${teamNumber}`)
-	).json()) as FMSMatch[];
-}
-
 export async function getLog(matchId: string, alliance: "Red" | "Blue", station: FMSEnums.StationType) {
 	return (await (
 		await fetch(

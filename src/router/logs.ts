@@ -182,17 +182,15 @@ export const matchRouter = router({
 	 * Given a list of FMS match IDs, returns the subset that are already stored on the server.
 	 * Used by the extension's "Import All" to skip matches that don't need uploading.
 	 */
-	getUploadedMatchIds: publicProcedure
-		.input(z.object({ ids: z.array(z.string()) }))
-		.query(async ({ input }) => {
-			if (input.ids.length === 0) return [];
-			const rows = await db
-				.select({ id: matchLogs.id })
-				.from(matchLogs)
-				.where(inArray(matchLogs.id, input.ids))
-				.execute();
-			return rows.map((r) => r.id);
-		}),
+	getUploadedMatchIds: publicProcedure.input(z.object({ ids: z.array(z.string()) })).query(async ({ input }) => {
+		if (input.ids.length === 0) return [];
+		const rows = await db
+			.select({ id: matchLogs.id })
+			.from(matchLogs)
+			.where(inArray(matchLogs.id, input.ids))
+			.execute();
+		return rows.map((r) => r.id);
+	}),
 
 	getMatchNumbers: eventProcedure
 		.input(
@@ -493,7 +491,7 @@ export const matchRouter = router({
 					return a.play_number - b.play_number;
 				});
 			} catch {
-				// TBA fetch failed — return played matches only (already in result)
+				// TBA fetch failed - return played matches only (already in result)
 			}
 
 			return result;

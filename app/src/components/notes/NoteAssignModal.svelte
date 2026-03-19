@@ -21,7 +21,10 @@
 		{:else}
 			{#each eventUsers as u}
 				<button
-					class="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors {assignedToId === u.id ? 'ring-2 ring-blue-500' : ''}"
+					class="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors {assignedToId ===
+					u.id
+						? 'ring-2 ring-blue-500'
+						: ''}"
 					disabled={assignPending}
 					onclick={() => onassign(u.id)}
 				>

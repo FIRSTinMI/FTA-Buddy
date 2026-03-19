@@ -67,11 +67,7 @@
 <!-- Note type header row with played-since -->
 <div class="flex items-start justify-between gap-4">
 	<span class="font-bold text-xl text-black dark:text-white">
-		{note.note_type === "TeamIssue"
-			? "Team Issue"
-			: note.note_type === "EventNote"
-				? "Event Note"
-				: "Match Note"}
+		{note.note_type === "TeamIssue" ? "Team Issue" : note.note_type === "EventNote" ? "Event Note" : "Match Note"}
 	</span>
 	{#if note.note_type === "TeamIssue" && playedMatchesSince.length > 0}
 		<div class="flex flex-col items-end gap-0.5 shrink-0 mt-1">
@@ -98,8 +94,7 @@
 							? navigate("/logs/:matchid/:station", {
 									params: { matchid: pm.id, station: pmStation },
 								})
-							: navigate("/logs/:matchid", { params: { matchid: pm.id } })}
-					>{formatMatchLabel(pm)}</button
+							: navigate("/logs/:matchid", { params: { matchid: pm.id } })}>{formatMatchLabel(pm)}</button
 				>
 			{/each}
 		</div>
@@ -112,7 +107,8 @@
 		<button
 			class="font-semibold hover:underline"
 			onclick={() => note && navigate("/notepad/team/:team", { params: { team: String(note.team) } })}
-		>Team {displayTeam(note.team)}</button>
+			>Team {displayTeam(note.team)}</button
+		>
 	</div>
 
 	<!-- Next match -->

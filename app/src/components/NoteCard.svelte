@@ -151,8 +151,12 @@
 				{#if note.team !== null}
 					<button
 						class="font-bold text-base hover:underline"
-						onclick={(e) => { e.preventDefault(); e.stopPropagation(); navigate("/notepad/team/:team", { params: { team: String(note.team) } }); }}
-					>{displayTeam(note.team)}</button>
+						onclick={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							navigate("/notepad/team/:team", { params: { team: String(note.team) } });
+						}}>{displayTeam(note.team)}</button
+					>
 				{/if}
 				{#if note.note_type !== "TeamIssue"}
 					<Badge color={noteTypeColor[note.note_type]}>{noteTypeLabel[note.note_type]}</Badge>
@@ -175,7 +179,7 @@
 				{#if canToggleStatus && isOpen}
 					<Badge color="green">Open</Badge>
 				{:else if canToggleStatus}
-					<Badge color="gray">Closed{note.resolved_by ? ` by ${note.resolved_by.username}` : ''}</Badge>
+					<Badge color="gray">Closed{note.resolved_by ? ` by ${note.resolved_by.username}` : ""}</Badge>
 				{/if}
 			</div>
 			<div class="shrink-0 text-right text-xs text-gray-400 dark:text-gray-500 leading-relaxed">

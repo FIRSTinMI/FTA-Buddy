@@ -3,7 +3,10 @@
 </script>
 
 <div class="rounded-xl border border-neutral-700 bg-neutral-900 overflow-hidden">
-	<button class="flex w-full items-center justify-between gap-3 p-4 text-left h-20" onclick={() => (expanded = !expanded)}>
+	<button
+		class="flex w-full items-center justify-between gap-3 p-4 text-left h-20"
+		onclick={() => (expanded = !expanded)}
+	>
 		<div class="flex items-center gap-3">
 			<span class="text-2xl">📡</span>
 			<div>

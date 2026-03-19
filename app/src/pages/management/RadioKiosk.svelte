@@ -64,7 +64,7 @@
 	let loading = $state(false);
 
 	let blockSubmit = $derived(
-		!(eventCode.length > 6 && eventPin.length >= 4 && !loading && extensionDetected && extensionEnabled),
+		!(eventCode.length > 6 && eventPin.length >= 5 && !loading && extensionDetected && extensionEnabled),
 	);
 
 	async function setupExtension(evt: SubmitEvent) {
@@ -158,8 +158,8 @@
 			<Helper class="text-sm mt-1" color={eventCodeError ? "red" : undefined}>{eventCodeHelperText}</Helper>
 		</div>
 		<div>
-			<Label for="event-pin">Event Pin</Label>
-			<Input id="event-pin" bind:value={eventPin} disabled={loading} class="mt-1" />
+			<Label for="event-pin">Event Password</Label>
+			<Input id="event-pin" bind:value={eventPin} placeholder="robot-field-42" disabled={loading} class="mt-1" />
 		</div>
 		<Button type="submit" disabled={blockSubmit}>Setup Extension</Button>
 	</form>

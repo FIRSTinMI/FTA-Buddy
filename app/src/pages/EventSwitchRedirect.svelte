@@ -8,7 +8,7 @@
 	import { userStore } from "../stores/user";
 	import { savedEventsStore } from "../stores/savedEvents";
 
-	// Extract route params — this component serves 3 routes, try each pattern
+	// Extract route params - this component serves 3 routes, try each pattern
 	function getRouteParams() {
 		try {
 			const p = route.getParams("/notepad/view/:eventCode/:id");
@@ -43,7 +43,12 @@
 		const saved = get(savedEventsStore);
 
 		if (!eventCode) {
-			console.warn("[EventSwitchRedirect] eventCode prop is undefined. Props:", { eventCode, id, matchid, station });
+			console.warn("[EventSwitchRedirect] eventCode prop is undefined. Props:", {
+				eventCode,
+				id,
+				matchid,
+				station,
+			});
 			console.warn("[EventSwitchRedirect] Falling back to redirectPath:", redirectPath);
 			navigate(redirectPath as any, { replace: true });
 			return;
@@ -51,7 +56,7 @@
 
 		const normalizedCode = eventCode.toLowerCase();
 
-		// Already on the right event — just redirect
+		// Already on the right event - just redirect
 		if (event.code?.toLowerCase() === normalizedCode) {
 			navigate(redirectPath as any, { replace: true });
 			return;
@@ -68,8 +73,9 @@
 			}
 		}
 
-		// We have a saved token for this event — restore silently and redirect
-		const savedEntry = saved[normalizedCode] ?? Object.values(saved).find((e) => e.code.toLowerCase() === normalizedCode);
+		// We have a saved token for this event - restore silently and redirect
+		const savedEntry =
+			saved[normalizedCode] ?? Object.values(saved).find((e) => e.code.toLowerCase() === normalizedCode);
 		if (savedEntry) {
 			if (savedEntry.subEvents) {
 				userStore.update((u) => ({
@@ -131,7 +137,7 @@
 			return;
 		}
 
-		// Not logged in at all — send them to login and come back after
+		// Not logged in at all - send them to login and come back after
 		// Store the full event-scoped URL so after login we re-enter this redirect
 		// component, which will then handle the event switch before forwarding on.
 		sessionStorage.setItem("redirectAfterLogin", window.location.pathname);

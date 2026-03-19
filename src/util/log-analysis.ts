@@ -308,87 +308,41 @@ export async function logAnalysisLoop(limit: number) {
 
 	for (const log of logsToAnalyze) {
 		try {
-		if (!log.event) {
-			console.warn(`Skipping log ${log.id}: empty event code (likely a manual import with no event set). Marking as analyzed to prevent crash loop.`);
-			await db.update(matchLogs).set({ analyzed: true }).where(eq(matchLogs.id, log.id)).execute();
-			continue;
-		}
+			if (!log.event) {
+				console.warn(
+					`Skipping log ${log.id}: empty event code (likely a manual import with no event set). Marking as analyzed to prevent crash loop.`,
+				);
+				await db.update(matchLogs).set({ analyzed: true }).where(eq(matchLogs.id, log.id)).execute();
+				continue;
+			}
 
-		for (const station in ROBOT) {
-			//@ts-ignore
-			const teamNumber: number = log[station];
+			for (const station in ROBOT) {
+				//@ts-ignore
+				const teamNumber: number = log[station];
 
-			// Skip stations with no team (e.g. empty stations in test matches)
-			if (!teamNumber) continue;
+				// Skip stations with no team (e.g. empty stations in test matches)
+				if (!teamNumber) continue;
 
-			//@ts-ignore
-			const logData = decompressStationLog(log[`${station}_log`]);
+				//@ts-ignore
+				const logData = decompressStationLog(log[`${station}_log`]);
 
-			// Skip bypassed teams in test match
-			if (log.level === "None" && logData.length < 1) continue;
+				// Skip bypassed teams in test match
+				if (log.level === "None" && logData.length < 1) continue;
 
-			// Skip bypassed teams in practice match
-			if (log.level === "Practice" && logData.length < 1) continue;
+				// Skip bypassed teams in practice match
+				if (log.level === "Practice" && logData.length < 1) continue;
 
-			const isBypassed = logData.length < 1;
-			const analyzedLog = analyzeLog(logData);
-			const alliance = station.startsWith("blue") ? "blue" : "red";
-			const serverEvent = events[log.event];
-			const settings = autoEventSettingsCache.get(log.event) ?? {};
+				const isBypassed = logData.length < 1;
+				const analyzedLog = analyzeLog(logData);
+				const alliance = station.startsWith("blue") ? "blue" : "red";
+				const serverEvent = events[log.event];
+				const settings = autoEventSettingsCache.get(log.event) ?? {};
 
-			if (isBypassed) {
-				// Insert a single "Bypassed" row
-				await db
-					.insert(analyzedLogs)
-					.values({
-						id: randomUUID(),
-						match_id: log.id,
-						event: log.event,
-						match_number: log.match_number,
-						play_number: log.play_number,
-						level: log.level,
-						team: teamNumber,
-						alliance,
-						issue: "Bypassed",
-					})
-					.execute();
-
-				const bypassEnabled = settings.Bypassed !== false;
-				if (bypassEnabled) {
-					const matchEventId = randomUUID();
-					const [inserted] = await db
-						.insert(matchEvents)
+				if (isBypassed) {
+					// Insert a single "Bypassed" row
+					await db
+						.insert(analyzedLogs)
 						.values({
-							id: matchEventId,
-							match_id: log.id,
-							event_code: log.event,
-							team: teamNumber,
-							alliance,
-							issue: "Bypassed",
-							match_number: log.match_number,
-							play_number: log.play_number,
-							level: log.level,
-							status: "active",
-						})
-						.returning()
-						.execute();
-
-					if (serverEvent) {
-						const wasAutoLinked = await tryAutoLinkNewMatchEvent(inserted, log.event, serverEvent);
-						if (!wasAutoLinked) {
-							serverEvent.matchEventEmitter.emit("create", {
-								kind: "match_event_create",
-								matchEvent: inserted,
-							});
-						}
-					}
-				}
-			} else if (analyzedLog.length > 0) {
-				// Insert one row per event into analyzed_logs
-				await db
-					.insert(analyzedLogs)
-					.values(
-						analyzedLog.map((evt) => ({
 							id: randomUUID(),
 							match_id: log.id,
 							event: log.event,
@@ -397,91 +351,139 @@ export async function logAnalysisLoop(limit: number) {
 							level: log.level,
 							team: teamNumber,
 							alliance,
-							issue: evt.issue as (typeof issueEnum.enumValues)[number],
-							start_time: evt.startTime,
-							end_time: evt.endTime,
-							duration: evt.duration,
-							start_index: evt.startIndex,
-							end_index: evt.endIndex,
-						})),
-					)
-					.execute();
-
-				// Collect all enabled issues, grouped by issue type, then combine into one match event
-				const groupedByIssue = new Map<string, DisconnectionEvent[]>();
-				for (const evt of analyzedLog) {
-					const issueType = evt.issue as AutoEventIssueType;
-					const isEnabled = settings[issueType] !== false;
-					if (isEnabled) {
-						const group = groupedByIssue.get(evt.issue) ?? [];
-						group.push(evt);
-						groupedByIssue.set(evt.issue, group);
-					}
-				}
-
-				// Build per-issue detail entries for the combined event
-				const issueDetails: {
-					issue: string;
-					start_time: number | null;
-					end_time: number | null;
-					duration: number | null;
-				}[] = [];
-				for (const [issue, evts] of groupedByIssue) {
-					const startTime = Math.max(...evts.map((e) => e.startTime));
-					const endTime = Math.min(...evts.map((e) => e.endTime));
-					const totalDuration = evts.reduce((sum, e) => sum + Math.abs(e.duration), 0);
-
-					// Skip brownouts with less than 10 seconds total duration
-					if (issue === "Brownout" && totalDuration < 10) continue;
-
-					issueDetails.push({ issue, start_time: startTime, end_time: endTime, duration: totalDuration });
-				}
-
-				if (issueDetails.length > 0) {
-					// Select primary issue deterministically by severity (DS > Radio > RIO > Code > others)
-					const primaryIssue = issueDetails.reduce((best, d) =>
-						(ISSUE_SEVERITY[d.issue] ?? 4) < (ISSUE_SEVERITY[best.issue] ?? 4) ? d : best,
-					).issue;
-					const overallStartTime = Math.max(...issueDetails.map((d) => d.start_time ?? 0));
-					const overallEndTime = Math.min(...issueDetails.map((d) => d.end_time ?? 0));
-					const overallDuration = issueDetails.reduce((sum, d) => sum + Math.abs(d.duration ?? 0), 0);
-
-					const matchEventId = randomUUID();
-					const [inserted] = await db
-						.insert(matchEvents)
-						.values({
-							id: matchEventId,
-							match_id: log.id,
-							event_code: log.event,
-							team: teamNumber,
-							alliance,
-							issue: primaryIssue as (typeof issueEnum.enumValues)[number],
-							issues: issueDetails,
-							match_number: log.match_number,
-							play_number: log.play_number,
-							level: log.level,
-							start_time: overallStartTime,
-							end_time: overallEndTime,
-							duration: overallDuration,
-							status: "active",
+							issue: "Bypassed",
 						})
-						.returning()
 						.execute();
 
-					if (serverEvent) {
-						const wasAutoLinked = await tryAutoLinkNewMatchEvent(inserted, log.event, serverEvent);
-						if (!wasAutoLinked) {
-							serverEvent.matchEventEmitter.emit("create", {
-								kind: "match_event_create",
-								matchEvent: inserted,
-							});
+					const bypassEnabled = settings.Bypassed !== false;
+					if (bypassEnabled) {
+						const matchEventId = randomUUID();
+						const [inserted] = await db
+							.insert(matchEvents)
+							.values({
+								id: matchEventId,
+								match_id: log.id,
+								event_code: log.event,
+								team: teamNumber,
+								alliance,
+								issue: "Bypassed",
+								match_number: log.match_number,
+								play_number: log.play_number,
+								level: log.level,
+								status: "active",
+							})
+							.returning()
+							.execute();
+
+						if (serverEvent) {
+							const wasAutoLinked = await tryAutoLinkNewMatchEvent(inserted, log.event, serverEvent);
+							if (!wasAutoLinked) {
+								serverEvent.matchEventEmitter.emit("create", {
+									kind: "match_event_create",
+									matchEvent: inserted,
+								});
+							}
+						}
+					}
+				} else if (analyzedLog.length > 0) {
+					// Insert one row per event into analyzed_logs
+					await db
+						.insert(analyzedLogs)
+						.values(
+							analyzedLog.map((evt) => ({
+								id: randomUUID(),
+								match_id: log.id,
+								event: log.event,
+								match_number: log.match_number,
+								play_number: log.play_number,
+								level: log.level,
+								team: teamNumber,
+								alliance,
+								issue: evt.issue as (typeof issueEnum.enumValues)[number],
+								start_time: evt.startTime,
+								end_time: evt.endTime,
+								duration: evt.duration,
+								start_index: evt.startIndex,
+								end_index: evt.endIndex,
+							})),
+						)
+						.execute();
+
+					// Collect all enabled issues, grouped by issue type, then combine into one match event
+					const groupedByIssue = new Map<string, DisconnectionEvent[]>();
+					for (const evt of analyzedLog) {
+						const issueType = evt.issue as AutoEventIssueType;
+						const isEnabled = settings[issueType] !== false;
+						if (isEnabled) {
+							const group = groupedByIssue.get(evt.issue) ?? [];
+							group.push(evt);
+							groupedByIssue.set(evt.issue, group);
+						}
+					}
+
+					// Build per-issue detail entries for the combined event
+					const issueDetails: {
+						issue: string;
+						start_time: number | null;
+						end_time: number | null;
+						duration: number | null;
+					}[] = [];
+					for (const [issue, evts] of groupedByIssue) {
+						const startTime = Math.max(...evts.map((e) => e.startTime));
+						const endTime = Math.min(...evts.map((e) => e.endTime));
+						const totalDuration = evts.reduce((sum, e) => sum + Math.abs(e.duration), 0);
+
+						// Skip brownouts with less than 10 seconds total duration
+						if (issue === "Brownout" && totalDuration < 10) continue;
+
+						issueDetails.push({ issue, start_time: startTime, end_time: endTime, duration: totalDuration });
+					}
+
+					if (issueDetails.length > 0) {
+						// Select primary issue deterministically by severity (DS > Radio > RIO > Code > others)
+						const primaryIssue = issueDetails.reduce((best, d) =>
+							(ISSUE_SEVERITY[d.issue] ?? 4) < (ISSUE_SEVERITY[best.issue] ?? 4) ? d : best,
+						).issue;
+						const overallStartTime = Math.max(...issueDetails.map((d) => d.start_time ?? 0));
+						const overallEndTime = Math.min(...issueDetails.map((d) => d.end_time ?? 0));
+						const overallDuration = issueDetails.reduce((sum, d) => sum + Math.abs(d.duration ?? 0), 0);
+
+						const matchEventId = randomUUID();
+						const [inserted] = await db
+							.insert(matchEvents)
+							.values({
+								id: matchEventId,
+								match_id: log.id,
+								event_code: log.event,
+								team: teamNumber,
+								alliance,
+								issue: primaryIssue as (typeof issueEnum.enumValues)[number],
+								issues: issueDetails,
+								match_number: log.match_number,
+								play_number: log.play_number,
+								level: log.level,
+								start_time: overallStartTime,
+								end_time: overallEndTime,
+								duration: overallDuration,
+								status: "active",
+							})
+							.returning()
+							.execute();
+
+						if (serverEvent) {
+							const wasAutoLinked = await tryAutoLinkNewMatchEvent(inserted, log.event, serverEvent);
+							if (!wasAutoLinked) {
+								serverEvent.matchEventEmitter.emit("create", {
+									kind: "match_event_create",
+									matchEvent: inserted,
+								});
+							}
 						}
 					}
 				}
+				// If no events and not bypassed, skip - don't insert anything
 			}
-			// If no events and not bypassed, skip - don't insert anything
-		}
-		await db.update(matchLogs).set({ analyzed: true }).where(eq(matchLogs.id, log.id)).execute();
+			await db.update(matchLogs).set({ analyzed: true }).where(eq(matchLogs.id, log.id)).execute();
 		} catch (err) {
 			console.error(`Error analyzing log ${log.id} (event: "${log.event}"): ${err}`);
 			// Mark as analyzed so the server doesn't crash-loop retrying the same bad log

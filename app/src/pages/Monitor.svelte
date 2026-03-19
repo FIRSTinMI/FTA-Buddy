@@ -308,7 +308,7 @@
 		</div>
 		{#if !monitorFrame}
 			{#if $eventStore?.notepadOnly}
-				<p class="text-yellow-400">No live field data — running in Notepad Only mode</p>
+				<p class="text-yellow-400">No live field data - running in Notepad Only mode</p>
 			{:else}
 				<p>Requires Chrome Extension to be setup on field network</p>
 			{/if}

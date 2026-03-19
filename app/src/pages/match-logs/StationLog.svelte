@@ -12,6 +12,9 @@
 	import { navigate, route } from "../../router";
 	import { userStore } from "../../stores/user";
 	import { decompressStationLog } from "../../util/log-compression";
+	import { track } from "../../util/telemetry";
+
+	track("station_log_viewed");
 	import { displayTeam } from "../../util/team-name";
 	import Icon from "@iconify/svelte";
 

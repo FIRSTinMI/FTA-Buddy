@@ -663,15 +663,23 @@
 		{#if pullDelta > 8 || loading}
 			<div
 				class="flex justify-center items-center transition-all duration-150 overflow-hidden"
-				style="height: {loading ? 36 : Math.min(pullDelta * 0.55, 36)}px; opacity: {loading ? 1 : Math.min(pullDelta / PULL_THRESHOLD, 1)}"
+				style="height: {loading ? 36 : Math.min(pullDelta * 0.55, 36)}px; opacity: {loading
+					? 1
+					: Math.min(pullDelta / PULL_THRESHOLD, 1)}"
 			>
 				<div class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
 					<Icon
 						icon="charm:refresh"
 						class="size-4 {loading ? 'animate-spin' : ''}"
-						style={loading ? '' : `transform: rotate(${(pullDelta / PULL_THRESHOLD) * 180}deg)`}
+						style={loading ? "" : `transform: rotate(${(pullDelta / PULL_THRESHOLD) * 180}deg)`}
 					/>
-					<span>{loading ? "Refreshing…" : pullDelta >= PULL_THRESHOLD ? "Release to refresh" : "Pull to refresh"}</span>
+					<span
+						>{loading
+							? "Refreshing…"
+							: pullDelta >= PULL_THRESHOLD
+								? "Release to refresh"
+								: "Pull to refresh"}</span
+					>
 				</div>
 			</div>
 		{/if}

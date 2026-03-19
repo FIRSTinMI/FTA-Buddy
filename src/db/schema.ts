@@ -324,4 +324,12 @@ export const slackServers = pgTable("slack_servers", {
 	webhook_url: varchar("webhook_url"),
 });
 
+export const appTelemetry = pgTable("app_telemetry", {
+	id: uuid("id").primaryKey().defaultRandom(),
+	event_type: varchar("event_type", { length: 50 }).notNull(),
+	event_code: varchar("event_code"),
+	metadata: jsonb("metadata"),
+	created_at: timestamp("created_at").notNull().defaultNow(),
+});
+
 export default { events, users, messages, matchLogs, cycleLogs, logPublishing };

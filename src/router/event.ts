@@ -157,7 +157,9 @@ export const eventRouter = router({
 						checklist: events.checklist,
 						users: events.users,
 						archived: events.archived,
-						subEvents: events.meshedEvent,					notepadOnly: events.notepadOnly,					})
+						subEvents: events.meshedEvent,
+						notepadOnly: events.notepadOnly,
+					})
 					.from(events)
 					.where(eq(events.code, input.code))
 			)[0];
@@ -209,7 +211,7 @@ export const eventRouter = router({
 		.input(
 			z.object({
 				code: z.string().startsWith("202").min(6),
-				pin: z.string().min(4),
+				pin: z.string().min(5),
 				teams: z.array(z.number()).optional(),
 				notepadOnly: z.boolean().optional().default(false),
 			}),
@@ -458,7 +460,7 @@ export const eventRouter = router({
 		.input(
 			z.object({
 				code: z.string().min(4),
-				pin: z.string().min(4),
+				pin: z.string().min(5),
 				events: z
 					.array(
 						z.object({

@@ -210,7 +210,7 @@
 			} else if (li === 0) {
 				matchIndex = 0; // already at the first match
 			} else if (allMatches.length > 0) {
-				// Couldn't find live match — fall back to last played
+				// Couldn't find live match - fall back to last played
 				const lastPlayed = allMatches.findLastIndex((m) => m.isPlayed);
 				matchIndex = lastPlayed >= 0 ? lastPlayed : allMatches.length - 1;
 			}
@@ -229,7 +229,7 @@
 			if (li >= 0 && li < allMatches.length - 1) {
 				matchIndex = li + 1;
 			} else if (li === -1 && allMatches.length > 0) {
-				// Couldn't find live match — go to first unplayed
+				// Couldn't find live match - go to first unplayed
 				const firstUnplayed = allMatches.findIndex((m) => !m.isPlayed);
 				matchIndex = firstUnplayed >= 0 ? firstUnplayed : allMatches.length - 1;
 			}
@@ -253,15 +253,15 @@
 
 	/** Persist or clear the current match in the URL so back-navigation restores it. */
 	function updateMatchUrl() {
-		if (typeof window === 'undefined') return;
+		if (typeof window === "undefined") return;
 		const url = new URL(window.location.href);
 		if (matchIndex === -1 || !allMatches[matchIndex]) {
-			url.searchParams.delete('m');
+			url.searchParams.delete("m");
 		} else {
 			const m = allMatches[matchIndex];
-			url.searchParams.set('m', `${m.level}:${m.match_number}:${m.play_number}`);
+			url.searchParams.set("m", `${m.level}:${m.match_number}:${m.play_number}`);
 		}
-		window.history.replaceState(null, '', url.toString());
+		window.history.replaceState(null, "", url.toString());
 	}
 
 	// Restore match from URL once the match list loads (e.g. after back-nav from ViewNote)
@@ -269,10 +269,11 @@
 	$effect(() => {
 		if (allMatches.length > 0 && !matchRestoredFromUrl) {
 			matchRestoredFromUrl = true;
-			const mKey = new URLSearchParams(window.location.search).get('m');
+			const mKey = new URLSearchParams(window.location.search).get("m");
 			if (mKey) {
-				const [level, numStr, playStr] = mKey.split(':');
-				const num = parseInt(numStr), play = parseInt(playStr);
+				const [level, numStr, playStr] = mKey.split(":");
+				const num = parseInt(numStr),
+					play = parseInt(playStr);
 				const idx = allMatches.findIndex(
 					(x) => x.level === level && x.match_number === num && x.play_number === play,
 				);
@@ -612,7 +613,9 @@
 								<span
 									class="text-[10px] sm:text-[11px] lg:text-xs {note.resolution_status === 'Open'
 										? 'text-green-500'
-										: 'text-gray-400'}">{note.resolution_status}{#if note.resolution_status === 'Resolved' && note.resolved_by} by {note.resolved_by.username}{/if}</span
+										: 'text-gray-400'}"
+									>{note.resolution_status}{#if note.resolution_status === "Resolved" && note.resolved_by}
+										by {note.resolved_by.username}{/if}</span
 								>
 								{#if note.match_number}
 									<span class="text-[10px] sm:text-[11px] lg:text-xs text-gray-400"
@@ -685,7 +688,12 @@
 	<div class="flex flex-col h-full">
 		<div class="shrink-0 px-3 {isShortScreen ? 'py-0.5' : 'pt-2 pb-1'}">
 			<div class="flex items-center justify-between gap-2">
-				<Button size="xs" color="alternative" onclick={goToPrevMatch} disabled={matchIndex === 0 || (isLive && liveIdx <= 0)}>
+				<Button
+					size="xs"
+					color="alternative"
+					onclick={goToPrevMatch}
+					disabled={matchIndex === 0 || (isLive && liveIdx <= 0)}
+				>
 					<Icon icon="mdi:chevron-left" class={isShortScreen ? "size-3.5" : "size-4 sm:size-5"} />
 				</Button>
 
@@ -699,11 +707,11 @@
 					</p>
 					{#if !isShortScreen}
 						<div class="h-5 flex items-center">
-						{#if isLive}
-							<Badge color="green" class="text-xs">LIVE</Badge>
-						{:else if matchIndex >= 0 && !allMatches[matchIndex]?.isPlayed}
-							<Badge color="yellow" class="text-xs">SCHEDULED</Badge>
-						{/if}
+							{#if isLive}
+								<Badge color="green" class="text-xs">LIVE</Badge>
+							{:else if matchIndex >= 0 && !allMatches[matchIndex]?.isPlayed}
+								<Badge color="yellow" class="text-xs">SCHEDULED</Badge>
+							{/if}
 						</div>
 					{/if}
 				</div>
@@ -712,7 +720,8 @@
 					size={isShortScreen ? "xs" : "sm"}
 					color="alternative"
 					onclick={goToNextMatch}
-					disabled={matchIndex === allMatches.length - 1 || (isLive && (liveIdx === -1 || liveIdx === allMatches.length - 1))}
+					disabled={matchIndex === allMatches.length - 1 ||
+						(isLive && (liveIdx === -1 || liveIdx === allMatches.length - 1))}
 				>
 					<Icon icon="mdi:chevron-right" class={isShortScreen ? "size-3.5" : "size-4 sm:size-5"} />
 				</Button>

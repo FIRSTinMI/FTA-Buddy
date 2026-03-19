@@ -16,6 +16,7 @@ import sanitizeHtml from "sanitize-html";
 import { ROBOT, TournamentLevel } from "../shared/types";
 import { connect, db } from "./db/db";
 import { cycleLogs, logPublishing, matchLogs } from "./db/schema";
+import { adminRouter } from "./router/admin";
 import { checklistRouter } from "./router/checklist";
 import { cycleRouter } from "./router/cycles";
 import { eventRouter } from "./router/event";
@@ -29,6 +30,7 @@ import {
 	updateNoteAssignmentFromSlack,
 	updateNoteStatusFromSlack,
 } from "./router/notes";
+import { telemetryRouter } from "./router/telemetry";
 import { userRouter } from "./router/user";
 import { adminProcedure, createContext, publicProcedure, router } from "./trpc";
 
@@ -110,6 +112,8 @@ const appRouter = router({
 		}),
 	}),
 	ftc: ftcRouter,
+	admin: adminRouter,
+	telemetry: telemetryRouter,
 });
 
 export type AppRouter = typeof appRouter;

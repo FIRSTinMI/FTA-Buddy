@@ -40,7 +40,7 @@ const defaultSettings: Settings = {
 	vibrations: true,
 	forceCloud: true,
 	soundAlerts: false,
-	fieldGreen: true,
+	fieldGreen: false,
 	susRobots: false,
 	fimSpecifics: true,
 	notifications: false,

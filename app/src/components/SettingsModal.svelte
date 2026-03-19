@@ -228,36 +228,38 @@
 				>
 			</div>
 			<div class="grid gap-2 md:col-span-2">
-			{#if $userStore.token}
-				<p class="text-gray-700 dark:text-gray-400">Slack Account</p>
-				{#if $userStore.slack_user_id}
-					<p class="text-sm text-gray-500 dark:text-gray-400">
-						Linked: <span class="font-mono">{$userStore.slack_user_id}</span>
-					</p>
-					<Button onclick={unlinkSlack} size="xs" color="red" disabled={slackLinkLoading}>Unlink Slack</Button>
-				{:else}
-					<Label>
-						Slack Member ID
-						<Input
-							bind:value={slackUserIdInput}
-							placeholder="e.g. U012AB3CD"
-							size="sm"
-							class="mt-1 font-mono"
-						/>
-					</Label>
-					<p class="text-xs text-gray-500 dark:text-gray-400">
-						Find yours in Slack: click your name → View full profile → ··· → Copy member ID
-					</p>
-					<Button
-						onclick={linkSlack}
-						size="xs"
-						color="primary"
-						disabled={slackLinkLoading || !slackUserIdInput.trim()}
-					>Link Slack</Button>
+				{#if $userStore.token}
+					<p class="text-gray-700 dark:text-gray-400">Slack Account</p>
+					{#if $userStore.slack_user_id}
+						<p class="text-sm text-gray-500 dark:text-gray-400">
+							Linked: <span class="font-mono">{$userStore.slack_user_id}</span>
+						</p>
+						<Button onclick={unlinkSlack} size="xs" color="red" disabled={slackLinkLoading}
+							>Unlink Slack</Button
+						>
+					{:else}
+						<Label>
+							Slack Member ID
+							<Input
+								bind:value={slackUserIdInput}
+								placeholder="e.g. U012AB3CD"
+								size="sm"
+								class="mt-1 font-mono"
+							/>
+						</Label>
+						<p class="text-xs text-gray-500 dark:text-gray-400">
+							Find yours in Slack: click your name → View full profile → ··· → Copy member ID
+						</p>
+						<Button
+							onclick={linkSlack}
+							size="xs"
+							color="primary"
+							disabled={slackLinkLoading || !slackUserIdInput.trim()}>Link Slack</Button
+						>
+					{/if}
 				{/if}
-			{/if}
-		</div>
-		<div class="grid gap-2 md:col-span-2">
+			</div>
+			<div class="grid gap-2 md:col-span-2">
 				{#if $installPrompt}
 					<Button
 						color="primary"

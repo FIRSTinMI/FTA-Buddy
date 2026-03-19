@@ -7,6 +7,7 @@
 	import { eventStore } from "../../stores/event";
 	import { hostWizardStore } from "../../stores/hostWizard";
 	import { userStore } from "../../stores/user";
+	import { generateEventPassword } from "../../util/eventPassword";
 	import { toast } from "../../util/toast";
 
 	let notepadOnly = $hostWizardStore.notepadOnly;
@@ -15,12 +16,12 @@
 	let eventCode = $state("");
 	let eventCodeHelperText = $state("Event code must match the code on TBA");
 	let eventCodeError = $state(false);
-	let eventPin = $state(Math.random().toString().slice(2, 6));
+	let eventPin = $state(generateEventPassword());
 	let loading = $state(false);
 	let tbaKey: string | undefined = $state(undefined);
 	let autofilledKey: string | undefined = undefined;
 
-	let blockSubmit = $derived(!(eventCode.length > 6 && eventPin.length >= 4 && !loading && !eventCodeError));
+	let blockSubmit = $derived(!(eventCode.length > 6 && eventPin.length >= 5 && !loading && !eventCodeError));
 
 	window.addEventListener("message", (event) => {
 		if (event.data.type === "eventCode") {
@@ -104,7 +105,7 @@
 				"*",
 			);
 
-			navigate("/manage/host/integrations");
+			navigate("/manage/event-settings");
 		} catch (err: any) {
 			toast("Error Creating Event", err.message);
 			console.error(err);
@@ -141,14 +142,17 @@
 				<button
 					class="text-blue-400 hover:underline"
 					type="button"
-					onclick={() => { eventCode = tbaKey ?? ""; checkEventCode(); }}>{tbaKey}</button
+					onclick={() => {
+						eventCode = tbaKey ?? "";
+						checkEventCode();
+					}}>{tbaKey}</button
 				>
 			{/if}
 		</Helper>
 	</div>
 	<div>
-		<Label for="event-pin">Event Pin</Label>
-		<Input id="event-pin" bind:value={eventPin} disabled={loading} class="mt-1" />
+		<Label for="event-pin">Event Password</Label>
+		<Input id="event-pin" bind:value={eventPin} placeholder="robot-field-42" disabled={loading} class="mt-1" />
 	</div>
 	<Button type="submit" disabled={blockSubmit}>
 		{loading ? "Creating…" : "Create Event"}

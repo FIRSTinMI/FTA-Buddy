@@ -22,12 +22,12 @@ function authorName(val: unknown): string {
 }
 
 function fmtMs(ms: number | null | undefined): string {
-	if (!ms || ms <= 0) return "—";
-	return formatTimeShortNoAgoMinutes(ms) ?? "—";
+	if (!ms || ms <= 0) return "-";
+	return formatTimeShortNoAgoMinutes(ms) ?? "-";
 }
 
 function fmtDate(d: Date | string | null | undefined): string {
-	if (!d) return "—";
+	if (!d) return "-";
 	const dt = d instanceof Date ? d : new Date(d);
 	return dt.toLocaleString("en-US", {
 		month: "short",
@@ -41,10 +41,14 @@ function fmtDate(d: Date | string | null | undefined): string {
 function humanizeStatus(s: string | null | undefined): string {
 	if (!s) return "";
 	switch (s) {
-		case "Open": return "Open";
-		case "Resolved": return "Resolved";
-		case "NotApplicable": return "N/A";
-		default: return s;
+		case "Open":
+			return "Open";
+		case "Resolved":
+			return "Resolved";
+		case "NotApplicable":
+			return "N/A";
+		default:
+			return s;
 	}
 }
 
@@ -165,11 +169,7 @@ export async function generateNotesReportPdf(eventCode: string, eventName: strin
 	doc.setFontSize(9);
 	doc.setFont("helvetica", "normal");
 	doc.setTextColor("#555555");
-	doc.text(
-		`${allNotes.length} notes total · Generated ${new Date().toLocaleString()}`,
-		ML,
-		y,
-	);
+	doc.text(`${allNotes.length} notes total · Generated ${new Date().toLocaleString()}`, ML, y);
 	y += 5;
 	doc.setDrawColor("#cccccc");
 	doc.line(ML, y, PAGE_W - MR, y);

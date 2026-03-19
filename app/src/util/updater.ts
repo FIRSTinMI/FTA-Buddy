@@ -3,7 +3,7 @@ import { eventStore } from "../stores/event";
 import { settingsStore } from "../stores/settings";
 import { userStore } from "../stores/user";
 
-export const LATEST_EXTENSION_VERSION = "1.26.4";
+export const LATEST_EXTENSION_VERSION = "1.26.5";
 
 interface Version {
 	changelog?: string;
@@ -11,8 +11,8 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
-    "2.7.2.0": {
-        changelog: `
+	"2.7.2.0": {
+		changelog: `
         <h1 class="text-lg font-bold">v2.7.2.0</h1>
         <ul>
         <li>New step-by-step event creation flow</li>
@@ -20,9 +20,9 @@ export const VERSIONS: { [key: string]: Version } = {
         <li>Extension now automatically uploads match logs that were missed</li>
         <li>Event Settings page accessible from the sidebar at any time</li>
         </ul>`,
-    },
-    "2.7.1.9": {
-        changelog: `
+	},
+	"2.7.1.9": {
+		changelog: `
         <h1 class="text-lg font-bold">v2.7.1.9</h1>
         <ul>
         <li>Fixed the field monitor on the stupid FTA Laptop screen</li>
@@ -30,9 +30,9 @@ export const VERSIONS: { [key: string]: Version } = {
         <li>Linkify autodetected events</li>
         <li>Wrong match in team history</li>
         </ul>`,
-    },
-    "2.7.1.8": {
-        changelog: `
+	},
+	"2.7.1.8": {
+		changelog: `
         <h1 class="text-lg font-bold">v2.7.1.8</h1>
         <ul>
         <li>Assign notes to any user who has joined the event</li>
@@ -40,24 +40,24 @@ export const VERSIONS: { [key: string]: Version } = {
         <li>Navigating back from a note in field view returns to the same match you were viewing</li>
         <li>Match log button added to Slack message when a match is attached to a note after creation</li>
         </ul>`,
-    },
-    "2.7.1.7": {
-        changelog: `
+	},
+	"2.7.1.7": {
+		changelog: `
         <h1 class="text-lg font-bold">v2.7.1.7</h1>
         <ul>
         <li>Added a "Resolved by" field to notes so you can see who closed a note</li>
         </ul>`,
-    },
-    "2.7.1.6": {
-        changelog: `
+	},
+	"2.7.1.6": {
+		changelog: `
         <h1 class="text-lg font-bold">v2.7.1.6</h1>
         <ul>
         <li>Fixed field view match navigation (prev/next arrows)</li>
         <li>Fixed layout shift from LIVE/SCHEDULED badge</li>
         </ul>`,
-    },
-    "2.7.1.5": {
-        changelog: `
+	},
+	"2.7.1.5": {
+		changelog: `
         <h1 class="text-lg font-bold">v2.7.1.5</h1>
         <ul>
         <li>Fixed event link redirects not recognizing the current event</li>
@@ -68,30 +68,30 @@ export const VERSIONS: { [key: string]: Version } = {
         <li>Click team name/number on a note to go to team history</li>
         <li>Auto-detected events converted to notes now post to Slack</li>
         </ul>`,
-    },
-    "2.7.1.4": {
-        changelog: `
+	},
+	"2.7.1.4": {
+		changelog: `
         <h1 class="text-lg font-bold">v2.7.1.4</h1>
         <ul>
         <li>Ability to link your FTA Buddy and Slack accounts</li>
         <li>Or it falls back to your Slack nickname</li>
         </ul>`,
-    },
-    "2.7.1.3": {
-        changelog: `
+	},
+	"2.7.1.3": {
+		changelog: `
         <h1 class="text-lg font-bold">v2.7.1.3</h1>
         <ul>
         <li>Fixed message duplication from Slack sync</li>
         <li>Extension update: On-Site column detected correctly in Nexus</li>
         </ul>`,
-    },
-    "2.7.1.2": {
-        changelog: `
+	},
+	"2.7.1.2": {
+		changelog: `
         <h1 class="text-lg font-bold">v2.7.1.2</h1>
         <ul>
         <li>Fixed some QR Codes in the references section</li>
         </ul>`,
-    },
+	},
 	"2.7.1.1": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.1.1</h1>

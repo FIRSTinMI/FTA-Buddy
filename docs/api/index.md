@@ -1,3 +1,5 @@
+[Home](../)
+
 # FTA Buddy Public API
 
 Base URL: `https://ftabuddy.com/api`

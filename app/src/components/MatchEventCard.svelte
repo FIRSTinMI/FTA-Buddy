@@ -195,8 +195,12 @@
 					{#if matchEvent.team !== null}
 						<button
 							class="font-bold text-base hover:underline"
-							onclick={(e) => { e.preventDefault(); e.stopPropagation(); navigate("/notepad/team/:team", { params: { team: String(matchEvent.team) } }); }}
-						>{displayTeam(matchEvent.team)}</button>
+							onclick={(e) => {
+								e.preventDefault();
+								e.stopPropagation();
+								navigate("/notepad/team/:team", { params: { team: String(matchEvent.team) } });
+							}}>{displayTeam(matchEvent.team)}</button
+						>
 					{/if}
 					{#each issueList as detail}
 						<Badge color={ISSUE_COLORS[detail.issue] ?? "gray"}>{detail.issue}</Badge>

@@ -5,7 +5,10 @@
 </script>
 
 <div class="rounded-xl border border-neutral-700 bg-neutral-900 overflow-hidden">
-	<button class="flex w-full items-center justify-between gap-3 p-4 text-left h-20" onclick={() => (expanded = !expanded)}>
+	<button
+		class="flex w-full items-center justify-between gap-3 p-4 text-left h-20"
+		onclick={() => (expanded = !expanded)}
+	>
 		<div class="flex items-center gap-3">
 			<span class="text-2xl">💬</span>
 			<div>
@@ -32,7 +35,8 @@
 			<div class="flex flex-col gap-1">
 				<code class="bg-neutral-800 px-3 py-1.5 rounded-lg text-sm">/invite @FTA Buddy</code>
 				<code class="bg-neutral-800 px-3 py-1.5 rounded-lg text-sm">
-					/ftabuddy {$eventStore.code} {$eventStore.pin}
+					/ftabuddy {$eventStore.code}
+					{$eventStore.pin}
 				</code>
 			</div>
 		</div>

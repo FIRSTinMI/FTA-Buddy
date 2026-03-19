@@ -21,6 +21,7 @@ import {
 } from "./fmsapi";
 import { SignalR } from "./signalR";
 import { trpc, updateValues, uploadAllUnimportedMatchLogs } from "./trpc";
+import { MatchState, MatchStateMap } from "../../shared/types";
 
 let teamPollInterval: ReturnType<typeof setInterval> | null = null;
 let matchImportInterval: ReturnType<typeof setInterval> | null = null;
@@ -53,7 +54,10 @@ let outboundNoteSubscription: OutboundSubscription;
 const manifestData = chrome.runtime.getManifest();
 export const FMS = "10.0.100.5";
 
-export let signalRConnection = new SignalR(FMS, manifestData.version, sendFrame, sendCycletime, sendScheduleDetails);
+export const signalRConnection = new SignalR(FMS, manifestData.version);
+signalRConnection.on("frame", sendFrame);
+signalRConnection.on("cycleTime", sendCycletime);
+signalRConnection.on("sendSchedule", sendScheduleDetails);
 
 export let eventCode: string;
 export let eventToken: string;
@@ -151,13 +155,12 @@ async function start() {
 	startTeamPolling();
 	startMatchAutoImport();
 
-	// Fetch FMS event password from the server and propagate to SignalR + FTA App API
+	// Fetch FMS event password from the server and propagate to FTA App API
 	try {
 		const { fmsEventPassword } = await trpc.event.getFmsEventPassword.query();
-		signalRConnection.setFmsEventPassword(fmsEventPassword);
 		setFmsEventPassword(fmsEventPassword);
 		if (fieldMonitor) {
-			signalRConnection.setNoteChangedCallback(handleFmsNoteChanged);
+			signalRConnection.on("noteChanged", handleFmsNoteChanged);
 			startOutboundNoteSync();
 		}
 	} catch (err) {
@@ -454,8 +457,13 @@ async function sendScheduleDetails() {
 	await trpc.cycles.postScheduleDetails.mutate({ eventToken, ...schedule, extensionId: id });
 }
 
+function isMatchRunning(): boolean {
+	return fieldMonitor && MatchStateMap[signalRConnection.frame.field] === MatchState.RUNNING;
+}
+
 async function pollTeams() {
 	if (!fmsApi || !eventToken || qualsScheduleAvailable) return;
+	if (isMatchRunning()) return; // Skip iteration if a match is running
 
 	try {
 		const schedule = await getScheduleBreakdown();
@@ -496,6 +504,7 @@ function stopTeamPolling() {
 
 async function runMatchAutoImport() {
 	if (!enabled || !eventToken) return;
+	if (isMatchRunning()) return; // Skip iteration if a match is running
 	try {
 		await uploadAllUnimportedMatchLogs();
 	} catch (err) {

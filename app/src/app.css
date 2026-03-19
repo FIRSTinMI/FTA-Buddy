@@ -177,7 +177,7 @@ body {
 	}
 }
 
-/* Short screens (e.g. 1366×768 browser window) — smaller overhead fits more height */
+/* Short screens (e.g. 1366×768 browser window) - smaller overhead fits more height */
 @media screen and (min-width: 1024px) and (max-height: 780px) {
 	.fieldmonitor-square-height {
 		height: calc((100dvh - 200px) / 6);
@@ -190,7 +190,7 @@ body {
 	}
 }
 
-/* 2xl (≥1536px) fieldmonitor — wider gaps and slightly larger cells */
+/* 2xl (≥1536px) fieldmonitor - wider gaps and slightly larger cells */
 @media screen and (min-width: 1536px) {
 	.grid-cols-fieldmonitor-large {
 		grid-template-columns:

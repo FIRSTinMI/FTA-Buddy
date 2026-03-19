@@ -86,9 +86,7 @@ export async function uploadAllUnimportedMatchLogs(onProgress?: (current: number
 
 	// Ask the server which FMS match IDs it already has so we skip them
 	const allIds = completed.map((m) => m.fmsMatchId);
-	const uploadedIds = new Set(
-		await trpc.match.getUploadedMatchIds.query({ ids: allIds })
-	);
+	const uploadedIds = new Set(await trpc.match.getUploadedMatchIds.query({ ids: allIds }));
 
 	// Also skip anything currently being uploaded by the SignalR trigger
 	const missing = completed.filter((m) => !uploadedIds.has(m.fmsMatchId) && !inFlightMatchIds.has(m.fmsMatchId));
@@ -111,7 +109,9 @@ async function uploadMatchLogsByMatch(match: FMSMatch) {
 		return;
 	}
 	inFlightMatchIds.add(match.fmsMatchId);
-	console.log(`Uploading match ${match.matchNumber} play ${match.playNumber} (${match.tournamentLevel}) id ${match.fmsMatchId}`);
+	console.log(
+		`Uploading match ${match.matchNumber} play ${match.playNumber} (${match.tournamentLevel}) id ${match.fmsMatchId}`,
+	);
 	const logs = await getAllLogsForMatch(match.fmsMatchId);
 	try {
 		const upload = {

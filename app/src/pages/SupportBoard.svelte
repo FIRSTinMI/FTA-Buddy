@@ -6,6 +6,9 @@
 	import SupportFieldView from "../components/support/SupportFieldView.svelte";
 	import { route } from "../router";
 	import { supportBoardViewStore } from "../stores/supportBoardView";
+	import { track } from "../util/telemetry";
+
+	track("notepad_viewed");
 
 	let teamParam: string | undefined = $state(route.params.team);
 

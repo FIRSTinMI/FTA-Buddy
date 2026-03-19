@@ -20,7 +20,7 @@ export function updateScheduleText(
 	// timestamps.  Each day's `date` is the scheduled start time of the first
 	// match on that day (a UTC instant stored by the extension).  We pick the
 	// latest day whose scheduled start is <= now.  This is completely timezone-
-	// agnostic — it works correctly whether the viewer is at the venue, across
+	// agnostic - it works correctly whether the viewer is at the venue, across
 	// the country, or the event runs past midnight UTC.
 	//
 	// Examples:

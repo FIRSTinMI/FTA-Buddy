@@ -7,9 +7,12 @@
 	import Spinner from "../../components/Spinner.svelte";
 	import { trpc } from "../../main";
 	import { route } from "../../router";
+	import { track } from "../../util/telemetry";
 
 	const { team } = route.getParams("/notepad/team/:team");
 	const teamNumber = parseInt(team, 10);
+
+	track("team_history_viewed", undefined, { team: teamNumber });
 
 	type TBANextMatch = Awaited<ReturnType<typeof trpc.matchEvents.getNextMatchForTeam.query>>;
 

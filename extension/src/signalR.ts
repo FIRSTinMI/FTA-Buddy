@@ -1,10 +1,9 @@
-import { HubConnection, HubConnectionBuilder, HubConnectionState } from "@microsoft/signalr";
+import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } from "@microsoft/signalr";
 import { DEFAULT_MONITOR } from "../../shared/constants";
 import type {
 	FTAEventNoteIssueType,
 	FTAEventNoteResolutionType,
 	FTAEventNoteType,
-	FTAMatchStatusInfoChanged,
 	FTANoteRecord,
 } from "../../shared/fmsApiTypes";
 import {
@@ -47,196 +46,106 @@ function normalizeFmsNote(raw: any): FTANoteRecord {
 	};
 }
 
-export class SignalR {
-	// SignalR Hub Connection
+type SignalREventMap = {
+	/** Emitted every time a field monitor frame is processed. */
+	frame: [frame: PartialMonitorFrame];
+	/** Emitted for match cycle time milestones. */
+	cycleTime: [type: "lastCycleTime" | "prestart" | "start" | "end" | "refsDone" | "scoresPosted", time: string];
+	/** Emitted when the active tournament level changes and the schedule should be re-fetched. */
+	sendSchedule: [];
+	/** Emitted when a note is added/updated/resolved/etc on ftaAppHub. */
+	noteChanged: [action: "added" | "updated" | "reopened" | "resolved" | "deleted", note: FTANoteRecord];
+};
+
+class TypedEventEmitter<T extends Record<string, any[]>> {
+	private _listeners = new Map<keyof T, Set<(...args: any[]) => void>>();
+
+	on<K extends keyof T>(event: K, listener: (...args: T[K]) => void): this {
+		if (!this._listeners.has(event)) this._listeners.set(event, new Set());
+		this._listeners.get(event)!.add(listener as (...args: any[]) => void);
+		return this;
+	}
+
+	off<K extends keyof T>(event: K, listener: (...args: T[K]) => void): this {
+		this._listeners.get(event)?.delete(listener as (...args: any[]) => void);
+		return this;
+	}
+
+	protected emit<K extends keyof T>(event: K, ...args: T[K]): void {
+		this._listeners.get(event)?.forEach((l) => l(...args));
+	}
+}
+
+export class SignalR extends TypedEventEmitter<SignalREventMap> {
 	public connection: HubConnection | null = null;
-
 	public infrastructureConnection: HubConnection | null = null;
-
-	public gameSpecificConnection: HubConnection | null = null;
-
-	/** Connection to the FMS FTA App Hub (`ftaAppHub`). */
 	public ftaAppHubConnection: HubConnection | null = null;
 
 	public frame: PartialMonitorFrame = DEFAULT_MONITOR;
-
 	private ip: string;
-
-	private fmsEventPassword: string | null = null;
-
-	private callback: (frame: PartialMonitorFrame) => void;
-
-	private cycleTimeCallback: (
-		type: "lastCycleTime" | "prestart" | "start" | "end" | "refsDone" | "scoresPosted",
-		time: string,
-	) => void;
-
-	private sendScheduleCallback: () => void;
-
-	/**
-	 * Called whenever a note is added, updated, reopened, or resolved on ftaAppHub.
-	 * Set via {@link setNoteChangedCallback}.
-	 */
-	private noteChangedCallback:
-		| ((action: "added" | "updated" | "reopened" | "resolved" | "deleted", note: FTANoteRecord) => void)
-		| null = null;
 
 	private statusInterval: ReturnType<typeof setInterval> | null = null;
 
-	constructor(
-		ip: string,
-		version: string,
-		callback: (frame: PartialMonitorFrame) => void,
-		cycleTimeCallback: (
-			type: "lastCycleTime" | "prestart" | "start" | "end" | "refsDone" | "scoresPosted",
-			time: string,
-		) => void,
-		sendScheduleCallback: () => void,
-	) {
+	constructor(ip: string, version: string) {
+		super();
 		this.ip = ip;
-		this.callback = callback;
 		this.frame.version = version;
-		this.cycleTimeCallback = cycleTimeCallback;
-		this.sendScheduleCallback = sendScheduleCallback;
 	}
 
-	/** Set the FMS event password used to authenticate against ftaAppHub and FTA App API endpoints. */
-	public setFmsEventPassword(password: string | null) {
-		this.fmsEventPassword = password;
-	}
-
-	/**
-	 * Register a callback invoked when a note changes on ftaAppHub.
-	 * `action` indicates what happened; `note` is the full updated NoteModel.
-	 */
-	public setNoteChangedCallback(
-		cb: (action: "added" | "updated" | "reopened" | "resolved" | "deleted", note: FTANoteRecord) => void,
-	) {
-		this.noteChangedCallback = cb;
-	}
-
-	public async start() {
-		console.log("Starting SignalR");
-		// Build a connection to the SignalR Hub
-		console.log(`http://${this.ip}/fieldMonitorHub`);
-		this.connection = new HubConnectionBuilder()
-			.withUrl(`http://${this.ip}/fieldMonitorHub`)
-			.withServerTimeout(30000) // 30 seconds, per FMS Audience Display
-			.withKeepAliveInterval(15000) // 15 seconds per FMS Audience Display
-			.configureLogging({
-				log: (logLevel, message) => {
-					// Prevent showing errors in the extension for things that are expected to fail sometimes
-					if (
-						message.startsWith("Failed to complete negotiation") ||
-						message.startsWith("Failed to start the connection") ||
-						message.startsWith("Error from HTTP request")
-					)
-						return console.log(`[SignalR ${logLevel}] ${message}`);
-
-					[console.debug, console.debug, console.log, console.warn, console.error][logLevel](
-						`[SignalR ${logLevel}] ${message}`,
-					);
-				},
-			})
-			// .withHubProtocol(new MessagePackHubProtocol())
-			.withAutomaticReconnect({
-				nextRetryDelayInMilliseconds(retryContext) {
-					signalRConnectionStatus = HubConnectionState.Reconnecting;
-					console.warn("Retrying SignalR connection...");
-					return Math.min(2_000 * retryContext.previousRetryCount, 120_000);
-				},
-			})
-			.build();
-
-		this.infrastructureConnection = new HubConnectionBuilder()
-			.withUrl(`http://${this.ip}/infrastructureHub`)
-			.withServerTimeout(30000) // 30 seconds, per FMS Audience Display
-			.withKeepAliveInterval(15000) // 15 seconds per FMS Audience Display
-			.configureLogging({
-				log: (logLevel, message) => {
-					// Prevent showing errors in the extension for things that are expected to fail sometimes
-					if (
-						message.startsWith("Failed to complete negotiation") ||
-						message.startsWith("Failed to start the connection") ||
-						message.startsWith("Error from HTTP request")
-					)
-						return console.log(`[SignalR ${logLevel}] ${message}`);
-
-					[console.debug, console.debug, console.log, console.warn, console.error][logLevel](
-						`[SignalR ${logLevel}] ${message}`,
-					);
-				},
-			})
-			// .withHubProtocol(new MessagePackHubProtocol())
-			.withAutomaticReconnect({
-				nextRetryDelayInMilliseconds(retryContext) {
-					console.log("Retrying SignalR connection...");
-					return Math.min(2_000 * retryContext.previousRetryCount, 120_000);
-				},
-			})
-			.build();
-
-		this.gameSpecificConnection = new HubConnectionBuilder()
-			.withUrl(`http://${this.ip}/gameSpecificHub`)
-			.withServerTimeout(30000) // 30 seconds, per FMS Audience Display
-			.withKeepAliveInterval(15000) // 15 seconds per FMS Audience Display
-			.configureLogging({
-				log: (logLevel, message) => {
-					// Prevent showing errors in the extension for things that are expected to fail sometimes
-					if (
-						message.startsWith("Failed to complete negotiation") ||
-						message.startsWith("Failed to start the connection") ||
-						message.startsWith("Error from HTTP request")
-					)
-						return console.log(`[SignalR ${logLevel}] ${message}`);
-
-					[console.debug, console.debug, console.log, console.warn, console.error][logLevel](
-						`[SignalR ${logLevel}] ${message}`,
-					);
-				},
-			})
-			// .withHubProtocol(new MessagePackHubProtocol())
-			.withAutomaticReconnect({
-				nextRetryDelayInMilliseconds(retryContext) {
-					console.log("Retrying SignalR connection...");
-					return Math.min(2_000 * retryContext.previousRetryCount, 120_000);
-				},
-			})
-			.build();
-
-		// TODO: Authenticate with FMS using the event password (Basic auth or query param)
-		this.ftaAppHubConnection = new HubConnectionBuilder()
-			.withUrl(`http://${this.ip}/ftaAppHub`)
+	private buildConnection(url: string, logPrefix: string, onRetry?: () => void): HubConnection {
+		return new HubConnectionBuilder()
+			.withUrl(url)
 			.withServerTimeout(30000)
 			.withKeepAliveInterval(15000)
 			.configureLogging({
-				log: (logLevel, message) => {
+				log: (logLevel: LogLevel, message: string) => {
 					if (
 						message.startsWith("Failed to complete negotiation") ||
 						message.startsWith("Failed to start the connection") ||
-						message.startsWith("Error from HTTP request")
+						message.startsWith("Error from HTTP request") ||
+						message.startsWith("No client method with the name")
 					)
-						return console.log(`[ftaAppHub ${logLevel}] ${message}`);
+						return;
 
 					[console.debug, console.debug, console.log, console.warn, console.error][logLevel](
-						`[ftaAppHub ${logLevel}] ${message}`,
+						`[${logPrefix} ${logLevel}] ${message}`,
 					);
 				},
 			})
 			.withAutomaticReconnect({
 				nextRetryDelayInMilliseconds(retryContext) {
-					console.log("Retrying ftaAppHub connection...");
+					onRetry?.();
 					return Math.min(2_000 * retryContext.previousRetryCount, 120_000);
 				},
 			})
 			.build();
+	}
+
+	public async start() {
+		console.log(`Starting SignalR (http://${this.ip})`);
+
+		this.connection = this.buildConnection(`http://${this.ip}/fieldMonitorHub`, "fieldMonitor", () => {
+			signalRConnectionStatus = HubConnectionState.Reconnecting;
+			console.warn("Retrying fieldMonitor connection...");
+		});
+
+		this.infrastructureConnection = this.buildConnection(
+			`http://${this.ip}/infrastructureHub`,
+			"infrastructure",
+			() => console.log("Retrying infrastructure connection..."),
+		);
+
+		this.ftaAppHubConnection = this.buildConnection(`http://${this.ip}/ftaAppHub`, "ftaAppHub", () =>
+			console.log("Retrying ftaAppHub connection..."),
+		);
 
 		if (this.statusInterval) clearInterval(this.statusInterval);
 		this.statusInterval = setInterval(() => {
-			signalRConnectionStatus = this.connection?.state || HubConnectionState.Disconnected;
+			signalRConnectionStatus = this.connection?.state ?? HubConnectionState.Disconnected;
 		}, 5000);
 
-		// Register listener for the "MatchStatusInfoChanged" event (match starts, ends, changes modes, etc)
+		// #region fieldMonitorHub
+
 		this.connection.on("matchstatusinfochanged", async (data) => {
 			switch (data.MatchState) {
 				case 0:
@@ -258,11 +167,7 @@ export class SignalR {
 					this.frame.match = data.MatchNumber;
 					this.frame.play = data.PlayNumber;
 					this.frame.level = data.Level;
-					try {
-						this.cycleTimeCallback("prestart", "");
-					} catch (e) {
-						console.error(e);
-					}
+					this.emit("cycleTime", "prestart", "");
 					break;
 				case "WaitingForMatchReady":
 					this.frame.field = FieldState.MATCH_NOT_READY;
@@ -271,20 +176,11 @@ export class SignalR {
 					this.frame.field = FieldState.MATCH_READY;
 					break;
 				case "GameSpecific":
-					// What?
-					// $(".matchState").removeClass("matchStateRed");
-					// $(".matchState").addClass("matchStateGreen");
-					// $("#matchStateTop").text("CLEARING GAME DATA");
-					// $("#matchStateBottom").text("FROM DS");
 					this.frame.field = FieldState.UNKNOWN;
 					break;
 				case "MatchAuto":
 					this.frame.field = FieldState.MATCH_RUNNING_AUTO;
-					try {
-						this.cycleTimeCallback("start", "");
-					} catch (e) {
-						console.error(e);
-					}
+					this.emit("cycleTime", "start", "");
 					break;
 				case "MatchTransition":
 					this.frame.field = FieldState.MATCH_TRANSITIONING;
@@ -294,20 +190,12 @@ export class SignalR {
 					break;
 				case "WaitingForCommit":
 					this.frame.field = FieldState.MATCH_OVER;
-					try {
-						this.cycleTimeCallback("end", "");
-					} catch (e) {
-						console.error(e);
-					}
+					this.emit("cycleTime", "end", "");
 					setTimeout(async () => await uploadMatchLogs(), 3000);
 					break;
 				case "WaitingForPostResults":
 					this.frame.field = FieldState.READY_FOR_POST_RESULT;
-					try {
-						this.cycleTimeCallback("scoresPosted", "");
-					} catch (e) {
-						console.error(e);
-					}
+					this.emit("cycleTime", "scoresPosted", "");
 					await uploadMatchLogs();
 					break;
 				case "TournamentLevelComplete":
@@ -315,16 +203,14 @@ export class SignalR {
 					break;
 				case "MatchCancelled":
 					this.frame.field = FieldState.MATCH_ABORTED;
-					await uploadMatchLogs();
-					// womp womp
+					setTimeout(async () => await uploadMatchLogs(), 3000);
 					break;
 			}
 
 			this.frame.match = data.MatchNumber;
 		});
 
-		// Register listener for the "TeamInfoChanged" event (team connects, disconnects, etc)
-		this.connection.on("fieldmonitordatachanged", async (data: SignalRMonitorFrame[]) => {
+		this.connection.on("fieldmonitordatachanged", (data: SignalRMonitorFrame[]) => {
 			for (let i = 0; i < data.length; i++) {
 				const team: ROBOT = ((data[i].Alliance === "Red" ? "red" : "blue") +
 					FMSEnums.StationType[data[i].Station]) as ROBOT;
@@ -355,32 +241,17 @@ export class SignalR {
 			}
 
 			this.frame.frameTime = Date.now();
-			this.callback(this.frame);
+			this.emit("frame", this.frame);
 		});
 
-		// Register listener for the "ScheduleAheadBehindChanged" event (how far ahead or behind the schedule is)
 		this.connection.on("scheduleaheadbehindchanged", (data) => {
 			this.frame.time = data;
 		});
 
-		// Register listener for the "RobotVersionDataChanged" event (robot version information)
-		// No idea if this works, the field monitor's implementation made no sense
-		this.connection.on("robotversiondatachanged", (data) => {
-			console.log(data);
+		this.connection.onreconnecting(() => console.log("fieldMonitor connection lost, reconnecting"));
+		this.connection.onclose(() => console.log("fieldMonitor connection closed"));
 
-			/*
-            // like wtf does this even do? would it not always be true if p3.length is greater than 0?
-            var badVersion = false;
-            for (var index = 0; index < robotVersionDataParam.p3.length; index++) {
-                badVersion = true;
-            }
-            */
-
-			//const team: ROBOT = (((data.p1 === FMSEnums.AllianceType.Red) ? 'red' : 'blue') + data.p2) as ROBOT;
-
-			// if (data.p3) this.frame[team].versionmm = data.p3.length > 0;
-			// else this.frame[team].versionmm = false;
-		});
+		// #region infrastructureHub
 
 		this.infrastructureConnection.on("robotversiondatachanged", (data) => {
 			const team: ROBOT = ((data.Alliance === "Red" ? "red" : "blue") +
@@ -388,239 +259,59 @@ export class SignalR {
 			this.frame[team].versionData = data.Versions;
 		});
 
-		// Any settings changed in FMS
-		/**
-		 * Any settings changed in FMS
-		 * VideoSwitchOption
-		 * BackgroundVideoMessage (texted entered in match control page)
-		 * AutoTime, TeleopTime, TimeoutTime (match time changed in control page)
-		 * CurrentWizardStep
-		 *
-		 */
-		this.infrastructureConnection.on("systemconfigvaluechanged", (data) => {
-			console.log("systemconfigvaluechanged: ", data);
-		});
-
-		this.infrastructureConnection.on("activetournamentlevelchanged", (data) => {
-			console.log("activetournamentlevelchanged: ", data);
-			this.sendScheduleCallback();
-		});
-
-		// Constant countdown timer 14-0 for auto then 135-0 for teleop
-		// Also countdown for breaks during playoffs in seconds
-		this.infrastructureConnection.on("matchtimerchanged", (data) => {
-			//console.log('matchtimerchanged: ', data);
-		});
-
-		// 20 seconds left
-		this.infrastructureConnection.on("matchtimerwarning1", (data) => {
-			//console.log('matchtimerwarning1: ', data);
-		});
-
-		// 90 seconds left
-		this.infrastructureConnection.on("matchtimerwarning2", (data) => {
-			//console.log('matchtimerwarning2: ', data);
-		});
-
-		// 60 seconds left (intended for timeouts but also played during matches lol)
-		this.infrastructureConnection.on("timeoutwarning1", (data) => {
-			//console.log('timeoutwarning1: ', data);
-		});
-
-		this.infrastructureConnection.on("plc_status_changed", (data) => {
-			console.log("plc_status_changed: ", data);
-		});
-
-		this.infrastructureConnection.on("plc_astop_status_requestupdate", (data) => {
-			//console.log('plc_astop_status_requestupdate: ', data);
-		});
-
-		this.infrastructureConnection.on("plc_astop_status_changed", (data) => {
-			console.log("plc_astop_status_changed: ", data);
-		});
-
-		this.infrastructureConnection.on("plc_estop_status_requestupdate", (data) => {
-			//console.log('plc_estop_status_requestupdate: ', data);
-		});
-
-		this.infrastructureConnection.on("plc_estop_status_changed", (data) => {
-			console.log("plc_estop_status_changed: ", data);
-		});
-
-		this.infrastructureConnection.on("plc_connection_status_requestupdate", (data) => {
-			//console.log('plc_connection_status_requestupdate: ', data);
+		this.infrastructureConnection.on("activetournamentlevelchanged", () => {
+			this.emit("sendSchedule");
 		});
 
 		this.infrastructureConnection.on("plc_match_status_changed", (data) => {
-			console.log("plc_match_status_changed: ", data);
-			if (data.RefDone) {
-				this.cycleTimeCallback("refsDone", "");
-			}
-		});
-
-		this.infrastructureConnection.on("matchstatusinfochanged", (data) => {
-			console.log("matchstatusinfochanged: ", data);
-		});
-
-		this.infrastructureConnection.on("fieldnetworkstatus", (data) => {
-			//console.log('fieldnetworkstatus: ', data);
-		});
-
-		this.infrastructureConnection.on("plc_io_status_changed", (data) => {
-			//console.log('plc_io_status_changed: ', data);
-		});
-
-		this.infrastructureConnection.on("matchstatuschanged", (data) => {
-			console.log("matchstatuschanged: ", data);
-		});
-
-		// BackupPerformed_Incremental when score committed
-		// BackupPerformed_Full
-		this.infrastructureConnection.on("backupprogress", (data) => {
-			//console.log('backupprogress: ', data);
-		});
-
-		this.infrastructureConnection.on("audienceshowmatchresult", (data) => {
-			//console.log('audienceshowmatchresult: ', data);
+			if (data.RefDone) this.emit("cycleTime", "refsDone", "");
 		});
 
 		this.infrastructureConnection.on("lastcycletimecalculated", (data) => {
-			console.log("lastcycletimecalculated: ", data);
 			this.frame.lastCycleTime = data;
-			this.cycleTimeCallback("lastCycleTime", data);
+			this.emit("cycleTime", "lastCycleTime", data);
 		});
 
 		this.infrastructureConnection.on("scheduleaheadbehindchanged", (data) => {
-			console.log("scheduleaheadbehindchanged: ", data);
 			this.frame.time = data;
 		});
 
-		// Register connected/disconnected events
-		this.connection.onreconnecting(() => {
-			console.log("SignalR Connection Lost, Reconnecting");
-		});
+		this.infrastructureConnection.onreconnecting(() => console.log("infrastructure connection lost, reconnecting"));
+		this.infrastructureConnection.onclose(() => console.log("infrastructure connection closed"));
 
-		this.connection.onclose(() => {
-			console.log("SignalR FMS Connection Closed!");
-		});
-
-		// Register connected/disconnected events
-		this.infrastructureConnection.onreconnecting(() => {
-			console.log("SignalR Connection Lost, Reconnecting");
-		});
-
-		this.infrastructureConnection.onclose(() => {
-			console.log("SignalR FMS Connection Closed!");
-		});
-
-		this.gameSpecificConnection.on("BlueScoreChanged", (data) => {
-			//console.log('BlueScoreChanged: ', data)
-		});
-		this.gameSpecificConnection.on("RedScoreChanged", (data) => {
-			//console.log('RedScoreChanged: ', data)
-		});
-		this.gameSpecificConnection.on("BlueScoringElementsChanged", (data) => {
-			//console.log('BlueScoringElementsChanged: ', data)
-		});
-		this.gameSpecificConnection.on("RedScoringElementsChanged", (data) => {
-			//console.log('RedScoringElementsChanged: ', data)
-		});
-		this.gameSpecificConnection.on("fieldtestelements_changed", (data) =>
-			console.log("fieldtestelements_changed: ", data),
-		);
-
-		// ── ftaAppHub Server→Client events ──────────────────────────────────────
-		// SignalR normalises method names to lowercase.
+		// #region ftaAppHub
 
 		this.ftaAppHubConnection.on("noteadded", (note: FTANoteRecord) => {
-			console.log("ftaAppHub noteadded: ", note);
-			this.noteChangedCallback?.("added", normalizeFmsNote(note));
+			this.emit("noteChanged", "added", normalizeFmsNote(note));
 		});
 
 		this.ftaAppHubConnection.on("noteupdated", (note: FTANoteRecord) => {
-			console.log("ftaAppHub noteupdated: ", note);
-			this.noteChangedCallback?.("updated", normalizeFmsNote(note));
+			this.emit("noteChanged", "updated", normalizeFmsNote(note));
 		});
 
 		this.ftaAppHubConnection.on("notereopened", (note: FTANoteRecord) => {
-			console.log("ftaAppHub notereopened: ", note);
-			this.noteChangedCallback?.("reopened", normalizeFmsNote(note));
+			this.emit("noteChanged", "reopened", normalizeFmsNote(note));
 		});
 
 		this.ftaAppHubConnection.on("noteresolved", (note: FTANoteRecord) => {
-			console.log("ftaAppHub noteresolved: ", note);
-			this.noteChangedCallback?.("resolved", normalizeFmsNote(note));
+			this.emit("noteChanged", "resolved", normalizeFmsNote(note));
 		});
 
 		this.ftaAppHubConnection.on("notedeleted", (note: FTANoteRecord) => {
-			console.log("ftaAppHub notedeleted: ", note);
-			this.noteChangedCallback?.("deleted", normalizeFmsNote(note));
+			this.emit("noteChanged", "deleted", normalizeFmsNote(note));
 		});
 
-		// Fired when the active match state changes (match start/end, level, etc.).
-		this.ftaAppHubConnection.on("matchstatusinfochanged", (data: FTAMatchStatusInfoChanged) => {
-			console.log("ftaAppHub matchstatusinfochanged: ", data);
-		});
+		this.ftaAppHubConnection.onreconnecting(() => console.log("ftaAppHub connection lost, reconnecting"));
+		this.ftaAppHubConnection.onclose(() => console.log("ftaAppHub connection closed"));
 
-		this.ftaAppHubConnection.onreconnecting(() => {
-			console.log("ftaAppHub connection lost, reconnecting");
-		});
-
-		this.ftaAppHubConnection.onclose(() => {
-			console.log("ftaAppHub connection closed");
-		});
-
-		// Start connection to SignalR Hub
 		return Promise.all([
-			this.infrastructureConnection.start(),
 			this.connection.start(),
-			this.gameSpecificConnection.start(),
+			this.infrastructureConnection.start(),
 			this.ftaAppHubConnection.start().catch(() => {
 				// ftaAppHub is optional; swallow connection errors so the rest of SignalR still starts
 				console.warn("ftaAppHub connection failed to start (no FMS event password configured?)");
 			}),
 		]).catch(console.log);
-	}
-
-	/**
-	 * This function is used to invoke a SignalR event and wait for a response.
-	 * @param eventName The name of the event to invoke
-	 * @param eventResponse The name of the event to listen for the response
-	 * @param args Any arguments to pass to the event
-	 * @returns A promise that resolves with the response from the event
-	 */
-	private invokeExpectResponse<t>(eventName: string, eventResponse: string, ...args: any[]): Promise<t> {
-		return new Promise<t>((resolve, reject) => {
-			if (this.infrastructureConnection == null) {
-				reject();
-				return;
-			}
-
-			const listener = (response: t) => {
-				this.infrastructureConnection?.off(eventResponse, listener);
-				resolve(response);
-			};
-			this.infrastructureConnection.on(eventResponse, listener);
-
-			this.infrastructureConnection.invoke(eventName, ...args).catch((err) => {
-				console.error(`Failed to invoke '${eventName}'`, err);
-				reject(err);
-			});
-		});
-	}
-
-	private dsState(data: SignalRMonitorFrame): DSState {
-		if (data.IsBypassed) return DSState.BYPASS;
-		if (data.IsEStopped) return DSState.ESTOP;
-		if (data.IsAStopped && this.frame.field == FieldState.MATCH_RUNNING_AUTO) return DSState.ASTOP;
-		if (data.Connection) {
-			if (data.DSLinkActive) return DSState.GREEN;
-			if (data.StationStatus === "WrongStation") return DSState.MOVE_STATION;
-			if (data.StationStatus === "Waiting") return DSState.WAITING;
-			return DSState.GREEN_X;
-		}
-
-		return DSState.RED;
 	}
 
 	public async stop() {
@@ -637,10 +328,6 @@ export class SignalR {
 			stops.push(this.infrastructureConnection.stop());
 			this.infrastructureConnection = null;
 		}
-		if (this.gameSpecificConnection) {
-			stops.push(this.gameSpecificConnection.stop());
-			this.gameSpecificConnection = null;
-		}
 		if (this.ftaAppHubConnection) {
 			stops.push(this.ftaAppHubConnection.stop());
 			this.ftaAppHubConnection = null;
@@ -648,6 +335,21 @@ export class SignalR {
 		await Promise.allSettled(stops);
 		signalRConnectionStatus = HubConnectionState.Disconnected;
 		console.log("SignalR stopped");
+	}
+
+	// #region Helpers
+
+	private dsState(data: SignalRMonitorFrame): DSState {
+		if (data.IsBypassed) return DSState.BYPASS;
+		if (data.IsEStopped) return DSState.ESTOP;
+		if (data.IsAStopped && this.frame.field === FieldState.MATCH_RUNNING_AUTO) return DSState.ASTOP;
+		if (data.Connection) {
+			if (data.DSLinkActive) return DSState.GREEN;
+			if (data.StationStatus === "WrongStation") return DSState.MOVE_STATION;
+			if (data.StationStatus === "Waiting") return DSState.WAITING;
+			return DSState.GREEN_X;
+		}
+		return DSState.RED;
 	}
 
 	private enableState(data: SignalRMonitorFrame): EnableState {

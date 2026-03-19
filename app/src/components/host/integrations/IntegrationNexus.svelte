@@ -33,13 +33,20 @@
 
 	function stateColor(state: NexusStatus["state"] | undefined): "green" | "yellow" | "red" | "gray" | "blue" {
 		switch (state) {
-			case "polling": return "blue";
-			case "polling_slow": return "green";
-			case "complete": return "green";
-			case "unauthorized": return "red";
-			case "error": return "yellow";
-			case "event_over": return "gray";
-			default: return "gray";
+			case "polling":
+				return "blue";
+			case "polling_slow":
+				return "green";
+			case "complete":
+				return "green";
+			case "unauthorized":
+				return "red";
+			case "error":
+				return "yellow";
+			case "event_over":
+				return "gray";
+			default:
+				return "gray";
 		}
 	}
 
@@ -47,14 +54,21 @@
 		if (!status) return "Loading...";
 		switch (status.state) {
 			case "not_configured":
-			return status.nexusApiKeyIsSet ? "API key set - event has no end date" : "Not configured";
-		case "polling": return "Polling every 2 min";
-		case "polling_slow": return "Polling every 30 min (all inspected)";
-		case "complete": return "All teams inspected ✓";
-		case "unauthorized": return "Unauthorized - check API key";
-		case "error": return `Error${status.lastErrorMessage ? ": " + status.lastErrorMessage : ""}`;
-		case "event_over": return "Event ended - polling stopped";
-			default: return status.state;
+				return status.nexusApiKeyIsSet ? "API key set - event has no end date" : "Not configured";
+			case "polling":
+				return "Polling every 2 min";
+			case "polling_slow":
+				return "Polling every 30 min (all inspected)";
+			case "complete":
+				return "All teams inspected ✓";
+			case "unauthorized":
+				return "Unauthorized - check API key";
+			case "error":
+				return `Error${status.lastErrorMessage ? ": " + status.lastErrorMessage : ""}`;
+			case "event_over":
+				return "Event ended - polling stopped";
+			default:
+				return status.state;
 		}
 	}
 
@@ -69,7 +83,10 @@
 </script>
 
 <div class="rounded-xl border border-neutral-700 bg-neutral-900 overflow-hidden">
-	<button class="flex w-full items-center justify-between gap-3 p-4 text-left h-20" onclick={() => (expanded = !expanded)}>
+	<button
+		class="flex w-full items-center justify-between gap-3 p-4 text-left h-20"
+		onclick={() => (expanded = !expanded)}
+	>
 		<div class="flex items-center gap-3">
 			<span class="text-2xl">🔍</span>
 			<div>
@@ -110,7 +127,9 @@
 						placeholder={nexusStatus?.nexusApiKeyIsSet ? "••••••••" : "Paste your Nexus API key here"}
 						bind:value={nexusApiKey}
 						autocomplete="off"
-						onkeydown={(e) => { if (e.key === "Enter" && nexusApiKey) saveApiKey(); }}
+						onkeydown={(e) => {
+							if (e.key === "Enter" && nexusApiKey) saveApiKey();
+						}}
 					/>
 				</div>
 				<Button onclick={saveApiKey} disabled={nexusSaving || !nexusApiKey}>

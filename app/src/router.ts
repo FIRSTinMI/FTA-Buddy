@@ -17,7 +17,6 @@ export const { p, navigate, isActive, preload, route } = createRouter({
 	"/manage/login": () => import("./pages/management/Login.svelte"),
 	"/manage/host": () => import("./pages/management/Host.svelte"),
 	"/manage/host/create": () => import("./pages/management/Host.svelte"),
-	"/manage/host/integrations": () => import("./pages/management/Host.svelte"),
 	"/manage/event-settings": () => import("./pages/management/Host.svelte"),
 	"/manage/kiosk": () => import("./pages/management/RadioKiosk.svelte"),
 	"/manage/google-signup": () => import("./pages/management/CompleteGoogleSignup.svelte"),

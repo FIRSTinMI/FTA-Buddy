@@ -4,10 +4,11 @@
 	import { navigate } from "../../router";
 	import { eventStore } from "../../stores/event";
 	import { userStore } from "../../stores/user";
+	import { generateEventPassword } from "../../util/eventPassword";
 	import { toast } from "../../util/toast";
 
 	let eventCode = "";
-	let eventPin = Math.random().toString().slice(2, 6);
+	let eventPin = generateEventPassword();
 
 	let subEvents = [
 		{
@@ -67,8 +68,8 @@
 			<Input placeholder="2025micmp" bind:value={eventCode} disabled={blocked} />
 		</Label>
 		<Label>
-			Meshed Event Pin
-			<Input bind:value={eventPin} disabled={blocked} />
+			Meshed Event Password
+			<Input bind:value={eventPin} placeholder="robot-field-42" disabled={blocked} />
 		</Label>
 		<Label class="mt-2">Sub Events</Label>
 		{#each subEvents as subEvent, i}

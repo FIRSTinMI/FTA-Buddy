@@ -7,8 +7,11 @@
 	import { trpc } from "../../main";
 	import { navigate, route } from "../../router";
 	import { decompressStationLog } from "../../util/log-compression";
+	import { track } from "../../util/telemetry";
 
 	const { matchid } = route.getParams("/logs/:matchid");
+
+	track("match_log_viewed");
 
 	const match = trpc.match.getMatch.query({ id: matchid });
 	let data: MatchLog | undefined;

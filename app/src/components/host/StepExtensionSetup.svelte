@@ -96,7 +96,8 @@
 					<button
 						class="text-blue-400 hover:underline"
 						onclick={() => window.postMessage({ source: "page", type: "enable", fieldMonitor: true }, "*")}
-					>Enable</button>
+						>Enable</button
+					>
 				{/if}
 			{:else}
 				<Indicator color="red" class="my-auto" />
@@ -127,8 +128,8 @@
 			<div>
 				<p class="font-semibold">Notepad Only Mode</p>
 				<p class="text-sm text-gray-400">
-					Disables the SignalR field monitor connection in the extension. The extension and FMS
-					connection are still required. Match logs will need to be manually pulled.
+					Disables the SignalR field monitor connection in the extension. The extension and FMS connection are
+					still required. Match logs will need to be manually pulled.
 				</p>
 			</div>
 			<Toggle bind:checked={notepadOnly} class="ml-4 shrink-0" />

@@ -366,7 +366,7 @@ export function computeOvernightOffset(
 		// Only apply the overnight correction when the match truly carried over to
 		// the next day's session (actualStart >= gapEnd).  If the match merely ran
 		// slightly past midnight but before the next session began, it is simply
-		// late — no gap correction is needed and adding one would under-report the
+		// late - no gap correction is needed and adding one would under-report the
 		// delay (e.g. 51m behind incorrectly shown as 24m behind).
 		if (actualStart.getTime() < gapEnd.getTime()) continue;
 

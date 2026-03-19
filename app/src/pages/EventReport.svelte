@@ -3,6 +3,9 @@
 	import { onDestroy, onMount } from "svelte";
 	import { trpc } from "../main";
 	import { toast } from "../util/toast";
+	import { track } from "../util/telemetry";
+
+	track("event_report_viewed");
 
 	type AiReportStatus = "pending" | "generating" | "ready" | "error" | null;
 

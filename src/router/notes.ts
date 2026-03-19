@@ -1552,7 +1552,6 @@ export async function updateNoteAssignmentFromSlack(message_ts: string, add: boo
 		.where(eq(notes.id, note.id))
 		.returning();
 
-
 	if (add) {
 		event.noteUpdateEmitter.emit("note_update", {
 			kind: "assign",

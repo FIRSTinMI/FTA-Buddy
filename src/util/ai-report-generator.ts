@@ -201,9 +201,7 @@ function formatTimestamp(value: Date | null | undefined): string | null {
 
 function extractMatchRefs(text: string): string[] {
 	const matches = text.match(/\b(?:Q|QM|P|SF|F|M)\s*\d+\b/gi) ?? [];
-	const normalized = matches
-		.map((m) => m.replace(/\s+/g, "").toUpperCase())
-		.filter(Boolean);
+	const normalized = matches.map((m) => m.replace(/\s+/g, "").toUpperCase()).filter(Boolean);
 
 	return [...new Set(normalized)];
 }
@@ -822,23 +820,23 @@ Do not over-weight database issue labels. They are hints only and may be wrong.
 Use the note text and message excerpts as the primary source of truth.
 `;
 
-    const response = await openai.responses.create({
-        model,
-        input: [
-            {
-                role: "developer",
-                content: systemPrompt,
-            },
-            {
-                role: "user",
-                content: buildPrompt(ctx),
-            },
-        ],
-    });
+	const response = await openai.responses.create({
+		model,
+		input: [
+			{
+				role: "developer",
+				content: systemPrompt,
+			},
+			{
+				role: "user",
+				content: buildPrompt(ctx),
+			},
+		],
+	});
 
-    console.log("[AI Report] response:", JSON.stringify(response, null, 2));
+	console.log("[AI Report] response:", JSON.stringify(response, null, 2));
 
-    const reportText = response.output_text?.trim() || "No report generated.";
-    
+	const reportText = response.output_text?.trim() || "No report generated.";
+
 	return renderNarrativePdf(reportText, eventName, eventCode);
 }

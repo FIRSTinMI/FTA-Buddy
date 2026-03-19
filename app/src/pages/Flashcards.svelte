@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { Button, Input, Label } from "flowbite-svelte";
 	import { flashcardsStore } from "../stores/flashcards";
+	import { track } from "../util/telemetry";
+
+	track("flashcards_viewed");
 
 	let currentFlashcard = $state("");
 	let addRemoveState = $state(false);

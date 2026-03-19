@@ -52,7 +52,7 @@
 					window.history.replaceState({}, "", `?events=${events.join(",")}`);
 				}
 			} catch {
-				// Silently ignore — user can still add events manually.
+				// Silently ignore - user can still add events manually.
 			}
 		}
 

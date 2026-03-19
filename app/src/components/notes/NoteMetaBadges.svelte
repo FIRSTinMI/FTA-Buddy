@@ -30,11 +30,8 @@
 
 	{#if match}
 		<Badge color="teal">
-			{match.level === "Qualification"
-				? "Qual"
-				: match.level === "Playoff"
-					? "Playoff"
-					: (match.level ?? "")} M{match.match_number}{match.play_number && match.play_number > 1
+			{match.level === "Qualification" ? "Qual" : match.level === "Playoff" ? "Playoff" : (match.level ?? "")} M{match.match_number}{match.play_number &&
+			match.play_number > 1
 				? ` P${match.play_number}`
 				: ""}
 		</Badge>

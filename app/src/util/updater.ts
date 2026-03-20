@@ -11,9 +11,9 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
-    "2.7.2.1": {
+    "2.7.3.0": {
         changelog: `
-        <h1 class="text-lg font-bold">v2.7.2.1</h1>
+        <h1 class="text-lg font-bold">v2.7.3.0</h1>
         <ul>
         <li>Updated the extension to scrape the field monitor page instead of connecting to SignalR</li>
         </ul>

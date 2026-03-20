@@ -695,6 +695,12 @@ export const eventRouter = router({
 		return { fmsEventPassword: event.fmsEventPassword ?? null };
 	}),
 
+	/** Returns the team list (number, name, inspected) for this event. */
+	getTeams: eventProcedure.query(async ({ ctx }) => {
+		const event = await getEvent(ctx.event.token);
+		return event.teams;
+	}),
+
 	/** Returns the list of users currently joined to this event. */
 	getUsers: eventProcedure.query(async ({ ctx }) => {
 		const event = await getEvent(ctx.event.token);

@@ -11,3 +11,4 @@ app/public/music/*
 app/public/audio/*
 scripts/
 .claude/*
+userscript/dist

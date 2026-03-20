@@ -115,6 +115,44 @@ function updateSignalBars(bars: SVGRectElement[], dBm: number | null | undefined
 	bars.forEach((bar, i) => bar.setAttribute("fill", i < level ? activeColor : "#555"));
 }
 
+// ── Fullscreen ────────────────────────────────────────────────────────────────
+
+// MDI icon paths (24×24 viewBox)
+const ICON_FULLSCREEN      = "M5,5H10V7H7V10H5V5M14,5H19V10H17V7H14V5M17,14H19V19H14V17H17V14M10,17V19H5V14H7V17H10Z";
+const ICON_FULLSCREEN_EXIT = "M14,14H19V16H16V19H14V14M5,14H10V19H8V16H5V14M8,5H10V10H5V8H8V5M19,8V10H14V5H16V8H19Z";
+
+function makeFullscreenBtn(): HTMLButtonElement {
+	const btn = document.createElement("button") as HTMLButtonElement;
+	btn.id = "fb-fullscreen-btn";
+	btn.title = "Toggle fullscreen";
+
+	const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+	svg.setAttribute("viewBox", "0 0 24 24");
+	svg.setAttribute("fill", "currentColor");
+	const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+	path.setAttribute("d", ICON_FULLSCREEN);
+	svg.appendChild(path);
+	btn.appendChild(svg);
+
+	function updateIcon() {
+		path.setAttribute("d", document.fullscreenElement ? ICON_FULLSCREEN_EXIT : ICON_FULLSCREEN);
+	}
+
+	btn.addEventListener("click", async () => {
+		if (document.fullscreenElement) {
+			await (document.exitFullscreen?.() ?? (document as any).webkitExitFullscreen?.());
+		} else {
+			const el = document.documentElement;
+			await (el.requestFullscreen?.() ?? (el as any).webkitRequestFullscreen?.());
+		}
+	});
+
+	document.addEventListener("fullscreenchange", updateIcon);
+	document.addEventListener("webkitfullscreenchange", updateIcon);
+
+	return btn;
+}
+
 // ── Relative time ─────────────────────────────────────────────────────────────
 
 export function formatRelativeTime(ms: number): string {
@@ -155,7 +193,7 @@ export interface RootElements {
 	root: HTMLElement;
 	headerMatchDiv: HTMLDivElement;
 	headerStateDiv: HTMLDivElement;
-	headerTimeDiv: HTMLDivElement;
+	headerTimeSpan: HTMLSpanElement;
 	stations: Record<StationKey, StationElements>;
 }
 
@@ -272,6 +310,9 @@ export function buildRoot(): RootElements {
 	headerStateDiv.className = "fb-mid";
 	const headerTimeDiv = document.createElement("div") as HTMLDivElement;
 	headerTimeDiv.className = "fb-right";
+	const headerTimeSpan = document.createElement("span") as HTMLSpanElement;
+	headerTimeDiv.appendChild(headerTimeSpan);
+	headerTimeDiv.appendChild(makeFullscreenBtn());
 	headerRow.appendChild(headerMatchDiv);
 	headerRow.appendChild(headerStateDiv);
 	headerRow.appendChild(headerTimeDiv);
@@ -331,7 +372,7 @@ export function buildRoot(): RootElements {
 		root,
 		headerMatchDiv,
 		headerStateDiv,
-		headerTimeDiv,
+		headerTimeSpan,
 		stations: stationEls as Record<StationKey, StationElements>,
 	};
 }
@@ -345,7 +386,7 @@ function updateHeader(els: RootElements, frame: PartialMonitorFrame): void {
 		frame.level ?? "";
 	els.headerMatchDiv.textContent = frame.match > 0 ? `M: ${frame.match}` : "—";
 	els.headerStateDiv.textContent = FIELD_STATE_LABELS[frame.field] ?? "Unknown";
-	els.headerTimeDiv.textContent = frame.time ?? "";
+	els.headerTimeSpan.textContent = frame.time ?? "";
 }
 
 function updateStation(

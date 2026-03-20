@@ -111,8 +111,19 @@ export const CSS = `
 }
 .fb-span-row .fb-left  { padding: 0 0.5rem; }
 .fb-span-row .fb-mid   { flex: 1; padding: 0 0.5rem; text-align: center; }
-.fb-span-row .fb-right { padding: 0 0.5rem; }
+.fb-span-row .fb-right { padding: 0 0.5rem; display: flex; align-items: center; gap: 0.25rem; }
 .fb-span-row .fb-grow  { flex: 1; }
+#fb-fullscreen-btn {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 0.1rem;
+  opacity: 0.8;
+}
+#fb-fullscreen-btn:hover { opacity: 1; }
+#fb-fullscreen-btn svg { width: 1.5rem; height: 1.5rem; }
+@media screen and (min-width: 768px) { #fb-fullscreen-btn svg { width: 2rem; height: 2rem; } }
+@media screen and (min-width: 1024px) { #fb-fullscreen-btn svg { width: 2.5rem; height: 2.5rem; } }
 
 /* ── Column header p tags ────────────────────────────────────── */
 .fb-grid > p {

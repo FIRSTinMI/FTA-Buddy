@@ -13,7 +13,7 @@ export const telemetryRouter = router({
 						z.object({
 							event_type: z.string().max(50),
 							event_code: z.string().optional(),
-							metadata: z.record(z.unknown()).optional(),
+							metadata: z.record(z.string(), z.unknown()).optional(),
 						}),
 					)
 					.max(20),

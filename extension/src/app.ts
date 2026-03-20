@@ -6,13 +6,14 @@ const appExtensionData = chrome.runtime.getManifest();
 		changed: number,
 		enabled: boolean,
 		fieldMonitor: boolean,
+		useSignalR: boolean,
 		eventCode: string,
 		eventToken: string,
 		id: string;
 
 	await new Promise((resolve) => {
 		chrome.storage.local.get(
-			["url", "cloud", "event", "changed", "enabled", "fieldMonitor", "eventToken", "id"],
+			["url", "cloud", "event", "changed", "enabled", "fieldMonitor", "useSignalR", "eventToken", "id"],
 			(item) => {
 				console.log(item);
 				url = String(item.url);
@@ -21,6 +22,7 @@ const appExtensionData = chrome.runtime.getManifest();
 				changed = Number(item.changed);
 				enabled = Boolean(item.enabled);
 				fieldMonitor = Boolean(item.fieldMonitor);
+				useSignalR = item.useSignalR !== false; // default true
 				eventToken = String(item.eventToken);
 				id = String(item.id);
 				resolve(void 0);
@@ -36,6 +38,8 @@ const appExtensionData = chrome.runtime.getManifest();
 			cloud,
 			eventCode,
 			enabled,
+			fieldMonitor,
+			useSignalR,
 			signalR: enabled,
 			fms: extra?.fms ?? false,
 			id,
@@ -58,6 +62,10 @@ const appExtensionData = chrome.runtime.getManifest();
 				fieldMonitor = Boolean(evt.data.fieldMonitor);
 				updates.fieldMonitor = fieldMonitor;
 			}
+			if ("useSignalR" in evt.data) {
+				useSignalR = Boolean(evt.data.useSignalR);
+				updates.useSignalR = useSignalR;
+			}
 			await chrome.storage.local.set(updates);
 			// Storage change triggers background restart automatically
 			const fms = await pingFMS();
@@ -71,6 +79,10 @@ const appExtensionData = chrome.runtime.getManifest();
 			if ("fieldMonitor" in evt.data) {
 				fieldMonitor = Boolean(evt.data.fieldMonitor);
 				updates.fieldMonitor = fieldMonitor;
+			}
+			if ("useSignalR" in evt.data) {
+				useSignalR = Boolean(evt.data.useSignalR);
+				updates.useSignalR = useSignalR;
 			}
 			await chrome.storage.local.set(updates);
 			// Storage change triggers background restart automatically

@@ -65,6 +65,7 @@ export let url: string;
 export let id: string;
 export let enabled: boolean;
 export let fieldMonitor: boolean = false;
+export let useSignalR: boolean = true;
 export let cloud: boolean;
 export let useDev: boolean;
 export let changed: number;
@@ -84,7 +85,7 @@ async function start() {
 
 	await new Promise((resolve) => {
 		chrome.storage.local.get(
-			["url", "cloud", "useDev", "event", "changed", "enabled", "fieldMonitor", "id", "eventToken"],
+			["url", "cloud", "useDev", "event", "changed", "enabled", "fieldMonitor", "useSignalR", "id", "eventToken"],
 			(item) => {
 				if (!item.id) chrome.storage.local.set({ id: crypto.randomUUID() });
 
@@ -104,6 +105,7 @@ async function start() {
 						changed: item.changed || new Date().getTime(),
 						enabled: item.enabled ?? false,
 						fieldMonitor: item.fieldMonitor ?? false,
+						useSignalR: item.useSignalR ?? true,
 						eventToken: item.eventToken || "",
 						id: item.id || crypto.randomUUID(),
 					};
@@ -117,6 +119,7 @@ async function start() {
 				changed = Number(item.changed);
 				enabled = Boolean(item.enabled);
 				fieldMonitor = Boolean(item.fieldMonitor);
+				useSignalR = item.useSignalR !== false; // default true
 				eventToken = String(item.eventToken);
 				id = String(item.id) || crypto.randomUUID();
 				if (id !== item.id) chrome.storage.local.set({ id });
@@ -145,8 +148,12 @@ async function start() {
 		return;
 	}
 
-	console.log("Starting SignalR");
-	await signalRConnection.start();
+	if (useSignalR) {
+		console.log("Starting SignalR");
+		await signalRConnection.start();
+	} else {
+		console.log("SignalR disabled, using scraping mode");
+	}
 
 	if (!(eventCode || eventToken)) return;
 
@@ -159,10 +166,10 @@ async function start() {
 	try {
 		const { fmsEventPassword } = await trpc.event.getFmsEventPassword.query();
 		setFmsEventPassword(fmsEventPassword);
-		if (fieldMonitor) {
+		if (useSignalR) {
 			signalRConnection.on("noteChanged", handleFmsNoteChanged);
-			startOutboundNoteSync();
 		}
+		startOutboundNoteSync();
 	} catch (err) {
 		console.warn("Could not fetch FMS event password:", err);
 	}
@@ -212,6 +219,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 			eventToken,
 			enabled,
 			fieldMonitor,
+			useSignalR,
 			id,
 			fmsApi,
 			version: manifestData.version,
@@ -428,7 +436,7 @@ function startOutboundNoteSync() {
 }
 
 async function sendFrame(data: any) {
-	if (!fieldMonitor) return;
+	if (!fieldMonitor || !useSignalR) return;
 	await trpc.field.post.mutate(
 		eventToken ? { eventToken, ...data, extensionId: id } : { eventCode, ...data, extensionId: id },
 	);
@@ -458,7 +466,7 @@ async function sendScheduleDetails() {
 }
 
 function isMatchRunning(): boolean {
-	return fieldMonitor && MatchStateMap[signalRConnection.frame.field] === MatchState.RUNNING;
+	return fieldMonitor && useSignalR && MatchStateMap[signalRConnection.frame.field] === MatchState.RUNNING;
 }
 
 async function pollTeams() {

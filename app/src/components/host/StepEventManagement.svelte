@@ -13,6 +13,7 @@
 	let extensionDetected = $state(false);
 	let extensionEnabled = $state(false);
 	let extensionFieldMonitor = $state(false);
+	let extensionUseSignalR = $state(true);
 	let extensionVersion = $state("");
 	let extensionOutdated = $state(false);
 	let extensionConfiguring = $state(false);
@@ -25,12 +26,13 @@
 			extensionVersion = event.data.version ?? "";
 			extensionEnabled = event.data.enabled ?? false;
 			extensionFieldMonitor = event.data.fieldMonitor ?? false;
+			extensionUseSignalR = event.data.useSignalR ?? true;
 			extensionOutdated = extensionVersion < LATEST_EXTENSION_VERSION;
 			fmsExtensionConnected = event.data.fms ?? false;
 		}
 	});
 
-	async function configureExtension() {
+	async function configureExtension(useSignalR: boolean) {
 		extensionConfiguring = true;
 		extensionConfigured = false;
 		try {
@@ -41,10 +43,12 @@
 					code: $eventStore.code,
 					token: $userStore.eventToken,
 					fieldMonitor: true,
+					useSignalR,
 				},
 				"*",
 			);
 			await new Promise((resolve) => setTimeout(resolve, 600));
+			extensionUseSignalR = useSignalR;
 			extensionConfigured = true;
 		} finally {
 			extensionConfiguring = false;
@@ -80,16 +84,18 @@
 		{#if extensionDetected}
 			<span class="text-xs text-gray-500">
 				{#if !extensionEnabled}
-					Extension not enabled -
+					Extension not enabled ·
 				{:else if !extensionFieldMonitor}
-					Field monitor off -
+					Field monitor off ·
+				{:else if extensionUseSignalR}
+					SignalR mode ·
 				{:else}
-					Field monitor on ·
+					Scraping mode ·
 				{/if}
 				<button
 					class="text-blue-400 hover:underline disabled:opacity-50"
 					disabled={extensionConfiguring}
-					onclick={configureExtension}
+					onclick={() => configureExtension(extensionUseSignalR)}
 				>
 					{extensionConfiguring
 						? "Configuring…"
@@ -97,6 +103,16 @@
 							? "Reconfigure extension"
 							: "Configure extension"}
 				</button>
+				{#if extensionEnabled && extensionFieldMonitor}
+					·
+					<button
+						class="text-blue-400 hover:underline disabled:opacity-50"
+						disabled={extensionConfiguring}
+						onclick={() => configureExtension(!extensionUseSignalR)}
+					>
+						Switch to {extensionUseSignalR ? "scraping" : "SignalR"} mode
+					</button>
+				{/if}
 			</span>
 		{:else}
 			<span class="text-xs text-gray-500">

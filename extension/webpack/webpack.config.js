@@ -13,6 +13,7 @@ module.exports = {
 		"injected-trpc": path.resolve(__dirname, "..", "src", "injected-trpc.ts"),
 		vivid: path.resolve(__dirname, "..", "src", "vivid.ts"),
 		"injected-vivid": path.resolve(__dirname, "..", "src", "injected-vivid.ts"),
+		"injected-fieldmonitor": path.resolve(__dirname, "..", "src", "injected-fieldmonitor.ts"),
 	},
 	output: {
 		path: path.join(__dirname, "../dist"),

@@ -7,6 +7,8 @@ const eventInput = document.getElementById("event") as HTMLInputElement;
 const eventContainer = document.getElementById("event-container") as HTMLDivElement;
 const enabledInput = document.getElementById("enabled") as HTMLInputElement;
 const fieldMonitorInput = document.getElementById("fieldMonitor") as HTMLInputElement;
+const useSignalRInput = document.getElementById("useSignalR") as HTMLInputElement;
+const signalRRow = document.getElementById("signalr-row") as HTMLDivElement;
 const tokenInput = document.getElementById("eventToken") as HTMLInputElement;
 const saveButton = document.getElementById("save") as HTMLButtonElement;
 
@@ -46,7 +48,7 @@ async function bgGetStatuses(): Promise<{ signalrStatus: string }> {
 
 function load() {
 	chrome.storage.local.get(
-		["url", "cloud", "useDev", "event", "eventToken", "changed", "enabled", "fieldMonitor"],
+		["url", "cloud", "useDev", "event", "eventToken", "changed", "enabled", "fieldMonitor", "useSignalR"],
 		(item) => {
 			if (
 				item.url == undefined ||
@@ -64,6 +66,7 @@ function load() {
 					changed: item.changed || new Date().getTime(),
 					enabled: item.enabled ?? false,
 					fieldMonitor: item.fieldMonitor ?? false,
+					useSignalR: item.useSignalR ?? true,
 					eventToken: item.eventToken || "",
 				};
 				chrome.storage.local.set(item);
@@ -76,6 +79,8 @@ function load() {
 			eventInput.value = String(item.event);
 			enabledInput.checked = Boolean(item.enabled);
 			fieldMonitorInput.checked = Boolean(item.fieldMonitor);
+			useSignalRInput.checked = item.useSignalR !== false; // default true
+			signalRRow.style.display = Boolean(item.fieldMonitor) ? "flex" : "none";
 			tokenInput.value = String(item.eventToken);
 			let changed = Number(item.changed);
 
@@ -89,6 +94,7 @@ function load() {
 			cloudCheckbox.addEventListener("input", handleUpdate);
 			enabledInput.addEventListener("input", handleUpdate);
 			fieldMonitorInput.addEventListener("input", handleUpdate);
+			useSignalRInput.addEventListener("input", handleUpdate);
 			if (useDevCheckbox) useDevCheckbox.addEventListener("input", handleUpdate);
 			saveButton.addEventListener("click", handleUpdate);
 			refreshButton.addEventListener("click", () => chrome.runtime.reload());
@@ -118,9 +124,13 @@ async function updateStatusIndicators() {
 
 		bgStatus = bgGetStatuses().then((status) => {
 			const { signalrStatus } = status;
+			const useSignalR = useSignalRInput.checked;
 
 			fmsSignalRStatusIndicator.classList.remove("red", "green", "yellow");
-			if (signalrStatus !== "Connected") {
+			if (!useSignalR) {
+				fmsSignalRStatusIndicator.classList.add("yellow");
+				fmsSignalRStatusText.textContent = "Scraping mode";
+			} else if (signalrStatus !== "Connected") {
 				fmsSignalRStatusIndicator.classList.add("red");
 				fmsSignalRStatusText.textContent = signalrStatus || "Not Connected";
 			} else {
@@ -202,15 +212,17 @@ function handleUpdate() {
 		changed: new Date().getTime(),
 		enabled: enabledInput.checked,
 		fieldMonitor: fieldMonitorInput.checked,
+		useSignalR: useSignalRInput.checked,
 		eventToken: tokenInput.value,
 	});
 
 	urlContainer.style.display = cloudCheckbox.checked ? "none" : "block";
+	signalRRow.style.display = fieldMonitorInput.checked ? "flex" : "none";
 	// Storage change triggers background restart automatically
 }
 
 function updatePopup(
-	setting: "url" | "cloud" | "useDev" | "enabled" | "fieldMonitor" | "event" | "eventToken",
+	setting: "url" | "cloud" | "useDev" | "enabled" | "fieldMonitor" | "useSignalR" | "event" | "eventToken",
 	value: boolean | string,
 ) {
 	const elm = document?.getElementById(setting);
@@ -220,13 +232,17 @@ function updatePopup(
 	} else {
 		(elm as HTMLInputElement).value = value;
 	}
+	// Keep the SignalR row visibility in sync
+	if (setting === "fieldMonitor") {
+		signalRRow.style.display = (value as boolean) ? "flex" : "none";
+	}
 }
 
 chrome.storage.local.onChanged.addListener((changes) => {
 	for (const key of Object.keys(changes)) {
 		if (key === "changed") continue;
 		updatePopup(
-			key as "url" | "cloud" | "useDev" | "enabled" | "fieldMonitor" | "event" | "eventToken",
+			key as "url" | "cloud" | "useDev" | "enabled" | "fieldMonitor" | "useSignalR" | "event" | "eventToken",
 			changes[key].newValue as string | boolean,
 		);
 	}

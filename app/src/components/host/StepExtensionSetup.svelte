@@ -13,9 +13,10 @@
 	let teams: number[] = [];
 	let waitingForFirstConnectionTest = $state(true);
 	let notepadOnly = $state($hostWizardStore.notepadOnly);
+	let useSignalR = $state($hostWizardStore.useSignalR ?? false);
 
 	$effect(() => {
-		window.postMessage({ source: "page", type: "enable", fieldMonitor: !notepadOnly }, "*");
+		window.postMessage({ source: "page", type: "enable", fieldMonitor: !notepadOnly, useSignalR }, "*");
 	});
 
 	let canAdvance = $derived(extensionDetected && extensionEnabled && fmsDetected);
@@ -54,7 +55,7 @@
 	});
 
 	function advance() {
-		hostWizardStore.set({ notepadOnly, teams });
+		hostWizardStore.set({ notepadOnly, useSignalR, teams });
 		navigate("/manage/host/create");
 	}
 </script>
@@ -95,7 +96,7 @@
 					<span class="text-yellow-300">Extension Not Enabled</span>
 					<button
 						class="text-blue-400 hover:underline"
-						onclick={() => window.postMessage({ source: "page", type: "enable", fieldMonitor: true }, "*")}
+						onclick={() => window.postMessage({ source: "page", type: "enable", fieldMonitor: true, useSignalR }, "*")}
 						>Enable</button
 					>
 				{/if}
@@ -123,7 +124,7 @@
 		</div>
 	</div>
 
-	<div class="flex flex-col gap-1 border border-neutral-700 rounded-xl p-4 mb-6">
+	<div class="flex flex-col gap-3 border border-neutral-700 rounded-xl p-4 mb-6">
 		<div class="flex items-center justify-between">
 			<div>
 				<p class="font-semibold">Notepad Only Mode</p>
@@ -134,6 +135,19 @@
 			</div>
 			<Toggle bind:checked={notepadOnly} class="ml-4 shrink-0" />
 		</div>
+
+		{#if !notepadOnly}
+			<div class="flex items-center justify-between border-t border-neutral-700 pt-3">
+				<div>
+					<p class="font-semibold">Use SignalR</p>
+					<p class="text-sm text-gray-400">
+						When enabled, the extension connects to FMS via SignalR for live field data (recommended). When
+						disabled, the extension scrapes the FMS FieldMonitor page instead.
+					</p>
+				</div>
+				<Toggle bind:checked={useSignalR} class="ml-4 shrink-0" />
+			</div>
+		{/if}
 	</div>
 
 	<Button disabled={!canAdvance} onclick={advance}>Next</Button>

@@ -1,25 +1,29 @@
 console.log("Loaded injector");
 const manifestData = chrome.runtime.getManifest();
 chrome.storage.local.get(
-	["url", "cloud", "event", "changed", "enabled", "signalR", "id", "useDev", "eventToken"],
+	["url", "cloud", "event", "changed", "enabled", "fieldMonitor", "useSignalR", "id", "useDev", "eventToken"],
 	(item) => {
 		console.log(item);
 		let enabled = Boolean(item.enabled);
 		let cloud = Boolean(item.cloud);
 		let changed = Number(item.changed);
-		let signalR = Boolean(item.signalR);
+		let fieldMonitor = Boolean(item.fieldMonitor);
+		let useSignalR = item.useSignalR !== false; // default true
 		let useDev = Boolean(item.useDev);
 		let eventToken = String(item.eventToken);
 
-		// Don't inject if not enabled, expired, or using signalR
+		// Don't inject if not enabled, expired, notepad-only, or using SignalR
 		if (!enabled) {
 			console.log("Not enabled");
 			return;
 		} else if (changed + 1000 * 60 * 60 * 24 * 4 < new Date().getTime()) {
 			console.log("Expired");
 			return;
-		} else if (signalR) {
-			console.log("Using signalR so I won't inject");
+		} else if (!fieldMonitor) {
+			console.log("Field monitor disabled, not injecting");
+			return;
+		} else if (useSignalR) {
+			console.log("Using SignalR, not injecting scraper");
 			return;
 		}
 
@@ -37,6 +41,7 @@ chrome.storage.local.get(
 		script.dataset.useDev = String(useDev);
 		script.dataset.eventToken = String(eventToken);
 		script.id = "fta-buddy";
+		script.src = chrome.runtime.getURL("injected-fieldmonitor.js");
 		document.body.appendChild(script);
 	},
 );

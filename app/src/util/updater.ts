@@ -3,7 +3,7 @@ import { eventStore } from "../stores/event";
 import { settingsStore } from "../stores/settings";
 import { userStore } from "../stores/user";
 
-export const LATEST_EXTENSION_VERSION = "1.26.5";
+export const LATEST_EXTENSION_VERSION = "1.26.6";
 
 interface Version {
 	changelog?: string;
@@ -11,6 +11,14 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+    "2.7.2.1": {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.7.2.1</h1>
+        <ul>
+        <li>Updated the extension to scrape the field monitor page instead of connecting to SignalR</li>
+        </ul>
+        `
+    },
 	"2.7.2.0": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.2.0</h1>

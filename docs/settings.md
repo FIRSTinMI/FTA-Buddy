@@ -1,3 +1,5 @@
+[Home](./)
+
 # Settings
 
 Open Settings by tapping the **gear icon** (top right on most pages).
@@ -10,9 +12,9 @@ Open Settings by tapping the **gear icon** (top right on most pages).
 
 Vibrate on robot connection changes. On by default.
 
-### FIM Specific Field Manuals
+### FiM Specific Field Manuals
 
-Show FIM (FIRST in Michigan) specific documentation links in the [References](./references.md) section. On by default. Turn this off if you're at a non-FIM event and don't want the extra link.
+Show FiM (FIRST in Michigan) specific documentation links in the [References](./references) section. On by default. Turn this off if you're at a non-FIM event and don't want the extra link.
 
 ### Enable Notifications
 
@@ -41,7 +43,7 @@ All four are on by default. You can turn off any category you don't need.
 
 ## Change My Role
 
-Use the dropdown to switch between **FTA**, **FTAA**, **CSA**, and **RI**. This updates your role on the server and changes the bottom navigation bar. See [Getting Started](./getting-started.md#roles) for what each role can access.
+Use the dropdown to switch between **FTA**, **FTAA**, **CSA**, and **RI**. This updates your role on the server and changes the bottom navigation bar. See [Getting Started](./getting-started#roles) for what each role can access.
 
 ---
 

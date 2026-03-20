@@ -1,3 +1,5 @@
+[Home](./)
+
 # Getting Started
 
 FTA Buddy is a web app (and installable mobile app) for FRC event volunteers. It gives FTAs, FTAAs, CSAs, and RIs real-time field data, team support notes, and match logs on their phones or tablets - without needing to be on the FMS network.
@@ -24,7 +26,7 @@ Your role determines which features you see and how the app behaves by default.
 | **CSA**  | Control System Advisor  | Feed view            | Notepad, References, Notifications                     |
 | **RI**   | Robot Inspector         | Feed view            | Checklist, References, Notifications                   |
 
-You can change your role at any time in [Settings](./settings.md).
+You can change your role at any time in [Settings](./settings).
 
 ## Joining an Event
 
@@ -57,4 +59,4 @@ The bottom navigation bar changes based on your role:
 - **FTA / FTAA:** Monitor · Flashcards · References · Notepad
 - **CSA / RI:** Notepad · Status Lights · Software Docs · Notifications
 
-The gear icon (top right on most pages) opens [Settings](./settings.md).
+The gear icon (top right on most pages) opens [Settings](./settings).

@@ -1,8 +1,10 @@
+[Home](./)
+
 # Station Logs
 
 A station log is the detailed DS connection record for one robot in one match. It shows second-by-second data for every metric FMS tracks.
 
-Navigate to a station log by opening a match from the [Match Logs list](./index.md) and tapping a station.
+Navigate to a station log by opening a match from the [Match Logs list](./index) and tapping a station.
 
 ---
 

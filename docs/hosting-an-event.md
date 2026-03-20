@@ -1,3 +1,5 @@
+[Home](./)
+
 # Hosting an Event
 
 One person per event needs to set up FTA Buddy as the host. This is typically done on the **FMS computer** (or a laptop plugged into the FMS network) at the start of the event. Once hosted, all other volunteers can join with the event password.
@@ -62,7 +64,7 @@ After creating the event, you'll land on the Event Settings page. You can return
 From here you can:
 
 - View the event code and password
-- Configure [integrations](./integrations.md) (FTA App sync, Slack, Nexus, WPA Kiosk)
+- Configure [integrations](./integrations) (FTA App sync, Slack, Nexus, WPA Kiosk)
 - Set an event display label
 - Set up meshed events (for multi-field events that share a combined dashboard)
 

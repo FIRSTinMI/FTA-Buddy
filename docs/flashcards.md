@@ -1,3 +1,5 @@
+[Home](./)
+
 # Flashcards
 
 Flashcards are large-text quick-reference cards that display full-screen on your device. They're great for keeping frequently needed information visible without navigating away from what you're doing.

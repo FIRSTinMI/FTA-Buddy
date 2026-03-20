@@ -1,3 +1,5 @@
+[Home](./)
+
 # References
 
 The References section is a library of quick-access documentation for FRC hardware and software. It's available to all users without needing to log in or join an event.
@@ -65,6 +67,6 @@ The References hub also displays a quick-reference table of Driver Station keybo
 
 ---
 
-## FIM-Specific References
+## FiM-Specific References
 
-If **FIM Specific Field Manuals** is enabled in [Settings](./settings.md), an additional link to FIM (FIRST in Michigan) specific documentation appears on the References page. This is on by default and can be turned off for non-FIM events.
+If **FiM Specific Field Manuals** is enabled in [Settings](./settings), an additional link to FiM (FIRST in Michigan) specific documentation appears on the References page. This is on by default and can be turned off for non-FiM events.

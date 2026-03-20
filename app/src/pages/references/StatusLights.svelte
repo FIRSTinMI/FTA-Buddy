@@ -2019,10 +2019,10 @@
 
 							<tr class="border-2 border-gray-400">
 								<td>
-									<table class="section-table">
+									<table>
 										<tbody>
 											<tr class="w-100 border-b-2 border-b-gray-600">
-												<td colspan="2" class="bold w-100 pt-2 pl-2"></td>
+												<td colspan="2" class="bold w-100 pt-2 pl-2">Wi-Fi</td>
 											</tr>
 											<tr class="w-100 border-b-2 border-b-gray-600">
 												<td class="w-20 pl-8 pt-2"><span class={LEDToggleState["3Hz"] === true ? "green led" : "black led"}></span></td>
@@ -2039,7 +2039,7 @@
 
 							<tr class="border-2 border-gray-400">
 								<td>
-									<table class="section-table">
+									<table>
 										<tbody>
 											<tr class="w-100 border-b-2 border-b-gray-600">
 												<td colspan="2" class="bold w-100 pt-2 pl-2">BlueTooth</td>
@@ -2059,7 +2059,7 @@
 
 							<tr class="border-2 border-gray-400">
 								<td>
-									<table class="section-table">
+									<table>
 										<tbody>
 											<tr class="w-100 border-b-2 border-b-gray-600">
 												<td colspan="2" class="bold w-100 pt-2 pl-2">CAN</td>
@@ -2306,7 +2306,7 @@
 
 			{#if openState.ctretbcancoder === true || loadedState.ctretbcancoder === true}
 				<div class="flex flex-col pl-1" style="max-width: 375px;">
-					<table cellpadding="5" cellspacing="0" class="text-black dark:text-white" style="max-width: 375px;">
+					<table cellpadding="5" cellspacing="0" class="text-black dark:text-white">
 						<tbody>
 							<tr class="border-2 border-gray-400">
 								<td>
@@ -2328,9 +2328,29 @@
 												<td class="w-20 pl-8 pt-2"><span class={LEDToggleState["1Hz"] === true ? "black led" : "red led"}></span> </td>
 												<td>CAN bus has been lost</td>
 											</tr>
+											<tr class="w-100 border-b-2 border-b-gray-600">
+												<td class="w-20 pl-8 pt-2"><span class={LEDToggleState["3Hz"] === true ? "black led" : "dim-red led"}></span></td>
+												<td>(dim) No CAN and magnet out of range</td>
+											</tr>
+											<tr class="w-100 border-b-2 border-b-gray-600">
+												<td class="w-20 pl-8 pt-2"><span class={LEDToggleState["3Hz"] === true ? "black led" : "dim-yellow led"}></span></td>
+												<td>(dim) No CAN and reduced magnet accuracy</td>
+											</tr>
+											<tr class="w-100 border-b-2 border-b-gray-600">
+												<td class="w-20 pl-8 pt-2"><span class={LEDToggleState["3Hz"] === true ? "black led" : "dim-green led"}></span></td>
+												<td>(dim) No CAN and magnet present</td>
+											</tr>
+											<tr class="w-100 border-b-2 border-b-gray-600">
+												<td class="w-20 pl-8 pt-2"><span class={LEDToggleState["3Hz"] === true ? "black led" : "red led"}></span></td>
+												<td>(bright) CAN and magnet out of range</td>
+											</tr>
+											<tr class="w-100 border-b-2 border-b-gray-600">
+												<td class="w-20 pl-8 pt-2"><span class={LEDToggleState["3Hz"] === true ? "black led" : "yellow led"}></span></td>
+												<td>(bright) CAN and reduced magnet accuracy</td>
+											</tr>
 											<tr>
 												<td class="w-20 pl-8 pt-2"><span class={LEDToggleState["3Hz"] === true ? "black led" : "green led"}></span></td>
-												<td>CAN is present</td>
+												<td>(bright) CAN and magnet present</td>
 											</tr>
 										</tbody>
 									</table>
@@ -2694,9 +2714,6 @@
 		border: 2px solid #b0bec5;
 		width: 375px;
 	}
-	.section-table td {
-		border: 0;
-	}
 	.bold {
 		font-weight: bold;
 	}
@@ -2742,8 +2759,5 @@
 		height: 25px;
 		border: 1px black solid !important;
 		border-radius: 50% !important;
-	}
-	.section-table td {
-		vertical-align: top;
 	}
 </style>

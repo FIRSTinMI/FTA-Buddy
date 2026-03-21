@@ -41,13 +41,8 @@
 						events.push(data);
 					}
 					events = events.sort((a, b) => {
-						if (a.extensions.length === b.extensions.length) {
-							if (a.extensions.length === 0) return a.code.localeCompare(b.code);
-							const aDate = a.extensions[0].lastFrame;
-							const bDate = b.extensions[0].lastFrame;
-							return bDate.toISOString().split("T")[1].localeCompare(aDate.toISOString().split("T")[1]);
-						}
-						return b.extensions.length - a.extensions.length;
+						if (b.match !== a.match) return b.match - a.match;
+						return a.code.localeCompare(b.code);
 					});
 				},
 			},

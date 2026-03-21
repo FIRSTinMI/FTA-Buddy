@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { eq, inArray } from "drizzle-orm";
 import { EventEmitter } from "events";
 import { TypedEmitter } from "tiny-typed-emitter";
-import { eventCodes, events, newEventEmitter } from "../state";
+import { eventCodes, eventLastSeen, events, newEventEmitter } from "../state";
 import { DEFAULT_MONITOR } from "../../shared/constants";
 import {
 	EventAutoEventSettings,
@@ -170,6 +170,7 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 				},
 			};
 
+			eventLastSeen[eventCode] = new Date();
 			newEventEmitter.emit("new", eventCode);
 
 			if (event.nexusApiKey) {

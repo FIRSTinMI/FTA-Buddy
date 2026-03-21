@@ -1,7 +1,7 @@
 import { and, eq, gt } from "drizzle-orm";
 import { on } from "events";
 import { z } from "zod";
-import { events, newEventEmitter } from "../state";
+import { eventLastSeen, events, newEventEmitter } from "../state";
 import { formatTimeShortNoAgoSeconds } from "../../shared/formatTime";
 import { DSState, EnableState, FieldState, MonitorFrame, StateChange, TournamentLevel } from "../../shared/types";
 import { db } from "../db/db";
@@ -157,6 +157,7 @@ export const fieldMonitorRouter = router({
 			}
 
 			event.monitorFrame = processed.currentFrame;
+			eventLastSeen[event.code] = new Date();
 
 			event.history.push(processed.currentFrame);
 			if (event.history.length > 50) event.history.shift();

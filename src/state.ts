@@ -4,6 +4,7 @@ import { NotificationEvents, ServerEvent } from "../shared/types";
 
 export const events: { [key: string]: ServerEvent } = {};
 export const eventCodes: { [key: string]: string } = {};
+export const eventLastSeen: { [key: string]: Date } = {};
 
 export const notificationEmitter = new TypedEmitter<NotificationEvents>();
 export const newEventEmitter = new EventEmitter();

@@ -1,7 +1,7 @@
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import cors from "cors";
 import "dotenv/config";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNotNull } from "drizzle-orm";
 import express from "express";
 import { readFileSync, readdirSync } from "fs";
 import hljs from "highlight.js";
@@ -42,7 +42,7 @@ import { getEvent } from "./util/get-event";
 import { decompressStationLog, logAnalysisLoop } from "./util/log-analysis";
 import { linkChannel, slackOAuth } from "./util/slack";
 import { getTeamAverageCycle } from "./util/team-cycles";
-import { events, eventCodes, notificationEmitter, newEventEmitter } from "./state";
+import { eventLastSeen, events, eventCodes, notificationEmitter, newEventEmitter } from "./state";
 
 export { events, eventCodes, notificationEmitter, newEventEmitter };
 
@@ -391,19 +391,23 @@ connect().then(async () => {
 		}
 	});
 
-	// Start Nexus pollers for any events that already have a key configured
+	// Start Nexus pollers for events with a key configured that are currently running
 	try {
+		const today = new Date().toISOString().split("T")[0];
 		const eventsWithNexus = await db
 			.select({
 				token: schema.events.token,
+				startDate: schema.events.startDate,
+				endDate: schema.events.endDate,
 			})
 			.from(schema.events)
-			.where(and(eq(schema.events.archived, false)));
+			.where(and(eq(schema.events.archived, false), isNotNull(schema.events.nexusApiKey)));
 		for (const row of eventsWithNexus) {
-			// Load event into memory (which will start the poller if nexusApiKey is set)
-			getEvent(row.token).catch(() => {
-				/* ignore load errors on startup */
-			});
+			if (row.startDate && row.endDate && today >= row.startDate && today <= row.endDate) {
+				getEvent(row.token).catch(() => {
+					/* ignore load errors on startup */
+				});
+			}
 		}
 	} catch (err) {
 		console.error("[Nexus] Failed to load events on startup:", (err as any)?.message);
@@ -411,6 +415,20 @@ connect().then(async () => {
 
 	server.listen(port);
 	console.log("✅ HTTP Server listening on http://localhost:" + port);
+
+	// Evict events with no activity for more than 3 days
+	setInterval(() => {
+		const cutoff = Date.now() - 3 * 24 * 60 * 60 * 1000;
+		for (const code of Object.keys(events)) {
+			const event = events[code];
+			if ((eventLastSeen[code] ?? new Date(0)).getTime() < cutoff) {
+				console.log(`[Cleanup] Evicting inactive event ${code}`);
+				if (event.token) delete eventCodes[event.token];
+				delete eventLastSeen[code];
+				delete events[code];
+			}
+		}
+	}, 60 * 60 * 1000);
 });
 
 process.on("SIGTERM", () => {

@@ -1,13 +1,6 @@
-let cacheName = "ftabuddy";
-const SW_VERSION = "{{JS_FILE}}";
-let contentToCache = [
-	"/assets/{{CSS_FILE}}",
-	"/assets/{{JS_FILE}}",
-	"/index.html",
-	"/vh109.png",
-	"/frc-control-system-layout-ctre.svg",
-	"/frc-control-system-layout-rev.svg",
-];
+const SW_VERSION = "{{SW_VERSION}}";
+const cacheName = `ftabuddy-${SW_VERSION}`;
+const contentToCache = {{ALL_ASSETS}};
 
 self.importScripts("/localforage.js");
 
@@ -19,27 +12,61 @@ const localforageSettings = localforage.createInstance({
 });
 
 self.addEventListener("install", (evt) => {
-	console.log("Service worker installed");
+	console.log("[SW] installing, version:", SW_VERSION);
 	self.skipWaiting();
 	evt.waitUntil(
 		caches.open(cacheName).then((cache) => {
-			console.log("[Service Worker] Caching all: app shell and content");
+			console.log("[SW] precaching", contentToCache.length, "assets");
 			return cache.addAll(contentToCache);
-		})
+		}),
 	);
 });
 
 self.addEventListener("activate", (evt) => {
-	console.log("Service worker activated");
-	// Claim all open windows immediately so clearing fixes apply without reload.
+	console.log("[SW] activated, version:", SW_VERSION);
 	evt.waitUntil(
 		(async () => {
+			// Delete old versioned caches
+			const keys = await caches.keys();
+			await Promise.all(keys.filter((k) => k !== cacheName).map((k) => caches.delete(k)));
+			// Claim all open windows immediately so clearing fixes apply without reload.
 			await clients.claim();
 			const windowClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
 			for (const client of windowClients) {
 				client.postMessage({ type: "sw-ready", version: SW_VERSION });
 			}
-		})()
+		})(),
+	);
+});
+
+self.addEventListener("fetch", (evt) => {
+	const url = new URL(evt.request.url);
+	// Never intercept tRPC, API, SSE, or cross-origin requests
+	if (
+		url.pathname.startsWith("/trpc") ||
+		url.pathname.startsWith("/slack") ||
+		url.pathname.startsWith("/report") ||
+		url.origin !== self.location.origin
+	) {
+		return;
+	}
+
+	evt.respondWith(
+		caches.match(evt.request).then((cached) => {
+			if (cached) return cached;
+			return fetch(evt.request)
+				.then((response) => {
+					// Only cache successful same-origin responses
+					if (!response || response.status !== 200 || response.type === "opaque") return response;
+					const toCache = response.clone();
+					caches.open(cacheName).then((cache) => cache.put(evt.request, toCache));
+					return response;
+				})
+				.catch(() => {
+					// For navigation requests, serve the cached index.html (SPA fallback)
+					if (evt.request.mode === "navigate") return caches.match("/index.html");
+				});
+		}),
 	);
 });
 
@@ -155,10 +182,10 @@ self.addEventListener("push", (event) => {
 				body: data.body ?? "",
 				tag: data.tag,
 				data: { ...(data.data ?? {}), notificationId: data.id },
-				icon: data.icon || '/transparent.png',
-                badge: data.badge || '/icon96_badge.png'
+				icon: data.icon || "/transparent.png",
+				badge: data.badge || "/icon96_badge.png",
 			});
-		})()
+		})(),
 	);
 });
 
@@ -172,7 +199,7 @@ self.addEventListener("notificationclick", (event) => {
 	event.waitUntil(
 		(async () => {
 			if (notificationId) {
-			    await removeNotificationFromStorage(notificationId);
+				await removeNotificationFromStorage(notificationId);
 				await broadcastToClients({ type: "notification_cleared", notificationId });
 			}
 			const matched = await clients.matchAll({ type: "window", includeUncontrolled: true });
@@ -186,7 +213,7 @@ self.addEventListener("notificationclick", (event) => {
 				}
 			}
 			return clients.openWindow(targetUrl);
-		})()
+		})(),
 	);
 });
 
@@ -198,7 +225,7 @@ self.addEventListener("notificationclose", (event) => {
 		(async () => {
 			await removeNotificationFromStorage(notificationId);
 			await broadcastToClients({ type: "notification_cleared", notificationId });
-		})()
+		})(),
 	);
 });
 
@@ -220,22 +247,6 @@ self.addEventListener("pushsubscriptionchange", (event) => {
 				console.warn("[SW] pushsubscriptionchange: failed to resubscribe", e);
 				await broadcastToClients({ type: "pushsubscriptionchange-error", message: e?.message ?? String(e) });
 			}
-		})()
+		})(),
 	);
 });
-/*
-self.addEventListener('fetch', function(e) {
-    e.respondWith(
-        caches.match(e.request).then(function(r) {
-            console.log('[Service Worker] Fetching resource: '+e.request.url);
-            return r || fetch(e.request).then(function(response) {
-                return caches.open(cacheName).then(function(cache) {
-                    console.log('[Service Worker] Caching new resource: '+e.request.url);
-                    cache.put(e.request, response.clone());
-                    return response;
-                });
-            });
-        });
-    );
-});
-*/

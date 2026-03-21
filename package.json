@@ -14,7 +14,7 @@
 		"app": "cd app && bun run dev",
 		"build": "cd app && bun run build",
 		"generate-migration": "drizzle-kit generate",
-		"migrate": "ts-node src/db/migrate",
+		"migrate": "bun run src/db/migrate",
 		"userscript": "bun run --cwd userscript build",
 		"format": "prettier --write ."
 	},

@@ -4,7 +4,6 @@ node_modules
 *.rsls
 dist/*
 .env
-FieldMonitor.ts
 reports/*
 oauth2.keys.json
 app/public/music/*

@@ -1,10 +1,10 @@
 import "dotenv/config";
-import { inArray } from "drizzle-orm";
+import { inArray, eq } from "drizzle-orm";
 import webpush, { PushSubscription, SendResult } from "web-push";
 import { notificationEmitter } from "../state";
 import type { Notification } from "../../shared/types";
 import { db } from "../db/db";
-import { pushSubscriptions } from "../db/schema";
+import { pushSubscriptions, users } from "../db/schema";
 
 const publicVapidKey = process.env.VAPID_PUBLIC_KEY || "";
 const privateVapidKey = process.env.VAPID_PRIVATE_KEY || "";
@@ -13,29 +13,44 @@ export function initializePushNotifications() {
 	webpush.setVapidDetails("mailto:me@filipkin.com", publicVapidKey, privateVapidKey);
 }
 
-export async function createNotification(users: number[], data: Notification) {
-	// Send notification to any active clients
+export async function createNotification(userIds: number[], data: Notification, eventCode?: string) {
+	// Attach eventCode to the notification for SSE client-side filtering
+	const annotated = eventCode ? { ...data, eventCode } : data;
+
+	// Send notification to any active clients via SSE
 	notificationEmitter.emit("send", {
-		users,
-		notification: data,
+		users: userIds,
+		notification: annotated,
 	});
 
 	// Send push notifications
-	sendWebPushNotification(users, data);
+	sendWebPushNotification(userIds, data, eventCode);
 }
 
-export async function sendWebPushNotification(users: number[], data: Notification) {
-	if (users.length === 0) return;
+export async function sendWebPushNotification(userIds: number[], data: Notification, eventCode?: string) {
+	if (userIds.length === 0) return;
+
+	// Filter to users whose active event matches (null = no preference, receives all)
+	let filteredUserIds = userIds;
+	if (eventCode) {
+		const userRows = await db.query.users.findMany({
+			where: inArray(users.id, userIds),
+			columns: { id: true, active_event_code: true },
+		});
+		filteredUserIds = userRows
+			.filter((u) => !u.active_event_code || u.active_event_code === eventCode)
+			.map((u) => u.id);
+		if (filteredUserIds.length === 0) return;
+	}
+
 	const subscriptions = await db.query.pushSubscriptions.findMany({
-		where: inArray(pushSubscriptions.user_id, users),
+		where: inArray(pushSubscriptions.user_id, filteredUserIds),
 	});
 
 	const notifications: Promise<SendResult | void>[] = [];
 	const subscriptionsToDelete: number[] = [];
 
 	for (let subscription of subscriptions) {
-		//console.log('Sending notification to', subscription.user_id);
-
 		const parsedUrl = new URL(subscription.endpoint);
 		const audience = `${parsedUrl.protocol}//${parsedUrl.hostname}`;
 		const vapidHeaders = webpush.getVapidHeaders(

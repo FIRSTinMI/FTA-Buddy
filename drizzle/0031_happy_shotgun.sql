@@ -1,1 +1,0 @@
-ALTER TABLE "tickets" ALTER COLUMN "author_id" SET DATA TYPE serial;

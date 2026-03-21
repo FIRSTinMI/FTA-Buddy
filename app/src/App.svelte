@@ -433,6 +433,7 @@
 							eventToken: $user.meshedEventToken ?? "",
 						});
 						eventStore.set({ ...event, code: event.meshedEventCode ?? "", label: "Combined" });
+						if (event.meshedEventCode) trpc.event.setActiveEvent.mutate({ eventCode: event.meshedEventCode }).catch(() => {});
 						if (route.pathname.startsWith("/monitor")) {
 							navigate("/dashboard");
 						}
@@ -442,6 +443,7 @@
 							eventToken: event.subEvents?.find((e) => e.code === multiEventSelection)?.token ?? "",
 						});
 						eventStore.set({ ...event, ...event.subEvents?.find((e) => e.code === multiEventSelection) });
+						trpc.event.setActiveEvent.mutate({ eventCode: multiEventSelection }).catch(() => {});
 						if (route.pathname.startsWith("/dashboard")) {
 							navigate("/monitor");
 						} else if (route.pathname.startsWith("/monitor")) {

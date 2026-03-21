@@ -1,1 +1,0 @@
-ALTER TABLE "tickets" ALTER COLUMN "assigned_to" SET DATA TYPE serial;

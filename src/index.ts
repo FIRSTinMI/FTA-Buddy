@@ -129,10 +129,23 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/trpc", createExpressMiddleware({ router: appRouter, createContext }));
 
 app.get("/serviceworker.js", async (req, res) => {
-	let assets = readdirSync("./app/dist/assets");
+	const assets = readdirSync("./app/dist/assets");
+	const rootFiles = readdirSync("./app/dist").filter(
+		(f) =>
+			f !== "serviceworker.js" &&
+			f !== "tutorial" &&
+			(f.endsWith(".png") || f.endsWith(".svg") || f.endsWith(".ico") || f.endsWith(".js") || f.endsWith(".html") || f.endsWith(".json")),
+	);
+	const allAssets = [
+		...assets.map((f) => `/assets/${f}`),
+		...rootFiles.map((f) => `/${f}`),
+		"/",
+	];
+	// Use the main entry JS hash as the SW version for cache busting
+	const swVersion = assets.find((f) => f.startsWith("index-") && f.endsWith(".js")) ?? assets[0] ?? "v1";
 	let serviceWorkerFile = readFileSync("./app/dist/serviceworker.js").toString();
-	serviceWorkerFile = serviceWorkerFile.replace("{{CSS_FILE}}", assets.filter((f) => f.endsWith(".css"))[0]);
-	serviceWorkerFile = serviceWorkerFile.replace("{{JS_FILE}}", assets.filter((f) => f.endsWith(".js"))[0]);
+	serviceWorkerFile = serviceWorkerFile.replace("{{ALL_ASSETS}}", JSON.stringify(allAssets));
+	serviceWorkerFile = serviceWorkerFile.replace("{{SW_VERSION}}", swVersion);
 	res.setHeader("Content-Type", "application/javascript");
 	res.send(serviceWorkerFile);
 });

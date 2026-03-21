@@ -32,15 +32,15 @@ export interface NoteContext {
 // Discriminated union of per-kind context objects
 
 export type NotificationContext =
-	| { kind: "note.created"; note: NoteContext; author: string }
-	| { kind: "note.message"; note: NoteContext; author: string; messageText: string; messageId?: string }
-	| { kind: "note.statusChanged"; note: NoteContext; newStatus: "Open" | "Resolved"; actor: string }
-	| { kind: "note.assigned"; note: NoteContext; assignee: string; actor: string }
-	| { kind: "note.assignedToYou"; note: NoteContext; actor: string }
-	| { kind: "note.unassigned"; note: NoteContext; actor: string }
-	| { kind: "note.unassignedFromYou"; note: NoteContext; actor: string }
-	| { kind: "event.general"; title: string; body: string }
-	| { kind: "robot.warning"; station: string; team: number | null; warning: string };
+	| { kind: "note.created"; eventCode: string; note: NoteContext; author: string }
+	| { kind: "note.message"; eventCode: string; note: NoteContext; author: string; messageText: string; messageId?: string }
+	| { kind: "note.statusChanged"; eventCode: string; note: NoteContext; newStatus: "Open" | "Resolved"; actor: string }
+	| { kind: "note.assigned"; eventCode: string; note: NoteContext; assignee: string; actor: string }
+	| { kind: "note.assignedToYou"; eventCode: string; note: NoteContext; actor: string }
+	| { kind: "note.unassigned"; eventCode: string; note: NoteContext; actor: string }
+	| { kind: "note.unassignedFromYou"; eventCode: string; note: NoteContext; actor: string }
+	| { kind: "event.general"; eventCode: string; title: string; body: string }
+	| { kind: "robot.warning"; eventCode: string; station: string; team: number | null; warning: string };
 
 // Internal formatting helpers
 
@@ -78,8 +78,8 @@ function noteLabel(note: NoteContext): string {
 	return parts.join(" • ");
 }
 
-function noteUrl(noteId: string): string {
-	return `notepad/view/${noteId}`;
+function noteUrl(eventCode: string, noteId: string): string {
+	return `notepad/view/${eventCode}/${noteId}`;
 }
 
 // Maps notification kind → legacy NotificationTopic used by the SW TOPIC_CATEGORY table
@@ -120,7 +120,7 @@ export function buildNotification(ctx: NotificationContext): Notification {
 			body = trunc(`${ctx.note.text} • by ${ctx.author}`, MAX_BODY);
 			tag = `note-${ctx.note.noteId}`;
 			id = `note.created:${ctx.note.noteId}`;
-			url = noteUrl(ctx.note.noteId);
+			url = noteUrl(ctx.eventCode, ctx.note.noteId);
 			break;
 		}
 
@@ -132,7 +132,7 @@ export function buildNotification(ctx: NotificationContext): Notification {
 			id = ctx.messageId
 				? `note.message:${ctx.messageId}`
 				: `note.message:${ctx.note.noteId}:${Math.floor(now.getTime() / 1000)}`;
-			url = noteUrl(ctx.note.noteId);
+			url = noteUrl(ctx.eventCode, ctx.note.noteId);
 			break;
 		}
 
@@ -148,7 +148,7 @@ export function buildNotification(ctx: NotificationContext): Notification {
 			body = trunc(`${ctx.newStatus === "Resolved" ? "Closed" : "Reopened"} by ${ctx.actor}`, MAX_BODY);
 			tag = `note-${ctx.note.noteId}`;
 			id = `note.status:${ctx.note.noteId}:${ctx.newStatus}:${Math.floor(now.getTime() / 1000)}`;
-			url = noteUrl(ctx.note.noteId);
+			url = noteUrl(ctx.eventCode, ctx.note.noteId);
 			break;
 		}
 
@@ -159,7 +159,7 @@ export function buildNotification(ctx: NotificationContext): Notification {
 			body = trunc(`Assigned to ${ctx.assignee} by ${ctx.actor}`, MAX_BODY);
 			tag = `note-${ctx.note.noteId}`;
 			id = `note.assigned:${ctx.note.noteId}:${Math.floor(now.getTime() / 1000)}`;
-			url = noteUrl(ctx.note.noteId);
+			url = noteUrl(ctx.eventCode, ctx.note.noteId);
 			break;
 		}
 
@@ -171,7 +171,7 @@ export function buildNotification(ctx: NotificationContext): Notification {
 			tag = `note-${ctx.note.noteId}`;
 			id = `note.assigned-you:${ctx.note.noteId}`;
 			urgency = "high";
-			url = noteUrl(ctx.note.noteId);
+			url = noteUrl(ctx.eventCode, ctx.note.noteId);
 			break;
 		}
 
@@ -182,7 +182,7 @@ export function buildNotification(ctx: NotificationContext): Notification {
 			body = trunc(`Unassigned by ${ctx.actor}`, MAX_BODY);
 			tag = `note-${ctx.note.noteId}`;
 			id = `note.unassigned:${ctx.note.noteId}:${Math.floor(now.getTime() / 1000)}`;
-			url = noteUrl(ctx.note.noteId);
+			url = noteUrl(ctx.eventCode, ctx.note.noteId);
 			break;
 		}
 
@@ -193,7 +193,7 @@ export function buildNotification(ctx: NotificationContext): Notification {
 			body = trunc(`Removed by ${ctx.actor}`, MAX_BODY);
 			tag = `note-${ctx.note.noteId}`;
 			id = `note.unassigned-you:${ctx.note.noteId}:${Math.floor(now.getTime() / 1000)}`;
-			url = noteUrl(ctx.note.noteId);
+			url = noteUrl(ctx.eventCode, ctx.note.noteId);
 			break;
 		}
 
@@ -239,6 +239,7 @@ export function buildNotification(ctx: NotificationContext): Notification {
 		tag,
 		kind: ctx.kind,
 		urgency,
+		eventCode: ctx.eventCode,
 		data: {
 			page: url,
 			...("note" in ctx ? { note_id: ctx.note.noteId } : {}),

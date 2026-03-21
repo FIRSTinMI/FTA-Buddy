@@ -1,1 +1,0 @@
-ALTER TABLE "events" ADD COLUMN "name" varchar NOT NULL;

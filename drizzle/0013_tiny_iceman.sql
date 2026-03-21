@@ -1,1 +1,0 @@
-ALTER TABLE "team_cycle_logs" DROP COLUMN IF EXISTS "event_id";

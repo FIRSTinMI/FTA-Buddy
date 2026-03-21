@@ -28,6 +28,7 @@ export const users = pgTable("users", {
 	token: varchar("token").notNull().default(""),
 	admin: boolean("admin").notNull().default(false),
 	slack_user_id: varchar("slack_user_id"),
+	active_event_code: varchar("active_event_code"),
 });
 
 export type User = typeof users.$inferInsert;

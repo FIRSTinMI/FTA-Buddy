@@ -319,11 +319,13 @@ const messagesSubRouter = router({
 				(note.followers ?? []).filter((id) => id !== authorProfile[0].id),
 				buildNotification({
 					kind: "note.message",
+					eventCode: event.code,
 					note: toNoteCtx(note as any),
 					author: authorProfile[0].username,
 					messageText: insert[0].text,
 					messageId: insert[0].id,
 				}),
+				event.code,
 			);
 
 			if (event.slackTeam && note.slack_channel && note.slack_ts) {
@@ -663,9 +665,11 @@ export const notesRouter = router({
 				event.users.map((u) => u.id),
 				buildNotification({
 					kind: "note.created",
+					eventCode: event.code,
 					note: toNoteCtx(insert[0] as any),
 					author: `Team #${insert[0].team}`,
 				}),
+				event.code,
 			);
 
 			if (event.slackChannel && event.slackTeam) {
@@ -798,9 +802,11 @@ export const notesRouter = router({
 				event.users.map((u) => u.id).filter((id) => id !== authorProfile[0].id),
 				buildNotification({
 					kind: "note.created",
+					eventCode: event.code,
 					note: toNoteCtx(insert[0] as any),
 					author: authorProfile[0].username,
 				}),
+				event.code,
 			);
 
 			if (event.slackChannel && event.slackTeam) {
@@ -966,10 +972,12 @@ export const notesRouter = router({
 				(note.followers ?? []).filter((id) => id !== currentUserProfile[0].id),
 				buildNotification({
 					kind: "note.statusChanged",
+					eventCode: event.code,
 					note: toNoteCtx(note as any),
 					newStatus: input.new_status as "Open" | "Resolved",
 					actor: currentUserProfile[0].username,
 				}),
+				event.code,
 			);
 
 			if (event.slackTeam && note.slack_ts && note.slack_channel) {
@@ -1038,10 +1046,12 @@ export const notesRouter = router({
 				(note.followers ?? []).filter((id) => id !== profile[0].id && id !== actorIdAssign),
 				buildNotification({
 					kind: "note.assigned",
+					eventCode: event.code,
 					note: toNoteCtx(note as any),
 					assignee: profile[0].username,
 					actor: actorUsernameAssign,
 				}),
+				event.code,
 			);
 
 			// Only notify the assignee if they didn't assign themselves
@@ -1050,9 +1060,11 @@ export const notesRouter = router({
 					[profile[0].id],
 					buildNotification({
 						kind: "note.assignedToYou",
+						eventCode: event.code,
 						note: toNoteCtx(note as any),
 						actor: actorUsernameAssign,
 					}),
+					event.code,
 				);
 			}
 
@@ -1119,9 +1131,11 @@ export const notesRouter = router({
 				(note.followers ?? []).filter((id) => id !== actorIdUnassign),
 				buildNotification({
 					kind: "note.unassigned",
+					eventCode: event.code,
 					note: toNoteCtx(note as any),
 					actor: actorUsernameUnassign,
 				}),
+				event.code,
 			);
 
 			// Only notify the previously-assigned user if they didn't unassign themselves
@@ -1130,9 +1144,11 @@ export const notesRouter = router({
 					[profile[0].id],
 					buildNotification({
 						kind: "note.unassignedFromYou",
+						eventCode: event.code,
 						note: toNoteCtx(note as any),
 						actor: actorUsernameUnassign,
 					}),
+					event.code,
 				);
 			}
 
@@ -1435,9 +1451,16 @@ export const notesRouter = router({
 
 		for await (const [payload] of on(notificationEmitter, "send", { signal: signal! })) {
 			const d = payload as { users: number[]; notification: Notification };
-			if (d.users.includes(user.id)) {
-				yield d.notification;
-			}
+			if (!d.users.includes(user.id)) continue;
+			// Re-fetch active_event_code each message (subscription is long-lived)
+			const currentUser = await db.query.users.findFirst({
+				where: eq(users.token, input.token),
+				columns: { id: true, active_event_code: true },
+			});
+			if (!currentUser) continue;
+			const notif = d.notification as Notification;
+			if (notif.eventCode && currentUser.active_event_code && notif.eventCode !== currentUser.active_event_code) continue;
+			yield notif;
 		}
 	}),
 
@@ -1520,10 +1543,12 @@ export async function updateNoteStatusFromSlack(message_ts: string, resolved: bo
 		note.followers ?? [],
 		buildNotification({
 			kind: "note.statusChanged",
+			eventCode: event.code,
 			note: toNoteCtx(note as any),
 			newStatus: newStatus as "Open" | "Resolved",
 			actor: resolverProfile?.username ?? "Slack",
 		}),
+		event.code,
 	);
 
 	if (!resolved && note.slack_channel && event.slackTeam && note.slack_ts) {
@@ -1563,10 +1588,12 @@ export async function updateNoteAssignmentFromSlack(message_ts: string, add: boo
 			note.followers ?? [],
 			buildNotification({
 				kind: "note.assigned",
+				eventCode: event.code,
 				note: toNoteCtx(note as any),
 				assignee: profile.username,
 				actor: "Slack",
 			}),
+			event.code,
 		);
 	} else {
 		event.noteUpdateEmitter.emit("note_update", {
@@ -1579,9 +1606,11 @@ export async function updateNoteAssignmentFromSlack(message_ts: string, add: boo
 			note.followers ?? [],
 			buildNotification({
 				kind: "note.unassigned",
+				eventCode: event.code,
 				note: toNoteCtx(note as any),
 				actor: "Slack",
 			}),
+			event.code,
 		);
 		if (note.slack_channel && event.slackTeam && note.slack_ts) {
 			removeSlackReaction(note.slack_channel, event.slackTeam, note.slack_ts, "eyes");
@@ -1637,9 +1666,11 @@ export async function addNoteMessageFromSlack(
 		note.followers ?? [],
 		buildNotification({
 			kind: "note.message",
+			eventCode: event.code,
 			note: toNoteCtx(note as any),
 			author: user.username,
 			messageText: text,
 		}),
+		event.code,
 	);
 }

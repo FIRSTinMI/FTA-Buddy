@@ -1,8 +1,12 @@
 import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { db } from "./db";
+import "dotenv/config";
+import { connect, db } from "./db";
 
-// this will automatically run needed migrations on the database
-migrate(db, { migrationsFolder: "./drizzle" })
+connect()
+	.then(() =>
+		// this will automatically run needed migrations on the database
+		migrate(db, { migrationsFolder: "./drizzle" }),
+	)
 	.then(() => {
 		console.log("Migrations complete!");
 		process.exit(0);

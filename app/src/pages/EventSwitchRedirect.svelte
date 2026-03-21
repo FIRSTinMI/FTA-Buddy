@@ -7,6 +7,7 @@
 	import { eventStore } from "../stores/event";
 	import { userStore } from "../stores/user";
 	import { savedEventsStore } from "../stores/savedEvents";
+	import { trpc } from "../main";
 
 	// Extract route params - this component serves 3 routes, try each pattern
 	function getRouteParams() {
@@ -68,6 +69,7 @@
 			if (subEvent) {
 				userStore.update((u) => ({ ...u, eventToken: subEvent.token }));
 				eventStore.set({ ...event, ...subEvent });
+				trpc.event.setActiveEvent.mutate({ eventCode: subEvent.code }).catch(() => {});
 				navigate(redirectPath as any, { replace: true });
 				return;
 			}
@@ -83,6 +85,7 @@
 					eventToken: savedEntry.token,
 					meshedEventToken: savedEntry.token,
 				}));
+				trpc.event.setActiveEvent.mutate({ eventCode: savedEntry.code }).catch(() => {});
 				eventStore.set({
 					code: savedEntry.code,
 					pin: savedEntry.pin,
@@ -94,6 +97,7 @@
 				});
 			} else {
 				userStore.update((u) => ({ ...u, eventToken: savedEntry.token, meshedEventToken: undefined }));
+			trpc.event.setActiveEvent.mutate({ eventCode: savedEntry.code }).catch(() => {});
 				eventStore.set({
 					code: savedEntry.code,
 					pin: savedEntry.pin,
@@ -117,6 +121,7 @@
 					eventToken: subEvent.token,
 					meshedEventToken: savedEvent.token,
 				}));
+				trpc.event.setActiveEvent.mutate({ eventCode: subEvent.code }).catch(() => {});
 				eventStore.set({
 					code: subEvent.code,
 					pin: subEvent.pin,

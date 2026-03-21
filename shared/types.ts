@@ -591,6 +591,8 @@ export interface Notification {
 	short?: string;
 	/** Delivery urgency hint ("low" | "normal" | "high"). */
 	urgency?: "low" | "normal" | "high";
+	/** Event code this notification belongs to, for routing and client-side filtering. */
+	eventCode?: string;
 	data?: {
 		page?: string;
 		note_id?: string;

@@ -28,6 +28,7 @@ const ctx = await esbuild.context({
 	minify: false,
 	sourcemap: false,
 	target: "es2020",
+	loader: { ".png": "dataurl" },
 });
 
 if (isWatch) {

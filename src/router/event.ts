@@ -128,7 +128,7 @@ export const eventRouter = router({
 
 			await db
 				.update(users)
-				.set({ events: Array.from(new Set([...eventList, event.code])) })
+				.set({ events: Array.from(new Set([...eventList, event.code])), active_event_code: event.code })
 				.where(eq(users.id, ctx.user.id));
 			await db
 				.update(events)
@@ -186,7 +186,7 @@ export const eventRouter = router({
 
 			await db
 				.update(users)
-				.set({ events: Array.from(new Set([...eventList, event.code])) })
+				.set({ events: Array.from(new Set([...eventList, event.code])), active_event_code: event.code })
 				.where(eq(users.id, ctx.user.id));
 			await db
 				.update(events)
@@ -795,8 +795,25 @@ export const eventRouter = router({
 				kind: base?.kind,
 				urgency: base?.urgency,
 				data: base?.data ?? { page: "/" },
-			});
+			}, event.code);
 
 			return { sent: userIds.length };
+		}),
+
+	setActiveEvent: protectedProcedure
+		.input(z.object({ eventCode: z.string() }))
+		.mutation(async ({ input, ctx }) => {
+			if (input.eventCode === "") {
+				await db.update(users).set({ active_event_code: null }).where(eq(users.id, ctx.user.id));
+				return true;
+			}
+			const eventDB = await db.query.events.findFirst({
+				where: eq(events.code, input.eventCode),
+				columns: { users: true },
+			});
+			const members = (eventDB?.users ?? []) as number[];
+			if (!members.includes(ctx.user.id)) throw new TRPCError({ code: "FORBIDDEN", message: "Not a member of this event" });
+			await db.update(users).set({ active_event_code: input.eventCode }).where(eq(users.id, ctx.user.id));
+			return true;
 		}),
 });

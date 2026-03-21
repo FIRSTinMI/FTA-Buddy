@@ -1,1 +1,0 @@
-ALTER TABLE "log_publishing" ADD COLUMN "expire_time" timestamp NOT NULL;

@@ -7,6 +7,7 @@ import {
 	notificationsStore,
 	removeNotification,
 } from "../stores/notifications";
+import { eventStore } from "../stores/event";
 import { settingsStore } from "../stores/settings";
 import { userStore } from "../stores/user";
 import type { MonitorEvent } from "./monitorFrameHandler";
@@ -96,6 +97,15 @@ export function startNotificationSubscription() {
 			{
 				onError: console.error,
 				onData: (data) => {
+					// Belt-and-suspenders: suppress SSE notifications not for the current event
+					if (data.eventCode) {
+						const currentCode = get(eventStore)?.code;
+						if (currentCode && data.eventCode !== currentCode) {
+							console.log("[NOTIFICATIONS] suppressed: wrong event", data.eventCode, "vs", currentCode);
+							return;
+						}
+					}
+
 					let sendNotification = false;
 
 					switch (data.topic) {

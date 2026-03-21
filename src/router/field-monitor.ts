@@ -109,11 +109,12 @@ export const fieldMonitorRouter = router({
 					event.lastMatchStart = new Date();
 
 					let exactAheadBehind = undefined;
+					console.log("[exactAB] match start: match=", processed.currentFrame.match, "level=", processed.currentFrame.level, "hasMatches=", !!event.scheduleDetails?.matches, "matchesCount=", event.scheduleDetails?.matches?.length ?? 0);
 					if (event.scheduleDetails.matches) {
 						processed.currentFrame.matchScheduledStartTime = event.scheduleDetails.matches.find(
 							(m) => m.match === processed.currentFrame.match && m.level === processed.currentFrame.level,
 						)?.scheduledStartTime;
-						console.log(processed.currentFrame.matchScheduledStartTime);
+						console.log("[exactAB] scheduledStartTime=", processed.currentFrame.matchScheduledStartTime);
 						if (processed.currentFrame.matchScheduledStartTime !== undefined) {
 							if (typeof processed.currentFrame.matchScheduledStartTime === "string") {
 								processed.currentFrame.matchScheduledStartTime = new Date(
@@ -130,14 +131,11 @@ export const fieldMonitorRouter = router({
 							);
 							exactAheadBehind =
 								formatTimeShortNoAgoSeconds(timeDelta) + (timeDelta >= 0 ? " ahead" : " behind");
-							console.log(
-								processed.currentFrame.matchScheduledStartTime,
-								event.lastMatchStart,
-								exactAheadBehind,
-							);
+							console.log("[exactAB] timeDelta=", timeDelta, "result=", exactAheadBehind);
 						}
 					}
 					processed.currentFrame.exactAheadBehind = exactAheadBehind;
+					console.log("[exactAB] frame.exactAheadBehind=", processed.currentFrame.exactAheadBehind);
 				} else if (processed.currentFrame.field === FieldState.MATCH_OVER) {
 					event.lastMatchEnd = new Date();
 				} else if (event.monitorFrame.field === FieldState.READY_FOR_POST_RESULT) {

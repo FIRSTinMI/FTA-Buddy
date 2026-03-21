@@ -76,14 +76,17 @@
 				onData: (data) => {
 					averageCycleTimeMS = data.averageCycleTime ?? 7 * 60 * 1000;
 					calculatedCycleTime = data.lastCycleTime ? cycleTimeToMS(data.lastCycleTime) : 0;
+					console.log("[scheduleText] cycle onData: hasScheduleDetails=", !!data.scheduleDetails, "level=", monitorFrame?.level, "match=", monitorFrame?.match);
 					if (data.scheduleDetails) {
 						scheduleDetails = data.scheduleDetails;
-						scheduleText = updateScheduleText(
-							monitorFrame?.match ?? scheduleDetails?.lastPlayed ?? 0,
+						const newText = updateScheduleText(
+							monitorFrame?.match ?? data.matchNumber ?? scheduleDetails?.lastPlayed ?? 0,
 							scheduleDetails,
-							monitorFrame?.level ?? "",
+							monitorFrame?.level || data.level || "",
 							averageCycleTimeMS,
 						);
+						console.log("[scheduleText] updated to:", newText || "(empty)", "| monitorLevel=", monitorFrame?.level, "dataLevel=", data.level);
+						scheduleText = newText;
 					}
 				},
 			},
@@ -173,12 +176,14 @@
 
 		averageCycleTimeMS = (await trpc.cycles.getAverageCycleTime.query()) ?? 8 * 60 * 1000;
 
-		scheduleText = updateScheduleText(
+		const newScheduleText = updateScheduleText(
 			monitorFrame?.match ?? scheduleDetails?.lastPlayed ?? 0,
 			scheduleDetails,
 			monitorFrame?.level ?? "",
 			averageCycleTimeMS,
 		);
+		console.log("[scheduleText] onMatchStart: match=", monitorFrame?.match, "level=", monitorFrame?.level, "hasDetails=", !!scheduleDetails, "result=", newScheduleText || "(empty)");
+		scheduleText = newScheduleText;
 
 		// Reset the cycle time so it doesn't screw up the next match's cycle time
 		calculatedCycleTime = undefined;

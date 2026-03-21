@@ -372,8 +372,10 @@ export const cycleRouter = router({
 				.execute();
 
 			event.scheduleDetails = { days: input.days, lastPlayed: input.lastPlayed, matches: input.matches };
+			console.log("[schedule] postScheduleDetails: days=", input.days.length, "matches=", input.matches?.length ?? 0, "lastPlayed=", input.lastPlayed);
 
 			// If the current match started without schedule data, compute exactAheadBehind now
+			console.log("[schedule] retroactive check: existingExactAB=", event.monitorFrame.exactAheadBehind, "lastMatchStart=", event.lastMatchStart, "hasInputMatches=", !!input.matches);
 			if (!event.monitorFrame.exactAheadBehind && event.lastMatchStart && input.matches) {
 				const scheduled = input.matches.find(
 					(m) => m.match === event.monitorFrame.match && m.level === event.monitorFrame.level,

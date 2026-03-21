@@ -155,7 +155,7 @@ export const fieldMonitorRouter = router({
 			event.history.push(processed.currentFrame);
 			if (event.history.length > 50) event.history.shift();
 
-			event.fieldMonitorEmitter.emit("update", input);
+			event.fieldMonitorEmitter.emit("update", event.monitorFrame);
 
 			for (const change of processed.changes) {
 				event.robotStateChangeEmitter.emit("change", change);

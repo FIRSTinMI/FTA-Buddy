@@ -2,7 +2,6 @@ import { count, gt, eq, and, sql } from "drizzle-orm";
 import { db } from "../db/db";
 import { appTelemetry, events, matchEvents, matchLogs, messages, notes, users } from "../db/schema";
 import { adminProcedure, router } from "../trpc";
-import { events as liveEvents } from "../state";
 
 /** Returns midnight on the most recent Tuesday (the start of the FRC event week). */
 function getWeekStart(): Date {
@@ -49,6 +48,7 @@ export const adminRouter = router({
 			newUsersWeekly,
 			activeUsersWeekly,
 			newEventsWeekly,
+			newUsersList,
 		] = await Promise.all([
 			db.select({ totalUsers: count() }).from(users),
 			db.select({ newUsersThisWeek: count() }).from(users).where(gt(users.created_at, weekStart)),
@@ -115,6 +115,10 @@ export const adminRouter = router({
 				.from(events)
 				.where(gt(events.created_at, yearStart))
 				.groupBy(tuesdayWeek(events.created_at)),
+			db
+				.select({ id: users.id, username: users.username, role: users.role })
+				.from(users)
+				.where(gt(users.created_at, weekStart)),
 		]);
 
 		const roleMap: Record<string, number> = {};
@@ -158,12 +162,12 @@ export const adminRouter = router({
 				newEvents: newEventsMap.get(week) ?? 0,
 			}));
 
-		const liveEventCount = Object.values(liveEvents).filter((e) => e.stats.extensions.length > 0).length;
 
 		return {
 			users: {
 				total: totalUsers,
 				newThisWeek: newUsersThisWeek,
+				newThisWeekList: newUsersList,
 				activeThisWeek: activeUsersThisWeek,
 				byRole: roleMap,
 			},
@@ -171,7 +175,6 @@ export const adminRouter = router({
 				total: totalEvents,
 				active: activeEvents,
 				newThisWeek: newEventsThisWeek,
-				liveNow: liveEventCount,
 			},
 			activity: {
 				notesThisWeek,

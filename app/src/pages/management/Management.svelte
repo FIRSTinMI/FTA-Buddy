@@ -14,6 +14,7 @@
 
 	type EventUserEntry = { id: number; username: string; role: string };
 	let eventUsers: Record<string, EventUserEntry[]> = $state({});
+	let eventNoteCount: Record<string, number> = $state({});
 
 	type Stats = Awaited<ReturnType<typeof trpc.admin.getStats.query>>;
 	type Telemetry = Awaited<ReturnType<typeof trpc.admin.getRecentTelemetry.query>>;
@@ -58,6 +59,7 @@
 					stats = s;
 					telemetry = t;
 					eventUsers = Object.fromEntries(users.map((e) => [e.code, e.users]));
+					eventNoteCount = Object.fromEntries(users.map((e) => [e.code, e.noteCount]));
 				})
 				.catch((err) => console.error("[Management]", err))
 				.finally(() => {
@@ -258,12 +260,19 @@
 						</div>
 					</Card>
 				</div>
+				{#if !showYtd && weekIndex === 0 && stats.users.newThisWeekList.length > 0}
+					<div class="flex flex-wrap gap-1 mt-2">
+						{#each stats.users.newThisWeekList as u}
+							<Badge color={roleColors[u.role] ?? "gray"} class="text-xs">{u.username}</Badge>
+						{/each}
+					</div>
+				{/if}
 			</div>
 
 			<!-- Event Stats -->
 			<div>
 				<h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Events</h2>
-				<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+				<div class="grid grid-cols-3 gap-3">
 					<Card class="p-4 text-center">
 						<p class="text-3xl font-bold text-primary-700 dark:text-primary-400">{stats.events.total}</p>
 						<p class="text-sm text-gray-500 mt-1">Total Events</p>
@@ -275,10 +284,6 @@
 					<Card class="p-4 text-center">
 						<p class="text-3xl font-bold text-blue-700 dark:text-blue-400">{weekUserEvents.newEvents}</p>
 						<p class="text-sm text-gray-500 mt-1">{showYtd ? "YTD" : "This Week"}</p>
-					</Card>
-					<Card class="p-4 text-center">
-						<p class="text-3xl font-bold text-yellow-600 dark:text-yellow-400">{stats.events.liveNow}</p>
-						<p class="text-sm text-gray-500 mt-1">Live Now</p>
 					</Card>
 				</div>
 			</div>
@@ -437,12 +442,15 @@
 							<p class="text-xs text-gray-400 italic">No extension connected</p>
 						{/if}
 
-						<!-- Clients -->
-						{#if event.clients.length > 0}
-							<p class="text-xs text-gray-500">
-								{event.clients.length} client{event.clients.length !== 1 ? "s" : ""} connected
-							</p>
-						{/if}
+						<!-- Clients + Notes -->
+						<div class="flex items-center gap-3 text-xs text-gray-500">
+							{#if event.clients.length > 0}
+								<span>{event.clients.length} client{event.clients.length !== 1 ? "s" : ""}</span>
+							{/if}
+							{#if eventNoteCount[event.code]}
+								<span>{eventNoteCount[event.code]} note{eventNoteCount[event.code] !== 1 ? "s" : ""}</span>
+							{/if}
+						</div>
 
 						<!-- Users -->
 						{#if eventUsers[event.code]?.length}

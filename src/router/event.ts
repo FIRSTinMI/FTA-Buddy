@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { createHash, randomUUID } from "crypto";
-import { desc, eq, inArray } from "drizzle-orm";
+import { count, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import {
 	AUTO_EVENT_ISSUE_TYPES,
@@ -13,7 +13,7 @@ import {
 } from "../../shared/types";
 import { autoEventSettingsCache } from "../util/log-analysis";
 import { db } from "../db/db";
-import { events, users } from "../db/schema";
+import { events, notes, users } from "../db/schema";
 import { adminProcedure, eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
 import { events as inMemoryEvents } from "../state";
 import { getEvent } from "../util/get-event";
@@ -360,9 +360,22 @@ export const eventRouter = router({
 				: [];
 
 		const usersMap = new Map(usersList.map((u) => [u.id, u]));
+
+		const eventCodesList = eventsData.map((e) => e.code);
+		const noteCountRows =
+			eventCodesList.length > 0
+				? await db
+						.select({ event_code: notes.event_code, cnt: count() })
+						.from(notes)
+						.where(inArray(notes.event_code, eventCodesList))
+						.groupBy(notes.event_code)
+				: [];
+		const noteCountMap = new Map(noteCountRows.map((r) => [r.event_code, r.cnt]));
+
 		return eventsData.map((event) => ({
 			code: event.code,
 			name: event.name,
+			noteCount: noteCountMap.get(event.code) ?? 0,
 			users: ((event.users as number[]) ?? [])
 				.map((id) => usersMap.get(id))
 				.filter((u): u is NonNullable<typeof u> => u != null),

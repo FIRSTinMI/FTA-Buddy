@@ -203,7 +203,7 @@ function buildFrameFromAngular(): PartialMonitorFrame | null {
 		match: matchNum,
 		play: playNum,
 		level: TOURNAMENT_LEVEL_MAP[tournamentLevel] ?? "None",
-		time: comp.aheadBedind ?? "",
+		time: comp.aheadBehind ?? "",
 		version,
 		frameTime: Date.now(),
 		blue1: stations.blue1 ? stationToRobotInfo(stations.blue1) : EMPTY,

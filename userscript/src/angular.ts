@@ -191,12 +191,18 @@ function buildFrameFromAngular(): PartialMonitorFrame | null {
 		return s ? stationToRobotInfo(s) : EMPTY_ROBOT;
 	};
 
+	// aheadBehind may not be a property on the Angular component — fall back to DOM if empty
+	const aheadBehind: string = comp.aheadBehind || (() => {
+		const el = document.querySelector(".bg-dark span");
+		return el?.textContent?.trim() ?? "";
+	})();
+
 	return {
 		field: matchStateTextToField(matchStateMsg),
 		match: matchNum,
 		play: playNum,
 		level: TOURNAMENT_LEVEL_MAP[tournamentLevel] ?? "None",
-		time: comp.aheadBehind ?? "",
+		time: aheadBehind,
 		version: "userscript",
 		frameTime: Date.now(),
 		blue1: station("blue1"),

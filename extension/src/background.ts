@@ -25,6 +25,7 @@ import { MatchState, MatchStateMap } from "../../shared/types";
 
 let teamPollInterval: ReturnType<typeof setInterval> | null = null;
 let matchImportInterval: ReturnType<typeof setInterval> | null = null;
+let schedulePollInterval: ReturnType<typeof setInterval> | null = null;
 let qualsScheduleAvailable = false;
 let inboundSyncInProgress = false;
 
@@ -75,6 +76,7 @@ export let fmsApi: boolean = false;
 async function stop() {
 	stopTeamPolling();
 	stopMatchAutoImport();
+	stopSchedulePolling();
 	outboundNoteSubscription?.unsubscribe();
 	outboundNoteSubscription = undefined;
 	await signalRConnection.stop();
@@ -142,7 +144,7 @@ async function start() {
 		console.log("Field monitor disabled, skipping SignalR");
 		if (!(eventCode || eventToken)) return;
 		await updateValues();
-		sendScheduleDetails();
+		startSchedulePolling();
 		startTeamPolling();
 		startMatchAutoImport();
 		return;
@@ -158,7 +160,7 @@ async function start() {
 	if (!(eventCode || eventToken)) return;
 
 	await updateValues();
-	sendScheduleDetails();
+	startSchedulePolling();
 	startTeamPolling();
 	startMatchAutoImport();
 
@@ -532,6 +534,21 @@ function stopMatchAutoImport() {
 		clearInterval(matchImportInterval);
 		matchImportInterval = null;
 		console.log("Stopped match auto-import");
+	}
+}
+
+function startSchedulePolling() {
+	if (schedulePollInterval) return;
+	sendScheduleDetails();
+	schedulePollInterval = setInterval(sendScheduleDetails, 10 * 60 * 1000);
+	console.log("Started schedule polling (every 10 min)");
+}
+
+function stopSchedulePolling() {
+	if (schedulePollInterval) {
+		clearInterval(schedulePollInterval);
+		schedulePollInterval = null;
+		console.log("Stopped schedule polling");
 	}
 }
 

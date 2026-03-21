@@ -10,6 +10,7 @@ import { eventProcedure, publicProcedure, router } from "../trpc";
 import { getEvent } from "../util/get-event";
 import { generateReport } from "../util/report-generator";
 import { subscriptionQueue } from "../util/subscription";
+import { computeOvernightOffset } from "../util/frame-processing";
 import { getTeamAverageCycle } from "../util/team-cycles";
 
 export const cycleRouter = router({
@@ -371,6 +372,20 @@ export const cycleRouter = router({
 				.execute();
 
 			event.scheduleDetails = { days: input.days, lastPlayed: input.lastPlayed, matches: input.matches };
+
+			// If the current match started without schedule data, compute exactAheadBehind now
+			if (!event.monitorFrame.exactAheadBehind && event.lastMatchStart && input.matches) {
+				const scheduled = input.matches.find(
+					(m) => m.match === event.monitorFrame.match && m.level === event.monitorFrame.level,
+				);
+				if (scheduled) {
+					const scheduledStart = new Date(scheduled.scheduledStartTime);
+					let timeDelta = scheduledStart.getTime() - event.lastMatchStart.getTime();
+					timeDelta += computeOvernightOffset(scheduledStart, event.lastMatchStart, event.scheduleDetails);
+					event.monitorFrame.exactAheadBehind =
+						formatTimeShortNoAgoSeconds(timeDelta) + (timeDelta >= 0 ? " ahead" : " behind");
+				}
+			}
 
 			event.cycleEmitter.emit("update");
 		}),

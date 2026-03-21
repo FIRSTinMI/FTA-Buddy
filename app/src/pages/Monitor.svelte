@@ -76,6 +76,15 @@
 				onData: (data) => {
 					averageCycleTimeMS = data.averageCycleTime ?? 7 * 60 * 1000;
 					calculatedCycleTime = data.lastCycleTime ? cycleTimeToMS(data.lastCycleTime) : 0;
+					if (data.scheduleDetails) {
+						scheduleDetails = data.scheduleDetails;
+						scheduleText = updateScheduleText(
+							monitorFrame?.match ?? scheduleDetails?.lastPlayed ?? 0,
+							scheduleDetails,
+							monitorFrame?.level ?? "",
+							averageCycleTimeMS,
+						);
+					}
 				},
 			},
 		);

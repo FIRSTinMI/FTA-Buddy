@@ -11,6 +11,15 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+    "2.7.3.1": {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.7.3.1</h1>
+        <ul>
+        <li>Made the extension poll for schedule details since don't have SignalR for that anymore</li>
+        <li>Fixed a bug where the exact ahead/behind was not calculated if schedule details were uploaded late</li>
+        </ul>
+        `
+    },
     "2.7.3.0": {
         changelog: `
         <h1 class="text-lg font-bold">v2.7.3.0</h1>

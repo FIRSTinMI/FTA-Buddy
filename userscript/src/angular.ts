@@ -82,9 +82,7 @@ function dsState(s: StationData): DSState {
 	if (s.IsBypassed) return DSState.BYPASS;
 	if (s.StationStatus === "WrongStation" || s.StationStatus === "WrongMatch") return DSState.MOVE_STATION;
 	if (!s.Connection) return DSState.RED;
-	// "Unknown" is the FMS default for a normally-connected robot that hasn't
-	// been explicitly confirmed "Good" yet — treat it the same as "Good".
-	if (!s.StationStatus || s.StationStatus === "Good" || s.StationStatus === "Unknown") return DSState.GREEN;
+	if (!s.StationStatus || s.StationStatus === "Good") return DSState.GREEN;
 	return DSState.GREEN_X;
 }
 

@@ -150,6 +150,12 @@ export const fieldMonitorRouter = router({
 			if (!processed.currentFrame.exactAheadBehind && processed.currentFrame.level === "Qualification")
 				processed.currentFrame.exactAheadBehind = event.monitorFrame.exactAheadBehind;
 
+			// Scraper sources always send lastCycleTime: "" — preserve the existing value so
+			// the server-computed cycle time (set by postCycleTime) is not overwritten.
+			if (!processed.currentFrame.lastCycleTime) {
+				processed.currentFrame.lastCycleTime = event.monitorFrame.lastCycleTime;
+			}
+
 			event.monitorFrame = processed.currentFrame;
 
 			event.history.push(processed.currentFrame);

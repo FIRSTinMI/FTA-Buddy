@@ -54,13 +54,19 @@ const RADIO_QUALITY_MAP: Record<number, "Warning" | "Caution" | "Good" | "Excell
 	3: "Excellent",
 };
 
-const TOURNAMENT_LEVEL_MAP: Record<string, "None" | "Practice" | "Qualification" | "Playoff"> = {
+const TOURNAMENT_LEVEL_MAP: Record<string | number, "None" | "Practice" | "Qualification" | "Playoff"> = {
+	// String keys (SignalR / REST API)
 	None: "None",
 	Practice: "Practice",
 	Qual: "Qualification",
 	Qualification: "Qualification",
 	Playoff: "Playoff",
 	Eliminations: "Playoff",
+	// Numeric keys (Angular component)
+	0: "None",
+	1: "Practice",
+	2: "Qualification",
+	3: "Playoff",
 };
 
 function toNum(v: unknown): number | null {

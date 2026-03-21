@@ -96,6 +96,12 @@ export const fieldMonitorRouter = router({
 				connection.frames++;
 			}
 
+			// Infer level from schedule when scraping mode reports "None" — match 999 is always a test match
+			if (input.level === "None" && input.match > 0 && input.match !== 999) {
+				const scheduledMatch = event.scheduleDetails?.matches?.find((m) => m.match === input.match);
+				if (scheduledMatch) (input as any).level = scheduledMatch.level;
+			}
+
 			// Detects raising and falling edges
 			const processed = detectStatusChange(input, event.monitorFrame);
 
@@ -109,12 +115,10 @@ export const fieldMonitorRouter = router({
 					event.lastMatchStart = new Date();
 
 					let exactAheadBehind = undefined;
-					console.log("[exactAB] match start: match=", processed.currentFrame.match, "level=", processed.currentFrame.level, "hasMatches=", !!event.scheduleDetails?.matches, "matchesCount=", event.scheduleDetails?.matches?.length ?? 0);
 					if (event.scheduleDetails.matches) {
 						processed.currentFrame.matchScheduledStartTime = event.scheduleDetails.matches.find(
 							(m) => m.match === processed.currentFrame.match && m.level === processed.currentFrame.level,
 						)?.scheduledStartTime;
-						console.log("[exactAB] scheduledStartTime=", processed.currentFrame.matchScheduledStartTime);
 						if (processed.currentFrame.matchScheduledStartTime !== undefined) {
 							if (typeof processed.currentFrame.matchScheduledStartTime === "string") {
 								processed.currentFrame.matchScheduledStartTime = new Date(
@@ -131,11 +135,9 @@ export const fieldMonitorRouter = router({
 							);
 							exactAheadBehind =
 								formatTimeShortNoAgoSeconds(timeDelta) + (timeDelta >= 0 ? " ahead" : " behind");
-							console.log("[exactAB] timeDelta=", timeDelta, "result=", exactAheadBehind);
 						}
 					}
 					processed.currentFrame.exactAheadBehind = exactAheadBehind;
-					console.log("[exactAB] frame.exactAheadBehind=", processed.currentFrame.exactAheadBehind);
 				} else if (processed.currentFrame.field === FieldState.MATCH_OVER) {
 					event.lastMatchEnd = new Date();
 				} else if (event.monitorFrame.field === FieldState.READY_FOR_POST_RESULT) {

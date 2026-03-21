@@ -76,17 +76,14 @@
 				onData: (data) => {
 					averageCycleTimeMS = data.averageCycleTime ?? 7 * 60 * 1000;
 					calculatedCycleTime = data.lastCycleTime ? cycleTimeToMS(data.lastCycleTime) : 0;
-					console.log("[scheduleText] cycle onData: hasScheduleDetails=", !!data.scheduleDetails, "level=", monitorFrame?.level, "match=", monitorFrame?.match);
 					if (data.scheduleDetails) {
 						scheduleDetails = data.scheduleDetails;
-						const newText = updateScheduleText(
+						scheduleText = updateScheduleText(
 							monitorFrame?.match ?? data.matchNumber ?? scheduleDetails?.lastPlayed ?? 0,
 							scheduleDetails,
 							monitorFrame?.level || data.level || "",
 							averageCycleTimeMS,
 						);
-						console.log("[scheduleText] updated to:", newText || "(empty)", "| monitorLevel=", monitorFrame?.level, "dataLevel=", data.level);
-						scheduleText = newText;
 					}
 				},
 			},
@@ -182,8 +179,7 @@
 			monitorFrame?.level ?? "",
 			averageCycleTimeMS,
 		);
-		console.log("[scheduleText] onMatchStart: match=", monitorFrame?.match, "level=", monitorFrame?.level, "hasDetails=", !!scheduleDetails, "result=", newScheduleText || "(empty)");
-		scheduleText = newScheduleText;
+			scheduleText = newScheduleText;
 
 		// Reset the cycle time so it doesn't screw up the next match's cycle time
 		calculatedCycleTime = undefined;

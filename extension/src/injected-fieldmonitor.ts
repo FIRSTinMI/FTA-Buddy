@@ -142,13 +142,19 @@ function stationToRobotInfo(s: StationData): PartialRobotInfo {
 }
 
 
-const TOURNAMENT_LEVEL_MAP: Record<string, "None" | "Practice" | "Qualification" | "Playoff"> = {
+const TOURNAMENT_LEVEL_MAP: Record<string | number, "None" | "Practice" | "Qualification" | "Playoff"> = {
+	// String keys (SignalR / REST API)
 	None: "None",
 	Practice: "Practice",
 	Qual: "Qualification",
 	Qualification: "Qualification",
 	Playoff: "Playoff",
 	Eliminations: "Playoff",
+	// Numeric keys (Angular component)
+	0: "None",
+	1: "Practice",
+	2: "Qualification",
+	3: "Playoff",
 };
 
 function getAngularComponent(selector: string): any | null {
@@ -203,7 +209,7 @@ function buildFrameFromAngular(): PartialMonitorFrame | null {
 		match: matchNum,
 		play: playNum,
 		level: TOURNAMENT_LEVEL_MAP[tournamentLevel] ?? "None",
-		time: comp.aheadBehind ?? "",
+		time: comp.aheadBedind ?? comp.aheadBehind ?? "",
 		version,
 		frameTime: Date.now(),
 		blue1: stations.blue1 ? stationToRobotInfo(stations.blue1) : EMPTY,

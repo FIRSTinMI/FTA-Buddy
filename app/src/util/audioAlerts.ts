@@ -2,6 +2,58 @@ import { get } from "svelte/store";
 import type { ROBOT } from "../../../shared/types";
 import { settingsStore } from "../stores/settings";
 
+// --- Audio leader election (one tab plays audio at a time) ---
+const TAB_ID = Math.random().toString(36).slice(2);
+const LEADER_KEY = "ftabuddy_audio_leader";
+const HEARTBEAT_MS = 3_000;
+const STALE_MS = 8_000;
+
+function claimLeadership(): boolean {
+	try {
+		localStorage.setItem(LEADER_KEY, JSON.stringify({ id: TAB_ID, ts: Date.now() }));
+	} catch {}
+	return true;
+}
+
+function isAudioLeader(): boolean {
+	try {
+		const raw = localStorage.getItem(LEADER_KEY);
+		if (!raw) return claimLeadership();
+		const { id, ts } = JSON.parse(raw);
+		if (id === TAB_ID) {
+			// Refresh heartbeat while we're confirmed leader
+			claimLeadership();
+			return true;
+		}
+		// Take over if the current leader has gone stale
+		if (Date.now() - ts > STALE_MS) return claimLeadership();
+		return false;
+	} catch {
+		return true; // fallback: allow audio if storage is unavailable
+	}
+}
+
+// Heartbeat: keep our leadership timestamp fresh so other tabs don't steal it
+setInterval(() => {
+	try {
+		const raw = localStorage.getItem(LEADER_KEY);
+		if (!raw) return;
+		const { id } = JSON.parse(raw);
+		if (id === TAB_ID) claimLeadership();
+	} catch {}
+}, HEARTBEAT_MS);
+
+// Release leadership when this tab closes so another tab can take over immediately
+window.addEventListener("beforeunload", () => {
+	try {
+		const raw = localStorage.getItem(LEADER_KEY);
+		if (!raw) return;
+		const { id } = JSON.parse(raw);
+		if (id === TAB_ID) localStorage.removeItem(LEADER_KEY);
+	} catch {}
+});
+// --- end leader election ---
+
 const loadedClips: { [key: string]: HTMLAudioElement } = {};
 
 const audioClips: AudioClips = {
@@ -143,6 +195,7 @@ export class AudioQueuer {
 	constructor() {}
 
 	public addRobotClip(robot: ROBOT, clip: "ds" | "radio" | "rio" | "code" | "astop" | "estop") {
+		if (!isAudioLeader()) return;
 		// If there is a clip for this robot in queue, and it's less severe than the new clip, remove it
 		// If the new clip is less severe than the existing clip, don't add it
 		const existingClipsForRobot = this.queue.filter(({ robot: r }) => r === robot);
@@ -176,12 +229,14 @@ export class AudioQueuer {
 	}
 
 	public addOtherClip(clip: keyof AudioClips["other"]) {
+		if (!isAudioLeader()) return;
 		console.log("Adding clip", clip);
 		this.queue.push({ audio: this.getClip(audioClips.other[clip]), robot: undefined, clip: "ds" });
 		if (!this.playing) this.playNext();
 	}
 
 	public addGreenClip() {
+		if (!isAudioLeader()) return;
 		console.log("Adding clip Green");
 		if (this.queue.some(({ audio }) => audio.src.includes("green"))) return; // Green debounce
 		this.queue.push({
@@ -230,6 +285,7 @@ export class AudioQueuer {
 	}
 
 	public playMusic(musicOrder: number[] = []) {
+		if (!isAudioLeader()) return;
 		console.log("Playing music");
 
 		if (this.music) {

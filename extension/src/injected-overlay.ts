@@ -149,8 +149,9 @@ function updateFooter(
 		}
 	}
 
-	// C: last cycle — prefer server string
-	const lastStr = serverCycleData?.lastCycleTime ?? "—";
+	// C: last cycle — prefer server string, treat "unk" sentinel as no data
+	const rawLast = serverCycleData?.lastCycleTime;
+	const lastStr = (rawLast && rawLast !== "unk") ? rawLast : "—";
 
 	// A: average — prefer server ms value
 	const avgMs = serverCycleData?.averageCycleTime ?? null;
@@ -158,9 +159,9 @@ function updateFooter(
 
 	// Green if last cycle is best
 	const isBest =
-		serverCycleData?.lastCycleTime != null &&
+		rawLast != null && rawLast !== "unk" &&
 		serverCycleData?.bestCycleTime != null &&
-		cycleTimeToMS(serverCycleData.lastCycleTime) <= cycleTimeToMS(serverCycleData.bestCycleTime);
+		cycleTimeToMS(rawLast) <= cycleTimeToMS(serverCycleData.bestCycleTime);
 
 	footer.cycleSpan.textContent = `C: ${lastStr} (A: ${avgStr})`;
 	footer.cycleSpan.className = isBest ? "fb-cycle-best" : "";

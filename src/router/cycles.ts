@@ -13,6 +13,14 @@ import { subscriptionQueue } from "../util/subscription";
 import { computeOvernightOffset } from "../util/frame-processing";
 import { getTeamAverageCycle } from "../util/team-cycles";
 
+/** Format milliseconds as "M:SS" — compatible with cycleTimeToMS(). */
+function msTocycleTimeString(ms: number): string {
+	const totalSeconds = Math.floor(ms / 1000);
+	const minutes = Math.floor(totalSeconds / 60);
+	const seconds = totalSeconds % 60;
+	return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
 export const cycleRouter = router({
 	postCycleTime: publicProcedure
 		.input(
@@ -227,18 +235,34 @@ export const cycleRouter = router({
 	getLastCycleTime: eventProcedure.query(async ({ ctx }) => {
 		const event = await getEvent(ctx.eventToken ?? "");
 		if (event.monitorFrame.lastCycleTime == "unk") {
-			const lastRecordedCycleTime = await db
-				.select()
-				.from(cycleLogs)
-				.where(and(eq(cycleLogs.event, event.code), isNotNull(cycleLogs.calculated_cycle_time)))
-				.orderBy(desc(cycleLogs.start_time))
-				.limit(1)
-				.execute();
+			const [lastRecordedCycleTime, lastComputedCycle] = await Promise.all([
+				db
+					.select()
+					.from(cycleLogs)
+					.where(and(eq(cycleLogs.event, event.code), isNotNull(cycleLogs.calculated_cycle_time)))
+					.orderBy(desc(cycleLogs.start_time))
+					.limit(1)
+					.execute(),
+				db
+					.select()
+					.from(cycleLogs)
+					.where(and(eq(cycleLogs.event, event.code), isNotNull(cycleLogs.prestart_time), isNotNull(cycleLogs.scores_posted_time)))
+					.orderBy(desc(cycleLogs.scores_posted_time))
+					.limit(1)
+					.execute(),
+			]);
 
-			if (lastRecordedCycleTime.length === 0) {
-				return null;
+			if (lastRecordedCycleTime.length > 0) {
+				return lastRecordedCycleTime[0].calculated_cycle_time;
 			}
-			return lastRecordedCycleTime[0].calculated_cycle_time;
+			if (lastComputedCycle.length > 0) {
+				const c = lastComputedCycle[0];
+				const cycleMs = new Date(c.scores_posted_time!).getTime() - new Date(c.prestart_time!).getTime();
+				if (cycleMs > 0 && cycleMs < 3_600_000) {
+					return msTocycleTimeString(cycleMs);
+				}
+			}
+			return null;
 		}
 		return event.monitorFrame.lastCycleTime;
 	}),
@@ -272,7 +296,7 @@ export const cycleRouter = router({
 		.query(async ({ input }) => {
 			const event = await getEvent("", input.eventCode);
 
-			const [bestCycle, lastRecordedCycleTime, lastPrestartFromDB] = await Promise.all([
+			const [bestCycle, lastRecordedCycleTime, lastPrestartFromDB, lastComputedCycle] = await Promise.all([
 				db
 					.select()
 					.from(cycleLogs)
@@ -296,6 +320,14 @@ export const cycleRouter = router({
 					.orderBy(desc(cycleLogs.prestart_time))
 					.limit(1)
 					.execute(),
+
+				db
+					.select()
+					.from(cycleLogs)
+					.where(and(eq(cycleLogs.event, event.code), isNotNull(cycleLogs.prestart_time), isNotNull(cycleLogs.scores_posted_time)))
+					.orderBy(desc(cycleLogs.scores_posted_time))
+					.limit(1)
+					.execute(),
 			]);
 
 			let bestCycleTime: string | null = bestCycle.length > 0 ? bestCycle[0].calculated_cycle_time : null;
@@ -303,6 +335,13 @@ export const cycleRouter = router({
 			let lastCycleTime: string | null = event.monitorFrame.lastCycleTime;
 			if (lastCycleTime == "unk" && lastRecordedCycleTime.length !== 0) {
 				lastCycleTime = lastRecordedCycleTime[0].calculated_cycle_time;
+			}
+			if ((!lastCycleTime || lastCycleTime === "unk") && lastComputedCycle.length > 0) {
+				const c = lastComputedCycle[0];
+				const cycleMs = new Date(c.scores_posted_time!).getTime() - new Date(c.prestart_time!).getTime();
+				if (cycleMs > 0 && cycleMs < 3_600_000) {
+					lastCycleTime = msTocycleTimeString(cycleMs);
+				}
 			}
 
 			let lastPrestartDone: Date | null = event.lastPrestartDone;

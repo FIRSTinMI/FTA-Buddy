@@ -49,6 +49,9 @@ export function updateCycleTimeState(field: FieldState, state: CycleTimeState): 
 		if (state.bestCycleMs === null || cycleMs < state.bestCycleMs) {
 			state.bestCycleMs = cycleMs;
 		}
+		// Clear prestartAt so T: goes blank until next cycle's prestart
+		state.prestartAt = null;
+		state.matchStartAt = null;
 	}
 }
 

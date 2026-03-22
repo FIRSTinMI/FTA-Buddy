@@ -23,9 +23,10 @@ import { SignalR } from "./signalR";
 import { trpc, updateValues, uploadAllUnimportedMatchLogs } from "./trpc";
 import { MatchState, MatchStateMap } from "../../shared/types";
 
-let teamPollInterval: ReturnType<typeof setInterval> | null = null;
-let matchImportInterval: ReturnType<typeof setInterval> | null = null;
-let schedulePollInterval: ReturnType<typeof setInterval> | null = null;
+const ALARM_TEAM_POLL = "teamPoll";
+const ALARM_MATCH_IMPORT = "matchImport";
+const ALARM_SCHEDULE_POLL = "schedulePoll";
+
 let qualsScheduleAvailable = false;
 let inboundSyncInProgress = false;
 
@@ -497,19 +498,15 @@ async function pollTeams() {
 }
 
 function startTeamPolling() {
-	if (teamPollInterval) return;
 	qualsScheduleAvailable = false;
 	pollTeams();
-	teamPollInterval = setInterval(pollTeams, 2 * 60 * 1000);
+	chrome.alarms.create(ALARM_TEAM_POLL, { delayInMinutes: 2, periodInMinutes: 2 });
 	console.log("Started team polling (every 2 min until quals schedule available)");
 }
 
 function stopTeamPolling() {
-	if (teamPollInterval) {
-		clearInterval(teamPollInterval);
-		teamPollInterval = null;
-		console.log("Stopped team polling");
-	}
+	chrome.alarms.clear(ALARM_TEAM_POLL);
+	console.log("Stopped team polling");
 }
 
 async function runMatchAutoImport() {
@@ -523,34 +520,30 @@ async function runMatchAutoImport() {
 }
 
 function startMatchAutoImport() {
-	if (matchImportInterval) return;
 	runMatchAutoImport();
-	matchImportInterval = setInterval(runMatchAutoImport, 2 * 60 * 1000);
+	chrome.alarms.create(ALARM_MATCH_IMPORT, { delayInMinutes: 2, periodInMinutes: 2 });
 	console.log("Started match auto-import (every 2 min)");
 }
 
 function stopMatchAutoImport() {
-	if (matchImportInterval) {
-		clearInterval(matchImportInterval);
-		matchImportInterval = null;
-		console.log("Stopped match auto-import");
-	}
+	chrome.alarms.clear(ALARM_MATCH_IMPORT);
 }
 
 function startSchedulePolling() {
-	if (schedulePollInterval) return;
 	sendScheduleDetails();
-	schedulePollInterval = setInterval(sendScheduleDetails, 10 * 60 * 1000);
+	chrome.alarms.create(ALARM_SCHEDULE_POLL, { delayInMinutes: 10, periodInMinutes: 10 });
 	console.log("Started schedule polling (every 10 min)");
 }
 
 function stopSchedulePolling() {
-	if (schedulePollInterval) {
-		clearInterval(schedulePollInterval);
-		schedulePollInterval = null;
-		console.log("Stopped schedule polling");
-	}
+	chrome.alarms.clear(ALARM_SCHEDULE_POLL);
 }
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+	if (alarm.name === ALARM_TEAM_POLL) pollTeams().catch(console.warn);
+	else if (alarm.name === ALARM_MATCH_IMPORT) runMatchAutoImport().catch(console.warn);
+	else if (alarm.name === ALARM_SCHEDULE_POLL) sendScheduleDetails().catch(console.warn);
+});
 
 let storageDebounce: ReturnType<typeof setTimeout> | null = null;
 chrome.storage.local.onChanged.addListener((changes) => {

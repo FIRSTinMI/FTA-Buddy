@@ -121,7 +121,7 @@ function updateSignalBars(bars: SVGRectElement[], dBm: number | null | undefined
 const ICON_FULLSCREEN      = "M5,5H10V7H7V10H5V5M14,5H19V10H17V7H14V5M17,14H19V19H14V17H17V14M10,17V19H5V14H7V17H10Z";
 const ICON_FULLSCREEN_EXIT = "M14,14H19V16H16V19H14V14M5,14H10V19H8V16H5V14M8,5H10V10H5V8H8V5M19,8V10H14V5H16V8H19Z";
 
-function makeFullscreenBtn(): HTMLButtonElement {
+export function makeFullscreenBtn(): HTMLButtonElement {
 	const btn = document.createElement("button") as HTMLButtonElement;
 	btn.id = "fb-fullscreen-btn";
 	btn.title = "Toggle fullscreen";
@@ -175,6 +175,7 @@ interface StationElements {
 	batBtn: HTMLButtonElement;
 	batPath: SVGPathElement;
 	batVal: HTMLDivElement;
+	batSub: HTMLParagraphElement;
 	pingBtn: HTMLButtonElement;
 	pingPath: SVGPathElement;
 	pingVal: HTMLDivElement;
@@ -248,6 +249,9 @@ function makeStationCells(alliance: "blue" | "red"): StationElements {
 
 	// ── Battery (always visible) ──────────────────────────────────────────────
 	const bat = makeMetricBtn();
+	const batSub = document.createElement("p") as HTMLParagraphElement;
+	batSub.className = "fb-metric-sub";
+	bat.btn.appendChild(batSub);
 
 	// ── Ping (desktop only — fb-ping hides it on mobile) ─────────────────────
 	const ping = makeMetricBtn("fb-ping");
@@ -281,7 +285,7 @@ function makeStationCells(alliance: "blue" | "red"): StationElements {
 	return {
 		teamBtn, teamNumP, teamWarnP,
 		dsBtn, radioBtn, rioBtn,
-		batBtn: bat.btn, batPath: bat.path, batVal: bat.val,
+		batBtn: bat.btn, batPath: bat.path, batVal: bat.val, batSub,
 		pingBtn: ping.btn, pingPath: ping.path, pingVal: ping.val,
 		bwuBtn,
 		sigBtn, sigSpan, sigBars,
@@ -312,7 +316,6 @@ export function buildRoot(): RootElements {
 	headerTimeDiv.className = "fb-right";
 	const headerTimeSpan = document.createElement("span") as HTMLSpanElement;
 	headerTimeDiv.appendChild(headerTimeSpan);
-	headerTimeDiv.appendChild(makeFullscreenBtn());
 	headerRow.appendChild(headerMatchDiv);
 	headerRow.appendChild(headerStateDiv);
 	headerRow.appendChild(headerTimeDiv);
@@ -429,6 +432,15 @@ function updateStation(
 	if (batVals.length >= 2) {
 		els.batPath.setAttribute("d", buildSparklinePath(batVals, 6, 14));
 	}
+	const validBatVals = batVals.filter(v => v > 0);
+	if (validBatVals.length > 0) {
+		const sorted = [...validBatVals].sort((a, b) => a - b);
+		const minBat = sorted[Math.floor(sorted.length * 0.02)] ?? sorted[0];
+		els.batSub.textContent = `min: ${minBat.toFixed(1)}v`;
+		els.batSub.style.color = minBat < 7.8 ? "#dc2626" : "#9e9e9e";
+	} else {
+		els.batSub.textContent = "";
+	}
 
 	// ── Ping ──────────────────────────────────────────────────────────────────
 	const ping = robot.ping ?? 0;
@@ -453,8 +465,12 @@ function updateStation(
 	els.sigSpan.textContent = sig !== 0 ? String(sig) : "";
 	updateSignalBars(els.sigBars, sig !== 0 ? sig : null);
 
-	// ── Last Change ───────────────────────────────────────────────────────────
-	els.lcBtn.textContent = formatRelativeTime(Date.now() - hist.lastChangedAt);
+	// ── Last Change — only shown when something is disconnected and not bypassed/estoped
+	const bypassed = ds === DSState.BYPASS || ds === DSState.ESTOP;
+	const somethingDisconnected = ds === DSState.RED || !radio || !rio || !code;
+	els.lcBtn.textContent = (!bypassed && somethingDisconnected)
+		? formatRelativeTime(Date.now() - hist.lastChangedAt)
+		: "";
 
 	// ── Net (mobile combined cell) ────────────────────────────────────────────
 	els.netPingDiv.textContent = `${ping} ms`;

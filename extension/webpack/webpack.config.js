@@ -14,6 +14,7 @@ module.exports = {
 		vivid: path.resolve(__dirname, "..", "src", "vivid.ts"),
 		"injected-vivid": path.resolve(__dirname, "..", "src", "injected-vivid.ts"),
 		"injected-fieldmonitor": path.resolve(__dirname, "..", "src", "injected-fieldmonitor.ts"),
+		"injected-overlay": path.resolve(__dirname, "..", "src", "injected-overlay.ts"),
 	},
 	output: {
 		path: path.join(__dirname, "../dist"),

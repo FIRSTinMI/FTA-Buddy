@@ -4,13 +4,22 @@
  * Standalone: reads live data from the FMS FieldMonitor Angular component
  * (ng.getComponent) and renders an FTA Buddy-style 9-column grid.
  * No external server connections required.
+ *
+ * A small toggle button (FTA Buddy logo) is always injected into the page.
+ * The overlay is only activated when sessionStorage has the 'ftabuddy' key.
+ * The ?ftabuddy=1 query param is set cosmetically (address bar visibility),
+ * but sessionStorage is the reliable source because Angular strips unknown
+ * query params during its router initialization before our script runs.
  */
 
 import { CSS } from "./styles";
 import { buildFrame, isAppReady } from "./angular";
 import { makeFrameHistory, updateHistory } from "./history";
-import { buildRoot, updateAll } from "./ui";
+import { buildRoot, updateAll, makeFullscreenBtn } from "./ui";
 import logoDataUrl from "./logo-192.png";
+
+const STORAGE_KEY = "ftabuddy";
+const FTA_MODE = localStorage.getItem(STORAGE_KEY) === "1";
 
 function injectStyles(): void {
 	const style = document.createElement("style");
@@ -20,9 +29,8 @@ function injectStyles(): void {
 }
 
 function setPageMeta(): void {
-	document.title = "FMS - Not FTA Buddy";
+	document.title = "FMS - FTA Buddy";
 
-	// Remove any existing favicon links
 	document.querySelectorAll("link[rel~='icon']").forEach(el => el.remove());
 
 	const link = document.createElement("link");
@@ -32,12 +40,40 @@ function setPageMeta(): void {
 	document.head.appendChild(link);
 }
 
+function makeToggleBtn(): HTMLButtonElement {
+	const btn = document.createElement("button");
+	btn.id = "fb-toggle-btn";
+
+	if (FTA_MODE) {
+		btn.classList.add("fta-active");
+		btn.title = "Switch to FMS native view";
+		btn.textContent = "← FMS";
+	} else {
+		btn.title = "Switch to FTA Buddy view";
+		const img = document.createElement("img");
+		img.src = logoDataUrl;
+		img.alt = "FTA Buddy";
+		btn.appendChild(img);
+	}
+
+	btn.addEventListener("click", () => {
+		if (FTA_MODE) {
+			localStorage.removeItem(STORAGE_KEY);
+		} else {
+			localStorage.setItem(STORAGE_KEY, "1");
+		}
+		location.reload();
+	});
+
+	return btn;
+}
+
 function hideAngularUI(): void {
 	// Hide Angular app but don't remove it — Angular keeps running so
 	// ng.getComponent() continues to return live data.
 	for (const child of Array.from(document.body.children)) {
 		const el = child as HTMLElement;
-		if (el.id !== "fta-buddy-root") el.style.display = "none";
+		if (el.id !== "fta-buddy-root" && el.id !== "fb-controls") el.style.display = "none";
 	}
 }
 
@@ -55,8 +91,29 @@ function waitForApp(callback: () => void, attempts = 0): void {
 }
 
 function boot(): void {
-	console.log("[FTA Buddy] boot() called, readyState:", document.readyState);
+	console.log("[FTA Buddy] boot() called, readyState:", document.readyState, "FTA_MODE:", FTA_MODE);
 	injectStyles();
+
+	// Always inject the controls column (toggle + fullscreen) so users can switch between views
+	const controls = document.createElement("div");
+	controls.id = "fb-controls";
+	controls.appendChild(makeToggleBtn());
+	controls.appendChild(makeFullscreenBtn());
+	document.body.appendChild(controls);
+
+	if (!FTA_MODE) {
+		console.log("[FTA Buddy] Not in FTA mode — toggle button injected, waiting for user action");
+		return;
+	}
+
+	// FTA_MODE active — reflect state in URL (cosmetic only, not used for detection)
+	if (!new URLSearchParams(location.search).has("ftabuddy")) {
+		const url = new URL(location.href);
+		url.searchParams.set("ftabuddy", "1");
+		history.replaceState({}, "", url.toString());
+	}
+
+	// FTA_MODE active — build the full overlay
 	setPageMeta();
 
 	waitForApp(() => {

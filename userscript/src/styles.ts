@@ -117,13 +117,16 @@ export const CSS = `
   display: flex;
   align-items: center;
   cursor: pointer;
-  padding: 0.1rem;
-  opacity: 0.8;
+  background: rgba(0, 0, 0, 0.35);
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.2rem;
+  opacity: 0.25;
+  color: #fff;
 }
-#fb-fullscreen-btn:hover { opacity: 1; }
-#fb-fullscreen-btn svg { width: 1.5rem; height: 1.5rem; }
-@media screen and (min-width: 768px) { #fb-fullscreen-btn svg { width: 2rem; height: 2rem; } }
-@media screen and (min-width: 1024px) { #fb-fullscreen-btn svg { width: 2.5rem; height: 2.5rem; } }
+#fb-fullscreen-btn:hover { opacity: 0.7; }
+#fb-fullscreen-btn svg { width: 1.5rem; height: 1.5rem; display: block; }
+@media screen and (min-width: 768px) { #fb-fullscreen-btn svg { width: 1.75rem; height: 1.75rem; } }
 
 /* ── Column header p tags ────────────────────────────────────── */
 .fb-grid > p {
@@ -148,7 +151,7 @@ export const CSS = `
 }
 @media screen and (min-width: 640px)  { #fta-buddy-root .fb-team { font-size: 1.25rem; } }
 @media screen and (min-width: 1024px) { #fta-buddy-root .fb-team { font-size: 1.5rem; } }
-@media screen and (min-width: 1280px) { #fta-buddy-root .fb-team { font-size: 1.875rem; } }
+@media screen and (min-width: 1280px) { #fta-buddy-root .fb-team { font-size: 2.5rem; } }
 #fta-buddy-root .fb-team.blue { background: #2563eb; }  /* bg-blue-600 */
 #fta-buddy-root .fb-team.red  { background: #dc2626; }  /* bg-red-600  */
 .fb-team-num  { line-height: 1.2; }
@@ -214,24 +217,24 @@ export const CSS = `
   left: 0;
   padding: 0 0.25rem;
   font-variant-numeric: tabular-nums;
-  font-size: 0.875rem;
+  font-size: 1rem;
   line-height: 1;
 }
-@media screen and (min-width: 640px)  { .fb-metric-val { font-size: 1rem; } }
-@media screen and (min-width: 1024px) { .fb-metric-val { font-size: 1.125rem; } }
-@media screen and (min-width: 1280px) {
-  .fb-metric-val { font-size: 1.25rem; bottom: 0.5rem; }
-}
-@media screen and (min-width: 1536px) { .fb-metric-val { font-size: 1.875rem; } }
+@media screen and (min-width: 640px)  { .fb-metric-val { font-size: 1.125rem; } }
+@media screen and (min-width: 1024px) { .fb-metric-val { font-size: 1.5rem; } }
+@media screen and (min-width: 1280px) { .fb-metric-val { font-size: 1.75rem; bottom: 1.25rem; } }
+@media screen and (min-width: 1536px) { .fb-metric-val { font-size: 2.25rem; bottom: 1.5rem; } }
 .fb-metric-sub {
   position: absolute;
   bottom: 0;
   left: 0;
   padding: 0.125rem 0.5rem;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   color: #9e9e9e;   /* text-gray-500 */
 }
-@media screen and (min-width: 1280px) { .fb-metric-sub { font-size: 0.875rem; } }
+@media screen and (min-width: 1024px) { .fb-metric-sub { font-size: 0.875rem; } }
+@media screen and (min-width: 1280px) { .fb-metric-sub { font-size: 0.9rem; } }
+@media screen and (min-width: 1536px) { .fb-metric-sub { font-size: 1.1rem; } }
 
 /* Ping cell only shown on desktop */
 .fb-ping { display: none; }
@@ -306,6 +309,62 @@ export const CSS = `
 /* .fb-col-mb — mobile-only column header (Net) */
 .fb-col-mb { display: block; }
 @media screen and (min-width: 1024px) { .fb-col-mb { display: none; } }
+
+/* ── Controls column (toggle + fullscreen, fixed top-right) ─────── */
+#fb-controls {
+  position: fixed;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+/* ── Toggle button (FTA Buddy logo) ──────────────────────────── */
+#fb-toggle-btn {
+  background: rgba(21, 101, 192, 0.85);
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.3rem;
+  cursor: pointer;
+  opacity: 0.7;
+  line-height: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+#fb-toggle-btn:hover { opacity: 1; }
+#fb-toggle-btn img { width: 2.5rem; height: 2.5rem; display: block; }
+/* FTA mode: plain text "← FMS" button, very subtle */
+#fb-toggle-btn.fta-active {
+  background: rgba(0, 0, 0, 0.35);
+  opacity: 0.25;
+  line-height: 1;
+  padding: 0.25rem 0.5rem;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 0.875rem;
+  color: #fff;
+  box-shadow: none;
+}
+#fb-toggle-btn.fta-active:hover { opacity: 0.7; }
+
+/* ── Footer row (cycle time — inside the grid as a span row) ─── */
+#fb-footer {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 0.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+@media screen and (min-width: 768px)  { #fb-footer { font-size: 1.25rem; } }
+@media screen and (min-width: 1024px) { #fb-footer { font-size: 1.5rem; } }
+#fb-footer-cycle { padding: 0 0.25rem; }
+#fb-footer-schedule { flex: 1; text-align: center; padding: 0 0.25rem; }
+#fb-footer-current { padding: 0 0.25rem; }
+.fb-cycle-best { color: #22c55e; }
 
 /* ── Bottom nav ──────────────────────────────────────────────── */
 #fb-bottomnav {

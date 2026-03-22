@@ -1,4 +1,4 @@
-import { trpc, updateValues } from "./injected-trpc";
+import { trpc, updateValues, uploadAllUnimportedMatchLogs } from "./injected-trpc";
 import { DSState, EnableState, FieldState, FMSEnums, type PartialMonitorFrame, type PartialRobotInfo } from "../../shared/types";
 
 const scriptEl = document.getElementById("fta-buddy") as HTMLScriptElement | null;
@@ -476,6 +476,20 @@ function buildFrameFromDOM(): PartialMonitorFrame | null {
 }
 
 let postPending = false;
+let prevFieldState: FieldState | null = null;
+let matchUploadTimer: ReturnType<typeof setTimeout> | null = null;
+
+function triggerMatchUpload(delayMs: number) {
+	if (matchUploadTimer !== null) return; // already scheduled
+	matchUploadTimer = setTimeout(async () => {
+		matchUploadTimer = null;
+		try {
+			await uploadAllUnimportedMatchLogs();
+		} catch (err) {
+			console.warn("[FTA Buddy] Match upload failed:", err);
+		}
+	}, delayMs);
+}
 
 async function postFrame() {
 	if (postPending) return;
@@ -483,6 +497,44 @@ async function postFrame() {
 	try {
 		const frame = buildFrameFromAngular() ?? buildFrameFromDOM();
 		if (!frame) return;
+
+		const cur = frame.field;
+		const prev = prevFieldState;
+		prevFieldState = cur;
+
+		// Trigger cycle time tracking and match log upload on state transitions (mirrors signalR.ts)
+		if (prev !== cur) {
+			const cycleArgs = {
+				eventToken: eventToken!,
+				matchNumber: frame.match ?? 0,
+				playNumber: frame.play ?? 1,
+				level: frame.level ?? "Qualification",
+				extensionId: extensionId ?? "",
+			} as const;
+
+			if (cur === FieldState.PRESTART_COMPLETED) {
+				trpc.cycles.postCycleTime.mutate({ ...cycleArgs, type: "prestart" })
+					.catch((err) => console.warn("[FTA Buddy] postCycleTime prestart failed:", err));
+			} else if (cur === FieldState.MATCH_RUNNING_AUTO) {
+				trpc.cycles.postCycleTime.mutate({ ...cycleArgs, type: "start" })
+					.catch((err) => console.warn("[FTA Buddy] postCycleTime start failed:", err));
+				if (matchUploadTimer !== null) {
+					clearTimeout(matchUploadTimer);
+					matchUploadTimer = null;
+				}
+			} else if (cur === FieldState.MATCH_OVER) {
+				trpc.cycles.postCycleTime.mutate({ ...cycleArgs, type: "end" })
+					.catch((err) => console.warn("[FTA Buddy] postCycleTime end failed:", err));
+				triggerMatchUpload(3000);
+			} else if (cur === FieldState.MATCH_ABORTED) {
+				triggerMatchUpload(3000);
+			} else if (cur === FieldState.READY_FOR_POST_RESULT) {
+				trpc.cycles.postCycleTime.mutate({ ...cycleArgs, type: "scoresPosted" })
+					.catch((err) => console.warn("[FTA Buddy] postCycleTime scoresPosted failed:", err));
+				triggerMatchUpload(0);
+			}
+		}
+
 		await trpc.field.post.mutate(
 			eventToken
 				? { eventToken, ...frame, extensionId: extensionId ?? "" }

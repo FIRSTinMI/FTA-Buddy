@@ -197,12 +197,9 @@
 	}, 1000);
 
 	let lastCycleTimeInterval = setInterval(() => {
-		if (lastCycleTimeMS !== frameHandler.getLastCycleTime()) {
-			// console.log("Cycle time is not matching", {
-			// 	current: lastCycleTimeMS,
-			// 	new: frameHandler.getLastCycleTime(),
-			// });
-			lastCycleTimeMS = frameHandler.getLastCycleTime() || 0;
+		const newMs = frameHandler.getLastCycleTime();
+		if (newMs !== undefined && newMs !== null && lastCycleTimeMS !== newMs) {
+			lastCycleTimeMS = newMs;
 			lastCycleTime = formatTimeShortNoAgoSeconds(lastCycleTimeMS);
 		}
 	}, 1000);

@@ -436,7 +436,7 @@ function updateStation(
 	if (validBatVals.length > 0) {
 		const sorted = [...validBatVals].sort((a, b) => a - b);
 		const minBat = sorted[Math.floor(sorted.length * 0.02)] ?? sorted[0];
-		els.batSub.textContent = `min: ${minBat.toFixed(1)}v`;
+		els.batSub.textContent = `${minBat.toFixed(1)}v`;
 		els.batSub.style.color = minBat < 7.8 ? "#dc2626" : "#9e9e9e";
 	} else {
 		els.batSub.textContent = "";

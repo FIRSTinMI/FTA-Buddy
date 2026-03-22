@@ -149,9 +149,9 @@ function updateFooter(
 		}
 	}
 
-	// C: last cycle — prefer server string, treat "unk" sentinel as no data
+	// C: last cycle — convert server "M:SS" string to formatted display
 	const rawLast = serverCycleData?.lastCycleTime;
-	const lastStr = (rawLast && rawLast !== "unk") ? rawLast : "—";
+	const lastStr = (rawLast && rawLast !== "unk") ? formatCycleMs(cycleTimeToMS(rawLast)) : "—";
 
 	// A: average — prefer server ms value
 	const avgMs = serverCycleData?.averageCycleTime ?? null;

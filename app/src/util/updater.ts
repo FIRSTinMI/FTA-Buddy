@@ -11,6 +11,15 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+    "2.7.3.2": {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.7.3.2</h1>
+        <ul>
+        <li>Fixed cycle time data from scraping extension</li>
+        <li>Added "FTA Buddy Native" to extension, add FTA Buddy features to the official field monitor</li>
+        <li>Fix match log fetching in scraping and notepad only mode</li>
+        </ul>`
+    },
     "2.7.3.1": {
         changelog: `
         <h1 class="text-lg font-bold">v2.7.3.1</h1>

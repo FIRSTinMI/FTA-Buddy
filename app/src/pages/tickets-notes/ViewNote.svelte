@@ -151,6 +151,9 @@
 
 	const isOpen = $derived(note?.resolution_status === "Open");
 
+	const currentEventCodes = [event.code, ...(event.subEvents?.map((se) => se.code) ?? [])];
+	const isReadOnly = $derived(note ? !currentEventCodes.includes(note.event_code) : false);
+
 	async function changeOpenStatus() {
 		if (!note) return;
 		try {
@@ -521,6 +524,7 @@
 						isOwner={user.id === note.author_id}
 						{isOpen}
 						hasMatch={!!match}
+						readonly={isReadOnly}
 						onback={back}
 						ontogglefollow={toggleFollowNote}
 						onchangestatus={changeOpenStatus}
@@ -569,26 +573,33 @@
 					</div>
 
 					<!-- Reply form -->
-					<div class="w-full rounded-xl bg-white dark:bg-neutral-800 shadow-sm py-3 mt-1">
-						<form class="flex flex-row gap-2 w-full" style="width: 100%" onsubmit={postMessage}>
-							<label for="chat-input" class="sr-only">Reply</label>
-							<div class="flex-1 min-w-0 [&_textarea]:w-full">
-								<Textarea
-									id="chat-input"
-									class="flex-1 min-w-0"
-									rows={2}
-									placeholder="Write a reply…"
-									onkeydown={sendKey}
-									bind:value={message_text}
-								/>
-							</div>
-							<div class="flex flex-none items-center">
-								<Button type="submit" size="sm" color="blue" disabled={!message_text.trim()}>
-									<Icon icon="mdi:send" class="size-4" />
-								</Button>
-							</div>
-						</form>
-					</div>
+					{#if isReadOnly}
+						<div class="w-full rounded-xl bg-gray-100 dark:bg-neutral-800 border border-gray-300 dark:border-neutral-600 px-4 py-2.5 mt-1 text-sm text-gray-500 dark:text-gray-400 text-center">
+							<Icon icon="mdi:lock-outline" class="size-4 inline mr-1 mb-0.5" />
+							This note is from a previous event ({note.event_code}) and is read-only.
+						</div>
+					{:else}
+						<div class="w-full rounded-xl bg-white dark:bg-neutral-800 shadow-sm py-3 mt-1">
+							<form class="flex flex-row gap-2 w-full" style="width: 100%" onsubmit={postMessage}>
+								<label for="chat-input" class="sr-only">Reply</label>
+								<div class="flex-1 min-w-0 [&_textarea]:w-full">
+									<Textarea
+										id="chat-input"
+										class="flex-1 min-w-0"
+										rows={2}
+										placeholder="Write a reply…"
+										onkeydown={sendKey}
+										bind:value={message_text}
+									/>
+								</div>
+								<div class="flex flex-none items-center">
+									<Button type="submit" size="sm" color="blue" disabled={!message_text.trim()}>
+										<Icon icon="mdi:send" class="size-4" />
+									</Button>
+								</div>
+							</form>
+						</div>
+					{/if}
 				</div>
 			{/if}
 		{/await}

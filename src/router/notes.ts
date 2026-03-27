@@ -587,7 +587,7 @@ export const notesRouter = router({
 				eventCodes = eventCodes.concat(event.subEvents.map((se) => se.code));
 			}
 			const note = await db.query.notes.findFirst({
-				where: and(eq(notes.id, input.id), inArray(notes.event_code, eventCodes)),
+				where: eq(notes.id, input.id),
 				with: { messages: { orderBy: [asc(messages.id)] } },
 			});
 			if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });

@@ -11,6 +11,14 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+    "2.7.4.0": {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.7.4.0</h1>
+        <ul>
+        <li>In the notepad feed if you type a team number you can view their team history</li>
+        </ul>
+        `,
+    },
     "2.7.3.2": {
         changelog: `
         <h1 class="text-lg font-bold">v2.7.3.2</h1>

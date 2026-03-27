@@ -599,6 +599,18 @@
 			</Input>
 		</div>
 
+		{#if /^\d+$/.test(search.trim())}
+			<Button
+				size="sm"
+				color="alternative"
+				class="shrink-0"
+				onclick={() => navigate("/notepad/team/:team", { params: { team: search.trim() } })}
+				title="View team history"
+			>
+				<Icon icon="mdi:history" class="size-4 mr-1" />#{search.trim()}
+			</Button>
+		{/if}
+
 		<Button
 			size="sm"
 			color={typeFilter !== "all" || statusFilter !== "all" || feedFilter !== "all" ? "primary" : "alternative"}

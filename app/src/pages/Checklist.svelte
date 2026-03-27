@@ -14,6 +14,7 @@
 	import type { EventChecklist, NexusStatus } from "../../../shared/types";
 	import Spinner from "../components/Spinner.svelte";
 	import { trpc } from "../main";
+	import { navigate } from "../router";
 	import { eventStore } from "../stores/event";
 	import { userStore } from "../stores/user";
 
@@ -197,7 +198,12 @@
 			<tbody>
 				{#each Object.entries(checklist) as [team, items]}
 					<tr class="border-b-1 border-gray-600">
-						<td class="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 px-6 py-4">{team}</td>
+						<td class="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 px-6 py-4">
+							<button
+								class="font-medium hover:underline text-blue-600 dark:text-blue-400"
+								onclick={() => navigate("/notepad/team/:team", { params: { team } })}
+							>{team}</button>
+						</td>
 						<td class="hidden sm:table-cell">{teamNames[team]}</td>
 						<td>
 							<Checkbox

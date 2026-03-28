@@ -20,7 +20,7 @@ import {
 	makeCycleTimeState,
 	updateCycleTimeState,
 	formatCycleMs,
-	currentCycleElapsedMs,
+	currentMatchElapsedMs,
 	type CycleTimeState,
 } from "./overlay-cycle";
 import { updateScheduleText } from "../../app/src/util/schedule-detail-formatter";
@@ -140,13 +140,10 @@ function updateFooter(
 	serverCycleData: ServerCycleData | null,
 	frame: PartialMonitorFrame,
 ): void {
-	// T: from local cycle state, fall back to server prestartTime for immediate display
-	let elapsed = currentCycleElapsedMs(cycleState);
-	if (elapsed === null && serverCycleData?.prestartTime) {
-		const matchMs = MatchStateMap[frame.field];
-		if (matchMs === MatchState.PRESTART || matchMs === MatchState.RUNNING) {
-			elapsed = Date.now() - new Date(serverCycleData.prestartTime).getTime();
-		}
+	// T: elapsed since last match auto-start; fall back to server startTime on initial load
+	let elapsed = currentMatchElapsedMs(cycleState);
+	if (elapsed === null && serverCycleData?.startTime) {
+		elapsed = Date.now() - new Date(serverCycleData.startTime).getTime();
 	}
 
 	// C: last cycle — convert server "M:SS" string to formatted display

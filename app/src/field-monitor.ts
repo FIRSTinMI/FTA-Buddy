@@ -1,5 +1,5 @@
-import { get } from "svelte/store";
-import { DSState, FieldState, MatchState, MatchStateMap, ROBOT } from "../../shared/types";
+import { get, writable } from "svelte/store";
+import { DSState, FieldState, MatchState, MatchStateMap, ROBOT, type TournamentLevel } from "../../shared/types";
 import { trpc } from "./main";
 import { settingsStore } from "./stores/settings";
 import { userStore } from "./stores/user";
@@ -71,6 +71,22 @@ let subscriptionGeneration = 0;
 // How long without data before we consider the connection stale (ms).
 // Frames arrive every ~0.5s at an event, so 2.5s without data is clearly broken.
 const STALE_THRESHOLD_MS = 2500;
+
+// TBA fallback: last known current match inferred from The Blue Alliance.
+// Polled when live field monitor data is unavailable (field monitor disabled or disconnected).
+export const tbaCurrentMatch = writable<{ matchNumber: number; level: TournamentLevel } | null>(null);
+
+// Poll TBA for current match every 60s when live data has been absent for 30+ seconds.
+setInterval(async () => {
+	if (!get(userStore).eventToken) return;
+	if (lastReceivedAt > 0 && Date.now() - lastReceivedAt < 30_000) return; // live data present
+	try {
+		const result = await trpc.event.getCurrentMatchFromTBA.query();
+		tbaCurrentMatch.set(result);
+	} catch {
+		// ignore -- TBA may be unavailable
+	}
+}, 60_000);
 
 // Watchdog: while the page is visible, check every 5s whether we've gone
 // stale and reconnect if so.

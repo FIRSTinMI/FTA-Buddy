@@ -478,13 +478,16 @@ function buildFrameFromDOM(): PartialMonitorFrame | null {
 let postPending = false;
 let prevFieldState: FieldState | null = null;
 let lastMatchAutoStartMs: number | null = null;
+let lastMatchCycleArgs: { eventToken: string; matchNumber: number; playNumber: number; level: "None" | "Practice" | "Qualification" | "Playoff"; extensionId: string } | null = null;
 let matchUploadTimer: ReturnType<typeof setTimeout> | null = null;
 
 function msToCycleTimeStr(ms: number): string {
 	const totalSec = Math.floor(ms / 1000);
-	const m = Math.floor(totalSec / 60);
+	const h = Math.floor(totalSec / 3600);
+	const m = Math.floor((totalSec % 3600) / 60);
 	const s = totalSec % 60;
-	return `${m}:${s.toString().padStart(2, "0")}`;
+	const msRemainder = ms % 1000;
+	return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}.${msRemainder.toString().padStart(3, "0")}`;
 }
 
 function triggerMatchUpload(delayMs: number) {
@@ -524,16 +527,18 @@ async function postFrame() {
 				trpc.cycles.postCycleTime.mutate({ ...cycleArgs, type: "prestart" })
 					.catch((err) => console.warn("[FTA Buddy] postCycleTime prestart failed:", err));
 			} else if (cur === FieldState.MATCH_RUNNING_AUTO) {
-				// Compute match-start-to-match-start cycle time and post it, mirroring SignalR's lastcycletimecalculated
-				if (lastMatchAutoStartMs !== null) {
+				// Post the completed cycle time to the PREVIOUS match's DB row (match-start to match-start),
+				// mirroring what SignalR's lastcycletimecalculated event does.
+				if (lastMatchAutoStartMs !== null && lastMatchCycleArgs !== null) {
 					const cycleMs = Date.now() - lastMatchAutoStartMs;
 					if (cycleMs > 60_000 && cycleMs < 3_600_000) {
 						trpc.cycles.postCycleTime
-							.mutate({ ...cycleArgs, type: "lastCycleTime", lastCycleTime: msToCycleTimeStr(cycleMs) })
+							.mutate({ ...lastMatchCycleArgs, type: "lastCycleTime", lastCycleTime: msToCycleTimeStr(cycleMs) })
 							.catch((err) => console.warn("[FTA Buddy] postCycleTime lastCycleTime failed:", err));
 					}
 				}
 				lastMatchAutoStartMs = Date.now();
+				lastMatchCycleArgs = { ...cycleArgs };
 				trpc.cycles.postCycleTime.mutate({ ...cycleArgs, type: "start" })
 					.catch((err) => console.warn("[FTA Buddy] postCycleTime start failed:", err));
 				if (matchUploadTimer !== null) {

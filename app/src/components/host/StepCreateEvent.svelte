@@ -11,6 +11,7 @@
 	import { toast } from "../../util/toast";
 
 	let notepadOnly = $hostWizardStore.notepadOnly;
+	let fmsApiEnabled = $hostWizardStore.fmsApiEnabled ?? true;
 	let teams = $hostWizardStore.teams;
 
 	let eventCode = $state("");
@@ -101,7 +102,14 @@
 			});
 
 			window.postMessage(
-				{ source: "page", type: "eventCode", code: eventCode, token: res.token, fieldMonitor: !notepadOnly },
+				{
+					source: "page",
+					type: "eventCode",
+					code: eventCode,
+					token: res.token,
+					fieldMonitor: !notepadOnly,
+					fmsApiEnabled,
+				},
 				"*",
 			);
 

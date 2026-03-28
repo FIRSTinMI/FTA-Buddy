@@ -12,14 +12,17 @@
 	let extensionVersion = $state("unknown version");
 	let teams: number[] = [];
 	let waitingForFirstConnectionTest = $state(true);
-	let notepadOnly = $state($hostWizardStore.notepadOnly);
+	let fieldMonitor = $state(!$hostWizardStore.notepadOnly);
 	let useSignalR = $state($hostWizardStore.useSignalR ?? false);
+	let fmsApiEnabled = $state($hostWizardStore.fmsApiEnabled ?? true);
 
 	$effect(() => {
-		window.postMessage({ source: "page", type: "enable", fieldMonitor: !notepadOnly, useSignalR }, "*");
+		window.postMessage({ source: "page", type: "enable", fieldMonitor, useSignalR, fmsApiEnabled }, "*");
 	});
 
-	let canAdvance = $derived(extensionDetected && extensionEnabled && fmsDetected);
+	let canAdvance = $derived(
+		extensionDetected && extensionEnabled && (fmsDetected || (!fieldMonitor && !fmsApiEnabled)),
+	);
 
 	window.addEventListener("message", (event) => {
 		if (event.data.type === "pong") {
@@ -55,7 +58,7 @@
 	});
 
 	function advance() {
-		hostWizardStore.set({ notepadOnly, useSignalR, teams });
+		hostWizardStore.set({ notepadOnly: !fieldMonitor, useSignalR, fmsApiEnabled, teams });
 		navigate("/manage/host/create");
 	}
 </script>
@@ -96,7 +99,7 @@
 					<span class="text-yellow-300">Extension Not Enabled</span>
 					<button
 						class="text-blue-400 hover:underline"
-						onclick={() => window.postMessage({ source: "page", type: "enable", fieldMonitor: true, useSignalR }, "*")}
+						onclick={() => window.postMessage({ source: "page", type: "enable", fieldMonitor, useSignalR, fmsApiEnabled }, "*")}
 						>Enable</button
 					>
 				{/if}
@@ -114,40 +117,60 @@
 			<div class="text-sm text-gray-500">You may have to refresh the page after installing the extension</div>
 		{/if}
 
-		<div class="inline-flex gap-2 font-bold">
-			<Indicator color={fmsDetected ? "green" : "red"} class="my-auto" />
-			{#if fmsDetected}
-				<span class="text-green-500">FMS Detected</span>
-			{:else}
-				<span class="text-red-500">FMS Not Detected</span>
-			{/if}
-		</div>
-	</div>
-
-	<div class="flex flex-col gap-3 border border-neutral-700 rounded-xl p-4 mb-6">
-		<div class="flex items-center justify-between">
-			<div>
-				<p class="font-semibold">Notepad Only Mode</p>
-				<p class="text-sm text-gray-400">
-					Disables the SignalR field monitor connection in the extension. The extension and FMS connection are
-					still required. Match logs will need to be manually pulled.
-				</p>
-			</div>
-			<Toggle bind:checked={notepadOnly} class="ml-4 shrink-0" />
-		</div>
-
-		{#if !notepadOnly}
-			<div class="flex items-center justify-between border-t border-neutral-700 pt-3">
-				<div>
-					<p class="font-semibold">Use SignalR</p>
-					<p class="text-sm text-gray-400">
-						When enabled, the extension connects to FMS via SignalR for live field data (recommended). When
-						disabled, the extension scrapes the FMS FieldMonitor page instead.
-					</p>
-				</div>
-				<Toggle bind:checked={useSignalR} class="ml-4 shrink-0" />
+		{#if fieldMonitor || fmsApiEnabled}
+			<div class="inline-flex gap-2 font-bold">
+				<Indicator color={fmsDetected ? "green" : "red"} class="my-auto" />
+				{#if fmsDetected}
+					<span class="text-green-500">FMS Detected</span>
+				{:else}
+					<span class="text-red-500">FMS Not Detected</span>
+				{/if}
 			</div>
 		{/if}
+	</div>
+
+	<div class="flex flex-col gap-4 mb-6">
+		<!-- Card 1: Field Monitor -->
+		<div class="flex flex-col gap-3 border border-neutral-700 rounded-xl p-4">
+			<div class="flex items-center justify-between">
+				<div>
+					<p class="font-semibold">Field Monitor</p>
+					<p class="text-sm text-gray-400">
+						Streams real-time field data from FMS to your device, including robot connection status, battery
+						levels, and cycle timing.
+					</p>
+				</div>
+				<Toggle bind:checked={fieldMonitor} class="ml-4 shrink-0" />
+			</div>
+
+			{#if fieldMonitor}
+				<div class="flex items-center justify-between border-t border-neutral-700 pt-3">
+					<div>
+						<p class="font-semibold">Use SignalR</p>
+						<p class="text-sm text-gray-400">
+							Connects to FMS via SignalR for a more integrated experience including live match state,
+							cycle time tracking, and FMS note sync. When disabled, the extension scrapes the FMS
+							FieldMonitor page instead.
+						</p>
+					</div>
+					<Toggle bind:checked={useSignalR} class="ml-4 shrink-0" />
+				</div>
+			{/if}
+		</div>
+
+		<!-- Card 2: FMS API Calls -->
+		<div class="flex flex-col gap-3 border border-neutral-700 rounded-xl p-4">
+			<div class="flex items-center justify-between">
+				<div>
+					<p class="font-semibold">FMS API Calls</p>
+					<p class="text-sm text-gray-400">
+						Enables fetching match logs, team lists, and schedule details directly from FMS. When disabled,
+						schedule data falls back to The Blue Alliance and match logs will not be captured.
+					</p>
+				</div>
+				<Toggle bind:checked={fmsApiEnabled} class="ml-4 shrink-0" />
+			</div>
+		</div>
 	</div>
 
 	<Button disabled={!canAdvance} onclick={advance}>Next</Button>

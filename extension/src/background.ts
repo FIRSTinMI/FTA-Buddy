@@ -73,6 +73,7 @@ export let useDev: boolean;
 export let changed: number;
 
 export let fmsApi: boolean = false;
+export let fmsApiEnabled: boolean = true;
 
 async function stop() {
 	stopTeamPolling();
@@ -88,7 +89,7 @@ async function start() {
 
 	await new Promise((resolve) => {
 		chrome.storage.local.get(
-			["url", "cloud", "useDev", "event", "changed", "enabled", "fieldMonitor", "useSignalR", "id", "eventToken"],
+			["url", "cloud", "useDev", "event", "changed", "enabled", "fieldMonitor", "useSignalR", "id", "eventToken", "fmsApiEnabled"],
 			(item) => {
 				if (!item.id) chrome.storage.local.set({ id: crypto.randomUUID() });
 
@@ -109,6 +110,7 @@ async function start() {
 						enabled: item.enabled ?? false,
 						fieldMonitor: item.fieldMonitor ?? false,
 						useSignalR: item.useSignalR ?? true,
+						fmsApiEnabled: item.fmsApiEnabled ?? true,
 						eventToken: item.eventToken || "",
 						id: item.id || crypto.randomUUID(),
 					};
@@ -123,6 +125,7 @@ async function start() {
 				enabled = Boolean(item.enabled);
 				fieldMonitor = Boolean(item.fieldMonitor);
 				useSignalR = item.useSignalR !== false; // default true
+				fmsApiEnabled = item.fmsApiEnabled !== false; // default true
 				eventToken = String(item.eventToken);
 				id = String(item.id) || crypto.randomUUID();
 				if (id !== item.id) chrome.storage.local.set({ id });
@@ -145,9 +148,11 @@ async function start() {
 		console.log("Field monitor disabled, skipping SignalR");
 		if (!(eventCode || eventToken)) return;
 		await updateValues();
-		startSchedulePolling();
-		startTeamPolling();
-		startMatchAutoImport();
+		if (fmsApiEnabled) {
+			startSchedulePolling();
+			startTeamPolling();
+			startMatchAutoImport();
+		}
 		return;
 	}
 
@@ -161,9 +166,11 @@ async function start() {
 	if (!(eventCode || eventToken)) return;
 
 	await updateValues();
-	startSchedulePolling();
-	startTeamPolling();
-	startMatchAutoImport();
+	if (fmsApiEnabled) {
+		startSchedulePolling();
+		startTeamPolling();
+		startMatchAutoImport();
+	}
 
 	// Fetch FMS event password from the server and propagate to FTA App API
 	try {
@@ -223,6 +230,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 			enabled,
 			fieldMonitor,
 			useSignalR,
+			fmsApiEnabled,
 			id,
 			fmsApi,
 			version: manifestData.version,
@@ -350,7 +358,7 @@ function startOutboundNoteSync() {
 					console.log(`[NoteSync] outbound SKIPPED - source is fms`);
 					return;
 				}
-				if (!fmsApi) return;
+				if (!fmsApi || !fmsApiEnabled) return;
 				try {
 					if (data.kind === "create" && !data.note.fms_note_id) {
 						console.log(`[NoteSync] outbound CREATE → calling addNote to FMS`);
@@ -450,7 +458,14 @@ async function sendCycletime(
 	data: string,
 ) {
 	if (!fieldMonitor) return;
-	const { matchNumber, playNumber, level } = await getCurrentMatch();
+	let matchNumber: number, playNumber: number, level: string;
+	if (fmsApiEnabled) {
+		({ matchNumber, playNumber, level } = await getCurrentMatch());
+	} else {
+		matchNumber = signalRConnection.frame.match;
+		playNumber = signalRConnection.frame.play;
+		level = signalRConnection.frame.level;
+	}
 	await trpc.cycles.postCycleTime.mutate({
 		eventToken,
 		type,

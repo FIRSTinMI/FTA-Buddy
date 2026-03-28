@@ -49,9 +49,9 @@ export function updateCycleTimeState(field: FieldState, state: CycleTimeState): 
 		if (state.bestCycleMs === null || cycleMs < state.bestCycleMs) {
 			state.bestCycleMs = cycleMs;
 		}
-		// Clear prestartAt so T: goes blank until next cycle's prestart
+		// Clear prestartAt so it doesn't accumulate into the next cycle
+		// Keep matchStartAt so T: keeps counting after match ends
 		state.prestartAt = null;
-		state.matchStartAt = null;
 	}
 }
 
@@ -72,4 +72,10 @@ export function formatCycleMs(ms: number): string {
 export function currentCycleElapsedMs(state: CycleTimeState): number | null {
 	if (state.prestartAt === null) return null;
 	return Date.now() - state.prestartAt;
+}
+
+/** Elapsed ms since the last match auto-start, or null if never seen one. */
+export function currentMatchElapsedMs(state: CycleTimeState): number | null {
+	if (state.matchStartAt === null) return null;
+	return Date.now() - state.matchStartAt;
 }

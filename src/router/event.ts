@@ -829,4 +829,46 @@ export const eventRouter = router({
 			await db.update(users).set({ active_event_code: input.eventCode }).where(eq(users.id, ctx.user.id));
 			return true;
 		}),
+
+	/**
+	 * Infers the current match from The Blue Alliance by finding the last qualification
+	 * match that has an actual_time set (i.e. has been played). Useful when neither
+	 * field monitor nor FMS API calls are enabled.
+	 */
+	getCurrentMatchFromTBA: eventProcedure.query(async ({ ctx }) => {
+		try {
+			const res = await fetch(
+				`https://www.thebluealliance.com/api/v3/event/${ctx.event.code}/matches/simple`,
+				{ headers: { "X-TBA-Auth-Key": process.env.TBA_API_KEY ?? "" } },
+			);
+			if (!res.ok) return { matchNumber: 0, level: "None" as TournamentLevel };
+
+			const matches: any[] = await res.json();
+
+			// Find qual matches sorted by match_number descending
+			const qualMatches = matches
+				.filter((m) => m.comp_level === "qm")
+				.sort((a, b) => b.match_number - a.match_number);
+
+			// Last played qual match is the first one (highest number) with actual_time set
+			const lastPlayed = qualMatches.find((m) => m.actual_time != null);
+
+			if (lastPlayed) {
+				return { matchNumber: lastPlayed.match_number as number, level: "Qualification" as TournamentLevel };
+			}
+
+			// No qual matches played yet -- check if any playoff matches are being played
+			const playoffMatches = matches
+				.filter((m) => m.comp_level !== "qm" && m.actual_time != null)
+				.sort((a, b) => (b.actual_time ?? 0) - (a.actual_time ?? 0));
+
+			if (playoffMatches.length > 0) {
+				return { matchNumber: playoffMatches[0].match_number as number, level: "Playoff" as TournamentLevel };
+			}
+
+			return { matchNumber: 0, level: "None" as TournamentLevel };
+		} catch {
+			return { matchNumber: 0, level: "None" as TournamentLevel };
+		}
+	}),
 });

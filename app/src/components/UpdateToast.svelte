@@ -14,7 +14,7 @@
 			<h3 class="text-lg font-bold text-left">Update</h3>
 			<p class="text-left">Version v{newVersion} is available</p>
 
-			<Button onclick={() => window.location.reload()} class="mt-1 ml-0" color="blue">Refresh</Button>
+			<Button onclick={() => window.location.reload(true)} class="mt-1 ml-0" color="blue">Refresh</Button>
 		</Toast>
 	</div>
 {/if}

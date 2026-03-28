@@ -458,7 +458,7 @@ async function sendCycletime(
 	data: string,
 ) {
 	if (!fieldMonitor) return;
-	let matchNumber: number, playNumber: number, level: string;
+	let matchNumber: number, playNumber: number, level: "None" | "Practice" | "Qualification" | "Playoff";
 	if (fmsApiEnabled) {
 		({ matchNumber, playNumber, level } = await getCurrentMatch());
 	} else {

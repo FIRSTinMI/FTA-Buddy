@@ -268,19 +268,17 @@ export const cycleRouter = router({
 	}),
 
 	getBestCycleTime: eventProcedure.query(async ({ ctx }) => {
-		const bestCycle = await db
+		const cycles = await db
 			.select()
 			.from(cycleLogs)
-			.where(eq(cycleLogs.event, ctx.event.code))
-			.orderBy(asc(cycleLogs.calculated_cycle_time))
-			.limit(1)
+			.where(and(eq(cycleLogs.event, ctx.event.code), isNotNull(cycleLogs.calculated_cycle_time)))
 			.execute();
 
-		if (bestCycle.length === 0) {
-			return null;
-		}
+		if (cycles.length === 0) return null;
 
-		return bestCycle[0];
+		return cycles.reduce((best, c) =>
+			cycleTimeToMS(c.calculated_cycle_time!) < cycleTimeToMS(best.calculated_cycle_time!) ? c : best
+		);
 	}),
 
 	getAverageCycleTime: eventProcedure.query(async ({ ctx }) => {
@@ -296,13 +294,11 @@ export const cycleRouter = router({
 		.query(async ({ input }) => {
 			const event = await getEvent("", input.eventCode);
 
-			const [bestCycle, lastRecordedCycleTime, lastPrestartFromDB, lastComputedCycle] = await Promise.all([
+			const [allCyclesWithTime, lastRecordedCycleTime, lastPrestartFromDB, lastComputedCycle] = await Promise.all([
 				db
 					.select()
 					.from(cycleLogs)
-					.where(eq(cycleLogs.event, event.code))
-					.orderBy(asc(cycleLogs.calculated_cycle_time))
-					.limit(1)
+					.where(and(eq(cycleLogs.event, event.code), isNotNull(cycleLogs.calculated_cycle_time)))
 					.execute(),
 
 				db
@@ -330,7 +326,13 @@ export const cycleRouter = router({
 					.execute(),
 			]);
 
-			let bestCycleTime: string | null = bestCycle.length > 0 ? bestCycle[0].calculated_cycle_time : null;
+			let bestCycleTime: string | null = null;
+			if (allCyclesWithTime.length > 0) {
+				const best = allCyclesWithTime.reduce((b, c) =>
+					cycleTimeToMS(c.calculated_cycle_time!) < cycleTimeToMS(b.calculated_cycle_time!) ? c : b
+				);
+				bestCycleTime = best.calculated_cycle_time;
+			}
 
 			let lastCycleTime: string | null = event.monitorFrame.lastCycleTime;
 			if (lastCycleTime == "unk" && lastRecordedCycleTime.length !== 0) {

@@ -1,7 +1,7 @@
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import cors from "cors";
 import "dotenv/config";
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq, isNotNull, sql } from "drizzle-orm";
 import express from "express";
 import { readFileSync, readdirSync } from "fs";
 import hljs from "highlight.js";
@@ -13,6 +13,7 @@ import { gfmHeadingId } from "marked-gfm-heading-id";
 import { markedHighlight } from "marked-highlight";
 import { join } from "path";
 import sanitizeHtml from "sanitize-html";
+import { cycleTimeToMS } from "../shared/cycleTimeToMS";
 import { ROBOT, TournamentLevel } from "../shared/types";
 import { connect, db } from "./db/db";
 import { cycleLogs, logPublishing, matchLogs } from "./db/schema";
@@ -411,6 +412,30 @@ connect().then(async () => {
 		}
 	} catch (err) {
 		console.error("[Nexus] Failed to load events on startup:", (err as any)?.message);
+	}
+
+	// Fix old-format calculated_cycle_time strings (e.g. "8:33") to the full format ("00:08:33.000")
+	try {
+		const shortCycles = await db
+			.select({ id: cycleLogs.id, calculated_cycle_time: cycleLogs.calculated_cycle_time })
+			.from(cycleLogs)
+			.where(and(isNotNull(cycleLogs.calculated_cycle_time), sql`LENGTH(${cycleLogs.calculated_cycle_time}) < 5`))
+			.execute();
+		if (shortCycles.length > 0) {
+			for (const row of shortCycles) {
+				const ms = cycleTimeToMS(row.calculated_cycle_time!);
+				const totalSec = Math.floor(ms / 1000);
+				const h = Math.floor(totalSec / 3600);
+				const m = Math.floor((totalSec % 3600) / 60);
+				const s = totalSec % 60;
+				const msRemainder = ms % 1000;
+				const fixed = `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}.${msRemainder.toString().padStart(3, "0")}`;
+				await db.update(cycleLogs).set({ calculated_cycle_time: fixed }).where(eq(cycleLogs.id, row.id)).execute();
+			}
+			console.log(`✅ Migrated ${shortCycles.length} old cycle time format(s) to full format`);
+		}
+	} catch (err) {
+		console.error("Failed to migrate old cycle time formats:", err);
 	}
 
 	server.listen(port);

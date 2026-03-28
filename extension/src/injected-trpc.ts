@@ -84,7 +84,7 @@ function createTRPCConnection() {
 export let trpc = createTRPCConnection();
 
 const FMS_HOST = "10.0.100.5";
-const LEVELS = ["Practice", "Qualification", "Playoff"] as const;
+const LEVELS = ["None", "Practice", "Qualification", "Playoff"] as const;
 const STATIONS = ["Station1", "Station2", "Station3"] as const;
 
 async function fetchJson<T>(url: string): Promise<T> {

@@ -75,7 +75,10 @@
 			{
 				onData: (data) => {
 					averageCycleTimeMS = data.averageCycleTime ?? 7 * 60 * 1000;
-					calculatedCycleTime = data.lastCycleTime ? cycleTimeToMS(data.lastCycleTime) : 0;
+					const rawCt = data.lastCycleTime && data.lastCycleTime !== "unk"
+						? cycleTimeToMS(data.lastCycleTime)
+						: 0;
+					calculatedCycleTime = isNaN(rawCt) ? 0 : rawCt;
 					if (data.scheduleDetails) {
 						scheduleDetails = data.scheduleDetails;
 						scheduleText = updateScheduleText(

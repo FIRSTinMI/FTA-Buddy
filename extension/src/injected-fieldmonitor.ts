@@ -477,7 +477,15 @@ function buildFrameFromDOM(): PartialMonitorFrame | null {
 
 let postPending = false;
 let prevFieldState: FieldState | null = null;
+let lastMatchAutoStartMs: number | null = null;
 let matchUploadTimer: ReturnType<typeof setTimeout> | null = null;
+
+function msToCycleTimeStr(ms: number): string {
+	const totalSec = Math.floor(ms / 1000);
+	const m = Math.floor(totalSec / 60);
+	const s = totalSec % 60;
+	return `${m}:${s.toString().padStart(2, "0")}`;
+}
 
 function triggerMatchUpload(delayMs: number) {
 	if (matchUploadTimer !== null) return; // already scheduled
@@ -516,6 +524,16 @@ async function postFrame() {
 				trpc.cycles.postCycleTime.mutate({ ...cycleArgs, type: "prestart" })
 					.catch((err) => console.warn("[FTA Buddy] postCycleTime prestart failed:", err));
 			} else if (cur === FieldState.MATCH_RUNNING_AUTO) {
+				// Compute match-start-to-match-start cycle time and post it, mirroring SignalR's lastcycletimecalculated
+				if (lastMatchAutoStartMs !== null) {
+					const cycleMs = Date.now() - lastMatchAutoStartMs;
+					if (cycleMs > 60_000 && cycleMs < 3_600_000) {
+						trpc.cycles.postCycleTime
+							.mutate({ ...cycleArgs, type: "lastCycleTime", lastCycleTime: msToCycleTimeStr(cycleMs) })
+							.catch((err) => console.warn("[FTA Buddy] postCycleTime lastCycleTime failed:", err));
+					}
+				}
+				lastMatchAutoStartMs = Date.now();
 				trpc.cycles.postCycleTime.mutate({ ...cycleArgs, type: "start" })
 					.catch((err) => console.warn("[FTA Buddy] postCycleTime start failed:", err));
 				if (matchUploadTimer !== null) {

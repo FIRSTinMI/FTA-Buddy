@@ -237,10 +237,10 @@ export class MonitorFrameHandler extends EventTarget {
 	public getLastCycleTime() {
 		const thisFrame = this.getFrame();
 		const lastCycleTime = thisFrame?.lastCycleTime;
-		if (lastCycleTime) {
-			return cycleTimeToMS(lastCycleTime);
-		} else {
-			return undefined;
+		if (lastCycleTime && lastCycleTime !== "unk") {
+			const ms = cycleTimeToMS(lastCycleTime);
+			return isNaN(ms) ? undefined : ms;
 		}
+		return undefined;
 	}
 }

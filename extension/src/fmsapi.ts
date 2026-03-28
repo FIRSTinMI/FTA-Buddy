@@ -34,7 +34,7 @@ export async function getCurrentMatch() {
 export async function getCompletedMatches(): Promise<FMSMatch[]> {
 	// GetCurrentResults only returns the active tournament level.
 	// Query all levels individually and merge so quals and playoffs are always included.
-	const levels = [FMSEnums.Level.Practice, FMSEnums.Level.Qualification, FMSEnums.Level.Playoff];
+	const levels = [FMSEnums.Level.None, FMSEnums.Level.Practice, FMSEnums.Level.Qualification, FMSEnums.Level.Playoff];
 	const results = await Promise.all(
 		levels.map(async (level) => {
 			try {

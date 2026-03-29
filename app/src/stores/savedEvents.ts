@@ -10,6 +10,8 @@ export interface SavedEvent {
 	users: Profile[];
 	subEvents?: { code: string; label: string; token: string; pin: string; teams: TeamList }[];
 	meshedEventCode?: string;
+	startDate?: string;
+	endDate?: string;
 }
 
 const STORAGE_KEY = "savedEvents";

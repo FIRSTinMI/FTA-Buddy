@@ -10,6 +10,7 @@ const fieldMonitorInput = document.getElementById("fieldMonitor") as HTMLInputEl
 const useSignalRInput = document.getElementById("useSignalR") as HTMLInputElement;
 const signalRRow = document.getElementById("signalr-row") as HTMLDivElement;
 const tokenInput = document.getElementById("eventToken") as HTMLInputElement;
+const fmsApiEnabledInput = document.getElementById("fmsApiEnabled") as HTMLInputElement;
 const saveButton = document.getElementById("save") as HTMLButtonElement;
 
 const extensionStatusIndicator = document.getElementById("extension-status") as HTMLDivElement;
@@ -48,7 +49,7 @@ async function bgGetStatuses(): Promise<{ signalrStatus: string }> {
 
 function load() {
 	chrome.storage.local.get(
-		["url", "cloud", "useDev", "event", "eventToken", "changed", "enabled", "fieldMonitor", "useSignalR"],
+		["url", "cloud", "useDev", "event", "eventToken", "changed", "enabled", "fieldMonitor", "useSignalR", "fmsApiEnabled"],
 		(item) => {
 			if (
 				item.url == undefined ||
@@ -67,6 +68,7 @@ function load() {
 					enabled: item.enabled ?? false,
 					fieldMonitor: item.fieldMonitor ?? false,
 					useSignalR: item.useSignalR ?? true,
+					fmsApiEnabled: item.fmsApiEnabled ?? true,
 					eventToken: item.eventToken || "",
 				};
 				chrome.storage.local.set(item);
@@ -80,6 +82,7 @@ function load() {
 			enabledInput.checked = Boolean(item.enabled);
 			fieldMonitorInput.checked = Boolean(item.fieldMonitor);
 			useSignalRInput.checked = item.useSignalR !== false; // default true
+			fmsApiEnabledInput.checked = item.fmsApiEnabled !== false; // default true
 			signalRRow.style.display = Boolean(item.fieldMonitor) ? "flex" : "none";
 			tokenInput.value = String(item.eventToken);
 			let changed = Number(item.changed);
@@ -95,6 +98,7 @@ function load() {
 			enabledInput.addEventListener("input", handleUpdate);
 			fieldMonitorInput.addEventListener("input", handleUpdate);
 			useSignalRInput.addEventListener("input", handleUpdate);
+			fmsApiEnabledInput.addEventListener("input", handleUpdate);
 			if (useDevCheckbox) useDevCheckbox.addEventListener("input", handleUpdate);
 			saveButton.addEventListener("click", handleUpdate);
 			refreshButton.addEventListener("click", () => chrome.runtime.reload());
@@ -213,6 +217,7 @@ function handleUpdate() {
 		enabled: enabledInput.checked,
 		fieldMonitor: fieldMonitorInput.checked,
 		useSignalR: useSignalRInput.checked,
+		fmsApiEnabled: fmsApiEnabledInput.checked,
 		eventToken: tokenInput.value,
 	});
 
@@ -222,7 +227,7 @@ function handleUpdate() {
 }
 
 function updatePopup(
-	setting: "url" | "cloud" | "useDev" | "enabled" | "fieldMonitor" | "useSignalR" | "event" | "eventToken",
+	setting: "url" | "cloud" | "useDev" | "enabled" | "fieldMonitor" | "useSignalR" | "fmsApiEnabled" | "event" | "eventToken",
 	value: boolean | string,
 ) {
 	const elm = document?.getElementById(setting);
@@ -242,7 +247,7 @@ chrome.storage.local.onChanged.addListener((changes) => {
 	for (const key of Object.keys(changes)) {
 		if (key === "changed") continue;
 		updatePopup(
-			key as "url" | "cloud" | "useDev" | "enabled" | "fieldMonitor" | "useSignalR" | "event" | "eventToken",
+			key as "url" | "cloud" | "useDev" | "enabled" | "fieldMonitor" | "useSignalR" | "fmsApiEnabled" | "event" | "eventToken",
 			changes[key].newValue as string | boolean,
 		);
 	}

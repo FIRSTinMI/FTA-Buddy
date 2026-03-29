@@ -228,6 +228,38 @@
 
 	registerToast(toast);
 
+	// Auto-kick from stale (past) events on the Tuesday after the event ends
+	function getTuesdayAfter(dateStr: string): Date {
+		const d = new Date(dateStr + "T00:00:00");
+		const day = d.getDay(); // 0=Sun,1=Mon,2=Tue,...
+		const daysUntilTuesday = day <= 2 ? 2 - day : 9 - day;
+		d.setDate(d.getDate() + daysUntilTuesday);
+		return d;
+	}
+
+	function checkAndKickFromStaleEvent() {
+		const event = get(eventStore);
+		if (!event.code || !event.endDate) return;
+		const kickDate = getTuesdayAfter(event.endDate);
+		const today = new Date();
+		today.setHours(0, 0, 0, 0);
+		if (today >= kickDate) {
+			const code = event.code;
+			eventStore.set({ code: "", pin: "", teams: [], users: [] });
+			user.update((u) => ({ ...u, eventToken: "" }));
+			toast("Event Ended", `You've been signed out of ${code.toUpperCase()} because the event has ended. You can rejoin it from the event switcher.`, "red-500", 8000);
+		}
+	}
+
+	onMount(() => {
+		checkAndKickFromStaleEvent();
+		const handleVisibility = () => {
+			if (document.visibilityState === "visible") checkAndKickFromStaleEvent();
+		};
+		document.addEventListener("visibilitychange", handleVisibility);
+		return () => document.removeEventListener("visibilitychange", handleVisibility);
+	});
+
 	const toastColorClasses: Record<string, string> = {
 		"red-500": "bg-red-200 dark:bg-red-700 text-red-950 dark:text-red-100",
 		"green-500": "bg-green-200 dark:bg-green-700 text-green-950 dark:text-green-100",

@@ -706,6 +706,7 @@ export const notesRouter = router({
 				tournament_level: z.enum(["None", "Practice", "Qualification", "Playoff"]).nullable().optional(),
 				issue_type: z.string().nullable().optional(),
 				match_id: z.string().optional(),
+				request_type: z.enum(["CSA", "RI"]).nullable().optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -753,6 +754,7 @@ export const notesRouter = router({
 					updated_at: new Date(),
 					followers: [authorProfile[0].id],
 					match_id: matchId,
+					request_type: input.request_type ?? null,
 				})
 				.returning();
 			if (!insert[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Note" });
@@ -809,7 +811,7 @@ export const notesRouter = router({
 				event.code,
 			);
 
-			if (event.slackChannel && event.slackTeam) {
+			if (event.slackChannel && event.slackTeam && insert[0].request_type !== null) {
 				const messageTS = await sendSlackMessage(
 					event.slackChannel,
 					event.slackTeam,
@@ -1274,6 +1276,7 @@ export const notesRouter = router({
 					event_code: event.code,
 					created_at: new Date(),
 					updated_at: new Date(),
+					request_type: "CSA",
 				})
 				.returning();
 			if (!insert[0])

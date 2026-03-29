@@ -97,6 +97,8 @@ export const noteIssueTypeEnum = pgEnum("note_issue_type", [
 	"Other",
 ]);
 
+export const noteRequestTypeEnum = pgEnum("note_request_type", ["CSA", "RI"]);
+
 export const notes = pgTable("notes", {
 	id: uuid("id").primaryKey(),
 	text: varchar("text").notNull().default(""),
@@ -128,6 +130,7 @@ export const notes = pgTable("notes", {
 	match_id: uuid("match_id").references(() => matchLogs.id),
 	resolved_by_id: integer("resolved_by_id").references(() => users.id),
 	resolved_by: jsonb("resolved_by").$type<Profile>(),
+	request_type: noteRequestTypeEnum("request_type"),
 });
 
 export const noteMessagesRelations = relations(notes, ({ many }) => ({

@@ -554,6 +554,7 @@ export interface Note {
 	slack_channel?: string | null;
 	resolved_by_id: number | null;
 	resolved_by: Profile | null;
+	request_type: "CSA" | "RI" | null;
 	messages?: Message[];
 }
 

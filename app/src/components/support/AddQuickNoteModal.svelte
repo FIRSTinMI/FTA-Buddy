@@ -32,6 +32,7 @@
 	let saving = $state(false);
 	let issueType = $state<FTAEventNoteIssueType | null>(null);
 	let selectedLabel = $state<string | null>(null);
+	let requestType = $state<"CSA" | "RI" | null>(null);
 
 	// Reset text when modal opens for a new team
 	$effect(() => {
@@ -39,6 +40,7 @@
 			noteText = "";
 			issueType = null;
 			selectedLabel = null;
+			requestType = null;
 		}
 	});
 
@@ -86,6 +88,7 @@
 				match_number: match_number ?? null,
 				play_number: play_number ?? null,
 				tournament_level: (level as TournamentLevel) ?? null,
+				request_type: requestType,
 			});
 			toast("Note created", "", "green-500");
 			noteText = "";
@@ -149,6 +152,23 @@
 		}}
 	/>
 	<p class="mt-1 text-xs text-gray-400">Tip: Ctrl+Enter to save quickly</p>
+
+	<div class="flex flex-col gap-1 text-sm mt-2">
+		{#each [{ value: "CSA", label: "CSA Request" }, { value: "RI", label: "RI Request" }] as opt}
+			<button
+				type="button"
+				class="flex items-center gap-2 px-3 py-1.5 rounded border text-left transition-colors
+					{requestType === opt.value
+					? 'border-blue-500 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+					: 'border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-neutral-700 text-gray-700 dark:text-gray-300'}"
+				onclick={() => (requestType = requestType === opt.value ? null : (opt.value as "CSA" | "RI"))}
+			>
+				<span class="size-3 rounded-full border-2 shrink-0
+					{requestType === opt.value ? 'border-blue-500 bg-blue-500' : 'border-gray-400'}"></span>
+				{opt.label}
+			</button>
+		{/each}
+	</div>
 
 	{#snippet footer()}
 		<Button color="blue" disabled={!noteText.trim() || saving} onclick={save}>

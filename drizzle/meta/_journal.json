@@ -15,6 +15,13 @@
       "when": 1774796099659,
       "tag": "0001_misty_aaron_stack",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1774797017422,
+      "tag": "0002_small_photon",
+      "breakpoints": true
     }
   ]
 }

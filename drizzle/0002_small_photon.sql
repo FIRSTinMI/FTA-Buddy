@@ -1,0 +1,1 @@
+ALTER TABLE "notes" ADD COLUMN "is_nexus" boolean DEFAULT false NOT NULL;

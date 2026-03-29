@@ -1508,7 +1508,7 @@ export async function getEventMessages(event_code: string) {
 
 export async function updateNoteStatusFromSlack(message_ts: string, resolved: boolean, slackUserId?: string) {
 	const note = await db.query.notes.findFirst({ where: eq(notes.slack_ts, message_ts) });
-	if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
+	if (!note) return null;
 
 	const event = await getEvent("", note.event_code);
 
@@ -1563,7 +1563,7 @@ export async function updateNoteStatusFromSlack(message_ts: string, resolved: bo
 
 export async function updateNoteAssignmentFromSlack(message_ts: string, add: boolean, slackUser: string) {
 	const note = await db.query.notes.findFirst({ where: eq(notes.slack_ts, message_ts) });
-	if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
+	if (!note) return null;
 
 	const event = await getEvent("", note.event_code);
 	const profile: Profile = event.slackTeam
@@ -1621,6 +1621,171 @@ export async function updateNoteAssignmentFromSlack(message_ts: string, add: boo
 	}
 
 	return update[0] as Note;
+}
+
+/**
+ * Parses an incoming Nexus Slack bot message into structured note fields.
+ *
+ * Supported formats:
+ *  1. FTA CSA request:
+ *     text = "FTA request for team 5478 [D8]: Radio reboot, please check connections"
+ *     block sections may include "had issues in Qualification 72" and "FTA notes:..."
+ *
+ *  2. Volunteer request:
+ *     text = "A volunteer has requested help on behalf of team 9455"
+ *     block sections include "Team 9455 needs help with the following:" and the note text
+ */
+function parseNexusMessage(
+	text: string,
+	blocks?: any[],
+): {
+	team: number | null;
+	matchNumber: number | null;
+	tournamentLevel: "None" | "Practice" | "Qualification" | "Playoff" | null;
+	playNumber: number | null;
+	noteText: string;
+} {
+	// Collect all human-readable text from blocks for richer parsing
+	const allText: string[] = [text];
+	if (blocks) {
+		for (const block of blocks) {
+			if (block.type === "section" && block.text?.text) {
+				allText.push(block.text.text);
+			} else if (block.type === "rich_text" && block.elements) {
+				for (const elem of block.elements) {
+					if (elem.elements) {
+						for (const inner of elem.elements) {
+							if (inner.text) allText.push(inner.text);
+						}
+					}
+				}
+			}
+		}
+	}
+	const combined = allText.join("\n");
+
+	// Team number
+	const teamMatch = combined.match(/team (\d+)/i);
+	const team = teamMatch ? parseInt(teamMatch[1]) : null;
+
+	// Match info: "had issues in Qualification 72" or "Qualification 72"
+	const matchMatch = combined.match(/had issues in (Qualification|Practice|Playoff)(?: match)? (\d+)/i);
+	let matchNumber: number | null = null;
+	let tournamentLevel: "None" | "Practice" | "Qualification" | "Playoff" | null = null;
+	if (matchMatch) {
+		const lvl = matchMatch[1];
+		tournamentLevel = (lvl.charAt(0).toUpperCase() + lvl.slice(1).toLowerCase()) as typeof tournamentLevel;
+		matchNumber = parseInt(matchMatch[2]);
+	}
+
+	// Note text — try "FTA notes: ..." blocks first, then volunteer "needs help with" block, then fall back to text suffix
+	let noteText = "";
+	const ftaNotesMatch = combined.match(/FTA notes[:\s]+(.+?)(?:\n|$)/i);
+	const volunteerNotesMatch = combined.match(/needs help with the following:\s*(.+?)(?:\n|$)/i);
+	if (ftaNotesMatch) {
+		noteText = ftaNotesMatch[1].trim();
+	} else if (volunteerNotesMatch) {
+		noteText = volunteerNotesMatch[1].trim();
+	} else {
+		// "FTA request for team 5478 [D8]: Radio reboot..."
+		const colonMatch = text.match(/\]\s*:\s*(.+)$/);
+		if (colonMatch) noteText = colonMatch[1].trim();
+	}
+	if (!noteText) noteText = text;
+
+	return { team, matchNumber, tournamentLevel, playNumber: null, noteText };
+}
+
+/**
+ * Creates a note from an incoming Nexus Slack bot message.
+ * Sets slack_ts to the Nexus message ts so thread replies and reactions sync normally.
+ * Posts a reply in the thread with a link back to the FTA Buddy ticket.
+ */
+export async function createFromNexus(channel_id: string, message_ts: string, text: string, blocks?: any[]) {
+	// Find the event linked to this Slack channel
+	const eventRow = await db.query.events.findFirst({ where: eq(events.slackChannel, channel_id) });
+	if (!eventRow) return; // Channel not linked to any event
+
+	const event = await getEvent("", eventRow.code);
+
+	const { team, matchNumber, tournamentLevel, playNumber, noteText } = parseNexusMessage(text, blocks);
+
+	const matchId = await resolveMatchId(event.code, matchNumber, playNumber, tournamentLevel);
+
+	const author: Profile = { id: -1, username: "Nexus", role: "FTA", admin: false, source: "Slack" };
+
+	const noteId = randomUUID();
+	const insert = await db
+		.insert(notes)
+		.values({
+			id: noteId,
+			team: team ?? null,
+			text: noteText,
+			author_id: -1,
+			author,
+			note_type: "TeamIssue",
+			resolution_status: "Open",
+			match_number: matchNumber ?? null,
+			play_number: playNumber ?? null,
+			tournament_level: tournamentLevel ?? null,
+			fms_note_id: null,
+			fms_record_version: null,
+			fms_metadata: null,
+			event_code: event.code,
+			created_at: new Date(),
+			updated_at: new Date(),
+			followers: [],
+			match_id: matchId,
+			request_type: "CSA",
+			slack_ts: message_ts,
+			slack_channel: channel_id,
+			is_nexus: true,
+		})
+		.returning();
+
+	if (!insert[0]) return;
+
+	event.noteUpdateEmitter.emit("note_update", { kind: "create", note: insert[0] as Note });
+
+	createNotification(
+		event.users.map((u) => u.id),
+		buildNotification({
+			kind: "note.created",
+			eventCode: event.code,
+			note: toNoteCtx(insert[0] as any),
+			author: "Nexus",
+		}),
+		event.code,
+	);
+
+	// Reply in the Nexus thread with a link to the ticket
+	if (event.slackTeam) {
+		try {
+			await sendSlackMessage(
+				channel_id,
+				event.slackTeam,
+				{
+					blocks: [
+						{
+							type: "section",
+							text: {
+								type: "mrkdwn",
+								text: "Ticket created in FTA Buddy.",
+							},
+							accessory: {
+								type: "button",
+								text: { type: "plain_text", text: "View Ticket", emoji: true },
+								url: `https://ftabuddy.com/notepad/view/${event.code}/${noteId}`,
+							},
+						},
+					],
+				},
+				message_ts,
+			);
+		} catch (err) {
+			console.error("[Nexus] Failed to post reply to Nexus thread:", err);
+		}
+	}
 }
 
 export async function addNoteMessageFromSlack(

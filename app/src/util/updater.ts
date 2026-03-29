@@ -3,7 +3,7 @@ import { eventStore } from "../stores/event";
 import { settingsStore } from "../stores/settings";
 import { userStore } from "../stores/user";
 
-export const LATEST_EXTENSION_VERSION = "1.26.12";
+export const LATEST_EXTENSION_VERSION = "1.26.14";
 
 interface Version {
 	changelog?: string;
@@ -11,6 +11,15 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+    "2.7.4.1": {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.7.4.1</h1>
+        <ul>
+        <li>Added the ability to select a CSA or RI or neither for a note</li>
+        <li>Sync notes from Nexus via Slack bot</li>
+        </ul>
+        `,
+    },
     "2.7.4.0": {
         changelog: `
         <h1 class="text-lg font-bold">v2.7.4.0</h1>

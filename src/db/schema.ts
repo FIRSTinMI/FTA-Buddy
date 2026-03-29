@@ -131,6 +131,7 @@ export const notes = pgTable("notes", {
 	resolved_by_id: integer("resolved_by_id").references(() => users.id),
 	resolved_by: jsonb("resolved_by").$type<Profile>(),
 	request_type: noteRequestTypeEnum("request_type"),
+	is_nexus: boolean("is_nexus").notNull().default(false),
 });
 
 export const noteMessagesRelations = relations(notes, ({ many }) => ({

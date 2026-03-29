@@ -555,6 +555,7 @@ export interface Note {
 	resolved_by_id: number | null;
 	resolved_by: Profile | null;
 	request_type: "CSA" | "RI" | null;
+	is_nexus?: boolean;
 	messages?: Message[];
 }
 

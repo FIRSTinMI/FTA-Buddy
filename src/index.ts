@@ -27,6 +27,7 @@ import { aiReportRouter } from "./router/ai-report";
 import { matchEventsRouter } from "./router/match-events";
 import {
 	addNoteMessageFromSlack,
+	createFromNexus,
 	notesRouter,
 	updateNoteAssignmentFromSlack,
 	updateNoteStatusFromSlack,
@@ -219,13 +220,21 @@ app.post("/slack/events", async (req, res) => {
 	}
 
 	try {
-		// Ignore events from the bot
+		// Ignore events from the FTA Buddy bot itself
 		if (event && event.user !== "U08FVV94LPR") {
 			console.log(event);
-			// Only listen to reactions on messages from the bot
-			if (event.reaction === "white_check_mark" && event.item.user === "U08FVV94LPR") {
+			// Nexus bot messages: create a ticket from the incoming CSA/volunteer request
+			if (
+				event.type === "message" &&
+				event.subtype === "bot_message" &&
+				typeof event.text === "string" &&
+				/^(FTA request for team \d+|A volunteer has requested help on behalf of team \d+)/i.test(event.text)
+			) {
+				await createFromNexus(event.channel, event.ts, event.text, event.blocks);
+			} else if (event.reaction === "white_check_mark") {
+				// Accept reactions on any tracked message (FTA Buddy posts and Nexus posts)
 				await updateNoteStatusFromSlack(event.item.ts, event.type === "reaction_added", event.user);
-			} else if (event.reaction === "eyes" && event.item.user === "U08FVV94LPR") {
+			} else if (event.reaction === "eyes") {
 				await updateNoteAssignmentFromSlack(event.item.ts, event.type === "reaction_added", event.user);
 			} else if (event.type === "message" && event.thread_ts && !event.subtype && !event.bot_id) {
 				// event.subtype is set for bot_message, message_changed, message_deleted, etc.

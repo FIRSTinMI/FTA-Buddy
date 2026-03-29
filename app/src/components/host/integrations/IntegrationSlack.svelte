@@ -39,6 +39,11 @@
 					{$eventStore.pin}
 				</code>
 			</div>
+			<p class="text-sm text-gray-400">
+				Once linked, CSA and RI request tickets created by <span class="text-white font-medium">FRC Nexus</span> will
+				automatically appear in FTA Buddy. Thread replies and reactions (&#10003; to resolve, &#128064; to assign)
+				sync both ways. FTA Buddy will reply to each Nexus request with a link to the ticket.
+			</p>
 		</div>
 	{/if}
 </div>

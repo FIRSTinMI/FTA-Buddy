@@ -58,4 +58,8 @@
 	{:else if note.request_type === "RI"}
 		<Badge color="orange">RI Request</Badge>
 	{/if}
+
+	{#if note.is_nexus}
+		<Badge color="dark">Nexus</Badge>
+	{/if}
 </div>

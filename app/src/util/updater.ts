@@ -11,9 +11,9 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
-    "1.26.5.0": {
+    "2.7.5.0": {
         changelog: `
-        <h1 class="text-lg font-bold">v1.26.5.0</h1>
+        <h1 class="text-lg font-bold">v2.7.5.0</h1>
         <ul>
         <li>Local account improvements: access the notepad and create notes without signing in</li>
         </ul>

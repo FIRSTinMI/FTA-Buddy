@@ -106,14 +106,14 @@
 		"/manage/kiosk",
 	];
 
-	const eventTokenPaths = ["/monitor", "/checklist", "/logs"];
+	const eventTokenPaths = ["/monitor", "/checklist", "/logs", "/notepad"];
 
 	const pageIsPublicLog = route.pathname.startsWith("/logs/") && route.pathname.split("/")[3].length == 36;
 	const pageIsPublicNoteCreate = route.pathname.startsWith("/notepad/submit/");
 
 	function redirectForAuth() {
 		// if user has event token and is trying to access a page that requires an event token
-		if ($user.eventToken && (eventTokenPaths.includes(route.pathname) || route.pathname.startsWith("/logs"))) {
+		if ($user.eventToken && (eventTokenPaths.includes(route.pathname) || route.pathname.startsWith("/logs") || route.pathname.startsWith("/notepad"))) {
 			return;
 		}
 
@@ -601,6 +601,17 @@
 						{/snippet}
 					</SidebarItem>
 					<SidebarItem
+						label="Notepad"
+						onclick={() => {
+							drawerOpen = false;
+							navigate("/notepad");
+						}}
+					>
+						{#snippet icon()}
+							<Icon icon="fluent:notepad-16-regular" class="size-8" />
+						{/snippet}
+					</SidebarItem>
+					<SidebarItem
 						label="Match Logs"
 						onclick={() => {
 							drawerOpen = false;
@@ -788,7 +799,7 @@
 				<Icon icon="mdi:menu" class="w-8 h-10" />
 			</button>
 			<div class="grow mr-12">
-				{#if $user.token && $user.eventToken}
+				{#if $user.eventToken}
 					<h1 class="text-white text-lg place-content-center pt-1 font-bold">{event.label ?? event.code}</h1>
 				{/if}
 			</div>

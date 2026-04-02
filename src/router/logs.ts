@@ -444,6 +444,7 @@ export const matchRouter = router({
 
 				const tbaMatches: {
 					comp_level: string;
+					set_number: number;
 					match_number: number;
 					alliances: {
 						blue: { team_keys: string[] };
@@ -454,6 +455,13 @@ export const matchRouter = router({
 				// Set of already-played qual match numbers (from DB)
 				const playedQualNums = new Set(
 					playedMatches.filter((m) => m.level === "Qualification").map((m) => m.match_number),
+				);
+
+				// Set of already-played playoff match keys (match_number:play_number)
+				const playedPlayoffKeys = new Set(
+					playedMatches
+						.filter((m) => m.level === "Playoff")
+						.map((m) => `${m.match_number}:${m.play_number}`),
 				);
 
 				const tbaTeamNum = (key: string): number | null => {
@@ -472,6 +480,34 @@ export const matchRouter = router({
 						match_number: m.match_number,
 						play_number: 1,
 						level: "Qualification",
+						blue1: tbaTeamNum(blue[0] ?? ""),
+						blue2: tbaTeamNum(blue[1] ?? ""),
+						blue3: tbaTeamNum(blue[2] ?? ""),
+						red1: tbaTeamNum(red[0] ?? ""),
+						red2: tbaTeamNum(red[1] ?? ""),
+						red3: tbaTeamNum(red[2] ?? ""),
+						isPlayed: false,
+					});
+				}
+
+				// Add unplayed playoff matches from TBA.
+				// In FRC 2023+ double-elimination, all bracket matches have comp_level "sf"
+				// where set_number = sequential FMS match number and match_number = play number.
+				// Only include matches where TBA already knows both alliances (bracket decided).
+				for (const m of tbaMatches) {
+					if (m.comp_level !== "sf") continue;
+					const blue = m.alliances?.blue?.team_keys ?? [];
+					const red = m.alliances?.red?.team_keys ?? [];
+					// Skip if alliances haven't been determined yet
+					if (blue.length === 0 || red.length === 0) continue;
+					const fmsMatchNum = m.set_number;
+					const fmsPlayNum = m.match_number;
+					if (playedPlayoffKeys.has(`${fmsMatchNum}:${fmsPlayNum}`)) continue;
+					result.push({
+						id: null,
+						match_number: fmsMatchNum,
+						play_number: fmsPlayNum,
+						level: "Playoff",
 						blue1: tbaTeamNum(blue[0] ?? ""),
 						blue2: tbaTeamNum(blue[1] ?? ""),
 						blue3: tbaTeamNum(blue[2] ?? ""),

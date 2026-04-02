@@ -284,20 +284,27 @@ const messagesSubRouter = router({
 			});
 			if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
 
-			const authorProfile = (await db
-				.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
-				.from(users)
-				.where(eq(users.token, ctx.token as string))) as Profile[];
-			if (!authorProfile[0])
-				throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
+			const localProfile: Profile = { id: -1, username: "Field", role: "FTA", admin: false };
+			let resolvedProfile: Profile;
+			if (!ctx.token) {
+				resolvedProfile = localProfile;
+			} else {
+				const rows = (await db
+					.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
+					.from(users)
+					.where(eq(users.token, ctx.token))) as Profile[];
+				if (!rows[0])
+					throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
+				resolvedProfile = rows[0];
+			}
 
 			const insert = await db
 				.insert(messages)
 				.values({
 					id: randomUUID(),
 					note_id: note.id,
-					author_id: authorProfile[0].id,
-					author: authorProfile[0],
+					author_id: resolvedProfile.id,
+					author: resolvedProfile,
 					text: input.text,
 					event_code: note.event_code,
 					created_at: new Date(),
@@ -316,12 +323,12 @@ const messagesSubRouter = router({
 			});
 
 			createNotification(
-				(note.followers ?? []).filter((id) => id !== authorProfile[0].id),
+				(note.followers ?? []).filter((id) => id !== resolvedProfile.id),
 				buildNotification({
 					kind: "note.message",
 					eventCode: event.code,
 					note: toNoteCtx(note as any),
-					author: authorProfile[0].username,
+					author: resolvedProfile.username,
 					messageText: insert[0].text,
 					messageId: insert[0].id,
 				}),
@@ -712,12 +719,19 @@ export const notesRouter = router({
 		.mutation(async ({ ctx, input }) => {
 			const event = await getEvent(ctx.eventToken as string);
 
-			const authorProfile = (await db
-				.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
-				.from(users)
-				.where(eq(users.token, ctx.token as string))) as Profile[];
-			if (!authorProfile[0])
-				throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
+			const localProfile: Profile = { id: -1, username: "Field", role: "FTA", admin: false };
+			let resolvedProfile: Profile;
+			if (!ctx.token) {
+				resolvedProfile = localProfile;
+			} else {
+				const rows = (await db
+					.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
+					.from(users)
+					.where(eq(users.token, ctx.token))) as Profile[];
+				if (!rows[0])
+					throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
+				resolvedProfile = rows[0];
+			}
 
 			const isTeamIssue = input.note_type === "TeamIssue";
 			const resolutionStatus = isTeamIssue ? "Open" : "NotApplicable";
@@ -737,8 +751,8 @@ export const notesRouter = router({
 				.values({
 					id: noteId,
 					team: input.team ?? null,
-					author_id: authorProfile[0].id,
-					author: authorProfile[0],
+					author_id: resolvedProfile.id,
+					author: resolvedProfile,
 					text: input.text,
 					note_type: input.note_type,
 					resolution_status: resolutionStatus as any,
@@ -752,7 +766,7 @@ export const notesRouter = router({
 					event_code: event.code,
 					created_at: new Date(),
 					updated_at: new Date(),
-					followers: [authorProfile[0].id],
+					followers: [resolvedProfile.id],
 					match_id: matchId,
 					request_type: input.request_type ?? null,
 				})
@@ -801,12 +815,12 @@ export const notesRouter = router({
 			}
 
 			createNotification(
-				event.users.map((u) => u.id).filter((id) => id !== authorProfile[0].id),
+				event.users.map((u) => u.id).filter((id) => id !== resolvedProfile.id),
 				buildNotification({
 					kind: "note.created",
 					eventCode: event.code,
 					note: toNoteCtx(insert[0] as any),
-					author: authorProfile[0].username,
+					author: resolvedProfile.username,
 				}),
 				event.code,
 			);
@@ -819,7 +833,7 @@ export const notesRouter = router({
 						insert[0].id,
 						insert[0].team,
 						event.teams.find((t) => parseInt(t.number) === insert[0].team)?.name ?? null,
-						authorProfile[0].username,
+						resolvedProfile.username,
 						insert[0].text,
 						event.code,
 						insert[0].match_id ?? undefined,

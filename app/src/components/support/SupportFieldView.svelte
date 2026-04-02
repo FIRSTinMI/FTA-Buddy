@@ -692,7 +692,7 @@
 					size="xs"
 					color="alternative"
 					onclick={goToPrevMatch}
-					disabled={matchIndex === 0 || (isLive && liveIdx <= 0)}
+					disabled={matchIndex === 0 || (isLive && liveIdx === 0)}
 				>
 					<Icon icon="mdi:chevron-left" class={isShortScreen ? "size-3.5" : "size-4 sm:size-5"} />
 				</Button>

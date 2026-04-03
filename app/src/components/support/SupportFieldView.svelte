@@ -10,7 +10,7 @@
 		NoteUpdateEventData,
 		RobotInfo,
 	} from "../../../../shared/types";
-	import { DSState, ROBOT, RobotWarnings } from "../../../../shared/types";
+	import { DSState, MatchState, MatchStateMap, ROBOT, RobotWarnings } from "../../../../shared/types";
 	import { frameHandler, subscribeToFieldMonitor } from "../../field-monitor";
 	import { trpc } from "../../main";
 	import { navigate } from "../../router";
@@ -433,6 +433,22 @@
 	function handleResize() {
 		isShortScreen = window.innerHeight < 900;
 	}
+
+	function formatScheduledTime(d: Date | string | null | undefined): string | null {
+		if (!d) return null;
+		const dt = d instanceof Date ? d : new Date(d as string);
+		if (isNaN(dt.getTime())) return null;
+		return dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+	}
+
+	let scheduledStartTime = $derived(isLive ? (monitorFrame?.matchScheduledStartTime ?? null) : null);
+	let formattedStartTime = $derived(formatScheduledTime(scheduledStartTime));
+	let isPastStartTime = $derived(
+		!!scheduledStartTime &&
+			Date.now() > new Date(scheduledStartTime as Date).getTime() &&
+			!!monitorFrame &&
+			MatchStateMap[monitorFrame.field] !== MatchState.RUNNING,
+	);
 </script>
 
 {#snippet teamCard(teamNum: number, alliance: "blue" | "red", slot: 1 | 2 | 3)}
@@ -471,18 +487,7 @@
 				{#if teamName}
 					<span class="text-[11px] sm:text-sm lg:text-base font-normal opacity-80 truncate">{teamName}</span>
 				{/if}
-				<div class="ml-auto flex items-center gap-0.5 shrink-0">
-					{#if hasOpenNote}
-						<Icon icon="mdi:alert" class="{isShortScreen ? 'size-3.5' : 'size-4'} text-yellow-300" title="Open note" />
-					{/if}
-					{#if liveRobot?.warnings?.includes(RobotWarnings.NOT_INSPECTED)}
-						<Icon icon="mdi:magnify" class="{isShortScreen ? 'size-3.5' : 'size-4'} text-orange-300" title="Not inspected" />
-					{/if}
-					{#if liveRobot?.warnings?.includes(RobotWarnings.RADIO_NOT_FLASHED)}
-						<Icon icon="mdi:wifi-off" class="{isShortScreen ? 'size-3.5' : 'size-4'} text-orange-300" title="Radio not programmed" />
-					{/if}
-				</div>
-			</button>
+				</button>
 			{#if currentMatchId}
 				<button
 					class="px-1.5 sm:px-2 {isShortScreen
@@ -570,6 +575,42 @@
 					class="tabular-nums font-mono text-[9px] sm:text-xs lg:text-sm text-black dark:text-white shrink-0"
 					title="Signal strength">{liveRobot.signal ?? 0}dBm</span
 				>
+				{#if hasOpenNote || liveRobot.warnings.includes(RobotWarnings.NOT_INSPECTED) || liveRobot.warnings.includes(RobotWarnings.RADIO_NOT_FLASHED) || liveRobot.warnings.includes(RobotWarnings.PREVIOUS_MATCH_EVENT)}
+					<div class="ml-auto flex items-center gap-0.5 sm:gap-1 shrink-0">
+						{#if hasOpenNote}
+							<div
+								class="{isShortScreen ? 'size-3.5' : 'size-4 sm:size-6'} rounded-sm bg-yellow-400 flex items-center justify-center shrink-0"
+								title="Open note"
+							>
+								<Icon icon="mdi:pencil" class="{isShortScreen ? 'size-2.5' : 'size-3 sm:size-4'} text-black" />
+							</div>
+						{/if}
+						{#if liveRobot.warnings.includes(RobotWarnings.NOT_INSPECTED)}
+							<div
+								class="{isShortScreen ? 'size-3.5' : 'size-4 sm:size-6'} rounded-sm bg-yellow-400 flex items-center justify-center shrink-0"
+								title="Not inspected"
+							>
+								<Icon icon="mdi:magnify" class="{isShortScreen ? 'size-2.5' : 'size-3 sm:size-4'} text-black" />
+							</div>
+						{/if}
+						{#if liveRobot.warnings.includes(RobotWarnings.RADIO_NOT_FLASHED)}
+							<div
+								class="{isShortScreen ? 'size-3.5' : 'size-4 sm:size-6'} rounded-sm bg-yellow-400 flex items-center justify-center shrink-0"
+								title="Radio not programmed"
+							>
+								<Icon icon="mdi:wifi-off" class="{isShortScreen ? 'size-2.5' : 'size-3 sm:size-4'} text-black" />
+							</div>
+						{/if}
+						{#if liveRobot.warnings.includes(RobotWarnings.PREVIOUS_MATCH_EVENT)}
+							<div
+								class="{isShortScreen ? 'size-3.5' : 'size-4 sm:size-6'} rounded-sm bg-yellow-400 flex items-center justify-center shrink-0"
+								title="Previous match event"
+							>
+								<Icon icon="mdi:wrench" class="{isShortScreen ? 'size-2.5' : 'size-3 sm:size-4'} text-black" />
+							</div>
+						{/if}
+					</div>
+				{/if}
 			</div>
 		{/if}
 		<div class="min-h-0 overflow-y-auto px-2 sm:px-3 flex-1">
@@ -711,13 +752,18 @@
 						{matchLabel}
 					</p>
 					{#if !isShortScreen}
-						<div class="h-5 flex items-center">
+						<div class="h-5 flex items-center gap-1.5">
 							{#if isLive}
 								<Badge color="green" class="text-xs">LIVE</Badge>
 							{:else if matchIndex >= 0 && !allMatches[matchIndex]?.isPlayed}
 								<Badge color="yellow" class="text-xs">SCHEDULED</Badge>
 							{/if}
+							{#if formattedStartTime}
+								<span class="text-xs {isPastStartTime ? 'text-red-500 dark:text-red-400 font-semibold' : 'text-gray-500 dark:text-gray-400'}">{formattedStartTime}</span>
+							{/if}
 						</div>
+					{:else if formattedStartTime}
+						<span class="text-[10px] leading-tight {isPastStartTime ? 'text-red-500 dark:text-red-400 font-semibold' : 'text-gray-400 dark:text-gray-500'}">{formattedStartTime}</span>
 					{/if}
 				</div>
 

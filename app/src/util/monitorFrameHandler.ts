@@ -37,6 +37,14 @@ export class MonitorFrameHandler extends EventTarget {
 
 	public setHistory(history: MonitorFrame[]) {
 		this.frames = history;
+		const latest = this.getFrame();
+		if (latest && latest.field !== FieldState.UNKNOWN) {
+			this.dispatchEvent(
+				new CustomEvent("frame", {
+					detail: { frame: latest, match: MatchStateMap[latest.field] },
+				}),
+			);
+		}
 	}
 
 	public feed(frame: MonitorFrame) {

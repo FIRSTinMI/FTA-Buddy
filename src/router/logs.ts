@@ -2,7 +2,7 @@ import { inferRouterOutputs } from "@trpc/server";
 import { randomUUID } from "crypto";
 import { and, asc, count, eq, gt, inArray, ne, or } from "drizzle-orm";
 import { z } from "zod";
-import { DisconnectionEvent, FMSLogFrame, ROBOT } from "../../shared/types";
+import { DisconnectionEvent, FMSLogFrame, ROBOT, ScheduleDetails } from "../../shared/types";
 import { db } from "../db/db";
 import { analyzedLogs, events, logPublishing, matchLogs } from "../db/schema";
 import { eventProcedure, publicProcedure, router } from "../trpc";
@@ -393,11 +393,19 @@ export const matchRouter = router({
 					red2: z.number().nullable(),
 					red3: z.number().nullable(),
 					isPlayed: z.boolean(),
+					scheduledStartTime: z.date().nullable(),
 				}),
 			),
 		)
 		.query(async ({ ctx }) => {
 			const tbaKey = process.env.TBA_API_KEY;
+
+			// Build a lookup map from scheduleDetails for start times
+			const scheduleDetails = ctx.event.scheduleDetails as ScheduleDetails;
+			const startTimeMap = new Map<string, Date>();
+			for (const m of scheduleDetails?.matches ?? []) {
+				startTimeMap.set(`${m.level}:${m.match}`, new Date(m.scheduledStartTime));
+			}
 
 			// Load all played matches from DB with full team data
 			const playedMatches = await db
@@ -429,9 +437,14 @@ export const matchRouter = router({
 				red2: number | null;
 				red3: number | null;
 				isPlayed: boolean;
+				scheduledStartTime: Date | null;
 			};
 
-			const result: ScheduledMatch[] = playedMatches.map((m) => ({ ...m, isPlayed: true }));
+			const result: ScheduledMatch[] = playedMatches.map((m) => ({
+				...m,
+				isPlayed: true,
+				scheduledStartTime: startTimeMap.get(`${m.level}:${m.match_number}`) ?? null,
+			}));
 
 			if (!tbaKey) return result;
 
@@ -487,6 +500,7 @@ export const matchRouter = router({
 						red2: tbaTeamNum(red[1] ?? ""),
 						red3: tbaTeamNum(red[2] ?? ""),
 						isPlayed: false,
+						scheduledStartTime: startTimeMap.get(`Qualification:${m.match_number}`) ?? null,
 					});
 				}
 
@@ -515,6 +529,7 @@ export const matchRouter = router({
 						red2: tbaTeamNum(red[1] ?? ""),
 						red3: tbaTeamNum(red[2] ?? ""),
 						isPlayed: false,
+						scheduledStartTime: startTimeMap.get(`Playoff:${fmsMatchNum}`) ?? null,
 					});
 				}
 

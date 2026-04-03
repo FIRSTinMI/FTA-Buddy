@@ -33,6 +33,7 @@
 		red2: number | null;
 		red3: number | null;
 		isPlayed: boolean;
+		scheduledStartTime: Date | null;
 	}
 
 	let allMatches: MatchInfo[] = $state([]);
@@ -441,13 +442,24 @@
 		return dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
 	}
 
-	let scheduledStartTime = $derived(isLive ? (monitorFrame?.matchScheduledStartTime ?? null) : null);
+	// Show scheduled start time for the current unstarted match or future scheduled matches.
+	// Hide once a match is running, and never show for already-played matches.
+	let scheduledStartTime = $derived.by(() => {
+		if (isLive) {
+			if (monitorFrame && MatchStateMap[monitorFrame.field] === MatchState.RUNNING) return null;
+			const liveMatch = liveIdx >= 0 ? allMatches[liveIdx] : null;
+			return liveMatch?.scheduledStartTime ?? null;
+		}
+		if (matchIndex >= 0) {
+			const m = allMatches[matchIndex];
+			if (!m || m.isPlayed) return null;
+			return m.scheduledStartTime ?? null;
+		}
+		return null;
+	});
 	let formattedStartTime = $derived(formatScheduledTime(scheduledStartTime));
 	let isPastStartTime = $derived(
-		!!scheduledStartTime &&
-			Date.now() > new Date(scheduledStartTime as Date).getTime() &&
-			!!monitorFrame &&
-			MatchStateMap[monitorFrame.field] !== MatchState.RUNNING,
+		!!scheduledStartTime && Date.now() > new Date(scheduledStartTime as Date).getTime(),
 	);
 </script>
 

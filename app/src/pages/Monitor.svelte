@@ -21,6 +21,7 @@
 	import { fullscreen } from "../stores/fullscreen";
 	import { eventStore } from "../stores/event";
 	import { userStore } from "../stores/user";
+	import { settingsStore } from "../stores/settings";
 	import type { MonitorEvent } from "../util/monitorFrameHandler";
 	import { updateScheduleText } from "../util/schedule-detail-formatter";
 
@@ -74,6 +75,7 @@
 	}
 
 	function fireConfetti() {
+		if (!$settingsStore.confetti) return;
 		const defaults = { startVelocity: 30, spread: 70, ticks: 180, zIndex: 9999 };
 		confetti({ ...defaults, particleCount: 80, angle: 60, origin: { x: 0, y: 0.7 } });
 		confetti({ ...defaults, particleCount: 80, angle: 120, origin: { x: 1, y: 0.7 } });

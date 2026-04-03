@@ -1,4 +1,5 @@
 <script lang="ts">
+	import confetti from "canvas-confetti";
 	import Icon from "@iconify/svelte";
 	import { Badge, Button, Modal, Textarea, Toggle } from "flowbite-svelte";
 	import { onDestroy, onMount } from "svelte";
@@ -9,6 +10,7 @@
 		Note,
 		NoteUpdateEventData,
 		RobotInfo,
+		ScheduleDetails,
 		TournamentLevel,
 	} from "../../../../shared/types";
 	import { DSState, MatchState, MatchStateMap, ROBOT, RobotWarnings } from "../../../../shared/types";
@@ -18,6 +20,7 @@
 	import { trpc } from "../../main";
 	import { navigate } from "../../router";
 	import { eventStore } from "../../stores/event";
+	import { settingsStore } from "../../stores/settings";
 	import { userStore } from "../../stores/user";
 	import type { MonitorEvent } from "../../util/monitorFrameHandler";
 	import Spinner from "../Spinner.svelte";
@@ -413,6 +416,7 @@
 		}
 		frameHandler.addEventListener("frame", onFrame);
 		frameHandler.addEventListener("prestart", onPrestart);
+		frameHandler.addEventListener("match-start", onMatchStart);
 		loadMatchIndex();
 		startSubscription();
 		startMatchEventSubscription();
@@ -420,6 +424,7 @@
 		// Initialise match start time so T: starts counting from the right point
 		trpc.cycles.getLastPrestart.query().then((t) => { if (t) matchStartTime = new Date(t); });
 		trpc.cycles.getLastMatchStart.query().then((t) => { if (t) matchStartTime = new Date(t); });
+		trpc.cycles.getScheduleDetails.query().then((d) => { if (d) scheduleDetails = d; });
 		cycleInterval = setInterval(() => {
 			currentCycleTime = formatTimeShortNoAgo(matchStartTime);
 		}, 1000);
@@ -428,6 +433,7 @@
 	onDestroy(() => {
 		frameHandler.removeEventListener("frame", onFrame);
 		frameHandler.removeEventListener("prestart", onPrestart);
+		frameHandler.removeEventListener("match-start", onMatchStart);
 		subscription?.unsubscribe();
 		matchEventSubscription?.unsubscribe();
 		window.removeEventListener("resize", handleResize);
@@ -480,6 +486,43 @@
 	let matchStartTime = $state(new Date());
 	let currentCycleTime = $state("0");
 	let cycleInterval: ReturnType<typeof setInterval> | undefined;
+
+	// Schedule details for confetti
+	let scheduleDetails: ScheduleDetails | undefined;
+
+	function getScheduledCycleTimeMS(matchNumber: number): number | undefined {
+		if (!scheduleDetails) return undefined;
+		const now = new Date().getTime();
+		let day = 0;
+		for (let i = 0; i < scheduleDetails.days.length; i++) {
+			if (new Date(scheduleDetails.days[i].date).getTime() <= now) {
+				day = i;
+			}
+		}
+		const cts = scheduleDetails.days[day]?.cycleTimes;
+		if (!cts || cts.length === 0) return undefined;
+		let minutes = cts[0].minutes;
+		for (const ct of cts) {
+			if (ct.match <= matchNumber) minutes = ct.minutes;
+		}
+		return minutes * 60 * 1000;
+	}
+
+	function fireConfetti() {
+		if (!$settingsStore.confetti) return;
+		const defaults = { startVelocity: 30, spread: 70, ticks: 180, zIndex: 9999 };
+		confetti({ ...defaults, particleCount: 80, angle: 60, origin: { x: 0, y: 0.7 } });
+		confetti({ ...defaults, particleCount: 80, angle: 120, origin: { x: 1, y: 0.7 } });
+	}
+
+	function onMatchStart(evt: Event) {
+		const frame = (evt as MonitorEvent).detail.frame;
+		const lastCycleTimeMS = Date.now() - matchStartTime.getTime();
+		const scheduledCycleTimeMS = getScheduledCycleTimeMS(frame?.match ?? 0);
+		if (scheduledCycleTimeMS && lastCycleTimeMS > 0 && lastCycleTimeMS < scheduledCycleTimeMS) {
+			fireConfetti();
+		}
+	}
 
 	function formatScheduledTime(d: Date | string | null | undefined): string | null {
 		if (!d) return null;

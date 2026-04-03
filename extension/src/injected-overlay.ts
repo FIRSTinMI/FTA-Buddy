@@ -267,6 +267,74 @@ function hideAngularUI(): void {
 	}
 }
 
+// ── Confetti ───────────────────────────────────────────────────────────────
+
+function fireConfetti(): void {
+	const canvas = document.createElement("canvas");
+	canvas.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:99999";
+	document.body.appendChild(canvas);
+	const ctx = canvas.getContext("2d");
+	if (!ctx) { canvas.remove(); return; }
+	canvas.width = window.innerWidth;
+	canvas.height = window.innerHeight;
+
+	interface Particle { x: number; y: number; vx: number; vy: number; color: string; w: number; h: number; rot: number; rotV: number; }
+	const colors = ["#ff0", "#f60", "#f0f", "#0ff", "#0f0", "#00f"];
+	const particles: Particle[] = [];
+	for (let i = 0; i < 160; i++) {
+		const side = i < 80 ? 0 : 1;
+		particles.push({
+			x: side === 0 ? 0 : canvas.width,
+			y: canvas.height * 0.7,
+			vx: (side === 0 ? 1 : -1) * (5 + Math.random() * 10),
+			vy: -(8 + Math.random() * 12),
+			color: colors[Math.floor(Math.random() * colors.length)],
+			w: 6 + Math.random() * 6,
+			h: 8 + Math.random() * 6,
+			rot: Math.random() * Math.PI * 2,
+			rotV: (Math.random() - 0.5) * 0.3,
+		});
+	}
+
+	let tick = 0;
+	function animate() {
+		ctx!.clearRect(0, 0, canvas.width, canvas.height);
+		for (const p of particles) {
+			p.x += p.vx;
+			p.y += p.vy;
+			p.vy += 0.4;
+			p.vx *= 0.99;
+			p.rot += p.rotV;
+			ctx!.save();
+			ctx!.translate(p.x, p.y);
+			ctx!.rotate(p.rot);
+			ctx!.fillStyle = p.color;
+			ctx!.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+			ctx!.restore();
+		}
+		if (++tick < 180) requestAnimationFrame(animate);
+		else canvas.remove();
+	}
+	requestAnimationFrame(animate);
+}
+
+function getScheduledCycleTimeMS(matchNumber: number, details: ScheduleDetails): number | undefined {
+	const now = new Date().getTime();
+	let day = 0;
+	for (let i = 0; i < details.days.length; i++) {
+		if (new Date(details.days[i].date).getTime() <= now) {
+			day = i;
+		}
+	}
+	const cts = details.days[day]?.cycleTimes;
+	if (!cts || cts.length === 0) return undefined;
+	let minutes = cts[0].minutes;
+	for (const ct of cts) {
+		if (ct.match <= matchNumber) minutes = ct.minutes;
+	}
+	return minutes * 60 * 1000;
+}
+
 // ── Wait for Angular ───────────────────────────────────────────────────────
 
 function waitForApp(callback: () => void, attempts = 0): void {
@@ -381,7 +449,22 @@ function boot(): void {
 			const frame = buildFrame();
 			if (!frame) return;
 
+			// Check for match start transition before updateCycleTimeState updates state
+			const isNewMatchStart = frame.field === FieldState.MATCH_RUNNING_AUTO &&
+				cycleState.prevFieldState !== FieldState.MATCH_RUNNING_AUTO;
+			const prevMatchStartAt = isNewMatchStart ? cycleState.matchStartAt : null;
+
 			updateCycleTimeState(frame.field, cycleState);
+
+			// Fire confetti if this cycle beat the scheduled time
+			if (isNewMatchStart && prevMatchStartAt !== null && serverCycleData?.scheduleDetails) {
+				const lastCycleMs = Date.now() - prevMatchStartAt;
+				const scheduledMs = getScheduledCycleTimeMS(frame.match ?? 0, serverCycleData.scheduleDetails);
+				if (scheduledMs && lastCycleMs > 60_000 && lastCycleMs < scheduledMs) {
+					fireConfetti();
+				}
+			}
+
 			updateHistory(history, frame);
 			updateAll(els, frame, history);
 			applyServerWarnings(els, frame, serverFrame);

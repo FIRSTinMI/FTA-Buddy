@@ -10,7 +10,7 @@
 		NoteUpdateEventData,
 		RobotInfo,
 	} from "../../../../shared/types";
-	import { DSState, ROBOT } from "../../../../shared/types";
+	import { DSState, ROBOT, RobotWarnings } from "../../../../shared/types";
 	import { frameHandler, subscribeToFieldMonitor } from "../../field-monitor";
 	import { trpc } from "../../main";
 	import { navigate } from "../../router";
@@ -471,12 +471,17 @@
 				{#if teamName}
 					<span class="text-[11px] sm:text-sm lg:text-base font-normal opacity-80 truncate">{teamName}</span>
 				{/if}
-				{#if hasOpenNote}
-					<Icon
-						icon="mdi:alert"
-						class="ml-auto shrink-0 {isShortScreen ? 'size-3.5' : 'size-4'} text-yellow-300"
-					/>
-				{/if}
+				<div class="ml-auto flex items-center gap-0.5 shrink-0">
+					{#if hasOpenNote}
+						<Icon icon="mdi:alert" class="{isShortScreen ? 'size-3.5' : 'size-4'} text-yellow-300" title="Open note" />
+					{/if}
+					{#if liveRobot?.warnings?.includes(RobotWarnings.NOT_INSPECTED)}
+						<Icon icon="mdi:magnify" class="{isShortScreen ? 'size-3.5' : 'size-4'} text-orange-300" title="Not inspected" />
+					{/if}
+					{#if liveRobot?.warnings?.includes(RobotWarnings.RADIO_NOT_FLASHED)}
+						<Icon icon="mdi:wifi-off" class="{isShortScreen ? 'size-3.5' : 'size-4'} text-orange-300" title="Radio not programmed" />
+					{/if}
+				</div>
 			</button>
 			{#if currentMatchId}
 				<button

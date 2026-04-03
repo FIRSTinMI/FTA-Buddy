@@ -4,6 +4,7 @@
 	import type { MatchEvent, Note } from "../../../../shared/types";
 	import MatchEventCard from "../../components/MatchEventCard.svelte";
 	import NoteCard from "../../components/NoteCard.svelte";
+	import PitMapModal from "../../components/PitMapModal.svelte";
 	import Spinner from "../../components/Spinner.svelte";
 	import { trpc } from "../../main";
 	import { route } from "../../router";
@@ -79,6 +80,8 @@
 	let dismissedEvents = $derived(matchEvents.filter((e) => e.status === "dismissed").length);
 	let convertedEvents = $derived(matchEvents.filter((e) => e.status === "converted").length);
 
+	let pitMapOpen = $state(false);
+
 	function back() {
 		history.back();
 	}
@@ -97,6 +100,9 @@
 		<h1 class="text-2xl font-bold text-black dark:text-white">
 			Team {teamNumber} - Full History
 		</h1>
+		<Button size="sm" color="alternative" onclick={() => (pitMapOpen = true)}>
+			<Icon icon="mdi:map-marker" class="size-4 mr-1" />Pit Map
+		</Button>
 	</div>
 
 	<!-- Content -->
@@ -200,3 +206,5 @@
 		{/if}
 	</div>
 </div>
+
+<PitMapModal bind:open={pitMapOpen} teamNumber={team} />

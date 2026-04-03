@@ -12,9 +12,9 @@
 	import { onDestroy, onMount } from "svelte";
 	import { get } from "svelte/store";
 	import type { EventChecklist, NexusStatus } from "../../../shared/types";
+	import PitMapModal from "../components/PitMapModal.svelte";
 	import Spinner from "../components/Spinner.svelte";
 	import { trpc } from "../main";
-	import { navigate } from "../router";
 	import { eventStore } from "../stores/event";
 	import { userStore } from "../stores/user";
 
@@ -42,6 +42,10 @@
 	let radioProgrammed = $state(0);
 	let connectionTested = $state(0);
 	let total = $state(0);
+
+	// Pit map
+	let pitMapOpen = $state(false);
+	let pitMapTeam = $state("");
 
 	// Nexus status
 	let nexusStatus: NexusStatus | null = $state(null);
@@ -201,7 +205,7 @@
 						<td class="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 px-6 py-4">
 							<button
 								class="font-medium hover:underline text-blue-600 dark:text-blue-400"
-								onclick={() => navigate("/notepad/team/:team", { params: { team } })}
+								onclick={() => { pitMapTeam = team; pitMapOpen = true; }}
 							>{team}</button>
 						</td>
 						<td class="hidden sm:table-cell">{teamNames[team]}</td>
@@ -239,3 +243,5 @@
 		</table>
 	{/await}
 </div>
+
+<PitMapModal bind:open={pitMapOpen} teamNumber={pitMapTeam} />

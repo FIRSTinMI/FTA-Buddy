@@ -8,6 +8,7 @@
 	import FormattedTime from "../../components/FormattedTime.svelte";
 	import MessageCard from "../../components/MessageCard.svelte";
 	import NoteActionBar from "../../components/notes/NoteActionBar.svelte";
+	import PitMapModal from "../../components/PitMapModal.svelte";
 	import NoteAssignModal from "../../components/notes/NoteAssignModal.svelte";
 	import NoteMatchInfo from "../../components/notes/NoteMatchInfo.svelte";
 	import NoteMetaBadges from "../../components/notes/NoteMetaBadges.svelte";
@@ -53,6 +54,7 @@
 			: [],
 	);
 
+	let pitMapOpen = $state(false);
 	let deleteNotePopup = $state(false);
 
 	let editNoteView = $state(false);
@@ -533,6 +535,7 @@
 						ondelete={() => (deleteNotePopup = true)}
 						onopenassignmodal={openAssignModal}
 						onviewlog={viewLog}
+						onopenpitmap={() => (pitMapOpen = true)}
 					/>
 
 					<!-- Scrollable content -->
@@ -605,6 +608,8 @@
 		{/await}
 	</div>
 </div>
+
+<PitMapModal bind:open={pitMapOpen} teamNumber={note?.team?.toString() ?? ""} />
 
 <!-- Assign-to modal -->
 <NoteAssignModal

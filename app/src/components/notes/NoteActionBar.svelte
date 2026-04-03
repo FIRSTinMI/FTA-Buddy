@@ -18,6 +18,7 @@
 		ondelete: () => void;
 		onopenassignmodal: () => void;
 		onviewlog: () => void;
+		onopenpitmap?: () => void;
 	}
 
 	let {
@@ -35,6 +36,7 @@
 		ondelete,
 		onopenassignmodal,
 		onviewlog,
+		onopenpitmap,
 	}: Props = $props();
 </script>
 
@@ -81,6 +83,12 @@
 		{#if hasMatch}
 			<Button size="sm" color="alternative" onclick={onviewlog}>
 				<Icon icon="mdi:chart-line" class="size-4 mr-1" />Log
+			</Button>
+		{/if}
+
+		{#if onopenpitmap}
+			<Button size="sm" color="alternative" onclick={onopenpitmap}>
+				<Icon icon="mdi:map-marker" class="size-4 mr-1" />Pit Map
 			</Button>
 		{/if}
 

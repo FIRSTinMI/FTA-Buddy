@@ -662,6 +662,33 @@ export const eventRouter = router({
 		return { ...event.nexus, nexusApiKeyIsSet: !!event.nexusApiKey };
 	}),
 
+	getPitMap: eventProcedure.query(async ({ ctx }) => {
+		const event = await getEvent(ctx.event.token);
+		if (!event.nexusApiKey) return null;
+
+		const CACHE_MS = 5 * 60 * 1000;
+		if (event.pitMap && Date.now() - event.pitMap.fetchedAt.getTime() < CACHE_MS) {
+			return event.pitMap.data;
+		}
+
+		const response = await fetch(`https://frc.nexus/api/v1/event/${event.code}/map`, {
+			headers: { "Nexus-Api-Key": event.nexusApiKey },
+		});
+
+		if (response.status === 404) {
+			event.pitMap = { data: null, fetchedAt: new Date() };
+			return null;
+		}
+
+		if (!response.ok) {
+			throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Nexus map fetch failed: ${response.status}` });
+		}
+
+		const data = await response.json();
+		event.pitMap = { data, fetchedAt: new Date() };
+		return data;
+	}),
+
 	setFmsEventPassword: eventProcedure
 		.input(
 			z.object({

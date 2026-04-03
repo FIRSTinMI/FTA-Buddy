@@ -120,7 +120,7 @@
 		return `${Math.floor(secs / 3600)}h ${Math.floor((secs % 3600) / 60)}m`;
 	}
 
-	// Shared week navigation — controls both Activity and Feature Usage
+	// Shared week navigation - controls both Activity and Feature Usage
 	let weekIndex = $state(0);
 
 	function currentWeekStart(): string {
@@ -202,7 +202,7 @@
 							newEvents: stats.activityWeeks[weekIndex - 1]?.newEvents ?? 0,
 						}}
 
-			<!-- Week nav — controls all sections -->
+			<!-- Week nav - controls all sections -->
 			<div class="flex items-center justify-end gap-2">
 				{#if !showYtd}
 					<button
@@ -358,7 +358,7 @@
 									<span
 										class="text-sm font-semibold text-gray-700 dark:text-gray-300 w-14 text-right"
 									>
-										{row.count > 0 ? row.count.toLocaleString() : "—"}
+										{row.count > 0 ? row.count.toLocaleString() : "-"}
 									</span>
 								</div>
 							{/each}

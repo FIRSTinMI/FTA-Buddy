@@ -4,7 +4,7 @@ import { and, asc, count, eq, gt, inArray, ne, or } from "drizzle-orm";
 import { z } from "zod";
 import { DisconnectionEvent, FMSLogFrame, ROBOT, ScheduleDetails } from "../../shared/types";
 import { db } from "../db/db";
-import { analyzedLogs, events, logPublishing, matchLogs } from "../db/schema";
+import { analyzedLogs, cycleLogs, events, logPublishing, matchLogs } from "../db/schema";
 import { eventProcedure, publicProcedure, router } from "../trpc";
 import { compressStationLog } from "../util/log-analysis";
 import { generateReport } from "../util/report-generator";
@@ -394,6 +394,7 @@ export const matchRouter = router({
 					red3: z.number().nullable(),
 					isPlayed: z.boolean(),
 					scheduledStartTime: z.date().nullable(),
+					cycleTime: z.string().nullable(),
 				}),
 			),
 		)
@@ -420,8 +421,18 @@ export const matchRouter = router({
 					red1: matchLogs.red1,
 					red2: matchLogs.red2,
 					red3: matchLogs.red3,
+					calculated_cycle_time: cycleLogs.calculated_cycle_time,
 				})
 				.from(matchLogs)
+				.leftJoin(
+					cycleLogs,
+					and(
+						eq(cycleLogs.event, matchLogs.event),
+						eq(cycleLogs.match_number, matchLogs.match_number),
+						eq(cycleLogs.play_number, matchLogs.play_number),
+						eq(cycleLogs.level, matchLogs.level),
+					),
+				)
 				.where(eq(matchLogs.event, ctx.event.code))
 				.orderBy(asc(matchLogs.start_time));
 
@@ -438,12 +449,14 @@ export const matchRouter = router({
 				red3: number | null;
 				isPlayed: boolean;
 				scheduledStartTime: Date | null;
+				cycleTime: string | null;
 			};
 
 			const result: ScheduledMatch[] = playedMatches.map((m) => ({
 				...m,
 				isPlayed: true,
 				scheduledStartTime: startTimeMap.get(`${m.level}:${m.match_number}`) ?? null,
+				cycleTime: m.calculated_cycle_time ?? null,
 			}));
 
 			if (!tbaKey) return result;
@@ -501,6 +514,7 @@ export const matchRouter = router({
 						red3: tbaTeamNum(red[2] ?? ""),
 						isPlayed: false,
 						scheduledStartTime: startTimeMap.get(`Qualification:${m.match_number}`) ?? null,
+						cycleTime: null,
 					});
 				}
 
@@ -530,6 +544,7 @@ export const matchRouter = router({
 						red3: tbaTeamNum(red[2] ?? ""),
 						isPlayed: false,
 						scheduledStartTime: startTimeMap.get(`Playoff:${fmsMatchNum}`) ?? null,
+						cycleTime: null,
 					});
 				}
 

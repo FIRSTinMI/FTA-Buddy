@@ -212,23 +212,29 @@ app.post("/slack/command", async (req, res) => {
 });
 
 app.post("/slack/events", async (req, res) => {
-	const { event, challenge } = req.body;
+	const { event, challenge, authorizations } = req.body;
 
 	// Slack Verification Challenge
 	if (challenge) {
 		return res.json({ challenge });
 	}
 
+	// Check if this event was triggered by our own bot (bot user ID differs per workspace)
+	const isBotSelfEvent =
+		event &&
+		Array.isArray(authorizations) &&
+		authorizations.some((a: { user_id: string; is_bot: boolean }) => a.user_id === event.user && a.is_bot);
+
 	try {
 		// Ignore events from the FTA Buddy bot itself
-		if (event && event.user !== "U08FVV94LPR") {
+		if (event && !isBotSelfEvent) {
 			console.log(event);
 			// Nexus bot messages: create a ticket from the incoming CSA/volunteer request
 			if (
 				event.type === "message" &&
 				event.subtype === "bot_message" &&
 				typeof event.text === "string" &&
-				/^(FTA request for team \d+|A volunteer has requested help on behalf of team \d+)/i.test(event.text)
+				/^(FTA request for team \d+|A volunteer has requested help on behalf of team \d+|Team \d+ has requested help)/i.test(event.text)
 			) {
 				await createFromNexus(event.channel, event.ts, event.text, event.blocks);
 			} else if (event.reaction === "white_check_mark") {

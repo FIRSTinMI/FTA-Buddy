@@ -1695,7 +1695,7 @@ function parseNexusMessage(
 	// Note text — try "FTA notes: ..." blocks first, then volunteer "needs help with" block, then fall back to text suffix
 	let noteText = "";
 	const ftaNotesMatch = combined.match(/FTA notes[:\s]+(.+?)(?:\n|$)/i);
-	const volunteerNotesMatch = combined.match(/needs help with the following:\s*(.+?)(?:\n|$)/i);
+	const volunteerNotesMatch = combined.match(/(?:needs|has requested) help with the following:\s*(.+?)(?:\n|$)/i);
 	if (ftaNotesMatch) {
 		noteText = ftaNotesMatch[1].trim();
 	} else if (volunteerNotesMatch) {

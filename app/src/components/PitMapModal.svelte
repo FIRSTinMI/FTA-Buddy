@@ -40,7 +40,7 @@
 		}
 	}
 
-	// Some API entries are empty objects {} — skip those
+	// Some API entries are empty objects {} - skip those
 	function hasGeometry(el: any): el is PitMapElement {
 		return el?.position?.x != null && el?.size?.x != null;
 	}
@@ -82,7 +82,7 @@
 
 <Modal bind:open size="xl" outsideclose>
 	{#snippet header()}
-		<span class="text-lg font-semibold">Pit Map — Team {teamNumber}</span>
+		<span class="text-lg font-semibold">Pit Map - Team {teamNumber}</span>
 		{#if teamPitId}
 			<span class="ml-2 text-sm text-gray-500 dark:text-gray-400">Pit {teamPitId}</span>
 		{/if}

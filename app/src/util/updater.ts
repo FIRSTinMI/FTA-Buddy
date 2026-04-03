@@ -11,6 +11,15 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+    "2.7.5.2": {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.7.5.2</h1>
+        <ul>
+        <li>Add schedule start time & cycle time to notepad field view</li>
+        <li>Fix slack integration messing up assignees</li>
+        </ul>
+        `,
+    },
     "2.7.5.1": {
         changelog: `
         <h1 class="text-lg font-bold">v2.7.5.1</h1>

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Icon from "@iconify/svelte";
-	import { Badge, Button, Toggle } from "flowbite-svelte";
+	import { Badge, Button, Modal, Textarea, Toggle } from "flowbite-svelte";
 	import { onDestroy, onMount } from "svelte";
 	import type {
 		MatchEvent,
@@ -9,8 +9,11 @@
 		Note,
 		NoteUpdateEventData,
 		RobotInfo,
+		TournamentLevel,
 	} from "../../../../shared/types";
 	import { DSState, MatchState, MatchStateMap, ROBOT, RobotWarnings } from "../../../../shared/types";
+	import { cycleTimeToMS } from "../../../../shared/cycleTimeToMS";
+	import { formatTimeShortNoAgo, formatTimeShortNoAgoSeconds } from "../../../../shared/formatTime";
 	import { frameHandler, subscribeToFieldMonitor } from "../../field-monitor";
 	import { trpc } from "../../main";
 	import { navigate } from "../../router";
@@ -19,6 +22,7 @@
 	import type { MonitorEvent } from "../../util/monitorFrameHandler";
 	import Spinner from "../Spinner.svelte";
 	import AddQuickNoteModal from "./AddQuickNoteModal.svelte";
+	import { toast } from "../../util/toast";
 
 	// Match index for prev/next navigation
 	interface MatchInfo {
@@ -34,6 +38,7 @@
 		red3: number | null;
 		isPlayed: boolean;
 		scheduledStartTime: Date | null;
+		cycleTime: string | null;
 	}
 
 	let allMatches: MatchInfo[] = $state([]);
@@ -167,6 +172,7 @@
 			matchIndex = -1; // snap to live
 			monitorFrame = (evt as MonitorEvent).detail.frame;
 		}
+		matchStartTime = new Date();
 	}
 
 	// Match navigation
@@ -411,6 +417,12 @@
 		startSubscription();
 		startMatchEventSubscription();
 		window.addEventListener("resize", handleResize);
+		// Initialise match start time so T: starts counting from the right point
+		trpc.cycles.getLastPrestart.query().then((t) => { if (t) matchStartTime = new Date(t); });
+		trpc.cycles.getLastMatchStart.query().then((t) => { if (t) matchStartTime = new Date(t); });
+		cycleInterval = setInterval(() => {
+			currentCycleTime = formatTimeShortNoAgo(matchStartTime);
+		}, 1000);
 	});
 
 	onDestroy(() => {
@@ -419,7 +431,36 @@
 		subscription?.unsubscribe();
 		matchEventSubscription?.unsubscribe();
 		window.removeEventListener("resize", handleResize);
+		if (cycleInterval) clearInterval(cycleInterval);
 	});
+
+	// Match note modal
+	let matchNoteOpen = $state(false);
+	let matchNoteText = $state("");
+	let savingMatchNote = $state(false);
+
+	async function saveMatchNote() {
+		const text = matchNoteText.trim();
+		if (!text || savingMatchNote) return;
+		savingMatchNote = true;
+		try {
+			await trpc.notes.create.mutate({
+				team: null,
+				text,
+				note_type: "MatchNote",
+				match_number: teams?.match_number ?? null,
+				play_number: teams?.play_number ?? null,
+				tournament_level: (teams?.level as TournamentLevel) ?? null,
+			});
+			toast("Match note created", "", "green-500");
+			matchNoteText = "";
+			matchNoteOpen = false;
+		} catch (err: any) {
+			toast("Error creating note", err.message);
+		} finally {
+			savingMatchNote = false;
+		}
+	}
 
 	function dsColor(ds: number): string {
 		if (ds === DSState.ESTOP || ds === DSState.BYPASS) return "bg-red-800";
@@ -435,11 +476,23 @@
 		isShortScreen = window.innerHeight < 900;
 	}
 
+	// Cycle time counting
+	let matchStartTime = $state(new Date());
+	let currentCycleTime = $state("0");
+	let cycleInterval: ReturnType<typeof setInterval> | undefined;
+
 	function formatScheduledTime(d: Date | string | null | undefined): string | null {
 		if (!d) return null;
 		const dt = d instanceof Date ? d : new Date(d as string);
 		if (isNaN(dt.getTime())) return null;
 		return dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+	}
+
+	function fmtCT(ct: string | null | undefined): string | null {
+		if (!ct || ct === "unk" || ct === "") return null;
+		const ms = cycleTimeToMS(ct);
+		if (isNaN(ms) || ms <= 0) return null;
+		return formatTimeShortNoAgoSeconds(ms);
 	}
 
 	// Show scheduled start time for the current unstarted match or future scheduled matches.
@@ -466,6 +519,23 @@
 		const text = monitorFrame.exactAheadBehind ?? monitorFrame.time;
 		if (!text || text === "unk") return null;
 		return text;
+	});
+	let cycleTimeText = $derived.by(() => {
+		if (isLive) {
+			const isRunning = monitorFrame && MatchStateMap[monitorFrame.field] === MatchState.RUNNING;
+			if (isRunning) {
+				// Match is running — show last completed cycle time
+				const c = fmtCT(monitorFrame?.lastCycleTime ?? null);
+				return c ? `C: ${c}` : null;
+			}
+			// Prestart / waiting — show counting-up timer
+			return `T: ${currentCycleTime}`;
+		}
+		if (matchIndex >= 0 && allMatches[matchIndex]?.isPlayed) {
+			const c = fmtCT(allMatches[matchIndex]?.cycleTime ?? null);
+			return c ? `C: ${c}` : null;
+		}
+		return null;
 	});
 </script>
 
@@ -726,6 +796,29 @@
 	</div>
 {/snippet}
 
+<Modal bind:open={matchNoteOpen} size="md" onclose={() => (matchNoteOpen = false)}>
+	{#snippet header()}
+		<span class="font-bold">Match Note - {matchLabel}</span>
+	{/snippet}
+	<Textarea
+		class="w-full"
+		rows={4}
+		placeholder="Describe the observation or issue…"
+		bind:value={matchNoteText}
+		autofocus
+		onkeydown={(e: KeyboardEvent) => {
+			if ((e.ctrlKey || e.metaKey) && e.key === "Enter") saveMatchNote();
+		}}
+	/>
+	<p class="mt-1 text-xs text-gray-400">Tip: Ctrl+Enter to save</p>
+	{#snippet footer()}
+		<Button color="blue" disabled={!matchNoteText.trim() || savingMatchNote} onclick={saveMatchNote}>
+			{savingMatchNote ? "Saving…" : "Save Note"}
+		</Button>
+		<Button color="alternative" onclick={() => (matchNoteOpen = false)}>Cancel</Button>
+	{/snippet}
+</Modal>
+
 <AddQuickNoteModal
 	bind:open={modalOpen}
 	teamNumber={modalTeamNum}
@@ -762,20 +855,35 @@
 				</Button>
 
 				<div class="flex-1 flex flex-col items-center min-w-0">
-					<div class="w-full flex items-center gap-1">
-						<div class="flex-1">
+					<div class="flex items-center justify-center {isShortScreen ? 'gap-2' : 'gap-2 sm:gap-4'} w-full">
+						<div class="flex flex-col items-end gap-0.5 shrink-0">
 							{#if formattedStartTime}
-								<span class="{isShortScreen ? 'text-xs' : 'text-xs sm:text-sm'} {isPastStartTime ? 'text-red-500 dark:text-red-400 font-semibold' : 'text-gray-500 dark:text-gray-400'}">{formattedStartTime}</span>
+								<span class="{isShortScreen ? 'text-xs' : 'text-xs sm:text-sm'} {isPastStartTime ? 'text-red-500 dark:text-red-400 font-semibold' : 'text-gray-500 dark:text-gray-400'}">
+									<span class="opacity-60">Sched:</span> {formattedStartTime}
+								</span>
 							{/if}
+							<button
+								class="text-[11px] sm:text-xs lg:text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 flex items-center gap-1 transition-colors"
+								onclick={() => (matchNoteOpen = true)}
+								title="Add match note"
+							>
+								<Icon icon="mdi:plus-circle-outline" class="size-3 sm:size-3.5 shrink-0" />
+								{#if !isShortScreen}Match note{/if}
+							</button>
 						</div>
 						<p class="font-bold {isShortScreen ? 'text-sm' : 'text-base sm:text-xl lg:text-3xl'} leading-tight text-black dark:text-white text-center shrink-0">
 							{matchLabel}
 						</p>
-						<div class="flex-1 flex justify-end">
-							{#if aheadBehindText}
-								<span class="{isShortScreen ? 'text-xs' : 'text-xs sm:text-sm'} {aheadBehindText.startsWith('-') ? 'text-orange-500 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}">{aheadBehindText}</span>
-							{/if}
-						</div>
+						{#if aheadBehindText || cycleTimeText}
+							<div class="flex flex-col items-start gap-0.5 shrink-0">
+								{#if aheadBehindText}
+									<span class="{isShortScreen ? 'text-xs' : 'text-xs sm:text-sm'} {aheadBehindText.startsWith('-') ? 'text-orange-500 dark:text-orange-400' : 'text-black dark:text-white'}">{aheadBehindText}</span>
+								{/if}
+								{#if cycleTimeText}
+									<span class="{isShortScreen ? 'text-xs' : 'text-xs sm:text-sm'} text-gray-500 dark:text-gray-400">{cycleTimeText}</span>
+								{/if}
+							</div>
+						{/if}
 					</div>
 					{#if !isShortScreen}
 						<div class="h-5 flex items-center gap-1.5">

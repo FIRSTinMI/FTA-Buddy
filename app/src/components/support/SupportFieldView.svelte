@@ -461,6 +461,12 @@
 	let isPastStartTime = $derived(
 		!!scheduledStartTime && Date.now() > new Date(scheduledStartTime as Date).getTime(),
 	);
+	let aheadBehindText = $derived.by(() => {
+		if (!isLive || !monitorFrame) return null;
+		const text = monitorFrame.exactAheadBehind ?? monitorFrame.time;
+		if (!text || text === "unk") return null;
+		return text;
+	});
 </script>
 
 {#snippet teamCard(teamNum: number, alliance: "blue" | "red", slot: 1 | 2 | 3)}
@@ -755,14 +761,22 @@
 					<Icon icon="mdi:chevron-left" class={isShortScreen ? "size-3.5" : "size-4 sm:size-5"} />
 				</Button>
 
-				<div class="flex flex-col items-center min-w-0">
-					<p
-						class="font-bold {isShortScreen
-							? 'text-sm'
-							: 'text-base sm:text-xl lg:text-3xl'} leading-tight text-black dark:text-white text-center truncate"
-					>
-						{matchLabel}
-					</p>
+				<div class="flex-1 flex flex-col items-center min-w-0">
+					<div class="w-full flex items-center gap-1">
+						<div class="flex-1">
+							{#if formattedStartTime}
+								<span class="{isShortScreen ? 'text-xs' : 'text-xs sm:text-sm'} {isPastStartTime ? 'text-red-500 dark:text-red-400 font-semibold' : 'text-gray-500 dark:text-gray-400'}">{formattedStartTime}</span>
+							{/if}
+						</div>
+						<p class="font-bold {isShortScreen ? 'text-sm' : 'text-base sm:text-xl lg:text-3xl'} leading-tight text-black dark:text-white text-center shrink-0">
+							{matchLabel}
+						</p>
+						<div class="flex-1 flex justify-end">
+							{#if aheadBehindText}
+								<span class="{isShortScreen ? 'text-xs' : 'text-xs sm:text-sm'} {aheadBehindText.startsWith('-') ? 'text-orange-500 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}">{aheadBehindText}</span>
+							{/if}
+						</div>
+					</div>
 					{#if !isShortScreen}
 						<div class="h-5 flex items-center gap-1.5">
 							{#if isLive}
@@ -770,12 +784,7 @@
 							{:else if matchIndex >= 0 && !allMatches[matchIndex]?.isPlayed}
 								<Badge color="yellow" class="text-xs">SCHEDULED</Badge>
 							{/if}
-							{#if formattedStartTime}
-								<span class="text-xs {isPastStartTime ? 'text-red-500 dark:text-red-400 font-semibold' : 'text-gray-500 dark:text-gray-400'}">{formattedStartTime}</span>
-							{/if}
 						</div>
-					{:else if formattedStartTime}
-						<span class="text-[10px] leading-tight {isPastStartTime ? 'text-red-500 dark:text-red-400 font-semibold' : 'text-gray-400 dark:text-gray-500'}">{formattedStartTime}</span>
 					{/if}
 				</div>
 

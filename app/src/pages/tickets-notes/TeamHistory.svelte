@@ -97,12 +97,12 @@
 		<Button size="sm" color="alternative" onclick={back}>
 			<Icon icon="mdi:arrow-left" class="size-4 mr-1" />Back
 		</Button>
-		<h1 class="text-2xl font-bold text-black dark:text-white">
+		<h1 class="text-2xl font-bold text-black dark:text-white flex items-baseline gap-2">
 			Team {teamNumber} - Full History
+			<button
+				class="text-sm font-normal text-blue-500 dark:text-blue-400 hover:underline"
+				onclick={() => (pitMapOpen = true)}>Pit Map</button>
 		</h1>
-		<Button size="sm" color="alternative" onclick={() => (pitMapOpen = true)}>
-			<Icon icon="mdi:map-marker" class="size-4 mr-1" />Pit Map
-		</Button>
 	</div>
 
 	<!-- Content -->

@@ -11,6 +11,14 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+    "2.7.5.1": {
+        changelog: `
+        <h1 class="text-lg font-bold">v2.7.5.1</h1>
+        <ul>
+        <li>Nexus pit map: find any team's pit directly from the checklist, team history, or a note</li>
+        </ul>
+        `,
+    },
     "2.7.5.0": {
         changelog: `
         <h1 class="text-lg font-bold">v2.7.5.0</h1>

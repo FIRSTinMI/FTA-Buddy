@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Button, Modal } from "flowbite-svelte";
-	import type { PitMapData } from "../../../shared/types";
+	import type { PitMapData, PitMapElement } from "../../../shared/types";
 	import { trpc } from "../main";
 	import Spinner from "./Spinner.svelte";
 
@@ -40,32 +40,42 @@
 		}
 	}
 
-	function getViewBox(data: PitMapData): string {
-		const padding = 20;
-		return `${-padding} ${-padding} ${data.size.x + padding * 2} ${data.size.y + padding * 2}`;
+	// Some API entries are empty objects {} — skip those
+	function hasGeometry(el: any): el is PitMapElement {
+		return el?.position?.x != null && el?.size?.x != null;
 	}
 
-	function arrowPoints(x: number, y: number, w: number, h: number, angle: number): string {
-		// Simple triangle pointing up, then rotated
-		const cx = x + w / 2;
-		const cy = y + h / 2;
-		const hw = w / 2;
-		const hh = h / 2;
-		// Points relative to center
-		const pts = [
-			[0, -hh],
-			[hw, hh],
-			[-hw, hh],
-		];
+	function getViewBox(data: PitMapData): string {
+		const padding = 20;
+		// Use the map's declared size if available
+		if (data.size?.x && data.size?.y) {
+			return `${-padding} ${-padding} ${data.size.x + padding * 2} ${data.size.y + padding * 2}`;
+		}
+		// Fallback: compute from elements
+		let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+		function expand(el: PitMapElement) {
+			minX = Math.min(minX, el.position.x);
+			minY = Math.min(minY, el.position.y);
+			maxX = Math.max(maxX, el.position.x + el.size.x);
+			maxY = Math.max(maxY, el.position.y + el.size.y);
+		}
+		Object.values(data.pits).filter(hasGeometry).forEach(expand);
+		Object.values(data.areas ?? {}).filter(hasGeometry).forEach(expand);
+		Object.values(data.walls ?? {}).filter(hasGeometry).forEach(expand);
+		Object.values(data.labels ?? {}).filter(hasGeometry).forEach(expand);
+		Object.values(data.arrows ?? {}).filter(hasGeometry).forEach(expand);
+		if (minX === Infinity) return "0 0 100 100";
+		return `${minX - padding} ${minY - padding} ${maxX - minX + padding * 2} ${maxY - minY + padding * 2}`;
+	}
+
+	// Returns SVG polygon points for a single arrowhead triangle.
+	// cx/cy = center, hw/hh = half-width/half-height, angle = rotation in degrees
+	function arrowTriangle(cx: number, cy: number, hw: number, hh: number, angle: number): string {
 		const rad = (angle * Math.PI) / 180;
 		const cos = Math.cos(rad);
 		const sin = Math.sin(rad);
-		return pts
-			.map(([px, py]) => {
-				const rx = px! * cos - py! * sin + cx;
-				const ry = px! * sin + py! * cos + cy;
-				return `${rx},${ry}`;
-			})
+		return [[0, -hh], [hw, hh], [-hw, hh]]
+			.map(([px, py]) => `${px! * cos - py! * sin + cx},${px! * sin + py! * cos + cy}`)
 			.join(" ");
 	}
 </script>
@@ -86,54 +96,53 @@
 		{:else if !pitMapData}
 			<p class="text-gray-500 dark:text-gray-400">No pit map available for this event.</p>
 		{:else}
-			<div class="w-full overflow-auto">
+			<div class="w-full overflow-auto max-h-[65vh]">
 				<svg
-					class="w-full h-auto max-h-[70vh]"
+					width="100%"
 					viewBox={getViewBox(pitMapData)}
+					preserveAspectRatio="xMidYMid meet"
+					style="min-width: 320px; display: block;"
 					xmlns="http://www.w3.org/2000/svg"
 				>
 					<!-- Walls -->
-					{#if pitMapData.walls}
-						{#each Object.values(pitMapData.walls) as wall}
-							<rect
-								x={wall.position.x}
-								y={wall.position.y}
-								width={wall.size.x}
-								height={wall.size.y}
-								fill="#6b7280"
-								stroke="none"
-							/>
-						{/each}
-					{/if}
+					{#each Object.values(pitMapData.walls ?? {}).filter(hasGeometry) as wall}
+						<rect
+							x={wall.position.x}
+							y={wall.position.y}
+							width={wall.size.x}
+							height={wall.size.y}
+							fill="#9ca3af"
+							stroke="none"
+						/>
+					{/each}
 
 					<!-- Areas -->
-					{#if pitMapData.areas}
-						{#each Object.entries(pitMapData.areas) as [, area]}
-							<rect
-								x={area.position.x}
-								y={area.position.y}
-								width={area.size.x}
-								height={area.size.y}
-								fill="#fef3c7"
-								stroke="#d97706"
-								stroke-width="2"
-								rx="2"
-							/>
-							<text
-								x={area.position.x + area.size.x / 2}
-								y={area.position.y + area.size.y / 2}
-								text-anchor="middle"
-								dominant-baseline="middle"
-								font-size={Math.min(area.size.x, area.size.y) * 0.25}
-								fill="#92400e"
-								font-weight="600"
-							>{area.label}</text>
-						{/each}
-					{/if}
+					{#each Object.values(pitMapData.areas ?? {}).filter(hasGeometry) as area}
+						<rect
+							x={area.position.x}
+							y={area.position.y}
+							width={area.size.x}
+							height={area.size.y}
+							fill="#fef3c7"
+							stroke="#d97706"
+							stroke-width="2"
+							rx="2"
+						/>
+						<text
+							x={area.position.x + area.size.x / 2}
+							y={area.position.y + area.size.y / 2}
+							text-anchor="middle"
+							dominant-baseline="middle"
+							font-size={Math.min(area.size.x, area.size.y) * 0.25}
+							fill="#92400e"
+							font-weight="600"
+						>{area.label}</text>
+					{/each}
 
 					<!-- Pits -->
-					{#each Object.entries(pitMapData.pits) as [pitId, pit]}
+					{#each Object.entries(pitMapData.pits).filter(([, p]) => hasGeometry(p)) as [pitId, pit]}
 						{@const isTarget = pitId === teamPitId}
+						{@const fs = Math.min(pit.size.x, pit.size.y)}
 						<rect
 							x={pit.position.x}
 							y={pit.position.y}
@@ -144,59 +153,59 @@
 							stroke-width={isTarget ? 3 : 1}
 							rx="2"
 						/>
-						<!-- Pit label (row/number like "A1") -->
-						<text
-							x={pit.position.x + pit.size.x / 2}
-							y={pit.position.y + pit.size.y * 0.35}
-							text-anchor="middle"
-							dominant-baseline="middle"
-							font-size={Math.min(pit.size.x, pit.size.y) * 0.3}
-							fill={isTarget ? "#1d4ed8" : "#374151"}
-							font-weight={isTarget ? "700" : "500"}
-						>{pitId}</text>
-						<!-- Team number -->
+						<!-- Team number (top, bold) -->
 						{#if pit.team}
 							<text
 								x={pit.position.x + pit.size.x / 2}
-								y={pit.position.y + pit.size.y * 0.68}
+								y={pit.position.y + pit.size.y * 0.38}
 								text-anchor="middle"
 								dominant-baseline="middle"
-								font-size={Math.min(pit.size.x, pit.size.y) * 0.22}
-								fill={isTarget ? "#1e40af" : "#6b7280"}
+								font-size={fs * 0.28}
+								fill={isTarget ? "#1d4ed8" : "#374151"}
+								font-weight="700"
 							>{pit.team}</text>
 						{/if}
+						<!-- Pit address (bottom, smaller) -->
+						<text
+							x={pit.position.x + pit.size.x / 2}
+							y={pit.position.y + pit.size.y * 0.68}
+							text-anchor="middle"
+							dominant-baseline="middle"
+							font-size={fs * 0.2}
+							fill={isTarget ? "#3b82f6" : "#6b7280"}
+						>{pitId}</text>
 					{/each}
 
 					<!-- Labels -->
-					{#if pitMapData.labels}
-						{#each Object.values(pitMapData.labels) as label}
-							<text
-								x={label.position.x + label.size.x / 2}
-								y={label.position.y + label.size.y / 2}
-								text-anchor="middle"
-								dominant-baseline="middle"
-								font-size={Math.min(label.size.x, label.size.y) * 0.4}
-								fill="#374151"
-								font-weight="600"
-							>{label.label}</text>
-						{/each}
-					{/if}
+					{#each Object.values(pitMapData.labels ?? {}).filter(hasGeometry) as label}
+						<text
+							x={label.position.x + label.size.x / 2}
+							y={label.position.y + label.size.y / 2}
+							text-anchor="middle"
+							dominant-baseline="middle"
+							font-size={Math.min(label.size.x, label.size.y) * 0.4}
+							fill="#374151"
+							font-weight="600"
+						>{label.label}</text>
+					{/each}
 
 					<!-- Arrows -->
-					{#if pitMapData.arrows}
-						{#each Object.values(pitMapData.arrows) as arrow}
-							<polygon
-								points={arrowPoints(
-									arrow.position.x,
-									arrow.position.y,
-									arrow.size.x,
-									arrow.size.y,
-									arrow.angle,
-								)}
-								fill="#6b7280"
-							/>
-						{/each}
-					{/if}
+					{#each Object.values(pitMapData.arrows ?? {}).filter(hasGeometry) as arrow}
+						{@const cx = arrow.position.x + arrow.size.x / 2}
+						{@const cy = arrow.position.y + arrow.size.y / 2}
+						{@const hw = arrow.size.x / 2}
+						{@const hh = arrow.size.y / 2}
+						{#if arrow.type === "double"}
+							<!-- Two half-size triangles offset along the arrow axis -->
+							{@const rad = (arrow.angle * Math.PI) / 180}
+							{@const dx = Math.sin(rad) * hh * 0.4}
+							{@const dy = -Math.cos(rad) * hh * 0.4}
+							<polygon points={arrowTriangle(cx + dx, cy + dy, hw * 0.8, hh * 0.6, arrow.angle)} fill="#6b7280" />
+							<polygon points={arrowTriangle(cx - dx, cy - dy, hw * 0.8, hh * 0.6, arrow.angle + 180)} fill="#6b7280" />
+						{:else}
+							<polygon points={arrowTriangle(cx, cy, hw, hh, arrow.angle)} fill="#6b7280" />
+						{/if}
+					{/each}
 				</svg>
 			</div>
 		{/if}

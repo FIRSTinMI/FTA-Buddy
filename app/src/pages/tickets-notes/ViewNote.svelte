@@ -535,13 +535,13 @@
 						ondelete={() => (deleteNotePopup = true)}
 						onopenassignmodal={openAssignModal}
 						onviewlog={viewLog}
-						onopenpitmap={() => (pitMapOpen = true)}
+	
 					/>
 
 					<!-- Scrollable content -->
 					<div class="flex flex-col flex-1 min-h-0 overflow-y-auto gap-3">
 						<!-- Note type header + played-since + team + next match -->
-						<NoteMatchInfo {note} {nextMatch} {playedMatchesSince} />
+						<NoteMatchInfo {note} {nextMatch} {playedMatchesSince} onopenpitmap={() => (pitMapOpen = true)} />
 
 						<!-- Created at + author -->
 						<div

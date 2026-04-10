@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { inArray, eq } from "drizzle-orm";
-import webpush, { PushSubscription, SendResult } from "web-push";
+import webpush from "web-push";
+import type { PushSubscription, SendResult } from "web-push";
 import { notificationEmitter } from "../state";
 import type { Notification } from "../../shared/types";
 import { db } from "../db/db";

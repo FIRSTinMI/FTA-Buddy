@@ -13,7 +13,7 @@ import {
 	uuid,
 	varchar,
 } from "drizzle-orm/pg-core";
-import { EventAutoEventSettings, FmsNoteMetadata, Profile } from "../../shared/types";
+import type { EventAutoEventSettings, FmsNoteMetadata, Profile } from "../../shared/types";
 export const roleEnum = pgEnum("role", ["FTA", "FTAA", "CSA", "RI"]);
 
 export const users = pgTable("users", {

@@ -52,7 +52,10 @@
 			return `${-padding} ${-padding} ${data.size.x + padding * 2} ${data.size.y + padding * 2}`;
 		}
 		// Fallback: compute from elements
-		let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+		let minX = Infinity,
+			minY = Infinity,
+			maxX = -Infinity,
+			maxY = -Infinity;
 		function expand(el: PitMapElement) {
 			minX = Math.min(minX, el.position.x);
 			minY = Math.min(minY, el.position.y);
@@ -60,10 +63,18 @@
 			maxY = Math.max(maxY, el.position.y + el.size.y);
 		}
 		Object.values(data.pits).filter(hasGeometry).forEach(expand);
-		Object.values(data.areas ?? {}).filter(hasGeometry).forEach(expand);
-		Object.values(data.walls ?? {}).filter(hasGeometry).forEach(expand);
-		Object.values(data.labels ?? {}).filter(hasGeometry).forEach(expand);
-		Object.values(data.arrows ?? {}).filter(hasGeometry).forEach(expand);
+		Object.values(data.areas ?? {})
+			.filter(hasGeometry)
+			.forEach(expand);
+		Object.values(data.walls ?? {})
+			.filter(hasGeometry)
+			.forEach(expand);
+		Object.values(data.labels ?? {})
+			.filter(hasGeometry)
+			.forEach(expand);
+		Object.values(data.arrows ?? {})
+			.filter(hasGeometry)
+			.forEach(expand);
 		if (minX === Infinity) return "0 0 100 100";
 		return `${minX - padding} ${minY - padding} ${maxX - minX + padding * 2} ${maxY - minY + padding * 2}`;
 	}
@@ -74,7 +85,11 @@
 		const rad = (angle * Math.PI) / 180;
 		const cos = Math.cos(rad);
 		const sin = Math.sin(rad);
-		return [[0, -hh], [hw, hh], [-hw, hh]]
+		return [
+			[0, -hh],
+			[hw, hh],
+			[-hw, hh],
+		]
 			.map(([px, py]) => `${px! * cos - py! * sin + cx},${px! * sin + py! * cos + cy}`)
 			.join(" ");
 	}
@@ -135,8 +150,8 @@
 							dominant-baseline="middle"
 							font-size={Math.min(area.size.x, area.size.y) * 0.25}
 							fill="#92400e"
-							font-weight="600"
-						>{area.label}</text>
+							font-weight="600">{area.label}</text
+						>
 					{/each}
 
 					<!-- Pits -->
@@ -162,8 +177,8 @@
 								dominant-baseline="middle"
 								font-size={fs * 0.28}
 								fill={isTarget ? "#1d4ed8" : "#374151"}
-								font-weight="700"
-							>{pit.team}</text>
+								font-weight="700">{pit.team}</text
+							>
 						{/if}
 						<!-- Pit address (bottom, smaller) -->
 						<text
@@ -172,8 +187,8 @@
 							text-anchor="middle"
 							dominant-baseline="middle"
 							font-size={fs * 0.2}
-							fill={isTarget ? "#3b82f6" : "#6b7280"}
-						>{pitId}</text>
+							fill={isTarget ? "#3b82f6" : "#6b7280"}>{pitId}</text
+						>
 					{/each}
 
 					<!-- Labels -->
@@ -185,8 +200,8 @@
 							dominant-baseline="middle"
 							font-size={Math.min(label.size.x, label.size.y) * 0.4}
 							fill="#374151"
-							font-weight="600"
-						>{label.label}</text>
+							font-weight="600">{label.label}</text
+						>
 					{/each}
 
 					<!-- Arrows -->
@@ -200,8 +215,14 @@
 							{@const rad = (arrow.angle * Math.PI) / 180}
 							{@const dx = Math.sin(rad) * hh * 0.4}
 							{@const dy = -Math.cos(rad) * hh * 0.4}
-							<polygon points={arrowTriangle(cx + dx, cy + dy, hw * 0.8, hh * 0.6, arrow.angle)} fill="#6b7280" />
-							<polygon points={arrowTriangle(cx - dx, cy - dy, hw * 0.8, hh * 0.6, arrow.angle + 180)} fill="#6b7280" />
+							<polygon
+								points={arrowTriangle(cx + dx, cy + dy, hw * 0.8, hh * 0.6, arrow.angle)}
+								fill="#6b7280"
+							/>
+							<polygon
+								points={arrowTriangle(cx - dx, cy - dy, hw * 0.8, hh * 0.6, arrow.angle + 180)}
+								fill="#6b7280"
+							/>
 						{:else}
 							<polygon points={arrowTriangle(cx, cy, hw, hh, arrow.angle)} fill="#6b7280" />
 						{/if}

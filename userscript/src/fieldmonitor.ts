@@ -31,7 +31,7 @@ function injectStyles(): void {
 function setPageMeta(): void {
 	document.title = "FMS - FTA Buddy";
 
-	document.querySelectorAll("link[rel~='icon']").forEach(el => el.remove());
+	document.querySelectorAll("link[rel~='icon']").forEach((el) => el.remove());
 
 	const link = document.createElement("link");
 	link.rel = "icon";
@@ -78,12 +78,24 @@ function hideAngularUI(): void {
 }
 
 function waitForApp(callback: () => void, attempts = 0): void {
-	if (attempts === 0) console.log("[FTA Buddy] Waiting for Angular app...", { readyState: document.readyState, body: !!document.body });
+	if (attempts === 0)
+		console.log("[FTA Buddy] Waiting for Angular app...", {
+			readyState: document.readyState,
+			body: !!document.body,
+		});
 	if (isAppReady()) {
 		console.log("[FTA Buddy] App ready after", attempts, "attempts");
 		callback();
 	} else if (attempts < 60) {
-		if (attempts % 5 === 0) console.log("[FTA Buddy] Still waiting... attempt", attempts, "| field-monitor-simple:", !!document.querySelector("field-monitor-simple"), "| .content-container-small:", !!document.querySelector(".content-container-small"));
+		if (attempts % 5 === 0)
+			console.log(
+				"[FTA Buddy] Still waiting... attempt",
+				attempts,
+				"| field-monitor-simple:",
+				!!document.querySelector("field-monitor-simple"),
+				"| .content-container-small:",
+				!!document.querySelector(".content-container-small"),
+			);
 		setTimeout(() => waitForApp(callback, attempts + 1), 500);
 	} else {
 		console.warn("[FTA Buddy] FieldMonitor did not load after 30s - giving up");
@@ -145,7 +157,14 @@ function boot(): void {
 				const frame = buildFrame();
 				if (!frame) return;
 				frameCount++;
-				if (frameCount <= 5 || frameCount % 50 === 0) console.log("[FTA Buddy] Frame #" + frameCount, "field:", frame.field, "blue1:", frame.blue1?.number);
+				if (frameCount <= 5 || frameCount % 50 === 0)
+					console.log(
+						"[FTA Buddy] Frame #" + frameCount,
+						"field:",
+						frame.field,
+						"blue1:",
+						frame.blue1?.number,
+					);
 				updateHistory(history, frame);
 				updateAll(els, frame, history);
 			}, 0);

@@ -11,8 +11,8 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
-    "2.7.6.0": {
-        changelog: `
+	"2.7.6.0": {
+		changelog: `
         <h1 class="text-lg font-bold">v2.7.6.0</h1>
         <ul>
         <li>Magic link for joining events - copy from event settings or click the button in the CSA Slack channel</li>
@@ -20,75 +20,75 @@ export const VERSIONS: { [key: string]: Version } = {
         <li>Checklist: click column headers (Present, Inspected, Radio, Connection) to sort incomplete teams first</li>
         </ul>
         `,
-    },
-    "2.7.5.2": {
-        changelog: `
+	},
+	"2.7.5.2": {
+		changelog: `
         <h1 class="text-lg font-bold">v2.7.5.2</h1>
         <ul>
         <li>Add schedule start time & cycle time to notepad field view</li>
         <li>Fix slack integration messing up assignees</li>
         </ul>
         `,
-    },
-    "2.7.5.1": {
-        changelog: `
+	},
+	"2.7.5.1": {
+		changelog: `
         <h1 class="text-lg font-bold">v2.7.5.1</h1>
         <ul>
         <li>Nexus pit map: find any team's pit directly from the checklist, team history, or a note</li>
         </ul>
         `,
-    },
-    "2.7.5.0": {
-        changelog: `
+	},
+	"2.7.5.0": {
+		changelog: `
         <h1 class="text-lg font-bold">v2.7.5.0</h1>
         <ul>
         <li>Local account improvements: access the notepad and create notes without signing in</li>
         </ul>
         `,
-    },
-    "2.7.4.1": {
-        changelog: `
+	},
+	"2.7.4.1": {
+		changelog: `
         <h1 class="text-lg font-bold">v2.7.4.1</h1>
         <ul>
         <li>Added the ability to select a CSA or RI or neither for a note</li>
         <li>Sync notes from Nexus via Slack bot</li>
         </ul>
         `,
-    },
-    "2.7.4.0": {
-        changelog: `
+	},
+	"2.7.4.0": {
+		changelog: `
         <h1 class="text-lg font-bold">v2.7.4.0</h1>
         <ul>
         <li>In the notepad feed if you type a team number you can view their team history</li>
         </ul>
         `,
-    },
-    "2.7.3.2": {
-        changelog: `
+	},
+	"2.7.3.2": {
+		changelog: `
         <h1 class="text-lg font-bold">v2.7.3.2</h1>
         <ul>
         <li>Fixed cycle time data from scraping extension</li>
         <li>Added "FTA Buddy Native" to extension, add FTA Buddy features to the official field monitor</li>
         <li>Fix match log fetching in scraping and notepad only mode</li>
-        </ul>`
-    },
-    "2.7.3.1": {
-        changelog: `
+        </ul>`,
+	},
+	"2.7.3.1": {
+		changelog: `
         <h1 class="text-lg font-bold">v2.7.3.1</h1>
         <ul>
         <li>Made the extension poll for schedule details since don't have SignalR for that anymore</li>
         <li>Fixed a bug where the exact ahead/behind was not calculated if schedule details were uploaded late</li>
         </ul>
-        `
-    },
-    "2.7.3.0": {
-        changelog: `
+        `,
+	},
+	"2.7.3.0": {
+		changelog: `
         <h1 class="text-lg font-bold">v2.7.3.0</h1>
         <ul>
         <li>Updated the extension to scrape the field monitor page instead of connecting to SignalR</li>
         </ul>
-        `
-    },
+        `,
+	},
 	"2.7.2.0": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.2.0</h1>

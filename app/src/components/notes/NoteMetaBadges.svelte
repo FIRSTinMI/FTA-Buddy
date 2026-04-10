@@ -60,6 +60,6 @@
 	{/if}
 
 	{#if note.is_nexus}
-		<Badge color="dark">Nexus</Badge>
+		<Badge color="gray">Nexus</Badge>
 	{/if}
 </div>

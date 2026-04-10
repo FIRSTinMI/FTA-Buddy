@@ -38,13 +38,20 @@ const FIELD_STATE_LABELS: Record<number, string> = {
 
 function dsLetter(ds: DSState): string {
 	switch (ds) {
-		case DSState.GREEN_X: return "X";
-		case DSState.MOVE_STATION: return "M";
-		case DSState.WAITING: return "W";
-		case DSState.BYPASS: return "B";
-		case DSState.ESTOP: return "E";
-		case DSState.ASTOP: return "A";
-		default: return "";
+		case DSState.GREEN_X:
+			return "X";
+		case DSState.MOVE_STATION:
+			return "M";
+		case DSState.WAITING:
+			return "W";
+		case DSState.BYPASS:
+			return "B";
+		case DSState.ESTOP:
+			return "E";
+		case DSState.ASTOP:
+			return "A";
+		default:
+			return "";
 	}
 }
 
@@ -62,10 +69,7 @@ function buildSparklinePath(values: number[], min: number, max: number): string 
 	const range = max - min || 1;
 	const n = values.length;
 
-	const pts = values.map((v, i): [number, number] => [
-		(i / (n - 1)) * 90,
-		((max - v) / range) * 100,
-	]);
+	const pts = values.map((v, i): [number, number] => [(i / (n - 1)) * 90, ((max - v) / range) * 100]);
 
 	let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
 	for (let i = 0; i < pts.length - 1; i++) {
@@ -85,9 +89,9 @@ function makeSignalSvg(): { svg: SVGSVGElement; bars: SVGRectElement[] } {
 
 	// Three bars of increasing height (left=short, right=tall)
 	const barDefs = [
-		[1, 18, 5, 5],     // bar 1 - short
-		[9.5, 12, 5, 11],  // bar 2 - medium
-		[18, 6, 5, 17],    // bar 3 - tall
+		[1, 18, 5, 5], // bar 1 - short
+		[9.5, 12, 5, 11], // bar 2 - medium
+		[18, 6, 5, 17], // bar 3 - tall
 	] as const;
 
 	const bars: SVGRectElement[] = barDefs.map(([x, y, w, h]) => {
@@ -108,17 +112,14 @@ function updateSignalBars(bars: SVGRectElement[], dBm: number | null | undefined
 	const s = dBm ?? 0;
 	const level = s === 0 ? 0 : s > -60 ? 3 : s > -70 ? 2 : s > -80 ? 1 : 0;
 	// Matches MonitorRow.svelte: green-600 / yellow-600 / red-600 / gray
-	const activeColor =
-		level === 3 ? "#16a34a" :
-		level === 2 ? "#ca8a04" :
-		level >= 1  ? "#dc2626" : "#9e9e9e";
+	const activeColor = level === 3 ? "#16a34a" : level === 2 ? "#ca8a04" : level >= 1 ? "#dc2626" : "#9e9e9e";
 	bars.forEach((bar, i) => bar.setAttribute("fill", i < level ? activeColor : "#555"));
 }
 
 // ── Fullscreen ────────────────────────────────────────────────────────────────
 
 // MDI icon paths (24×24 viewBox)
-const ICON_FULLSCREEN      = "M5,5H10V7H7V10H5V5M14,5H19V10H17V7H14V5M17,14H19V19H14V17H17V14M10,17V19H5V14H7V17H10Z";
+const ICON_FULLSCREEN = "M5,5H10V7H7V10H5V5M14,5H19V10H17V7H14V5M17,14H19V19H14V17H17V14M10,17V19H5V14H7V17H10Z";
 const ICON_FULLSCREEN_EXIT = "M14,14H19V16H16V19H14V14M5,14H10V19H8V16H5V14M8,5H10V10H5V8H8V5M19,8V10H14V5H16V8H19Z";
 
 export function makeFullscreenBtn(): HTMLButtonElement {
@@ -283,14 +284,28 @@ function makeStationCells(alliance: "blue" | "red"): StationElements {
 	netBtn.appendChild(netSigDiv);
 
 	return {
-		teamBtn, teamNumP, teamWarnP,
-		dsBtn, radioBtn, rioBtn,
-		batBtn: bat.btn, batPath: bat.path, batVal: bat.val, batSub,
-		pingBtn: ping.btn, pingPath: ping.path, pingVal: ping.val,
+		teamBtn,
+		teamNumP,
+		teamWarnP,
+		dsBtn,
+		radioBtn,
+		rioBtn,
+		batBtn: bat.btn,
+		batPath: bat.path,
+		batVal: bat.val,
+		batSub,
+		pingBtn: ping.btn,
+		pingPath: ping.path,
+		pingVal: ping.val,
 		bwuBtn,
-		sigBtn, sigSpan, sigBars,
+		sigBtn,
+		sigSpan,
+		sigBars,
 		lcBtn,
-		netBtn, netPingDiv, netBwuDiv, netSigDiv,
+		netBtn,
+		netPingDiv,
+		netBwuDiv,
+		netSigDiv,
 	};
 }
 
@@ -361,11 +376,11 @@ export function buildRoot(): RootElements {
 		grid.appendChild(els.radioBtn);
 		grid.appendChild(els.rioBtn);
 		grid.appendChild(els.batBtn);
-		grid.appendChild(els.pingBtn);   // fb-ping: hidden mobile, flex desktop
-		grid.appendChild(els.bwuBtn);    // fb-bwu: hidden mobile, flex desktop
-		grid.appendChild(els.sigBtn);    // fb-signal: hidden mobile, flex desktop
-		grid.appendChild(els.lcBtn);     // fb-lastchange: hidden mobile, flex desktop
-		grid.appendChild(els.netBtn);    // fb-net: flex mobile, hidden desktop
+		grid.appendChild(els.pingBtn); // fb-ping: hidden mobile, flex desktop
+		grid.appendChild(els.bwuBtn); // fb-bwu: hidden mobile, flex desktop
+		grid.appendChild(els.sigBtn); // fb-signal: hidden mobile, flex desktop
+		grid.appendChild(els.lcBtn); // fb-lastchange: hidden mobile, flex desktop
+		grid.appendChild(els.netBtn); // fb-net: flex mobile, hidden desktop
 	}
 
 	scroll.appendChild(grid);
@@ -384,19 +399,13 @@ export function buildRoot(): RootElements {
 
 function updateHeader(els: RootElements, frame: PartialMonitorFrame): void {
 	const level =
-		frame.level === "Qualification" ? "Qual" :
-		frame.level === "Playoff" ? "Playoff" :
-		frame.level ?? "";
+		frame.level === "Qualification" ? "Qual" : frame.level === "Playoff" ? "Playoff" : (frame.level ?? "");
 	els.headerMatchDiv.textContent = frame.match > 0 ? `M: ${frame.match}` : "-";
 	els.headerStateDiv.textContent = FIELD_STATE_LABELS[frame.field] ?? "Unknown";
 	els.headerTimeSpan.textContent = frame.time ?? "";
 }
 
-function updateStation(
-	els: StationElements,
-	robot: PartialRobotInfo,
-	hist: StationHistory,
-): void {
+function updateStation(els: StationElements, robot: PartialRobotInfo, hist: StationHistory): void {
 	const ds = robot.ds ?? DSState.RED;
 	const radio = robot.radio ?? false;
 	const rio = robot.rio ?? false;
@@ -405,7 +414,7 @@ function updateStation(
 
 	// ── Team ──────────────────────────────────────────────────────────────────
 	els.teamNumP.textContent = robot.number > 0 ? String(robot.number) : "-";
-	els.teamWarnP.textContent = "";  // no server = no badges
+	els.teamWarnP.textContent = ""; // no server = no badges
 
 	// ── DS ────────────────────────────────────────────────────────────────────
 	// ds-N class maps to exact colors in styles.ts (0=red, 1/2=green, 3/4=yellow, 5/6=dark-red, 7=green-600)
@@ -432,7 +441,7 @@ function updateStation(
 	if (batVals.length >= 2) {
 		els.batPath.setAttribute("d", buildSparklinePath(batVals, 6, 14));
 	}
-	const validBatVals = batVals.filter(v => v > 0);
+	const validBatVals = batVals.filter((v) => v > 0);
 	if (validBatVals.length > 0) {
 		const sorted = [...validBatVals].sort((a, b) => a - b);
 		const minBat = sorted[Math.floor(sorted.length * 0.02)] ?? sorted[0];
@@ -445,9 +454,7 @@ function updateStation(
 	// ── Ping ──────────────────────────────────────────────────────────────────
 	const ping = robot.ping ?? 0;
 	// Exact formula from MonitorRow.svelte lines 211-215
-	const pingAlpha =
-		ping >= 20 && ping < 100 ? Math.log10(ping / 25) :
-		ping > 100 ? 0.5 : 0;
+	const pingAlpha = ping >= 20 && ping < 100 ? Math.log10(ping / 25) : ping > 100 ? 0.5 : 0;
 	els.pingBtn.style.backgroundColor = `rgba(255,0,0,${pingAlpha})`;
 	els.pingVal.textContent = ping > 0 ? `${ping}ms` : "-";
 	const pingVals = hist.ping.values;
@@ -468,9 +475,8 @@ function updateStation(
 	// ── Last Change - only shown when something is disconnected and not bypassed/estoped
 	const bypassed = ds === DSState.BYPASS || ds === DSState.ESTOP;
 	const somethingDisconnected = ds === DSState.RED || !radio || !rio || !code;
-	els.lcBtn.textContent = (!bypassed && somethingDisconnected)
-		? formatRelativeTime(Date.now() - hist.lastChangedAt)
-		: "";
+	els.lcBtn.textContent =
+		!bypassed && somethingDisconnected ? formatRelativeTime(Date.now() - hist.lastChangedAt) : "";
 
 	// ── Net (mobile combined cell) ────────────────────────────────────────────
 	els.netPingDiv.textContent = `${ping} ms`;
@@ -478,11 +484,7 @@ function updateStation(
 	els.netSigDiv.textContent = sig !== 0 ? `${sig} dBm` : "0 dBm";
 }
 
-export function updateAll(
-	els: RootElements,
-	frame: PartialMonitorFrame,
-	history: FrameHistory,
-): void {
+export function updateAll(els: RootElements, frame: PartialMonitorFrame, history: FrameHistory): void {
 	updateHeader(els, frame);
 	for (const key of STATION_KEYS) {
 		const robot = frame[key] as PartialRobotInfo;

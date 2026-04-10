@@ -49,7 +49,18 @@ async function bgGetStatuses(): Promise<{ signalrStatus: string }> {
 
 function load() {
 	chrome.storage.local.get(
-		["url", "cloud", "useDev", "event", "eventToken", "changed", "enabled", "fieldMonitor", "useSignalR", "fmsApiEnabled"],
+		[
+			"url",
+			"cloud",
+			"useDev",
+			"event",
+			"eventToken",
+			"changed",
+			"enabled",
+			"fieldMonitor",
+			"useSignalR",
+			"fmsApiEnabled",
+		],
 		(item) => {
 			if (
 				item.url == undefined ||
@@ -227,7 +238,16 @@ function handleUpdate() {
 }
 
 function updatePopup(
-	setting: "url" | "cloud" | "useDev" | "enabled" | "fieldMonitor" | "useSignalR" | "fmsApiEnabled" | "event" | "eventToken",
+	setting:
+		| "url"
+		| "cloud"
+		| "useDev"
+		| "enabled"
+		| "fieldMonitor"
+		| "useSignalR"
+		| "fmsApiEnabled"
+		| "event"
+		| "eventToken",
 	value: boolean | string,
 ) {
 	const elm = document?.getElementById(setting);
@@ -247,7 +267,16 @@ chrome.storage.local.onChanged.addListener((changes) => {
 	for (const key of Object.keys(changes)) {
 		if (key === "changed") continue;
 		updatePopup(
-			key as "url" | "cloud" | "useDev" | "enabled" | "fieldMonitor" | "useSignalR" | "fmsApiEnabled" | "event" | "eventToken",
+			key as
+				| "url"
+				| "cloud"
+				| "useDev"
+				| "enabled"
+				| "fieldMonitor"
+				| "useSignalR"
+				| "fmsApiEnabled"
+				| "event"
+				| "eventToken",
 			changes[key].newValue as string | boolean,
 		);
 	}

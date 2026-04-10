@@ -535,13 +535,17 @@
 						ondelete={() => (deleteNotePopup = true)}
 						onopenassignmodal={openAssignModal}
 						onviewlog={viewLog}
-	
 					/>
 
 					<!-- Scrollable content -->
 					<div class="flex flex-col flex-1 min-h-0 overflow-y-auto gap-3">
 						<!-- Note type header + played-since + team + next match -->
-						<NoteMatchInfo {note} {nextMatch} {playedMatchesSince} onopenpitmap={() => (pitMapOpen = true)} />
+						<NoteMatchInfo
+							{note}
+							{nextMatch}
+							{playedMatchesSince}
+							onopenpitmap={() => (pitMapOpen = true)}
+						/>
 
 						<!-- Created at + author -->
 						<div
@@ -577,7 +581,9 @@
 
 					<!-- Reply form -->
 					{#if isReadOnly}
-						<div class="w-full rounded-xl bg-gray-100 dark:bg-neutral-800 border border-gray-300 dark:border-neutral-600 px-4 py-2.5 mt-1 text-sm text-gray-500 dark:text-gray-400 text-center">
+						<div
+							class="w-full rounded-xl bg-gray-100 dark:bg-neutral-800 border border-gray-300 dark:border-neutral-600 px-4 py-2.5 mt-1 text-sm text-gray-500 dark:text-gray-400 text-center"
+						>
 							<Icon icon="mdi:lock-outline" class="size-4 inline mr-1 mb-0.5" />
 							This note is from a previous event ({note.event_code}) and is read-only.
 						</div>

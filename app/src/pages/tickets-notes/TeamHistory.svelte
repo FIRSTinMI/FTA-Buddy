@@ -101,7 +101,8 @@
 			Team {teamNumber} - Full History
 			<button
 				class="text-sm font-normal text-blue-500 dark:text-blue-400 hover:underline"
-				onclick={() => (pitMapOpen = true)}>Pit Map</button>
+				onclick={() => (pitMapOpen = true)}>Pit Map</button
+			>
 		</h1>
 	</div>
 

@@ -210,25 +210,29 @@
 						<button
 							onclick={() => (sortBy = sortBy === "present" ? null : "present")}
 							class={sortBy === "present" ? "text-blue-400 font-bold" : "font-bold"}
-						>Present{sortBy === "present" ? " ▲" : ""}</button>
+							>Present{sortBy === "present" ? " ▲" : ""}</button
+						>
 					</td>
 					<td class="p-1 md:p-2">
 						<button
 							onclick={() => (sortBy = sortBy === "inspected" ? null : "inspected")}
 							class={sortBy === "inspected" ? "text-blue-400 font-bold" : "font-bold"}
-						>Inspected{sortBy === "inspected" ? " ▲" : ""}</button>
+							>Inspected{sortBy === "inspected" ? " ▲" : ""}</button
+						>
 					</td>
 					<td class="p-1 md:p-2">
 						<button
 							onclick={() => (sortBy = sortBy === "radioProgrammed" ? null : "radioProgrammed")}
 							class={sortBy === "radioProgrammed" ? "text-blue-400 font-bold" : "font-bold"}
-						>Radio{sortBy === "radioProgrammed" ? " ▲" : ""}</button>
+							>Radio{sortBy === "radioProgrammed" ? " ▲" : ""}</button
+						>
 					</td>
 					<td class="p-1 md:p-2">
 						<button
 							onclick={() => (sortBy = sortBy === "connectionTested" ? null : "connectionTested")}
 							class={sortBy === "connectionTested" ? "text-blue-400 font-bold" : "font-bold"}
-						>Connection{sortBy === "connectionTested" ? " ▲" : ""}</button>
+							>Connection{sortBy === "connectionTested" ? " ▲" : ""}</button
+						>
 					</td>
 				</tr>
 			</thead>
@@ -238,8 +242,11 @@
 						<td class="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 px-6 py-4">
 							<button
 								class="font-medium hover:underline text-blue-600 dark:text-blue-400"
-								onclick={() => { pitMapTeam = team; pitMapOpen = true; }}
-							>{team}</button>
+								onclick={() => {
+									pitMapTeam = team;
+									pitMapOpen = true;
+								}}>{team}</button
+							>
 						</td>
 						<td class="hidden sm:table-cell">{teamNames[team]}</td>
 						<td>

@@ -111,10 +111,9 @@
 			>Team {displayTeam(note.team)}</button
 		>
 		{#if onopenpitmap}
-			<button
-				class="text-xs text-blue-500 dark:text-blue-400 hover:underline"
-				onclick={onopenpitmap}
-			>Pit Map</button>
+			<button class="text-xs text-blue-500 dark:text-blue-400 hover:underline" onclick={onopenpitmap}
+				>Pit Map</button
+			>
 		{/if}
 	</div>
 

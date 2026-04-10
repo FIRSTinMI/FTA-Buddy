@@ -83,9 +83,7 @@
 		<div class="flex flex-col items-center gap-3 text-center p-6">
 			<p class="text-red-400 text-lg font-semibold">Failed to join event</p>
 			<p class="text-gray-400">{error}</p>
-			<button class="text-blue-400 underline" onclick={() => navigate("/manage/login")}>
-				Go to login
-			</button>
+			<button class="text-blue-400 underline" onclick={() => navigate("/manage/login")}> Go to login </button>
 		</div>
 	{:else}
 		<Spinner />

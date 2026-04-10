@@ -1,5 +1,12 @@
 import { trpc, updateValues, uploadAllUnimportedMatchLogs } from "./injected-trpc";
-import { DSState, EnableState, FieldState, FMSEnums, type PartialMonitorFrame, type PartialRobotInfo } from "../../shared/types";
+import {
+	DSState,
+	EnableState,
+	FieldState,
+	FMSEnums,
+	type PartialMonitorFrame,
+	type PartialRobotInfo,
+} from "../../shared/types";
 
 const scriptEl = document.getElementById("fta-buddy") as HTMLScriptElement | null;
 const urlVal = scriptEl?.dataset.host;
@@ -82,13 +89,20 @@ function dsState(s: StationData): DSState {
 
 function enableState(s: StationData): EnableState {
 	switch (s.MonitorStatus) {
-		case FMSEnums.MonitorStatusType.EStopped: return EnableState.ESTOP;
-		case FMSEnums.MonitorStatusType.AStopped: return EnableState.ASTOP;
-		case FMSEnums.MonitorStatusType.DisabledAuto: return EnableState.RED_A;
-		case FMSEnums.MonitorStatusType.DisabledTeleop: return EnableState.RED_T;
-		case FMSEnums.MonitorStatusType.EnabledAuto: return EnableState.GREEN_A;
-		case FMSEnums.MonitorStatusType.EnabledTeleop: return EnableState.GREEN_T;
-		default: return EnableState.RED;
+		case FMSEnums.MonitorStatusType.EStopped:
+			return EnableState.ESTOP;
+		case FMSEnums.MonitorStatusType.AStopped:
+			return EnableState.ASTOP;
+		case FMSEnums.MonitorStatusType.DisabledAuto:
+			return EnableState.RED_A;
+		case FMSEnums.MonitorStatusType.DisabledTeleop:
+			return EnableState.RED_T;
+		case FMSEnums.MonitorStatusType.EnabledAuto:
+			return EnableState.GREEN_A;
+		case FMSEnums.MonitorStatusType.EnabledTeleop:
+			return EnableState.GREEN_T;
+		default:
+			return EnableState.RED;
 	}
 }
 
@@ -141,7 +155,6 @@ function stationToRobotInfo(s: StationData): PartialRobotInfo {
 	};
 }
 
-
 const TOURNAMENT_LEVEL_MAP: Record<string | number, "None" | "Practice" | "Qualification" | "Playoff"> = {
 	// String keys (SignalR / REST API)
 	None: "None",
@@ -192,11 +205,27 @@ function buildFrameFromAngular(): PartialMonitorFrame | null {
 	};
 
 	const EMPTY: PartialRobotInfo = {
-		number: 0, ds: DSState.RED, radio: false, rio: false, code: false,
-		enabled: EnableState.RED, bwu: 0, battery: 0, ping: 0, packets: 0,
-		MAC: null, RX: null, RXMCS: null, TX: null, TXMCS: null,
-		SNR: null, noise: null, signal: null, versionmm: false,
-		radioConnectionQuality: null, radioConnected: null,
+		number: 0,
+		ds: DSState.RED,
+		radio: false,
+		rio: false,
+		code: false,
+		enabled: EnableState.RED,
+		bwu: 0,
+		battery: 0,
+		ping: 0,
+		packets: 0,
+		MAC: null,
+		RX: null,
+		RXMCS: null,
+		TX: null,
+		TXMCS: null,
+		SNR: null,
+		noise: null,
+		signal: null,
+		versionmm: false,
+		radioConnectionQuality: null,
+		radioConnected: null,
 	};
 
 	const matchStateMsg = ms.MatchStateMessage ?? ms.matchStateMessage ?? "";
@@ -236,7 +265,15 @@ function parseIntSafe(s: string | undefined | null): number {
  * Parse "Signal: X (dBm) Noise: Y (dBm) SNR: Z TX Rate: A TX MCS: B RX Rate: C Rx MCS: D"
  * from the title attribute of the data rate column.
  */
-function parseTitleAttr(title: string): { signal: number; noise: number; snr: number; txRate: number; txMCS: number; rxRate: number; rxMCS: number } {
+function parseTitleAttr(title: string): {
+	signal: number;
+	noise: number;
+	snr: number;
+	txRate: number;
+	txMCS: number;
+	rxRate: number;
+	rxMCS: number;
+} {
 	const num = (label: string) => {
 		const m = title.match(new RegExp(label + "[:\\s]+([\\d.-]+)"));
 		return m ? parseFloat(m[1]) : 0;
@@ -359,7 +396,9 @@ function scrapeStation(stationEl: Element, isInMatch: boolean): PartialRobotInfo
 
 	// Battery from the bottom row - look for the battery col (last data col with "Min:" in secondary)
 	const allDataPrimary = Array.from(bottomRow?.querySelectorAll(".indicator-data, .indicator-data-small") ?? []);
-	const allDataSecondary = Array.from(bottomRow?.querySelectorAll(".indicator-data-secondary, .indicator-data-small-secondary") ?? []);
+	const allDataSecondary = Array.from(
+		bottomRow?.querySelectorAll(".indicator-data-secondary, .indicator-data-small-secondary") ?? [],
+	);
 
 	// Look for battery by finding "Min:" secondary label
 	for (let i = 0; i < allDataSecondary.length; i++) {
@@ -440,7 +479,10 @@ function buildFrameFromDOM(): PartialMonitorFrame | null {
 	const matchStateEl = document.querySelector(".bg-light span.fs-2, .bg-light span.fs-5");
 	const matchStateText = matchStateEl?.textContent ?? "";
 	const fieldState = matchStateTextToField(matchStateText);
-	const isInMatch = fieldState === FieldState.MATCH_RUNNING_AUTO || fieldState === FieldState.MATCH_RUNNING_TELEOP || fieldState === FieldState.MATCH_TRANSITIONING;
+	const isInMatch =
+		fieldState === FieldState.MATCH_RUNNING_AUTO ||
+		fieldState === FieldState.MATCH_RUNNING_TELEOP ||
+		fieldState === FieldState.MATCH_TRANSITIONING;
 
 	const matchNumEl = document.querySelector(".bg-secondary span.fs-2");
 	const matchNumText = (matchNumEl?.textContent ?? "M0").replace(/[Mm]/, "");
@@ -450,11 +492,27 @@ function buildFrameFromDOM(): PartialMonitorFrame | null {
 	const aheadBehind = aheadBehindEl?.textContent?.trim() ?? "";
 
 	const EMPTY: PartialRobotInfo = {
-		number: 0, ds: DSState.RED, radio: false, rio: false, code: false,
-		enabled: EnableState.RED, bwu: 0, battery: 0, ping: 0, packets: 0,
-		MAC: null, RX: null, RXMCS: null, TX: null, TXMCS: null,
-		SNR: null, noise: null, signal: null, versionmm: false,
-		radioConnectionQuality: null, radioConnected: null,
+		number: 0,
+		ds: DSState.RED,
+		radio: false,
+		rio: false,
+		code: false,
+		enabled: EnableState.RED,
+		bwu: 0,
+		battery: 0,
+		ping: 0,
+		packets: 0,
+		MAC: null,
+		RX: null,
+		RXMCS: null,
+		TX: null,
+		TXMCS: null,
+		SNR: null,
+		noise: null,
+		signal: null,
+		versionmm: false,
+		radioConnectionQuality: null,
+		radioConnected: null,
 	};
 
 	return {
@@ -478,7 +536,13 @@ function buildFrameFromDOM(): PartialMonitorFrame | null {
 let postPending = false;
 let prevFieldState: FieldState | null = null;
 let lastMatchAutoStartMs: number | null = null;
-let lastMatchCycleArgs: { eventToken: string; matchNumber: number; playNumber: number; level: "None" | "Practice" | "Qualification" | "Playoff"; extensionId: string } | null = null;
+let lastMatchCycleArgs: {
+	eventToken: string;
+	matchNumber: number;
+	playNumber: number;
+	level: "None" | "Practice" | "Qualification" | "Playoff";
+	extensionId: string;
+} | null = null;
 let matchUploadTimer: ReturnType<typeof setTimeout> | null = null;
 
 function msToCycleTimeStr(ms: number): string {
@@ -524,7 +588,8 @@ async function postFrame() {
 			} as const;
 
 			if (cur === FieldState.PRESTART_COMPLETED) {
-				trpc.cycles.postCycleTime.mutate({ ...cycleArgs, type: "prestart" })
+				trpc.cycles.postCycleTime
+					.mutate({ ...cycleArgs, type: "prestart" })
 					.catch((err) => console.warn("[FTA Buddy] postCycleTime prestart failed:", err));
 			} else if (cur === FieldState.MATCH_RUNNING_AUTO) {
 				// Post the completed cycle time to the PREVIOUS match's DB row (match-start to match-start),
@@ -533,26 +598,33 @@ async function postFrame() {
 					const cycleMs = Date.now() - lastMatchAutoStartMs;
 					if (cycleMs > 60_000 && cycleMs < 3_600_000) {
 						trpc.cycles.postCycleTime
-							.mutate({ ...lastMatchCycleArgs, type: "lastCycleTime", lastCycleTime: msToCycleTimeStr(cycleMs) })
+							.mutate({
+								...lastMatchCycleArgs,
+								type: "lastCycleTime",
+								lastCycleTime: msToCycleTimeStr(cycleMs),
+							})
 							.catch((err) => console.warn("[FTA Buddy] postCycleTime lastCycleTime failed:", err));
 					}
 				}
 				lastMatchAutoStartMs = Date.now();
 				lastMatchCycleArgs = { ...cycleArgs };
-				trpc.cycles.postCycleTime.mutate({ ...cycleArgs, type: "start" })
+				trpc.cycles.postCycleTime
+					.mutate({ ...cycleArgs, type: "start" })
 					.catch((err) => console.warn("[FTA Buddy] postCycleTime start failed:", err));
 				if (matchUploadTimer !== null) {
 					clearTimeout(matchUploadTimer);
 					matchUploadTimer = null;
 				}
 			} else if (cur === FieldState.MATCH_OVER) {
-				trpc.cycles.postCycleTime.mutate({ ...cycleArgs, type: "end" })
+				trpc.cycles.postCycleTime
+					.mutate({ ...cycleArgs, type: "end" })
 					.catch((err) => console.warn("[FTA Buddy] postCycleTime end failed:", err));
 				triggerMatchUpload(3000);
 			} else if (cur === FieldState.MATCH_ABORTED) {
 				triggerMatchUpload(3000);
 			} else if (cur === FieldState.READY_FOR_POST_RESULT) {
-				trpc.cycles.postCycleTime.mutate({ ...cycleArgs, type: "scoresPosted" })
+				trpc.cycles.postCycleTime
+					.mutate({ ...cycleArgs, type: "scoresPosted" })
 					.catch((err) => console.warn("[FTA Buddy] postCycleTime scoresPosted failed:", err));
 				triggerMatchUpload(0);
 			}

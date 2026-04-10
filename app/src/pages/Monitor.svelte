@@ -102,9 +102,8 @@
 			{
 				onData: (data) => {
 					averageCycleTimeMS = data.averageCycleTime ?? 7 * 60 * 1000;
-					const rawCt = data.lastCycleTime && data.lastCycleTime !== "unk"
-						? cycleTimeToMS(data.lastCycleTime)
-						: 0;
+					const rawCt =
+						data.lastCycleTime && data.lastCycleTime !== "unk" ? cycleTimeToMS(data.lastCycleTime) : 0;
 					calculatedCycleTime = isNaN(rawCt) ? 0 : rawCt;
 					if (data.scheduleDetails) {
 						scheduleDetails = data.scheduleDetails;
@@ -215,7 +214,7 @@
 			monitorFrame?.level ?? "",
 			averageCycleTimeMS,
 		);
-			scheduleText = newScheduleText;
+		scheduleText = newScheduleText;
 
 		// Reset the cycle time so it doesn't screw up the next match's cycle time
 		calculatedCycleTime = undefined;

@@ -14,7 +14,7 @@ import { markedHighlight } from "marked-highlight";
 import { join } from "path";
 import sanitizeHtml from "sanitize-html";
 import { cycleTimeToMS } from "../shared/cycleTimeToMS";
-import { ROBOT, TournamentLevel } from "../shared/types";
+import type { ROBOT, TournamentLevel } from "../shared/types";
 import { connect, db } from "./db/db";
 import { cycleLogs, logPublishing, matchLogs } from "./db/schema";
 import { adminRouter } from "./router/admin";
@@ -136,13 +136,14 @@ app.get("/serviceworker.js", async (req, res) => {
 		(f) =>
 			f !== "serviceworker.js" &&
 			f !== "tutorial" &&
-			(f.endsWith(".png") || f.endsWith(".svg") || f.endsWith(".ico") || f.endsWith(".js") || f.endsWith(".html") || f.endsWith(".json")),
+			(f.endsWith(".png") ||
+				f.endsWith(".svg") ||
+				f.endsWith(".ico") ||
+				f.endsWith(".js") ||
+				f.endsWith(".html") ||
+				f.endsWith(".json")),
 	);
-	const allAssets = [
-		...assets.map((f) => `/assets/${f}`),
-		...rootFiles.map((f) => `/${f}`),
-		"/",
-	];
+	const allAssets = [...assets.map((f) => `/assets/${f}`), ...rootFiles.map((f) => `/${f}`), "/"];
 	// Use the main entry JS hash as the SW version for cache busting
 	const swVersion = assets.find((f) => f.startsWith("index-") && f.endsWith(".js")) ?? assets[0] ?? "v1";
 	let serviceWorkerFile = readFileSync("./app/dist/serviceworker.js").toString();
@@ -234,7 +235,9 @@ app.post("/slack/events", async (req, res) => {
 				event.type === "message" &&
 				event.subtype === "bot_message" &&
 				typeof event.text === "string" &&
-				/^(FTA request for team \d+|A volunteer has requested help on behalf of team \d+|Team \d+ has requested help)/i.test(event.text)
+				/^(FTA request for team \d+|A volunteer has requested help on behalf of team \d+|Team \d+ has requested help)/i.test(
+					event.text,
+				)
 			) {
 				await createFromNexus(event.channel, event.ts, event.text, event.blocks);
 			} else if (event.reaction === "white_check_mark") {
@@ -445,7 +448,11 @@ connect().then(async () => {
 				const s = totalSec % 60;
 				const msRemainder = ms % 1000;
 				const fixed = `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}.${msRemainder.toString().padStart(3, "0")}`;
-				await db.update(cycleLogs).set({ calculated_cycle_time: fixed }).where(eq(cycleLogs.id, row.id)).execute();
+				await db
+					.update(cycleLogs)
+					.set({ calculated_cycle_time: fixed })
+					.where(eq(cycleLogs.id, row.id))
+					.execute();
 			}
 			console.log(`✅ Migrated ${shortCycles.length} old cycle time format(s) to full format`);
 		}
@@ -457,18 +464,21 @@ connect().then(async () => {
 	console.log("✅ HTTP Server listening on http://localhost:" + port);
 
 	// Evict events with no activity for more than 3 days
-	setInterval(() => {
-		const cutoff = Date.now() - 3 * 24 * 60 * 60 * 1000;
-		for (const code of Object.keys(events)) {
-			const event = events[code];
-			if ((eventLastSeen[code] ?? new Date(0)).getTime() < cutoff) {
-				console.log(`[Cleanup] Evicting inactive event ${code}`);
-				if (event.token) delete eventCodes[event.token];
-				delete eventLastSeen[code];
-				delete events[code];
+	setInterval(
+		() => {
+			const cutoff = Date.now() - 3 * 24 * 60 * 60 * 1000;
+			for (const code of Object.keys(events)) {
+				const event = events[code];
+				if ((eventLastSeen[code] ?? new Date(0)).getTime() < cutoff) {
+					console.log(`[Cleanup] Evicting inactive event ${code}`);
+					if (event.token) delete eventCodes[event.token];
+					delete eventLastSeen[code];
+					delete events[code];
+				}
 			}
-		}
-	}, 60 * 60 * 1000);
+		},
+		60 * 60 * 1000,
+	);
 });
 
 process.on("SIGTERM", () => {

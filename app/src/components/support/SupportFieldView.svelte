@@ -422,9 +422,15 @@
 		startMatchEventSubscription();
 		window.addEventListener("resize", handleResize);
 		// Initialise match start time so T: starts counting from the right point
-		trpc.cycles.getLastPrestart.query().then((t) => { if (t) matchStartTime = new Date(t); });
-		trpc.cycles.getLastMatchStart.query().then((t) => { if (t) matchStartTime = new Date(t); });
-		trpc.cycles.getScheduleDetails.query().then((d) => { if (d) scheduleDetails = d; });
+		trpc.cycles.getLastPrestart.query().then((t) => {
+			if (t) matchStartTime = new Date(t);
+		});
+		trpc.cycles.getLastMatchStart.query().then((t) => {
+			if (t) matchStartTime = new Date(t);
+		});
+		trpc.cycles.getScheduleDetails.query().then((d) => {
+			if (d) scheduleDetails = d;
+		});
 		cycleInterval = setInterval(() => {
 			currentCycleTime = formatTimeShortNoAgo(matchStartTime);
 		}, 1000);
@@ -554,9 +560,7 @@
 		return null;
 	});
 	let formattedStartTime = $derived(formatScheduledTime(scheduledStartTime));
-	let isPastStartTime = $derived(
-		!!scheduledStartTime && Date.now() > new Date(scheduledStartTime as Date).getTime(),
-	);
+	let isPastStartTime = $derived(!!scheduledStartTime && Date.now() > new Date(scheduledStartTime as Date).getTime());
 	let aheadBehindText = $derived.by(() => {
 		if (!isLive || !monitorFrame) return null;
 		const text = monitorFrame.exactAheadBehind ?? monitorFrame.time;
@@ -618,7 +622,7 @@
 				{#if teamName}
 					<span class="text-[11px] sm:text-sm lg:text-base font-normal opacity-80 truncate">{teamName}</span>
 				{/if}
-				</button>
+			</button>
 			{#if currentMatchId}
 				<button
 					class="px-1.5 sm:px-2 {isShortScreen
@@ -710,34 +714,54 @@
 					<div class="ml-auto flex items-center gap-0.5 sm:gap-1 shrink-0">
 						{#if hasOpenNote}
 							<div
-								class="{isShortScreen ? 'size-3.5' : 'size-4 sm:size-6'} rounded-sm bg-yellow-400 flex items-center justify-center shrink-0"
+								class="{isShortScreen
+									? 'size-3.5'
+									: 'size-4 sm:size-6'} rounded-sm bg-yellow-400 flex items-center justify-center shrink-0"
 								title="Open note"
 							>
-								<Icon icon="mdi:pencil" class="{isShortScreen ? 'size-2.5' : 'size-3 sm:size-4'} text-black" />
+								<Icon
+									icon="mdi:pencil"
+									class="{isShortScreen ? 'size-2.5' : 'size-3 sm:size-4'} text-black"
+								/>
 							</div>
 						{/if}
 						{#if liveRobot.warnings.includes(RobotWarnings.NOT_INSPECTED)}
 							<div
-								class="{isShortScreen ? 'size-3.5' : 'size-4 sm:size-6'} rounded-sm bg-yellow-400 flex items-center justify-center shrink-0"
+								class="{isShortScreen
+									? 'size-3.5'
+									: 'size-4 sm:size-6'} rounded-sm bg-yellow-400 flex items-center justify-center shrink-0"
 								title="Not inspected"
 							>
-								<Icon icon="mdi:magnify" class="{isShortScreen ? 'size-2.5' : 'size-3 sm:size-4'} text-black" />
+								<Icon
+									icon="mdi:magnify"
+									class="{isShortScreen ? 'size-2.5' : 'size-3 sm:size-4'} text-black"
+								/>
 							</div>
 						{/if}
 						{#if liveRobot.warnings.includes(RobotWarnings.RADIO_NOT_FLASHED)}
 							<div
-								class="{isShortScreen ? 'size-3.5' : 'size-4 sm:size-6'} rounded-sm bg-yellow-400 flex items-center justify-center shrink-0"
+								class="{isShortScreen
+									? 'size-3.5'
+									: 'size-4 sm:size-6'} rounded-sm bg-yellow-400 flex items-center justify-center shrink-0"
 								title="Radio not programmed"
 							>
-								<Icon icon="mdi:wifi-off" class="{isShortScreen ? 'size-2.5' : 'size-3 sm:size-4'} text-black" />
+								<Icon
+									icon="mdi:wifi-off"
+									class="{isShortScreen ? 'size-2.5' : 'size-3 sm:size-4'} text-black"
+								/>
 							</div>
 						{/if}
 						{#if liveRobot.warnings.includes(RobotWarnings.PREVIOUS_MATCH_EVENT)}
 							<div
-								class="{isShortScreen ? 'size-3.5' : 'size-4 sm:size-6'} rounded-sm bg-yellow-400 flex items-center justify-center shrink-0"
+								class="{isShortScreen
+									? 'size-3.5'
+									: 'size-4 sm:size-6'} rounded-sm bg-yellow-400 flex items-center justify-center shrink-0"
 								title="Previous match event"
 							>
-								<Icon icon="mdi:wrench" class="{isShortScreen ? 'size-2.5' : 'size-3 sm:size-4'} text-black" />
+								<Icon
+									icon="mdi:wrench"
+									class="{isShortScreen ? 'size-2.5' : 'size-3 sm:size-4'} text-black"
+								/>
 							</div>
 						{/if}
 					</div>
@@ -901,8 +925,13 @@
 					<div class="flex items-center justify-center {isShortScreen ? 'gap-2' : 'gap-2 sm:gap-4'} w-full">
 						<div class="flex flex-col items-end gap-0.5 shrink-0">
 							{#if formattedStartTime}
-								<span class="{isShortScreen ? 'text-xs' : 'text-xs sm:text-sm'} {isPastStartTime ? 'text-red-500 dark:text-red-400 font-semibold' : 'text-gray-500 dark:text-gray-400'}">
-									<span class="opacity-60">Sched:</span> {formattedStartTime}
+								<span
+									class="{isShortScreen ? 'text-xs' : 'text-xs sm:text-sm'} {isPastStartTime
+										? 'text-red-500 dark:text-red-400 font-semibold'
+										: 'text-gray-500 dark:text-gray-400'}"
+								>
+									<span class="opacity-60">Sched:</span>
+									{formattedStartTime}
 								</span>
 							{/if}
 							<button
@@ -914,16 +943,31 @@
 								{#if !isShortScreen}Match note{/if}
 							</button>
 						</div>
-						<p class="font-bold {isShortScreen ? 'text-sm' : 'text-base sm:text-xl lg:text-3xl'} leading-tight text-black dark:text-white text-center shrink-0">
+						<p
+							class="font-bold {isShortScreen
+								? 'text-sm'
+								: 'text-base sm:text-xl lg:text-3xl'} leading-tight text-black dark:text-white text-center shrink-0"
+						>
 							{matchLabel}
 						</p>
 						{#if aheadBehindText || cycleTimeText}
 							<div class="flex flex-col items-start gap-0.5 shrink-0">
 								{#if aheadBehindText}
-									<span class="{isShortScreen ? 'text-xs' : 'text-xs sm:text-sm'} {aheadBehindText.startsWith('-') ? 'text-orange-500 dark:text-orange-400' : 'text-black dark:text-white'}">{aheadBehindText}</span>
+									<span
+										class="{isShortScreen
+											? 'text-xs'
+											: 'text-xs sm:text-sm'} {aheadBehindText.startsWith('-')
+											? 'text-orange-500 dark:text-orange-400'
+											: 'text-black dark:text-white'}">{aheadBehindText}</span
+									>
 								{/if}
 								{#if cycleTimeText}
-									<span class="{isShortScreen ? 'text-xs' : 'text-xs sm:text-sm'} text-gray-500 dark:text-gray-400">{cycleTimeText}</span>
+									<span
+										class="{isShortScreen
+											? 'text-xs'
+											: 'text-xs sm:text-sm'} text-gray-500 dark:text-gray-400"
+										>{cycleTimeText}</span
+									>
 								{/if}
 							</div>
 						{/if}

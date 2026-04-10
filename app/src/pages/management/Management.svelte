@@ -448,7 +448,11 @@
 								<span>{event.clients.length} client{event.clients.length !== 1 ? "s" : ""}</span>
 							{/if}
 							{#if eventNoteCount[event.code]}
-								<span>{eventNoteCount[event.code]} note{eventNoteCount[event.code] !== 1 ? "s" : ""}</span>
+								<span
+									>{eventNoteCount[event.code]} note{eventNoteCount[event.code] !== 1
+										? "s"
+										: ""}</span
+								>
 							{/if}
 						</div>
 

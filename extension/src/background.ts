@@ -89,7 +89,19 @@ async function start() {
 
 	await new Promise((resolve) => {
 		chrome.storage.local.get(
-			["url", "cloud", "useDev", "event", "changed", "enabled", "fieldMonitor", "useSignalR", "id", "eventToken", "fmsApiEnabled"],
+			[
+				"url",
+				"cloud",
+				"useDev",
+				"event",
+				"changed",
+				"enabled",
+				"fieldMonitor",
+				"useSignalR",
+				"id",
+				"eventToken",
+				"fmsApiEnabled",
+			],
 			(item) => {
 				if (!item.id) chrome.storage.local.set({ id: crypto.randomUUID() });
 

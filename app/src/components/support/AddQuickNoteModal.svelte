@@ -163,8 +163,10 @@
 					: 'border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-neutral-700 text-gray-700 dark:text-gray-300'}"
 				onclick={() => (requestType = requestType === opt.value ? null : (opt.value as "CSA" | "RI"))}
 			>
-				<span class="size-3 rounded-full border-2 shrink-0
-					{requestType === opt.value ? 'border-blue-500 bg-blue-500' : 'border-gray-400'}"></span>
+				<span
+					class="size-3 rounded-full border-2 shrink-0
+					{requestType === opt.value ? 'border-blue-500 bg-blue-500' : 'border-gray-400'}"
+				></span>
 				{opt.label}
 			</button>
 		{/each}

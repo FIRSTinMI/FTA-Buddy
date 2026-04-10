@@ -66,7 +66,7 @@ export function makeFrameHistory(): FrameHistory {
 }
 
 const STATION_KEYS = ["blue1", "blue2", "blue3", "red1", "red2", "red3"] as const;
-type StationKey = typeof STATION_KEYS[number];
+type StationKey = (typeof STATION_KEYS)[number];
 
 export function updateHistory(history: FrameHistory, frame: PartialMonitorFrame): void {
 	for (const key of STATION_KEYS) {

@@ -14,7 +14,18 @@ const appExtensionData = chrome.runtime.getManifest();
 
 	await new Promise((resolve) => {
 		chrome.storage.local.get(
-			["url", "cloud", "event", "changed", "enabled", "fieldMonitor", "useSignalR", "fmsApiEnabled", "eventToken", "id"],
+			[
+				"url",
+				"cloud",
+				"event",
+				"changed",
+				"enabled",
+				"fieldMonitor",
+				"useSignalR",
+				"fmsApiEnabled",
+				"eventToken",
+				"id",
+			],
 			(item) => {
 				console.log(item);
 				url = String(item.url);

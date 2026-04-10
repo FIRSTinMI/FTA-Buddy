@@ -2,7 +2,7 @@ import { asc, eq } from "drizzle-orm";
 import { existsSync, mkdirSync } from "fs";
 import jsPDF from "jspdf";
 import { formatTimeShortNoAgoMinutes } from "../../shared/formatTime";
-import { Profile } from "../../shared/types";
+import type { Profile } from "../../shared/types";
 import { db } from "../db/db";
 import { messages, notes } from "../db/schema";
 

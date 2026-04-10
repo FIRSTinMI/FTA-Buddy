@@ -3,7 +3,7 @@ import { and, asc, desc, eq, isNotNull } from "drizzle-orm";
 import { z } from "zod";
 import { cycleTimeToMS } from "../../shared/cycleTimeToMS";
 import { formatTimeShortNoAgoSeconds } from "../../shared/formatTime";
-import { CycleData } from "../../shared/types";
+import type { CycleData } from "../../shared/types";
 import { db } from "../db/db";
 import { cycleLogs, events } from "../db/schema";
 import { eventProcedure, publicProcedure, router } from "../trpc";
@@ -246,7 +246,13 @@ export const cycleRouter = router({
 				db
 					.select()
 					.from(cycleLogs)
-					.where(and(eq(cycleLogs.event, event.code), isNotNull(cycleLogs.prestart_time), isNotNull(cycleLogs.scores_posted_time)))
+					.where(
+						and(
+							eq(cycleLogs.event, event.code),
+							isNotNull(cycleLogs.prestart_time),
+							isNotNull(cycleLogs.scores_posted_time),
+						),
+					)
 					.orderBy(desc(cycleLogs.scores_posted_time))
 					.limit(1)
 					.execute(),
@@ -277,7 +283,7 @@ export const cycleRouter = router({
 		if (cycles.length === 0) return null;
 
 		return cycles.reduce((best, c) =>
-			cycleTimeToMS(c.calculated_cycle_time!) < cycleTimeToMS(best.calculated_cycle_time!) ? c : best
+			cycleTimeToMS(c.calculated_cycle_time!) < cycleTimeToMS(best.calculated_cycle_time!) ? c : best,
 		);
 	}),
 
@@ -294,42 +300,50 @@ export const cycleRouter = router({
 		.query(async ({ input }) => {
 			const event = await getEvent("", input.eventCode);
 
-			const [allCyclesWithTime, lastRecordedCycleTime, lastPrestartFromDB, lastComputedCycle] = await Promise.all([
-				db
-					.select()
-					.from(cycleLogs)
-					.where(and(eq(cycleLogs.event, event.code), isNotNull(cycleLogs.calculated_cycle_time)))
-					.execute(),
+			const [allCyclesWithTime, lastRecordedCycleTime, lastPrestartFromDB, lastComputedCycle] = await Promise.all(
+				[
+					db
+						.select()
+						.from(cycleLogs)
+						.where(and(eq(cycleLogs.event, event.code), isNotNull(cycleLogs.calculated_cycle_time)))
+						.execute(),
 
-				db
-					.select()
-					.from(cycleLogs)
-					.where(and(eq(cycleLogs.event, event.code), isNotNull(cycleLogs.calculated_cycle_time)))
-					.orderBy(desc(cycleLogs.start_time))
-					.limit(1)
-					.execute(),
+					db
+						.select()
+						.from(cycleLogs)
+						.where(and(eq(cycleLogs.event, event.code), isNotNull(cycleLogs.calculated_cycle_time)))
+						.orderBy(desc(cycleLogs.start_time))
+						.limit(1)
+						.execute(),
 
-				db
-					.select()
-					.from(cycleLogs)
-					.where(and(eq(cycleLogs.event, event.code), isNotNull(cycleLogs.prestart_time)))
-					.orderBy(desc(cycleLogs.prestart_time))
-					.limit(1)
-					.execute(),
+					db
+						.select()
+						.from(cycleLogs)
+						.where(and(eq(cycleLogs.event, event.code), isNotNull(cycleLogs.prestart_time)))
+						.orderBy(desc(cycleLogs.prestart_time))
+						.limit(1)
+						.execute(),
 
-				db
-					.select()
-					.from(cycleLogs)
-					.where(and(eq(cycleLogs.event, event.code), isNotNull(cycleLogs.prestart_time), isNotNull(cycleLogs.scores_posted_time)))
-					.orderBy(desc(cycleLogs.scores_posted_time))
-					.limit(1)
-					.execute(),
-			]);
+					db
+						.select()
+						.from(cycleLogs)
+						.where(
+							and(
+								eq(cycleLogs.event, event.code),
+								isNotNull(cycleLogs.prestart_time),
+								isNotNull(cycleLogs.scores_posted_time),
+							),
+						)
+						.orderBy(desc(cycleLogs.scores_posted_time))
+						.limit(1)
+						.execute(),
+				],
+			);
 
 			let bestCycleTime: string | null = null;
 			if (allCyclesWithTime.length > 0) {
 				const best = allCyclesWithTime.reduce((b, c) =>
-					cycleTimeToMS(c.calculated_cycle_time!) < cycleTimeToMS(b.calculated_cycle_time!) ? c : b
+					cycleTimeToMS(c.calculated_cycle_time!) < cycleTimeToMS(b.calculated_cycle_time!) ? c : b,
 				);
 				bestCycleTime = best.calculated_cycle_time;
 			}
@@ -413,7 +427,7 @@ export const cycleRouter = router({
 				.execute();
 
 			event.scheduleDetails = { days: input.days, lastPlayed: input.lastPlayed, matches: input.matches };
-				// If the current match started without schedule data, compute exactAheadBehind now
+			// If the current match started without schedule data, compute exactAheadBehind now
 			if (!event.monitorFrame.exactAheadBehind && event.lastMatchStart && input.matches) {
 				const scheduled = input.matches.find(
 					(m) => m.match === event.monitorFrame.match && m.level === event.monitorFrame.level,

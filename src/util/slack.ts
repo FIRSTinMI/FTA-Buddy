@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "../db/db";
 import { events, slackServers, users } from "../db/schema";
-import { Profile } from "../../shared/types";
+import type { Profile } from "../../shared/types";
 import { getEvent } from "./get-event";
 
 export async function slackOAuth(code: string) {
@@ -45,7 +45,11 @@ export async function linkChannel(args: string[], channel_id: string, team_id: s
 
 	// Check if the event exists
 	const event = (
-		await db.select({ code: events.code, pin: events.pin, token: events.token }).from(events).where(eq(events.code, eventCode)).execute()
+		await db
+			.select({ code: events.code, pin: events.pin, token: events.token })
+			.from(events)
+			.where(eq(events.code, eventCode))
+			.execute()
 	)[0];
 
 	if (!event || event.pin !== eventPin) {

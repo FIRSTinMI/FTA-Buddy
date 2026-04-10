@@ -7,7 +7,7 @@ import { notificationEmitter } from "../state";
 import { formatTimeShortNoAgoMinutes } from "../../shared/formatTime";
 import { buildNotification, toNoteCtx } from "../../shared/notifications";
 import type { Notification } from "../../shared/types";
-import { FmsNoteMetadata, Message, Note, NoteUpdateEventData, Profile } from "../../shared/types";
+import type { FmsNoteMetadata, Message, Note, NoteUpdateEventData, Profile } from "../../shared/types";
 import { db } from "../db/db";
 import { events, matchEvents, matchLogs, messages, notes, pushSubscriptions, users } from "../db/schema";
 import { eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
@@ -90,7 +90,7 @@ export async function getAllAvgOpenTime(event_code: string) {
 		orderBy: [desc(notes.created_at)],
 	});
 	if (!eventNotes || eventNotes.length < 1) return 0;
-	const total = eventNotes.reduce((sum, n) => {
+	const total = eventNotes.reduce((sum: number, n) => {
 		if (n.created_at && n.closed_at) {
 			return sum + (new Date(n.closed_at).getTime() - new Date(n.created_at).getTime());
 		}
@@ -295,8 +295,7 @@ const messagesSubRouter = router({
 					.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
 					.from(users)
 					.where(eq(users.token, ctx.token))) as Profile[];
-				if (!rows[0])
-					throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
+				if (!rows[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
 				resolvedProfile = rows[0];
 			}
 
@@ -325,7 +324,7 @@ const messagesSubRouter = router({
 			});
 
 			createNotification(
-				(note.followers ?? []).filter((id) => id !== resolvedProfile.id),
+				(note.followers ?? []).filter((id: number) => id !== resolvedProfile.id),
 				buildNotification({
 					kind: "note.message",
 					eventCode: event.code,
@@ -569,7 +568,7 @@ export const notesRouter = router({
 		// When a note has a match_id, prefer the match log's authoritative match details
 		// to keep NoteCard in team history consistent with the ViewNote badge (which also
 		// looks up match details via match_id).
-		return notesByTeam.map((row) => ({
+		return notesByTeam.map((row: (typeof notesByTeam)[number]) => ({
 			...row.notes,
 			match_number: row.matchLogMatchNumber ?? row.notes.match_number,
 			play_number: row.matchLogPlayNumber ?? row.notes.play_number,
@@ -732,8 +731,7 @@ export const notesRouter = router({
 					.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
 					.from(users)
 					.where(eq(users.token, ctx.token))) as Profile[];
-				if (!rows[0])
-					throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
+				if (!rows[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
 				resolvedProfile = rows[0];
 			}
 
@@ -809,7 +807,9 @@ export const notesRouter = router({
 				// If the note had no match_id yet but the linked events share a single match_id,
 				// back-fill it so the Slack message below includes the "View Match Log" button
 				if (insert[0].match_id === null && activeEvents.length > 0) {
-					const uniqueMatchIds = [...new Set(activeEvents.map((e) => e.match_id).filter(Boolean))];
+					const uniqueMatchIds = [
+						...new Set(activeEvents.map((e: (typeof activeEvents)[number]) => e.match_id).filter(Boolean)),
+					];
 					if (uniqueMatchIds.length === 1) {
 						const resolvedMatchId = uniqueMatchIds[0];
 						await db.update(notes).set({ match_id: resolvedMatchId }).where(eq(notes.id, noteId)).execute();
@@ -953,16 +953,13 @@ export const notesRouter = router({
 			});
 			if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
 
-			let currentUserProfile: Profile[] | undefined;
-			if (ctx.token) {
-				currentUserProfile = await db
-					.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
-					.from(users)
-					.where(eq(users.token, ctx.token));
-			} else {
-				throw new TRPCError({ code: "BAD_REQUEST", message: "User token not provided" });
-			}
-			if (!currentUserProfile[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Current User not found" });
+			if (!ctx.token) throw new TRPCError({ code: "BAD_REQUEST", message: "User token not provided" });
+			const currentUserProfileRows = await db
+				.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
+				.from(users)
+				.where(eq(users.token, ctx.token));
+			const currentUserProfile = currentUserProfileRows[0];
+			if (!currentUserProfile) throw new TRPCError({ code: "NOT_FOUND", message: "Current User not found" });
 
 			const isResolving = input.new_status === "Resolved";
 
@@ -971,8 +968,8 @@ export const notesRouter = router({
 				.set({
 					resolution_status: input.new_status as any,
 					closed_at: isResolving ? new Date() : null,
-					resolved_by_id: isResolving ? currentUserProfile[0].id : null,
-					resolved_by: isResolving ? currentUserProfile[0] : null,
+					resolved_by_id: isResolving ? currentUserProfile.id : null,
+					resolved_by: isResolving ? currentUserProfile : null,
 					fms_metadata: note.fms_metadata
 						? { ...(note.fms_metadata as FmsNoteMetadata), resolutionStatus: input.new_status }
 						: null,
@@ -987,17 +984,17 @@ export const notesRouter = router({
 				kind: "status",
 				note_id: update[0].id,
 				resolution_status: update[0].resolution_status ?? "Open",
-				resolved_by: isResolving ? currentUserProfile[0] : null,
+				resolved_by: isResolving ? currentUserProfile : null,
 			});
 
 			createNotification(
-				(note.followers ?? []).filter((id) => id !== currentUserProfile[0].id),
+				(note.followers ?? []).filter((id: number) => id !== currentUserProfile.id),
 				buildNotification({
 					kind: "note.statusChanged",
 					eventCode: event.code,
 					note: toNoteCtx(note as any),
 					newStatus: input.new_status as "Open" | "Resolved",
-					actor: currentUserProfile[0].username,
+					actor: currentUserProfile.username,
 				}),
 				event.code,
 			);
@@ -1065,7 +1062,7 @@ export const notesRouter = router({
 			});
 
 			createNotification(
-				(note.followers ?? []).filter((id) => id !== profile[0].id && id !== actorIdAssign),
+				(note.followers ?? []).filter((id: number) => id !== profile[0].id && id !== actorIdAssign),
 				buildNotification({
 					kind: "note.assigned",
 					eventCode: event.code,
@@ -1116,7 +1113,7 @@ export const notesRouter = router({
 				throw new TRPCError({ code: "NOT_FOUND", message: "No user currently assigned to this Note" });
 			}
 
-			let profile: Profile[] | null = [];
+			let profile: Profile[] = [];
 			if (note.assigned_to === null && note.assigned_to_id) {
 				profile = await db
 					.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
@@ -1150,7 +1147,7 @@ export const notesRouter = router({
 			});
 
 			createNotification(
-				(note.followers ?? []).filter((id) => id !== actorIdUnassign),
+				(note.followers ?? []).filter((id: number) => id !== actorIdUnassign),
 				buildNotification({
 					kind: "note.unassigned",
 					eventCode: event.code,
@@ -1482,7 +1479,8 @@ export const notesRouter = router({
 			});
 			if (!currentUser) continue;
 			const notif = d.notification as Notification;
-			if (notif.eventCode && currentUser.active_event_code && notif.eventCode !== currentUser.active_event_code) continue;
+			if (notif.eventCode && currentUser.active_event_code && notif.eventCode !== currentUser.active_event_code)
+				continue;
 			yield notif;
 		}
 	}),
@@ -1694,7 +1692,10 @@ function parseNexusMessage(
 	let tournamentLevel: "None" | "Practice" | "Qualification" | "Playoff" | null = null;
 	if (matchMatch) {
 		const lvl = matchMatch[1];
-		tournamentLevel = (lvl.charAt(0).toUpperCase() + lvl.slice(1).toLowerCase()) as Exclude<typeof tournamentLevel, null>;
+		tournamentLevel = (lvl.charAt(0).toUpperCase() + lvl.slice(1).toLowerCase()) as Exclude<
+			typeof tournamentLevel,
+			null
+		>;
 		matchNumber = parseInt(matchMatch[2]);
 	}
 

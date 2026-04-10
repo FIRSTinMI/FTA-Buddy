@@ -51,7 +51,7 @@
 				station,
 			});
 			console.warn("[EventSwitchRedirect] Falling back to redirectPath:", redirectPath);
-			navigate(redirectPath as any, { replace: true });
+			navigate(redirectPath as any, { replace: true, params: {} });
 			return;
 		}
 
@@ -59,7 +59,7 @@
 
 		// Already on the right event - just redirect
 		if (event.code?.toLowerCase() === normalizedCode) {
-			navigate(redirectPath as any, { replace: true });
+			navigate(redirectPath as any, { replace: true, params: {} });
 			return;
 		}
 
@@ -70,7 +70,7 @@
 				userStore.update((u) => ({ ...u, eventToken: subEvent.token }));
 				eventStore.set({ ...event, ...subEvent });
 				trpc.event.setActiveEvent.mutate({ eventCode: subEvent.code }).catch(() => {});
-				navigate(redirectPath as any, { replace: true });
+				navigate(redirectPath as any, { replace: true, params: {} });
 				return;
 			}
 		}
@@ -97,7 +97,7 @@
 				});
 			} else {
 				userStore.update((u) => ({ ...u, eventToken: savedEntry.token, meshedEventToken: undefined }));
-			trpc.event.setActiveEvent.mutate({ eventCode: savedEntry.code }).catch(() => {});
+				trpc.event.setActiveEvent.mutate({ eventCode: savedEntry.code }).catch(() => {});
 				eventStore.set({
 					code: savedEntry.code,
 					pin: savedEntry.pin,
@@ -106,7 +106,7 @@
 					label: savedEntry.label,
 				});
 			}
-			navigate(redirectPath as any, { replace: true });
+			navigate(redirectPath as any, { replace: true, params: {} });
 			return;
 		}
 
@@ -131,7 +131,7 @@
 					meshedEventCode: savedEvent.meshedEventCode,
 					label: subEvent.label,
 				});
-				navigate(redirectPath as any, { replace: true });
+				navigate(redirectPath as any, { replace: true, params: {} });
 				return;
 			}
 		}
@@ -151,7 +151,10 @@
 </script>
 
 {#if showPrompt}
-	<EventJoinPrompt eventCode={eventCode!} onSuccess={() => navigate(redirectPath as any, { replace: true })} />
+	<EventJoinPrompt
+		eventCode={eventCode!}
+		onSuccess={() => navigate(redirectPath as any, { replace: true, params: {} })}
+	/>
 {:else}
 	<Spinner />
 {/if}

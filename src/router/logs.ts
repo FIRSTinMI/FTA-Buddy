@@ -1,8 +1,8 @@
-import { inferRouterOutputs } from "@trpc/server";
+import type { inferRouterOutputs } from "@trpc/server";
 import { randomUUID } from "crypto";
 import { and, asc, count, eq, gt, inArray, ne, or } from "drizzle-orm";
 import { z } from "zod";
-import { DisconnectionEvent, FMSLogFrame, ROBOT, ScheduleDetails } from "../../shared/types";
+import type { DisconnectionEvent, FMSLogFrame, ROBOT, ScheduleDetails } from "../../shared/types";
 import { db } from "../db/db";
 import { analyzedLogs, cycleLogs, events, logPublishing, matchLogs } from "../db/schema";
 import { eventProcedure, publicProcedure, router } from "../trpc";
@@ -485,9 +485,7 @@ export const matchRouter = router({
 
 				// Set of already-played playoff match keys (match_number:play_number)
 				const playedPlayoffKeys = new Set(
-					playedMatches
-						.filter((m) => m.level === "Playoff")
-						.map((m) => `${m.match_number}:${m.play_number}`),
+					playedMatches.filter((m) => m.level === "Playoff").map((m) => `${m.match_number}:${m.play_number}`),
 				);
 
 				const tbaTeamNum = (key: string): number | null => {

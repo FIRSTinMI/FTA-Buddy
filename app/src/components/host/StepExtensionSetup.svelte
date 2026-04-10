@@ -99,8 +99,11 @@
 					<span class="text-yellow-300">Extension Not Enabled</span>
 					<button
 						class="text-blue-400 hover:underline"
-						onclick={() => window.postMessage({ source: "page", type: "enable", fieldMonitor, useSignalR, fmsApiEnabled }, "*")}
-						>Enable</button
+						onclick={() =>
+							window.postMessage(
+								{ source: "page", type: "enable", fieldMonitor, useSignalR, fmsApiEnabled },
+								"*",
+							)}>Enable</button
 					>
 				{/if}
 			{:else}

@@ -162,7 +162,6 @@ export const adminRouter = router({
 				newEvents: newEventsMap.get(week) ?? 0,
 			}));
 
-
 		return {
 			users: {
 				total: totalUsers,

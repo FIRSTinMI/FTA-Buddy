@@ -94,7 +94,9 @@ function makeToggleBtn(): HTMLButtonElement {
 
 	function startFadeTimer() {
 		if (fadeTimer !== null) clearTimeout(fadeTimer);
-		fadeTimer = setTimeout(() => { btn.style.opacity = "0"; }, 30_000);
+		fadeTimer = setTimeout(() => {
+			btn.style.opacity = "0";
+		}, 30_000);
 	}
 
 	btn.addEventListener("mouseenter", () => {
@@ -170,7 +172,7 @@ function updateFooter(
 
 	// C: last cycle - convert server "M:SS" string to formatted display
 	const rawLast = serverCycleData?.lastCycleTime;
-	const lastStr = (rawLast && rawLast !== "unk") ? formatCycleMs(cycleTimeToMS(rawLast)) : "-";
+	const lastStr = rawLast && rawLast !== "unk" ? formatCycleMs(cycleTimeToMS(rawLast)) : "-";
 
 	// A: average - prefer server ms value
 	const avgMs = serverCycleData?.averageCycleTime ?? null;
@@ -178,7 +180,8 @@ function updateFooter(
 
 	// Green if last cycle is best
 	const isBest =
-		rawLast != null && rawLast !== "unk" &&
+		rawLast != null &&
+		rawLast !== "unk" &&
 		serverCycleData?.bestCycleTime != null &&
 		cycleTimeToMS(rawLast) <= cycleTimeToMS(serverCycleData.bestCycleTime);
 
@@ -189,9 +192,8 @@ function updateFooter(
 	const scheduleDetails = serverCycleData?.scheduleDetails ?? null;
 	const schedLevel = serverCycleData?.level ?? frame.level ?? "";
 	const schedMatch = serverCycleData?.match ?? frame.match ?? 0;
-	const schedText = scheduleDetails && avgMs !== null
-		? updateScheduleText(schedMatch, scheduleDetails, schedLevel, avgMs)
-		: "";
+	const schedText =
+		scheduleDetails && avgMs !== null ? updateScheduleText(schedMatch, scheduleDetails, schedLevel, avgMs) : "";
 	footer.scheduleSpan.textContent = schedText;
 
 	// T: current elapsed cycle time with redness
@@ -219,11 +221,7 @@ function updateFooter(
 const STATION_KEYS = ["blue1", "blue2", "blue3", "red1", "red2", "red3"] as const;
 type StationKey = (typeof STATION_KEYS)[number];
 
-function warningsToEmoji(
-	robot: PartialRobotInfo,
-	serverRobot: RobotInfo | null,
-	fieldState: FieldState,
-): string {
+function warningsToEmoji(robot: PartialRobotInfo, serverRobot: RobotInfo | null, fieldState: FieldState): string {
 	const emojis: string[] = [];
 
 	// 👀 waiting - only shown during PRESTART states, uses server lastChange
@@ -252,11 +250,19 @@ function warningsToEmoji(
 	if (serverRobot?.warnings) {
 		for (const w of serverRobot.warnings) {
 			switch (w) {
-				case RobotWarnings.NOT_INSPECTED: emojis.push("🔍"); break;
-				case RobotWarnings.RADIO_NOT_FLASHED: emojis.push("🛜"); break;
+				case RobotWarnings.NOT_INSPECTED:
+					emojis.push("🔍");
+					break;
+				case RobotWarnings.RADIO_NOT_FLASHED:
+					emojis.push("🛜");
+					break;
 				case RobotWarnings.OPEN_NOTE:
-				case RobotWarnings.RECENT_NOTE: emojis.push("📝"); break;
-				case RobotWarnings.PREVIOUS_MATCH_EVENT: emojis.push("⚙️"); break;
+				case RobotWarnings.RECENT_NOTE:
+					emojis.push("📝");
+					break;
+				case RobotWarnings.PREVIOUS_MATCH_EVENT:
+					emojis.push("⚙️");
+					break;
 			}
 		}
 	}
@@ -265,11 +271,7 @@ function warningsToEmoji(
 	return [...new Set(emojis)].join("");
 }
 
-function applyServerWarnings(
-	els: RootElements,
-	frame: PartialMonitorFrame,
-	serverFrame: MonitorFrame | null,
-): void {
+function applyServerWarnings(els: RootElements, frame: PartialMonitorFrame, serverFrame: MonitorFrame | null): void {
 	for (const key of STATION_KEYS) {
 		const robot = frame[key] as PartialRobotInfo;
 		const serverRobot = serverFrame ? (serverFrame[key] as RobotInfo) : null;
@@ -296,11 +298,24 @@ function fireConfetti(): void {
 	canvas.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:99999";
 	document.body.appendChild(canvas);
 	const ctx = canvas.getContext("2d");
-	if (!ctx) { canvas.remove(); return; }
+	if (!ctx) {
+		canvas.remove();
+		return;
+	}
 	canvas.width = window.innerWidth;
 	canvas.height = window.innerHeight;
 
-	interface Particle { x: number; y: number; vx: number; vy: number; color: string; w: number; h: number; rot: number; rotV: number; }
+	interface Particle {
+		x: number;
+		y: number;
+		vx: number;
+		vy: number;
+		color: string;
+		w: number;
+		h: number;
+		rot: number;
+		rotV: number;
+	}
 	const colors = ["#ff0", "#f60", "#f0f", "#0ff", "#0f0", "#00f"];
 	const particles: Particle[] = [];
 	for (let i = 0; i < 160; i++) {
@@ -472,7 +487,8 @@ function boot(): void {
 			if (!frame) return;
 
 			// Check for match start transition before updateCycleTimeState updates state
-			const isNewMatchStart = frame.field === FieldState.MATCH_RUNNING_AUTO &&
+			const isNewMatchStart =
+				frame.field === FieldState.MATCH_RUNNING_AUTO &&
 				cycleState.prevFieldState !== FieldState.MATCH_RUNNING_AUTO;
 			const prevMatchStartAt = isNewMatchStart ? cycleState.matchStartAt : null;
 

@@ -2,8 +2,8 @@ import { TRPCError } from "@trpc/server";
 import { createHash, randomUUID } from "crypto";
 import { count, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
-import {
-	AUTO_EVENT_ISSUE_TYPES,
+import { AUTO_EVENT_ISSUE_TYPES } from "../../shared/types";
+import type {
 	AutoEventIssueType,
 	EventAutoEventSettings,
 	EventChecklist,
@@ -138,41 +138,39 @@ export const eventRouter = router({
 			return event;
 		}),
 
-	joinByToken: protectedProcedure
-		.input(z.object({ token: z.string() }))
-		.mutation(async ({ input, ctx }) => {
-			const eventDB = await db.query.events.findFirst({ where: eq(events.token, input.token) });
+	joinByToken: protectedProcedure.input(z.object({ token: z.string() })).mutation(async ({ input, ctx }) => {
+		const eventDB = await db.query.events.findFirst({ where: eq(events.token, input.token) });
 
-			if (!eventDB) throw new TRPCError({ code: "NOT_FOUND", message: "Event not found" });
-			if (eventDB.archived) throw new TRPCError({ code: "BAD_REQUEST", message: "Event has been archived" });
+		if (!eventDB) throw new TRPCError({ code: "NOT_FOUND", message: "Event not found" });
+		if (eventDB.archived) throw new TRPCError({ code: "BAD_REQUEST", message: "Event has been archived" });
 
-			const event = await getEvent(eventDB.token);
+		const event = await getEvent(eventDB.token);
 
-			const eventList = ctx.user.events as string[];
+		const eventList = ctx.user.events as string[];
 
-			event.users = Array.from(
-				new Set([
-					...event.users,
-					{
-						id: ctx.user.id,
-						username: ctx.user.username,
-						role: ctx.user.role,
-						admin: ctx.user.admin,
-					},
-				]),
-			);
+		event.users = Array.from(
+			new Set([
+				...event.users,
+				{
+					id: ctx.user.id,
+					username: ctx.user.username,
+					role: ctx.user.role,
+					admin: ctx.user.admin,
+				},
+			]),
+		);
 
-			await db
-				.update(users)
-				.set({ events: Array.from(new Set([...eventList, event.code])), active_event_code: event.code })
-				.where(eq(users.id, ctx.user.id));
-			await db
-				.update(events)
-				.set({ users: Array.from(new Set(event.users.map((u) => u.id))) })
-				.where(eq(events.code, event.code));
+		await db
+			.update(users)
+			.set({ events: Array.from(new Set([...eventList, event.code])), active_event_code: event.code })
+			.where(eq(users.id, ctx.user.id));
+		await db
+			.update(events)
+			.set({ users: Array.from(new Set(event.users.map((u) => u.id))) })
+			.where(eq(events.code, event.code));
 
-			return event;
-		}),
+		return event;
+	}),
 
 	get: adminProcedure
 		.input(
@@ -195,6 +193,8 @@ export const eventRouter = router({
 						archived: events.archived,
 						subEvents: events.meshedEvent,
 						notepadOnly: events.notepadOnly,
+						startDate: events.startDate,
+						endDate: events.endDate,
 					})
 					.from(events)
 					.where(eq(events.code, input.code))
@@ -717,7 +717,10 @@ export const eventRouter = router({
 		}
 
 		if (!response.ok) {
-			throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Nexus map fetch failed: ${response.status}` });
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: `Nexus map fetch failed: ${response.status}`,
+			});
 		}
 
 		const data = await response.json();
@@ -861,37 +864,40 @@ export const eventRouter = router({
 			}
 
 			const base = input.notification;
-			await createNotification(userIds, {
-				id: randomUUID(),
-				timestamp: new Date(),
-				title: base?.title ?? "Test Notification",
-				body: base?.body,
-				topic: (base?.topic ?? "Note-Created") as any,
-				tag: base?.tag,
-				kind: base?.kind,
-				urgency: base?.urgency,
-				data: base?.data ?? { page: "/" },
-			}, event.code);
+			await createNotification(
+				userIds,
+				{
+					id: randomUUID(),
+					timestamp: new Date(),
+					title: base?.title ?? "Test Notification",
+					body: base?.body,
+					topic: (base?.topic ?? "Note-Created") as any,
+					tag: base?.tag,
+					kind: base?.kind,
+					urgency: base?.urgency,
+					data: base?.data ?? { page: "/" },
+				},
+				event.code,
+			);
 
 			return { sent: userIds.length };
 		}),
 
-	setActiveEvent: protectedProcedure
-		.input(z.object({ eventCode: z.string() }))
-		.mutation(async ({ input, ctx }) => {
-			if (input.eventCode === "") {
-				await db.update(users).set({ active_event_code: null }).where(eq(users.id, ctx.user.id));
-				return true;
-			}
-			const eventDB = await db.query.events.findFirst({
-				where: eq(events.code, input.eventCode),
-				columns: { users: true },
-			});
-			const members = (eventDB?.users ?? []) as number[];
-			if (!members.includes(ctx.user.id)) throw new TRPCError({ code: "FORBIDDEN", message: "Not a member of this event" });
-			await db.update(users).set({ active_event_code: input.eventCode }).where(eq(users.id, ctx.user.id));
+	setActiveEvent: protectedProcedure.input(z.object({ eventCode: z.string() })).mutation(async ({ input, ctx }) => {
+		if (input.eventCode === "") {
+			await db.update(users).set({ active_event_code: null }).where(eq(users.id, ctx.user.id));
 			return true;
-		}),
+		}
+		const eventDB = await db.query.events.findFirst({
+			where: eq(events.code, input.eventCode),
+			columns: { users: true },
+		});
+		const members = (eventDB?.users ?? []) as number[];
+		if (!members.includes(ctx.user.id))
+			throw new TRPCError({ code: "FORBIDDEN", message: "Not a member of this event" });
+		await db.update(users).set({ active_event_code: input.eventCode }).where(eq(users.id, ctx.user.id));
+		return true;
+	}),
 
 	/**
 	 * Infers the current match from The Blue Alliance by finding the last qualification
@@ -900,10 +906,9 @@ export const eventRouter = router({
 	 */
 	getCurrentMatchFromTBA: eventProcedure.query(async ({ ctx }) => {
 		try {
-			const res = await fetch(
-				`https://www.thebluealliance.com/api/v3/event/${ctx.event.code}/matches/simple`,
-				{ headers: { "X-TBA-Auth-Key": process.env.TBA_API_KEY ?? "" } },
-			);
+			const res = await fetch(`https://www.thebluealliance.com/api/v3/event/${ctx.event.code}/matches/simple`, {
+				headers: { "X-TBA-Auth-Key": process.env.TBA_API_KEY ?? "" },
+			});
 			if (!res.ok) return { matchNumber: 0, level: "None" as TournamentLevel };
 
 			const matches: any[] = await res.json();

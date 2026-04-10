@@ -135,11 +135,18 @@
 </div>
 
 {#if !$userStore.token}
-	<div class="flex items-start gap-2 p-3 rounded-lg bg-yellow-50 border border-yellow-300 dark:bg-yellow-900/30 dark:border-yellow-700 text-yellow-800 dark:text-yellow-200 text-sm">
+	<div
+		class="flex items-start gap-2 p-3 rounded-lg bg-yellow-50 border border-yellow-300 dark:bg-yellow-900/30 dark:border-yellow-700 text-yellow-800 dark:text-yellow-200 text-sm"
+	>
 		<Icon icon="mdi:information-outline" class="size-5 mt-0.5 shrink-0" />
 		<span>
-			You're not signed in. This event will be created with a local Field account - notes will be attributed to "Field (FTA)".
-			<button type="button" class="underline font-medium hover:no-underline" onclick={() => navigate("/manage/login")}>
+			You're not signed in. This event will be created with a local Field account - notes will be attributed to
+			"Field (FTA)".
+			<button
+				type="button"
+				class="underline font-medium hover:no-underline"
+				onclick={() => navigate("/manage/login")}
+			>
 				Sign in to use a named account.
 			</button>
 		</span>

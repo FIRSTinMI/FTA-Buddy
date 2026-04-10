@@ -162,7 +162,12 @@
 
 	function redirectForAuth() {
 		// if user has event token and is trying to access a page that requires an event token
-		if ($user.eventToken && (eventTokenPaths.includes(route.pathname) || route.pathname.startsWith("/logs") || route.pathname.startsWith("/notepad"))) {
+		if (
+			$user.eventToken &&
+			(eventTokenPaths.includes(route.pathname) ||
+				route.pathname.startsWith("/logs") ||
+				route.pathname.startsWith("/notepad"))
+		) {
 			return;
 		}
 
@@ -296,7 +301,12 @@
 			const code = event.code;
 			eventStore.set({ code: "", pin: "", teams: [], users: [] });
 			user.update((u) => ({ ...u, eventToken: "" }));
-			toast("Event Ended", `You've been signed out of ${code.toUpperCase()} because the event has ended. You can rejoin it from the event switcher.`, "red-500", 8000);
+			toast(
+				"Event Ended",
+				`You've been signed out of ${code.toUpperCase()} because the event has ended. You can rejoin it from the event switcher.`,
+				"red-500",
+				8000,
+			);
 		}
 	}
 
@@ -355,7 +365,7 @@
 
 	window.addEventListener("beforeinstallprompt", (event) => {
 		event.preventDefault();
-		installPrompt.set(event);
+		installPrompt.set(event as any);
 	});
 
 	window.addEventListener("appinstalled", () => {
@@ -514,7 +524,8 @@
 							eventToken: $user.meshedEventToken ?? "",
 						});
 						eventStore.set({ ...event, code: event.meshedEventCode ?? "", label: "Combined" });
-						if (event.meshedEventCode) trpc.event.setActiveEvent.mutate({ eventCode: event.meshedEventCode }).catch(() => {});
+						if (event.meshedEventCode)
+							trpc.event.setActiveEvent.mutate({ eventCode: event.meshedEventCode }).catch(() => {});
 						if (route.pathname.startsWith("/monitor")) {
 							navigate("/dashboard");
 						}

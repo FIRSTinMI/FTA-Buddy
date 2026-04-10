@@ -4,7 +4,7 @@ import { EventEmitter } from "events";
 import { TypedEmitter } from "tiny-typed-emitter";
 import { eventCodes, eventLastSeen, events, newEventEmitter } from "../state";
 import { DEFAULT_MONITOR } from "../../shared/constants";
-import {
+import type {
 	EventAutoEventSettings,
 	EventChecklist,
 	MatchEventUpdateEvents,

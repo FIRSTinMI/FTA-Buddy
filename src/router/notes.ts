@@ -1694,7 +1694,7 @@ function parseNexusMessage(
 	let tournamentLevel: "None" | "Practice" | "Qualification" | "Playoff" | null = null;
 	if (matchMatch) {
 		const lvl = matchMatch[1];
-		tournamentLevel = (lvl.charAt(0).toUpperCase() + lvl.slice(1).toLowerCase()) as typeof tournamentLevel;
+		tournamentLevel = (lvl.charAt(0).toUpperCase() + lvl.slice(1).toLowerCase()) as Exclude<typeof tournamentLevel, null>;
 		matchNumber = parseInt(matchMatch[2]);
 	}
 

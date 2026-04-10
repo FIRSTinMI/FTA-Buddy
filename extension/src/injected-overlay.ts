@@ -87,6 +87,28 @@ function makeToggleBtn(): HTMLButtonElement {
 		location.reload();
 	});
 
+	// Fade out after 30 seconds of no hover; restore on hover, then fade again
+	btn.style.transition = "opacity 0.5s";
+	const defaultOpacity = FTA_MODE ? "0.25" : "0.7";
+	let fadeTimer: ReturnType<typeof setTimeout> | null = null;
+
+	function startFadeTimer() {
+		if (fadeTimer !== null) clearTimeout(fadeTimer);
+		fadeTimer = setTimeout(() => { btn.style.opacity = "0"; }, 30_000);
+	}
+
+	btn.addEventListener("mouseenter", () => {
+		if (fadeTimer !== null) clearTimeout(fadeTimer);
+		btn.style.opacity = FTA_MODE ? "0.7" : "1";
+	});
+
+	btn.addEventListener("mouseleave", () => {
+		btn.style.opacity = defaultOpacity;
+		startFadeTimer();
+	});
+
+	startFadeTimer();
+
 	return btn;
 }
 

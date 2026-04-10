@@ -15,7 +15,7 @@ export const VERSIONS: { [key: string]: Version } = {
         changelog: `
         <h1 class="text-lg font-bold">v2.7.6.0</h1>
         <ul>
-        <li>Magic link for joining events — copy from event settings or click the button in the CSA Slack channel</li>
+        <li>Magic link for joining events - copy from event settings or click the button in the CSA Slack channel</li>
         <li>All Slack note and log links now auto-join the event when clicked</li>
         <li>Checklist: click column headers (Present, Inspected, Radio, Connection) to sort incomplete teams first</li>
         </ul>

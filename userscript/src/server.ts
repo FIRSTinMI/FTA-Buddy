@@ -1,5 +1,5 @@
 /**
- * server.ts — Fetch team names and open notes from the FTA Buddy server.
+ * server.ts - Fetch team names and open notes from the FTA Buddy server.
  * Uses GM_xmlhttpRequest to bypass CORS restrictions.
  */
 

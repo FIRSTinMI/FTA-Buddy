@@ -1,5 +1,5 @@
 /**
- * styles.ts — CSS that exactly replicates FTA Buddy's Monitor.svelte styling.
+ * styles.ts - CSS that exactly replicates FTA Buddy's Monitor.svelte styling.
  * Colors and grid definitions are copied directly from app/src/app.css.
  */
 
@@ -303,10 +303,10 @@ export const CSS = `
 @media screen and (min-width: 1024px) { .fb-net { display: none; } }
 
 /* ── Column header visibility helpers ───────────────────────── */
-/* .fb-col-dt — desktop-only column header (Ping/BWU/Signal/LastChange) */
+/* .fb-col-dt - desktop-only column header (Ping/BWU/Signal/LastChange) */
 .fb-col-dt { display: none; }
 @media screen and (min-width: 1024px) { .fb-col-dt { display: block; } }
-/* .fb-col-mb — mobile-only column header (Net) */
+/* .fb-col-mb - mobile-only column header (Net) */
 .fb-col-mb { display: block; }
 @media screen and (min-width: 1024px) { .fb-col-mb { display: none; } }
 
@@ -348,7 +348,7 @@ export const CSS = `
 }
 #fb-toggle-btn.fta-active:hover { opacity: 0.7; }
 
-/* ── Footer row (cycle time — inside the grid as a span row) ─── */
+/* ── Footer row (cycle time - inside the grid as a span row) ─── */
 #fb-footer {
   grid-column: 1 / -1;
   display: flex;

@@ -101,7 +101,7 @@ const RADIO_QUALITY_MAP: Record<number, "Warning" | "Caution" | "Good" | "Excell
 	3: "Excellent",
 };
 
-/** Coerce a value to number | null — handles strings from SignalR deserialization. */
+/** Coerce a value to number | null - handles strings from SignalR deserialization. */
 function toNum(v: unknown): number | null {
 	if (v === null || v === undefined) return null;
 	const n = Number(v);
@@ -579,7 +579,7 @@ function onMutation() {
 	debounceTimer = setTimeout(() => {
 		debounceTimer = null;
 		postFrame();
-	}, 0); // next event-loop tick — coalesces all mutations in one CD cycle
+	}, 0); // next event-loop tick - coalesces all mutations in one CD cycle
 }
 
 // Wait for Angular to bootstrap before starting

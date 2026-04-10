@@ -1,5 +1,5 @@
 /**
- * injected-overlay.ts — Extension visual overlay for FMS FieldMonitor.
+ * injected-overlay.ts - Extension visual overlay for FMS FieldMonitor.
  *
  * Injected into the FMS FieldMonitor page whenever the extension is enabled.
  * Shows a small toggle button (FTA Buddy logo) on the page.
@@ -50,7 +50,7 @@ const eventToken = scriptEl?.dataset.eventToken;
 const extensionId = scriptEl?.dataset.extensionId;
 const version = scriptEl?.dataset.version ?? "0.0.0";
 
-// localStorage is the reliable detection source — Angular strips unknown
+// localStorage is the reliable detection source - Angular strips unknown
 // query params during router init before the injected script runs.
 const STORAGE_KEY = "ftabuddy";
 const FTA_MODE = localStorage.getItem(STORAGE_KEY) === "1";
@@ -146,13 +146,13 @@ function updateFooter(
 		elapsed = Date.now() - new Date(serverCycleData.startTime).getTime();
 	}
 
-	// C: last cycle — convert server "M:SS" string to formatted display
+	// C: last cycle - convert server "M:SS" string to formatted display
 	const rawLast = serverCycleData?.lastCycleTime;
-	const lastStr = (rawLast && rawLast !== "unk") ? formatCycleMs(cycleTimeToMS(rawLast)) : "—";
+	const lastStr = (rawLast && rawLast !== "unk") ? formatCycleMs(cycleTimeToMS(rawLast)) : "-";
 
-	// A: average — prefer server ms value
+	// A: average - prefer server ms value
 	const avgMs = serverCycleData?.averageCycleTime ?? null;
-	const avgStr = avgMs !== null ? formatCycleMs(avgMs) : "—";
+	const avgStr = avgMs !== null ? formatCycleMs(avgMs) : "-";
 
 	// Green if last cycle is best
 	const isBest =
@@ -163,7 +163,7 @@ function updateFooter(
 	footer.cycleSpan.textContent = `C: ${lastStr} (A: ${avgStr})`;
 	footer.cycleSpan.className = isBest ? "fb-cycle-best" : "";
 
-	// Schedule text (qualification only) — use server level/match as they persist across match states
+	// Schedule text (qualification only) - use server level/match as they persist across match states
 	const scheduleDetails = serverCycleData?.scheduleDetails ?? null;
 	const schedLevel = serverCycleData?.level ?? frame.level ?? "";
 	const schedMatch = serverCycleData?.match ?? frame.match ?? 0;
@@ -204,7 +204,7 @@ function warningsToEmoji(
 ): string {
 	const emojis: string[] = [];
 
-	// 👀 waiting — only shown during PRESTART states, uses server lastChange
+	// 👀 waiting - only shown during PRESTART states, uses server lastChange
 	// Not shown for bypassed or e-stopped robots
 	const ds = robot.ds ?? DSState.RED;
 	if (
@@ -359,7 +359,7 @@ async function pollServerFrame(): Promise<void> {
 			serverFrame = history[history.length - 1] as MonitorFrame;
 		}
 	} catch {
-		// Server not reachable — silently ignore, use local data only
+		// Server not reachable - silently ignore, use local data only
 	}
 }
 
@@ -381,7 +381,7 @@ async function pollCycleData(): Promise<void> {
 			};
 		}
 	} catch {
-		// Server not reachable — silently ignore
+		// Server not reachable - silently ignore
 	}
 }
 
@@ -412,7 +412,7 @@ function boot(): void {
 
 	// Validate config before connecting to server
 	if (!urlVal || !cloudVal || !eventCode || !eventToken) {
-		console.warn("[FTA Buddy Overlay] Missing config — overlay will work but no server data");
+		console.warn("[FTA Buddy Overlay] Missing config - overlay will work but no server data");
 	} else {
 		updateValues({
 			cloud: cloudVal === "true",

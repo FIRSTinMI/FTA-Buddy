@@ -567,11 +567,11 @@
 		if (isLive) {
 			const isRunning = monitorFrame && MatchStateMap[monitorFrame.field] === MatchState.RUNNING;
 			if (isRunning) {
-				// Match is running — show last completed cycle time
+				// Match is running - show last completed cycle time
 				const c = fmtCT(monitorFrame?.lastCycleTime ?? null);
 				return c ? `C: ${c}` : null;
 			}
-			// Prestart / waiting — show counting-up timer
+			// Prestart / waiting - show counting-up timer
 			return `T: ${currentCycleTime}`;
 		}
 		if (matchIndex >= 0 && allMatches[matchIndex]?.isPlayed) {

@@ -1,5 +1,5 @@
 /**
- * angular.ts — Read live data from the FMS FieldMonitor Angular component.
+ * angular.ts - Read live data from the FMS FieldMonitor Angular component.
  * Ported from extension/src/injected-fieldmonitor.ts.
  */
 
@@ -170,7 +170,7 @@ let _angularLoggedOnce = false;
 function buildFrameFromAngular(): PartialMonitorFrame | null {
 	const comp = getAngularComponent("field-monitor-simple");
 	if (!comp) {
-		if (!_angularLoggedOnce) console.log("[FTA Buddy] ng.getComponent('field-monitor-simple') returned null — ng available:", !!(window as any).ng, "element exists:", !!document.querySelector("field-monitor-simple"));
+		if (!_angularLoggedOnce) console.log("[FTA Buddy] ng.getComponent('field-monitor-simple') returned null - ng available:", !!(window as any).ng, "element exists:", !!document.querySelector("field-monitor-simple"));
 		return null;
 	}
 
@@ -197,7 +197,7 @@ function buildFrameFromAngular(): PartialMonitorFrame | null {
 		return s ? stationToRobotInfo(s) : EMPTY_ROBOT;
 	};
 
-	// aheadBehind may not be a property on the Angular component — fall back to DOM if empty
+	// aheadBehind may not be a property on the Angular component - fall back to DOM if empty
 	const aheadBehind: string = comp.aheadBehind || (() => {
 		const el = document.querySelector(".bg-dark span");
 		return el?.textContent?.trim() ?? "";

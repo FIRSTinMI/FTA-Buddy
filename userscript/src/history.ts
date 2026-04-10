@@ -1,5 +1,5 @@
 /**
- * history.ts — Rolling buffer for sparklines + per-station lastChange tracking.
+ * history.ts - Rolling buffer for sparklines + per-station lastChange tracking.
  */
 
 import { DSState, type PartialMonitorFrame, type PartialRobotInfo } from "../../shared/types";

@@ -13,7 +13,7 @@ import { subscriptionQueue } from "../util/subscription";
 import { computeOvernightOffset } from "../util/frame-processing";
 import { getTeamAverageCycle } from "../util/team-cycles";
 
-/** Format milliseconds as "M:SS" — compatible with cycleTimeToMS(). */
+/** Format milliseconds as "M:SS" - compatible with cycleTimeToMS(). */
 function msTocycleTimeString(ms: number): string {
 	const totalSeconds = Math.floor(ms / 1000);
 	const minutes = Math.floor(totalSeconds / 60);

@@ -1,6 +1,6 @@
 # FTA-Buddy
 
-A companion app for FIRST Robotics Competition (FRC) event volunteers — FTAs, FTAAs, CSAs, and RIs. It streams live field data from FMS to phones/tablets via a Chrome extension, without overloading the FMS network.
+A companion app for FIRST Robotics Competition (FRC) event volunteers - FTAs, FTAAs, CSAs, and RIs. It streams live field data from FMS to phones/tablets via a Chrome extension, without overloading the FMS network.
 
 ## Architecture
 
@@ -43,13 +43,13 @@ bun run format
 
 Copy `.env.example` to `.env` and fill in values. Required keys:
 
-- `DB_*` — PostgreSQL connection
-- `TBA_API_KEY` — The Blue Alliance API key (for event code validation)
-- `GOOGLE_CLIENT_ID` + `GOOGLE_KEY*` — Google OAuth
-- `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` — Web Push notifications
-- `OPENAI_KEY` / `OPENAI_MODEL` — Event report generation
-- `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET` — Slack bot integration
-- `TOA_KEY` / `FTC_KEY` — FTC event data
+- `DB_*` - PostgreSQL connection
+- `TBA_API_KEY` - The Blue Alliance API key (for event code validation)
+- `GOOGLE_CLIENT_ID` + `GOOGLE_KEY*` - Google OAuth
+- `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` - Web Push notifications
+- `OPENAI_KEY` / `OPENAI_MODEL` - Event report generation
+- `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET` - Slack bot integration
+- `TOA_KEY` / `FTC_KEY` - FTC event data
 
 ## Tech Stack
 
@@ -77,9 +77,9 @@ Types shared between server and app are in `shared/types.ts` and `shared/fmsApiT
 
 Svelte stores in `app/src/stores/`:
 
-- `user.ts` — authenticated user (persisted to localStorage)
-- `event.ts` — current event data (persisted to localStorage)
-- `settings.ts` — all user settings (persisted to localStorage + localforage)
+- `user.ts` - authenticated user (persisted to localStorage)
+- `event.ts` - current event data (persisted to localStorage)
+- `settings.ts` - all user settings (persisted to localStorage + localforage)
 - `notifications.ts`, `flashcards.ts`, `savedEvents.ts`, etc.
 
 ### Database

@@ -129,7 +129,7 @@
 				// Strip the token param from the URL without reloading
 				window.history.replaceState({}, "", window.location.pathname);
 			} catch {
-				// Ignore — token may be invalid; user can join manually
+				// Ignore - token may be invalid; user can join manually
 			}
 		}
 	});

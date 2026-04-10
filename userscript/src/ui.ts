@@ -1,5 +1,5 @@
 /**
- * ui.ts — DOM construction and per-frame update logic.
+ * ui.ts - DOM construction and per-frame update logic.
  *
  * Produces an exact replica of FTA Buddy's Monitor.svelte + MonitorRow.svelte:
  *   - Flat CSS grid (all station cells are direct children of .fb-grid)
@@ -51,7 +51,7 @@ function dsLetter(ds: DSState): string {
 // ── Sparkline path (smooth quadratic-bezier, matches Graph.svelte curveBasis) ─
 //
 // Graph.svelte uses d3 curveBasis (cubic B-spline).  We approximate it with
-// quadratic-bezier midpoint smoothing — visually equivalent for sparklines.
+// quadratic-bezier midpoint smoothing - visually equivalent for sparklines.
 //
 // Coordinate system (matches Graph.svelte scales):
 //   x: (index / (n-1)) * 90       → domain [0, 20], range [0, 90]
@@ -85,9 +85,9 @@ function makeSignalSvg(): { svg: SVGSVGElement; bars: SVGRectElement[] } {
 
 	// Three bars of increasing height (left=short, right=tall)
 	const barDefs = [
-		[1, 18, 5, 5],     // bar 1 — short
-		[9.5, 12, 5, 11],  // bar 2 — medium
-		[18, 6, 5, 17],    // bar 3 — tall
+		[1, 18, 5, 5],     // bar 1 - short
+		[9.5, 12, 5, 11],  // bar 2 - medium
+		[18, 6, 5, 17],    // bar 3 - tall
 	] as const;
 
 	const bars: SVGRectElement[] = barDefs.map(([x, y, w, h]) => {
@@ -253,7 +253,7 @@ function makeStationCells(alliance: "blue" | "red"): StationElements {
 	batSub.className = "fb-metric-sub";
 	bat.btn.appendChild(batSub);
 
-	// ── Ping (desktop only — fb-ping hides it on mobile) ─────────────────────
+	// ── Ping (desktop only - fb-ping hides it on mobile) ─────────────────────
 	const ping = makeMetricBtn("fb-ping");
 
 	// ── BWU (desktop only) ───────────────────────────────────────────────────
@@ -341,7 +341,7 @@ export function buildRoot(): RootElements {
 	netP.className = "fb-col-mb";
 	grid.appendChild(netP);
 
-	// ── Station cells (flat grid — all cells are direct .fb-grid children) ────
+	// ── Station cells (flat grid - all cells are direct .fb-grid children) ────
 	const stationOrder: { key: StationKey; alliance: "blue" | "red" }[] = [
 		{ key: "blue1", alliance: "blue" },
 		{ key: "blue2", alliance: "blue" },
@@ -387,7 +387,7 @@ function updateHeader(els: RootElements, frame: PartialMonitorFrame): void {
 		frame.level === "Qualification" ? "Qual" :
 		frame.level === "Playoff" ? "Playoff" :
 		frame.level ?? "";
-	els.headerMatchDiv.textContent = frame.match > 0 ? `M: ${frame.match}` : "—";
+	els.headerMatchDiv.textContent = frame.match > 0 ? `M: ${frame.match}` : "-";
 	els.headerStateDiv.textContent = FIELD_STATE_LABELS[frame.field] ?? "Unknown";
 	els.headerTimeSpan.textContent = frame.time ?? "";
 }
@@ -404,7 +404,7 @@ function updateStation(
 	const radioConnected = robot.radioConnected ?? false;
 
 	// ── Team ──────────────────────────────────────────────────────────────────
-	els.teamNumP.textContent = robot.number > 0 ? String(robot.number) : "—";
+	els.teamNumP.textContent = robot.number > 0 ? String(robot.number) : "-";
 	els.teamWarnP.textContent = "";  // no server = no badges
 
 	// ── DS ────────────────────────────────────────────────────────────────────
@@ -427,7 +427,7 @@ function updateStation(
 	// Exact formula from MonitorRow.svelte line 185-186
 	const batAlpha = bat < 11 && bat > 0 ? (-1.5 * bat ** 2 - 6.6 * bat + 255) / 255 : 0;
 	els.batBtn.style.backgroundColor = `rgba(255,0,0,${batAlpha})`;
-	els.batVal.textContent = bat > 0 ? `${bat.toFixed(1)}v` : "—";
+	els.batVal.textContent = bat > 0 ? `${bat.toFixed(1)}v` : "-";
 	const batVals = hist.battery.values;
 	if (batVals.length >= 2) {
 		els.batPath.setAttribute("d", buildSparklinePath(batVals, 6, 14));
@@ -449,7 +449,7 @@ function updateStation(
 		ping >= 20 && ping < 100 ? Math.log10(ping / 25) :
 		ping > 100 ? 0.5 : 0;
 	els.pingBtn.style.backgroundColor = `rgba(255,0,0,${pingAlpha})`;
-	els.pingVal.textContent = ping > 0 ? `${ping}ms` : "—";
+	els.pingVal.textContent = ping > 0 ? `${ping}ms` : "-";
 	const pingVals = hist.ping.values;
 	if (pingVals.length >= 2) {
 		const pingMax = Math.max(23, ...pingVals) + 2;
@@ -458,14 +458,14 @@ function updateStation(
 
 	// ── BWU ───────────────────────────────────────────────────────────────────
 	const bwu = robot.bwu ?? 0;
-	els.bwuBtn.textContent = bwu > 0 ? bwu.toFixed(2) : "—";
+	els.bwuBtn.textContent = bwu > 0 ? bwu.toFixed(2) : "-";
 
 	// ── Signal ────────────────────────────────────────────────────────────────
 	const sig = robot.signal ?? 0;
 	els.sigSpan.textContent = sig !== 0 ? String(sig) : "";
 	updateSignalBars(els.sigBars, sig !== 0 ? sig : null);
 
-	// ── Last Change — only shown when something is disconnected and not bypassed/estoped
+	// ── Last Change - only shown when something is disconnected and not bypassed/estoped
 	const bypassed = ds === DSState.BYPASS || ds === DSState.ESTOP;
 	const somethingDisconnected = ds === DSState.RED || !radio || !rio || !code;
 	els.lcBtn.textContent = (!bypassed && somethingDisconnected)
@@ -474,7 +474,7 @@ function updateStation(
 
 	// ── Net (mobile combined cell) ────────────────────────────────────────────
 	els.netPingDiv.textContent = `${ping} ms`;
-	els.netBwuDiv.textContent = bwu > 0 ? bwu.toFixed(2) : "—";
+	els.netBwuDiv.textContent = bwu > 0 ? bwu.toFixed(2) : "-";
 	els.netSigDiv.textContent = sig !== 0 ? `${sig} dBm` : "0 dBm";
 }
 

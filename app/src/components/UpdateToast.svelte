@@ -11,7 +11,7 @@
 			const keys = await caches.keys();
 			await Promise.all(keys.map((k) => caches.delete(k)));
 		} catch {
-			// non-fatal — still reload even if SW/cache cleanup fails
+			// non-fatal - still reload even if SW/cache cleanup fails
 		}
 		window.location.reload();
 	}

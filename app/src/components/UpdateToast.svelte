@@ -3,6 +3,18 @@
 
 	export let show = false;
 	export let newVersion = "";
+
+	async function hardRefresh() {
+		try {
+			const regs = await navigator.serviceWorker.getRegistrations();
+			await Promise.all(regs.map((r) => r.unregister()));
+			const keys = await caches.keys();
+			await Promise.all(keys.map((k) => caches.delete(k)));
+		} catch {
+			// non-fatal — still reload even if SW/cache cleanup fails
+		}
+		window.location.reload();
+	}
 </script>
 
 {#if show}
@@ -14,7 +26,7 @@
 			<h3 class="text-lg font-bold text-left">Update</h3>
 			<p class="text-left">Version v{newVersion} is available</p>
 
-			<Button onclick={() => window.location.reload(true)} class="mt-1 ml-0" color="blue">Refresh</Button>
+			<Button onclick={hardRefresh} class="mt-1 ml-0" color="blue">Refresh</Button>
 		</Toast>
 	</div>
 {/if}

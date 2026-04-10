@@ -1,0 +1,16 @@
+FROM oven/bun:1 AS builder
+WORKDIR /app
+
+COPY package.json bun.lock* ./
+COPY app/package.json app/bun.lock* ./app/
+RUN bun install --frozen-lockfile
+RUN cd app && bun install --frozen-lockfile
+
+COPY . .
+RUN bun run build
+
+FROM oven/bun:1
+WORKDIR /app
+COPY --from=builder /app .
+
+CMD ["bun", "run", "start"]

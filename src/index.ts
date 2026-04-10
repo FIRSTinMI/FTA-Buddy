@@ -473,5 +473,6 @@ connect().then(async () => {
 
 process.on("SIGTERM", () => {
 	console.log("SIGTERM");
-	server.close();
+	server.closeAllConnections();
+	server.close(() => process.exit(0));
 });

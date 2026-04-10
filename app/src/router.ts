@@ -21,6 +21,7 @@ export const { p, navigate, isActive, preload, route } = createRouter({
 	"/manage/kiosk": () => import("./pages/management/RadioKiosk.svelte"),
 	"/manage/google-signup": () => import("./pages/management/CompleteGoogleSignup.svelte"),
 	"/manage/meshed-event": () => import("./pages/management/MeshedEvent.svelte"),
+	"/join/:token": () => import("./pages/management/JoinByLink.svelte"),
 
 	"/logs": () => import("./pages/match-logs/MatchLogsList.svelte"),
 	"/logs/event/:eventCode/:matchid/:station": () => import("./pages/EventSwitchRedirect.svelte"),

@@ -251,6 +251,7 @@ export const matchEventsRouter = router({
 							newNote.text,
 							event.code,
 							newNote.match_id ?? undefined,
+							event.token,
 						),
 					);
 					await db

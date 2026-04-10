@@ -191,18 +191,20 @@ export function createSlackNoteMessage(
 	body: string,
 	event_code: string,
 	match_id?: string,
+	event_token?: string,
 ) {
+	const tokenParam = event_token ? `?token=${event_token}` : "";
 	const buttons: any[] = [];
 	buttons.push({
 		type: "button",
 		text: { type: "plain_text", text: "View Note", emoji: true },
-		url: `https://ftabuddy.com/notepad/view/${event_code}/${note_id}`,
+		url: `https://ftabuddy.com/notepad/view/${event_code}/${note_id}${tokenParam}`,
 	});
 	if (match_id) {
 		buttons.push({
 			type: "button",
 			text: { type: "plain_text", text: "View Match Log", emoji: true },
-			url: `https://ftabuddy.com/logs/event/${event_code}/${match_id}`,
+			url: `https://ftabuddy.com/logs/event/${event_code}/${match_id}${tokenParam}`,
 		});
 	}
 	const blocks: SlackElements[] = [
@@ -690,6 +692,8 @@ export const notesRouter = router({
 						"Team Submission",
 						insert[0].text,
 						event.code,
+						undefined,
+						event.token,
 					),
 				);
 				await db
@@ -837,6 +841,7 @@ export const notesRouter = router({
 						insert[0].text,
 						event.code,
 						insert[0].match_id ?? undefined,
+						event.token,
 					),
 				);
 				await db
@@ -894,6 +899,7 @@ export const notesRouter = router({
 						update[0].text,
 						event.code,
 						update[0].match_id ?? undefined,
+						event.token,
 					),
 				);
 			}
@@ -1789,7 +1795,7 @@ export async function createFromNexus(channel_id: string, message_ts: string, te
 							accessory: {
 								type: "button",
 								text: { type: "plain_text", text: "View Ticket", emoji: true },
-								url: `https://ftabuddy.com/notepad/view/${event.code}/${noteId}`,
+								url: `https://ftabuddy.com/notepad/view/${event.code}/${noteId}?token=${event.token}`,
 							},
 						},
 					],

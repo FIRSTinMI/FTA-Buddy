@@ -5,7 +5,7 @@
 		"extension",
 		"userscript"
 	],
-	"version": "2.7.5.2",
+	"version": "2.7.6.0",
 	"description": "",
 	"scripts": {
 		"start": "bun run ./src/index.ts",

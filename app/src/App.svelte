@@ -18,12 +18,14 @@
 	import { onDestroy, onMount, tick } from "svelte";
 	import { get } from "svelte/store";
 	import { formatTime } from "../../shared/formatTime";
+	import type { Profile, TeamList } from "../../shared/types";
 	import SettingsModal from "./components/SettingsModal.svelte";
 	import UpdateToast from "./components/UpdateToast.svelte";
 	import WelcomeModal from "./components/WelcomeModal.svelte";
 	import { trpc } from "./main";
 	import { navigate, route } from "./router";
 	import { eventStore } from "./stores/event";
+	import { saveEvent } from "./stores/savedEvents";
 	import { fullscreen } from "./stores/fullscreen";
 	import { installPrompt } from "./stores/install-prompt";
 	import { notificationsStore } from "./stores/notifications";
@@ -85,6 +87,62 @@
 			// Network / server error - do NOT clear the token to avoid false logouts on flaky connections
 			console.warn("[AUTH] checkAuth request failed (not clearing token):", err.message);
 		}
+
+		// Auto-join event from magic link ?token= query param (used in Slack deep-links)
+		const urlParams = new URLSearchParams(window.location.search);
+		const magicToken = urlParams.get("token");
+		if (magicToken && $user.token && $user.eventToken !== magicToken) {
+			try {
+				const res = await trpc.event.joinByToken.mutate({ token: magicToken });
+				if (res.subEvents) {
+					user.set({ ...$user, eventToken: res.token, meshedEventToken: res.token });
+					eventStore.set({
+						code: res.code,
+						pin: res.pin,
+						teams: res.teams as TeamList,
+						users: res.users as Profile[],
+						subEvents: res.subEvents,
+						meshedEventCode: res.code,
+						startDate: res.startDate ?? undefined,
+						endDate: res.endDate ?? undefined,
+					});
+					saveEvent({
+						code: res.code,
+						token: res.token,
+						pin: res.pin,
+						teams: res.teams as TeamList,
+						users: res.users as Profile[],
+						subEvents: res.subEvents,
+						meshedEventCode: res.code,
+						startDate: res.startDate ?? undefined,
+						endDate: res.endDate ?? undefined,
+					});
+				} else {
+					user.set({ ...$user, eventToken: res.token });
+					eventStore.set({
+						code: res.code,
+						pin: res.pin,
+						teams: res.teams as TeamList,
+						users: res.users as Profile[],
+						startDate: res.startDate ?? undefined,
+						endDate: res.endDate ?? undefined,
+					});
+					saveEvent({
+						code: res.code,
+						token: res.token,
+						pin: res.pin,
+						teams: res.teams as TeamList,
+						users: res.users as Profile[],
+						startDate: res.startDate ?? undefined,
+						endDate: res.endDate ?? undefined,
+					});
+				}
+				// Strip the token param from the URL without reloading
+				window.history.replaceState({}, "", window.location.pathname);
+			} catch {
+				// Ignore — token may be invalid; user can join manually
+			}
+		}
 	});
 
 	const publicPaths = [
@@ -104,12 +162,14 @@
 		"/references/softwaredocs",
 		"/dashboard",
 		"/manage/kiosk",
+		"/join",
 	];
 
 	const eventTokenPaths = ["/monitor", "/checklist", "/logs", "/notepad"];
 
 	const pageIsPublicLog = route.pathname.startsWith("/logs/") && route.pathname.split("/")[3].length == 36;
 	const pageIsPublicNoteCreate = route.pathname.startsWith("/notepad/submit/");
+	const pageIsJoinLink = route.pathname.startsWith("/join/");
 
 	function redirectForAuth() {
 		// if user has event token and is trying to access a page that requires an event token
@@ -119,7 +179,7 @@
 
 		if (!publicPaths.includes(route.pathname)) {
 			//user trying to acces protected page
-			if (!pageIsPublicLog && !pageIsPublicNoteCreate) {
+			if (!pageIsPublicLog && !pageIsPublicNoteCreate && !pageIsJoinLink) {
 				//page is not public log or public note creation page
 				if (!$user.token || !$user.eventToken) {
 					navigate("/manage/login"); //user is either not logged in or does not have event token

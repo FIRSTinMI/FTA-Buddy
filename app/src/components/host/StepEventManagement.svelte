@@ -146,6 +146,18 @@
 		</div>
 		{#if $userStore.eventToken}
 			<div class="flex items-center gap-2">
+				<span class="text-sm text-gray-400 w-24">Magic Link</span>
+				<code class="bg-neutral-800 px-2 py-0.5 rounded-lg text-xs text-gray-400 max-w-xs truncate"
+					>https://ftabuddy.com/join/{$userStore.eventToken}</code
+				>
+				<button
+					class="text-xs text-blue-400 hover:underline"
+					onclick={() => copyToClipboard(`https://ftabuddy.com/join/${$userStore.eventToken}`)}>copy</button
+				>
+			</div>
+		{/if}
+		{#if $userStore.eventToken}
+			<div class="flex items-center gap-2">
 				<span class="text-sm text-gray-400 w-24">API Token</span>
 				<code class="bg-neutral-800 px-2 py-0.5 rounded-lg text-xs text-gray-400 max-w-xs truncate"
 					>{$userStore.eventToken}</code

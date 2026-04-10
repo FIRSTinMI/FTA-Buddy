@@ -138,6 +138,42 @@ export const eventRouter = router({
 			return event;
 		}),
 
+	joinByToken: protectedProcedure
+		.input(z.object({ token: z.string() }))
+		.mutation(async ({ input, ctx }) => {
+			const eventDB = await db.query.events.findFirst({ where: eq(events.token, input.token) });
+
+			if (!eventDB) throw new TRPCError({ code: "NOT_FOUND", message: "Event not found" });
+			if (eventDB.archived) throw new TRPCError({ code: "BAD_REQUEST", message: "Event has been archived" });
+
+			const event = await getEvent(eventDB.token);
+
+			const eventList = ctx.user.events as string[];
+
+			event.users = Array.from(
+				new Set([
+					...event.users,
+					{
+						id: ctx.user.id,
+						username: ctx.user.username,
+						role: ctx.user.role,
+						admin: ctx.user.admin,
+					},
+				]),
+			);
+
+			await db
+				.update(users)
+				.set({ events: Array.from(new Set([...eventList, event.code])), active_event_code: event.code })
+				.where(eq(users.id, ctx.user.id));
+			await db
+				.update(events)
+				.set({ users: Array.from(new Set(event.users.map((u) => u.id))) })
+				.where(eq(events.code, event.code));
+
+			return event;
+		}),
+
 	get: adminProcedure
 		.input(
 			z.object({

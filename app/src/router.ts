@@ -1,63 +1,64 @@
 // src/app/router.ts
 import { createRouter } from "sv-router";
 
-function lazy<T>(importFn: () => Promise<T>): () => Promise<T> {
-	return () =>
-		importFn()
-			.then((mod) => {
-				sessionStorage.removeItem("chunk-reload");
-				return mod;
-			})
-			.catch((err: unknown) => {
-				const msg = (err as Error)?.message ?? "";
-				if (msg.includes("Failed to fetch dynamically imported module") || msg.includes("error loading dynamically imported module")) {
-					if (!sessionStorage.getItem("chunk-reload")) {
-						sessionStorage.setItem("chunk-reload", "true");
-						window.location.reload();
-					}
-				}
-				throw err;
-			});
+// Handle stale JS chunks after a deployment. sv-router's isLazyImport() detects
+// lazy routes via a regex on the function's source text — wrapping imports in a
+// closure breaks that detection and causes sv-router to treat the function as an
+// already-resolved component, rendering nothing. Use a global unhandledrejection
+// handler instead so the direct () => import(...) syntax is preserved.
+if (typeof window !== "undefined") {
+	window.addEventListener("unhandledrejection", (event) => {
+		const msg = (event.reason as Error)?.message ?? "";
+		if (
+			msg.includes("Failed to fetch dynamically imported module") ||
+			msg.includes("error loading dynamically imported module")
+		) {
+			if (!sessionStorage.getItem("chunk-reload")) {
+				sessionStorage.setItem("chunk-reload", "true");
+				window.location.reload();
+			}
+		}
+	});
 }
 
 export const { p, navigate, isActive, preload, route } = createRouter({
-	"/": lazy(() => import("./pages/Monitor.svelte")),
+	"/": () => import("./pages/Monitor.svelte"),
 
 	// Main pages
-	"/monitor": lazy(() => import("./pages/Monitor.svelte")),
-	"/dashboard": lazy(() => import("./pages/EventDashboard.svelte")),
-	"/event-reports": lazy(() => import("./pages/EventReport.svelte")),
-	"/flashcards": lazy(() => import("./pages/Flashcards.svelte")),
-	"/checklist": lazy(() => import("./pages/Checklist.svelte")),
-	"/notifications": lazy(() => import("./pages/tickets-notes/NotificationList.svelte")),
-	"/ftc": lazy(() => import("./pages/ftc/FTCStatus.svelte")),
+	"/monitor": () => import("./pages/Monitor.svelte"),
+	"/dashboard": () => import("./pages/EventDashboard.svelte"),
+	"/event-reports": () => import("./pages/EventReport.svelte"),
+	"/flashcards": () => import("./pages/Flashcards.svelte"),
+	"/checklist": () => import("./pages/Checklist.svelte"),
+	"/notifications": () => import("./pages/tickets-notes/NotificationList.svelte"),
+	"/ftc": () => import("./pages/ftc/FTCStatus.svelte"),
 
-	"/manage": lazy(() => import("./pages/management/Management.svelte")),
-	"/manage/login": lazy(() => import("./pages/management/Login.svelte")),
-	"/manage/host": lazy(() => import("./pages/management/Host.svelte")),
-	"/manage/host/create": lazy(() => import("./pages/management/Host.svelte")),
-	"/manage/event-settings": lazy(() => import("./pages/management/Host.svelte")),
-	"/manage/kiosk": lazy(() => import("./pages/management/RadioKiosk.svelte")),
-	"/manage/google-signup": lazy(() => import("./pages/management/CompleteGoogleSignup.svelte")),
-	"/manage/meshed-event": lazy(() => import("./pages/management/MeshedEvent.svelte")),
-	"/join/:token": lazy(() => import("./pages/management/JoinByLink.svelte")),
+	"/manage": () => import("./pages/management/Management.svelte"),
+	"/manage/login": () => import("./pages/management/Login.svelte"),
+	"/manage/host": () => import("./pages/management/Host.svelte"),
+	"/manage/host/create": () => import("./pages/management/Host.svelte"),
+	"/manage/event-settings": () => import("./pages/management/Host.svelte"),
+	"/manage/kiosk": () => import("./pages/management/RadioKiosk.svelte"),
+	"/manage/google-signup": () => import("./pages/management/CompleteGoogleSignup.svelte"),
+	"/manage/meshed-event": () => import("./pages/management/MeshedEvent.svelte"),
+	"/join/:token": () => import("./pages/management/JoinByLink.svelte"),
 
-	"/logs": lazy(() => import("./pages/match-logs/MatchLogsList.svelte")),
-	"/logs/event/:eventCode/:matchid/:station": lazy(() => import("./pages/EventSwitchRedirect.svelte")),
-	"/logs/event/:eventCode/:matchid": lazy(() => import("./pages/EventSwitchRedirect.svelte")),
-	"/logs/:matchid": lazy(() => import("./pages/match-logs/MatchLog.svelte")),
-	"/logs/:matchid/:station": lazy(() => import("./pages/match-logs/StationLog.svelte")),
+	"/logs": () => import("./pages/match-logs/MatchLogsList.svelte"),
+	"/logs/event/:eventCode/:matchid/:station": () => import("./pages/EventSwitchRedirect.svelte"),
+	"/logs/event/:eventCode/:matchid": () => import("./pages/EventSwitchRedirect.svelte"),
+	"/logs/:matchid": () => import("./pages/match-logs/MatchLog.svelte"),
+	"/logs/:matchid/:station": () => import("./pages/match-logs/StationLog.svelte"),
 
-	"/notepad": lazy(() => import("./pages/SupportBoard.svelte")),
-	"/notepad/team/:team": lazy(() => import("./pages/tickets-notes/TeamHistory.svelte")),
-	"/notepad/view/:eventCode/:id": lazy(() => import("./pages/EventSwitchRedirect.svelte")),
-	"/notepad/view/:id": lazy(() => import("./pages/tickets-notes/ViewNote.svelte")),
-	"/notepad/submit/:eventCode": lazy(() => import("./pages/tickets-notes/PublicNoteCreate.svelte")),
+	"/notepad": () => import("./pages/SupportBoard.svelte"),
+	"/notepad/team/:team": () => import("./pages/tickets-notes/TeamHistory.svelte"),
+	"/notepad/view/:eventCode/:id": () => import("./pages/EventSwitchRedirect.svelte"),
+	"/notepad/view/:id": () => import("./pages/tickets-notes/ViewNote.svelte"),
+	"/notepad/submit/:eventCode": () => import("./pages/tickets-notes/PublicNoteCreate.svelte"),
 
-	"/references": lazy(() => import("./pages/references/Reference.svelte")),
-	"/references/statuslights": lazy(() => import("./pages/references/StatusLights.svelte")),
-	"/references/softwaredocs": lazy(() => import("./pages/references/SoftwareDocs.svelte")),
-	"/references/wiringdiagrams": lazy(() => import("./pages/references/WiringDiagrams.svelte")),
-	"/references/componentmanuals": lazy(() => import("./pages/references/ComponentManuals.svelte")),
-	"/references/fieldmanuals": lazy(() => import("./pages/references/FieldManuals.svelte")),
+	"/references": () => import("./pages/references/Reference.svelte"),
+	"/references/statuslights": () => import("./pages/references/StatusLights.svelte"),
+	"/references/softwaredocs": () => import("./pages/references/SoftwareDocs.svelte"),
+	"/references/wiringdiagrams": () => import("./pages/references/WiringDiagrams.svelte"),
+	"/references/componentmanuals": () => import("./pages/references/ComponentManuals.svelte"),
+	"/references/fieldmanuals": () => import("./pages/references/FieldManuals.svelte"),
 });

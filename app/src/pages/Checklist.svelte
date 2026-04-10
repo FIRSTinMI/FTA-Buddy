@@ -237,7 +237,7 @@
 				</tr>
 			</thead>
 			<tbody>
-				{#each sortedEntries as [team, items]}
+				{#each sortedEntries as [team, items] (team)}
 					<tr class="border-b-1 border-gray-600">
 						<td class="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 px-6 py-4">
 							<button

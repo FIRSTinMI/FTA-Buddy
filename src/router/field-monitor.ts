@@ -167,10 +167,15 @@ export const fieldMonitorRouter = router({
 			if (event.history.length > 50) event.history.shift();
 
 			bus.publish(`event:${event.code}:frame`, event.monitorFrame);
-			redis.set(`ftabuddy:event:${event.code}:monitor_frame`, JSON.stringify(event.monitorFrame));
-			redis.lpush(`ftabuddy:event:${event.code}:history`, JSON.stringify(event.monitorFrame));
-			redis.ltrim(`ftabuddy:event:${event.code}:history`, 0, 49);
-			redis.expire(`ftabuddy:event:${event.code}:history`, 86400);
+			// Pipeline the four Redis writes so trim/expire always follow the push atomically
+			redis
+				.multi()
+				.set(`ftabuddy:event:${event.code}:monitor_frame`, JSON.stringify(event.monitorFrame))
+				.lpush(`ftabuddy:event:${event.code}:history`, JSON.stringify(event.monitorFrame))
+				.ltrim(`ftabuddy:event:${event.code}:history`, 0, 49)
+				.expire(`ftabuddy:event:${event.code}:history`, 86400)
+				.exec()
+				.catch((err) => console.error(`[Redis] Frame pipeline failed for ${event.code}:`, err));
 
 			for (const change of processed.changes) {
 				bus.publish(`event:${event.code}:robot_state`, change);
@@ -273,10 +278,14 @@ export const fieldMonitorRouter = router({
 			const { push, drain } = subscriptionQueue<EventState>(signal!);
 			const cleanups: Array<() => void> = [];
 
-			const addNewEvent = (eventCode: string) => {
+			const addNewEvent = async (eventCode: string) => {
 				console.log("new event", eventCode);
-				const event = events[eventCode];
-				if (!event) return;
+				let event = events[eventCode];
+				// If this instance hasn't loaded the event yet (e.g. it was created on another
+				// instance), load it now so we can push current state and wire the subscription.
+				if (!event) {
+					try { event = await getEvent("", eventCode); } catch { return; }
+				}
 				const unsub = bus.subscribe(`event:${eventCode}:frame`, (data) => {
 					const frame = data as MonitorFrame;
 					push({

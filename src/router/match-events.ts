@@ -443,7 +443,7 @@ export const matchEventsRouter = router({
 		const { push, drain } = subscriptionQueue<MatchEventUpdateEventData>(signal!);
 
 		const eventCodesToListen = [event.code];
-		if (event.meshedEvent && event.subEvents) {
+		if (event.meshedEvent && event.subEvents && !event.playoffMode) {
 			eventCodesToListen.push(...event.subEvents.map((s) => s.code));
 		}
 

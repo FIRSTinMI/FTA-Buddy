@@ -14,7 +14,7 @@ export const VERSIONS: { [key: string]: Version } = {
 	"2.7.7.0": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.7.0</h1>
-        <strong>Happy DCMP Update!<strong>
+        <strong>Happy DCMP Update!</strong>
         <ul>
         <li>Add refused help status for notes</li>
         <li>Meshed event improvements</li>

@@ -15,6 +15,7 @@
 	let pitMapData: PitMapData | null = $state(null);
 	let loading = $state(false);
 	let error: string | null = $state(null);
+	let confirmRemoveOpen = $state(false);
 	let teamPitId: string | null = $derived.by(() => {
 		if (!pitMapData) return null;
 		for (const [id, pit] of Object.entries(pitMapData.pits)) {
@@ -235,16 +236,23 @@
 
 	{#snippet footer()}
 		{#if onRemove}
-			<Button
-				color="red"
-				onclick={() => {
-					if (confirm(`Remove team ${teamNumber} from this event?`)) {
-						onRemove!(teamNumber);
-						open = false;
-					}
-				}}
-			>Remove from Event</Button>
+			<Button color="red" onclick={() => (confirmRemoveOpen = true)}>Remove Team From Event</Button>
 		{/if}
-		<Button onclick={() => (open = false)}>Close</Button>
+		<Button class="ml-auto" onclick={() => (open = false)}>Close</Button>
+	{/snippet}
+</Modal>
+
+<Modal bind:open={confirmRemoveOpen} size="xs" title="Remove Team">
+	<p class="text-sm">Are you sure you want to remove team <strong>{teamNumber}</strong> from this event? This cannot be undone.</p>
+	{#snippet footer()}
+		<Button
+			color="red"
+			onclick={() => {
+				onRemove!(teamNumber);
+				confirmRemoveOpen = false;
+				open = false;
+			}}
+		>Yes, Remove Team</Button>
+		<Button color="alternative" onclick={() => (confirmRemoveOpen = false)}>Cancel</Button>
 	{/snippet}
 </Modal>

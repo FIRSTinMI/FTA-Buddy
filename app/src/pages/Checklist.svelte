@@ -252,28 +252,28 @@
 						<button
 							onclick={() => (sortBy = sortBy === "present" ? null : "present")}
 							class={sortBy === "present" ? "text-blue-400 font-bold" : "font-bold"}
-							>Present{sortBy === "present" ? " ▲" : ""}</button
+							>Present <span class={sortBy === "present" ? "" : "opacity-30"}>▲</span></button
 						>
 					</td>
 					<td class="p-1 md:p-2">
 						<button
 							onclick={() => (sortBy = sortBy === "inspected" ? null : "inspected")}
 							class={sortBy === "inspected" ? "text-blue-400 font-bold" : "font-bold"}
-							>Inspected{sortBy === "inspected" ? " ▲" : ""}</button
+							>Inspected <span class={sortBy === "inspected" ? "" : "opacity-30"}>▲</span></button
 						>
 					</td>
 					<td class="p-1 md:p-2">
 						<button
 							onclick={() => (sortBy = sortBy === "radioProgrammed" ? null : "radioProgrammed")}
 							class={sortBy === "radioProgrammed" ? "text-blue-400 font-bold" : "font-bold"}
-							>Radio{sortBy === "radioProgrammed" ? " ▲" : ""}</button
+							>Radio <span class={sortBy === "radioProgrammed" ? "" : "opacity-30"}>▲</span></button
 						>
 					</td>
 					<td class="p-1 md:p-2">
 						<button
 							onclick={() => (sortBy = sortBy === "connectionTested" ? null : "connectionTested")}
 							class={sortBy === "connectionTested" ? "text-blue-400 font-bold" : "font-bold"}
-							>Connection{sortBy === "connectionTested" ? " ▲" : ""}</button
+							>Connection <span class={sortBy === "connectionTested" ? "" : "opacity-30"}>▲</span></button
 						>
 					</td>
 				</tr>

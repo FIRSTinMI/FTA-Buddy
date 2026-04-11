@@ -13,6 +13,7 @@ import { gfmHeadingId } from "marked-gfm-heading-id";
 import { markedHighlight } from "marked-highlight";
 import { join } from "path";
 import sanitizeHtml from "sanitize-html";
+import SuperJSON from "superjson";
 import { cycleTimeToMS } from "../shared/cycleTimeToMS";
 import type { ROBOT, TournamentLevel } from "../shared/types";
 import { connect, db } from "./db/db";
@@ -105,7 +106,7 @@ const appRouter = router({
 					endTime: null,
 					effectedEvents: input.effectedEvents,
 				};
-				redis.set("ftabuddy:global:known_issue", JSON.stringify(knownIssue));
+				redis.set("ftabuddy:global:known_issue", SuperJSON.stringify(knownIssue));
 				bus.publish("global:known_issue", knownIssue);
 				return knownIssue;
 			}),
@@ -117,7 +118,7 @@ const appRouter = router({
 				endTime: new Date(),
 				effectedEvents: knownIssue.effectedEvents,
 			};
-			redis.set("ftabuddy:global:known_issue", JSON.stringify(knownIssue));
+			redis.set("ftabuddy:global:known_issue", SuperJSON.stringify(knownIssue));
 			bus.publish("global:known_issue", knownIssue);
 			return knownIssue;
 		}),
@@ -427,6 +428,7 @@ app.post("/api/nexus/event-status", async (req, res) => {
 	if (!body?.eventKey || typeof body.dataAsOfTime !== "number") return;
 
 	const eventCode = body.eventKey.toLowerCase();
+	console.log(`[NexusWebhook] Received ${body.matches ? "match" : "event"} update for ${eventCode}`);
 	const newStatus = {
 		dataAsOfTime: body.dataAsOfTime,
 		nowQueuing: body.nowQueuing ?? null,
@@ -454,17 +456,14 @@ if (process.env.NODE_ENV === "dev") {
 }
 
 connect().then(async () => {
-	// Load knownIssue from Redis — rehydrate Date fields since JSON round-trips them as strings
-	function rehydrateKnownIssue(raw: typeof knownIssue): typeof knownIssue {
-		return { ...raw, startTime: raw.startTime ? new Date(raw.startTime as any) : null, endTime: raw.endTime ? new Date(raw.endTime as any) : null };
-	}
+	// Load knownIssue from Redis
 	try {
 		const storedIssue = await redis.get("ftabuddy:global:known_issue");
-		if (storedIssue) knownIssue = rehydrateKnownIssue(JSON.parse(storedIssue));
+		if (storedIssue) knownIssue = SuperJSON.parse(storedIssue);
 	} catch (err) {
 		console.error("[KnownIssue] Failed to load from Redis:", err);
 	}
-	bus.subscribe("global:known_issue", (data) => { knownIssue = rehydrateKnownIssue(data as typeof knownIssue); });
+	bus.subscribe("global:known_issue", (data) => { knownIssue = data as typeof knownIssue; });
 
 	// Log analysis loop — runs forever; errors are caught and logged so the loop never dies.
 	// acquireOrRenewLock: if we already hold the lock, renew it; if unclaimed, acquire it.

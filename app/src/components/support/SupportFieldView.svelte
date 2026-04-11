@@ -104,7 +104,7 @@
 				level: m.level,
 			};
 		}
-		if (monitorFrame) {
+		if (monitorFrame && monitorFrame.frameTime > 0) {
 			return {
 				blue1: monitorFrame.blue1.number,
 				blue2: monitorFrame.blue2.number,
@@ -123,7 +123,7 @@
 
 	let teamsSource = $derived.by(() => {
 		if (matchIndex >= 0 && matchIndex < allMatches.length) return "nav" as const;
-		if (monitorFrame) return "monitor" as const;
+		if (monitorFrame && monitorFrame.frameTime > 0) return "monitor" as const;
 		if (matchIndex === -1 && nexusTeams) return "nexus" as const;
 		return null;
 	});

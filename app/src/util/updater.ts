@@ -22,6 +22,7 @@ export const VERSIONS: { [key: string]: Version } = {
         <li>Backend performance improvements</li>
         <li>Ability to manually remove team from event</li>
         <li>Use Nexus API to get event status when missing FMS integration</li>
+        <li>Add proper support for inter-divisional playoffs</li>
         </ul>
         `,
 	},

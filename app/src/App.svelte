@@ -40,6 +40,7 @@
 	import { registerToast } from "./util/toast";
 	import { track } from "./util/telemetry";
 	import { update, VERSIONS } from "./util/updater";
+	import { getPlayoffViewLabel } from "./util/playoffViewLabel";
 
 	// On mount check if the user's permissions have changed
 	onMount(async () => {
@@ -405,7 +406,7 @@
 	onMount(() => {
 		if ($user.token && route.pathname === "/") {
 			if ($user.role === "FTA" || $user.role === "FTAA") {
-				if ($user.meshedEventToken && event && event.subEvents && $user.eventToken === $user.meshedEventToken) {
+				if ($user.meshedEventToken && event && event.subEvents && $user.eventToken === $user.meshedEventToken && !event.playoffMode) {
 					navigate("/dashboard");
 				} else {
 					navigate("/monitor");
@@ -526,7 +527,7 @@
 			<Select
 				bind:value={multiEventSelection}
 				items={[
-					{ value: "combined", name: "Combined" },
+					{ value: "combined", name: event.playoffMode ? getPlayoffViewLabel(event.meshedEventCode ?? event.code) : "Combined" },
 					...event.subEvents.map((e) => ({ value: e.code, name: e.label })),
 				]}
 				class="w-full"
@@ -536,10 +537,10 @@
 							...$user,
 							eventToken: $user.meshedEventToken ?? "",
 						});
-						eventStore.set({ ...event, code: event.meshedEventCode ?? "", label: "Combined" });
+						eventStore.set({ ...event, code: event.meshedEventCode ?? "", label: event.playoffMode ? getPlayoffViewLabel(event.meshedEventCode ?? event.code) : "Combined" });
 						if (event.meshedEventCode)
 							trpc.event.setActiveEvent.mutate({ eventCode: event.meshedEventCode }).catch(() => {});
-						if (route.pathname.startsWith("/monitor")) {
+						if (route.pathname.startsWith("/monitor") && !event.playoffMode) {
 							navigate("/dashboard");
 						}
 					} else {

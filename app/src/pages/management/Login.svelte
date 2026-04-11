@@ -179,6 +179,7 @@
 					users: res.users as Profile[],
 					subEvents: res.subEvents,
 					meshedEventCode: res.code,
+					playoffMode: res.playoffMode,
 					startDate: res.startDate ?? undefined,
 					endDate: res.endDate ?? undefined,
 				});
@@ -244,6 +245,7 @@
 					users: res.users as Profile[],
 					subEvents: res.subEvents,
 					meshedEventCode: res.code,
+					playoffMode: res.playoffMode,
 					startDate: res.startDate ?? undefined,
 					endDate: res.endDate ?? undefined,
 				});

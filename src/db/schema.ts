@@ -60,6 +60,7 @@ export const events = pgTable("events", {
 	fmsEventPassword: varchar("fmsEventPassword"),
 	autoEventSettings: jsonb("autoEventSettings").$type<EventAutoEventSettings>().notNull().default({}),
 	notepadOnly: boolean("notepadOnly").notNull().default(false),
+	playoffMode: boolean("playoffMode").notNull().default(false),
 });
 
 export type Event = typeof events.$inferInsert;

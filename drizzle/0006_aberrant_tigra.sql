@@ -1,0 +1,1 @@
+ALTER TABLE "events" ADD COLUMN "playoffMode" boolean DEFAULT false NOT NULL;

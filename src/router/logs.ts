@@ -302,9 +302,12 @@ export const matchRouter = router({
 			),
 		)
 		.query(async ({ input, ctx }) => {
-			// For meshed events, query all sub-event codes; otherwise just the current event
+			// For meshed events, query all sub-event codes (and the parent); otherwise just the current event.
+			// In inter-divisional playoffs mode, only query the parent event.
 			const eventCodes: string[] = ctx.event.meshedEvent
-				? (ctx.event.meshedEvent as Array<{ code: string }>).map((e) => e.code)
+				? ctx.event.playoffMode
+					? [ctx.event.code]
+					: [ctx.event.code, ...(ctx.event.meshedEvent as Array<{ code: string }>).map((e) => e.code)]
 				: [ctx.event.code];
 
 			const filters = [eventCodes.length === 1 ? eq(matchLogs.event, eventCodes[0]) : inArray(matchLogs.event, eventCodes)];

@@ -3,6 +3,9 @@
 	import { onMount } from "svelte";
 	import { eventStore } from "../../stores/event";
 	import { userStore } from "../../stores/user";
+	import { trpc } from "../../main";
+	import { toast } from "../../util/toast";
+	import { getPlayoffViewLabel } from "../../util/playoffViewLabel";
 	import { LATEST_EXTENSION_VERSION } from "../../util/updater";
 	import IntegrationAutoEvents from "./integrations/IntegrationAutoEvents.svelte";
 	import IntegrationFmsFtaApp from "./integrations/IntegrationFmsFtaApp.svelte";
@@ -58,6 +61,26 @@
 	onMount(() => {
 		window.postMessage({ source: "page", type: "ping" }, "*");
 	});
+
+	let playoffModeBlocked = $state(false);
+	async function togglePlayoffMode() {
+		playoffModeBlocked = true;
+		try {
+			const res = await trpc.event.setPlayoffMode.mutate({ playoffMode: !$eventStore.playoffMode });
+			eventStore.update((e) => ({ ...e, playoffMode: res.playoffMode }));
+			toast(
+				"Inter-Divisional Playoffs",
+				res.playoffMode
+					? `Enabled — ${getPlayoffViewLabel($eventStore.code)} view is now active`
+					: "Disabled — Combined view restored",
+				res.playoffMode ? "blue-500" : "green-500",
+			);
+		} catch (e) {
+			if (e instanceof Error) toast("Error", e.message);
+		} finally {
+			playoffModeBlocked = false;
+		}
+	}
 
 	function copyToClipboard(text: string) {
 		navigator.clipboard.writeText(text);
@@ -170,6 +193,35 @@
 		{/if}
 	</div>
 </div>
+
+{#if $eventStore.subEvents?.length}
+<div class="border border-neutral-700 rounded-xl p-4 mb-6">
+	<div class="flex items-start justify-between gap-4">
+		<div>
+			<h2 class="text-base font-semibold">Inter-Divisional Playoffs</h2>
+			<p class="text-sm text-gray-400 mt-1">
+				When enabled, the <strong>{getPlayoffViewLabel($eventStore.meshedEventCode ?? $eventStore.code)}</strong> view
+				acts as a normal single-field event — field monitor, match logs, and notes are scoped to
+				<code class="bg-neutral-800 px-1 rounded">{$eventStore.meshedEventCode ?? $eventStore.code}</code>
+				only. Divisional sub-events remain accessible from the sidebar.
+			</p>
+		</div>
+		<Button
+			color={$eventStore.playoffMode ? "red" : "blue"}
+			class="shrink-0"
+			disabled={playoffModeBlocked}
+			onclick={togglePlayoffMode}
+		>
+			{$eventStore.playoffMode ? "Disable" : "Enable"} Inter-Divisional Playoffs
+		</Button>
+	</div>
+	{#if $eventStore.playoffMode}
+		<p class="text-sm text-blue-400 mt-3">
+			✓ Inter-divisional playoffs mode is active. Combined view is now <strong>{getPlayoffViewLabel($eventStore.meshedEventCode ?? $eventStore.code)}</strong>.
+		</p>
+	{/if}
+</div>
+{/if}
 
 <h2 class="text-lg font-bold mb-3">Integrations</h2>
 

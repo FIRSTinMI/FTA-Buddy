@@ -43,8 +43,12 @@ export const matchEventsRouter = router({
 		)
 		.query(async ({ ctx, input }) => {
 			const event = await getEvent(ctx.event.token);
+			// For meshed events, query all sub-event codes (and the parent); otherwise just the current event.
+			// In inter-divisional playoffs mode, only query the parent event.
 			const eventCodes: string[] = event.meshedEvent
-				? (event.meshedEvent as Array<{ code: string }>).map((e) => e.code)
+				? event.playoffMode
+					? [event.code]
+					: [event.code, ...(event.subEvents ?? []).map((e) => e.code)]
 				: [event.code];
 			const codeFilter =
 				eventCodes.length === 1

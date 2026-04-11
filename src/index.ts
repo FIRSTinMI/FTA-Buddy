@@ -162,7 +162,17 @@ app.get("/serviceworker.js", async (req, res) => {
 	res.send(serviceWorkerFile);
 });
 
-app.use("/report", express.static("/data/reports"));
+app.get("/report/:filename", async (req, res) => {
+	try {
+		const { downloadReport } = await import("./util/gcs");
+		const buffer = await downloadReport(req.params.filename);
+		res.setHeader("Content-Type", "application/pdf");
+		res.setHeader("Content-Disposition", `attachment; filename="${req.params.filename}"`);
+		res.send(buffer);
+	} catch (err: any) {
+		res.status(404).send("Report not found");
+	}
+});
 
 app.get("/slack/oauth", async (req, res) => {
 	const code = req.query.code as string;

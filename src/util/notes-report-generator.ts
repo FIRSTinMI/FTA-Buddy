@@ -1,6 +1,6 @@
 import { asc, eq } from "drizzle-orm";
-import { existsSync, mkdirSync } from "fs";
 import jsPDF from "jspdf";
+import { uploadReport } from "./gcs";
 import { formatTimeShortNoAgoMinutes } from "../../shared/formatTime";
 import type { Profile } from "../../shared/types";
 import { db } from "../db/db";
@@ -310,8 +310,8 @@ export async function generateNotesReportPdf(eventCode: string, eventName: strin
 	}
 
 	// ── Save ─────────────────────────────────────────────────────────────────
-	if (!existsSync("/data/reports")) mkdirSync("/data/reports", { recursive: true });
-	const filePath = `/data/reports/NotesReport-${eventCode}.pdf`;
-	doc.save(filePath);
-	return `/report/NotesReport-${eventCode}.pdf`;
+	const fileName = `NotesReport-${eventCode}.pdf`;
+	const buffer = Buffer.from(doc.output("arraybuffer"));
+	await uploadReport(buffer, fileName);
+	return `/report/${fileName}`;
 }

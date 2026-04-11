@@ -1,6 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { existsSync, mkdirSync } from "fs";
 import jsPDF from "jspdf";
+import { uploadReport } from "./gcs";
 import OpenAI from "openai";
 import { db } from "../db/db";
 import { matchEvents, messages, notes } from "../db/schema";
@@ -721,7 +721,7 @@ EVENT DATA (COMPACT JSON):
 ${JSON.stringify(ctx)}`;
 }
 
-function renderNarrativePdf(text: string, eventName: string, eventCode: string): string {
+async function renderNarrativePdf(text: string, eventName: string, eventCode: string): Promise<string> {
 	const doc = new jsPDF({ format: "letter" });
 	const marginLeft = 15;
 	const marginTop = 20;
@@ -783,10 +783,10 @@ function renderNarrativePdf(text: string, eventName: string, eventCode: string):
 		}
 	}
 
-	if (!existsSync("/data/reports")) mkdirSync("/data/reports", { recursive: true });
-	const filePath = `/data/reports/ai-summary-${eventCode}.pdf`;
-	doc.save(filePath);
-	return `/report/ai-summary-${eventCode}.pdf`;
+	const fileName = `ai-summary-${eventCode}.pdf`;
+	const buffer = Buffer.from(doc.output("arraybuffer"));
+	await uploadReport(buffer, fileName);
+	return `/report/${fileName}`;
 }
 
 export async function generateAiEventReport(
@@ -838,5 +838,5 @@ Use the note text and message excerpts as the primary source of truth.
 
 	const reportText = response.output_text?.trim() || "No report generated.";
 
-	return renderNarrativePdf(reportText, eventName, eventCode);
+	return await renderNarrativePdf(reportText, eventName, eventCode);
 }

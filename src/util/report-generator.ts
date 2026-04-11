@@ -1,6 +1,6 @@
-import { existsSync, mkdirSync } from "fs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { uploadReport } from "./gcs";
 
 export interface ReportFormat {
 	title: string;
@@ -68,11 +68,8 @@ export async function generateReport(format: ReportFormat, data: (string | numbe
 		});
 	}
 
-	if (!existsSync("/data/reports")) {
-		mkdirSync("/data/reports", { recursive: true });
-	}
-
-	// Save the PDF file
-	await doc.save(`/data/reports/${format.fileName}-${eventCode}.pdf`);
-	return `/report/${format.fileName}-${eventCode}.pdf`;
+	const fileName = `${format.fileName}-${eventCode}.pdf`;
+	const buffer = Buffer.from(doc.output("arraybuffer"));
+	await uploadReport(buffer, fileName);
+	return `/report/${fileName}`;
 }

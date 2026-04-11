@@ -47,6 +47,18 @@
 		$settingsStore.supportFeedStatusFilter = statusFilter as "all" | "Open" | "Resolved";
 	});
 
+	// Sub-event field filter for meshed events
+	const availableSubEvents = $derived($eventStore.subEvents ?? []);
+	const hasMeshedFields = $derived(availableSubEvents.length > 1);
+	let selectedFields: string[] = $state(
+		(() => {
+			const subs = $eventStore.subEvents;
+			if (!subs?.length) return [];
+			const isCombined = $userStore.eventToken === $userStore.meshedEventToken;
+			return isCombined ? subs.map((e) => e.code) : [$eventStore.code];
+		})(),
+	);
+
 	let notes: Note[] = $state([]);
 	let matchEvents: MatchEvent[] = $state([]);
 	type FeedItem =
@@ -75,6 +87,11 @@
 				feed = feed.filter((n) => n.resolution_status === "Resolved");
 			}
 
+			// Field filter
+			if (hasMeshedFields && selectedFields.length < availableSubEvents.length) {
+				feed = feed.filter((n) => selectedFields.includes(n.event_code));
+			}
+
 			// Search filter
 			if (search.length > 0) {
 				const tokenized = search.toLowerCase().split(" ");
@@ -98,6 +115,11 @@
 		// Add match events (unless filtering to notes only)
 		if (feedFilter !== "notes") {
 			let evts = [...matchEvents].filter((e) => e.status === "active");
+
+			// Field filter
+			if (hasMeshedFields && selectedFields.length < availableSubEvents.length) {
+				evts = evts.filter((e) => selectedFields.includes(e.event_code));
+			}
 
 			if (search.length > 0) {
 				const tokenized = search.toLowerCase().split(" ");
@@ -313,6 +335,11 @@
 	userStore.subscribe((value) => {
 		if (value.eventToken !== eventToken) {
 			eventToken = value.eventToken;
+			const subs = $eventStore.subEvents;
+			if (subs && subs.length > 1) {
+				const isCombined = value.eventToken === value.meshedEventToken;
+				selectedFields = isCombined ? subs.map((e) => e.code) : [$eventStore.code];
+			}
 			fetchAll();
 			startSubscription();
 			startMatchEventSubscription();
@@ -700,7 +727,7 @@
 
 		<Button
 			size="sm"
-			color={typeFilter !== "all" || statusFilter !== "all" || feedFilter !== "all" ? "primary" : "alternative"}
+			color={typeFilter !== "all" || statusFilter !== "all" || feedFilter !== "all" || (hasMeshedFields && selectedFields.length < availableSubEvents.length) ? "primary" : "alternative"}
 			class="shrink-0"
 			onclick={() => (filterModalOpen = true)}
 			title="Filters"
@@ -752,6 +779,33 @@
 						]}
 					/>
 				</Label>
+			{/if}
+			{#if hasMeshedFields}
+				<div>
+					<Label>Fields</Label>
+					<div class="flex flex-wrap gap-1.5 mt-1">
+						{#each availableSubEvents as sub}
+							<button
+								type="button"
+								class="text-xs px-2 py-1 rounded border transition-colors
+								{selectedFields.includes(sub.code)
+									? 'border-blue-500 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+									: 'border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-neutral-700 text-gray-700 dark:text-gray-300'}"
+								onclick={() => {
+									if (selectedFields.includes(sub.code)) {
+										if (selectedFields.length > 1) {
+											selectedFields = selectedFields.filter((c) => c !== sub.code);
+										}
+									} else {
+										selectedFields = [...selectedFields, sub.code];
+									}
+								}}
+							>
+								{sub.label}
+							</button>
+						{/each}
+					</div>
+				</div>
 			{/if}
 			<Button color="primary" onclick={() => (filterModalOpen = false)}>Done</Button>
 		</div>

@@ -1756,17 +1756,53 @@ function parseNexusMessage(
  * Creates a note from an incoming Nexus Slack bot message.
  * Sets slack_ts to the Nexus message ts so thread replies and reactions sync normally.
  * Posts a reply in the thread with a link back to the FTA Buddy ticket.
+ *
+ * For meshed events where multiple fields share one Slack channel, the team number is used
+ * to route the note to the correct sub-event.
  */
 export async function createFromNexus(channel_id: string, message_ts: string, text: string, blocks?: any[]) {
-	// Find the event linked to this Slack channel
-	const eventRow = await db.query.events.findFirst({ where: eq(events.slackChannel, channel_id) });
-	if (!eventRow) return; // Channel not linked to any event
-
-	const event = await getEvent("", eventRow.code);
+	// Find all events linked to this Slack channel (multiple sub-events may share one channel)
+	const linkedEventRows = await db
+		.select({ code: events.code, slackTeam: events.slackTeam })
+		.from(events)
+		.where(eq(events.slackChannel, channel_id))
+		.execute();
+	if (linkedEventRows.length === 0) return;
 
 	const { team, matchNumber, tournamentLevel, playNumber, noteText } = parseNexusMessage(text, blocks);
 
-	const matchId = await resolveMatchId(event.code, matchNumber, playNumber, tournamentLevel);
+	// The Slack workspace ID — same across all linked events; grab the first non-null one.
+	const slackTeam = linkedEventRows.find((r) => r.slackTeam)?.slackTeam ?? null;
+
+	// Resolve which event/sub-event owns this team.
+	// Walk linked events; for meshed events expand to sub-event team lists.
+	let targetEventCode = linkedEventRows[0].code;
+	let linkEvent = await getEvent("", targetEventCode); // used for notification users + ticket URL
+
+	if (team !== null) {
+		for (const row of linkedEventRows) {
+			const ev = await getEvent("", row.code);
+			if (ev.meshedEvent && ev.subEvents) {
+				const ownerSub = ev.subEvents.find((sub) =>
+					sub.teams.some((t) => parseInt(t.number, 10) === team),
+				);
+				if (ownerSub) {
+					targetEventCode = ownerSub.code;
+					linkEvent = ev; // meshed event has all users merged; use it for notifications + URL
+					break;
+				}
+			} else if (ev.teams.some((t) => parseInt(t.number, 10) === team)) {
+				targetEventCode = row.code;
+				linkEvent = ev;
+				break;
+			}
+		}
+	}
+
+	// noteEvent is the specific sub-event (or the only linked event) where the note is filed.
+	const noteEvent = targetEventCode === linkEvent.code ? linkEvent : await getEvent("", targetEventCode);
+
+	const matchId = await resolveMatchId(noteEvent.code, matchNumber, playNumber, tournamentLevel);
 
 	const author: Profile = { id: -1, username: "Nexus", role: "FTA", admin: false, source: "Slack" };
 
@@ -1787,7 +1823,7 @@ export async function createFromNexus(channel_id: string, message_ts: string, te
 			fms_note_id: null,
 			fms_record_version: null,
 			fms_metadata: null,
-			event_code: event.code,
+			event_code: noteEvent.code,
 			created_at: new Date(),
 			updated_at: new Date(),
 			followers: [],
@@ -1801,25 +1837,27 @@ export async function createFromNexus(channel_id: string, message_ts: string, te
 
 	if (!insert[0]) return;
 
-	event.noteUpdateEmitter.emit("note_update", { kind: "create", note: insert[0] as Note });
+	noteEvent.noteUpdateEmitter.emit("note_update", { kind: "create", note: insert[0] as Note });
 
+	// Notify users on linkEvent (the meshed parent if applicable — it has all sub-event users merged)
 	createNotification(
-		event.users.map((u) => u.id),
+		linkEvent.users.map((u) => u.id),
 		buildNotification({
 			kind: "note.created",
-			eventCode: event.code,
+			eventCode: noteEvent.code,
 			note: toNoteCtx(insert[0] as any),
 			author: "Nexus",
 		}),
-		event.code,
+		noteEvent.code,
 	);
 
-	// Reply in the Nexus thread with a link to the ticket
-	if (event.slackTeam) {
+	// Reply in the Nexus thread with a link to the ticket.
+	// Use linkEvent code + token so users with the meshed event access can follow the URL.
+	if (slackTeam) {
 		try {
 			await sendSlackMessage(
 				channel_id,
-				event.slackTeam,
+				slackTeam,
 				{
 					blocks: [
 						{
@@ -1831,7 +1869,7 @@ export async function createFromNexus(channel_id: string, message_ts: string, te
 							accessory: {
 								type: "button",
 								text: { type: "plain_text", text: "View Ticket", emoji: true },
-								url: `https://ftabuddy.com/notepad/view/${event.code}/${noteId}?token=${event.token}`,
+								url: `https://ftabuddy.com/notepad/view/${linkEvent.code}/${noteId}?token=${linkEvent.token}`,
 							},
 						},
 					],

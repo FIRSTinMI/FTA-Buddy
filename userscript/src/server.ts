@@ -1,5 +1,5 @@
 /**
- * server.ts — Fetch team names and open notes from the FTA Buddy server.
+ * server.ts - Fetch team names and open notes from the FTA Buddy server.
  * Uses GM_xmlhttpRequest to bypass CORS restrictions.
  */
 
@@ -51,10 +51,7 @@ function trpcUrl(baseUrl: string, path: string): string {
 	return `${base}/trpc/${path}`;
 }
 
-export async function fetchTeams(
-	ftaBuddyUrl: string,
-	eventToken: string,
-): Promise<Record<number, TeamInfo>> {
+export async function fetchTeams(ftaBuddyUrl: string, eventToken: string): Promise<Record<number, TeamInfo>> {
 	try {
 		const res = await gmFetch(trpcUrl(ftaBuddyUrl, "event.getTeams"), {
 			json: {},
@@ -72,10 +69,7 @@ export async function fetchTeams(
 	}
 }
 
-export async function fetchOpenNoteTeams(
-	ftaBuddyUrl: string,
-	eventToken: string,
-): Promise<Set<number>> {
+export async function fetchOpenNoteTeams(ftaBuddyUrl: string, eventToken: string): Promise<Set<number>> {
 	try {
 		const res = await gmFetch(trpcUrl(ftaBuddyUrl, "notes.getAll"), {
 			json: {},
@@ -103,10 +97,7 @@ function makeHeaders(eventToken: string): Record<string, string> {
 	};
 }
 
-export async function fetchTeamsWithAuth(
-	ftaBuddyUrl: string,
-	eventToken: string,
-): Promise<Record<number, TeamInfo>> {
+export async function fetchTeamsWithAuth(ftaBuddyUrl: string, eventToken: string): Promise<Record<number, TeamInfo>> {
 	try {
 		const url = trpcUrl(ftaBuddyUrl, "event.getTeams");
 		const res: any = await new Promise((resolve, reject) => {
@@ -118,8 +109,11 @@ export async function fetchTeamsWithAuth(
 				timeout: 10_000,
 				onload: (r) => {
 					if (r.status >= 200 && r.status < 300) {
-						try { resolve(JSON.parse(r.responseText)); }
-						catch { resolve(null); }
+						try {
+							resolve(JSON.parse(r.responseText));
+						} catch {
+							resolve(null);
+						}
 					} else {
 						reject(new Error(`HTTP ${r.status}`));
 					}
@@ -138,10 +132,7 @@ export async function fetchTeamsWithAuth(
 	}
 }
 
-export async function fetchOpenNoteTeamsWithAuth(
-	ftaBuddyUrl: string,
-	eventToken: string,
-): Promise<Set<number>> {
+export async function fetchOpenNoteTeamsWithAuth(ftaBuddyUrl: string, eventToken: string): Promise<Set<number>> {
 	try {
 		const url = trpcUrl(ftaBuddyUrl, "notes.getAll");
 		const res: any = await new Promise((resolve, reject) => {
@@ -153,8 +144,11 @@ export async function fetchOpenNoteTeamsWithAuth(
 				timeout: 10_000,
 				onload: (r) => {
 					if (r.status >= 200 && r.status < 300) {
-						try { resolve(JSON.parse(r.responseText)); }
-						catch { resolve(null); }
+						try {
+							resolve(JSON.parse(r.responseText));
+						} catch {
+							resolve(null);
+						}
 					} else {
 						reject(new Error(`HTTP ${r.status}`));
 					}

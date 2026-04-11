@@ -166,13 +166,27 @@
 	type MatchEventSubscription = ReturnType<typeof trpc.matchEvents.updateSubscription.subscribe>;
 	let subscription: NoteSubscription | undefined;
 	let matchEventSubscription: MatchEventSubscription | undefined;
+	let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+	async function reconnect() {
+		if (reconnectTimer) {
+			clearTimeout(reconnectTimer);
+			reconnectTimer = null;
+		}
+		await fetchAll();
+		startSubscription();
+		startMatchEventSubscription();
+	}
 
 	function startSubscription() {
 		subscription?.unsubscribe();
 		subscription = trpc.notes.updateSubscription.subscribe(
 			{ eventToken: $userStore.eventToken, source: `${$userStore.username}.feed` },
 			{
-				onError: console.error,
+				onError: (err) => {
+					console.error("Notes subscription lost, reconnecting in 5s…", err);
+					reconnectTimer = setTimeout(() => reconnect(), 5000);
+				},
 				onData: (data: NoteUpdateEventData) => {
 					switch (data.kind) {
 						case "create":
@@ -259,7 +273,10 @@
 		matchEventSubscription = trpc.matchEvents.updateSubscription.subscribe(
 			{ eventToken: $userStore.eventToken },
 			{
-				onError: console.error,
+				onError: (err) => {
+					console.error("Match events subscription lost, reconnecting in 5s…", err);
+					reconnectTimer = setTimeout(() => reconnect(), 5000);
+				},
 				onData: (data: MatchEventUpdateEventData) => {
 					switch (data.kind) {
 						case "match_event_create":
@@ -292,11 +309,27 @@
 		fetchAll();
 		startSubscription();
 		startMatchEventSubscription();
+
+		function handleVisibility() {
+			if (document.visibilityState === "visible") reconnect();
+		}
+		function handleOnline() {
+			reconnect();
+		}
+
+		document.addEventListener("visibilitychange", handleVisibility);
+		window.addEventListener("online", handleOnline);
+
+		return () => {
+			document.removeEventListener("visibilitychange", handleVisibility);
+			window.removeEventListener("online", handleOnline);
+		};
 	});
 
 	onDestroy(() => {
 		subscription?.unsubscribe();
 		matchEventSubscription?.unsubscribe();
+		if (reconnectTimer) clearTimeout(reconnectTimer);
 	});
 
 	// ── Pull-to-refresh ──────────────────────────────────────────────────────
@@ -366,6 +399,7 @@
 	let issueType: string | undefined = $state();
 	let selectedLabel: string | undefined = $state();
 	let newNoteText: string = $state("");
+	let newRequestType: "CSA" | "RI" | null = $state(null);
 
 	const ISSUE_TYPE_OPTIONS = [
 		{ value: "RoboRioIssue", name: "RoboRIO Issue" },
@@ -441,6 +475,7 @@
 		} else if (newNoteType !== "MatchNote" && newNoteType !== "TeamIssue") {
 			matchOptions = [];
 			matchId = undefined;
+			newRequestType = null;
 		}
 	});
 
@@ -487,6 +522,7 @@
 				text: newNoteText,
 				note_type: newNoteType,
 				issue_type: newNoteType === "TeamIssue" ? (issueType ?? null) : null,
+				request_type: newRequestType,
 				...matchDetails,
 			});
 			createModalOpen = false;
@@ -494,6 +530,7 @@
 			issueType = undefined;
 			selectedLabel = undefined;
 			matchId = undefined;
+			newRequestType = "CSA";
 			await tick();
 			navigate("/notepad/view/:id", { params: { id: createdNote.id } });
 		} catch (err: any) {
@@ -575,6 +612,28 @@
 			</div>
 		{/if}
 		<Textarea id="new-note-text" class="w-full" rows={5} bind:value={newNoteText} autofocus />
+
+		{#if newNoteType === "TeamIssue"}
+			<div class="flex flex-col gap-1 text-sm">
+				{#each [{ value: "CSA", label: "CSA Request" }, { value: "RI", label: "RI Request" }] as opt}
+					<button
+						type="button"
+						class="flex items-center gap-2 px-3 py-1.5 rounded border text-left transition-colors
+						{newRequestType === opt.value
+							? 'border-blue-500 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+							: 'border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-neutral-700 text-gray-700 dark:text-gray-300'}"
+						onclick={() =>
+							(newRequestType = newRequestType === opt.value ? null : (opt.value as "CSA" | "RI"))}
+					>
+						<span
+							class="size-3 rounded-full border-2 shrink-0
+						{newRequestType === opt.value ? 'border-blue-500 bg-blue-500' : 'border-gray-400'}"
+						></span>
+						{opt.label}
+					</button>
+				{/each}
+			</div>
+		{/if}
 
 		<Button type="submit" disabled={disableSubmit}>Create Note</Button>
 	</form>

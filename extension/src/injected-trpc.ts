@@ -97,9 +97,7 @@ async function getCompletedMatches(): Promise<FMSMatch[]> {
 	const results = await Promise.all(
 		LEVELS.map(async (level) => {
 			try {
-				return await fetchJson<FMSMatch[]>(
-					`http://${FMS_HOST}/api/v1.0/fieldmonitor/get/GetResults/${level}`,
-				);
+				return await fetchJson<FMSMatch[]>(`http://${FMS_HOST}/api/v1.0/fieldmonitor/get/GetResults/${level}`);
 			} catch {
 				return [] as FMSMatch[];
 			}
@@ -110,7 +108,12 @@ async function getCompletedMatches(): Promise<FMSMatch[]> {
 
 async function getAllLogsForMatch(matchId: string) {
 	const logs: Record<ROBOT, FMSLogFrame[]> = {
-		red1: [], red2: [], red3: [], blue1: [], blue2: [], blue3: [],
+		red1: [],
+		red2: [],
+		red3: [],
+		blue1: [],
+		blue2: [],
+		blue3: [],
 	};
 	for (let i = 0; i < 3; i++) {
 		logs[`red${i + 1}` as ROBOT] = await fetchJson(
@@ -128,9 +131,7 @@ const inFlightMatchIds = new Set<string>();
 async function uploadMatch(match: FMSMatch) {
 	if (inFlightMatchIds.has(match.fmsMatchId)) return;
 	inFlightMatchIds.add(match.fmsMatchId);
-	console.log(
-		`[FTA Buddy] Uploading match ${match.matchNumber} play ${match.playNumber} (${match.tournamentLevel})`,
-	);
+	console.log(`[FTA Buddy] Uploading match ${match.matchNumber} play ${match.playNumber} (${match.tournamentLevel})`);
 	try {
 		const logs = await getAllLogsForMatch(match.fmsMatchId);
 		await trpc.match.putMatchLogs.mutate({ event: eventCode, level: match.tournamentLevel, ...match, logs });

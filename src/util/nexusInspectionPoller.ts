@@ -10,7 +10,7 @@
  */
 
 import { eq } from "drizzle-orm";
-import { ServerEvent } from "../../shared/types";
+import type { ServerEvent } from "../../shared/types";
 import { db } from "../db/db";
 import { events } from "../db/schema";
 

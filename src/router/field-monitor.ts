@@ -3,7 +3,8 @@ import { on } from "events";
 import { z } from "zod";
 import { eventLastSeen, events, newEventEmitter } from "../state";
 import { formatTimeShortNoAgoSeconds } from "../../shared/formatTime";
-import { DSState, EnableState, FieldState, MonitorFrame, StateChange, TournamentLevel } from "../../shared/types";
+import { DSState, EnableState, FieldState } from "../../shared/types";
+import type { MonitorFrame, StateChange, TournamentLevel } from "../../shared/types";
 import { db } from "../db/db";
 import { users } from "../db/schema";
 import { eventProcedure, publicProcedure, router } from "../trpc";
@@ -96,7 +97,7 @@ export const fieldMonitorRouter = router({
 				connection.frames++;
 			}
 
-			// Infer level from schedule when scraping mode reports "None" — match 999 is always a test match
+			// Infer level from schedule when scraping mode reports "None" - match 999 is always a test match
 			if (input.level === "None" && input.match > 0 && input.match !== 999) {
 				const scheduledMatch = event.scheduleDetails?.matches?.find((m) => m.match === input.match);
 				if (scheduledMatch) (input as any).level = scheduledMatch.level;
@@ -150,7 +151,7 @@ export const fieldMonitorRouter = router({
 			if (!processed.currentFrame.exactAheadBehind && processed.currentFrame.level === "Qualification")
 				processed.currentFrame.exactAheadBehind = event.monitorFrame.exactAheadBehind;
 
-			// Scraper sources always send lastCycleTime: "" — preserve the existing value so
+			// Scraper sources always send lastCycleTime: "" - preserve the existing value so
 			// the server-computed cycle time (set by postCycleTime) is not overwritten.
 			if (!processed.currentFrame.lastCycleTime) {
 				processed.currentFrame.lastCycleTime = event.monitorFrame.lastCycleTime;

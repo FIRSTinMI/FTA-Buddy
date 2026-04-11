@@ -32,9 +32,10 @@
 		note: Note;
 		nextMatch: TBANextMatch;
 		playedMatchesSince: PlayedMatch[];
+		onopenpitmap?: () => void;
 	}
 
-	let { note, nextMatch, playedMatchesSince }: Props = $props();
+	let { note, nextMatch, playedMatchesSince, onopenpitmap }: Props = $props();
 
 	function formatMatchLabel(m: PlayedMatch): string {
 		const prefix =
@@ -103,12 +104,17 @@
 
 <!-- Team name link -->
 {#if note.team}
-	<div class="justify-center text-center sm:justify-start sm:text-left">
+	<div class="flex items-center gap-2 justify-center sm:justify-start">
 		<button
 			class="font-semibold hover:underline"
 			onclick={() => note && navigate("/notepad/team/:team", { params: { team: String(note.team) } })}
 			>Team {displayTeam(note.team)}</button
 		>
+		{#if onopenpitmap}
+			<button class="text-xs text-blue-500 dark:text-blue-400 hover:underline" onclick={onopenpitmap}
+				>Pit Map</button
+			>
+		{/if}
 	</div>
 
 	<!-- Next match -->

@@ -19,14 +19,13 @@
 		value = formatter(date instanceof Date ? date : new Date(date));
 	}
 
-	// Re-run immediately whenever the `date` or `formatter` props change.
+	// Re-run immediately whenever props change, and set up the interval.
 	$effect(() => {
 		update();
+		const ms = intervalMs;
+		const interval = setInterval(() => update(), ms);
+		return () => clearInterval(interval);
 	});
-
-	// Re-run on every tick so the elapsed-time display stays current.
-	const interval = setInterval(update, intervalMs);
-	onDestroy(() => clearInterval(interval));
 </script>
 
 {value}

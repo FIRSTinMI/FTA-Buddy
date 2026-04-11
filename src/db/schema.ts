@@ -13,7 +13,7 @@ import {
 	uuid,
 	varchar,
 } from "drizzle-orm/pg-core";
-import { EventAutoEventSettings, FmsNoteMetadata, Profile } from "../../shared/types";
+import type { EventAutoEventSettings, FmsNoteMetadata, Profile } from "../../shared/types";
 export const roleEnum = pgEnum("role", ["FTA", "FTAA", "CSA", "RI"]);
 
 export const users = pgTable("users", {
@@ -51,6 +51,7 @@ export const events = pgTable("events", {
 	nexusApiKey: varchar("nexusApiKey"),
 	startDate: varchar("startDate"),
 	endDate: varchar("endDate"),
+	timezone: varchar("timezone"),
 	fmsEventPassword: varchar("fmsEventPassword"),
 	autoEventSettings: jsonb("autoEventSettings").$type<EventAutoEventSettings>().notNull().default({}),
 	notepadOnly: boolean("notepadOnly").notNull().default(false),
@@ -97,6 +98,8 @@ export const noteIssueTypeEnum = pgEnum("note_issue_type", [
 	"Other",
 ]);
 
+export const noteRequestTypeEnum = pgEnum("note_request_type", ["CSA", "RI"]);
+
 export const notes = pgTable("notes", {
 	id: uuid("id").primaryKey(),
 	text: varchar("text").notNull().default(""),
@@ -128,6 +131,8 @@ export const notes = pgTable("notes", {
 	match_id: uuid("match_id").references(() => matchLogs.id),
 	resolved_by_id: integer("resolved_by_id").references(() => users.id),
 	resolved_by: jsonb("resolved_by").$type<Profile>(),
+	request_type: noteRequestTypeEnum("request_type"),
+	is_nexus: boolean("is_nexus").notNull().default(false),
 });
 
 export const noteMessagesRelations = relations(notes, ({ many }) => ({

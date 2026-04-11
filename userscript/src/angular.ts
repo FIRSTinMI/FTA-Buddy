@@ -1,9 +1,16 @@
 /**
- * angular.ts — Read live data from the FMS FieldMonitor Angular component.
+ * angular.ts - Read live data from the FMS FieldMonitor Angular component.
  * Ported from extension/src/injected-fieldmonitor.ts.
  */
 
-import { DSState, EnableState, FieldState, FMSEnums, type PartialMonitorFrame, type PartialRobotInfo } from "../../shared/types";
+import {
+	DSState,
+	EnableState,
+	FieldState,
+	FMSEnums,
+	type PartialMonitorFrame,
+	type PartialRobotInfo,
+} from "../../shared/types";
 
 export interface StationData {
 	TeamNumber: number;
@@ -94,13 +101,20 @@ function dsState(s: StationData): DSState {
 
 function enableState(s: StationData): EnableState {
 	switch (s.MonitorStatus) {
-		case FMSEnums.MonitorStatusType.EStopped: return EnableState.ESTOP;
-		case FMSEnums.MonitorStatusType.AStopped: return EnableState.ASTOP;
-		case FMSEnums.MonitorStatusType.DisabledAuto: return EnableState.RED_A;
-		case FMSEnums.MonitorStatusType.DisabledTeleop: return EnableState.RED_T;
-		case FMSEnums.MonitorStatusType.EnabledAuto: return EnableState.GREEN_A;
-		case FMSEnums.MonitorStatusType.EnabledTeleop: return EnableState.GREEN_T;
-		default: return EnableState.RED;
+		case FMSEnums.MonitorStatusType.EStopped:
+			return EnableState.ESTOP;
+		case FMSEnums.MonitorStatusType.AStopped:
+			return EnableState.ASTOP;
+		case FMSEnums.MonitorStatusType.DisabledAuto:
+			return EnableState.RED_A;
+		case FMSEnums.MonitorStatusType.DisabledTeleop:
+			return EnableState.RED_T;
+		case FMSEnums.MonitorStatusType.EnabledAuto:
+			return EnableState.GREEN_A;
+		case FMSEnums.MonitorStatusType.EnabledTeleop:
+			return EnableState.GREEN_T;
+		default:
+			return EnableState.RED;
 	}
 }
 
@@ -159,24 +173,51 @@ function getAngularComponent(selector: string): any | null {
 }
 
 const EMPTY_ROBOT: PartialRobotInfo = {
-	number: 0, ds: DSState.RED, radio: false, rio: false, code: false,
-	enabled: EnableState.RED, bwu: 0, battery: 0, ping: 0, packets: 0,
-	MAC: null, RX: null, RXMCS: null, TX: null, TXMCS: null,
-	SNR: null, noise: null, signal: null, versionmm: false,
-	radioConnectionQuality: null, radioConnected: null,
+	number: 0,
+	ds: DSState.RED,
+	radio: false,
+	rio: false,
+	code: false,
+	enabled: EnableState.RED,
+	bwu: 0,
+	battery: 0,
+	ping: 0,
+	packets: 0,
+	MAC: null,
+	RX: null,
+	RXMCS: null,
+	TX: null,
+	TXMCS: null,
+	SNR: null,
+	noise: null,
+	signal: null,
+	versionmm: false,
+	radioConnectionQuality: null,
+	radioConnected: null,
 };
 
 let _angularLoggedOnce = false;
 function buildFrameFromAngular(): PartialMonitorFrame | null {
 	const comp = getAngularComponent("field-monitor-simple");
 	if (!comp) {
-		if (!_angularLoggedOnce) console.log("[FTA Buddy] ng.getComponent('field-monitor-simple') returned null — ng available:", !!(window as any).ng, "element exists:", !!document.querySelector("field-monitor-simple"));
+		if (!_angularLoggedOnce)
+			console.log(
+				"[FTA Buddy] ng.getComponent('field-monitor-simple') returned null - ng available:",
+				!!(window as any).ng,
+				"element exists:",
+				!!document.querySelector("field-monitor-simple"),
+			);
 		return null;
 	}
 
 	if (!_angularLoggedOnce) {
 		_angularLoggedOnce = true;
-		console.log("[FTA Buddy] Angular component found! Keys:", Object.keys(comp).filter(k => !k.startsWith("_") && !k.startsWith("ng")).slice(0, 20));
+		console.log(
+			"[FTA Buddy] Angular component found! Keys:",
+			Object.keys(comp)
+				.filter((k) => !k.startsWith("_") && !k.startsWith("ng"))
+				.slice(0, 20),
+		);
 		console.log("[FTA Buddy] matchStatus:", JSON.stringify(comp.matchStatus));
 		console.log("[FTA Buddy] blue1 keys:", comp.blue1 ? Object.keys(comp.blue1) : "null");
 	}
@@ -197,11 +238,13 @@ function buildFrameFromAngular(): PartialMonitorFrame | null {
 		return s ? stationToRobotInfo(s) : EMPTY_ROBOT;
 	};
 
-	// aheadBehind may not be a property on the Angular component — fall back to DOM if empty
-	const aheadBehind: string = comp.aheadBehind || (() => {
-		const el = document.querySelector(".bg-dark span");
-		return el?.textContent?.trim() ?? "";
-	})();
+	// aheadBehind may not be a property on the Angular component - fall back to DOM if empty
+	const aheadBehind: string =
+		comp.aheadBehind ||
+		(() => {
+			const el = document.querySelector(".bg-dark span");
+			return el?.textContent?.trim() ?? "";
+		})();
 
 	return {
 		field: matchStateTextToField(matchStateMsg),
@@ -239,8 +282,13 @@ function parseTitleAttr(title: string) {
 		return m ? parseFloat(m[1]) : 0;
 	};
 	return {
-		signal: num("Signal"), noise: num("Noise"), snr: num("SNR"),
-		txRate: num("TX Rate"), txMCS: num("TX MCS"), rxRate: num("RX Rate"), rxMCS: num("Rx MCS"),
+		signal: num("Signal"),
+		noise: num("Noise"),
+		snr: num("SNR"),
+		txRate: num("TX Rate"),
+		txMCS: num("TX MCS"),
+		rxRate: num("RX Rate"),
+		rxMCS: num("Rx MCS"),
 	};
 }
 
@@ -309,26 +357,48 @@ function scrapeStation(el: Element, isInMatch: boolean): PartialRobotInfo {
 	const radioQuality = topRow ? iconToRadioQuality(topRow) : null;
 	const enabled = bottomRow ? iconToEnableState(bottomRow, isInMatch) : EnableState.RED;
 
-	let battery = 0, bwu = 0, ping = 0, packets = 0;
-	let signal = 0, noise = 0, snr = 0, txRate = 0, txMCS = 0, rxRate = 0, rxMCS = 0;
+	let battery = 0,
+		bwu = 0,
+		ping = 0,
+		packets = 0;
+	let signal = 0,
+		noise = 0,
+		snr = 0,
+		txRate = 0,
+		txMCS = 0,
+		rxRate = 0,
+		rxMCS = 0;
 
 	const dataRateCol = bottomRow?.querySelector("[title*='Signal:']");
 	if (dataRateCol) {
 		const p = parseTitleAttr(dataRateCol.getAttribute("title") ?? "");
-		signal = p.signal; noise = p.noise; snr = p.snr;
-		txRate = p.txRate; txMCS = p.txMCS; rxRate = p.rxRate; rxMCS = p.rxMCS;
+		signal = p.signal;
+		noise = p.noise;
+		snr = p.snr;
+		txRate = p.txRate;
+		txMCS = p.txMCS;
+		rxRate = p.rxRate;
+		rxMCS = p.rxMCS;
 	}
 
 	const allPrimary = Array.from(bottomRow?.querySelectorAll(".indicator-data, .indicator-data-small") ?? []);
-	const allSecondary = Array.from(bottomRow?.querySelectorAll(".indicator-data-secondary, .indicator-data-small-secondary") ?? []);
+	const allSecondary = Array.from(
+		bottomRow?.querySelectorAll(".indicator-data-secondary, .indicator-data-small-secondary") ?? [],
+	);
 
 	for (let i = 0; i < allSecondary.length; i++) {
 		const sec = allSecondary[i].textContent ?? "";
-		if (sec.includes("Min:")) { battery = parseFloatSafe(allPrimary[i]?.textContent); break; }
+		if (sec.includes("Min:")) {
+			battery = parseFloatSafe(allPrimary[i]?.textContent);
+			break;
+		}
 	}
 	for (let i = 0; i < allSecondary.length; i++) {
 		const sec = allSecondary[i].textContent ?? "";
-		if (sec.includes("/")) { bwu = parseFloatSafe(allPrimary[i]?.textContent); break; }
+		if (sec.includes("/")) {
+			bwu = parseFloatSafe(allPrimary[i]?.textContent);
+			break;
+		}
 	}
 
 	const tripEl = topRow?.querySelector(".indicator-data-small");
@@ -337,10 +407,27 @@ function scrapeStation(el: Element, isInMatch: boolean): PartialRobotInfo {
 	if (packetsEl) packets = parseIntSafe(packetsEl.textContent);
 
 	return {
-		number: teamNumber, ds, radio, rio, code: rio && radio, enabled, bwu, battery, ping, packets,
-		MAC: null, RX: rxRate || null, RXMCS: rxMCS || null, TX: txRate || null, TXMCS: txMCS || null,
-		SNR: snr || null, noise: noise || null, signal: signal || null, versionmm: false,
-		radioConnectionQuality: radioQuality, radioConnected: radio || null,
+		number: teamNumber,
+		ds,
+		radio,
+		rio,
+		code: rio && radio,
+		enabled,
+		bwu,
+		battery,
+		ping,
+		packets,
+		MAC: null,
+		RX: rxRate || null,
+		RXMCS: rxMCS || null,
+		TX: txRate || null,
+		TXMCS: txMCS || null,
+		SNR: snr || null,
+		noise: noise || null,
+		signal: signal || null,
+		versionmm: false,
+		radioConnectionQuality: radioQuality,
+		radioConnected: radio || null,
 	};
 }
 
@@ -348,7 +435,10 @@ let _domLoggedOnce = false;
 function buildFrameFromDOM(): PartialMonitorFrame | null {
 	const container = document.querySelector(".content-container-small");
 	if (!container) {
-		if (!_domLoggedOnce) { _domLoggedOnce = true; console.log("[FTA Buddy] DOM fallback: .content-container-small not found either"); }
+		if (!_domLoggedOnce) {
+			_domLoggedOnce = true;
+			console.log("[FTA Buddy] DOM fallback: .content-container-small not found either");
+		}
 		return null;
 	}
 
@@ -358,9 +448,10 @@ function buildFrameFromDOM(): PartialMonitorFrame | null {
 	const matchStateEl = document.querySelector(".bg-light span.fs-2, .bg-light span.fs-5");
 	const matchStateText = matchStateEl?.textContent ?? "";
 	const fieldState = matchStateTextToField(matchStateText);
-	const isInMatch = fieldState === FieldState.MATCH_RUNNING_AUTO
-		|| fieldState === FieldState.MATCH_RUNNING_TELEOP
-		|| fieldState === FieldState.MATCH_TRANSITIONING;
+	const isInMatch =
+		fieldState === FieldState.MATCH_RUNNING_AUTO ||
+		fieldState === FieldState.MATCH_RUNNING_TELEOP ||
+		fieldState === FieldState.MATCH_TRANSITIONING;
 
 	const matchNumEl = document.querySelector(".bg-secondary span.fs-2");
 	const matchNum = parseIntSafe((matchNumEl?.textContent ?? "M0").replace(/[Mm]/, ""));
@@ -369,8 +460,13 @@ function buildFrameFromDOM(): PartialMonitorFrame | null {
 	const aheadBehind = aheadBehindEl?.textContent?.trim() ?? "";
 
 	return {
-		field: fieldState, match: matchNum, play: 1, level: "Qualification",
-		time: aheadBehind, version: "userscript", frameTime: Date.now(),
+		field: fieldState,
+		match: matchNum,
+		play: 1,
+		level: "Qualification",
+		time: aheadBehind,
+		version: "userscript",
+		frameTime: Date.now(),
 		blue1: stationEls[0] ? scrapeStation(stationEls[0], isInMatch) : EMPTY_ROBOT,
 		blue2: stationEls[1] ? scrapeStation(stationEls[1], isInMatch) : EMPTY_ROBOT,
 		blue3: stationEls[2] ? scrapeStation(stationEls[2], isInMatch) : EMPTY_ROBOT,
@@ -386,8 +482,5 @@ export function buildFrame(): PartialMonitorFrame | null {
 }
 
 export function isAppReady(): boolean {
-	return !!(
-		document.querySelector("field-monitor-simple") ||
-		document.querySelector(".content-container-small")
-	);
+	return !!(document.querySelector("field-monitor-simple") || document.querySelector(".content-container-small"));
 }

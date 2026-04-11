@@ -12,9 +12,9 @@
 	import { onDestroy, onMount } from "svelte";
 	import { get } from "svelte/store";
 	import type { EventChecklist, NexusStatus } from "../../../shared/types";
+	import PitMapModal from "../components/PitMapModal.svelte";
 	import Spinner from "../components/Spinner.svelte";
 	import { trpc } from "../main";
-	import { navigate } from "../router";
 	import { eventStore } from "../stores/event";
 	import { userStore } from "../stores/user";
 
@@ -42,6 +42,23 @@
 	let radioProgrammed = $state(0);
 	let connectionTested = $state(0);
 	let total = $state(0);
+
+	let sortBy: "present" | "inspected" | "radioProgrammed" | "connectionTested" | null = $state(null);
+
+	let sortedEntries = $derived(
+		Object.entries(checklist).sort(([teamA, itemsA], [teamB, itemsB]) => {
+			if (sortBy !== null) {
+				const a = itemsA[sortBy] ? 1 : 0;
+				const b = itemsB[sortBy] ? 1 : 0;
+				if (a !== b) return a - b;
+			}
+			return parseInt(teamA) - parseInt(teamB);
+		}),
+	);
+
+	// Pit map
+	let pitMapOpen = $state(false);
+	let pitMapTeam = $state("");
 
 	// Nexus status
 	let nexusStatus: NexusStatus | null = $state(null);
@@ -72,6 +89,14 @@
 		}
 	}
 
+	async function removeTeam(team: string) {
+		await trpc.event.removeTeam.mutate({ teamNumber: team });
+		delete checklist[team];
+		delete teamNames[team];
+		checklist = { ...checklist };
+		updateTotals(checklist);
+	}
+
 	async function updateChecklist(
 		team: string,
 		key: "present" | "inspected" | "radioProgrammed" | "connectionTested",
@@ -92,9 +117,19 @@
 	}
 
 	let subscription: ReturnType<typeof trpc.checklist.subscription.subscribe>;
+	let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
-	onMount(() => {
+	async function resubscribe() {
+		if (reconnectTimer) {
+			clearTimeout(reconnectTimer);
+			reconnectTimer = null;
+		}
 		subscription?.unsubscribe();
+
+		try {
+			checklist = await trpc.checklist.get.query();
+			updateTotals(checklist);
+		} catch { /* ignore */ }
 
 		subscription = trpc.checklist.subscription.subscribe(
 			{
@@ -105,15 +140,39 @@
 					checklist = c;
 					updateTotals(checklist);
 				},
+				onError: (err) => {
+					console.error("Checklist subscription lost, reconnecting in 5s…", err);
+					reconnectTimer = setTimeout(() => resubscribe(), 5000);
+				},
 			},
 		);
+	}
+
+	onMount(() => {
+		resubscribe();
+
+		function handleVisibility() {
+			if (document.visibilityState === "visible") resubscribe();
+		}
+		function handleOnline() {
+			resubscribe();
+		}
+
+		document.addEventListener("visibilitychange", handleVisibility);
+		window.addEventListener("online", handleOnline);
 
 		refreshNexusStatus();
 		nexusStatusInterval = setInterval(refreshNexusStatus, 30_000);
+
+		return () => {
+			document.removeEventListener("visibilitychange", handleVisibility);
+			window.removeEventListener("online", handleOnline);
+		};
 	});
 
 	onDestroy(() => {
 		subscription?.unsubscribe();
+		if (reconnectTimer) clearTimeout(reconnectTimer);
 		if (nexusStatusInterval) clearInterval(nexusStatusInterval);
 	});
 </script>
@@ -189,20 +248,47 @@
 				<tr>
 					<td class="sticky left-0 z-30 p-1 md:p-2 bg-gray-100 dark:bg-gray-700">Team</td>
 					<td class="hidden sm:table-cell p-1 md:p-2">Name</td>
-					<td class="p-1 md:p-2">Present</td>
-					<td class="p-1 md:p-2">Inspected</td>
-					<td class="p-1 md:p-2">Radio</td>
-					<td class="p-1 md:p-2">Connection</td>
+					<td class="p-1 md:p-2">
+						<button
+							onclick={() => (sortBy = sortBy === "present" ? null : "present")}
+							class={sortBy === "present" ? "text-blue-400 font-bold" : "font-bold"}
+							>Present <span class={sortBy === "present" ? "" : "opacity-30"}>▲</span></button
+						>
+					</td>
+					<td class="p-1 md:p-2">
+						<button
+							onclick={() => (sortBy = sortBy === "inspected" ? null : "inspected")}
+							class={sortBy === "inspected" ? "text-blue-400 font-bold" : "font-bold"}
+							>Inspected <span class={sortBy === "inspected" ? "" : "opacity-30"}>▲</span></button
+						>
+					</td>
+					<td class="p-1 md:p-2">
+						<button
+							onclick={() => (sortBy = sortBy === "radioProgrammed" ? null : "radioProgrammed")}
+							class={sortBy === "radioProgrammed" ? "text-blue-400 font-bold" : "font-bold"}
+							>Radio <span class={sortBy === "radioProgrammed" ? "" : "opacity-30"}>▲</span></button
+						>
+					</td>
+					<td class="p-1 md:p-2">
+						<button
+							onclick={() => (sortBy = sortBy === "connectionTested" ? null : "connectionTested")}
+							class={sortBy === "connectionTested" ? "text-blue-400 font-bold" : "font-bold"}
+							>Connection <span class={sortBy === "connectionTested" ? "" : "opacity-30"}>▲</span></button
+						>
+					</td>
 				</tr>
 			</thead>
 			<tbody>
-				{#each Object.entries(checklist) as [team, items]}
+				{#each sortedEntries as [team, items] (team)}
 					<tr class="border-b-1 border-gray-600">
 						<td class="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 px-6 py-4">
 							<button
 								class="font-medium hover:underline text-blue-600 dark:text-blue-400"
-								onclick={() => navigate("/notepad/team/:team", { params: { team } })}
-							>{team}</button>
+								onclick={() => {
+									pitMapTeam = team;
+									pitMapOpen = true;
+								}}>{team}</button
+							>
 						</td>
 						<td class="hidden sm:table-cell">{teamNames[team]}</td>
 						<td>
@@ -239,3 +325,5 @@
 		</table>
 	{/await}
 </div>
+
+<PitMapModal bind:open={pitMapOpen} teamNumber={pitMapTeam} onRemove={removeTeam} />

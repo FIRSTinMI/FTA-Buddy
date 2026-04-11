@@ -199,13 +199,14 @@
 					color={testingMusic ? "dark" : "primary"}>{testingMusic ? "Stop" : "Test"} Music</Button
 				>
 			</div>
-			<div class="grid grid-cols-subgrid gap-2 row-span-4">
+			<div class="grid grid-cols-subgrid gap-2 row-span-5">
 				<p class="text-gray-700 dark:text-gray-400">Appearance</p>
 				<Toggle class="toggle" bind:checked={$settingsStore.darkMode}>Dark Theme</Toggle>
 				<Toggle class="toggle" bind:checked={$settingsStore.roundGreen}>Round Green Indicators</Toggle>
 				<Toggle class="toggle" bind:checked={$settingsStore.inspectionAlerts}
 					>🔍 Missing inspection icon on field monitor</Toggle
 				>
+				<Toggle class="toggle" bind:checked={$settingsStore.confetti}>🎉 Confetti on fast cycles</Toggle>
 			</div>
 			<div class="grid grid-cols-subgrid gap-2 row-span-4">
 				<p class="text-gray-700 dark:text-gray-400">Developer</p>

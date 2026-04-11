@@ -1,6 +1,6 @@
 import { EventEmitter } from "events";
 import { TypedEmitter } from "tiny-typed-emitter";
-import { FTAEventNoteIssueType, FTAEventNoteResolutionType } from "./fmsApiTypes";
+import type { FTAEventNoteIssueType, FTAEventNoteResolutionType } from "./fmsApiTypes";
 
 export interface MonitorFrame {
 	field: FieldState;
@@ -368,6 +368,39 @@ export interface TeamChecklist {
 export type EventChecklist = { [key: string]: TeamChecklist };
 export type TeamList = { number: string; name: string; inspected: boolean }[];
 
+export interface PitMapElement {
+	position: { x: number; y: number };
+	size: { x: number; y: number };
+}
+
+export interface PitMapPit extends PitMapElement {
+	team?: string;
+}
+
+export interface PitMapArea extends PitMapElement {
+	label: string;
+}
+
+export interface PitMapLabel extends PitMapElement {
+	label: string;
+}
+
+export interface PitMapArrow extends PitMapElement {
+	angle: number;
+	type: string;
+}
+
+export interface PitMapWall extends PitMapElement {}
+
+export interface PitMapData {
+	size: { x: number; y: number };
+	pits: Record<string, PitMapPit>;
+	areas: Record<string, PitMapArea> | null;
+	labels: Record<string, PitMapLabel> | null;
+	arrows: Record<string, PitMapArrow> | null;
+	walls: Record<string, PitMapWall> | null;
+}
+
 export type NexusPollState =
 	| "not_configured"
 	| "polling"
@@ -430,7 +463,9 @@ export interface ServerEvent {
 	matchEventEmitter: TypedEmitter<MatchEventUpdateEvents>;
 	startDate?: string;
 	endDate?: string;
+	timezone?: string;
 	nexus: NexusStatus;
+	pitMap?: { data: PitMapData | null; fetchedAt: Date };
 	stats: {
 		extensions: {
 			id: string;
@@ -554,6 +589,8 @@ export interface Note {
 	slack_channel?: string | null;
 	resolved_by_id: number | null;
 	resolved_by: Profile | null;
+	request_type: "CSA" | "RI" | null;
+	is_nexus?: boolean;
 	messages?: Message[];
 }
 

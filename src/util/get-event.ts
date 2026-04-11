@@ -4,7 +4,7 @@ import { EventEmitter } from "events";
 import { TypedEmitter } from "tiny-typed-emitter";
 import { eventCodes, eventLastSeen, events, newEventEmitter } from "../state";
 import { DEFAULT_MONITOR } from "../../shared/constants";
-import {
+import type {
 	EventAutoEventSettings,
 	EventChecklist,
 	MatchEventUpdateEvents,
@@ -159,6 +159,7 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 				autoEventSettings: (event.autoEventSettings ?? {}) as EventAutoEventSettings,
 				startDate: event.startDate ?? undefined,
 				endDate: event.endDate ?? undefined,
+				timezone: event.timezone ?? undefined,
 				nexus: {
 					state: event.nexusApiKey ? "polling" : "not_configured",
 					intervalMinutes: 2,

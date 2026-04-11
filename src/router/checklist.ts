@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { on } from "events";
 import { z } from "zod";
-import { EventChecklist } from "../../shared/types";
+import type { EventChecklist } from "../../shared/types";
 import { db } from "../db/db";
 import { events } from "../db/schema";
 import { eventProcedure, publicProcedure, router } from "../trpc";

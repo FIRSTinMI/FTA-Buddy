@@ -52,4 +52,14 @@
 			{$eventStore.subEvents.find((e) => e.code === note.event_code)?.label ?? note.event_code}
 		</Badge>
 	{/if}
+
+	{#if note.request_type === "CSA"}
+		<Badge color="blue">CSA Request</Badge>
+	{:else if note.request_type === "RI"}
+		<Badge color="orange">RI Request</Badge>
+	{/if}
+
+	{#if note.is_nexus}
+		<Badge color="gray">Nexus</Badge>
+	{/if}
 </div>

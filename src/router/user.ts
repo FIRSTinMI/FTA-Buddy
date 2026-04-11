@@ -222,7 +222,7 @@ export const userRouter = router({
 							id: users.id,
 							admin: users.admin,
 							slack_user_id: users.slack_user_id,
-						active_event_code: users.active_event_code,
+							active_event_code: users.active_event_code,
 						})
 						.from(users)
 						.where(eq(users.token, input.token))

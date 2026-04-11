@@ -5,15 +5,11 @@ import {
 	FieldState,
 	MatchState,
 	MatchStateMap,
-	MonitorFrame,
-	PartialMonitorFrame,
 	ROBOT,
-	RobotInfo,
 	RobotWarnings,
-	ScheduleDetails,
-	StateChange,
 	StateChangeType,
 } from "../../shared/types";
+import type { MonitorFrame, PartialMonitorFrame, RobotInfo, ScheduleDetails, StateChange } from "../../shared/types";
 import { db } from "../db/db";
 import { events, matchEvents, notes, robotCycleLogs } from "../db/schema";
 import { getEvent } from "./get-event";

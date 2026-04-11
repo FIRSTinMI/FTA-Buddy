@@ -179,6 +179,8 @@
 					users: res.users as Profile[],
 					subEvents: res.subEvents,
 					meshedEventCode: res.code,
+					startDate: res.startDate ?? undefined,
+					endDate: res.endDate ?? undefined,
 				});
 				saveEvent({
 					code: $eventStore.code,
@@ -188,6 +190,8 @@
 					users: res.users as Profile[],
 					subEvents: res.subEvents,
 					meshedEventCode: res.code,
+					startDate: res.startDate ?? undefined,
+					endDate: res.endDate ?? undefined,
 				});
 			} else {
 				user.set({ ...$user, eventToken: res.token });
@@ -196,6 +200,8 @@
 					pin: res.pin,
 					teams: res.teams as TeamList,
 					users: res.users as Profile[],
+					startDate: res.startDate ?? undefined,
+					endDate: res.endDate ?? undefined,
 				});
 				saveEvent({
 					code: $eventStore.code,
@@ -203,6 +209,8 @@
 					pin: res.pin,
 					teams: res.teams as TeamList,
 					users: res.users as Profile[],
+					startDate: res.startDate ?? undefined,
+					endDate: res.endDate ?? undefined,
 				});
 			}
 			eventCode = $eventStore.code;
@@ -236,6 +244,8 @@
 					users: res.users as Profile[],
 					subEvents: res.subEvents,
 					meshedEventCode: res.code,
+					startDate: res.startDate ?? undefined,
+					endDate: res.endDate ?? undefined,
 				});
 				saveEvent({
 					code: res.code,
@@ -245,6 +255,8 @@
 					users: res.users as Profile[],
 					subEvents: res.subEvents,
 					meshedEventCode: res.code,
+					startDate: res.startDate ?? undefined,
+					endDate: res.endDate ?? undefined,
 				});
 
 				await tick();
@@ -260,6 +272,8 @@
 					pin: res.pin,
 					teams: res.teams as TeamList,
 					users: res.users as Profile[],
+					startDate: res.startDate ?? undefined,
+					endDate: res.endDate ?? undefined,
 				});
 				saveEvent({
 					code: res.code,
@@ -267,6 +281,8 @@
 					pin: res.pin,
 					teams: res.teams as TeamList,
 					users: res.users as Profile[],
+					startDate: res.startDate ?? undefined,
+					endDate: res.endDate ?? undefined,
 				});
 
 				await tick();

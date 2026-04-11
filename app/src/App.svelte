@@ -18,12 +18,14 @@
 	import { onDestroy, onMount, tick } from "svelte";
 	import { get } from "svelte/store";
 	import { formatTime } from "../../shared/formatTime";
+	import type { Profile, TeamList } from "../../shared/types";
 	import SettingsModal from "./components/SettingsModal.svelte";
 	import UpdateToast from "./components/UpdateToast.svelte";
 	import WelcomeModal from "./components/WelcomeModal.svelte";
 	import { trpc } from "./main";
 	import { navigate, route } from "./router";
 	import { eventStore } from "./stores/event";
+	import { saveEvent } from "./stores/savedEvents";
 	import { fullscreen } from "./stores/fullscreen";
 	import { installPrompt } from "./stores/install-prompt";
 	import { notificationsStore } from "./stores/notifications";
@@ -38,17 +40,6 @@
 	import { registerToast } from "./util/toast";
 	import { track } from "./util/telemetry";
 	import { update, VERSIONS } from "./util/updater";
-
-	window.addEventListener("error", function (event) {
-		if (
-			event?.message?.includes("Failed to fetch dynamically imported module") &&
-			!sessionStorage.getItem("reloaded")
-		) {
-			console.warn("Detected missing JS chunk. Reloading...");
-			sessionStorage.setItem("reloaded", "true");
-			window.location.reload();
-		}
-	});
 
 	// On mount check if the user's permissions have changed
 	onMount(async () => {
@@ -81,9 +72,78 @@
 					admin: false,
 				});
 			}
+
+			if (checkAuth.event?.archived) {
+				const code = get(eventStore).code;
+				user.update((u) => ({ ...u, eventToken: "", meshedEventToken: "" }));
+				eventStore.set({ code: "", pin: "", teams: [], users: [] });
+				toast(
+					"Event Archived",
+					`${code ? code.toUpperCase() + " has" : "Your event has"} been archived. Please join a new event.`,
+					"red-500",
+					8000,
+				);
+				navigate("/manage/login");
+			}
 		} catch (err: any) {
 			// Network / server error - do NOT clear the token to avoid false logouts on flaky connections
 			console.warn("[AUTH] checkAuth request failed (not clearing token):", err.message);
+		}
+
+		// Auto-join event from magic link ?token= query param (used in Slack deep-links)
+		const urlParams = new URLSearchParams(window.location.search);
+		const magicToken = urlParams.get("token");
+		if (magicToken && $user.token && $user.eventToken !== magicToken) {
+			try {
+				const res = await trpc.event.joinByToken.mutate({ token: magicToken });
+				if (res.subEvents) {
+					user.set({ ...$user, eventToken: res.token, meshedEventToken: res.token });
+					eventStore.set({
+						code: res.code,
+						pin: res.pin,
+						teams: res.teams as TeamList,
+						users: res.users as Profile[],
+						subEvents: res.subEvents,
+						meshedEventCode: res.code,
+						startDate: res.startDate ?? undefined,
+						endDate: res.endDate ?? undefined,
+					});
+					saveEvent({
+						code: res.code,
+						token: res.token,
+						pin: res.pin,
+						teams: res.teams as TeamList,
+						users: res.users as Profile[],
+						subEvents: res.subEvents,
+						meshedEventCode: res.code,
+						startDate: res.startDate ?? undefined,
+						endDate: res.endDate ?? undefined,
+					});
+				} else {
+					user.set({ ...$user, eventToken: res.token });
+					eventStore.set({
+						code: res.code,
+						pin: res.pin,
+						teams: res.teams as TeamList,
+						users: res.users as Profile[],
+						startDate: res.startDate ?? undefined,
+						endDate: res.endDate ?? undefined,
+					});
+					saveEvent({
+						code: res.code,
+						token: res.token,
+						pin: res.pin,
+						teams: res.teams as TeamList,
+						users: res.users as Profile[],
+						startDate: res.startDate ?? undefined,
+						endDate: res.endDate ?? undefined,
+					});
+				}
+				// Strip the token param from the URL without reloading
+				window.history.replaceState({}, "", window.location.pathname);
+			} catch {
+				// Ignore - token may be invalid; user can join manually
+			}
 		}
 	});
 
@@ -104,22 +164,29 @@
 		"/references/softwaredocs",
 		"/dashboard",
 		"/manage/kiosk",
+		"/join",
 	];
 
-	const eventTokenPaths = ["/monitor", "/checklist", "/logs"];
+	const eventTokenPaths = ["/monitor", "/checklist", "/logs", "/notepad"];
 
 	const pageIsPublicLog = route.pathname.startsWith("/logs/") && route.pathname.split("/")[3].length == 36;
 	const pageIsPublicNoteCreate = route.pathname.startsWith("/notepad/submit/");
+	const pageIsJoinLink = route.pathname.startsWith("/join/");
 
 	function redirectForAuth() {
 		// if user has event token and is trying to access a page that requires an event token
-		if ($user.eventToken && (eventTokenPaths.includes(route.pathname) || route.pathname.startsWith("/logs"))) {
+		if (
+			$user.eventToken &&
+			(eventTokenPaths.includes(route.pathname) ||
+				route.pathname.startsWith("/logs") ||
+				route.pathname.startsWith("/notepad"))
+		) {
 			return;
 		}
 
 		if (!publicPaths.includes(route.pathname)) {
 			//user trying to acces protected page
-			if (!pageIsPublicLog && !pageIsPublicNoteCreate) {
+			if (!pageIsPublicLog && !pageIsPublicNoteCreate && !pageIsJoinLink) {
 				//page is not public log or public note creation page
 				if (!$user.token || !$user.eventToken) {
 					navigate("/manage/login"); //user is either not logged in or does not have event token
@@ -228,6 +295,43 @@
 
 	registerToast(toast);
 
+	// Auto-kick from stale (past) events on the Tuesday after the event ends
+	function getTuesdayAfter(dateStr: string): Date {
+		const d = new Date(dateStr + "T00:00:00");
+		const day = d.getDay(); // 0=Sun,1=Mon,2=Tue,...
+		const daysUntilTuesday = day <= 2 ? 2 - day : 9 - day;
+		d.setDate(d.getDate() + daysUntilTuesday);
+		return d;
+	}
+
+	function checkAndKickFromStaleEvent() {
+		const event = get(eventStore);
+		if (!event.code || !event.endDate) return;
+		const kickDate = getTuesdayAfter(event.endDate);
+		const today = new Date();
+		today.setHours(0, 0, 0, 0);
+		if (today >= kickDate) {
+			const code = event.code;
+			eventStore.set({ code: "", pin: "", teams: [], users: [] });
+			user.update((u) => ({ ...u, eventToken: "" }));
+			toast(
+				"Event Ended",
+				`You've been signed out of ${code.toUpperCase()} because the event has ended. You can rejoin it from the event switcher.`,
+				"red-500",
+				8000,
+			);
+		}
+	}
+
+	onMount(() => {
+		checkAndKickFromStaleEvent();
+		const handleVisibility = () => {
+			if (document.visibilityState === "visible") checkAndKickFromStaleEvent();
+		};
+		document.addEventListener("visibilitychange", handleVisibility);
+		return () => document.removeEventListener("visibilitychange", handleVisibility);
+	});
+
 	const toastColorClasses: Record<string, string> = {
 		"red-500": "bg-red-200 dark:bg-red-700 text-red-950 dark:text-red-100",
 		"green-500": "bg-green-200 dark:bg-green-700 text-green-950 dark:text-green-100",
@@ -274,7 +378,7 @@
 
 	window.addEventListener("beforeinstallprompt", (event) => {
 		event.preventDefault();
-		installPrompt.set(event);
+		installPrompt.set(event as any);
 	});
 
 	window.addEventListener("appinstalled", () => {
@@ -433,7 +537,8 @@
 							eventToken: $user.meshedEventToken ?? "",
 						});
 						eventStore.set({ ...event, code: event.meshedEventCode ?? "", label: "Combined" });
-						if (event.meshedEventCode) trpc.event.setActiveEvent.mutate({ eventCode: event.meshedEventCode }).catch(() => {});
+						if (event.meshedEventCode)
+							trpc.event.setActiveEvent.mutate({ eventCode: event.meshedEventCode }).catch(() => {});
 						if (route.pathname.startsWith("/monitor")) {
 							navigate("/dashboard");
 						}
@@ -566,6 +671,17 @@
 					>
 						{#snippet icon()}
 							<Icon icon="mdi:television" class="size-8" />
+						{/snippet}
+					</SidebarItem>
+					<SidebarItem
+						label="Notepad"
+						onclick={() => {
+							drawerOpen = false;
+							navigate("/notepad");
+						}}
+					>
+						{#snippet icon()}
+							<Icon icon="fluent:notepad-16-regular" class="size-8" />
 						{/snippet}
 					</SidebarItem>
 					<SidebarItem
@@ -756,7 +872,7 @@
 				<Icon icon="mdi:menu" class="w-8 h-10" />
 			</button>
 			<div class="grow mr-12">
-				{#if $user.token && $user.eventToken}
+				{#if $user.eventToken}
 					<h1 class="text-white text-lg place-content-center pt-1 font-bold">{event.label ?? event.code}</h1>
 				{/if}
 			</div>

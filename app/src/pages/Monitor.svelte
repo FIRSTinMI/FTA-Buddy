@@ -1,4 +1,5 @@
 <script lang="ts">
+	import confetti from "canvas-confetti";
 	import Icon from "@iconify/svelte";
 	import { onDestroy, onMount } from "svelte";
 	import { get } from "svelte/store";
@@ -20,6 +21,7 @@
 	import { fullscreen } from "../stores/fullscreen";
 	import { eventStore } from "../stores/event";
 	import { userStore } from "../stores/user";
+	import { settingsStore } from "../stores/settings";
 	import type { MonitorEvent } from "../util/monitorFrameHandler";
 	import { updateScheduleText } from "../util/schedule-detail-formatter";
 
@@ -54,6 +56,31 @@
 	let scheduleDetails: ScheduleDetails | undefined;
 	let scheduleText = $state("");
 
+	function getScheduledCycleTimeMS(matchNumber: number): number | undefined {
+		if (!scheduleDetails) return undefined;
+		const now = new Date().getTime();
+		let day = 0;
+		for (let i = 0; i < scheduleDetails.days.length; i++) {
+			if (new Date(scheduleDetails.days[i].date).getTime() <= now) {
+				day = i;
+			}
+		}
+		const cts = scheduleDetails.days[day]?.cycleTimes;
+		if (!cts || cts.length === 0) return undefined;
+		let minutes = cts[0].minutes;
+		for (const ct of cts) {
+			if (ct.match <= matchNumber) minutes = ct.minutes;
+		}
+		return minutes * 60 * 1000;
+	}
+
+	function fireConfetti() {
+		if (!$settingsStore.confetti) return;
+		const defaults = { startVelocity: 30, spread: 70, ticks: 180, zIndex: 9999 };
+		confetti({ ...defaults, particleCount: 80, angle: 60, origin: { x: 0, y: 0.7 } });
+		confetti({ ...defaults, particleCount: 80, angle: 120, origin: { x: 1, y: 0.7 } });
+	}
+
 	onMount(async () => {
 		frameHandler.addEventListener("frame", onFrameEvent);
 		frameHandler.addEventListener("match-start", onMatchStart);
@@ -75,9 +102,8 @@
 			{
 				onData: (data) => {
 					averageCycleTimeMS = data.averageCycleTime ?? 7 * 60 * 1000;
-					const rawCt = data.lastCycleTime && data.lastCycleTime !== "unk"
-						? cycleTimeToMS(data.lastCycleTime)
-						: 0;
+					const rawCt =
+						data.lastCycleTime && data.lastCycleTime !== "unk" ? cycleTimeToMS(data.lastCycleTime) : 0;
 					calculatedCycleTime = isNaN(rawCt) ? 0 : rawCt;
 					if (data.scheduleDetails) {
 						scheduleDetails = data.scheduleDetails;
@@ -172,6 +198,12 @@
 			bestCycleTimeMS = lastCycleTimeMS;
 			currentCycleIsBest = true;
 		}
+
+		const scheduledCycleTimeMS = getScheduledCycleTimeMS(monitorFrame?.match ?? 0);
+		if (scheduledCycleTimeMS && lastCycleTimeMS > 0 && lastCycleTimeMS < scheduledCycleTimeMS) {
+			fireConfetti();
+		}
+
 		matchStartTime = new Date();
 
 		averageCycleTimeMS = (await trpc.cycles.getAverageCycleTime.query()) ?? 8 * 60 * 1000;
@@ -182,7 +214,7 @@
 			monitorFrame?.level ?? "",
 			averageCycleTimeMS,
 		);
-			scheduleText = newScheduleText;
+		scheduleText = newScheduleText;
 
 		// Reset the cycle time so it doesn't screw up the next match's cycle time
 		calculatedCycleTime = undefined;

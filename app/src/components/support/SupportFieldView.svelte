@@ -1,6 +1,7 @@
 <script lang="ts">
+	import confetti from "canvas-confetti";
 	import Icon from "@iconify/svelte";
-	import { Badge, Button, Toggle } from "flowbite-svelte";
+	import { Badge, Button, Modal, Textarea, Toggle } from "flowbite-svelte";
 	import { onDestroy, onMount } from "svelte";
 	import type {
 		MatchEvent,
@@ -9,16 +10,22 @@
 		Note,
 		NoteUpdateEventData,
 		RobotInfo,
+		ScheduleDetails,
+		TournamentLevel,
 	} from "../../../../shared/types";
-	import { DSState, ROBOT } from "../../../../shared/types";
+	import { DSState, MatchState, MatchStateMap, ROBOT, RobotWarnings } from "../../../../shared/types";
+	import { cycleTimeToMS } from "../../../../shared/cycleTimeToMS";
+	import { formatTimeShortNoAgo, formatTimeShortNoAgoSeconds } from "../../../../shared/formatTime";
 	import { frameHandler, subscribeToFieldMonitor } from "../../field-monitor";
 	import { trpc } from "../../main";
 	import { navigate } from "../../router";
 	import { eventStore } from "../../stores/event";
+	import { settingsStore } from "../../stores/settings";
 	import { userStore } from "../../stores/user";
 	import type { MonitorEvent } from "../../util/monitorFrameHandler";
 	import Spinner from "../Spinner.svelte";
 	import AddQuickNoteModal from "./AddQuickNoteModal.svelte";
+	import { toast } from "../../util/toast";
 
 	// Match index for prev/next navigation
 	interface MatchInfo {
@@ -33,6 +40,8 @@
 		red2: number | null;
 		red3: number | null;
 		isPlayed: boolean;
+		scheduledStartTime: Date | null;
+		cycleTime: string | null;
 	}
 
 	let allMatches: MatchInfo[] = $state([]);
@@ -166,6 +175,7 @@
 			matchIndex = -1; // snap to live
 			monitorFrame = (evt as MonitorEvent).detail.frame;
 		}
+		matchStartTime = new Date();
 	}
 
 	// Match navigation
@@ -406,19 +416,63 @@
 		}
 		frameHandler.addEventListener("frame", onFrame);
 		frameHandler.addEventListener("prestart", onPrestart);
+		frameHandler.addEventListener("match-start", onMatchStart);
 		loadMatchIndex();
 		startSubscription();
 		startMatchEventSubscription();
 		window.addEventListener("resize", handleResize);
+		// Initialise match start time so T: starts counting from the right point
+		trpc.cycles.getLastPrestart.query().then((t) => {
+			if (t) matchStartTime = new Date(t);
+		});
+		trpc.cycles.getLastMatchStart.query().then((t) => {
+			if (t) matchStartTime = new Date(t);
+		});
+		trpc.cycles.getScheduleDetails.query().then((d) => {
+			if (d) scheduleDetails = d;
+		});
+		cycleInterval = setInterval(() => {
+			currentCycleTime = formatTimeShortNoAgo(matchStartTime);
+		}, 1000);
 	});
 
 	onDestroy(() => {
 		frameHandler.removeEventListener("frame", onFrame);
 		frameHandler.removeEventListener("prestart", onPrestart);
+		frameHandler.removeEventListener("match-start", onMatchStart);
 		subscription?.unsubscribe();
 		matchEventSubscription?.unsubscribe();
 		window.removeEventListener("resize", handleResize);
+		if (cycleInterval) clearInterval(cycleInterval);
 	});
+
+	// Match note modal
+	let matchNoteOpen = $state(false);
+	let matchNoteText = $state("");
+	let savingMatchNote = $state(false);
+
+	async function saveMatchNote() {
+		const text = matchNoteText.trim();
+		if (!text || savingMatchNote) return;
+		savingMatchNote = true;
+		try {
+			await trpc.notes.create.mutate({
+				team: null,
+				text,
+				note_type: "MatchNote",
+				match_number: teams?.match_number ?? null,
+				play_number: teams?.play_number ?? null,
+				tournament_level: (teams?.level as TournamentLevel) ?? null,
+			});
+			toast("Match note created", "", "green-500");
+			matchNoteText = "";
+			matchNoteOpen = false;
+		} catch (err: any) {
+			toast("Error creating note", err.message);
+		} finally {
+			savingMatchNote = false;
+		}
+	}
 
 	function dsColor(ds: number): string {
 		if (ds === DSState.ESTOP || ds === DSState.BYPASS) return "bg-red-800";
@@ -433,6 +487,103 @@
 	function handleResize() {
 		isShortScreen = window.innerHeight < 900;
 	}
+
+	// Cycle time counting
+	let matchStartTime = $state(new Date());
+	let currentCycleTime = $state("0");
+	let cycleInterval: ReturnType<typeof setInterval> | undefined;
+
+	// Schedule details for confetti
+	let scheduleDetails: ScheduleDetails | undefined;
+
+	function getScheduledCycleTimeMS(matchNumber: number): number | undefined {
+		if (!scheduleDetails) return undefined;
+		const now = new Date().getTime();
+		let day = 0;
+		for (let i = 0; i < scheduleDetails.days.length; i++) {
+			if (new Date(scheduleDetails.days[i].date).getTime() <= now) {
+				day = i;
+			}
+		}
+		const cts = scheduleDetails.days[day]?.cycleTimes;
+		if (!cts || cts.length === 0) return undefined;
+		let minutes = cts[0].minutes;
+		for (const ct of cts) {
+			if (ct.match <= matchNumber) minutes = ct.minutes;
+		}
+		return minutes * 60 * 1000;
+	}
+
+	function fireConfetti() {
+		if (!$settingsStore.confetti) return;
+		const defaults = { startVelocity: 30, spread: 70, ticks: 180, zIndex: 9999 };
+		confetti({ ...defaults, particleCount: 80, angle: 60, origin: { x: 0, y: 0.7 } });
+		confetti({ ...defaults, particleCount: 80, angle: 120, origin: { x: 1, y: 0.7 } });
+	}
+
+	function onMatchStart(evt: Event) {
+		const frame = (evt as MonitorEvent).detail.frame;
+		const lastCycleTimeMS = Date.now() - matchStartTime.getTime();
+		const scheduledCycleTimeMS = getScheduledCycleTimeMS(frame?.match ?? 0);
+		if (scheduledCycleTimeMS && lastCycleTimeMS > 0 && lastCycleTimeMS < scheduledCycleTimeMS) {
+			fireConfetti();
+		}
+	}
+
+	function formatScheduledTime(d: Date | string | null | undefined): string | null {
+		if (!d) return null;
+		const dt = d instanceof Date ? d : new Date(d as string);
+		if (isNaN(dt.getTime())) return null;
+		return dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+	}
+
+	function fmtCT(ct: string | null | undefined): string | null {
+		if (!ct || ct === "unk" || ct === "") return null;
+		const ms = cycleTimeToMS(ct);
+		if (isNaN(ms) || ms <= 0) return null;
+		return formatTimeShortNoAgoSeconds(ms);
+	}
+
+	// Show scheduled start time for the current unstarted match or future scheduled matches.
+	// Hide once a match is running, and never show for already-played matches.
+	let scheduledStartTime = $derived.by(() => {
+		if (isLive) {
+			if (monitorFrame && MatchStateMap[monitorFrame.field] === MatchState.RUNNING) return null;
+			const liveMatch = liveIdx >= 0 ? allMatches[liveIdx] : null;
+			return liveMatch?.scheduledStartTime ?? null;
+		}
+		if (matchIndex >= 0) {
+			const m = allMatches[matchIndex];
+			if (!m || m.isPlayed) return null;
+			return m.scheduledStartTime ?? null;
+		}
+		return null;
+	});
+	let formattedStartTime = $derived(formatScheduledTime(scheduledStartTime));
+	let isPastStartTime = $derived(!!scheduledStartTime && Date.now() > new Date(scheduledStartTime as Date).getTime());
+	let aheadBehindText = $derived.by(() => {
+		if (!isLive || !monitorFrame) return null;
+		const text = monitorFrame.exactAheadBehind ?? monitorFrame.time;
+		if (!text || text === "unk") return null;
+		return text;
+	});
+	let cycleTimeText = $derived.by(() => {
+		if (isLive) {
+			const isRunning = monitorFrame && MatchStateMap[monitorFrame.field] === MatchState.RUNNING;
+			if (isRunning) {
+				// Match is running - show last completed cycle time
+				const c = fmtCT(monitorFrame?.lastCycleTime ?? null);
+				return c ? `C: ${c}` : null;
+			}
+			// Prestart / waiting - show counting-up timer
+			return `T: ${currentCycleTime}`;
+		}
+		if (matchIndex >= 0 && allMatches[matchIndex]?.isPlayed) {
+			const c = fmtCT(allMatches[matchIndex]?.cycleTime ?? null);
+			return c ? `C: ${c}` : null;
+		}
+		return null;
+	});
 </script>
 
 {#snippet teamCard(teamNum: number, alliance: "blue" | "red", slot: 1 | 2 | 3)}
@@ -470,12 +621,6 @@
 				<span class="leading-none">#{teamNum}</span>
 				{#if teamName}
 					<span class="text-[11px] sm:text-sm lg:text-base font-normal opacity-80 truncate">{teamName}</span>
-				{/if}
-				{#if hasOpenNote}
-					<Icon
-						icon="mdi:alert"
-						class="ml-auto shrink-0 {isShortScreen ? 'size-3.5' : 'size-4'} text-yellow-300"
-					/>
 				{/if}
 			</button>
 			{#if currentMatchId}
@@ -565,9 +710,65 @@
 					class="tabular-nums font-mono text-[9px] sm:text-xs lg:text-sm text-black dark:text-white shrink-0"
 					title="Signal strength">{liveRobot.signal ?? 0}dBm</span
 				>
+				{#if hasOpenNote || liveRobot.warnings.includes(RobotWarnings.NOT_INSPECTED) || liveRobot.warnings.includes(RobotWarnings.RADIO_NOT_FLASHED) || liveRobot.warnings.includes(RobotWarnings.PREVIOUS_MATCH_EVENT)}
+					<div class="ml-auto flex items-center gap-0.5 sm:gap-1 shrink-0">
+						{#if hasOpenNote}
+							<div
+								class="{isShortScreen
+									? 'size-3.5'
+									: 'size-4 sm:size-6'} rounded-sm bg-yellow-400 flex items-center justify-center shrink-0"
+								title="Open note"
+							>
+								<Icon
+									icon="mdi:pencil"
+									class="{isShortScreen ? 'size-2.5' : 'size-3 sm:size-4'} text-black"
+								/>
+							</div>
+						{/if}
+						{#if liveRobot.warnings.includes(RobotWarnings.NOT_INSPECTED)}
+							<div
+								class="{isShortScreen
+									? 'size-3.5'
+									: 'size-4 sm:size-6'} rounded-sm bg-yellow-400 flex items-center justify-center shrink-0"
+								title="Not inspected"
+							>
+								<Icon
+									icon="mdi:magnify"
+									class="{isShortScreen ? 'size-2.5' : 'size-3 sm:size-4'} text-black"
+								/>
+							</div>
+						{/if}
+						{#if liveRobot.warnings.includes(RobotWarnings.RADIO_NOT_FLASHED)}
+							<div
+								class="{isShortScreen
+									? 'size-3.5'
+									: 'size-4 sm:size-6'} rounded-sm bg-yellow-400 flex items-center justify-center shrink-0"
+								title="Radio not programmed"
+							>
+								<Icon
+									icon="mdi:wifi-off"
+									class="{isShortScreen ? 'size-2.5' : 'size-3 sm:size-4'} text-black"
+								/>
+							</div>
+						{/if}
+						{#if liveRobot.warnings.includes(RobotWarnings.PREVIOUS_MATCH_EVENT)}
+							<div
+								class="{isShortScreen
+									? 'size-3.5'
+									: 'size-4 sm:size-6'} rounded-sm bg-yellow-400 flex items-center justify-center shrink-0"
+								title="Previous match event"
+							>
+								<Icon
+									icon="mdi:wrench"
+									class="{isShortScreen ? 'size-2.5' : 'size-3 sm:size-4'} text-black"
+								/>
+							</div>
+						{/if}
+					</div>
+				{/if}
 			</div>
 		{/if}
-		<div class="min-h-0 overflow-y-auto px-2 sm:px-3 flex-1">
+		<div class="min-h-0 overflow-y-auto px-2 sm:px-3 {itemCount > 0 || td?.loading ? 'flex-1' : ''}">
 			{#if td?.loading}
 				<div class="flex justify-center py-2"><Spinner /></div>
 			{:else}
@@ -651,16 +852,40 @@
 			{/if}
 		</div>
 		<button
-			class="shrink-0 w-full text-left px-3 {isShortScreen
-				? 'py-0.5'
-				: 'py-1.5'} text-[11px] sm:text-xs lg:text-sm text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-neutral-700 flex items-center gap-1.5 transition-colors"
+			class="w-full flex items-center justify-center gap-1.5 transition-colors text-[11px] sm:text-xs lg:text-sm text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-neutral-700
+				{itemCount === 0 && !td?.loading
+					? 'flex-1 py-4'
+					: 'shrink-0 text-left px-3 ' + (isShortScreen ? 'py-0.5' : 'py-1.5')}"
 			onclick={() => openNoteModal(teamNum)}
 		>
 			<Icon icon="mdi:plus-circle-outline" class="size-3 sm:size-3.5 lg:size-4 shrink-0" />
-			Add note
+			<span>Add note</span>
 		</button>
 	</div>
 {/snippet}
+
+<Modal bind:open={matchNoteOpen} size="md" onclose={() => (matchNoteOpen = false)}>
+	{#snippet header()}
+		<span class="font-bold">Match Note - {matchLabel}</span>
+	{/snippet}
+	<Textarea
+		class="w-full"
+		rows={4}
+		placeholder="Describe the observation or issue…"
+		bind:value={matchNoteText}
+		autofocus
+		onkeydown={(e: KeyboardEvent) => {
+			if ((e.ctrlKey || e.metaKey) && e.key === "Enter") saveMatchNote();
+		}}
+	/>
+	<p class="mt-1 text-xs text-gray-400">Tip: Ctrl+Enter to save</p>
+	{#snippet footer()}
+		<Button color="blue" disabled={!matchNoteText.trim() || savingMatchNote} onclick={saveMatchNote}>
+			{savingMatchNote ? "Saving…" : "Save Note"}
+		</Button>
+		<Button color="alternative" onclick={() => (matchNoteOpen = false)}>Cancel</Button>
+	{/snippet}
+</Modal>
 
 <AddQuickNoteModal
 	bind:open={modalOpen}
@@ -692,21 +917,64 @@
 					size="xs"
 					color="alternative"
 					onclick={goToPrevMatch}
-					disabled={matchIndex === 0 || (isLive && liveIdx <= 0)}
+					disabled={matchIndex === 0 || (isLive && liveIdx === 0)}
 				>
 					<Icon icon="mdi:chevron-left" class={isShortScreen ? "size-3.5" : "size-4 sm:size-5"} />
 				</Button>
 
-				<div class="flex flex-col items-center min-w-0">
-					<p
-						class="font-bold {isShortScreen
-							? 'text-sm'
-							: 'text-base sm:text-xl lg:text-3xl'} leading-tight text-black dark:text-white text-center truncate"
-					>
-						{matchLabel}
-					</p>
+				<div class="flex-1 flex flex-col items-center min-w-0">
+					<div class="flex items-center justify-center {isShortScreen ? 'gap-2' : 'gap-2 sm:gap-4'} w-full">
+						<div class="flex flex-col items-end gap-0.5 shrink-0">
+							{#if formattedStartTime}
+								<span
+									class="{isShortScreen ? 'text-xs' : 'text-xs sm:text-sm'} {isPastStartTime
+										? 'text-red-500 dark:text-red-400 font-semibold'
+										: 'text-gray-500 dark:text-gray-400'}"
+								>
+									<span class="opacity-60">Sched:</span>
+									{formattedStartTime}
+								</span>
+							{/if}
+							<button
+								class="text-[11px] sm:text-xs lg:text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 flex items-center gap-1 transition-colors"
+								onclick={() => (matchNoteOpen = true)}
+								title="Add match note"
+							>
+								<Icon icon="mdi:plus-circle-outline" class="size-3 sm:size-3.5 shrink-0" />
+								{#if !isShortScreen}Match note{/if}
+							</button>
+						</div>
+						<p
+							class="font-bold {isShortScreen
+								? 'text-sm'
+								: 'text-base sm:text-xl lg:text-3xl'} leading-tight text-black dark:text-white text-center shrink-0"
+						>
+							{matchLabel}
+						</p>
+						{#if aheadBehindText || cycleTimeText}
+							<div class="flex flex-col items-start gap-0.5 shrink-0">
+								{#if aheadBehindText}
+									<span
+										class="{isShortScreen
+											? 'text-xs'
+											: 'text-xs sm:text-sm'} {aheadBehindText.startsWith('-')
+											? 'text-orange-500 dark:text-orange-400'
+											: 'text-black dark:text-white'}">{aheadBehindText}</span
+									>
+								{/if}
+								{#if cycleTimeText}
+									<span
+										class="{isShortScreen
+											? 'text-xs'
+											: 'text-xs sm:text-sm'} text-gray-500 dark:text-gray-400"
+										>{cycleTimeText}</span
+									>
+								{/if}
+							</div>
+						{/if}
+					</div>
 					{#if !isShortScreen}
-						<div class="h-5 flex items-center">
+						<div class="h-5 flex items-center gap-1.5">
 							{#if isLive}
 								<Badge color="green" class="text-xs">LIVE</Badge>
 							{:else if matchIndex >= 0 && !allMatches[matchIndex]?.isPlayed}

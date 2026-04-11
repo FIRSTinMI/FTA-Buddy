@@ -8,6 +8,7 @@
 	import FormattedTime from "../../components/FormattedTime.svelte";
 	import MessageCard from "../../components/MessageCard.svelte";
 	import NoteActionBar from "../../components/notes/NoteActionBar.svelte";
+	import PitMapModal from "../../components/PitMapModal.svelte";
 	import NoteAssignModal from "../../components/notes/NoteAssignModal.svelte";
 	import NoteMatchInfo from "../../components/notes/NoteMatchInfo.svelte";
 	import NoteMetaBadges from "../../components/notes/NoteMetaBadges.svelte";
@@ -53,10 +54,12 @@
 			: [],
 	);
 
+	let pitMapOpen = $state(false);
 	let deleteNotePopup = $state(false);
 
 	let editNoteView = $state(false);
 	let editNoteText: string = $state("");
+	let editRequestType = $state<"CSA" | "RI" | null>(null);
 
 	type TBANextMatch = Awaited<ReturnType<typeof trpc.matchEvents.getNextMatchForTeam.query>>;
 	let nextMatch: TBANextMatch = $state(null);
@@ -276,6 +279,7 @@
 	async function openEditNote() {
 		if (!note) return;
 		editNoteText = note.text;
+		editRequestType = note.request_type ?? null;
 		matchIdVal = note.match_id ?? undefined;
 		await getMatchesForTeam(note.team);
 		editNoteView = true;
@@ -285,17 +289,19 @@
 		evt.preventDefault();
 		try {
 			if (!note) return;
-			if (editNoteText !== note.text || matchIdVal !== (note.match_id ?? undefined)) {
+			if (editNoteText !== note.text || matchIdVal !== (note.match_id ?? undefined) || editRequestType !== (note.request_type ?? null)) {
 				await trpc.notes.edit.mutate({
 					id: noteId,
 					new_text: editNoteText,
 					event_code: event.code,
 					match_id: matchIdVal,
+					request_type: editRequestType,
 				});
 				note = {
 					...note,
 					text: editNoteText,
 					match_id: matchIdVal ?? null,
+					request_type: editRequestType,
 				};
 				// Refresh match display if match_id changed
 				if (matchIdVal) {
@@ -494,6 +500,26 @@
 
 		<Label for="text">Edit Text:</Label>
 		<Textarea id="text" class="w-full" rows={5} bind:value={editNoteText} />
+
+		<div class="flex flex-col gap-1 text-sm">
+			{#each [{ value: "CSA", label: "CSA Request" }, { value: "RI", label: "RI Request" }] as opt}
+				<button
+					type="button"
+					class="flex items-center gap-2 px-3 py-1.5 rounded border text-left transition-colors
+						{editRequestType === opt.value
+						? 'border-blue-500 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+						: 'border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-neutral-700 text-gray-700 dark:text-gray-300'}"
+					onclick={() => (editRequestType = editRequestType === opt.value ? null : (opt.value as "CSA" | "RI"))}
+				>
+					<span
+						class="size-3 rounded-full border-2 shrink-0
+						{editRequestType === opt.value ? 'border-blue-500 bg-blue-500' : 'border-gray-400'}"
+					></span>
+					{opt.label}
+				</button>
+			{/each}
+		</div>
+
 		<Button type="submit">Save Changes</Button>
 	</form>
 </Modal>
@@ -538,7 +564,12 @@
 					<!-- Scrollable content -->
 					<div class="flex flex-col flex-1 min-h-0 overflow-y-auto gap-3">
 						<!-- Note type header + played-since + team + next match -->
-						<NoteMatchInfo {note} {nextMatch} {playedMatchesSince} />
+						<NoteMatchInfo
+							{note}
+							{nextMatch}
+							{playedMatchesSince}
+							onopenpitmap={() => (pitMapOpen = true)}
+						/>
 
 						<!-- Created at + author -->
 						<div
@@ -574,7 +605,9 @@
 
 					<!-- Reply form -->
 					{#if isReadOnly}
-						<div class="w-full rounded-xl bg-gray-100 dark:bg-neutral-800 border border-gray-300 dark:border-neutral-600 px-4 py-2.5 mt-1 text-sm text-gray-500 dark:text-gray-400 text-center">
+						<div
+							class="w-full rounded-xl bg-gray-100 dark:bg-neutral-800 border border-gray-300 dark:border-neutral-600 px-4 py-2.5 mt-1 text-sm text-gray-500 dark:text-gray-400 text-center"
+						>
 							<Icon icon="mdi:lock-outline" class="size-4 inline mr-1 mb-0.5" />
 							This note is from a previous event ({note.event_code}) and is read-only.
 						</div>
@@ -605,6 +638,8 @@
 		{/await}
 	</div>
 </div>
+
+<PitMapModal bind:open={pitMapOpen} teamNumber={note?.team?.toString() ?? ""} />
 
 <!-- Assign-to modal -->
 <NoteAssignModal

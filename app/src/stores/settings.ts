@@ -18,6 +18,7 @@ export interface Settings {
 	darkMode: boolean;
 	inspectionAlerts: boolean;
 	roundGreen: boolean;
+	confetti: boolean;
 	musicVolume: number;
 	musicType: "none" | "jazz" | "lofi";
 	acknowledgedNotesPolicy: boolean;
@@ -48,6 +49,7 @@ const defaultSettings: Settings = {
 	darkMode: true,
 	inspectionAlerts: true,
 	roundGreen: true,
+	confetti: true,
 	musicVolume: 12,
 	musicType: "none",
 	acknowledgedNotesPolicy: false,

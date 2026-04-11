@@ -7,7 +7,7 @@ import { notificationEmitter } from "../state";
 import { formatTimeShortNoAgoMinutes } from "../../shared/formatTime";
 import { buildNotification, toNoteCtx } from "../../shared/notifications";
 import type { Notification } from "../../shared/types";
-import { FmsNoteMetadata, Message, Note, NoteUpdateEventData, Profile } from "../../shared/types";
+import type { FmsNoteMetadata, Message, Note, NoteUpdateEventData, Profile } from "../../shared/types";
 import { db } from "../db/db";
 import { events, matchEvents, matchLogs, messages, notes, pushSubscriptions, users } from "../db/schema";
 import { eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
@@ -90,7 +90,7 @@ export async function getAllAvgOpenTime(event_code: string) {
 		orderBy: [desc(notes.created_at)],
 	});
 	if (!eventNotes || eventNotes.length < 1) return 0;
-	const total = eventNotes.reduce((sum, n) => {
+	const total = eventNotes.reduce((sum: number, n) => {
 		if (n.created_at && n.closed_at) {
 			return sum + (new Date(n.closed_at).getTime() - new Date(n.created_at).getTime());
 		}
@@ -191,18 +191,20 @@ export function createSlackNoteMessage(
 	body: string,
 	event_code: string,
 	match_id?: string,
+	event_token?: string,
 ) {
+	const tokenParam = event_token ? `?token=${event_token}` : "";
 	const buttons: any[] = [];
 	buttons.push({
 		type: "button",
 		text: { type: "plain_text", text: "View Note", emoji: true },
-		url: `https://ftabuddy.com/notepad/view/${event_code}/${note_id}`,
+		url: `https://ftabuddy.com/notepad/view/${event_code}/${note_id}${tokenParam}`,
 	});
 	if (match_id) {
 		buttons.push({
 			type: "button",
 			text: { type: "plain_text", text: "View Match Log", emoji: true },
-			url: `https://ftabuddy.com/logs/event/${event_code}/${match_id}`,
+			url: `https://ftabuddy.com/logs/event/${event_code}/${match_id}${tokenParam}`,
 		});
 	}
 	const blocks: SlackElements[] = [
@@ -284,20 +286,26 @@ const messagesSubRouter = router({
 			});
 			if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
 
-			const authorProfile = (await db
-				.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
-				.from(users)
-				.where(eq(users.token, ctx.token as string))) as Profile[];
-			if (!authorProfile[0])
-				throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
+			const localProfile: Profile = { id: -1, username: "Field", role: "FTA", admin: false };
+			let resolvedProfile: Profile;
+			if (!ctx.token) {
+				resolvedProfile = localProfile;
+			} else {
+				const rows = (await db
+					.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
+					.from(users)
+					.where(eq(users.token, ctx.token))) as Profile[];
+				if (!rows[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
+				resolvedProfile = rows[0];
+			}
 
 			const insert = await db
 				.insert(messages)
 				.values({
 					id: randomUUID(),
 					note_id: note.id,
-					author_id: authorProfile[0].id,
-					author: authorProfile[0],
+					author_id: resolvedProfile.id,
+					author: resolvedProfile,
 					text: input.text,
 					event_code: note.event_code,
 					created_at: new Date(),
@@ -316,12 +324,12 @@ const messagesSubRouter = router({
 			});
 
 			createNotification(
-				(note.followers ?? []).filter((id) => id !== authorProfile[0].id),
+				(note.followers ?? []).filter((id: number) => id !== resolvedProfile.id),
 				buildNotification({
 					kind: "note.message",
 					eventCode: event.code,
 					note: toNoteCtx(note as any),
-					author: authorProfile[0].username,
+					author: resolvedProfile.username,
 					messageText: insert[0].text,
 					messageId: insert[0].id,
 				}),
@@ -560,7 +568,7 @@ export const notesRouter = router({
 		// When a note has a match_id, prefer the match log's authoritative match details
 		// to keep NoteCard in team history consistent with the ViewNote badge (which also
 		// looks up match details via match_id).
-		return notesByTeam.map((row) => ({
+		return notesByTeam.map((row: (typeof notesByTeam)[number]) => ({
 			...row.notes,
 			match_number: row.matchLogMatchNumber ?? row.notes.match_number,
 			play_number: row.matchLogPlayNumber ?? row.notes.play_number,
@@ -683,6 +691,8 @@ export const notesRouter = router({
 						"Team Submission",
 						insert[0].text,
 						event.code,
+						undefined,
+						event.token,
 					),
 				);
 				await db
@@ -706,20 +716,28 @@ export const notesRouter = router({
 				tournament_level: z.enum(["None", "Practice", "Qualification", "Playoff"]).nullable().optional(),
 				issue_type: z.string().nullable().optional(),
 				match_id: z.string().optional(),
+				request_type: z.enum(["CSA", "RI"]).nullable().optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
 			const event = await getEvent(ctx.eventToken as string);
 
-			const authorProfile = (await db
-				.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
-				.from(users)
-				.where(eq(users.token, ctx.token as string))) as Profile[];
-			if (!authorProfile[0])
-				throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
+			const localProfile: Profile = { id: -1, username: "Field", role: "FTA", admin: false };
+			let resolvedProfile: Profile;
+			if (!ctx.token) {
+				resolvedProfile = localProfile;
+			} else {
+				const rows = (await db
+					.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
+					.from(users)
+					.where(eq(users.token, ctx.token))) as Profile[];
+				if (!rows[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
+				resolvedProfile = rows[0];
+			}
 
 			const isTeamIssue = input.note_type === "TeamIssue";
-			const resolutionStatus = isTeamIssue ? "Open" : "NotApplicable";
+			const hasRequest = !!input.request_type;
+			const resolutionStatus = isTeamIssue ? (hasRequest ? "Open" : "Resolved") : "NotApplicable";
 			const issueTypeVal = isTeamIssue ? (input.issue_type ?? null) : null;
 			const fmsMetadata = input.issue_type
 				? ({ issueType: input.issue_type, resolutionStatus: "Open" } as FmsNoteMetadata)
@@ -736,8 +754,8 @@ export const notesRouter = router({
 				.values({
 					id: noteId,
 					team: input.team ?? null,
-					author_id: authorProfile[0].id,
-					author: authorProfile[0],
+					author_id: resolvedProfile.id,
+					author: resolvedProfile,
 					text: input.text,
 					note_type: input.note_type,
 					resolution_status: resolutionStatus as any,
@@ -751,8 +769,10 @@ export const notesRouter = router({
 					event_code: event.code,
 					created_at: new Date(),
 					updated_at: new Date(),
-					followers: [authorProfile[0].id],
+					closed_at: isTeamIssue && !hasRequest ? new Date() : null,
+					followers: [resolvedProfile.id],
 					match_id: matchId,
+					request_type: input.request_type ?? null,
 				})
 				.returning();
 			if (!insert[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Note" });
@@ -789,7 +809,9 @@ export const notesRouter = router({
 				// If the note had no match_id yet but the linked events share a single match_id,
 				// back-fill it so the Slack message below includes the "View Match Log" button
 				if (insert[0].match_id === null && activeEvents.length > 0) {
-					const uniqueMatchIds = [...new Set(activeEvents.map((e) => e.match_id).filter(Boolean))];
+					const uniqueMatchIds = [
+						...new Set(activeEvents.map((e: (typeof activeEvents)[number]) => e.match_id).filter(Boolean)),
+					];
 					if (uniqueMatchIds.length === 1) {
 						const resolvedMatchId = uniqueMatchIds[0];
 						await db.update(notes).set({ match_id: resolvedMatchId }).where(eq(notes.id, noteId)).execute();
@@ -799,17 +821,17 @@ export const notesRouter = router({
 			}
 
 			createNotification(
-				event.users.map((u) => u.id).filter((id) => id !== authorProfile[0].id),
+				event.users.map((u) => u.id).filter((id) => id !== resolvedProfile.id),
 				buildNotification({
 					kind: "note.created",
 					eventCode: event.code,
 					note: toNoteCtx(insert[0] as any),
-					author: authorProfile[0].username,
+					author: resolvedProfile.username,
 				}),
 				event.code,
 			);
 
-			if (event.slackChannel && event.slackTeam) {
+			if (event.slackChannel && event.slackTeam && insert[0].request_type !== null) {
 				const messageTS = await sendSlackMessage(
 					event.slackChannel,
 					event.slackTeam,
@@ -817,10 +839,11 @@ export const notesRouter = router({
 						insert[0].id,
 						insert[0].team,
 						event.teams.find((t) => parseInt(t.number) === insert[0].team)?.name ?? null,
-						authorProfile[0].username,
+						resolvedProfile.username,
 						insert[0].text,
 						event.code,
 						insert[0].match_id ?? undefined,
+						event.token,
 					),
 				);
 				await db
@@ -840,6 +863,7 @@ export const notesRouter = router({
 				new_text: z.string(),
 				event_code: z.string(),
 				match_id: z.string().optional(),
+				request_type: z.enum(["CSA", "RI"]).nullable().optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -859,27 +883,34 @@ export const notesRouter = router({
 
 			const setFields: Record<string, any> = { text: input.new_text, updated_at: new Date() };
 			if (input.match_id !== undefined) setFields.match_id = input.match_id;
+			if (input.request_type !== undefined) setFields.request_type = input.request_type;
 
 			const update = await db.update(notes).set(setFields).where(eq(notes.id, input.id)).returning();
 			if (!update[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Note" });
 
 			event.noteUpdateEmitter.emit("note_update", { kind: "edit", note: update[0] as Note });
 
-			if (event.slackTeam && note.slack_ts && note.slack_channel) {
-				await updateSlackMessage(
-					note.slack_channel,
-					event.slackTeam,
-					note.slack_ts,
-					createSlackNoteMessage(
-						update[0].id,
-						update[0].team,
-						event.teams.find((t) => parseInt(t.number) === update[0].team)?.name ?? null,
-						update[0].author?.username ?? "Unknown",
-						update[0].text,
-						event.code,
-						update[0].match_id ?? undefined,
-					),
-				);
+			const newRequestType = input.request_type !== undefined ? input.request_type : note.request_type;
+			const slackMsg = createSlackNoteMessage(
+				update[0].id,
+				update[0].team,
+				event.teams.find((t) => parseInt(t.number) === update[0].team)?.name ?? null,
+				update[0].author?.username ?? "Unknown",
+				update[0].text,
+				event.code,
+				update[0].match_id ?? undefined,
+				event.token,
+			);
+			if (event.slackTeam && event.slackChannel) {
+				if (newRequestType !== null && note.slack_ts && note.slack_channel) {
+					await updateSlackMessage(note.slack_channel, event.slackTeam, note.slack_ts, slackMsg);
+				} else if (newRequestType !== null && !note.slack_ts) {
+					const messageTS = await sendSlackMessage(event.slackChannel, event.slackTeam, slackMsg);
+					await db.update(notes).set({ slack_ts: messageTS, slack_channel: event.slackChannel }).where(eq(notes.id, input.id)).execute();
+				} else if (newRequestType === null && note.slack_ts && note.slack_channel) {
+					await deleteSlackMessage(note.slack_channel, event.slackTeam, note.slack_ts);
+					await db.update(notes).set({ slack_ts: null, slack_channel: null }).where(eq(notes.id, input.id)).execute();
+				}
 			}
 
 			return update[0] as Note;
@@ -931,16 +962,13 @@ export const notesRouter = router({
 			});
 			if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
 
-			let currentUserProfile: Profile[] | undefined;
-			if (ctx.token) {
-				currentUserProfile = await db
-					.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
-					.from(users)
-					.where(eq(users.token, ctx.token));
-			} else {
-				throw new TRPCError({ code: "BAD_REQUEST", message: "User token not provided" });
-			}
-			if (!currentUserProfile[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Current User not found" });
+			if (!ctx.token) throw new TRPCError({ code: "BAD_REQUEST", message: "User token not provided" });
+			const currentUserProfileRows = await db
+				.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
+				.from(users)
+				.where(eq(users.token, ctx.token));
+			const currentUserProfile = currentUserProfileRows[0];
+			if (!currentUserProfile) throw new TRPCError({ code: "NOT_FOUND", message: "Current User not found" });
 
 			const isResolving = input.new_status === "Resolved";
 
@@ -949,8 +977,8 @@ export const notesRouter = router({
 				.set({
 					resolution_status: input.new_status as any,
 					closed_at: isResolving ? new Date() : null,
-					resolved_by_id: isResolving ? currentUserProfile[0].id : null,
-					resolved_by: isResolving ? currentUserProfile[0] : null,
+					resolved_by_id: isResolving ? currentUserProfile.id : null,
+					resolved_by: isResolving ? currentUserProfile : null,
 					fms_metadata: note.fms_metadata
 						? { ...(note.fms_metadata as FmsNoteMetadata), resolutionStatus: input.new_status }
 						: null,
@@ -965,17 +993,17 @@ export const notesRouter = router({
 				kind: "status",
 				note_id: update[0].id,
 				resolution_status: update[0].resolution_status ?? "Open",
-				resolved_by: isResolving ? currentUserProfile[0] : null,
+				resolved_by: isResolving ? currentUserProfile : null,
 			});
 
 			createNotification(
-				(note.followers ?? []).filter((id) => id !== currentUserProfile[0].id),
+				(note.followers ?? []).filter((id: number) => id !== currentUserProfile.id),
 				buildNotification({
 					kind: "note.statusChanged",
 					eventCode: event.code,
 					note: toNoteCtx(note as any),
 					newStatus: input.new_status as "Open" | "Resolved",
-					actor: currentUserProfile[0].username,
+					actor: currentUserProfile.username,
 				}),
 				event.code,
 			);
@@ -1043,7 +1071,7 @@ export const notesRouter = router({
 			});
 
 			createNotification(
-				(note.followers ?? []).filter((id) => id !== profile[0].id && id !== actorIdAssign),
+				(note.followers ?? []).filter((id: number) => id !== profile[0].id && id !== actorIdAssign),
 				buildNotification({
 					kind: "note.assigned",
 					eventCode: event.code,
@@ -1094,7 +1122,7 @@ export const notesRouter = router({
 				throw new TRPCError({ code: "NOT_FOUND", message: "No user currently assigned to this Note" });
 			}
 
-			let profile: Profile[] | null = [];
+			let profile: Profile[] = [];
 			if (note.assigned_to === null && note.assigned_to_id) {
 				profile = await db
 					.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
@@ -1128,7 +1156,7 @@ export const notesRouter = router({
 			});
 
 			createNotification(
-				(note.followers ?? []).filter((id) => id !== actorIdUnassign),
+				(note.followers ?? []).filter((id: number) => id !== actorIdUnassign),
 				buildNotification({
 					kind: "note.unassigned",
 					eventCode: event.code,
@@ -1274,6 +1302,7 @@ export const notesRouter = router({
 					event_code: event.code,
 					created_at: new Date(),
 					updated_at: new Date(),
+					request_type: "CSA",
 				})
 				.returning();
 			if (!insert[0])
@@ -1459,7 +1488,8 @@ export const notesRouter = router({
 			});
 			if (!currentUser) continue;
 			const notif = d.notification as Notification;
-			if (notif.eventCode && currentUser.active_event_code && notif.eventCode !== currentUser.active_event_code) continue;
+			if (notif.eventCode && currentUser.active_event_code && notif.eventCode !== currentUser.active_event_code)
+				continue;
 			yield notif;
 		}
 	}),
@@ -1505,7 +1535,7 @@ export async function getEventMessages(event_code: string) {
 
 export async function updateNoteStatusFromSlack(message_ts: string, resolved: boolean, slackUserId?: string) {
 	const note = await db.query.notes.findFirst({ where: eq(notes.slack_ts, message_ts) });
-	if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
+	if (!note) return null;
 
 	const event = await getEvent("", note.event_code);
 
@@ -1560,7 +1590,7 @@ export async function updateNoteStatusFromSlack(message_ts: string, resolved: bo
 
 export async function updateNoteAssignmentFromSlack(message_ts: string, add: boolean, slackUser: string) {
 	const note = await db.query.notes.findFirst({ where: eq(notes.slack_ts, message_ts) });
-	if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
+	if (!note) return null;
 
 	const event = await getEvent("", note.event_code);
 	const profile: Profile = event.slackTeam
@@ -1618,6 +1648,175 @@ export async function updateNoteAssignmentFromSlack(message_ts: string, add: boo
 	}
 
 	return update[0] as Note;
+}
+
+/**
+ * Parses an incoming Nexus Slack bot message into structured note fields.
+ *
+ * Supported formats:
+ *  1. FTA CSA request:
+ *     text = "FTA request for team 5478 [D8]: Radio reboot, please check connections"
+ *     block sections may include "had issues in Qualification 72" and "FTA notes:..."
+ *
+ *  2. Volunteer request:
+ *     text = "A volunteer has requested help on behalf of team 9455"
+ *     block sections include "Team 9455 needs help with the following:" and the note text
+ */
+function parseNexusMessage(
+	text: string,
+	blocks?: any[],
+): {
+	team: number | null;
+	matchNumber: number | null;
+	tournamentLevel: "None" | "Practice" | "Qualification" | "Playoff" | null;
+	playNumber: number | null;
+	noteText: string;
+} {
+	// Collect all human-readable text from blocks for richer parsing
+	const allText: string[] = [text];
+	if (blocks) {
+		for (const block of blocks) {
+			if (block.type === "section" && block.text?.text) {
+				allText.push(block.text.text);
+			} else if (block.type === "rich_text" && block.elements) {
+				for (const elem of block.elements) {
+					if (elem.elements) {
+						for (const inner of elem.elements) {
+							if (inner.text) allText.push(inner.text);
+						}
+					}
+				}
+			}
+		}
+	}
+	const combined = allText.join("\n");
+
+	// Team number
+	const teamMatch = combined.match(/team (\d+)/i);
+	const team = teamMatch ? parseInt(teamMatch[1]) : null;
+
+	// Match info: "had issues in Qualification 72" or "Qualification 72"
+	const matchMatch = combined.match(/had issues in (Qualification|Practice|Playoff)(?: match)? (\d+)/i);
+	let matchNumber: number | null = null;
+	let tournamentLevel: "None" | "Practice" | "Qualification" | "Playoff" | null = null;
+	if (matchMatch) {
+		const lvl = matchMatch[1];
+		tournamentLevel = (lvl.charAt(0).toUpperCase() + lvl.slice(1).toLowerCase()) as Exclude<
+			typeof tournamentLevel,
+			null
+		>;
+		matchNumber = parseInt(matchMatch[2]);
+	}
+
+	// Note text - try "FTA notes: ..." blocks first, then volunteer "needs help with" block, then fall back to text suffix
+	let noteText = "";
+	const ftaNotesMatch = combined.match(/FTA notes[:\s]+(.+?)(?:\n|$)/i);
+	const volunteerNotesMatch = combined.match(/(?:needs|has requested) help with the following:\s*(.+?)(?:\n|$)/i);
+	if (ftaNotesMatch) {
+		noteText = ftaNotesMatch[1].trim();
+	} else if (volunteerNotesMatch) {
+		noteText = volunteerNotesMatch[1].trim();
+	} else {
+		// "FTA request for team 5478 [D8]: Radio reboot..."
+		const colonMatch = text.match(/\]\s*:\s*(.+)$/);
+		if (colonMatch) noteText = colonMatch[1].trim();
+	}
+	if (!noteText) noteText = text;
+	noteText = noteText.replace(/^>{1,3}\s*/, "").trim();
+
+	return { team, matchNumber, tournamentLevel, playNumber: null, noteText };
+}
+
+/**
+ * Creates a note from an incoming Nexus Slack bot message.
+ * Sets slack_ts to the Nexus message ts so thread replies and reactions sync normally.
+ * Posts a reply in the thread with a link back to the FTA Buddy ticket.
+ */
+export async function createFromNexus(channel_id: string, message_ts: string, text: string, blocks?: any[]) {
+	// Find the event linked to this Slack channel
+	const eventRow = await db.query.events.findFirst({ where: eq(events.slackChannel, channel_id) });
+	if (!eventRow) return; // Channel not linked to any event
+
+	const event = await getEvent("", eventRow.code);
+
+	const { team, matchNumber, tournamentLevel, playNumber, noteText } = parseNexusMessage(text, blocks);
+
+	const matchId = await resolveMatchId(event.code, matchNumber, playNumber, tournamentLevel);
+
+	const author: Profile = { id: -1, username: "Nexus", role: "FTA", admin: false, source: "Slack" };
+
+	const noteId = randomUUID();
+	const insert = await db
+		.insert(notes)
+		.values({
+			id: noteId,
+			team: team ?? null,
+			text: noteText,
+			author_id: -1,
+			author,
+			note_type: "TeamIssue",
+			resolution_status: "Open",
+			match_number: matchNumber ?? null,
+			play_number: playNumber ?? null,
+			tournament_level: tournamentLevel ?? null,
+			fms_note_id: null,
+			fms_record_version: null,
+			fms_metadata: null,
+			event_code: event.code,
+			created_at: new Date(),
+			updated_at: new Date(),
+			followers: [],
+			match_id: matchId,
+			request_type: "CSA",
+			slack_ts: message_ts,
+			slack_channel: channel_id,
+			is_nexus: true,
+		})
+		.returning();
+
+	if (!insert[0]) return;
+
+	event.noteUpdateEmitter.emit("note_update", { kind: "create", note: insert[0] as Note });
+
+	createNotification(
+		event.users.map((u) => u.id),
+		buildNotification({
+			kind: "note.created",
+			eventCode: event.code,
+			note: toNoteCtx(insert[0] as any),
+			author: "Nexus",
+		}),
+		event.code,
+	);
+
+	// Reply in the Nexus thread with a link to the ticket
+	if (event.slackTeam) {
+		try {
+			await sendSlackMessage(
+				channel_id,
+				event.slackTeam,
+				{
+					blocks: [
+						{
+							type: "section",
+							text: {
+								type: "mrkdwn",
+								text: "Ticket created in FTA Buddy.",
+							},
+							accessory: {
+								type: "button",
+								text: { type: "plain_text", text: "View Ticket", emoji: true },
+								url: `https://ftabuddy.com/notepad/view/${event.code}/${noteId}?token=${event.token}`,
+							},
+						},
+					],
+				},
+				message_ts,
+			);
+		} catch (err) {
+			console.error("[Nexus] Failed to post reply to Nexus thread:", err);
+		}
+	}
 }
 
 export async function addNoteMessageFromSlack(

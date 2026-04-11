@@ -33,6 +33,8 @@
 					users: res.users as Profile[],
 					subEvents: res.subEvents,
 					meshedEventCode: res.code,
+					startDate: res.startDate ?? undefined,
+					endDate: res.endDate ?? undefined,
 				});
 				saveEvent({
 					code: res.code,
@@ -42,6 +44,8 @@
 					users: res.users as Profile[],
 					subEvents: res.subEvents,
 					meshedEventCode: res.code,
+					startDate: res.startDate ?? undefined,
+					endDate: res.endDate ?? undefined,
 				});
 			} else {
 				userStore.update((u) => ({ ...u, eventToken: res.token }));
@@ -50,6 +54,8 @@
 					pin: res.pin,
 					teams: res.teams as { number: string; name: string; inspected: boolean }[],
 					users: res.users as Profile[],
+					startDate: res.startDate ?? undefined,
+					endDate: res.endDate ?? undefined,
 				});
 				saveEvent({
 					code: res.code,
@@ -57,6 +63,8 @@
 					pin: res.pin,
 					teams: res.teams as { number: string; name: string; inspected: boolean }[],
 					users: res.users as Profile[],
+					startDate: res.startDate ?? undefined,
+					endDate: res.endDate ?? undefined,
 				});
 			}
 

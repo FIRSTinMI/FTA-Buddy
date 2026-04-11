@@ -33,8 +33,21 @@ export interface NoteContext {
 
 export type NotificationContext =
 	| { kind: "note.created"; eventCode: string; note: NoteContext; author: string }
-	| { kind: "note.message"; eventCode: string; note: NoteContext; author: string; messageText: string; messageId?: string }
-	| { kind: "note.statusChanged"; eventCode: string; note: NoteContext; newStatus: "Open" | "Resolved"; actor: string }
+	| {
+			kind: "note.message";
+			eventCode: string;
+			note: NoteContext;
+			author: string;
+			messageText: string;
+			messageId?: string;
+	  }
+	| {
+			kind: "note.statusChanged";
+			eventCode: string;
+			note: NoteContext;
+			newStatus: "Open" | "Resolved";
+			actor: string;
+	  }
 	| { kind: "note.assigned"; eventCode: string; note: NoteContext; assignee: string; actor: string }
 	| { kind: "note.assignedToYou"; eventCode: string; note: NoteContext; actor: string }
 	| { kind: "note.unassigned"; eventCode: string; note: NoteContext; actor: string }

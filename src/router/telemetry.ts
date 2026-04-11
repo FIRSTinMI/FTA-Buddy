@@ -21,7 +21,7 @@ export const telemetryRouter = router({
 		)
 		.mutation(async ({ input }) => {
 			if (input.events.length === 0) return { ok: true };
-			// Fire-and-forget — don't block the response, swallow errors
+			// Fire-and-forget - don't block the response, swallow errors
 			db.insert(appTelemetry)
 				.values(
 					input.events.map((e) => ({

@@ -1,10 +1,10 @@
-import { inferRouterOutputs } from "@trpc/server";
+import type { inferRouterOutputs } from "@trpc/server";
 import { randomUUID } from "crypto";
 import { and, asc, count, eq, gt, inArray, ne, or } from "drizzle-orm";
 import { z } from "zod";
-import { DisconnectionEvent, FMSLogFrame, ROBOT } from "../../shared/types";
+import type { DisconnectionEvent, FMSLogFrame, ROBOT, ScheduleDetails } from "../../shared/types";
 import { db } from "../db/db";
-import { analyzedLogs, events, logPublishing, matchLogs } from "../db/schema";
+import { analyzedLogs, cycleLogs, events, logPublishing, matchLogs } from "../db/schema";
 import { eventProcedure, publicProcedure, router } from "../trpc";
 import { compressStationLog } from "../util/log-analysis";
 import { generateReport } from "../util/report-generator";
@@ -393,11 +393,20 @@ export const matchRouter = router({
 					red2: z.number().nullable(),
 					red3: z.number().nullable(),
 					isPlayed: z.boolean(),
+					scheduledStartTime: z.date().nullable(),
+					cycleTime: z.string().nullable(),
 				}),
 			),
 		)
 		.query(async ({ ctx }) => {
 			const tbaKey = process.env.TBA_API_KEY;
+
+			// Build a lookup map from scheduleDetails for start times
+			const scheduleDetails = ctx.event.scheduleDetails as ScheduleDetails;
+			const startTimeMap = new Map<string, Date>();
+			for (const m of scheduleDetails?.matches ?? []) {
+				startTimeMap.set(`${m.level}:${m.match}`, new Date(m.scheduledStartTime));
+			}
 
 			// Load all played matches from DB with full team data
 			const playedMatches = await db
@@ -412,8 +421,18 @@ export const matchRouter = router({
 					red1: matchLogs.red1,
 					red2: matchLogs.red2,
 					red3: matchLogs.red3,
+					calculated_cycle_time: cycleLogs.calculated_cycle_time,
 				})
 				.from(matchLogs)
+				.leftJoin(
+					cycleLogs,
+					and(
+						eq(cycleLogs.event, matchLogs.event),
+						eq(cycleLogs.match_number, matchLogs.match_number),
+						eq(cycleLogs.play_number, matchLogs.play_number),
+						eq(cycleLogs.level, matchLogs.level),
+					),
+				)
 				.where(eq(matchLogs.event, ctx.event.code))
 				.orderBy(asc(matchLogs.start_time));
 
@@ -429,9 +448,16 @@ export const matchRouter = router({
 				red2: number | null;
 				red3: number | null;
 				isPlayed: boolean;
+				scheduledStartTime: Date | null;
+				cycleTime: string | null;
 			};
 
-			const result: ScheduledMatch[] = playedMatches.map((m) => ({ ...m, isPlayed: true }));
+			const result: ScheduledMatch[] = playedMatches.map((m) => ({
+				...m,
+				isPlayed: true,
+				scheduledStartTime: startTimeMap.get(`${m.level}:${m.match_number}`) ?? null,
+				cycleTime: m.calculated_cycle_time ?? null,
+			}));
 
 			if (!tbaKey) return result;
 
@@ -444,6 +470,7 @@ export const matchRouter = router({
 
 				const tbaMatches: {
 					comp_level: string;
+					set_number: number;
 					match_number: number;
 					alliances: {
 						blue: { team_keys: string[] };
@@ -454,6 +481,11 @@ export const matchRouter = router({
 				// Set of already-played qual match numbers (from DB)
 				const playedQualNums = new Set(
 					playedMatches.filter((m) => m.level === "Qualification").map((m) => m.match_number),
+				);
+
+				// Set of already-played playoff match keys (match_number:play_number)
+				const playedPlayoffKeys = new Set(
+					playedMatches.filter((m) => m.level === "Playoff").map((m) => `${m.match_number}:${m.play_number}`),
 				);
 
 				const tbaTeamNum = (key: string): number | null => {
@@ -479,6 +511,38 @@ export const matchRouter = router({
 						red2: tbaTeamNum(red[1] ?? ""),
 						red3: tbaTeamNum(red[2] ?? ""),
 						isPlayed: false,
+						scheduledStartTime: startTimeMap.get(`Qualification:${m.match_number}`) ?? null,
+						cycleTime: null,
+					});
+				}
+
+				// Add unplayed playoff matches from TBA.
+				// In FRC 2023+ double-elimination, all bracket matches have comp_level "sf"
+				// where set_number = sequential FMS match number and match_number = play number.
+				// Only include matches where TBA already knows both alliances (bracket decided).
+				for (const m of tbaMatches) {
+					if (m.comp_level !== "sf") continue;
+					const blue = m.alliances?.blue?.team_keys ?? [];
+					const red = m.alliances?.red?.team_keys ?? [];
+					// Skip if alliances haven't been determined yet
+					if (blue.length === 0 || red.length === 0) continue;
+					const fmsMatchNum = m.set_number;
+					const fmsPlayNum = m.match_number;
+					if (playedPlayoffKeys.has(`${fmsMatchNum}:${fmsPlayNum}`)) continue;
+					result.push({
+						id: null,
+						match_number: fmsMatchNum,
+						play_number: fmsPlayNum,
+						level: "Playoff",
+						blue1: tbaTeamNum(blue[0] ?? ""),
+						blue2: tbaTeamNum(blue[1] ?? ""),
+						blue3: tbaTeamNum(blue[2] ?? ""),
+						red1: tbaTeamNum(red[0] ?? ""),
+						red2: tbaTeamNum(red[1] ?? ""),
+						red3: tbaTeamNum(red[2] ?? ""),
+						isPlayed: false,
+						scheduledStartTime: startTimeMap.get(`Playoff:${fmsMatchNum}`) ?? null,
+						cycleTime: null,
 					});
 				}
 

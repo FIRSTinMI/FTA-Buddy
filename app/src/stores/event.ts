@@ -10,6 +10,8 @@ export interface Event {
 	meshedEventCode?: string;
 	label?: string;
 	notepadOnly?: boolean;
+	startDate?: string;
+	endDate?: string;
 }
 
 let initialEvent = localStorage.getItem("event");

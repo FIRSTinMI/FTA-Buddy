@@ -1,9 +1,9 @@
 /**
- * overlay-cycle.ts — Local cycle time tracking for the extension overlay.
+ * overlay-cycle.ts - Local cycle time tracking for the extension overlay.
  *
  * Tracks field state transitions (PRESTART_COMPLETED → MATCH_RUNNING_AUTO →
  * READY_FOR_POST_RESULT / MATCH_OVER) to compute current and last cycle times.
- * No server connection required — purely derived from live Angular data.
+ * No server connection required - purely derived from live Angular data.
  */
 
 import { FieldState } from "../../shared/types";

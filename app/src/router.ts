@@ -1,6 +1,26 @@
 // src/app/router.ts
 import { createRouter } from "sv-router";
 
+// Handle stale JS chunks after a deployment. sv-router's isLazyImport() detects
+// lazy routes via a regex on the function's source text — wrapping imports in a
+// closure breaks that detection and causes sv-router to treat the function as an
+// already-resolved component, rendering nothing. Use a global unhandledrejection
+// handler instead so the direct () => import(...) syntax is preserved.
+if (typeof window !== "undefined") {
+	window.addEventListener("unhandledrejection", (event) => {
+		const msg = (event.reason as Error)?.message ?? "";
+		if (
+			msg.includes("Failed to fetch dynamically imported module") ||
+			msg.includes("error loading dynamically imported module")
+		) {
+			if (!sessionStorage.getItem("chunk-reload")) {
+				sessionStorage.setItem("chunk-reload", "true");
+				window.location.reload();
+			}
+		}
+	});
+}
+
 export const { p, navigate, isActive, preload, route } = createRouter({
 	"/": () => import("./pages/Monitor.svelte"),
 
@@ -21,6 +41,7 @@ export const { p, navigate, isActive, preload, route } = createRouter({
 	"/manage/kiosk": () => import("./pages/management/RadioKiosk.svelte"),
 	"/manage/google-signup": () => import("./pages/management/CompleteGoogleSignup.svelte"),
 	"/manage/meshed-event": () => import("./pages/management/MeshedEvent.svelte"),
+	"/join/:token": () => import("./pages/management/JoinByLink.svelte"),
 
 	"/logs": () => import("./pages/match-logs/MatchLogsList.svelte"),
 	"/logs/event/:eventCode/:matchid/:station": () => import("./pages/EventSwitchRedirect.svelte"),

@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "../db/db";
 import { events, slackServers, users } from "../db/schema";
-import { Profile } from "../../shared/types";
+import type { Profile } from "../../shared/types";
 import { getEvent } from "./get-event";
 
 export async function slackOAuth(code: string) {
@@ -45,7 +45,11 @@ export async function linkChannel(args: string[], channel_id: string, team_id: s
 
 	// Check if the event exists
 	const event = (
-		await db.select({ code: events.code, pin: events.pin }).from(events).where(eq(events.code, eventCode)).execute()
+		await db
+			.select({ code: events.code, pin: events.pin, token: events.token })
+			.from(events)
+			.where(eq(events.code, eventCode))
+			.execute()
 	)[0];
 
 	if (!event || event.pin !== eventPin) {
@@ -72,7 +76,27 @@ export async function linkChannel(args: string[], channel_id: string, team_id: s
 
 	return {
 		response_type: "in_channel",
-		text: `Linked event ${eventCode} to this channel. Use pin ${event.pin} to join the event in the app!`,
+		text: `FTA Buddy linked to event ${eventCode}. Join: https://ftabuddy.com/join/${event.token}`,
+		blocks: [
+			{
+				type: "section",
+				text: {
+					type: "mrkdwn",
+					text: `*FTA Buddy* linked to event *${eventCode}*!\nUse the button below to join the event in the app, or enter code \`${eventCode}\` with pin \`${event.pin}\`.`,
+				},
+			},
+			{
+				type: "actions",
+				elements: [
+					{
+						type: "button",
+						text: { type: "plain_text", text: "Join Event", emoji: true },
+						url: `https://ftabuddy.com/join/${event.token}`,
+						style: "primary",
+					},
+				],
+			},
+		],
 	};
 }
 

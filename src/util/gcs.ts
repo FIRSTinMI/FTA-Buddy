@@ -9,7 +9,11 @@ function getStorage(): Storage {
 
 	const projectId = process.env.GOOGLE_PROJECT_ID;
 	const clientEmail = process.env.GOOGLE_KEY_CLIENT;
-	const privateKey = process.env.GOOGLE_KEY?.replace(/\\n/g, "\n");
+	let privateKey = process.env.GOOGLE_KEY ?? "";
+	// Strip surrounding quotes if the value was pasted with quotes (e.g. from .env file)
+	privateKey = privateKey.replace(/^"|"$/g, "");
+	// Convert literal \n sequences to real newlines (Coolify/Docker don't process escape sequences)
+	privateKey = privateKey.replace(/\\n/g, "\n");
 	const privateKeyId = process.env.GOOGLE_KEY_ID;
 
 	if (!projectId || !clientEmail || !privateKey) {

@@ -196,6 +196,7 @@ export const eventRouter = router({
 						notepadOnly: events.notepadOnly,
 						startDate: events.startDate,
 						endDate: events.endDate,
+						playoffMode: events.playoffMode,
 					})
 					.from(events)
 					.where(eq(events.code, input.code))
@@ -1002,4 +1003,28 @@ export const eventRouter = router({
 			return { matchNumber: 0, level: "None" as TournamentLevel };
 		}
 	}),
+
+	/**
+	 * Toggles inter-divisional playoffs mode for a meshed event.
+	 * When enabled, the combined view acts as a normal single-event view scoped
+	 * only to the parent event — its own field monitor, logs, and notes.
+	 * Divisional sub-events remain accessible via the sidebar selector.
+	 */
+	setPlayoffMode: eventProcedure
+		.input(z.object({ playoffMode: z.boolean() }))
+		.mutation(async ({ ctx, input }) => {
+			const event = await getEvent(ctx.event.token);
+			if (!event.meshedEvent) {
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: "Inter-divisional playoffs mode is only available for meshed events",
+				});
+			}
+			await db
+				.update(events)
+				.set({ playoffMode: input.playoffMode })
+				.where(eq(events.code, event.code));
+			event.playoffMode = input.playoffMode;
+			return { playoffMode: input.playoffMode };
+		}),
 });

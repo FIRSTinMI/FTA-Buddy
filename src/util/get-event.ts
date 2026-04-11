@@ -150,6 +150,7 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 				robotCycleTracking: {},
 				notes: (await getEventNotes(eventCode)) as Note[],
 				meshedEvent: event.meshedEvent !== null,
+				playoffMode: event.playoffMode ?? false,
 				subEvents: event.meshedEvent ? event.meshedEvent : undefined,
 				slackChannel: event.slackChannel,
 				slackTeam: event.slackTeam,

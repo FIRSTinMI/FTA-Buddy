@@ -47,9 +47,9 @@
 		$settingsStore.supportFeedStatusFilter = statusFilter as "all" | "Open" | "Resolved";
 	});
 
-	// Sub-event field filter for meshed events
+	// Sub-event field filter for meshed events (hidden in inter-divisional playoffs mode)
 	const availableSubEvents = $derived($eventStore.subEvents ?? []);
-	const hasMeshedFields = $derived(availableSubEvents.length > 1);
+	const hasMeshedFields = $derived(availableSubEvents.length > 1 && !$eventStore.playoffMode);
 	let selectedFields: string[] = $state(
 		(() => {
 			const subs = $eventStore.subEvents;

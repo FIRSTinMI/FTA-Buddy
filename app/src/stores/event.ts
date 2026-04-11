@@ -10,6 +10,7 @@ export interface Event {
 	meshedEventCode?: string;
 	label?: string;
 	notepadOnly?: boolean;
+	playoffMode?: boolean;
 	startDate?: string;
 	endDate?: string;
 }

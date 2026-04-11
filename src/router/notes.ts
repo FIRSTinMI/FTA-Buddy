@@ -476,7 +476,7 @@ export const notesRouter = router({
 		const event = await getEvent(ctx.eventToken as string);
 
 		let eventCodes = [event.code];
-		if (event.meshedEvent && event.subEvents) {
+		if (event.meshedEvent && event.subEvents && !event.playoffMode) {
 			eventCodes = eventCodes.concat(event.subEvents.map((se) => se.code));
 		}
 
@@ -492,7 +492,7 @@ export const notesRouter = router({
 		const event = await getEvent(ctx.eventToken as string);
 
 		let eventCodes = [event.code];
-		if (event.meshedEvent && event.subEvents) {
+		if (event.meshedEvent && event.subEvents && !event.playoffMode) {
 			eventCodes = eventCodes.concat(event.subEvents.map((se) => se.code));
 		}
 
@@ -520,7 +520,7 @@ export const notesRouter = router({
 
 			if (input.event_code) {
 				const event = await getEvent("", input.event_code);
-				if (event.meshedEvent && event.subEvents) {
+				if (event.meshedEvent && event.subEvents && !event.playoffMode) {
 					query.push(inArray(notes.event_code, [event.code, ...event.subEvents.map((se) => se.code)]));
 				} else {
 					query.push(eq(notes.event_code, input.event_code));
@@ -591,7 +591,7 @@ export const notesRouter = router({
 		.query(async ({ ctx, input }) => {
 			const event = await getEvent("", input.event_code);
 			let eventCodes = [event.code];
-			if (event.meshedEvent && event.subEvents) {
+			if (event.meshedEvent && event.subEvents && !event.playoffMode) {
 				eventCodes = eventCodes.concat(event.subEvents.map((se) => se.code));
 			}
 			const note = await db.query.notes.findFirst({

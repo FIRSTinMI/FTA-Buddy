@@ -768,7 +768,7 @@
 				{/if}
 			</div>
 		{/if}
-		<div class="min-h-0 overflow-y-auto px-2 sm:px-3 flex-1">
+		<div class="min-h-0 overflow-y-auto px-2 sm:px-3 {itemCount > 0 || td?.loading ? 'flex-1' : ''}">
 			{#if td?.loading}
 				<div class="flex justify-center py-2"><Spinner /></div>
 			{:else}
@@ -852,14 +852,14 @@
 			{/if}
 		</div>
 		<button
-			class="shrink-0 w-full flex items-center justify-center gap-1.5 transition-colors
-				{itemCount === 0
-					? 'py-4 flex-col text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-					: 'text-left px-3 ' + (isShortScreen ? 'py-0.5' : 'py-1.5') + ' text-[11px] sm:text-xs lg:text-sm text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-neutral-700'}"
+			class="w-full flex items-center justify-center gap-1.5 transition-colors text-[11px] sm:text-xs lg:text-sm text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-neutral-700
+				{itemCount === 0 && !td?.loading
+					? 'flex-1 py-4'
+					: 'shrink-0 text-left px-3 ' + (isShortScreen ? 'py-0.5' : 'py-1.5')}"
 			onclick={() => openNoteModal(teamNum)}
 		>
-			<Icon icon="mdi:plus-circle-outline" class="{itemCount === 0 ? 'size-6 sm:size-7' : 'size-3 sm:size-3.5 lg:size-4'} shrink-0" />
-			<span class="{itemCount === 0 ? 'text-sm sm:text-base font-medium' : ''}">Add note</span>
+			<Icon icon="mdi:plus-circle-outline" class="size-3 sm:size-3.5 lg:size-4 shrink-0" />
+			<span>Add note</span>
 		</button>
 	</div>
 {/snippet}

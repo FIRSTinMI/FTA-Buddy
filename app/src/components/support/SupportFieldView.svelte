@@ -16,7 +16,7 @@
 	import { DSState, MatchState, MatchStateMap, ROBOT, RobotWarnings } from "../../../../shared/types";
 	import { cycleTimeToMS } from "../../../../shared/cycleTimeToMS";
 	import { formatTimeShortNoAgo, formatTimeShortNoAgoSeconds } from "../../../../shared/formatTime";
-	import { frameHandler, subscribeToFieldMonitor } from "../../field-monitor";
+	import { frameHandler, subscribeToFieldMonitor, tbaCurrentMatch } from "../../field-monitor";
 	import { trpc } from "../../main";
 	import { navigate } from "../../router";
 	import { eventStore } from "../../stores/event";
@@ -118,6 +118,12 @@
 			};
 		}
 		if (matchIndex === -1 && nexusTeams) return nexusTeams;
+		// TBA fallback: find the match in allMatches by number/level from tbaCurrentMatch
+		const tba = $tbaCurrentMatch;
+		if (matchIndex === -1 && tba && tba.matchNumber > 0) {
+			const m = allMatches.find((m) => m.match_number === tba.matchNumber && m.level === tba.level);
+			if (m) return { blue1: m.blue1 ?? 0, blue2: m.blue2 ?? 0, blue3: m.blue3 ?? 0, red1: m.red1 ?? 0, red2: m.red2 ?? 0, red3: m.red3 ?? 0, match_number: m.match_number, play_number: m.play_number, level: m.level };
+		}
 		return null;
 	});
 
@@ -125,6 +131,8 @@
 		if (matchIndex >= 0 && matchIndex < allMatches.length) return "nav" as const;
 		if (monitorFrame && monitorFrame.frameTime > 0) return "monitor" as const;
 		if (matchIndex === -1 && nexusTeams) return "nexus" as const;
+		const tba = $tbaCurrentMatch;
+		if (matchIndex === -1 && tba && tba.matchNumber > 0) return "tba" as const;
 		return null;
 	});
 
@@ -1044,6 +1052,8 @@
 							{#if isLive}
 								{#if teamsSource === "nexus"}
 									<Badge color="purple" class="text-xs">via Nexus</Badge>
+								{:else if teamsSource === "tba"}
+									<Badge color="blue" class="text-xs">via TBA</Badge>
 								{:else}
 									<Badge color="green" class="text-xs">LIVE</Badge>
 								{/if}

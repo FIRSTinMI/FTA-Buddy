@@ -118,14 +118,6 @@
 				FTA Buddy polls every 2 minutes. Find your API key
 				<a href="https://frc.nexus/en/api" target="_blank" class="text-blue-400 hover:underline">here</a>.
 			</p>
-			<div class="flex flex-col gap-1">
-				<Label class="text-sm">Webhook URL (for live match updates)</Label>
-				<div class="flex gap-2 items-center">
-					<Input readonly value={typeof window !== 'undefined' ? window.location.origin + '/api/nexus/event-status' : ''} class="font-mono text-xs" />
-					<Button size="xs" color="alternative" onclick={() => navigator.clipboard.writeText(window.location.origin + '/api/nexus/event-status')}>Copy</Button>
-				</div>
-				<p class="text-xs text-gray-500">Add this as a webhook in Nexus (use "All events") for real-time updates.</p>
-			</div>
 			<div class="flex flex-row gap-2 items-end">
 				<div class="flex-1">
 					<Label for="nexus-key" class="mb-1 block text-sm">Nexus API Key</Label>

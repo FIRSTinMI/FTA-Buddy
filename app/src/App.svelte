@@ -422,7 +422,7 @@
 	async function checkStatus() {
 		const data = await trpc.app.status.query();
 		if (
-			data.current &&
+			data?.current &&
 			(!event.code || data.effectedEvents.includes(event.code) || data.effectedEvents.length < 1)
 		) {
 			if (!knownIssue) {

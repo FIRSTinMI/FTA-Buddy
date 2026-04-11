@@ -459,7 +459,10 @@ connect().then(async () => {
 	// Load knownIssue from Redis
 	try {
 		const storedIssue = await redis.get("ftabuddy:global:known_issue");
-		if (storedIssue) knownIssue = SuperJSON.parse(storedIssue);
+		if (storedIssue) {
+			const parsed = SuperJSON.parse(storedIssue);
+			if (parsed && typeof parsed === "object") knownIssue = parsed as typeof knownIssue;
+		}
 	} catch (err) {
 		console.error("[KnownIssue] Failed to load from Redis:", err);
 	}

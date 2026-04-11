@@ -15,6 +15,7 @@
  */
 
 import type { NexusEventStatus, ServerEvent } from "../../shared/types";
+import { bus } from "./eventBus";
 
 const NEXUS_BASE = "https://frc.nexus/api/v1";
 
@@ -28,8 +29,23 @@ const activePollers = new Map<string, ReturnType<typeof setTimeout>>();
 // Public API
 // ---------------------------------------------------------------------------
 
+/** Track events already subscribed to avoid duplicate subscriptions. */
+const subscribedEvents = new Set<string>();
+
+function subscribeToStatusUpdates(event: ServerEvent): void {
+	if (subscribedEvents.has(event.code)) return;
+	subscribedEvents.add(event.code);
+	bus.subscribe(`event:${event.code}:nexus_event_status`, (data) => {
+		const status = data as NexusEventStatus;
+		if (status.dataAsOfTime > (event.nexusEventStatus?.dataAsOfTime ?? 0)) {
+			event.nexusEventStatus = status;
+		}
+	});
+}
+
 /** Fetch event status once and store in event.nexusEventStatus. */
 export async function fetchOnce(event: ServerEvent): Promise<void> {
+	subscribeToStatusUpdates(event);
 	if (!event.nexusApiKey) return;
 
 	let response: Response;
@@ -73,6 +89,7 @@ export async function fetchOnce(event: ServerEvent): Promise<void> {
 		nowQueuing: data.nowQueuing ?? null,
 		matches: data.matches ?? [],
 	};
+	bus.publish(`event:${event.code}:nexus_event_status`, event.nexusEventStatus);
 }
 
 /** Start the 10-minute fallback poller for an event. Safe to call if already running (restarts). */

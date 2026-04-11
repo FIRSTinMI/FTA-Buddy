@@ -12,6 +12,7 @@ import { generateReport } from "../util/report-generator";
 import { subscriptionQueue } from "../util/subscription";
 import { computeOvernightOffset } from "../util/frame-processing";
 import { getTeamAverageCycle } from "../util/team-cycles";
+import { bus } from "../util/eventBus";
 
 /** Format milliseconds as "M:SS" - compatible with cycleTimeToMS(). */
 function msTocycleTimeString(ms: number): string {
@@ -111,7 +112,7 @@ export const cycleRouter = router({
 				}
 			}
 
-			event.cycleEmitter.emit("update");
+			bus.publish(`event:${event.code}:cycle`, {});
 		}),
 
 	subscription: publicProcedure
@@ -152,15 +153,11 @@ export const cycleRouter = router({
 				});
 			};
 
-			event.cycleEmitter.on("update", listener);
-			event.fieldStatusEmitter.on("change", listener);
+			const unsubCycle = bus.subscribe(`event:${event.code}:cycle`, listener);
+			const unsubField = bus.subscribe(`event:${event.code}:field_status`, listener);
 
-			try {
-				yield* drain();
-			} finally {
-				event.cycleEmitter.off("update", listener);
-				event.fieldStatusEmitter.off("change", listener);
-			}
+			try { yield* drain(); }
+			finally { unsubCycle(); unsubField(); }
 		}),
 
 	getCycle: publicProcedure
@@ -441,7 +438,7 @@ export const cycleRouter = router({
 				}
 			}
 
-			event.cycleEmitter.emit("update");
+			bus.publish(`event:${event.code}:cycle`, {});
 		}),
 
 	getScheduleDetails: eventProcedure.query(async ({ ctx }) => {

@@ -12,6 +12,7 @@ import { getEvent } from "../util/get-event";
 import { subscriptionQueue } from "../util/subscription";
 import { sendSlackMessage } from "../util/slack";
 import { createSlackNoteMessage } from "./notes";
+import { bus } from "../util/eventBus";
 
 interface TBASimpleMatch {
 	key: string;
@@ -138,7 +139,7 @@ export const matchEventsRouter = router({
 			throw new TRPCError({ code: "NOT_FOUND", message: "Match event not found" });
 		}
 
-		event.matchEventEmitter.emit("dismiss", {
+		bus.publish(`event:${event.code}:match_event:dismiss`, {
 			kind: "match_event_dismiss",
 			id: input.id,
 		});
@@ -241,8 +242,8 @@ export const matchEventsRouter = router({
 			});
 
 			// Emit events
-			event.noteUpdateEmitter.emit("note_update", { kind: "create", note: newNote as Note });
-			event.matchEventEmitter.emit("convert", {
+			bus.publish(`event:${event.code}:note_update`, { kind: "create", note: newNote as Note });
+			bus.publish(`event:${event.code}:match_event:convert`, {
 				kind: "match_event_convert",
 				id: input.id,
 				note_id: noteId,
@@ -289,7 +290,7 @@ export const matchEventsRouter = router({
 			.execute();
 
 		for (const row of dismissed) {
-			event.matchEventEmitter.emit("dismiss", {
+			bus.publish(`event:${event.code}:match_event:dismiss`, {
 				kind: "match_event_dismiss",
 				id: row.id,
 			});
@@ -441,34 +442,16 @@ export const matchEventsRouter = router({
 		const event = await getEvent(input.eventToken);
 		const { push, drain } = subscriptionQueue<MatchEventUpdateEventData>(signal!);
 
-		const handlers: {
-			event: keyof import("../../shared/types").MatchEventUpdateEvents;
-			fn: (...args: any[]) => void;
-		}[] = [];
-
-		function registerHandler<K extends keyof import("../../shared/types").MatchEventUpdateEvents>(
-			emitter: typeof event.matchEventEmitter,
-			eventName: K,
-			handler: import("../../shared/types").MatchEventUpdateEvents[K],
-		) {
-			handlers.push({ event: eventName, fn: handler as any });
-			emitter.on(eventName, handler);
-		}
-
-		const emitters: typeof event.matchEventEmitter[] = [event.matchEventEmitter];
+		const eventCodesToListen = [event.code];
 		if (event.meshedEvent && event.subEvents) {
-			for (const sub of event.subEvents) {
-				try {
-					const subEvent = await getEvent("", sub.code);
-					emitters.push(subEvent.matchEventEmitter);
-				} catch { /* sub-event not loaded yet, skip */ }
-			}
+			eventCodesToListen.push(...event.subEvents.map((s) => s.code));
 		}
 
-		for (const emitter of emitters) {
-			registerHandler(emitter, "create", (data) => push(data));
-			registerHandler(emitter, "dismiss", (data) => push(data));
-			registerHandler(emitter, "convert", (data) => push(data));
+		const unsubs: Array<() => void> = [];
+		for (const code of eventCodesToListen) {
+			unsubs.push(bus.subscribe(`event:${code}:match_event:create`, (data) => push(data as MatchEventUpdateEventData)));
+			unsubs.push(bus.subscribe(`event:${code}:match_event:dismiss`, (data) => push(data as MatchEventUpdateEventData)));
+			unsubs.push(bus.subscribe(`event:${code}:match_event:convert`, (data) => push(data as MatchEventUpdateEventData)));
 		}
 
 		const heartbeat = setInterval(() => push({ kind: "heartbeat" }), 30_000);
@@ -476,12 +459,7 @@ export const matchEventsRouter = router({
 		try {
 			yield* drain();
 		} finally {
-			for (const h of handlers) {
-				// Remove from all emitters that registered this fn
-				for (const emitter of emitters) {
-					emitter.off(h.event, h.fn as any);
-				}
-			}
+			for (const unsub of unsubs) unsub();
 			clearInterval(heartbeat);
 		}
 	}),

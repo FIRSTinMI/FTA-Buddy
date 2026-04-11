@@ -1,7 +1,8 @@
 import { and, eq, gt } from "drizzle-orm";
-import { on } from "events";
 import { z } from "zod";
-import { eventLastSeen, events, newEventEmitter } from "../state";
+import { eventLastSeen, events } from "../state";
+import { bus } from "../util/eventBus";
+import { redis } from "../util/redis";
 import { formatTimeShortNoAgoSeconds } from "../../shared/formatTime";
 import { DSState, EnableState, FieldState } from "../../shared/types";
 import type { MonitorFrame, StateChange, TournamentLevel } from "../../shared/types";
@@ -145,7 +146,7 @@ export const fieldMonitorRouter = router({
 					event.lastMatchScoresPosted = new Date();
 				}
 
-				event.fieldStatusEmitter.emit("change", processed.currentFrame.field);
+				bus.publish(`event:${event.code}:field_status`, processed.currentFrame.field);
 			}
 
 			if (!processed.currentFrame.exactAheadBehind && processed.currentFrame.level === "Qualification")
@@ -163,15 +164,19 @@ export const fieldMonitorRouter = router({
 			event.history.push(processed.currentFrame);
 			if (event.history.length > 50) event.history.shift();
 
-			event.fieldMonitorEmitter.emit("update", event.monitorFrame);
+			bus.publish(`event:${event.code}:frame`, event.monitorFrame);
+			redis.set(`ftabuddy:event:${event.code}:monitor_frame`, JSON.stringify(event.monitorFrame));
+			redis.lpush(`ftabuddy:event:${event.code}:history`, JSON.stringify(event.monitorFrame));
+			redis.ltrim(`ftabuddy:event:${event.code}:history`, 0, 49);
+			redis.expire(`ftabuddy:event:${event.code}:history`, 86400);
 
 			for (const change of processed.changes) {
-				event.robotStateChangeEmitter.emit("change", change);
+				bus.publish(`event:${event.code}:robot_state`, change);
 			}
 
 			const checklist = await processFrameForTeamData(event.code, processed.currentFrame, processed.changes);
 			if (checklist) {
-				event.checklistEmitter.emit("update", checklist);
+				bus.publish(`event:${event.code}:checklist`, checklist);
 			}
 
 			processTeamCycles(event.code, processed.currentFrame, processed.changes);
@@ -181,7 +186,8 @@ export const fieldMonitorRouter = router({
 
 	history: eventProcedure.query(async ({ ctx }) => {
 		const event = await getEvent(ctx.eventToken ?? "");
-
+		const items = await redis.lrange(`ftabuddy:event:${event.code}:history`, 0, 49);
+		if (items.length > 0) return items.map((i: string) => JSON.parse(i)).reverse();
 		return event.history;
 	}),
 
@@ -193,11 +199,11 @@ export const fieldMonitorRouter = router({
 		)
 		.subscription(async function* ({ input, signal }) {
 			const event = await getEvent(input.eventToken);
-
 			console.log("robots subscription", event.code);
-			for await (const [frame] of on(event.fieldMonitorEmitter, "update", { signal: signal! })) {
-				yield frame as MonitorFrame;
-			}
+			const { push, drain } = subscriptionQueue<MonitorFrame>(signal!);
+			const unsub = bus.subscribe(`event:${event.code}:frame`, (data) => push(data as MonitorFrame));
+			try { yield* drain(); }
+			finally { unsub(); }
 		}),
 
 	robotStatus: publicProcedure
@@ -208,11 +214,11 @@ export const fieldMonitorRouter = router({
 		)
 		.subscription(async function* ({ input, signal }) {
 			const event = await getEvent(input.eventToken);
-
 			console.log("robot status subscription", event.code);
-			for await (const [change] of on(event.robotStateChangeEmitter, "change", { signal: signal! })) {
-				yield change as StateChange;
-			}
+			const { push, drain } = subscriptionQueue<StateChange>(signal!);
+			const unsub = bus.subscribe(`event:${event.code}:robot_state`, (data) => push(data as StateChange));
+			try { yield* drain(); }
+			finally { unsub(); }
 		}),
 
 	fieldStatus: publicProcedure
@@ -223,11 +229,11 @@ export const fieldMonitorRouter = router({
 		)
 		.subscription(async function* ({ input, signal }) {
 			const event = await getEvent(input.eventToken);
-
 			console.log("field status subscription", event.code);
-			for await (const [state] of on(event.fieldStatusEmitter, "change", { signal: signal! })) {
-				yield state as FieldState;
-			}
+			const { push, drain } = subscriptionQueue<FieldState>(signal!);
+			const unsub = bus.subscribe(`event:${event.code}:field_status`, (data) => push(data as FieldState));
+			try { yield* drain(); }
+			finally { unsub(); }
 		}),
 
 	combinedSubscription: publicProcedure
@@ -238,21 +244,16 @@ export const fieldMonitorRouter = router({
 		)
 		.subscription(async function* ({ input, signal }) {
 			const event = await getEvent(input.eventToken);
-
 			console.log("combined subscription", event.code);
 			const { push, drain } = subscriptionQueue<MonitorFrame | StateChange | FieldState>(signal!);
-
-			event.fieldMonitorEmitter.on("update", push);
-			event.robotStateChangeEmitter.on("change", push);
-			event.fieldStatusEmitter.on("change", push);
-
-			try {
-				yield* drain();
-			} finally {
-				event.fieldMonitorEmitter.off("update", push);
-				event.robotStateChangeEmitter.off("change", push);
-				event.fieldStatusEmitter.off("change", push);
-			}
+			const unsubFrame = bus.subscribe(`event:${event.code}:frame`, (data) => push(data as MonitorFrame));
+			const unsubRobot = bus.subscribe(`event:${event.code}:robot_state`, (data) => push(data as StateChange));
+			const unsubField = bus.subscribe(`event:${event.code}:field_status`, (data) => push(data as FieldState));
+			// Seed with current frame from Redis for late joiners
+			const stored = await redis.get(`ftabuddy:event:${event.code}:monitor_frame`);
+			if (stored) push(JSON.parse(stored) as MonitorFrame);
+			try { yield* drain(); }
+			finally { unsubFrame(); unsubRobot(); unsubField(); }
 		}),
 
 	management: publicProcedure
@@ -265,10 +266,7 @@ export const fieldMonitorRouter = router({
 			const user = await db.query.users.findFirst({
 				where: and(eq(users.token, input.token), gt(users.id, -1), eq(users.admin, true)),
 			});
-
-			if (!user) {
-				throw new Error("Unauthorized");
-			}
+			if (!user) throw new Error("Unauthorized");
 
 			const { push, drain } = subscriptionQueue<EventState>(signal!);
 			const cleanups: Array<() => void> = [];
@@ -276,7 +274,9 @@ export const fieldMonitorRouter = router({
 			const addNewEvent = (eventCode: string) => {
 				console.log("new event", eventCode);
 				const event = events[eventCode];
-				const listener = (frame: MonitorFrame) => {
+				if (!event) return;
+				const unsub = bus.subscribe(`event:${eventCode}:frame`, (data) => {
+					const frame = data as MonitorFrame;
 					push({
 						code: event.code,
 						name: event.name,
@@ -290,11 +290,8 @@ export const fieldMonitorRouter = router({
 						clients: event.stats.clients,
 						extensions: event.stats.extensions,
 					});
-				};
-
-				event.fieldMonitorEmitter.on("update", listener);
-				cleanups.push(() => event.fieldMonitorEmitter.off("update", listener));
-
+				});
+				cleanups.push(unsub);
 				push({
 					code: event.code,
 					name: event.name,
@@ -314,14 +311,11 @@ export const fieldMonitorRouter = router({
 				addNewEvent(eventCode);
 			}
 
-			newEventEmitter.on("new", addNewEvent);
-			cleanups.push(() => newEventEmitter.off("new", addNewEvent));
+			const unsubNew = bus.subscribe("global:new_event", (data) => addNewEvent(data as string));
+			cleanups.push(unsubNew);
 
-			try {
-				yield* drain();
-			} finally {
-				for (const cleanup of cleanups) cleanup();
-			}
+			try { yield* drain(); }
+			finally { for (const cleanup of cleanups) cleanup(); }
 		}),
 });
 

@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import type { MatchEventIssueDetail, Message, Profile, ServerEvent } from "../../shared/types";
+import { bus } from "./eventBus";
 import { db } from "../db/db";
 import { matchEvents, messages, notes } from "../db/schema";
 
@@ -81,7 +82,7 @@ export async function autoLinkEventsToNote(
 	});
 
 	if (autoMsg) {
-		event.noteUpdateEmitter.emit("note_update", {
+		bus.publish(`event:${event.code}:note_update`, {
 			kind: "add_message",
 			note_id: noteId,
 			message: autoMsg as Message,
@@ -90,7 +91,7 @@ export async function autoLinkEventsToNote(
 
 	// Emit conversion events so clients remove the match events from feeds
 	for (const evtId of eventIds) {
-		event.matchEventEmitter.emit("convert", {
+		bus.publish(`event:${event.code}:match_event:convert`, {
 			kind: "match_event_convert",
 			id: evtId,
 			note_id: noteId,

@@ -8,6 +8,7 @@ import { db } from "../db/db";
 import { analyzedLogs, events as eventsTable, issueEnum, matchEvents, matchLogs } from "../db/schema";
 import { events } from "../index";
 import { tryAutoLinkNewMatchEvent } from "./auto-link-events";
+import { bus } from "./eventBus";
 
 /**
  * Global cache of autoEventSettings keyed by event code.
@@ -378,7 +379,7 @@ export async function logAnalysisLoop(limit: number) {
 						if (serverEvent) {
 							const wasAutoLinked = await tryAutoLinkNewMatchEvent(inserted, log.event, serverEvent);
 							if (!wasAutoLinked) {
-								serverEvent.matchEventEmitter.emit("create", {
+								bus.publish(`event:${serverEvent.code}:match_event:create`, {
 									kind: "match_event_create",
 									matchEvent: inserted,
 								});
@@ -473,7 +474,7 @@ export async function logAnalysisLoop(limit: number) {
 						if (serverEvent) {
 							const wasAutoLinked = await tryAutoLinkNewMatchEvent(inserted, log.event, serverEvent);
 							if (!wasAutoLinked) {
-								serverEvent.matchEventEmitter.emit("create", {
+								bus.publish(`event:${serverEvent.code}:match_event:create`, {
 									kind: "match_event_create",
 									matchEvent: inserted,
 								});

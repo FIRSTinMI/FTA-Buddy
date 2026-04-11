@@ -11,6 +11,7 @@
 
 import { eq } from "drizzle-orm";
 import type { ServerEvent } from "../../shared/types";
+import { bus } from "./eventBus";
 import { db } from "../db/db";
 import { events } from "../db/schema";
 
@@ -182,7 +183,7 @@ async function pollNexus(event: ServerEvent): Promise<void> {
 		}
 
 		event.checklist = checklist;
-		event.checklistEmitter.emit("update", checklist);
+		bus.publish(`event:${event.code}:checklist`, checklist);
 	}
 
 	// -- Update poll metadata ------------------------------------------------

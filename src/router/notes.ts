@@ -1,9 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { randomUUID } from "crypto";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
-import { on } from "events";
 import { z } from "zod";
-import { notificationEmitter } from "../state";
 import { formatTimeShortNoAgoMinutes } from "../../shared/formatTime";
 import { buildNotification, toNoteCtx } from "../../shared/notifications";
 import type { Notification } from "../../shared/types";
@@ -24,6 +22,7 @@ import {
 	updateSlackMessage,
 } from "../util/slack";
 import { subscriptionQueue } from "../util/subscription";
+import { bus } from "../util/eventBus";
 import { autoLinkEventsToNote } from "../util/auto-link-events";
 
 /**
@@ -317,7 +316,7 @@ const messagesSubRouter = router({
 
 			if (!insert[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Message" });
 
-			event.noteUpdateEmitter.emit("note_update", {
+			bus.publish(`event:${event.code}:note_update`, {
 				kind: "add_message",
 				note_id: note.id,
 				message: insert[0] as Message,
@@ -404,7 +403,7 @@ const messagesSubRouter = router({
 
 			if (!update[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Message" });
 
-			event.noteUpdateEmitter.emit("note_update", {
+			bus.publish(`event:${event.code}:note_update`, {
 				kind: "edit_message",
 				note_id: note.id,
 				message: update[0] as Message,
@@ -455,7 +454,7 @@ const messagesSubRouter = router({
 			const result = await db.delete(messages).where(eq(messages.id, input.message_id));
 			if (!result) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to delete Message" });
 
-			event.noteUpdateEmitter.emit("note_update", {
+			bus.publish(`event:${event.code}:note_update`, {
 				kind: "delete_message",
 				note_id: input.note_id,
 				message_id: message.id,
@@ -667,7 +666,7 @@ export const notesRouter = router({
 				.returning();
 			if (!insert[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Note" });
 
-			event.noteUpdateEmitter.emit("note_update", { kind: "create", note: insert[0] as Note });
+			bus.publish(`event:${event.code}:note_update`, { kind: "create", note: insert[0] as Note });
 
 			createNotification(
 				event.users.map((u) => u.id),
@@ -777,7 +776,7 @@ export const notesRouter = router({
 				.returning();
 			if (!insert[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Note" });
 
-			event.noteUpdateEmitter.emit("note_update", { kind: "create", note: insert[0] as Note });
+			bus.publish(`event:${event.code}:note_update`, { kind: "create", note: insert[0] as Note });
 
 			// Auto-attach all active match events for the same team + match
 			if (input.note_type === "TeamIssue" && insert[0].team !== null && insert[0].match_number !== null) {
@@ -888,7 +887,7 @@ export const notesRouter = router({
 			const update = await db.update(notes).set(setFields).where(eq(notes.id, input.id)).returning();
 			if (!update[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Note" });
 
-			event.noteUpdateEmitter.emit("note_update", { kind: "edit", note: update[0] as Note });
+			bus.publish(`event:${event.code}:note_update`, { kind: "edit", note: update[0] as Note });
 
 			const newRequestType = input.request_type !== undefined ? input.request_type : note.request_type;
 			const slackMsg = createSlackNoteMessage(
@@ -937,7 +936,7 @@ export const notesRouter = router({
 		const result = await db.delete(notes).where(eq(notes.id, input.id));
 		if (!result) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to delete Note" });
 
-		event.noteUpdateEmitter.emit("note_update", { kind: "delete", note: note as Note });
+		bus.publish(`event:${event.code}:note_update`, { kind: "delete", note: note as Note });
 
 		if (event.slackTeam && note.slack_ts && note.slack_channel) {
 			await deleteSlackMessage(note.slack_channel, event.slackTeam, note.slack_ts);
@@ -989,7 +988,7 @@ export const notesRouter = router({
 			if (!update[0])
 				throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update note status" });
 
-			event.noteUpdateEmitter.emit("note_update", {
+			bus.publish(`event:${event.code}:note_update`, {
 				kind: "status",
 				note_id: update[0].id,
 				resolution_status: update[0].resolution_status ?? "Open",
@@ -1066,7 +1065,7 @@ export const notesRouter = router({
 				.returning();
 			if (!update[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to assign User" });
 
-			event.noteUpdateEmitter.emit("note_update", {
+			bus.publish(`event:${event.code}:note_update`, {
 				kind: "assign",
 				note_id: update[0].id,
 				assigned_to_id: update[0].assigned_to_id,
@@ -1151,7 +1150,7 @@ export const notesRouter = router({
 			if (!update[0])
 				throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update assignment" });
 
-			event.noteUpdateEmitter.emit("note_update", {
+			bus.publish(`event:${event.code}:note_update`, {
 				kind: "assign",
 				note_id: update[0].id,
 				assigned_to_id: update[0].assigned_to_id,
@@ -1240,7 +1239,7 @@ export const notesRouter = router({
 				throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Note followers" });
 			}
 
-			event.noteUpdateEmitter.emit("note_update", {
+			bus.publish(`event:${event.code}:note_update`, {
 				kind: "follow",
 				note_id: update[0].id,
 				followers: update[0].followers,
@@ -1311,7 +1310,7 @@ export const notesRouter = router({
 			if (!insert[0])
 				throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Note from FMS" });
 
-			event.noteUpdateEmitter.emit("note_update", { kind: "create", note: insert[0] as Note, source: "fms" });
+			bus.publish(`event:${event.code}:note_update`, { kind: "create", note: insert[0] as Note, source: "fms" });
 			return insert[0] as Note;
 		}),
 
@@ -1363,7 +1362,7 @@ export const notesRouter = router({
 			if (!update[0])
 				throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Note from FMS" });
 
-			event.noteUpdateEmitter.emit("note_update", { kind: "edit", note: update[0] as Note, source: "fms" });
+			bus.publish(`event:${event.code}:note_update`, { kind: "edit", note: update[0] as Note, source: "fms" });
 			return update[0] as Note;
 		}),
 
@@ -1408,7 +1407,7 @@ export const notesRouter = router({
 		if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found for given FMS note ID" });
 		await db.delete(messages).where(eq(messages.note_id, note.id));
 		await db.delete(notes).where(eq(notes.id, note.id));
-		event.noteUpdateEmitter.emit("note_update", { kind: "delete", note: note as Note, source: "fms" });
+		bus.publish(`event:${event.code}:note_update`, { kind: "delete", note: note as Note, source: "fms" });
 		return note.id;
 	}),
 
@@ -1458,27 +1457,18 @@ export const notesRouter = router({
 				push(data);
 			};
 
-			const before = event.noteUpdateEmitter.listenerCount("note_update");
 			console.log(
-				`[notes sub] +1 listener (before=${before} after=${before + 1}) event=${event.code} source=${input.source ?? "unknown"}`,
+				`[notes sub] start event=${event.code} source=${input.source ?? "unknown"}`,
 			);
 
-			event.noteUpdateEmitter.on("note_update", handler);
-
-			// For meshed events in combined view, also forward updates from each sub-event's emitter
-			type SubHandler = { emitter: typeof event.noteUpdateEmitter; handler: (data: NoteUpdateEventData) => void };
-			const subHandlers: SubHandler[] = [];
+			const eventCodesToListen = [event.code];
 			if (event.meshedEvent && event.subEvents) {
-				for (const subEvent of event.subEvents) {
-					try {
-						const sub = await getEvent("", subEvent.code);
-						const subHandler = (data: NoteUpdateEventData) => handler(data);
-						sub.noteUpdateEmitter.on("note_update", subHandler);
-						subHandlers.push({ emitter: sub.noteUpdateEmitter, handler: subHandler });
-					} catch (_) {
-						// Sub-event may not be loaded yet; skip
-					}
-				}
+				eventCodesToListen.push(...event.subEvents.map((s) => s.code));
+			}
+
+			const unsubs: Array<() => void> = [];
+			for (const code of eventCodesToListen) {
+				unsubs.push(bus.subscribe(`event:${code}:note_update`, (data) => handler(data as NoteUpdateEventData)));
 			}
 
 			const heartbeat = setInterval(() => push({ kind: "heartbeat" }), 30_000);
@@ -1486,16 +1476,11 @@ export const notesRouter = router({
 			try {
 				yield* drain();
 			} finally {
-				event.noteUpdateEmitter.off("note_update", handler);
-				for (const { emitter, handler: subHandler } of subHandlers) {
-					emitter.off("note_update", subHandler);
-				}
+				for (const unsub of unsubs) unsub();
 				clearInterval(heartbeat);
-				const after = event.noteUpdateEmitter.listenerCount("note_update");
-				console.log(`[notes sub] -1 listener (after=${after}) event=${event.code}`);
+				console.log(`[notes sub] ended event=${event.code}`);
 			}
 		}),
-
 	pushSubscription: publicProcedure.input(z.object({ token: z.string() })).subscription(async function* ({
 		input,
 		signal,
@@ -1503,15 +1488,16 @@ export const notesRouter = router({
 		const user = await db.query.users.findFirst({ where: eq(users.token, input.token) });
 		if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
 
-		for await (const [payload] of on(notificationEmitter, "send", { signal: signal! })) {
-			const d = payload as { users: number[]; notification: Notification };
-			if (!d.users.includes(user.id)) continue;
+		const { push: pushNotif, drain: drainNotif } = subscriptionQueue<Notification>(signal!);
+		const unsub = bus.subscribe("global:notification", async (raw) => {
+			const d = raw as { users: number[]; notification: Notification };
+			if (!d.users.includes(user.id)) return;
 			// Re-fetch active_event_code each message (subscription is long-lived)
 			const currentUser = await db.query.users.findFirst({
 				where: eq(users.token, input.token),
 				columns: { id: true, active_event_code: true },
 			});
-			if (!currentUser) continue;
+			if (!currentUser) return;
 			const notif = d.notification as Notification;
 			if (notif.eventCode && currentUser.active_event_code && notif.eventCode !== currentUser.active_event_code) {
 				// Allow sub-event notifications through when the user is on a meshed parent event
@@ -1522,12 +1508,16 @@ export const notesRouter = router({
 				const subCodes = parentEvent?.meshedEvent
 					? (parentEvent.meshedEvent as Array<{ code: string }>).map((e) => e.code)
 					: [];
-				if (!subCodes.includes(notif.eventCode)) continue;
+				if (!subCodes.includes(notif.eventCode)) return;
 			}
-			yield notif;
+			pushNotif(notif);
+		});
+		try {
+			yield* drainNotif();
+		} finally {
+			unsub();
 		}
 	}),
-
 	registerPush: protectedProcedure
 		.input(
 			z.object({
@@ -1596,7 +1586,7 @@ export async function updateNoteStatusFromSlack(message_ts: string, resolved: bo
 		.where(eq(notes.id, note.id))
 		.returning();
 
-	event.noteUpdateEmitter.emit("note_update", {
+	bus.publish(`event:${event.code}:note_update`, {
 		kind: "status",
 		note_id: update[0].id,
 		resolution_status: update[0].resolution_status ?? "Open",
@@ -1642,7 +1632,7 @@ export async function updateNoteAssignmentFromSlack(message_ts: string, add: boo
 		.returning();
 
 	if (add) {
-		event.noteUpdateEmitter.emit("note_update", {
+		bus.publish(`event:${event.code}:note_update`, {
 			kind: "assign",
 			note_id: update[0].id,
 			assigned_to_id: update[0].assigned_to_id,
@@ -1660,7 +1650,7 @@ export async function updateNoteAssignmentFromSlack(message_ts: string, add: boo
 			event.code,
 		);
 	} else {
-		event.noteUpdateEmitter.emit("note_update", {
+		bus.publish(`event:${event.code}:note_update`, {
 			kind: "assign",
 			note_id: update[0].id,
 			assigned_to_id: update[0].assigned_to_id,
@@ -1846,7 +1836,7 @@ export async function createFromNexus(channel_id: string, message_ts: string, te
 
 	if (!insert[0]) return;
 
-	noteEvent.noteUpdateEmitter.emit("note_update", { kind: "create", note: insert[0] as Note });
+	bus.publish(`event:${noteEvent.code}:note_update`, { kind: "create", note: insert[0] as Note });
 
 	// Notify users on linkEvent (the meshed parent if applicable — it has all sub-event users merged)
 	createNotification(
@@ -1927,7 +1917,7 @@ export async function addNoteMessageFromSlack(
 		})
 		.returning();
 
-	event.noteUpdateEmitter.emit("note_update", {
+	bus.publish(`event:${event.code}:note_update`, {
 		kind: "add_message",
 		note_id: note.id,
 		message: insert[0] as Message,

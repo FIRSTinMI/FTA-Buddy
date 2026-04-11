@@ -109,9 +109,19 @@
 	}
 
 	let subscription: ReturnType<typeof trpc.checklist.subscription.subscribe>;
+	let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
-	onMount(() => {
+	async function resubscribe() {
+		if (reconnectTimer) {
+			clearTimeout(reconnectTimer);
+			reconnectTimer = null;
+		}
 		subscription?.unsubscribe();
+
+		try {
+			checklist = await trpc.checklist.get.query();
+			updateTotals(checklist);
+		} catch { /* ignore */ }
 
 		subscription = trpc.checklist.subscription.subscribe(
 			{
@@ -122,15 +132,39 @@
 					checklist = c;
 					updateTotals(checklist);
 				},
+				onError: (err) => {
+					console.error("Checklist subscription lost, reconnecting in 5s…", err);
+					reconnectTimer = setTimeout(() => resubscribe(), 5000);
+				},
 			},
 		);
+	}
+
+	onMount(() => {
+		resubscribe();
+
+		function handleVisibility() {
+			if (document.visibilityState === "visible") resubscribe();
+		}
+		function handleOnline() {
+			resubscribe();
+		}
+
+		document.addEventListener("visibilitychange", handleVisibility);
+		window.addEventListener("online", handleOnline);
 
 		refreshNexusStatus();
 		nexusStatusInterval = setInterval(refreshNexusStatus, 30_000);
+
+		return () => {
+			document.removeEventListener("visibilitychange", handleVisibility);
+			window.removeEventListener("online", handleOnline);
+		};
 	});
 
 	onDestroy(() => {
 		subscription?.unsubscribe();
+		if (reconnectTimer) clearTimeout(reconnectTimer);
 		if (nexusStatusInterval) clearInterval(nexusStatusInterval);
 	});
 </script>

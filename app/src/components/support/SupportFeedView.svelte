@@ -166,13 +166,27 @@
 	type MatchEventSubscription = ReturnType<typeof trpc.matchEvents.updateSubscription.subscribe>;
 	let subscription: NoteSubscription | undefined;
 	let matchEventSubscription: MatchEventSubscription | undefined;
+	let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+	async function reconnect() {
+		if (reconnectTimer) {
+			clearTimeout(reconnectTimer);
+			reconnectTimer = null;
+		}
+		await fetchAll();
+		startSubscription();
+		startMatchEventSubscription();
+	}
 
 	function startSubscription() {
 		subscription?.unsubscribe();
 		subscription = trpc.notes.updateSubscription.subscribe(
 			{ eventToken: $userStore.eventToken, source: `${$userStore.username}.feed` },
 			{
-				onError: console.error,
+				onError: (err) => {
+					console.error("Notes subscription lost, reconnecting in 5s…", err);
+					reconnectTimer = setTimeout(() => reconnect(), 5000);
+				},
 				onData: (data: NoteUpdateEventData) => {
 					switch (data.kind) {
 						case "create":
@@ -259,7 +273,10 @@
 		matchEventSubscription = trpc.matchEvents.updateSubscription.subscribe(
 			{ eventToken: $userStore.eventToken },
 			{
-				onError: console.error,
+				onError: (err) => {
+					console.error("Match events subscription lost, reconnecting in 5s…", err);
+					reconnectTimer = setTimeout(() => reconnect(), 5000);
+				},
 				onData: (data: MatchEventUpdateEventData) => {
 					switch (data.kind) {
 						case "match_event_create":
@@ -292,11 +309,27 @@
 		fetchAll();
 		startSubscription();
 		startMatchEventSubscription();
+
+		function handleVisibility() {
+			if (document.visibilityState === "visible") reconnect();
+		}
+		function handleOnline() {
+			reconnect();
+		}
+
+		document.addEventListener("visibilitychange", handleVisibility);
+		window.addEventListener("online", handleOnline);
+
+		return () => {
+			document.removeEventListener("visibilitychange", handleVisibility);
+			window.removeEventListener("online", handleOnline);
+		};
 	});
 
 	onDestroy(() => {
 		subscription?.unsubscribe();
 		matchEventSubscription?.unsubscribe();
+		if (reconnectTimer) clearTimeout(reconnectTimer);
 	});
 
 	// ── Pull-to-refresh ──────────────────────────────────────────────────────

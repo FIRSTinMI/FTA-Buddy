@@ -72,6 +72,19 @@
 					admin: false,
 				});
 			}
+
+			if (checkAuth.event?.archived) {
+				const code = get(eventStore).code;
+				user.update((u) => ({ ...u, eventToken: "", meshedEventToken: "" }));
+				eventStore.set({ code: "", pin: "", teams: [], users: [] });
+				toast(
+					"Event Archived",
+					`${code ? code.toUpperCase() + " has" : "Your event has"} been archived. Please join a new event.`,
+					"red-500",
+					8000,
+				);
+				navigate("/manage/login");
+			}
 		} catch (err: any) {
 			// Network / server error - do NOT clear the token to avoid false logouts on flaky connections
 			console.warn("[AUTH] checkAuth request failed (not clearing token):", err.message);

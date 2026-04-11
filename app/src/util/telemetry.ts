@@ -20,24 +20,7 @@ function flush() {
 	if (queue.length === 0) return;
 	const batch = queue.splice(0, 20);
 	flushTimer = null;
-
-	if (document.visibilityState === "hidden") {
-		// sendBeacon is non-blocking and survives page navigation/close
-		// tRPC batch endpoint expects SuperJSON but for telemetry we can use the raw JSON format
-		// since publicProcedure has no auth requirement and we just need it to arrive
-		try {
-			navigator.sendBeacon(
-				`/trpc/telemetry.batchTrack`,
-				new Blob([JSON.stringify({ "0": { json: { events: batch } } })], {
-					type: "application/json",
-				}),
-			);
-		} catch {
-			// ignore
-		}
-	} else {
-		trpc.telemetry.batchTrack.mutate({ events: batch }).catch(() => {});
-	}
+	trpc.telemetry.batchTrack.mutate({ events: batch }).catch(() => {});
 }
 
 if (typeof window !== "undefined") {

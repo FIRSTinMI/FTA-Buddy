@@ -716,28 +716,40 @@ export const eventRouter = router({
 			};
 		}
 
-		const match = status.matches.find((m) => m.label === status.nowQueuing);
 		const parseTeam = (s: string | null | undefined): number | null => {
 			if (!s) return null;
 			const n = parseInt(s, 10);
 			return isNaN(n) ? null : n;
 		};
 
-		const nowQueuingTeams = match
-			? {
-					red1: parseTeam(match.redTeams?.[0]),
-					red2: parseTeam(match.redTeams?.[1]),
-					red3: parseTeam(match.redTeams?.[2]),
-					blue1: parseTeam(match.blueTeams?.[0]),
-					blue2: parseTeam(match.blueTeams?.[1]),
-					blue3: parseTeam(match.blueTeams?.[2]),
-			  }
-			: null;
+		const teamsFromMatch = (m: (typeof status.matches)[number] | undefined) =>
+			m
+				? {
+						red1: parseTeam(m.redTeams?.[0]),
+						red2: parseTeam(m.redTeams?.[1]),
+						red3: parseTeam(m.redTeams?.[2]),
+						blue1: parseTeam(m.blueTeams?.[0]),
+						blue2: parseTeam(m.blueTeams?.[1]),
+						blue3: parseTeam(m.blueTeams?.[2]),
+				  }
+				: null;
+
+		// Prefer the match Nexus says is "On Field" — that's the one being played right now.
+		// Fall back to 2 positions before nowQueuing (on-deck = -1, on-field = -2).
+		const onFieldMatch =
+			status.matches.find((m) => m.status?.toLowerCase().includes("on field")) ??
+			(() => {
+				const idx = status.matches.findIndex((m) => m.label === status.nowQueuing);
+				return idx >= 2 ? status.matches[idx - 2] : undefined;
+			})();
+
+		const queuingMatch = status.matches.find((m) => m.label === status.nowQueuing);
 
 		return {
 			available: !!event.nexusApiKey,
 			nowQueuing: status.nowQueuing,
-			nowQueuingTeams,
+			nowQueuingTeams: teamsFromMatch(onFieldMatch) ?? teamsFromMatch(queuingMatch),
+			nowOnField: onFieldMatch?.label ?? null,
 			dataAsOfTime: status.dataAsOfTime,
 		};
 	}),

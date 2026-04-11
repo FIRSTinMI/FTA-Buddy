@@ -52,7 +52,7 @@
 
 	// Nexus live status (fallback when no field monitor connection)
 	type NexusTeamSet = { red1: number | null; red2: number | null; red3: number | null; blue1: number | null; blue2: number | null; blue3: number | null };
-	type NexusLiveStatus = { available: boolean; nowQueuing: string | null; nowQueuingTeams: NexusTeamSet | null; dataAsOfTime: number | null };
+	type NexusLiveStatus = { available: boolean; nowQueuing: string | null; nowOnField?: string | null; nowQueuingTeams: NexusTeamSet | null; dataAsOfTime: number | null };
 	let nexusLiveStatus = $state<NexusLiveStatus | null>(null);
 
 	let nexusTeams = $derived.by(() => {

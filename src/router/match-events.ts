@@ -43,7 +43,14 @@ export const matchEventsRouter = router({
 		)
 		.query(async ({ ctx, input }) => {
 			const event = await getEvent(ctx.event.token);
-			const filters = [eq(matchEvents.event_code, event.code)];
+			const eventCodes: string[] = event.meshedEvent
+				? (event.meshedEvent as Array<{ code: string }>).map((e) => e.code)
+				: [event.code];
+			const codeFilter =
+				eventCodes.length === 1
+					? eq(matchEvents.event_code, eventCodes[0])
+					: inArray(matchEvents.event_code, eventCodes);
+			const filters = [codeFilter];
 			if (input?.status) filters.push(eq(matchEvents.status, input.status));
 			if (input?.team) filters.push(eq(matchEvents.team, input.team));
 
@@ -436,16 +443,29 @@ export const matchEventsRouter = router({
 		}[] = [];
 
 		function registerHandler<K extends keyof import("../../shared/types").MatchEventUpdateEvents>(
+			emitter: typeof event.matchEventEmitter,
 			eventName: K,
 			handler: import("../../shared/types").MatchEventUpdateEvents[K],
 		) {
 			handlers.push({ event: eventName, fn: handler as any });
-			event.matchEventEmitter.on(eventName, handler);
+			emitter.on(eventName, handler);
 		}
 
-		registerHandler("create", (data) => push(data));
-		registerHandler("dismiss", (data) => push(data));
-		registerHandler("convert", (data) => push(data));
+		const emitters: typeof event.matchEventEmitter[] = [event.matchEventEmitter];
+		if (event.meshedEvent && event.subEvents) {
+			for (const sub of event.subEvents) {
+				try {
+					const subEvent = await getEvent("", sub.code);
+					emitters.push(subEvent.matchEventEmitter);
+				} catch { /* sub-event not loaded yet, skip */ }
+			}
+		}
+
+		for (const emitter of emitters) {
+			registerHandler(emitter, "create", (data) => push(data));
+			registerHandler(emitter, "dismiss", (data) => push(data));
+			registerHandler(emitter, "convert", (data) => push(data));
+		}
 
 		const heartbeat = setInterval(() => push({ kind: "heartbeat" }), 30_000);
 
@@ -453,7 +473,10 @@ export const matchEventsRouter = router({
 			yield* drain();
 		} finally {
 			for (const h of handlers) {
-				event.matchEventEmitter.off(h.event, h.fn as any);
+				// Remove from all emitters that registered this fn
+				for (const emitter of emitters) {
+					emitter.off(h.event, h.fn as any);
+				}
 			}
 			clearInterval(heartbeat);
 		}

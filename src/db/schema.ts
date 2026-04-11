@@ -3,6 +3,7 @@ import {
 	bigint,
 	boolean,
 	customType,
+	index,
 	integer,
 	jsonb,
 	pgEnum,
@@ -16,20 +17,24 @@ import {
 import type { EventAutoEventSettings, FmsNoteMetadata, Profile } from "../../shared/types";
 export const roleEnum = pgEnum("role", ["FTA", "FTAA", "CSA", "RI"]);
 
-export const users = pgTable("users", {
-	id: serial("id").primaryKey(),
-	username: varchar("username").notNull(),
-	email: varchar("email").unique().notNull(),
-	password: text("password").notNull(),
-	created_at: timestamp("created_at").notNull().defaultNow(),
-	last_seen: timestamp("last_seen").notNull().defaultNow(),
-	events: jsonb("events").notNull().default("[]"),
-	role: roleEnum("role").notNull().default("FTA"),
-	token: varchar("token").notNull().default(""),
-	admin: boolean("admin").notNull().default(false),
-	slack_user_id: varchar("slack_user_id"),
-	active_event_code: varchar("active_event_code"),
-});
+export const users = pgTable(
+	"users",
+	{
+		id: serial("id").primaryKey(),
+		username: varchar("username").notNull(),
+		email: varchar("email").unique().notNull(),
+		password: text("password").notNull(),
+		created_at: timestamp("created_at").notNull().defaultNow(),
+		last_seen: timestamp("last_seen").notNull().defaultNow(),
+		events: jsonb("events").notNull().default("[]"),
+		role: roleEnum("role").notNull().default("FTA"),
+		token: varchar("token").notNull().default(""),
+		admin: boolean("admin").notNull().default(false),
+		slack_user_id: varchar("slack_user_id"),
+		active_event_code: varchar("active_event_code"),
+	},
+	(t) => [index("users_token_idx").on(t.token)],
+);
 
 export type User = typeof users.$inferInsert;
 
@@ -100,40 +105,48 @@ export const noteIssueTypeEnum = pgEnum("note_issue_type", [
 
 export const noteRequestTypeEnum = pgEnum("note_request_type", ["CSA", "RI"]);
 
-export const notes = pgTable("notes", {
-	id: uuid("id").primaryKey(),
-	text: varchar("text").notNull().default(""),
-	author_id: integer("author_id")
-		.references(() => users.id)
-		.notNull(),
-	author: jsonb("author").$type<Profile>(),
-	team: integer("team"),
-	note_type: noteTypeEnum("note_type").notNull().default("TeamIssue"),
-	resolution_status: resolutionStatusEnum("resolution_status").default("NotApplicable"),
-	issue_type: noteIssueTypeEnum("issue_type"),
-	match_number: integer("match_number"),
-	play_number: integer("play_number"),
-	tournament_level: levelEnum("tournament_level"),
-	fms_note_id: varchar("fms_note_id").unique(),
-	fms_record_version: bigint("fms_record_version", { mode: "number" }),
-	fms_metadata: jsonb("fms_metadata").$type<FmsNoteMetadata>(),
-	event_code: varchar("event_code")
-		.references(() => events.code)
-		.notNull(),
-	created_at: timestamp("created_at").notNull().defaultNow(),
-	updated_at: timestamp("updated_at").notNull().defaultNow(),
-	closed_at: timestamp("closed_at"),
-	assigned_to_id: integer("assigned_to_id").references(() => users.id),
-	assigned_to: jsonb("assigned_to").$type<Profile>(),
-	followers: jsonb("followers").$type<number[]>().default([]).notNull(),
-	slack_ts: varchar("slack_ts"),
-	slack_channel: varchar("slack_channel"),
-	match_id: uuid("match_id").references(() => matchLogs.id),
-	resolved_by_id: integer("resolved_by_id").references(() => users.id),
-	resolved_by: jsonb("resolved_by").$type<Profile>(),
-	request_type: noteRequestTypeEnum("request_type"),
-	is_nexus: boolean("is_nexus").notNull().default(false),
-});
+export const notes = pgTable(
+	"notes",
+	{
+		id: uuid("id").primaryKey(),
+		text: varchar("text").notNull().default(""),
+		author_id: integer("author_id")
+			.references(() => users.id)
+			.notNull(),
+		author: jsonb("author").$type<Profile>(),
+		team: integer("team"),
+		note_type: noteTypeEnum("note_type").notNull().default("TeamIssue"),
+		resolution_status: resolutionStatusEnum("resolution_status").default("NotApplicable"),
+		issue_type: noteIssueTypeEnum("issue_type"),
+		match_number: integer("match_number"),
+		play_number: integer("play_number"),
+		tournament_level: levelEnum("tournament_level"),
+		fms_note_id: varchar("fms_note_id").unique(),
+		fms_record_version: bigint("fms_record_version", { mode: "number" }),
+		fms_metadata: jsonb("fms_metadata").$type<FmsNoteMetadata>(),
+		event_code: varchar("event_code")
+			.references(() => events.code)
+			.notNull(),
+		created_at: timestamp("created_at").notNull().defaultNow(),
+		updated_at: timestamp("updated_at").notNull().defaultNow(),
+		closed_at: timestamp("closed_at"),
+		assigned_to_id: integer("assigned_to_id").references(() => users.id),
+		assigned_to: jsonb("assigned_to").$type<Profile>(),
+		followers: jsonb("followers").$type<number[]>().default([]).notNull(),
+		slack_ts: varchar("slack_ts"),
+		slack_channel: varchar("slack_channel"),
+		match_id: uuid("match_id").references(() => matchLogs.id),
+		resolved_by_id: integer("resolved_by_id").references(() => users.id),
+		resolved_by: jsonb("resolved_by").$type<Profile>(),
+		request_type: noteRequestTypeEnum("request_type"),
+		is_nexus: boolean("is_nexus").notNull().default(false),
+	},
+	(t) => [
+		index("notes_event_code_idx").on(t.event_code),
+		index("notes_event_code_team_idx").on(t.event_code, t.team),
+		index("notes_event_code_created_at_idx").on(t.event_code, t.created_at),
+	],
+);
 
 export const noteMessagesRelations = relations(notes, ({ many }) => ({
 	messages: many(messages),
@@ -168,63 +181,79 @@ const bytea = customType<{ data: string; notNull: false; default: false }>({
 	},
 });
 
-export const matchLogs = pgTable("match_logs", {
-	id: uuid("id").primaryKey(),
-	event: varchar("event").notNull(),
-	event_id: uuid("event_id").notNull(),
-	match_number: integer("match_number").notNull(),
-	play_number: integer("play_number").notNull(),
-	level: levelEnum("level").notNull(),
-	start_time: timestamp("start_time").notNull(),
-	blue1: integer("blue1"),
-	blue2: integer("blue2"),
-	blue3: integer("blue3"),
-	red1: integer("red1"),
-	red2: integer("red2"),
-	red3: integer("red3"),
-	blue1_log: bytea("blue1_log"),
-	blue2_log: bytea("blue2_log"),
-	blue3_log: bytea("blue3_log"),
-	red1_log: bytea("red1_log"),
-	red2_log: bytea("red2_log"),
-	red3_log: bytea("red3_log"),
-	analyzed: boolean("analyzed").notNull().default(false),
-});
+export const matchLogs = pgTable(
+	"match_logs",
+	{
+		id: uuid("id").primaryKey(),
+		event: varchar("event").notNull(),
+		event_id: uuid("event_id").notNull(),
+		match_number: integer("match_number").notNull(),
+		play_number: integer("play_number").notNull(),
+		level: levelEnum("level").notNull(),
+		start_time: timestamp("start_time").notNull(),
+		blue1: integer("blue1"),
+		blue2: integer("blue2"),
+		blue3: integer("blue3"),
+		red1: integer("red1"),
+		red2: integer("red2"),
+		red3: integer("red3"),
+		blue1_log: bytea("blue1_log"),
+		blue2_log: bytea("blue2_log"),
+		blue3_log: bytea("blue3_log"),
+		red1_log: bytea("red1_log"),
+		red2_log: bytea("red2_log"),
+		red3_log: bytea("red3_log"),
+		analyzed: boolean("analyzed").notNull().default(false),
+	},
+	(t) => [
+		index("match_logs_event_idx").on(t.event),
+		index("match_logs_event_analyzed_idx").on(t.event, t.analyzed),
+		index("match_logs_event_match_idx").on(t.event, t.match_number, t.play_number),
+	],
+);
 
 export type MatchLog = typeof matchLogs.$inferInsert;
 
-export const analyzedLogs = pgTable("analyzed_logs", {
-	id: uuid("id").primaryKey(),
-	match_id: uuid("match_id")
-		.references(() => matchLogs.id)
-		.notNull(),
-	event: varchar("event").notNull(),
-	match_number: integer("match_number").notNull(),
-	play_number: integer("play_number").notNull(),
-	level: levelEnum("level").notNull(),
-	team: integer("team").notNull(),
-	alliance: varchar("alliance").notNull(),
-	issue: issueEnum("issue").notNull(),
-	start_time: integer("start_time"),
-	end_time: integer("end_time"),
-	duration: integer("duration"),
-	start_index: integer("start_index"),
-	end_index: integer("end_index"),
-});
+export const analyzedLogs = pgTable(
+	"analyzed_logs",
+	{
+		id: uuid("id").primaryKey(),
+		match_id: uuid("match_id")
+			.references(() => matchLogs.id)
+			.notNull(),
+		event: varchar("event").notNull(),
+		match_number: integer("match_number").notNull(),
+		play_number: integer("play_number").notNull(),
+		level: levelEnum("level").notNull(),
+		team: integer("team").notNull(),
+		alliance: varchar("alliance").notNull(),
+		issue: issueEnum("issue").notNull(),
+		start_time: integer("start_time"),
+		end_time: integer("end_time"),
+		duration: integer("duration"),
+		start_index: integer("start_index"),
+		end_index: integer("end_index"),
+	},
+	(t) => [index("analyzed_logs_event_idx").on(t.event)],
+);
 
-export const cycleLogs = pgTable("cycle_logs", {
-	id: uuid("id").primaryKey(),
-	event: varchar("event").notNull(),
-	match_number: integer("match_number").notNull(),
-	play_number: integer("play_number").notNull(),
-	level: levelEnum("level").notNull(),
-	prestart_time: timestamp("prestart_time"),
-	start_time: timestamp("start_time"),
-	calculated_cycle_time: varchar("calculated_cycle_time"),
-	ref_done_time: timestamp("ref_done_time"),
-	scores_posted_time: timestamp("scores_posted_time"),
-	end_time: timestamp("end_time"),
-});
+export const cycleLogs = pgTable(
+	"cycle_logs",
+	{
+		id: uuid("id").primaryKey(),
+		event: varchar("event").notNull(),
+		match_number: integer("match_number").notNull(),
+		play_number: integer("play_number").notNull(),
+		level: levelEnum("level").notNull(),
+		prestart_time: timestamp("prestart_time"),
+		start_time: timestamp("start_time"),
+		calculated_cycle_time: varchar("calculated_cycle_time"),
+		ref_done_time: timestamp("ref_done_time"),
+		scores_posted_time: timestamp("scores_posted_time"),
+		end_time: timestamp("end_time"),
+	},
+	(t) => [index("cycle_logs_event_idx").on(t.event)],
+);
 
 export type CycleLog = typeof cycleLogs.$inferSelect;
 
@@ -243,54 +272,65 @@ export const logPublishing = pgTable("log_publishing", {
 	expire_time: timestamp("expire_time").notNull(),
 });
 
-export const robotCycleLogs = pgTable("team_cycle_logs", {
-	id: uuid("id").primaryKey(),
-	event: varchar("event").notNull(),
-	match_number: integer("match_number").notNull(),
-	play_number: integer("play_number").notNull(),
-	level: levelEnum("level").notNull(),
-	team: integer("team").notNull(),
-	prestart: timestamp("prestart"),
-	first_ds: timestamp("first_ds"),
-	last_ds: timestamp("last_ds"),
-	time_ds: integer("time_ds"),
-	first_radio: timestamp("first_radio"),
-	last_radio: timestamp("last_radio"),
-	time_radio: integer("time_radio"),
-	first_rio: timestamp("first_rio"),
-	last_rio: timestamp("last_rio"),
-	time_rio: integer("time_rio"),
-	first_code: timestamp("first_code"),
-	last_code: timestamp("last_code"),
-	time_code: integer("time_code"),
-});
+export const robotCycleLogs = pgTable(
+	"team_cycle_logs",
+	{
+		id: uuid("id").primaryKey(),
+		event: varchar("event").notNull(),
+		match_number: integer("match_number").notNull(),
+		play_number: integer("play_number").notNull(),
+		level: levelEnum("level").notNull(),
+		team: integer("team").notNull(),
+		prestart: timestamp("prestart"),
+		first_ds: timestamp("first_ds"),
+		last_ds: timestamp("last_ds"),
+		time_ds: integer("time_ds"),
+		first_radio: timestamp("first_radio"),
+		last_radio: timestamp("last_radio"),
+		time_radio: integer("time_radio"),
+		first_rio: timestamp("first_rio"),
+		last_rio: timestamp("last_rio"),
+		time_rio: integer("time_rio"),
+		first_code: timestamp("first_code"),
+		last_code: timestamp("last_code"),
+		time_code: integer("time_code"),
+	},
+	(t) => [index("robot_cycle_logs_event_idx").on(t.event)],
+);
 
 export type RobotCycleLog = typeof robotCycleLogs.$inferInsert;
 
 export const matchEventStatusEnum = pgEnum("match_event_status", ["active", "dismissed", "converted"]);
 
-export const matchEvents = pgTable("match_events", {
-	id: uuid("id").primaryKey(),
-	match_id: uuid("match_id")
-		.references(() => matchLogs.id)
-		.notNull(),
-	event_code: varchar("event_code")
-		.references(() => events.code)
-		.notNull(),
-	team: integer("team").notNull(),
-	alliance: varchar("alliance").notNull(),
-	issue: issueEnum("issue").notNull(),
-	issues: jsonb("issues").$type<import("../../shared/types").MatchEventIssueDetail[]>(),
-	match_number: integer("match_number").notNull(),
-	play_number: integer("play_number").notNull(),
-	level: levelEnum("level").notNull(),
-	start_time: integer("start_time"),
-	end_time: integer("end_time"),
-	duration: integer("duration"),
-	status: matchEventStatusEnum("status").notNull().default("active"),
-	converted_note_id: uuid("converted_note_id").references(() => notes.id),
-	created_at: timestamp("created_at").notNull().defaultNow(),
-});
+export const matchEvents = pgTable(
+	"match_events",
+	{
+		id: uuid("id").primaryKey(),
+		match_id: uuid("match_id")
+			.references(() => matchLogs.id)
+			.notNull(),
+		event_code: varchar("event_code")
+			.references(() => events.code)
+			.notNull(),
+		team: integer("team").notNull(),
+		alliance: varchar("alliance").notNull(),
+		issue: issueEnum("issue").notNull(),
+		issues: jsonb("issues").$type<import("../../shared/types").MatchEventIssueDetail[]>(),
+		match_number: integer("match_number").notNull(),
+		play_number: integer("play_number").notNull(),
+		level: levelEnum("level").notNull(),
+		start_time: integer("start_time"),
+		end_time: integer("end_time"),
+		duration: integer("duration"),
+		status: matchEventStatusEnum("status").notNull().default("active"),
+		converted_note_id: uuid("converted_note_id").references(() => notes.id),
+		created_at: timestamp("created_at").notNull().defaultNow(),
+	},
+	(t) => [
+		index("match_events_event_code_idx").on(t.event_code),
+		index("match_events_event_code_status_idx").on(t.event_code, t.status),
+	],
+);
 
 export type MatchEvent = typeof matchEvents.$inferSelect;
 

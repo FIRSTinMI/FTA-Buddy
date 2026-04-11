@@ -546,11 +546,13 @@ export type MatchEventUpdateEvents = {
 };
 
 export type MatchEventUpdateEventData =
+	| { kind: "heartbeat" }
 	| { kind: "match_event_create"; matchEvent: MatchEvent }
 	| { kind: "match_event_dismiss"; id: string }
 	| { kind: "match_event_convert"; id: string; note_id: string };
 
 export type NoteUpdateEventData =
+	| { kind: "heartbeat" }
 	| { kind: "create"; note: Note; source?: "fms" }
 	| { kind: "edit"; note: Note; source?: "fms" }
 	| { kind: "delete"; note: Note; source?: "fms" }

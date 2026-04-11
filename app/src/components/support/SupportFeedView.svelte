@@ -162,18 +162,28 @@
 	}
 
 	// Live updates subscription
+	// How long without data before the connection is considered stale.
+	// Heartbeat arrives every 30s, so 35s without data means the connection is dead.
+	const STALE_THRESHOLD_MS = 35_000;
+	let lastReceivedAt = 0;
+	let subscriptionGeneration = 0;
 	type NoteSubscription = ReturnType<typeof trpc.notes.updateSubscription.subscribe>;
 	type MatchEventSubscription = ReturnType<typeof trpc.matchEvents.updateSubscription.subscribe>;
 	let subscription: NoteSubscription | undefined;
 	let matchEventSubscription: MatchEventSubscription | undefined;
 	let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+	let watchdogInterval: ReturnType<typeof setInterval> | null = null;
 
 	async function reconnect() {
 		if (reconnectTimer) {
 			clearTimeout(reconnectTimer);
 			reconnectTimer = null;
 		}
+		// Claim a generation before the first await to prevent overlapping reconnects
+		// (visibilitychange, onError, and watchdog can all fire simultaneously).
+		const generation = ++subscriptionGeneration;
 		await fetchAll();
+		if (generation !== subscriptionGeneration) return; // superseded
 		startSubscription();
 		startMatchEventSubscription();
 	}
@@ -188,6 +198,8 @@
 					reconnectTimer = setTimeout(() => reconnect(), 5000);
 				},
 				onData: (data: NoteUpdateEventData) => {
+					lastReceivedAt = Date.now();
+					if (data.kind === "heartbeat") return;
 					switch (data.kind) {
 						case "create":
 							notes = [...notes, data.note];
@@ -278,6 +290,8 @@
 					reconnectTimer = setTimeout(() => reconnect(), 5000);
 				},
 				onData: (data: MatchEventUpdateEventData) => {
+					lastReceivedAt = Date.now();
+					if (data.kind === "heartbeat") return;
 					switch (data.kind) {
 						case "match_event_create":
 							matchEvents = [...matchEvents, data.matchEvent];
@@ -310,8 +324,21 @@
 		startSubscription();
 		startMatchEventSubscription();
 
+		// Watchdog: detect silent SSE disconnections while the page is open.
+		// The server sends a heartbeat every 30s; if >35s pass without any data, reconnect.
+		watchdogInterval = setInterval(() => {
+			if (document.visibilityState !== "visible") return;
+			if (lastReceivedAt === 0) return; // never received data yet
+			if (Date.now() - lastReceivedAt > STALE_THRESHOLD_MS) {
+				console.warn("SupportFeed watchdog: connection stale, reconnecting…");
+				reconnect();
+			}
+		}, 10_000);
+
 		function handleVisibility() {
-			if (document.visibilityState === "visible") reconnect();
+			if (document.visibilityState !== "visible") return;
+			if (lastReceivedAt === 0) return;
+			if (Date.now() - lastReceivedAt > STALE_THRESHOLD_MS) reconnect();
 		}
 		function handleOnline() {
 			reconnect();
@@ -330,6 +357,7 @@
 		subscription?.unsubscribe();
 		matchEventSubscription?.unsubscribe();
 		if (reconnectTimer) clearTimeout(reconnectTimer);
+		if (watchdogInterval) clearInterval(watchdogInterval);
 	});
 
 	// ── Pull-to-refresh ──────────────────────────────────────────────────────

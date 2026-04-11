@@ -4,7 +4,7 @@ import * as schema from "./schema";
 
 export let db: NodePgDatabase<typeof schema>;
 
-export function connect() {
+export async function connect() {
 	console.log("Initializing database connection");
 	const pool = new Pool({
 		user: process.env.DB_USER,
@@ -18,7 +18,8 @@ export function connect() {
 	});
 
 	pool.on("error", (err) => console.error("Unexpected DB pool error:", err));
+	const client = await pool.connect();
+	client.release();
 	db = drizzle(pool, { schema });
 	console.log("Connected to database (pool)");
-	return Promise.resolve();
 }

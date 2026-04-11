@@ -65,15 +65,15 @@ export const checklistRouter = router({
 		)
 		.subscription(async function* ({ input, signal }) {
 			const event = await getEvent(input.eventToken);
-			const { push, drain } = subscriptionQueue<EventChecklist | null>(signal!);
+			const { push, drain } = subscriptionQueue<EventChecklist>(signal!);
 
 			const handler = (c: EventChecklist) => push(c);
 			event.checklistEmitter.on("update", handler);
-			const heartbeat = setInterval(() => push(null), 30_000);
+			const heartbeat = setInterval(() => push(event.checklist as EventChecklist), 30_000);
 
 			try {
 				for await (const item of drain()) {
-					if (item !== null) yield item;
+					yield item;
 				}
 			} finally {
 				event.checklistEmitter.off("update", handler);

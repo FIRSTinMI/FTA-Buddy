@@ -2,7 +2,7 @@ import "dotenv/config";
 import { inArray, eq } from "drizzle-orm";
 import webpush from "web-push";
 import type { PushSubscription, SendResult } from "web-push";
-import { notificationEmitter } from "../state";
+import { bus } from "./eventBus";
 import type { Notification } from "../../shared/types";
 import { db } from "../db/db";
 import { pushSubscriptions, users, events } from "../db/schema";
@@ -19,7 +19,7 @@ export async function createNotification(userIds: number[], data: Notification, 
 	const annotated = eventCode ? { ...data, eventCode } : data;
 
 	// Send notification to any active clients via SSE
-	notificationEmitter.emit("send", {
+	bus.publish("global:notification", {
 		users: userIds,
 		notification: annotated,
 	});

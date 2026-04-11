@@ -1,5 +1,3 @@
-import { EventEmitter } from "events";
-import { TypedEmitter } from "tiny-typed-emitter";
 import type { FTAEventNoteIssueType, FTAEventNoteResolutionType } from "./fmsApiTypes";
 
 export interface MonitorFrame {
@@ -451,12 +449,6 @@ export interface ServerEvent {
 	pin: string;
 	token: string;
 	year: number;
-	fieldMonitorEmitter: EventEmitter;
-	robotStateChangeEmitter: EventEmitter;
-	fieldStatusEmitter: EventEmitter;
-	checklistEmitter: EventEmitter;
-	noteUpdateEmitter: TypedEmitter<NoteUpdateEvents>;
-	cycleEmitter: EventEmitter;
 	teams: TeamList;
 	checklist: EventChecklist;
 	users: Profile[];
@@ -487,7 +479,6 @@ export interface ServerEvent {
 	nexusApiKey?: string;
 	fmsEventPassword?: string;
 	autoEventSettings: EventAutoEventSettings;
-	matchEventEmitter: TypedEmitter<MatchEventUpdateEvents>;
 	startDate?: string;
 	endDate?: string;
 	timezone?: string;

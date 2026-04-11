@@ -44,10 +44,13 @@ import { getEvent } from "./util/get-event";
 import { decompressStationLog, logAnalysisLoop } from "./util/log-analysis";
 import { linkChannel, slackOAuth } from "./util/slack";
 import { getTeamAverageCycle } from "./util/team-cycles";
-import { eventLastSeen, events, eventCodes, notificationEmitter, newEventEmitter } from "./state";
+import { eventLastSeen, events, eventCodes } from "./state";
 import * as nexusEventPoller from "./util/nexusEventPoller";
+import { bus } from "./util/eventBus";
+import { redis } from "./util/redis";
+import { tryAcquireLock, renewLock } from "./util/leaderLock";
 
-export { events, eventCodes, notificationEmitter, newEventEmitter };
+export { events, eventCodes };
 
 const pjson = require("../package.json") as { version: string };
 
@@ -101,6 +104,8 @@ const appRouter = router({
 					endTime: null,
 					effectedEvents: input.effectedEvents,
 				};
+				redis.set("ftabuddy:global:known_issue", JSON.stringify(knownIssue));
+				bus.publish("global:known_issue", knownIssue);
 				return knownIssue;
 			}),
 		endIssue: adminProcedure.mutation(async () => {
@@ -111,6 +116,8 @@ const appRouter = router({
 				endTime: new Date(),
 				effectedEvents: knownIssue.effectedEvents,
 			};
+			redis.set("ftabuddy:global:known_issue", JSON.stringify(knownIssue));
+			bus.publish("global:known_issue", knownIssue);
 			return knownIssue;
 		}),
 	}),
@@ -408,7 +415,7 @@ app.post("/api/nexus/event-status", async (req, res) => {
 	const body = req.body as { eventKey?: string; dataAsOfTime?: number; nowQueuing?: string | null; matches?: any[] };
 	if (!body?.eventKey || typeof body.dataAsOfTime !== "number") return;
 
-	const event = eventCodes.get(body.eventKey.toLowerCase());
+	const event = events[body.eventKey.toLowerCase()];
 	if (!event) return;
 
 	// Only update if this data is newer than what we already have
@@ -419,6 +426,7 @@ app.post("/api/nexus/event-status", async (req, res) => {
 		nowQueuing: body.nowQueuing ?? null,
 		matches: body.matches ?? [],
 	};
+	bus.publish(`event:${event.code}:nexus_event_status`, event.nexusEventStatus);
 });
 
 if (process.env.NODE_ENV === "dev") {
@@ -432,10 +440,19 @@ if (process.env.NODE_ENV === "dev") {
 }
 
 connect().then(async () => {
+	// Load knownIssue from Redis
+	const storedIssue = await redis.get("ftabuddy:global:known_issue");
+	if (storedIssue) knownIssue = JSON.parse(storedIssue);
+	bus.subscribe("global:known_issue", (data) => { knownIssue = data as typeof knownIssue; });
+
 	// Log analysis loop
 	new Promise(async () => {
 		while (true) {
-			await logAnalysisLoop(3);
+			const isLeader = await tryAcquireLock("log_analysis", 10);
+			if (isLeader) {
+				await logAnalysisLoop(3);
+				await renewLock("log_analysis", 10);
+			}
 			await new Promise((resolve) => setTimeout(resolve, 3e3));
 		}
 	});

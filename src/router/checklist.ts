@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { bus } from "../util/eventBus";
 import type { EventChecklist } from "../../shared/types";
 import { db } from "../db/db";
 import { events } from "../db/schema";
@@ -32,7 +33,7 @@ export const checklistRouter = router({
 
 			const event = await getEvent(ctx.event.token);
 			event.checklist = checklist;
-			event.checklistEmitter.emit("update", checklist);
+			bus.publish(`event:${event.code}:checklist`, checklist);
 
 			let extensionId = ctx.extensionId;
 			console.log("extensionId", extensionId, input.length);
@@ -66,17 +67,12 @@ export const checklistRouter = router({
 		.subscription(async function* ({ input, signal }) {
 			const event = await getEvent(input.eventToken);
 			const { push, drain } = subscriptionQueue<EventChecklist>(signal!);
-
-			const handler = (c: EventChecklist) => push(c);
-			event.checklistEmitter.on("update", handler);
+			const unsub = bus.subscribe(`event:${event.code}:checklist`, (data) => push(data as EventChecklist));
 			const heartbeat = setInterval(() => push(event.checklist as EventChecklist), 30_000);
-
 			try {
-				for await (const item of drain()) {
-					yield item;
-				}
+				for await (const item of drain()) { yield item; }
 			} finally {
-				event.checklistEmitter.off("update", handler);
+				unsub();
 				clearInterval(heartbeat);
 			}
 		}),

@@ -1,20 +1,17 @@
 import { TRPCError } from "@trpc/server";
 import { eq, inArray } from "drizzle-orm";
-import { EventEmitter } from "events";
-import { TypedEmitter } from "tiny-typed-emitter";
-import { eventCodes, eventLastSeen, events, newEventEmitter } from "../state";
+import { eventCodes, eventLastSeen, events } from "../state";
 import { DEFAULT_MONITOR } from "../../shared/constants";
 import type {
 	EventAutoEventSettings,
 	EventChecklist,
-	MatchEventUpdateEvents,
 	NexusStatus,
 	Note,
-	NoteUpdateEvents,
 	ScheduleDetails,
 	ServerEvent,
 	TeamList,
 } from "../../shared/types";
+import { bus } from "./eventBus";
 import { db } from "../db/db";
 import schema from "../db/schema";
 import { getEventNotes } from "../router/notes";
@@ -75,11 +72,6 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 		});
 	}
 
-	const noteUpdateEmitter = new TypedEmitter<NoteUpdateEvents>();
-	const matchEventEmitter = new TypedEmitter<MatchEventUpdateEvents>();
-	matchEventEmitter.setMaxListeners(100);
-	noteUpdateEmitter.setMaxListeners(100);
-
 	loadingEvents[eventCode] = new Promise(async (resolve) => {
 		const eventInMemory = events[eventCode];
 
@@ -137,13 +129,6 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 				lastMatchStart: null,
 				lastMatchRefDone: null,
 				lastMatchScoresPosted: null,
-				fieldMonitorEmitter: new EventEmitter(),
-				robotStateChangeEmitter: new EventEmitter(),
-				fieldStatusEmitter: new EventEmitter(),
-				checklistEmitter: new EventEmitter(),
-				noteUpdateEmitter: noteUpdateEmitter,
-				matchEventEmitter: matchEventEmitter,
-				cycleEmitter: new EventEmitter(),
 				scheduleDetails: event.scheduleDetails as ScheduleDetails,
 				lastPrestartDone: null,
 				lastMatchEnd: null,
@@ -173,7 +158,7 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 			};
 
 			eventLastSeen[eventCode] = new Date();
-			newEventEmitter.emit("new", eventCode);
+			bus.publish("global:new_event", eventCode);
 
 			if (event.nexusApiKey) {
 				nexusPoller.startForEvent(events[eventCode]);
@@ -188,7 +173,3 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 	return events[eventCode];
 }
 
-export async function getListenerCount(event_token: string) {
-	const event = await getEvent(event_token);
-	console.log(`Update Listener Count - ${event.noteUpdateEmitter.listenerCount("note_update")}`);
-}

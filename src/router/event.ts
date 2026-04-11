@@ -734,16 +734,10 @@ export const eventRouter = router({
 				  }
 				: null;
 
-		// Prefer the match Nexus says is "On Field" — that's the one being played right now.
-		// Fall back to 2 positions before nowQueuing (on-deck = -1, on-field = -2).
-		const onFieldMatch =
-			status.matches.find((m) => m.status?.toLowerCase().includes("on field")) ??
-			(() => {
-				const idx = status.matches.findIndex((m) => m.label === status.nowQueuing);
-				return idx >= 2 ? status.matches[idx - 2] : undefined;
-			})();
-
-		const queuingMatch = status.matches.find((m) => m.label === status.nowQueuing);
+		// Use array position: nowQueuing is at idx, on-deck is idx-1, on-field is idx-2.
+		const queuingIdx = status.matches.findIndex((m) => m.label === status.nowQueuing);
+		const onFieldMatch = queuingIdx >= 2 ? status.matches[queuingIdx - 2] : undefined;
+		const queuingMatch = queuingIdx >= 0 ? status.matches[queuingIdx] : undefined;
 
 		return {
 			available: !!event.nexusApiKey,

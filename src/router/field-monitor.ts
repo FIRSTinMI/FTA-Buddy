@@ -1,4 +1,5 @@
 import { and, eq, gt } from "drizzle-orm";
+import SuperJSON from "superjson";
 import { z } from "zod";
 import { eventLastSeen, events } from "../state";
 import { bus } from "../util/eventBus";
@@ -170,8 +171,8 @@ export const fieldMonitorRouter = router({
 			// Pipeline the four Redis writes so trim/expire always follow the push atomically
 			redis
 				.multi()
-				.set(`ftabuddy:event:${event.code}:monitor_frame`, JSON.stringify(event.monitorFrame))
-				.lpush(`ftabuddy:event:${event.code}:history`, JSON.stringify(event.monitorFrame))
+				.set(`ftabuddy:event:${event.code}:monitor_frame`, SuperJSON.stringify(event.monitorFrame))
+				.lpush(`ftabuddy:event:${event.code}:history`, SuperJSON.stringify(event.monitorFrame))
 				.ltrim(`ftabuddy:event:${event.code}:history`, 0, 49)
 				.expire(`ftabuddy:event:${event.code}:history`, 86400)
 				.exec()
@@ -195,7 +196,7 @@ export const fieldMonitorRouter = router({
 		const event = await getEvent(ctx.eventToken ?? "");
 		const items = await redis.lrange(`ftabuddy:event:${event.code}:history`, 0, 49);
 		if (items.length > 0) {
-			const parsed = items.flatMap((i: string) => { try { return [JSON.parse(i)]; } catch { return []; } });
+			const parsed = items.flatMap((i: string) => { try { return [SuperJSON.parse<MonitorFrame>(i)]; } catch { return []; } });
 			if (parsed.length > 0) return parsed.reverse();
 		}
 		return event.history;
@@ -261,7 +262,7 @@ export const fieldMonitorRouter = router({
 			const unsubField = bus.subscribe(`event:${event.code}:field_status`, (data) => push(data as FieldState));
 			// Seed with current frame from Redis for late joiners
 			const stored = await redis.get(`ftabuddy:event:${event.code}:monitor_frame`);
-			if (stored) push(JSON.parse(stored) as MonitorFrame);
+			if (stored) push(SuperJSON.parse<MonitorFrame>(stored));
 			try { yield* drain(); }
 			finally { unsubFrame(); unsubRobot(); unsubField(); }
 		}),

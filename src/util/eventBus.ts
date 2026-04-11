@@ -1,3 +1,4 @@
+import SuperJSON from "superjson";
 import { redis, redisSub } from "./redis";
 
 const PREFIX = "ftabuddy:";
@@ -14,7 +15,7 @@ redisSub.on("message", (ch: string, msg: string) => {
 	if (!handlers || handlers.size === 0) return;
 	let data: unknown;
 	try {
-		data = JSON.parse(msg);
+		data = SuperJSON.parse(msg);
 	} catch {
 		return; // ignore malformed payloads
 	}
@@ -39,7 +40,7 @@ export const bus = {
 	 * will receive the message via their redisSub connection.
 	 */
 	publish(channel: string, data: unknown): void {
-		redis.publish(PREFIX + channel, JSON.stringify(data)).catch((err) =>
+		redis.publish(PREFIX + channel, SuperJSON.stringify(data)).catch((err) =>
 			console.error(`[EventBus] Publish failed on channel ${channel}:`, err),
 		);
 	},

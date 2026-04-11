@@ -52,6 +52,7 @@ export async function fetchOnce(event: ServerEvent): Promise<void> {
 	try {
 		response = await fetch(`${NEXUS_BASE}/event/${event.code}`, {
 			headers: { "Nexus-Api-Key": event.nexusApiKey },
+			signal: AbortSignal.timeout(10_000),
 		});
 	} catch (err: any) {
 		console.warn(`[NexusEvent] Network error fetching status for ${event.code}:`, err?.message);

@@ -445,17 +445,21 @@ connect().then(async () => {
 	if (storedIssue) knownIssue = JSON.parse(storedIssue);
 	bus.subscribe("global:known_issue", (data) => { knownIssue = data as typeof knownIssue; });
 
-	// Log analysis loop
-	new Promise(async () => {
+	// Log analysis loop — runs forever; errors are caught and logged so the loop never dies.
+	(async () => {
 		while (true) {
-			const isLeader = await tryAcquireLock("log_analysis", 10);
-			if (isLeader) {
-				await logAnalysisLoop(3);
-				await renewLock("log_analysis", 10);
+			try {
+				const isLeader = await tryAcquireLock("log_analysis", 10);
+				if (isLeader) {
+					await logAnalysisLoop(3);
+					await renewLock("log_analysis", 10);
+				}
+			} catch (err) {
+				console.error("[LogAnalysis] Unhandled error in loop iteration — will retry in 3 s:", err);
 			}
 			await new Promise((resolve) => setTimeout(resolve, 3e3));
 		}
-	});
+	})();
 
 	// Start Nexus pollers for events with a key configured that are currently running
 	try {

@@ -13,6 +13,7 @@ export async function slackOAuth(code: string) {
 
 	const response = await fetch(url.toString(), {
 		method: "POST",
+		signal: AbortSignal.timeout(10_000),
 	});
 
 	const data = await response.json();
@@ -108,6 +109,7 @@ async function isBotInChannel(channel_id: string, team_id: string): Promise<bool
 			Authorization: `Bearer ${await getTokenByTeam(team_id)}`,
 			"Content-Type": "application/json",
 		},
+		signal: AbortSignal.timeout(10_000),
 	});
 
 	const data = await response.json();
@@ -165,6 +167,7 @@ export async function sendSlackMessage(channel_id: string, team_id: string, mess
 			"Content-Type": "application/json",
 		},
 		body: JSON.stringify({ channel: channel_id, ...message, thread_ts }),
+		signal: AbortSignal.timeout(10_000),
 	});
 
 	const data = await response.json();
@@ -195,6 +198,7 @@ export async function updateSlackMessage(
 			"Content-Type": "application/json",
 		},
 		body: JSON.stringify({ channel: channel_id, ts: message_ts, ...message }),
+		signal: AbortSignal.timeout(10_000),
 	});
 
 	return message_ts;
@@ -208,6 +212,7 @@ export async function deleteSlackMessage(channel_id: string, team_id: string, me
 			"Content-Type": "application/json",
 		},
 		body: JSON.stringify({ channel: channel_id, ts: message_ts }),
+		signal: AbortSignal.timeout(10_000),
 	});
 
 	return message_ts;
@@ -226,6 +231,7 @@ export async function addSlackReaction(
 			"Content-Type": "application/json",
 		},
 		body: JSON.stringify({ channel: channel_id, timestamp: message_ts, name: reaction }),
+		signal: AbortSignal.timeout(10_000),
 	});
 }
 
@@ -242,6 +248,7 @@ export async function removeSlackReaction(
 			"Content-Type": "application/json",
 		},
 		body: JSON.stringify({ channel: channel_id, timestamp: message_ts, name: reaction }),
+		signal: AbortSignal.timeout(10_000),
 	});
 }
 
@@ -265,6 +272,7 @@ export async function resolveSlackUserProfile(slackUserId: string, teamId: strin
 				Authorization: `Bearer ${token}`,
 				"Content-Type": "application/json",
 			},
+			signal: AbortSignal.timeout(10_000),
 		});
 		const data = await response.json();
 		if (data.ok && data.user) {

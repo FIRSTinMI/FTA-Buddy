@@ -19,6 +19,15 @@ import { bus } from "./eventBus";
 export const autoEventSettingsCache = new Map<string, EventAutoEventSettings>();
 let autoEventSettingsCacheInitialized = false;
 
+/**
+ * Per-log failure tracking for exponential back-off.
+ * Logs that throw are skipped for increasing intervals before being retried.
+ * After MAX_RETRIES failures the log is marked analyzed to stop it looping forever.
+ */
+const analysisFailed = new Map<string, { count: number; retryAfter: number }>();
+const RETRY_DELAYS_MS = [5 * 60_000, 30 * 60_000, 2 * 60 * 60_000]; // 5 min, 30 min, 2 hr
+const MAX_RETRIES = RETRY_DELAYS_MS.length;
+
 export function analyzeLog(log: FMSLogFrame[]): DisconnectionEvent[] {
 	const events: DisconnectionEvent[] = [];
 
@@ -308,6 +317,10 @@ export async function logAnalysisLoop(limit: number) {
 	console.log(`Analyzing ${logsToAnalyze.length} logs`);
 
 	for (const log of logsToAnalyze) {
+		// Skip logs that are still within their back-off window
+		const failState = analysisFailed.get(log.id);
+		if (failState && Date.now() < failState.retryAfter) continue;
+
 		try {
 			if (!log.event) {
 				console.warn(
@@ -486,12 +499,22 @@ export async function logAnalysisLoop(limit: number) {
 			}
 			await db.update(matchLogs).set({ analyzed: true }).where(eq(matchLogs.id, log.id)).execute();
 		} catch (err) {
-			console.error(`Error analyzing log ${log.id} (event: "${log.event}"): ${err}`);
-			// Mark as analyzed so the server doesn't crash-loop retrying the same bad log
-			try {
-				await db.update(matchLogs).set({ analyzed: true }).where(eq(matchLogs.id, log.id)).execute();
-			} catch (markErr) {
-				console.error(`Failed to mark log ${log.id} as analyzed after error: ${markErr}`);
+			console.error(`[LogAnalysis] Error on log ${log.id} (event: "${log.event}"): ${err}`);
+			const state = analysisFailed.get(log.id) ?? { count: 0, retryAfter: 0 };
+			state.count++;
+			if (state.count > MAX_RETRIES) {
+				console.error(`[LogAnalysis] Log ${log.id} failed ${state.count} times — marking analyzed to stop retrying`);
+				analysisFailed.delete(log.id);
+				try {
+					await db.update(matchLogs).set({ analyzed: true }).where(eq(matchLogs.id, log.id)).execute();
+				} catch (markErr) {
+					console.error(`[LogAnalysis] Failed to mark log ${log.id} as analyzed: ${markErr}`);
+				}
+			} else {
+				const delayMs = RETRY_DELAYS_MS[state.count - 1];
+				state.retryAfter = Date.now() + delayMs;
+				analysisFailed.set(log.id, state);
+				console.warn(`[LogAnalysis] Log ${log.id} will retry in ${delayMs / 60_000} min (attempt ${state.count}/${MAX_RETRIES})`);
 			}
 		}
 	}

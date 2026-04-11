@@ -21,8 +21,8 @@ export const bus = {
 			if (ch !== fullChannel) return;
 			try {
 				handler(JSON.parse(msg));
-			} catch {
-				// ignore malformed payloads
+			} catch (err) {
+				console.error(`[EventBus] Handler error on channel ${ch}:`, err);
 			}
 		};
 		redisSub.subscribe(fullChannel);

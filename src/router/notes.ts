@@ -1527,7 +1527,7 @@ export const notesRouter = router({
 			}),
 		)
 		.mutation(async ({ input, ctx }) => {
-			db.insert(pushSubscriptions)
+			await db.insert(pushSubscriptions)
 				.values({
 					endpoint: input.endpoint,
 					expirationTime: input.expirationTime,

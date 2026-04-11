@@ -1725,7 +1725,7 @@ function parseNexusMessage(
 		if (colonMatch) noteText = colonMatch[1].trim();
 	}
 	if (!noteText) noteText = text;
-	noteText = noteText.replace(/^>{1,3}\s*/, "").trim();
+	noteText = noteText.replace(/^(?:&gt;|>){1,3}\s*/, "").trim();
 
 	return { team, matchNumber, tournamentLevel, playNumber: null, noteText };
 }

@@ -29,18 +29,18 @@ const activePollers = new Map<string, ReturnType<typeof setTimeout>>();
 // Public API
 // ---------------------------------------------------------------------------
 
-/** Track events already subscribed to avoid duplicate subscriptions. */
-const subscribedEvents = new Set<string>();
+/** Track events already subscribed: eventCode → bus unsubscribe fn. */
+const subscribedEvents = new Map<string, () => void>();
 
 function subscribeToStatusUpdates(event: ServerEvent): void {
 	if (subscribedEvents.has(event.code)) return;
-	subscribedEvents.add(event.code);
-	bus.subscribe(`event:${event.code}:nexus_event_status`, (data) => {
+	const unsub = bus.subscribe(`event:${event.code}:nexus_event_status`, (data) => {
 		const status = data as NexusEventStatus;
 		if (status.dataAsOfTime > (event.nexusEventStatus?.dataAsOfTime ?? 0)) {
 			event.nexusEventStatus = status;
 		}
 	});
+	subscribedEvents.set(event.code, unsub);
 }
 
 /** Fetch event status once and store in event.nexusEventStatus. */
@@ -100,12 +100,17 @@ export function startFallbackPoller(event: ServerEvent): void {
 	scheduleNext(event);
 }
 
-/** Stop the fallback poller for an event. */
+/** Stop the fallback poller for an event and clean up bus subscription. */
 export function stopForEvent(eventCode: string): void {
 	const handle = activePollers.get(eventCode);
 	if (handle !== undefined) {
 		clearTimeout(handle);
 		activePollers.delete(eventCode);
+	}
+	const unsub = subscribedEvents.get(eventCode);
+	if (unsub) {
+		unsub();
+		subscribedEvents.delete(eventCode);
 	}
 }
 

@@ -2,8 +2,36 @@ import { redis, redisSub } from "./redis";
 
 const PREFIX = "ftabuddy:";
 
-/** Reference count per full channel name so we only call redisSub.unsubscribe when the last handler is gone. */
-const channelRefCount = new Map<string, number>();
+/**
+ * One Set of handlers per full channel name.
+ * A single redisSub "message" listener dispatches to these sets, so adding more
+ * subscriptions never increases the number of Node.js EventEmitter listeners.
+ */
+const channelHandlers = new Map<string, Set<(data: unknown) => void>>();
+
+redisSub.on("message", (ch: string, msg: string) => {
+	const handlers = channelHandlers.get(ch);
+	if (!handlers || handlers.size === 0) return;
+	let data: unknown;
+	try {
+		data = JSON.parse(msg);
+	} catch {
+		return; // ignore malformed payloads
+	}
+	for (const handler of handlers) {
+		try {
+			const result = handler(data) as unknown;
+			// Guard against async handlers — catch any returned promise rejection
+			if (result !== null && result !== undefined && typeof (result as Promise<unknown>).then === "function") {
+				(result as Promise<unknown>).catch((err: unknown) =>
+					console.error(`[EventBus] Async handler error on channel ${ch}:`, err),
+				);
+			}
+		} catch (err) {
+			console.error(`[EventBus] Handler error on channel ${ch}:`, err);
+		}
+	}
+});
 
 export const bus = {
 	/**
@@ -20,52 +48,31 @@ export const bus = {
 	 * Subscribe to a channel. Returns an unsubscribe function — call it in `finally`
 	 * to avoid listener leaks when a tRPC subscription ends.
 	 *
-	 * redisSub.unsubscribe() is only called when the *last* handler for a channel is
-	 * removed, so concurrent subscribers on the same channel don't interfere.
+	 * redisSub.subscribe() is only called when the *first* handler for a channel is
+	 * added; redisSub.unsubscribe() only when the *last* one is removed.
 	 */
 	subscribe(channel: string, handler: (data: unknown) => void): () => void {
 		const fullChannel = PREFIX + channel;
 
-		const listener = (ch: string, msg: string) => {
-			if (ch !== fullChannel) return;
-			let data: unknown;
-			try {
-				data = JSON.parse(msg);
-			} catch {
-				return; // ignore malformed payloads
-			}
-			try {
-				const result = handler(data) as unknown;
-				// Guard against async handlers — catch any returned promise rejection
-				if (result !== null && result !== undefined && typeof (result as Promise<unknown>).then === "function") {
-					(result as Promise<unknown>).catch((err: unknown) =>
-						console.error(`[EventBus] Async handler error on channel ${channel}:`, err),
-					);
-				}
-			} catch (err) {
-				console.error(`[EventBus] Handler error on channel ${channel}:`, err);
-			}
-		};
-
-		const refCount = (channelRefCount.get(fullChannel) ?? 0) + 1;
-		channelRefCount.set(fullChannel, refCount);
-		if (refCount === 1) {
+		let handlers = channelHandlers.get(fullChannel);
+		if (!handlers) {
+			handlers = new Set();
+			channelHandlers.set(fullChannel, handlers);
 			redisSub.subscribe(fullChannel).catch((err) =>
 				console.error(`[EventBus] Subscribe failed on channel ${channel}:`, err),
 			);
 		}
-		redisSub.on("message", listener);
+		handlers.add(handler);
 
 		return () => {
-			redisSub.off("message", listener);
-			const remaining = (channelRefCount.get(fullChannel) ?? 1) - 1;
-			if (remaining <= 0) {
-				channelRefCount.delete(fullChannel);
+			const set = channelHandlers.get(fullChannel);
+			if (!set) return;
+			set.delete(handler);
+			if (set.size === 0) {
+				channelHandlers.delete(fullChannel);
 				redisSub.unsubscribe(fullChannel).catch((err) =>
 					console.error(`[EventBus] Unsubscribe failed on channel ${channel}:`, err),
 				);
-			} else {
-				channelRefCount.set(fullChannel, remaining);
 			}
 		};
 	},

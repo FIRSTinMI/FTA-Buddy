@@ -19,6 +19,17 @@ import * as nexusPoller from "./nexusInspectionPoller";
 
 let loadingEvents: { [key: string]: Promise<ServerEvent> } = {};
 
+/** Bus unsubscribe functions keyed by event code — called during event eviction. */
+const eventBusCleanups = new Map<string, Array<() => void>>();
+
+export function cleanupEventSubscriptions(eventCode: string): void {
+	const fns = eventBusCleanups.get(eventCode);
+	if (fns) {
+		for (const fn of fns) fn();
+		eventBusCleanups.delete(eventCode);
+	}
+}
+
 /**
  * Get the event object from either the event token or the event code
  *
@@ -160,10 +171,13 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 			eventLastSeen[eventCode] = new Date();
 			bus.publish("global:new_event", eventCode);
 
-			// Keep playoffMode in sync across instances
-			bus.subscribe(`event:${eventCode}:playoff_mode`, (data) => {
+			// Keep playoffMode in sync across instances; track unsub for cleanup on eviction
+			const playoffUnsub = bus.subscribe(`event:${eventCode}:playoff_mode`, (data) => {
 				if (events[eventCode]) events[eventCode].playoffMode = data as boolean;
 			});
+			const cleanups = eventBusCleanups.get(eventCode) ?? [];
+			cleanups.push(playoffUnsub);
+			eventBusCleanups.set(eventCode, cleanups);
 
 			if (event.nexusApiKey) {
 				nexusPoller.startForEvent(events[eventCode]);

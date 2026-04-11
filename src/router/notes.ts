@@ -736,7 +736,8 @@ export const notesRouter = router({
 			}
 
 			const isTeamIssue = input.note_type === "TeamIssue";
-			const resolutionStatus = isTeamIssue ? "Open" : "NotApplicable";
+			const hasRequest = !!input.request_type;
+			const resolutionStatus = isTeamIssue ? (hasRequest ? "Open" : "Resolved") : "NotApplicable";
 			const issueTypeVal = isTeamIssue ? (input.issue_type ?? null) : null;
 			const fmsMetadata = input.issue_type
 				? ({ issueType: input.issue_type, resolutionStatus: "Open" } as FmsNoteMetadata)
@@ -768,6 +769,7 @@ export const notesRouter = router({
 					event_code: event.code,
 					created_at: new Date(),
 					updated_at: new Date(),
+					closed_at: isTeamIssue && !hasRequest ? new Date() : null,
 					followers: [resolvedProfile.id],
 					match_id: matchId,
 					request_type: input.request_type ?? null,
@@ -861,6 +863,7 @@ export const notesRouter = router({
 				new_text: z.string(),
 				event_code: z.string(),
 				match_id: z.string().optional(),
+				request_type: z.enum(["CSA", "RI"]).nullable().optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -880,28 +883,34 @@ export const notesRouter = router({
 
 			const setFields: Record<string, any> = { text: input.new_text, updated_at: new Date() };
 			if (input.match_id !== undefined) setFields.match_id = input.match_id;
+			if (input.request_type !== undefined) setFields.request_type = input.request_type;
 
 			const update = await db.update(notes).set(setFields).where(eq(notes.id, input.id)).returning();
 			if (!update[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Note" });
 
 			event.noteUpdateEmitter.emit("note_update", { kind: "edit", note: update[0] as Note });
 
-			if (event.slackTeam && note.slack_ts && note.slack_channel) {
-				await updateSlackMessage(
-					note.slack_channel,
-					event.slackTeam,
-					note.slack_ts,
-					createSlackNoteMessage(
-						update[0].id,
-						update[0].team,
-						event.teams.find((t) => parseInt(t.number) === update[0].team)?.name ?? null,
-						update[0].author?.username ?? "Unknown",
-						update[0].text,
-						event.code,
-						update[0].match_id ?? undefined,
-						event.token,
-					),
-				);
+			const newRequestType = input.request_type !== undefined ? input.request_type : note.request_type;
+			const slackMsg = createSlackNoteMessage(
+				update[0].id,
+				update[0].team,
+				event.teams.find((t) => parseInt(t.number) === update[0].team)?.name ?? null,
+				update[0].author?.username ?? "Unknown",
+				update[0].text,
+				event.code,
+				update[0].match_id ?? undefined,
+				event.token,
+			);
+			if (event.slackTeam && event.slackChannel) {
+				if (newRequestType !== null && note.slack_ts && note.slack_channel) {
+					await updateSlackMessage(note.slack_channel, event.slackTeam, note.slack_ts, slackMsg);
+				} else if (newRequestType !== null && !note.slack_ts) {
+					const messageTS = await sendSlackMessage(event.slackChannel, event.slackTeam, slackMsg);
+					await db.update(notes).set({ slack_ts: messageTS, slack_channel: event.slackChannel }).where(eq(notes.id, input.id)).execute();
+				} else if (newRequestType === null && note.slack_ts && note.slack_channel) {
+					await deleteSlackMessage(note.slack_channel, event.slackTeam, note.slack_ts);
+					await db.update(notes).set({ slack_ts: null, slack_channel: null }).where(eq(notes.id, input.id)).execute();
+				}
 			}
 
 			return update[0] as Note;
@@ -1713,6 +1722,7 @@ function parseNexusMessage(
 		if (colonMatch) noteText = colonMatch[1].trim();
 	}
 	if (!noteText) noteText = text;
+	noteText = noteText.replace(/^>{1,3}\s*/, "").trim();
 
 	return { team, matchNumber, tournamentLevel, playNumber: null, noteText };
 }

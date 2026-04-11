@@ -68,7 +68,7 @@ export const eventRouter = router({
 
 			// Get event title
 			const eventData = await (
-				await fetch(`https://www.thebluealliance.com/api/v3/event/${input.code}/simple`, {
+				await fetch(`https://www.thebluealliance.com/api/v3/event/${input.code}`, {
 					headers: {
 						"X-TBA-Auth-Key": process.env.TBA_API_KEY ?? "",
 					},
@@ -263,7 +263,7 @@ export const eventRouter = router({
 			}
 
 			const eventData = await (
-				await fetch(`https://www.thebluealliance.com/api/v3/event/${input.code}/simple`, {
+				await fetch(`https://www.thebluealliance.com/api/v3/event/${input.code}`, {
 					headers: {
 						"X-TBA-Auth-Key": process.env.TBA_API_KEY ?? "",
 					},
@@ -344,6 +344,7 @@ export const eventRouter = router({
 					users: [user?.id],
 					startDate: eventData.start_date ?? null,
 					endDate: eventData.end_date ?? null,
+					timezone: eventData.timezone_id ?? null,
 					autoEventSettings: Object.fromEntries(
 						AUTO_EVENT_ISSUE_TYPES.map((t) => [t, true]),
 					) as EventAutoEventSettings,
@@ -779,6 +780,27 @@ export const eventRouter = router({
 		const event = await getEvent(ctx.event.token);
 		return event.teams;
 	}),
+
+	/** Removes a single team from the event's team list and checklist. */
+	removeTeam: eventProcedure
+		.input(z.object({ teamNumber: z.string() }))
+		.mutation(async ({ ctx, input }) => {
+			const event = await getEvent(ctx.event.token);
+			const teams = event.teams as TeamList;
+			const checklist = event.checklist as EventChecklist;
+
+			event.teams = teams.filter((t) => t.number !== input.teamNumber);
+			delete checklist[input.teamNumber];
+			event.checklist = checklist;
+
+			await db
+				.update(events)
+				.set({ teams: event.teams, checklist })
+				.where(eq(events.code, event.code))
+				.execute();
+
+			return { success: true };
+		}),
 
 	/** Returns the list of users currently joined to this event. */
 	getUsers: eventProcedure.query(async ({ ctx }) => {

@@ -463,6 +463,7 @@ export interface ServerEvent {
 	matchEventEmitter: TypedEmitter<MatchEventUpdateEvents>;
 	startDate?: string;
 	endDate?: string;
+	timezone?: string;
 	nexus: NexusStatus;
 	pitMap?: { data: PitMapData | null; fetchedAt: Date };
 	stats: {

@@ -471,7 +471,7 @@ export const cycleRouter = router({
 				cycle.match_number,
 				cycle.play_number,
 				cycle.level,
-				cycle.start_time?.toLocaleString() ?? "",
+				cycle.start_time?.toLocaleString("en-US", ctx.event.timezone ? { timeZone: ctx.event.timezone } : undefined) ?? "",
 				cycle.calculated_cycle_time ?? "",
 			]),
 			ctx.event.code,

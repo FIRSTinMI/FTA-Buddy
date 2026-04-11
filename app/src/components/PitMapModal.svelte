@@ -7,9 +7,10 @@
 	interface Props {
 		open: boolean;
 		teamNumber: string;
+		onRemove?: (teamNumber: string) => void;
 	}
 
-	let { open = $bindable(), teamNumber }: Props = $props();
+	let { open = $bindable(), teamNumber, onRemove }: Props = $props();
 
 	let pitMapData: PitMapData | null = $state(null);
 	let loading = $state(false);
@@ -233,6 +234,17 @@
 	</div>
 
 	{#snippet footer()}
+		{#if onRemove}
+			<Button
+				color="red"
+				onclick={() => {
+					if (confirm(`Remove team ${teamNumber} from this event?`)) {
+						onRemove!(teamNumber);
+						open = false;
+					}
+				}}
+			>Remove from Event</Button>
+		{/if}
 		<Button onclick={() => (open = false)}>Close</Button>
 	{/snippet}
 </Modal>

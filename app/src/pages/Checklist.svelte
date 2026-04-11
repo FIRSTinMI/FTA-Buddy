@@ -89,6 +89,14 @@
 		}
 	}
 
+	async function removeTeam(team: string) {
+		await trpc.event.removeTeam.mutate({ teamNumber: team });
+		delete checklist[team];
+		delete teamNames[team];
+		checklist = { ...checklist };
+		updateTotals(checklist);
+	}
+
 	async function updateChecklist(
 		team: string,
 		key: "present" | "inspected" | "radioProgrammed" | "connectionTested",
@@ -318,4 +326,4 @@
 	{/await}
 </div>
 
-<PitMapModal bind:open={pitMapOpen} teamNumber={pitMapTeam} />
+<PitMapModal bind:open={pitMapOpen} teamNumber={pitMapTeam} onRemove={removeTeam} />

@@ -51,6 +51,7 @@ export const events = pgTable("events", {
 	nexusApiKey: varchar("nexusApiKey"),
 	startDate: varchar("startDate"),
 	endDate: varchar("endDate"),
+	timezone: varchar("timezone"),
 	fmsEventPassword: varchar("fmsEventPassword"),
 	autoEventSettings: jsonb("autoEventSettings").$type<EventAutoEventSettings>().notNull().default({}),
 	notepadOnly: boolean("notepadOnly").notNull().default(false),

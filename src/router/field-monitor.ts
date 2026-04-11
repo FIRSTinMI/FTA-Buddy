@@ -91,6 +91,8 @@ export const fieldMonitorRouter = router({
 						frames: 0,
 						checklistUpdates: 0,
 					};
+					// Cap to 100 entries so a spoofed stream of unique IDs can't grow this unboundedly
+					if (event.stats.extensions.length >= 100) event.stats.extensions.shift();
 					event.stats.extensions.push(connection);
 				}
 

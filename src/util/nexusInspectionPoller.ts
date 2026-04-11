@@ -99,6 +99,7 @@ async function pollNexus(event: ServerEvent): Promise<void> {
 	try {
 		response = await fetch(`${NEXUS_BASE}/event/${event.code}/inspection`, {
 			headers: { "Nexus-Api-Key": event.nexusApiKey },
+			signal: AbortSignal.timeout(10_000),
 		});
 	} catch (err: any) {
 		event.nexus.state = "error";

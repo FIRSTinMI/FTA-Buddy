@@ -173,6 +173,21 @@
 		}
 	}
 
+	async function refuseNote() {
+		if (!note) return;
+		try {
+			const update = await trpc.notes.updateStatus.mutate({
+				id: note.id,
+				new_status: "Refused",
+				event_code: event.code,
+			});
+			note.resolution_status = update.resolution_status;
+		} catch (err: any) {
+			toast("An error occurred while updating the note", err.message);
+			console.error(err);
+		}
+	}
+
 	async function assignSelf() {
 		if (!note) return;
 		try {
@@ -554,6 +569,7 @@
 						onback={back}
 						ontogglefollow={toggleFollowNote}
 						onchangestatus={changeOpenStatus}
+						onrefuse={refuseNote}
 						onassignself={assignSelf}
 						onopeneditnote={openEditNote}
 						ondelete={() => (deleteNotePopup = true)}

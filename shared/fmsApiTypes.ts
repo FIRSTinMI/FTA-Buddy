@@ -73,13 +73,14 @@ export const FTAEventNoteIssueTypeNumeric: Record<FTAEventNoteIssueType, number>
 };
 
 /** Resolution state for team issues (EventNoteResolutionTypes enum). */
-export type FTAEventNoteResolutionType = "Open" | "Resolved" | "NotApplicable";
+export type FTAEventNoteResolutionType = "Open" | "Resolved" | "NotApplicable" | "Refused";
 
 /** Numeric values for FMS EventNoteResolutionTypes enum (confirmed from source). */
 export const FTAEventNoteResolutionTypeNumeric: Record<FTAEventNoteResolutionType, number> = {
 	Open: 1,
 	Resolved: 5,
 	NotApplicable: 99,
+	Refused: 6,
 };
 
 /**

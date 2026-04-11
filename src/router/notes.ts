@@ -950,7 +950,7 @@ export const notesRouter = router({
 		.input(
 			z.object({
 				id: z.string().uuid(),
-				new_status: z.enum(["Open", "Resolved"]),
+				new_status: z.enum(["Open", "Resolved", "Refused"]),
 				event_code: z.string(),
 			}),
 		)
@@ -970,17 +970,17 @@ export const notesRouter = router({
 			const currentUserProfile = currentUserProfileRows[0];
 			if (!currentUserProfile) throw new TRPCError({ code: "NOT_FOUND", message: "Current User not found" });
 
-			const isResolving = input.new_status === "Resolved";
+			const isClosing = input.new_status === "Resolved" || input.new_status === "Refused";
 
 			const update = await db
 				.update(notes)
 				.set({
 					resolution_status: input.new_status as any,
-					closed_at: isResolving ? new Date() : null,
-					resolved_by_id: isResolving ? currentUserProfile.id : null,
-					resolved_by: isResolving ? currentUserProfile : null,
+					closed_at: isClosing ? new Date() : null,
+					resolved_by_id: isClosing ? currentUserProfile.id : null,
+					resolved_by: isClosing ? currentUserProfile : null,
 					fms_metadata: note.fms_metadata
-						? { ...(note.fms_metadata as FmsNoteMetadata), resolutionStatus: input.new_status }
+						? { ...(note.fms_metadata as FmsNoteMetadata), resolutionStatus: input.new_status === "Refused" ? "Resolved" : input.new_status }
 						: null,
 					updated_at: new Date(),
 				})
@@ -993,7 +993,7 @@ export const notesRouter = router({
 				kind: "status",
 				note_id: update[0].id,
 				resolution_status: update[0].resolution_status ?? "Open",
-				resolved_by: isResolving ? currentUserProfile : null,
+				resolved_by: isClosing ? currentUserProfile : null,
 			});
 
 			createNotification(
@@ -1002,17 +1002,20 @@ export const notesRouter = router({
 					kind: "note.statusChanged",
 					eventCode: event.code,
 					note: toNoteCtx(note as any),
-					newStatus: input.new_status as "Open" | "Resolved",
+					newStatus: input.new_status as "Open" | "Resolved" | "Refused",
 					actor: currentUserProfile.username,
 				}),
 				event.code,
 			);
 
 			if (event.slackTeam && note.slack_ts && note.slack_channel) {
-				if (isResolving) {
+				if (input.new_status === "Resolved") {
 					await addSlackReaction(note.slack_channel, event.slackTeam, note.slack_ts, "white_check_mark");
+				} else if (input.new_status === "Refused") {
+					await addSlackReaction(note.slack_channel, event.slackTeam, note.slack_ts, "x");
 				} else {
 					await removeSlackReaction(note.slack_channel, event.slackTeam, note.slack_ts, "white_check_mark");
+					await removeSlackReaction(note.slack_channel, event.slackTeam, note.slack_ts, "x");
 				}
 			}
 

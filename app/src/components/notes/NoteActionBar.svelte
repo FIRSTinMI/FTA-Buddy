@@ -13,6 +13,7 @@
 		onback: () => void;
 		ontogglefollow: () => void;
 		onchangestatus: () => void;
+		onrefuse: () => void;
 		onassignself: () => void;
 		onopeneditnote: () => void;
 		ondelete: () => void;
@@ -30,6 +31,7 @@
 		onback,
 		ontogglefollow,
 		onchangestatus,
+		onrefuse,
 		onassignself,
 		onopeneditnote,
 		ondelete,
@@ -88,17 +90,22 @@
 			<Button id="note-action-more-btn" size="sm" color="alternative">
 				<Icon icon="mdi:dots-vertical" class="size-4" />
 			</Button>
-			<Dropdown triggeredBy="#note-action-more-btn" placement="bottom-end">
+			<Dropdown triggeredBy="#note-action-more-btn" placement="bottom-end" class="list-none">
 				{#if isOwner}
-					<DropdownItem onclick={onopeneditnote}>
+					<DropdownItem onclick={onopeneditnote} class="list-none">
 						<Icon icon="mdi:pencil" class="size-4 mr-2 inline" />Edit
 					</DropdownItem>
 				{/if}
-				<DropdownItem onclick={onopenassignmodal}>
+				<DropdownItem onclick={onopenassignmodal} class="list-none">
 					<Icon icon="mdi:account-arrow-right" class="size-4 mr-2 inline" />Assign to…
 				</DropdownItem>
+				{#if isOpen && note.resolution_status !== "NotApplicable"}
+					<DropdownItem onclick={onrefuse} class="text-orange-600 dark:text-orange-400 list-none">
+						<Icon icon="mdi:cancel" class="size-4 mr-2 inline" />Mark as Refused
+					</DropdownItem>
+				{/if}
 				{#if isOwner}
-					<DropdownItem onclick={ondelete} class="text-red-600 dark:text-red-400">
+					<DropdownItem onclick={ondelete} class="text-red-600 dark:text-red-400 list-none">
 						<Icon icon="mdi:trash-can" class="size-4 mr-2 inline" />Delete
 					</DropdownItem>
 				{/if}

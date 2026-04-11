@@ -45,7 +45,7 @@ export type NotificationContext =
 			kind: "note.statusChanged";
 			eventCode: string;
 			note: NoteContext;
-			newStatus: "Open" | "Resolved";
+			newStatus: "Open" | "Resolved" | "Refused";
 			actor: string;
 	  }
 	| { kind: "note.assigned"; eventCode: string; note: NoteContext; assignee: string; actor: string }
@@ -155,10 +155,18 @@ export function buildNotification(ctx: NotificationContext): Notification {
 			if (ctx.newStatus === "Resolved") {
 				title = trunc(`✓ Note Resolved${suffix}`, MAX_TITLE);
 				urgency = "low";
+			} else if (ctx.newStatus === "Refused") {
+				title = trunc(`✗ Note Refused${suffix}`, MAX_TITLE);
+				urgency = "low";
 			} else {
 				title = trunc(`Note Reopened${suffix}`, MAX_TITLE);
 			}
-			body = trunc(`${ctx.newStatus === "Resolved" ? "Closed" : "Reopened"} by ${ctx.actor}`, MAX_BODY);
+			body = trunc(
+				ctx.newStatus === "Resolved" ? `Closed by ${ctx.actor}` :
+				ctx.newStatus === "Refused" ? `Refused by ${ctx.actor}` :
+				`Reopened by ${ctx.actor}`,
+				MAX_BODY,
+			);
 			tag = `note-${ctx.note.noteId}`;
 			id = `note.status:${ctx.note.noteId}:${ctx.newStatus}:${Math.floor(now.getTime() / 1000)}`;
 			url = noteUrl(ctx.eventCode, ctx.note.noteId);

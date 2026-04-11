@@ -87,7 +87,7 @@ export const levelEnum = pgEnum("level", ["None", "Practice", "Qualification", "
 
 export const noteTypeEnum = pgEnum("note_type", ["TeamIssue", "EventNote", "MatchNote"]);
 
-export const resolutionStatusEnum = pgEnum("resolution_status", ["Open", "Resolved", "NotApplicable"]);
+export const resolutionStatusEnum = pgEnum("resolution_status", ["Open", "Resolved", "NotApplicable", "Refused"]);
 
 export const noteIssueTypeEnum = pgEnum("note_issue_type", [
 	"RoboRioIssue",

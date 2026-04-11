@@ -62,7 +62,8 @@
 
 	let isTeamIssue = $derived(note.note_type === "TeamIssue");
 	let isOpen = $derived(note.resolution_status === "Open");
-	let isResolved = $derived(note.resolution_status === "Resolved");
+	let isResolved = $derived(note.resolution_status === "Resolved" || note.resolution_status === "Refused");
+	let isRefused = $derived(note.resolution_status === "Refused");
 	let canToggleStatus = $derived(
 		isTeamIssue && note.resolution_status !== "NotApplicable" && note.resolution_status !== null,
 	);
@@ -178,6 +179,8 @@
 				{/if}
 				{#if canToggleStatus && isOpen}
 					<Badge color="green">Open</Badge>
+				{:else if canToggleStatus && isRefused}
+					<Badge color="orange">Refused{note.resolved_by ? ` by ${note.resolved_by.username}` : ""}</Badge>
 				{:else if canToggleStatus}
 					<Badge color="gray">Closed{note.resolved_by ? ` by ${note.resolved_by.username}` : ""}</Badge>
 				{/if}

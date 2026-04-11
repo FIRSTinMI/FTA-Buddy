@@ -1,0 +1,1 @@
+ALTER TYPE "public"."resolution_status" ADD VALUE 'Refused';

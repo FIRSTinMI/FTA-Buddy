@@ -97,12 +97,22 @@ export function startNotificationSubscription() {
 			{
 				onError: console.error,
 				onData: (data) => {
-					// Belt-and-suspenders: suppress SSE notifications not for the current event
+					// Belt-and-suspenders: suppress SSE notifications not for the current event or its sub-events
 					if (data.eventCode) {
-						const currentCode = get(eventStore)?.code;
-						if (currentCode && data.eventCode !== currentCode) {
+						const currentEvent = get(eventStore);
+						const currentCode = currentEvent?.code;
+						const subEventCodes = currentEvent?.subEvents?.map((s) => s.code) ?? [];
+						if (currentCode && data.eventCode !== currentCode && !subEventCodes.includes(data.eventCode)) {
 							console.log("[NOTIFICATIONS] suppressed: wrong event", data.eventCode, "vs", currentCode);
 							return;
+						}
+						// Field filter: if user has deselected some fields, suppress notifications for those
+						if (subEventCodes.length > 1 && subEventCodes.includes(data.eventCode)) {
+							const selectedFields = get(settingsStore).supportFeedSelectedFields;
+							if (selectedFields != null && !selectedFields.includes(data.eventCode)) {
+								console.log("[NOTIFICATIONS] suppressed by field filter:", data.eventCode);
+								return;
+							}
 						}
 					}
 

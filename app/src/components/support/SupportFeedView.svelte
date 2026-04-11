@@ -54,10 +54,20 @@
 		(() => {
 			const subs = $eventStore.subEvents;
 			if (!subs?.length) return [];
+			const saved = $settingsStore.supportFeedSelectedFields;
+			if (saved != null) {
+				// Filter to only codes that still exist in this event's sub-events
+				const valid = saved.filter((c) => subs.some((s) => s.code === c));
+				if (valid.length > 0) return valid;
+			}
 			const isCombined = $userStore.eventToken === $userStore.meshedEventToken;
 			return isCombined ? subs.map((e) => e.code) : [$eventStore.code];
 		})(),
 	);
+
+	$effect(() => {
+		$settingsStore.supportFeedSelectedFields = hasMeshedFields ? selectedFields : null;
+	});
 
 	let notes: Note[] = $state([]);
 	let matchEvents: MatchEvent[] = $state([]);
@@ -805,6 +815,7 @@
 							</button>
 						{/each}
 					</div>
+					<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Also filters notifications.</p>
 				</div>
 			{/if}
 			<Button color="primary" onclick={() => (filterModalOpen = false)}>Done</Button>

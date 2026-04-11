@@ -185,6 +185,9 @@
 					target="_blank">GitHub</a
 				>.
 			</p>
+			<p class="py-1">
+				Powered in part by <a href="https://frc.nexus" class="text-blue-500 underline" target="_blank">frc.nexus</a>.
+			</p>
 			<Button color="primary" class="w-full py-1" onclick={() => openChangelog()}>Changelog</Button>
 			<Button color="primary" class="w-full py-1" onclick={() => closeModal()}>Close</Button>
 		{/if}

@@ -91,7 +91,7 @@
 			<span class="text-2xl">🔍</span>
 			<div>
 				<p class="font-semibold">Nexus Inspection API</p>
-				<p class="text-sm text-gray-400">Pull inspection status into the checklist.</p>
+			<p class="text-sm text-gray-400">Pull inspection status into the checklist, and provide live match status for events without a field connection.</p>
 			</div>
 		</div>
 		<div class="flex items-center gap-2 shrink-0">
@@ -114,10 +114,18 @@
 
 	{#if expanded}
 		<div class="flex flex-col gap-3 px-4 pb-4 border-t border-neutral-700 pt-4">
-			<p class="text-sm text-gray-400">
+		<p class="text-sm text-gray-400">
 				FTA Buddy polls every 2 minutes. Find your API key
 				<a href="https://frc.nexus/en/api" target="_blank" class="text-blue-400 hover:underline">here</a>.
 			</p>
+			<div class="flex flex-col gap-1">
+				<Label class="text-sm">Webhook URL (for live match updates)</Label>
+				<div class="flex gap-2 items-center">
+					<Input readonly value={typeof window !== 'undefined' ? window.location.origin + '/api/nexus/event-status' : ''} class="font-mono text-xs" />
+					<Button size="xs" color="alternative" onclick={() => navigator.clipboard.writeText(window.location.origin + '/api/nexus/event-status')}>Copy</Button>
+				</div>
+				<p class="text-xs text-gray-500">Add this as a webhook in Nexus (use "All events") for real-time updates.</p>
+			</div>
 			<div class="flex flex-row gap-2 items-end">
 				<div class="flex-1">
 					<Label for="nexus-key" class="mb-1 block text-sm">Nexus API Key</Label>

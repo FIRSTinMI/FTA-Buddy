@@ -401,6 +401,32 @@ export interface PitMapData {
 	walls: Record<string, PitMapWall> | null;
 }
 
+export interface NexusMatchTimes {
+	estimatedQueueTime?: number;
+	estimatedOnDeckTime?: number;
+	estimatedOnFieldTime?: number;
+	estimatedStartTime?: number;
+	actualQueueTime?: number;
+	actualOnDeckTime?: number;
+	actualOnFieldTime?: number;
+}
+
+export interface NexusMatch {
+	label: string;
+	status: string;
+	redTeams?: (string | null)[];
+	blueTeams?: (string | null)[];
+	times: NexusMatchTimes;
+	replayOf?: string;
+	breakAfter?: string;
+}
+
+export interface NexusEventStatus {
+	dataAsOfTime: number;
+	nowQueuing: string | null;
+	matches: NexusMatch[];
+}
+
 export type NexusPollState =
 	| "not_configured"
 	| "polling"
@@ -465,6 +491,7 @@ export interface ServerEvent {
 	endDate?: string;
 	timezone?: string;
 	nexus: NexusStatus;
+	nexusEventStatus?: NexusEventStatus;
 	pitMap?: { data: PitMapData | null; fetchedAt: Date };
 	stats: {
 		extensions: {

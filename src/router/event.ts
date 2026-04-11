@@ -18,6 +18,7 @@ import { adminProcedure, eventProcedure, protectedProcedure, publicProcedure, ro
 import { events as inMemoryEvents } from "../state";
 import { getEvent } from "../util/get-event";
 import * as nexusPoller from "../util/nexusInspectionPoller";
+import * as nexusEventPoller from "../util/nexusEventPoller";
 import { createNotification } from "../util/push-notifications";
 import { generateToken } from "./user";
 
@@ -691,12 +692,52 @@ export const eventRouter = router({
 				.where(eq(events.code, event.code));
 			event.nexusApiKey = input.nexusApiKey || undefined;
 			nexusPoller.restartForEvent(event);
+			nexusEventPoller.restartForEvent(event);
 			return { success: true };
 		}),
 
 	getNexusStatus: eventProcedure.query(async ({ ctx }) => {
 		const event = await getEvent(ctx.event.token);
 		return { ...event.nexus, nexusApiKeyIsSet: !!event.nexusApiKey };
+	}),
+
+	getNexusLiveStatus: eventProcedure.query(async ({ ctx }) => {
+		const event = await getEvent(ctx.event.token);
+		const status = event.nexusEventStatus;
+
+		if (!status || !status.nowQueuing) {
+			return {
+				available: !!event.nexusApiKey,
+				nowQueuing: null,
+				nowQueuingTeams: null,
+				dataAsOfTime: status?.dataAsOfTime ?? null,
+			};
+		}
+
+		const match = status.matches.find((m) => m.label === status.nowQueuing);
+		const parseTeam = (s: string | null | undefined): number | null => {
+			if (!s) return null;
+			const n = parseInt(s, 10);
+			return isNaN(n) ? null : n;
+		};
+
+		const nowQueuingTeams = match
+			? {
+					red1: parseTeam(match.redTeams?.[0]),
+					red2: parseTeam(match.redTeams?.[1]),
+					red3: parseTeam(match.redTeams?.[2]),
+					blue1: parseTeam(match.blueTeams?.[0]),
+					blue2: parseTeam(match.blueTeams?.[1]),
+					blue3: parseTeam(match.blueTeams?.[2]),
+			  }
+			: null;
+
+		return {
+			available: !!event.nexusApiKey,
+			nowQueuing: status.nowQueuing,
+			nowQueuingTeams,
+			dataAsOfTime: status.dataAsOfTime,
+		};
 	}),
 
 	getPitMap: eventProcedure.query(async ({ ctx }) => {

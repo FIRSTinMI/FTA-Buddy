@@ -8,6 +8,7 @@ import { analyzedLogs, cycleLogs, events, logPublishing, matchLogs } from "../db
 import { eventProcedure, publicProcedure, router } from "../trpc";
 import { compressStationLog } from "../util/log-analysis";
 import { generateReport } from "../util/report-generator";
+import { getEvent } from "../util/get-event";
 
 // FMS generates Windows-style GUIDs which may have version nibbles outside [1-8],
 // so we use a permissive hex pattern instead of the strict RFC 4122 z.string().uuid().
@@ -565,6 +566,71 @@ export const matchRouter = router({
 				});
 			} catch {
 				// TBA fetch failed - return played matches only (already in result)
+			}
+
+			// Third pass: fill in unscheduled matches from Nexus (e.g. playoff/finals not yet in TBA)
+			const liveEvent = await getEvent(ctx.event.token);
+			const nexusStatus = liveEvent.nexusEventStatus;
+			if (nexusStatus?.matches?.length) {
+				const resultKeys = new Set(result.map((m) => `${m.level}:${m.match_number}:${m.play_number}`));
+
+				const parseNexusLabel = (label: string): { level: string; match_number: number; play_number: number } | null => {
+					const finalMatch = label.match(/^Final (\d+)$/);
+					if (finalMatch) {
+						const n = parseInt(finalMatch[1], 10);
+						return { level: "Playoff", match_number: 13 + n, play_number: 1 }; // Final 1→14, 2→15, 3→16, 4→17
+					}
+					const playoffMatch = label.match(/^Playoff (\d+)$/);
+					if (playoffMatch) return { level: "Playoff", match_number: parseInt(playoffMatch[1], 10), play_number: 1 };
+					const qualReplayMatch = label.match(/^Qualification (\d+) Replay$/);
+					if (qualReplayMatch) return { level: "Qualification", match_number: parseInt(qualReplayMatch[1], 10), play_number: 2 };
+					const qualMatch = label.match(/^Qualification (\d+)$/);
+					if (qualMatch) return { level: "Qualification", match_number: parseInt(qualMatch[1], 10), play_number: 1 };
+					const practiceMatch = label.match(/^Practice (\d+)$/);
+					if (practiceMatch) return { level: "Practice", match_number: parseInt(practiceMatch[1], 10), play_number: 1 };
+					return null;
+				};
+
+				const parseTeam = (s: string | null | undefined): number | null => {
+					if (!s) return null;
+					const n = parseInt(s, 10);
+					return isNaN(n) ? null : n;
+				};
+
+				const levelOrder: Record<string, number> = { None: 0, Practice: 1, Qualification: 2, Playoff: 3 };
+
+				for (const m of nexusStatus.matches) {
+					const red = m.redTeams ?? [];
+					const blue = m.blueTeams ?? [];
+					if (red.length === 0 || blue.length === 0) continue;
+					const parsed = parseNexusLabel(m.label);
+					if (!parsed) continue;
+					const key = `${parsed.level}:${parsed.match_number}:${parsed.play_number}`;
+					if (resultKeys.has(key)) continue;
+					result.push({
+						id: null,
+						match_number: parsed.match_number,
+						play_number: parsed.play_number,
+						level: parsed.level,
+						blue1: parseTeam(blue[0]),
+						blue2: parseTeam(blue[1]),
+						blue3: parseTeam(blue[2]),
+						red1: parseTeam(red[0]),
+						red2: parseTeam(red[1]),
+						red3: parseTeam(red[2]),
+						isPlayed: false,
+						scheduledStartTime: m.times.estimatedStartTime ? new Date(m.times.estimatedStartTime) : null,
+						cycleTime: null,
+					});
+					resultKeys.add(key);
+				}
+
+				result.sort((a, b) => {
+					const lo = (levelOrder[a.level] ?? 4) - (levelOrder[b.level] ?? 4);
+					if (lo !== 0) return lo;
+					if (a.match_number !== b.match_number) return a.match_number - b.match_number;
+					return a.play_number - b.play_number;
+				});
 			}
 
 			return result;

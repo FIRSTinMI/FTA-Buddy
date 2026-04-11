@@ -50,6 +50,44 @@
 
 	let monitorFrame: MonitorFrame | undefined = $state(frameHandler.getFrame());
 
+	// Nexus live status (fallback when no field monitor connection)
+	type NexusTeamSet = { red1: number | null; red2: number | null; red3: number | null; blue1: number | null; blue2: number | null; blue3: number | null };
+	type NexusLiveStatus = { available: boolean; nowQueuing: string | null; nowQueuingTeams: NexusTeamSet | null; dataAsOfTime: number | null };
+	let nexusLiveStatus = $state<NexusLiveStatus | null>(null);
+
+	let nexusTeams = $derived.by(() => {
+		if (!nexusLiveStatus?.nowQueuingTeams) return null;
+		const q = nexusLiveStatus.nowQueuingTeams;
+		// Try to find the matching scheduled entry in allMatches
+		const match = allMatches.find(
+			(m) =>
+				m.blue1 === q.blue1 &&
+				m.blue2 === q.blue2 &&
+				m.blue3 === q.blue3 &&
+				m.red1 === q.red1 &&
+				m.red2 === q.red2 &&
+				m.red3 === q.red3,
+		);
+		if (match) {
+			return {
+				blue1: match.blue1 ?? 0,
+				blue2: match.blue2 ?? 0,
+				blue3: match.blue3 ?? 0,
+				red1: match.red1 ?? 0,
+				red2: match.red2 ?? 0,
+				red3: match.red3 ?? 0,
+				match_number: match.match_number,
+				play_number: match.play_number,
+				level: match.level,
+			};
+		}
+		// Teams known from Nexus but not yet in allMatches
+		if (q.blue1 !== null && q.blue2 !== null && q.blue3 !== null && q.red1 !== null && q.red2 !== null && q.red3 !== null) {
+			return { blue1: q.blue1, blue2: q.blue2, blue3: q.blue3, red1: q.red1, red2: q.red2, red3: q.red3, match_number: 0, play_number: 1, level: "Qualification" };
+		}
+		return null;
+	});
+
 	// Current 6 teams
 	let teams = $derived.by(() => {
 		if (matchIndex >= 0 && matchIndex < allMatches.length) {
@@ -79,6 +117,14 @@
 				level: monitorFrame.level,
 			};
 		}
+		if (matchIndex === -1 && nexusTeams) return nexusTeams;
+		return null;
+	});
+
+	let teamsSource = $derived.by(() => {
+		if (matchIndex >= 0 && matchIndex < allMatches.length) return "nav" as const;
+		if (monitorFrame) return "monitor" as const;
+		if (matchIndex === -1 && nexusTeams) return "nexus" as const;
 		return null;
 	});
 
@@ -410,6 +456,17 @@
 		);
 	}
 
+	let nexusInterval: ReturnType<typeof setInterval> | undefined;
+	let allMatchesInterval: ReturnType<typeof setInterval> | undefined;
+
+	async function fetchNexusStatus() {
+		try {
+			nexusLiveStatus = await trpc.event.getNexusLiveStatus.query();
+		} catch {
+			// ignore — nexus may not be configured
+		}
+	}
+
 	onMount(() => {
 		if (!frameHandler.getFrame()) {
 			subscribeToFieldMonitor();
@@ -434,6 +491,13 @@
 		cycleInterval = setInterval(() => {
 			currentCycleTime = formatTimeShortNoAgo(matchStartTime);
 		}, 1000);
+		// Nexus fallback: poll live status every 30s
+		fetchNexusStatus();
+		nexusInterval = setInterval(fetchNexusStatus, 30_000);
+		// Refresh match list every 60s when no field monitor (picks up Nexus-sourced matches)
+		allMatchesInterval = setInterval(() => {
+			if (!monitorFrame) loadMatchIndex();
+		}, 60_000);
 	});
 
 	onDestroy(() => {
@@ -444,6 +508,8 @@
 		matchEventSubscription?.unsubscribe();
 		window.removeEventListener("resize", handleResize);
 		if (cycleInterval) clearInterval(cycleInterval);
+		if (nexusInterval) clearInterval(nexusInterval);
+		if (allMatchesInterval) clearInterval(allMatchesInterval);
 	});
 
 	// Match note modal
@@ -976,7 +1042,11 @@
 					{#if !isShortScreen}
 						<div class="h-5 flex items-center gap-1.5">
 							{#if isLive}
-								<Badge color="green" class="text-xs">LIVE</Badge>
+								{#if teamsSource === "nexus"}
+									<Badge color="purple" class="text-xs">via Nexus</Badge>
+								{:else}
+									<Badge color="green" class="text-xs">LIVE</Badge>
+								{/if}
 							{:else if matchIndex >= 0 && !allMatches[matchIndex]?.isPlayed}
 								<Badge color="yellow" class="text-xs">SCHEDULED</Badge>
 							{/if}

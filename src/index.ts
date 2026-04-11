@@ -45,6 +45,7 @@ import { decompressStationLog, logAnalysisLoop } from "./util/log-analysis";
 import { linkChannel, slackOAuth } from "./util/slack";
 import { getTeamAverageCycle } from "./util/team-cycles";
 import { eventLastSeen, events, eventCodes, notificationEmitter, newEventEmitter } from "./state";
+import * as nexusEventPoller from "./util/nexusEventPoller";
 
 export { events, eventCodes, notificationEmitter, newEventEmitter };
 
@@ -391,6 +392,35 @@ app.get("/app", (req, res) => {
 	res.redirect("/");
 });
 
+// Nexus live event status webhook — receives push updates for all active events.
+// Always returns 200 to prevent Nexus from auto-disabling the webhook.
+// Only processes the payload if the NEXUS_WEBHOOK_TOKEN env var matches.
+app.post("/api/nexus/event-status", async (req, res) => {
+	res.status(200).send("OK");
+
+	const token = req.headers["nexus-token"] as string | undefined;
+	const expectedToken = process.env.NEXUS_WEBHOOK_TOKEN;
+	if (expectedToken && token !== expectedToken) {
+		console.warn("[NexusWebhook] Received request with invalid token — ignoring");
+		return;
+	}
+
+	const body = req.body as { eventKey?: string; dataAsOfTime?: number; nowQueuing?: string | null; matches?: any[] };
+	if (!body?.eventKey || typeof body.dataAsOfTime !== "number") return;
+
+	const event = eventCodes.get(body.eventKey.toLowerCase());
+	if (!event) return;
+
+	// Only update if this data is newer than what we already have
+	if (body.dataAsOfTime <= (event.nexusEventStatus?.dataAsOfTime ?? 0)) return;
+
+	event.nexusEventStatus = {
+		dataAsOfTime: body.dataAsOfTime,
+		nowQueuing: body.nowQueuing ?? null,
+		matches: body.matches ?? [],
+	};
+});
+
 if (process.env.NODE_ENV === "dev") {
 	app.use("/FieldMonitor", express.static("app/src/public/FieldMonitor"));
 } else {
@@ -423,9 +453,14 @@ connect().then(async () => {
 			.where(and(eq(schema.events.archived, false), isNotNull(schema.events.nexusApiKey)));
 		for (const row of eventsWithNexus) {
 			if (row.startDate && row.endDate && today >= row.startDate && today <= row.endDate) {
-				getEvent(row.token).catch(() => {
-					/* ignore load errors on startup */
-				});
+				getEvent(row.token)
+					.then((event) => {
+						nexusEventPoller.fetchOnce(event);
+						nexusEventPoller.startFallbackPoller(event);
+					})
+					.catch(() => {
+						/* ignore load errors on startup */
+					});
 			}
 		}
 	} catch (err) {

@@ -11,6 +11,20 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.7.0": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.7.0</h1>
+        <strong>Happy DCMP Update!<strong>
+        <ul>
+        <li>Add refused help status for notes</li>
+        <li>Meshed event improvements</li>
+        <li>Remove &gt;&gt;&gt; from Nexus messages</li>
+        <li>Backend performance improvements</li>
+        <li>Ability to manually remove team from event</li>
+        <li>Use Nexus API to get event status when missing FMS integration</li>
+        </ul>
+        `,
+	},
 	"2.7.6.0": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.6.0</h1>

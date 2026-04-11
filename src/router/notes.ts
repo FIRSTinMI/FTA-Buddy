@@ -1513,8 +1513,17 @@ export const notesRouter = router({
 			});
 			if (!currentUser) continue;
 			const notif = d.notification as Notification;
-			if (notif.eventCode && currentUser.active_event_code && notif.eventCode !== currentUser.active_event_code)
-				continue;
+			if (notif.eventCode && currentUser.active_event_code && notif.eventCode !== currentUser.active_event_code) {
+				// Allow sub-event notifications through when the user is on a meshed parent event
+				const parentEvent = await db.query.events.findFirst({
+					where: eq(events.code, currentUser.active_event_code),
+					columns: { meshedEvent: true },
+				});
+				const subCodes = parentEvent?.meshedEvent
+					? (parentEvent.meshedEvent as Array<{ code: string }>).map((e) => e.code)
+					: [];
+				if (!subCodes.includes(notif.eventCode)) continue;
+			}
 			yield notif;
 		}
 	}),

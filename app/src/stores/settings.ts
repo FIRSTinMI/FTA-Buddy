@@ -25,6 +25,7 @@ export interface Settings {
 	supportFeedFilter: "all" | "notes" | "events";
 	supportFeedTypeFilter: "all" | "TeamIssue" | "EventNote" | "MatchNote";
 	supportFeedStatusFilter: "all" | "Open" | "Resolved";
+	supportFeedSelectedFields: string[] | null;
 	notificationCategories: {
 		create: boolean;
 		follow: boolean;
@@ -56,6 +57,7 @@ const defaultSettings: Settings = {
 	supportFeedFilter: "all",
 	supportFeedTypeFilter: "all",
 	supportFeedStatusFilter: "Open",
+	supportFeedSelectedFields: null,
 	notificationCategories: {
 		create: true,
 		follow: true,

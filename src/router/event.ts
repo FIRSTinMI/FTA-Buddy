@@ -19,6 +19,7 @@ import { events as inMemoryEvents } from "../state";
 import { getEvent } from "../util/get-event";
 import * as nexusPoller from "../util/nexusInspectionPoller";
 import * as nexusEventPoller from "../util/nexusEventPoller";
+import { bus } from "../util/eventBus";
 import { createNotification } from "../util/push-notifications";
 import { generateToken } from "./user";
 
@@ -1025,6 +1026,8 @@ export const eventRouter = router({
 				.set({ playoffMode: input.playoffMode })
 				.where(eq(events.code, event.code));
 			event.playoffMode = input.playoffMode;
+			// Broadcast to all instances so their cached event stays in sync
+			bus.publish(`event:${event.code}:playoff_mode`, input.playoffMode);
 			return { playoffMode: input.playoffMode };
 		}),
 });

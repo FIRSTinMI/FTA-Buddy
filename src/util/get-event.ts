@@ -160,6 +160,11 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 			eventLastSeen[eventCode] = new Date();
 			bus.publish("global:new_event", eventCode);
 
+			// Keep playoffMode in sync across instances
+			bus.subscribe(`event:${eventCode}:playoff_mode`, (data) => {
+				if (events[eventCode]) events[eventCode].playoffMode = data as boolean;
+			});
+
 			if (event.nexusApiKey) {
 				nexusPoller.startForEvent(events[eventCode]);
 			}

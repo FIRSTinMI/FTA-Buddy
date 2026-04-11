@@ -19,19 +19,39 @@ export async function tryAcquireLock(lockName: string, ttlSeconds: number): Prom
 
 /**
  * Renew a lock this instance already holds, resetting its TTL.
- * Returns false if another instance has since taken the lock (e.g. after a crash).
+ * Uses a Lua script so the check-and-expire is atomic — prevents extending a lock
+ * that expired and was re-acquired by another instance between GET and EXPIRE.
+ * Returns false if this instance no longer owns the lock.
  */
 export async function renewLock(lockName: string, ttlSeconds: number): Promise<boolean> {
-	const owner = await redis.get(LOCK_PREFIX + lockName);
-	if (owner !== instanceId) return false;
-	await redis.expire(LOCK_PREFIX + lockName, ttlSeconds);
-	return true;
+	const result = await redis.eval(
+		`if redis.call("GET", KEYS[1]) == ARGV[1] then
+			return redis.call("EXPIRE", KEYS[1], ARGV[2])
+		else
+			return 0
+		end`,
+		1,
+		LOCK_PREFIX + lockName,
+		instanceId,
+		String(ttlSeconds),
+	);
+	return result === 1;
 }
 
 /**
  * Release a lock — only if this instance owns it.
+ * Uses a Lua script so the check-and-delete is atomic — prevents accidentally
+ * deleting a lock re-acquired by another instance after expiry.
  */
 export async function releaseLock(lockName: string): Promise<void> {
-	const owner = await redis.get(LOCK_PREFIX + lockName);
-	if (owner === instanceId) await redis.del(LOCK_PREFIX + lockName);
+	await redis.eval(
+		`if redis.call("GET", KEYS[1]) == ARGV[1] then
+			return redis.call("DEL", KEYS[1])
+		else
+			return 0
+		end`,
+		1,
+		LOCK_PREFIX + lockName,
+		instanceId,
+	);
 }

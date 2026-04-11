@@ -194,7 +194,10 @@ export const fieldMonitorRouter = router({
 	history: eventProcedure.query(async ({ ctx }) => {
 		const event = await getEvent(ctx.eventToken ?? "");
 		const items = await redis.lrange(`ftabuddy:event:${event.code}:history`, 0, 49);
-		if (items.length > 0) return items.map((i: string) => JSON.parse(i)).reverse();
+		if (items.length > 0) {
+			const parsed = items.flatMap((i: string) => { try { return [JSON.parse(i)]; } catch { return []; } });
+			if (parsed.length > 0) return parsed.reverse();
+		}
 		return event.history;
 	}),
 

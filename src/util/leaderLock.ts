@@ -8,6 +8,32 @@ console.log(`[LeaderLock] Instance ID: ${instanceId}`);
 const LOCK_PREFIX = "ftabuddy:lock:";
 
 /**
+ * Acquire the lock if unclaimed, or renew it if this instance already owns it.
+ * Returns true if this instance holds the lock after the call.
+ * Single Lua round-trip — avoids the race between separate acquire and renew calls.
+ * Use this for long-running loops where you want to hold leadership continuously.
+ */
+export async function acquireOrRenewLock(lockName: string, ttlSeconds: number): Promise<boolean> {
+	const result = await redis.eval(
+		`local owner = redis.call("GET", KEYS[1])
+		if owner == false then
+			redis.call("SET", KEYS[1], ARGV[1], "EX", ARGV[2])
+			return 1
+		elseif owner == ARGV[1] then
+			redis.call("EXPIRE", KEYS[1], ARGV[2])
+			return 1
+		else
+			return 0
+		end`,
+		1,
+		LOCK_PREFIX + lockName,
+		instanceId,
+		String(ttlSeconds),
+	);
+	return result === 1;
+}
+
+/**
  * Try to acquire a named distributed lock.
  * Returns true if this instance now holds the lock, false if another instance does.
  * Uses Redis SET NX EX — atomic, no race conditions.

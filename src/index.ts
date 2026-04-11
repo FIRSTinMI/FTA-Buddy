@@ -48,7 +48,8 @@ import { eventLastSeen, events, eventCodes } from "./state";
 import * as nexusEventPoller from "./util/nexusEventPoller";
 import { bus } from "./util/eventBus";
 import { redis } from "./util/redis";
-import { tryAcquireLock, renewLock } from "./util/leaderLock";
+import { acquireOrRenewLock } from "./util/leaderLock";
+import { cleanupEventSubscriptions } from "./util/get-event";
 
 export { events, eventCodes };
 
@@ -415,18 +416,21 @@ app.post("/api/nexus/event-status", async (req, res) => {
 	const body = req.body as { eventKey?: string; dataAsOfTime?: number; nowQueuing?: string | null; matches?: any[] };
 	if (!body?.eventKey || typeof body.dataAsOfTime !== "number") return;
 
-	const event = events[body.eventKey.toLowerCase()];
-	if (!event) return;
-
-	// Only update if this data is newer than what we already have
-	if (body.dataAsOfTime <= (event.nexusEventStatus?.dataAsOfTime ?? 0)) return;
-
-	event.nexusEventStatus = {
+	const eventCode = body.eventKey.toLowerCase();
+	const newStatus = {
 		dataAsOfTime: body.dataAsOfTime,
 		nowQueuing: body.nowQueuing ?? null,
 		matches: body.matches ?? [],
 	};
-	bus.publish(`event:${event.code}:nexus_event_status`, event.nexusEventStatus);
+
+	// Publish to bus so ALL instances receive the update, not just the one that got the webhook
+	bus.publish(`event:${eventCode}:nexus_event_status`, newStatus);
+
+	// Also update this instance's local cache if the event is loaded here
+	const event = events[eventCode];
+	if (event && body.dataAsOfTime > (event.nexusEventStatus?.dataAsOfTime ?? 0)) {
+		event.nexusEventStatus = newStatus;
+	}
 });
 
 if (process.env.NODE_ENV === "dev") {
@@ -440,19 +444,28 @@ if (process.env.NODE_ENV === "dev") {
 }
 
 connect().then(async () => {
-	// Load knownIssue from Redis
-	const storedIssue = await redis.get("ftabuddy:global:known_issue");
-	if (storedIssue) knownIssue = JSON.parse(storedIssue);
-	bus.subscribe("global:known_issue", (data) => { knownIssue = data as typeof knownIssue; });
+	// Load knownIssue from Redis — rehydrate Date fields since JSON round-trips them as strings
+	function rehydrateKnownIssue(raw: typeof knownIssue): typeof knownIssue {
+		return { ...raw, startTime: raw.startTime ? new Date(raw.startTime as any) : null, endTime: raw.endTime ? new Date(raw.endTime as any) : null };
+	}
+	try {
+		const storedIssue = await redis.get("ftabuddy:global:known_issue");
+		if (storedIssue) knownIssue = rehydrateKnownIssue(JSON.parse(storedIssue));
+	} catch (err) {
+		console.error("[KnownIssue] Failed to load from Redis:", err);
+	}
+	bus.subscribe("global:known_issue", (data) => { knownIssue = rehydrateKnownIssue(data as typeof knownIssue); });
 
 	// Log analysis loop — runs forever; errors are caught and logged so the loop never dies.
+	// acquireOrRenewLock: if we already hold the lock, renew it; if unclaimed, acquire it.
+	// TTL=15 s, loop interval=3 s → lock is renewed 5× per TTL window, so it stays held
+	// as long as this instance is healthy. On crash, another instance takes over within 15 s.
 	(async () => {
 		while (true) {
 			try {
-				const isLeader = await tryAcquireLock("log_analysis", 10);
+				const isLeader = await acquireOrRenewLock("log_analysis", 15);
 				if (isLeader) {
 					await logAnalysisLoop(3);
-					await renewLock("log_analysis", 10);
 				}
 			} catch (err) {
 				console.error("[LogAnalysis] Unhandled error in loop iteration — will retry in 3 s:", err);
@@ -527,6 +540,8 @@ connect().then(async () => {
 				const event = events[code];
 				if ((eventLastSeen[code] ?? new Date(0)).getTime() < cutoff) {
 					console.log(`[Cleanup] Evicting inactive event ${code}`);
+					cleanupEventSubscriptions(code);
+					nexusEventPoller.stopForEvent(code);
 					if (event.token) delete eventCodes[event.token];
 					delete eventLastSeen[code];
 					delete events[code];

@@ -712,12 +712,13 @@
 				</button>
 			{/if}
 		</div>
-		{#if liveRobot && isLive}
+		{#if liveRobot && isLive && (teamsSource !== 'nexus' || hasOpenNote || liveRobot.warnings.includes(RobotWarnings.NOT_INSPECTED) || liveRobot.warnings.includes(RobotWarnings.RADIO_NOT_FLASHED) || liveRobot.warnings.includes(RobotWarnings.PREVIOUS_MATCH_EVENT))}
 			<div
 				class="shrink-0 flex items-center gap-1 sm:gap-2 px-2 {isShortScreen
 					? 'py-0.5'
 					: 'py-1 sm:py-1.5'} border-b border-gray-200 dark:border-gray-700 text-[11px] sm:text-xs lg:text-sm"
 			>
+				{#if teamsSource !== 'nexus'}
 				<div
 					class="{isShortScreen
 						? 'size-3.5'
@@ -784,8 +785,9 @@
 					class="tabular-nums font-mono text-[9px] sm:text-xs lg:text-sm text-black dark:text-white shrink-0"
 					title="Signal strength">{liveRobot.signal ?? 0}dBm</span
 				>
+				{/if}
 				{#if hasOpenNote || liveRobot.warnings.includes(RobotWarnings.NOT_INSPECTED) || liveRobot.warnings.includes(RobotWarnings.RADIO_NOT_FLASHED) || liveRobot.warnings.includes(RobotWarnings.PREVIOUS_MATCH_EVENT)}
-					<div class="ml-auto flex items-center gap-0.5 sm:gap-1 shrink-0">
+					<div class="{teamsSource !== 'nexus' ? 'ml-auto' : ''} flex items-center gap-0.5 sm:gap-1 shrink-0">
 						{#if hasOpenNote}
 							<div
 								class="{isShortScreen

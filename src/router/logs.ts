@@ -296,11 +296,17 @@ export const matchRouter = router({
 					red1_bypassed: z.boolean(),
 					red2_bypassed: z.boolean(),
 					red3_bypassed: z.boolean(),
+					event_code: z.string(),
 				}),
 			),
 		)
 		.query(async ({ input, ctx }) => {
-			const filters = [eq(matchLogs.event, ctx.event.code)];
+			// For meshed events, query all sub-event codes; otherwise just the current event
+			const eventCodes: string[] = ctx.event.meshedEvent
+				? (ctx.event.meshedEvent as Array<{ code: string }>).map((e) => e.code)
+				: [ctx.event.code];
+
+			const filters = [eventCodes.length === 1 ? eq(matchLogs.event, eventCodes[0]) : inArray(matchLogs.event, eventCodes)];
 
 			if (input.level) filters.push(eq(matchLogs.level, input.level));
 			if (input.team)
@@ -316,6 +322,7 @@ export const matchRouter = router({
 			const matches = await db
 				.select({
 					id: matchLogs.id,
+					event_code: matchLogs.event,
 					match_number: matchLogs.match_number,
 					play_number: matchLogs.play_number,
 					level: matchLogs.level,
@@ -342,7 +349,9 @@ export const matchRouter = router({
 				.from(analyzedLogs)
 				.where(
 					and(
-						eq(analyzedLogs.event, ctx.event.code),
+						eventCodes.length === 1
+							? eq(analyzedLogs.event, eventCodes[0])
+							: inArray(analyzedLogs.event, eventCodes),
 						inArray(
 							analyzedLogs.match_id,
 							matches.map((match) => match.id),

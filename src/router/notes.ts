@@ -1462,12 +1462,31 @@ export const notesRouter = router({
 
 			event.noteUpdateEmitter.on("note_update", handler);
 
+			// For meshed events in combined view, also forward updates from each sub-event's emitter
+			type SubHandler = { emitter: typeof event.noteUpdateEmitter; handler: (data: NoteUpdateEventData) => void };
+			const subHandlers: SubHandler[] = [];
+			if (event.meshedEvent && event.subEvents) {
+				for (const subEvent of event.subEvents) {
+					try {
+						const sub = await getEvent("", subEvent.code);
+						const subHandler = (data: NoteUpdateEventData) => handler(data);
+						sub.noteUpdateEmitter.on("note_update", subHandler);
+						subHandlers.push({ emitter: sub.noteUpdateEmitter, handler: subHandler });
+					} catch (_) {
+						// Sub-event may not be loaded yet; skip
+					}
+				}
+			}
+
 			const heartbeat = setInterval(() => push({ kind: "heartbeat" }), 30_000);
 
 			try {
 				yield* drain();
 			} finally {
 				event.noteUpdateEmitter.off("note_update", handler);
+				for (const { emitter, handler: subHandler } of subHandlers) {
+					emitter.off("note_update", subHandler);
+				}
 				clearInterval(heartbeat);
 				const after = event.noteUpdateEmitter.listenerCount("note_update");
 				console.log(`[notes sub] -1 listener (after=${after}) event=${event.code}`);

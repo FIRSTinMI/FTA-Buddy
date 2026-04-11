@@ -40,7 +40,7 @@
 			$eventStore.teams = meshedEvent.teams;
 			$eventStore.users = meshedEvent.users;
 			$eventStore.subEvents = meshedEvent.subEvents;
-			navigate("/manage/login");
+			navigate("/dashboard");
 		} catch (e) {
 			console.error(e);
 			if (e instanceof Error) toast("Failed to create meshed event", e.message);

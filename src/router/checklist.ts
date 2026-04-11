@@ -1,11 +1,11 @@
 import { eq } from "drizzle-orm";
-import { on } from "events";
 import { z } from "zod";
 import type { EventChecklist } from "../../shared/types";
 import { db } from "../db/db";
 import { events } from "../db/schema";
 import { eventProcedure, publicProcedure, router } from "../trpc";
 import { getEvent } from "../util/get-event";
+import { subscriptionQueue } from "../util/subscription";
 
 export const checklistRouter = router({
 	get: eventProcedure.query(async ({ input, ctx }) => {
@@ -65,9 +65,19 @@ export const checklistRouter = router({
 		)
 		.subscription(async function* ({ input, signal }) {
 			const event = await getEvent(input.eventToken);
+			const { push, drain } = subscriptionQueue<EventChecklist | null>(signal!);
 
-			for await (const [checklist] of on(event.checklistEmitter, "update", { signal })) {
-				yield checklist as EventChecklist;
+			const handler = (c: EventChecklist) => push(c);
+			event.checklistEmitter.on("update", handler);
+			const heartbeat = setInterval(() => push(null), 30_000);
+
+			try {
+				for await (const item of drain()) {
+					if (item !== null) yield item;
+				}
+			} finally {
+				event.checklistEmitter.off("update", handler);
+				clearInterval(heartbeat);
 			}
 		}),
 });

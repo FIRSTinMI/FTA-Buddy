@@ -447,12 +447,15 @@ export const matchEventsRouter = router({
 		registerHandler("dismiss", (data) => push(data));
 		registerHandler("convert", (data) => push(data));
 
+		const heartbeat = setInterval(() => push({ kind: "heartbeat" }), 30_000);
+
 		try {
 			yield* drain();
 		} finally {
 			for (const h of handlers) {
 				event.matchEventEmitter.off(h.event, h.fn as any);
 			}
+			clearInterval(heartbeat);
 		}
 	}),
 });

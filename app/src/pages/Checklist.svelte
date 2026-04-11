@@ -116,8 +116,14 @@
 		updateTotals(checklist);
 	}
 
+	// How long without data before the connection is considered stale.
+	// Heartbeat arrives every 30s, so 35s without data means the connection is dead.
+	const STALE_THRESHOLD_MS = 35_000;
+	let lastReceivedAt = 0;
+	let subscriptionGeneration = 0;
 	let subscription: ReturnType<typeof trpc.checklist.subscription.subscribe>;
 	let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+	let watchdogInterval: ReturnType<typeof setInterval> | null = null;
 
 	async function resubscribe() {
 		if (reconnectTimer) {
@@ -126,10 +132,18 @@
 		}
 		subscription?.unsubscribe();
 
+		// Claim a generation before the first await to prevent overlapping reconnects
+		// (visibilitychange, onError, and watchdog can all fire simultaneously).
+		const generation = ++subscriptionGeneration;
+
 		try {
-			checklist = await trpc.checklist.get.query();
+			const c = await trpc.checklist.get.query();
+			if (generation !== subscriptionGeneration) return; // superseded
+			checklist = c;
 			updateTotals(checklist);
 		} catch { /* ignore */ }
+
+		if (generation !== subscriptionGeneration) return; // superseded
 
 		subscription = trpc.checklist.subscription.subscribe(
 			{
@@ -137,6 +151,7 @@
 			},
 			{
 				onData: (c: EventChecklist) => {
+					lastReceivedAt = Date.now();
 					checklist = c;
 					updateTotals(checklist);
 				},
@@ -151,8 +166,21 @@
 	onMount(() => {
 		resubscribe();
 
+		// Watchdog: detect silent SSE disconnections while the page is open.
+		// The server sends a heartbeat every 30s; if >35s pass without any data, reconnect.
+		watchdogInterval = setInterval(() => {
+			if (document.visibilityState !== "visible") return;
+			if (lastReceivedAt === 0) return; // never received data yet
+			if (Date.now() - lastReceivedAt > STALE_THRESHOLD_MS) {
+				console.warn("Checklist watchdog: connection stale, reconnecting…");
+				resubscribe();
+			}
+		}, 10_000);
+
 		function handleVisibility() {
-			if (document.visibilityState === "visible") resubscribe();
+			if (document.visibilityState !== "visible") return;
+			if (lastReceivedAt === 0) return;
+			if (Date.now() - lastReceivedAt > STALE_THRESHOLD_MS) resubscribe();
 		}
 		function handleOnline() {
 			resubscribe();
@@ -173,6 +201,7 @@
 	onDestroy(() => {
 		subscription?.unsubscribe();
 		if (reconnectTimer) clearTimeout(reconnectTimer);
+		if (watchdogInterval) clearInterval(watchdogInterval);
 		if (nexusStatusInterval) clearInterval(nexusStatusInterval);
 	});
 </script>

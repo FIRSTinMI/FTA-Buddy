@@ -1462,10 +1462,13 @@ export const notesRouter = router({
 
 			event.noteUpdateEmitter.on("note_update", handler);
 
+			const heartbeat = setInterval(() => push({ kind: "heartbeat" }), 30_000);
+
 			try {
 				yield* drain();
 			} finally {
 				event.noteUpdateEmitter.off("note_update", handler);
+				clearInterval(heartbeat);
 				const after = event.noteUpdateEmitter.listenerCount("note_update");
 				console.log(`[notes sub] -1 listener (after=${after}) event=${event.code}`);
 			}

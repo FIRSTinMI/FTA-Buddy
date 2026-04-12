@@ -67,3 +67,29 @@ jobs:
           done
           echo "Timed out waiting for instance B"
           exit 1
+
+      - name: Notify Discord success
+        if: success()
+        run: |
+          curl -s -X POST ${{ secrets.DISCORD_WEBHOOK }} \
+            -H "Content-Type: application/json" \
+            -d '{
+              "embeds": [{
+                "title": "✅ FTA Buddy Deployed",
+                "description": "Both instances deployed successfully.",
+                "color": 3066993
+              }]
+            }'
+
+      - name: Notify Discord failure
+        if: failure()
+        run: |
+          curl -s -X POST ${{ secrets.DISCORD_WEBHOOK }} \
+            -H "Content-Type: application/json" \
+            -d '{
+              "embeds": [{
+                "title": "❌ FTA Buddy Deployment Failed",
+                "description": "Check [GitHub Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.",
+                "color": 15158332
+              }]
+            }'

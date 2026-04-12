@@ -282,6 +282,7 @@
 			<p>Contributors: Kelly Malone, Cole H, Brandon McDonald</p>
 			<p>Version: {$settingsStore.version}</p>
 			<a href="https://github.com/FIRSTinMI/FTA-Buddy" class="underline text-blue-400">GitHub</a>
+			<a href="https://discord.gg/Kpnj55seHr" class="underline text-blue-400">Discord</a>
 		</div>
 	{/snippet}
 </Modal>

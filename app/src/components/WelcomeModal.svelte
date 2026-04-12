@@ -183,6 +183,10 @@
 					href="https://github.com/FIRSTinMI/FTA-Buddy/issues"
 					class="text-blue-500 underline"
 					target="_blank">GitHub</a
+				> or join the <a
+					href="https://discord.gg/Kpnj55seHr"
+					class="text-blue-500 underline"
+					target="_blank">Discord server</a
 				>.
 			</p>
 			<p class="py-1">

@@ -710,5 +710,7 @@
 	{/if}
 	<p class="text-sm text-neutral-500">
 		<a href="/privacy.html" class="underline">Privacy Policy</a>
+		&middot;
+		<a href="https://discord.gg/Kpnj55seHr" class="underline" target="_blank">Discord</a>
 	</p>
 </div>

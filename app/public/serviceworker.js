@@ -64,7 +64,9 @@ self.addEventListener("fetch", (evt) => {
 				})
 				.catch(() => {
 					// For navigation requests, serve the cached index.html (SPA fallback)
-					if (evt.request.mode === "navigate") return caches.match("/index.html");
+					if (evt.request.mode === "navigate") {
+						return caches.match("/index.html").then((r) => r || fetch("/index.html"));
+					}
 				});
 		}),
 	);

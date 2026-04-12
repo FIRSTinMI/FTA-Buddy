@@ -11,43 +11,59 @@ jobs:
 
     steps:
       - name: Deploy instance A
+        id: deploy_a
         run: |
-          curl -s -X POST https://panel.filipkin.com/api/v1/applications/${{ secrets.INSTANCE_A_UUID }}/start \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
-            -H "Content-Type: application/json"
+          response=$(curl -s -X POST https://panel.filipkin.com/api/v1/applications/${{ secrets.INSTANCE_A_UUID }}/start \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}")
+          echo "response=$response"
+          uuid=$(echo $response | jq -r '.deployment_uuid')
+          echo "deployment_uuid=$uuid" >> $GITHUB_OUTPUT
 
-      - name: Wait for instance A to become healthy
+      - name: Wait for instance A deployment to finish
         run: |
-          echo "Waiting for instance A..."
-          for i in $(seq 1 30); do
-            status=$(curl -s -o /dev/null -w "%{http_code}" https://a.ftabuddy.com/)
-            if [ "$status" = "200" ]; then
-              echo "Instance A healthy after $i attempts"
+          echo "Tracking deployment ${{ steps.deploy_a.outputs.deployment_uuid }}..."
+          for i in $(seq 1 60); do
+            status=$(curl -s https://panel.filipkin.com/api/v1/deployments/${{ steps.deploy_a.outputs.deployment_uuid }} \
+              -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" | jq -r '.status')
+            echo "Attempt $i: status=$status"
+            if [ "$status" = "finished" ]; then
+              echo "Instance A deployed successfully"
               exit 0
             fi
-            echo "Attempt $i: got $status, retrying in 10s..."
+            if [ "$status" = "failed" ] || [ "$status" = "error" ]; then
+              echo "Instance A deployment failed"
+              exit 1
+            fi
             sleep 10
           done
-          echo "Instance A failed to become healthy after 5 minutes"
+          echo "Timed out waiting for instance A"
           exit 1
 
       - name: Deploy instance B
+        id: deploy_b
         run: |
-          curl -s -X POST https://panel.filipkin.com/api/v1/applications/${{ secrets.INSTANCE_B_UUID }}/start \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
-            -H "Content-Type: application/json"
+          response=$(curl -s -X POST https://panel.filipkin.com/api/v1/applications/${{ secrets.INSTANCE_B_UUID }}/start \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}")
+          echo "response=$response"
+          uuid=$(echo $response | jq -r '.deployment_uuid')
+          echo "deployment_uuid=$uuid" >> $GITHUB_OUTPUT
 
-      - name: Wait for instance B to become healthy
+      - name: Wait for instance B deployment to finish
         run: |
-          echo "Waiting for instance B..."
-          for i in $(seq 1 30); do
-            status=$(curl -s -o /dev/null -w "%{http_code}" https://b.ftabuddy.com/)
-            if [ "$status" = "200" ]; then
-              echo "Instance B healthy after $i attempts"
+          echo "Tracking deployment ${{ steps.deploy_b.outputs.deployment_uuid }}..."
+          for i in $(seq 1 60); do
+            status=$(curl -s https://panel.filipkin.com/api/v1/deployments/${{ steps.deploy_b.outputs.deployment_uuid }} \
+              -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" | jq -r '.status')
+            echo "Attempt $i: status=$status"
+            if [ "$status" = "finished" ]; then
+              echo "Instance B deployed successfully"
               exit 0
             fi
-            echo "Attempt $i: got $status, retrying in 10s..."
+            if [ "$status" = "failed" ] || [ "$status" = "error" ]; then
+              echo "Instance B deployment failed"
+              exit 1
+            fi
             sleep 10
           done
-          echo "Instance B failed to become healthy after 5 minutes"
+          echo "Timed out waiting for instance B"
           exit 1

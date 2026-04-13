@@ -88,7 +88,7 @@ const app = mount(App, {
 	target: target,
 });
 
-// App loaded successfully — clear the one-shot chunk-reload guard so it rearms
+// App loaded successfully - clear the one-shot chunk-reload guard so it rearms
 // for the next deployment rather than permanently suppressing recovery.
 sessionStorage.removeItem("chunk-reload");
 

@@ -19,7 +19,7 @@ import { bus } from "./eventBus";
 
 const NEXUS_BASE = "https://frc.nexus/api/v1";
 
-/** Fallback poll interval in ms (10 minutes — webhooks are the primary mechanism). */
+/** Fallback poll interval in ms (10 minutes - webhooks are the primary mechanism). */
 const FALLBACK_INTERVAL_MS = 10 * 60 * 1000;
 
 /** In-memory registry: eventCode → scheduled timeout handle. */

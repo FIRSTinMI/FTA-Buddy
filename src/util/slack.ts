@@ -88,11 +88,15 @@ export async function linkChannel(args: string[], channel_id: string, team_id: s
 		text: `FTA Buddy linked to event ${eventCode}. Join: https://ftabuddy.com/join/${event.token}`,
 		blocks: [
 			{
+				type: "header",
+				text: { type: "plain_text", text: "FTA Buddy Linked!", emoji: true },
+			},
+			{
 				type: "section",
-				text: {
-					type: "mrkdwn",
-					text: `*FTA Buddy* linked to event *${eventCode}*!\nUse the button below to join the event in the app, or enter code \`${eventCode}\` with pin \`${event.pin}\`.`,
-				},
+				fields: [
+					{ type: "mrkdwn", text: `*Event Code*\n\`${eventCode}\`` },
+					{ type: "mrkdwn", text: `*Event Pin*\n\`${event.pin}\`` },
+				],
 			},
 			{
 				type: "actions",
@@ -104,6 +108,21 @@ export async function linkChannel(args: string[], channel_id: string, team_id: s
 						style: "primary",
 					},
 				],
+			},
+			{ type: "divider" },
+			{
+				type: "section",
+				text: {
+					type: "mrkdwn",
+					text: ":robot_face: *How this channel works*\nCSA requests from Nexus are automatically added as tickets in FTA Buddy. Use reactions on any ticket message to update its status:",
+				},
+			},
+			{
+				type: "section",
+				text: {
+					type: "mrkdwn",
+					text: ":eyes: - Assign yourself to the ticket (you're on your way)\n:white_check_mark: - Mark the ticket resolved, and leave a thread reply explaining what you did\n:x: - Mark the team as refusing help",
+				},
 			},
 		],
 	};

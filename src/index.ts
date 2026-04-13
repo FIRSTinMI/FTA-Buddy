@@ -411,7 +411,7 @@ app.get("/app", (req, res) => {
 	res.redirect("/");
 });
 
-// Nexus live event status webhook — receives push updates for all active events.
+// Nexus live event status webhook - receives push updates for all active events.
 // Always returns 200 to prevent Nexus from auto-disabling the webhook.
 // Only processes the payload if the NEXUS_WEBHOOK_TOKEN env var matches.
 app.post("/api/nexus/event-status", async (req, res) => {
@@ -420,7 +420,7 @@ app.post("/api/nexus/event-status", async (req, res) => {
 	const token = req.headers["nexus-token"] as string | undefined;
 	const expectedToken = process.env.NEXUS_WEBHOOK_TOKEN;
 	if (expectedToken && token !== expectedToken) {
-		console.warn("[NexusWebhook] Received request with invalid token — ignoring");
+		console.warn("[NexusWebhook] Received request with invalid token - ignoring");
 		return;
 	}
 
@@ -468,7 +468,7 @@ connect().then(async () => {
 	}
 	bus.subscribe("global:known_issue", (data) => { knownIssue = data as typeof knownIssue; });
 
-	// Log analysis loop — runs forever; errors are caught and logged so the loop never dies.
+	// Log analysis loop - runs forever; errors are caught and logged so the loop never dies.
 	// acquireOrRenewLock: if we already hold the lock, renew it; if unclaimed, acquire it.
 	// TTL=15 s, loop interval=3 s → lock is renewed 5× per TTL window, so it stays held
 	// as long as this instance is healthy. On crash, another instance takes over within 15 s.
@@ -480,7 +480,7 @@ connect().then(async () => {
 					await logAnalysisLoop(3);
 				}
 			} catch (err) {
-				console.error("[LogAnalysis] Unhandled error in loop iteration — will retry in 3 s:", err);
+				console.error("[LogAnalysis] Unhandled error in loop iteration - will retry in 3 s:", err);
 			}
 			await new Promise((resolve) => setTimeout(resolve, 3e3));
 		}

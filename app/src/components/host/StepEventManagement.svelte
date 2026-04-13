@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, Indicator } from "flowbite-svelte";
+	import { Button, Indicator, Modal } from "flowbite-svelte";
 	import { onMount } from "svelte";
 	import { eventStore } from "../../stores/event";
 	import { userStore } from "../../stores/user";
@@ -7,12 +7,14 @@
 	import { toast } from "../../util/toast";
 	import { getPlayoffViewLabel } from "../../util/playoffViewLabel";
 	import { LATEST_EXTENSION_VERSION } from "../../util/updater";
+	import QrCode from "svelte-qrcode";
 	import IntegrationAutoEvents from "./integrations/IntegrationAutoEvents.svelte";
 	import IntegrationFmsFtaApp from "./integrations/IntegrationFmsFtaApp.svelte";
 	import IntegrationNexus from "./integrations/IntegrationNexus.svelte";
 	import IntegrationSlack from "./integrations/IntegrationSlack.svelte";
 	import IntegrationWpaKiosk from "./integrations/IntegrationWpaKiosk.svelte";
 
+	let qrModalOpen = $state(false);
 	let extensionDetected = $state(false);
 	let extensionEnabled = $state(false);
 	let extensionFieldMonitor = $state(false);
@@ -71,8 +73,8 @@
 			toast(
 				"Inter-Divisional Playoffs",
 				res.playoffMode
-					? `Enabled — ${getPlayoffViewLabel($eventStore.code)} view is now active`
-					: "Disabled — Combined view restored",
+					? `Enabled - ${getPlayoffViewLabel($eventStore.code)} view is now active`
+					: "Disabled - Combined view restored",
 				res.playoffMode ? "blue-500" : "green-500",
 			);
 		} catch (e) {
@@ -177,6 +179,10 @@
 					class="text-xs text-blue-400 hover:underline"
 					onclick={() => copyToClipboard(`https://ftabuddy.com/join/${$userStore.eventToken}`)}>copy</button
 				>
+				<button
+					class="text-xs text-blue-400 hover:underline"
+					onclick={() => (qrModalOpen = true)}>QR Code</button
+				>
 			</div>
 		{/if}
 		{#if $userStore.eventToken}
@@ -201,7 +207,7 @@
 			<h2 class="text-base font-semibold">Inter-Divisional Playoffs</h2>
 			<p class="text-sm text-gray-400 mt-1">
 				When enabled, the <strong>{getPlayoffViewLabel($eventStore.meshedEventCode ?? $eventStore.code)}</strong> view
-				acts as a normal single-field event — field monitor, match logs, and notes are scoped to
+				acts as a normal single-field event - field monitor, match logs, and notes are scoped to
 				<code class="bg-neutral-800 px-1 rounded">{$eventStore.meshedEventCode ?? $eventStore.code}</code>
 				only. Divisional sub-events remain accessible from the sidebar.
 			</p>
@@ -232,3 +238,15 @@
 	<IntegrationSlack />
 	<IntegrationAutoEvents />
 </div>
+
+{#if $userStore.eventToken}
+	<Modal title="Join Event QR Code" bind:open={qrModalOpen} outsideclose size="xs">
+		<div class="flex flex-col items-center gap-3">
+			<p class="text-sm text-gray-400 text-center">Scan to join the event on FTA Buddy</p>
+			<div class="max-w-64 w-full mx-auto">
+				<QrCode value={`https://ftabuddy.com/join/${$userStore.eventToken}`} padding={12} />
+			</div>
+			<Button onclick={() => (qrModalOpen = false)} class="w-full">Close</Button>
+		</div>
+	</Modal>
+{/if}

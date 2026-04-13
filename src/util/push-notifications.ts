@@ -61,7 +61,7 @@ export async function sendWebPushNotification(userIds: number[], data: Notificat
 			.filter((u) => {
 				if (!u.active_event_code) return true; // null = receives all
 				if (u.active_event_code === eventCode) return true;
-				// User is on a meshed parent — check if notification is for one of its sub-events
+				// User is on a meshed parent - check if notification is for one of its sub-events
 				const subCodes = meshedSubMap.get(u.active_event_code);
 				return subCodes ? subCodes.includes(eventCode) : false;
 			})

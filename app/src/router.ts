@@ -2,7 +2,7 @@
 import { createRouter } from "sv-router";
 
 // Handle stale JS chunks after a deployment. sv-router's isLazyImport() detects
-// lazy routes via a regex on the function's source text — wrapping imports in a
+// lazy routes via a regex on the function's source text - wrapping imports in a
 // closure breaks that detection and causes sv-router to treat the function as an
 // already-resolved component, rendering nothing. Use a global unhandledrejection
 // handler instead so the direct () => import(...) syntax is preserved.

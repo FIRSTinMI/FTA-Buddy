@@ -471,7 +471,7 @@
 		try {
 			nexusLiveStatus = await trpc.event.getNexusLiveStatus.query();
 		} catch {
-			// ignore — nexus may not be configured
+			// ignore - nexus may not be configured
 		}
 	}
 

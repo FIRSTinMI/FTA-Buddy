@@ -1014,7 +1014,7 @@ export const eventRouter = router({
 	/**
 	 * Toggles inter-divisional playoffs mode for a meshed event.
 	 * When enabled, the combined view acts as a normal single-event view scoped
-	 * only to the parent event — its own field monitor, logs, and notes.
+	 * only to the parent event - its own field monitor, logs, and notes.
 	 * Divisional sub-events remain accessible via the sidebar selector.
 	 */
 	setPlayoffMode: eventProcedure

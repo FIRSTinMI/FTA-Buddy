@@ -1770,7 +1770,7 @@ export async function createFromNexus(channel_id: string, message_ts: string, te
 
 	const { team, matchNumber, tournamentLevel, playNumber, noteText } = parseNexusMessage(text, blocks);
 
-	// The Slack workspace ID — same across all linked events; grab the first non-null one.
+	// The Slack workspace ID - same across all linked events; grab the first non-null one.
 	const slackTeam = linkedEventRows.find((r) => r.slackTeam)?.slackTeam ?? null;
 
 	// Resolve which event/sub-event owns this team.
@@ -1838,7 +1838,7 @@ export async function createFromNexus(channel_id: string, message_ts: string, te
 
 	bus.publish(`event:${noteEvent.code}:note_update`, { kind: "create", note: insert[0] as Note });
 
-	// Notify users on linkEvent (the meshed parent if applicable — it has all sub-event users merged)
+	// Notify users on linkEvent (the meshed parent if applicable - it has all sub-event users merged)
 	createNotification(
 		linkEvent.users.map((u) => u.id),
 		buildNotification({

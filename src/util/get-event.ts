@@ -19,7 +19,7 @@ import * as nexusPoller from "./nexusInspectionPoller";
 
 let loadingEvents: { [key: string]: Promise<ServerEvent> } = {};
 
-/** Bus unsubscribe functions keyed by event code — called during event eviction. */
+/** Bus unsubscribe functions keyed by event code - called during event eviction. */
 const eventBusCleanups = new Map<string, Array<() => void>>();
 
 export function cleanupEventSubscriptions(eventCode: string): void {

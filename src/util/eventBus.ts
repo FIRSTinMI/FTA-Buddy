@@ -22,7 +22,7 @@ redisSub.on("message", (ch: string, msg: string) => {
 	for (const handler of handlers) {
 		try {
 			const result = handler(data) as unknown;
-			// Guard against async handlers — catch any returned promise rejection
+			// Guard against async handlers - catch any returned promise rejection
 			if (result !== null && result !== undefined && typeof (result as Promise<unknown>).then === "function") {
 				(result as Promise<unknown>).catch((err: unknown) =>
 					console.error(`[EventBus] Async handler error on channel ${ch}:`, err),
@@ -46,7 +46,7 @@ export const bus = {
 	},
 
 	/**
-	 * Subscribe to a channel. Returns an unsubscribe function — call it in `finally`
+	 * Subscribe to a channel. Returns an unsubscribe function - call it in `finally`
 	 * to avoid listener leaks when a tRPC subscription ends.
 	 *
 	 * redisSub.subscribe() is only called when the *first* handler for a channel is

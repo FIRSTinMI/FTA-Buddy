@@ -365,7 +365,7 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
 
 export const slackServers = pgTable("slack_servers", {
 	id: serial("id").primaryKey(),
-	team_id: varchar("team_id").notNull(),
+	team_id: varchar("team_id").notNull().unique(),
 	team_name: varchar("team_name").notNull(),
 	access_token: varchar("access_token").notNull(),
 	webhook_url: varchar("webhook_url"),

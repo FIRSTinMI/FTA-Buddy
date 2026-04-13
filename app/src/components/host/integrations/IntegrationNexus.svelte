@@ -91,7 +91,7 @@
 			<span class="text-2xl">🔍</span>
 			<div>
 				<p class="font-semibold">Nexus Inspection API</p>
-			<p class="text-sm text-gray-400">Pull inspection status into the checklist, and provide live match status for events without a field connection.</p>
+			<p class="text-sm text-gray-400">Pull inspection status, and backup data connection for notepad.</p>
 			</div>
 		</div>
 		<div class="flex items-center gap-2 shrink-0">

@@ -32,6 +32,14 @@ export async function slackOAuth(code: string) {
 			access_token: data.access_token,
 			webhook_url: data.incoming_webhook,
 		})
+		.onConflictDoUpdate({
+			target: slackServers.team_id,
+			set: {
+				team_name: data.team.name,
+				access_token: data.access_token,
+				webhook_url: data.incoming_webhook,
+			},
+		})
 		.execute();
 
 	return true;

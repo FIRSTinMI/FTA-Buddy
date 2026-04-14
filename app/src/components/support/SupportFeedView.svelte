@@ -449,6 +449,13 @@
 
 	let filterModalOpen = $state(false);
 
+	const activeFilterCount = $derived(
+		(feedFilter !== "all" ? 1 : 0) +
+			(feedFilter !== "events" && typeFilter !== "all" ? 1 : 0) +
+			(feedFilter !== "events" && statusFilter !== "all" ? 1 : 0) +
+			(hasMeshedFields && selectedFields.length > 0 && selectedFields.length < availableSubEvents.length ? 1 : 0),
+	);
+
 	let createModalOpen = $state(false);
 
 	const teamOptions = $eventStore.teams
@@ -737,17 +744,12 @@
 
 		<Button
 			size="sm"
-			color={typeFilter !== "all" ||
-			statusFilter !== "all" ||
-			feedFilter !== "all" ||
-			(hasMeshedFields && selectedFields.length > 0 && selectedFields.length < availableSubEvents.length)
-				? "primary"
-				: "alternative"}
+			color={activeFilterCount > 0 ? "primary" : "alternative"}
 			class="shrink-0"
 			onclick={() => (filterModalOpen = true)}
 			title="Filters"
 		>
-			<Icon icon="mdi:filter-variant" class="size-4" />
+			<Icon icon="mdi:filter-variant" class="size-4" />{#if activeFilterCount > 0}<span class="ml-1">{activeFilterCount}</span>{/if}
 		</Button>
 	</div>
 

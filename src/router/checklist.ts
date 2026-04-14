@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { bus } from "../util/eventBus";
 import type { EventChecklist } from "../../shared/types";
@@ -10,6 +10,16 @@ import { subscriptionQueue } from "../util/subscription";
 
 export const checklistRouter = router({
 	get: eventProcedure.query(async ({ input, ctx }) => {
+		if (ctx.event.subEvents) {
+			const subEventCodes = (ctx.event.subEvents as Array<{ code: string }>).map((e) => e.code);
+			const rows = await db
+				.select({ checklist: events.checklist })
+				.from(events)
+				.where(inArray(events.code, subEventCodes));
+			const merged: EventChecklist = {};
+			for (const row of rows) Object.assign(merged, row.checklist as EventChecklist);
+			return merged;
+		}
 		return ctx.event.checklist as EventChecklist;
 	}),
 
@@ -67,14 +77,37 @@ export const checklistRouter = router({
 		.subscription(async function* ({ input, signal }) {
 			const event = await getEvent(input.eventToken);
 			const { push, drain } = subscriptionQueue<EventChecklist>(signal!);
-			const unsub = bus.subscribe(`event:${event.code}:checklist`, (data) => push(data as EventChecklist));
-			const heartbeat = setInterval(() => push(event.checklist as EventChecklist), 30_000);
+
+			let unsubs: Array<() => void>;
+			let heartbeatFn: () => void;
+
+			if (event.subEvents) {
+				const subEventCodes = (event.subEvents as Array<{ code: string }>).map((e) => e.code);
+				async function getMerged(): Promise<EventChecklist> {
+					const rows = await db
+						.select({ checklist: events.checklist })
+						.from(events)
+						.where(inArray(events.code, subEventCodes));
+					const merged: EventChecklist = {};
+					for (const row of rows) Object.assign(merged, row.checklist as EventChecklist);
+					return merged;
+				}
+				unsubs = subEventCodes.map((code) =>
+					bus.subscribe(`event:${code}:checklist`, async () => push(await getMerged())),
+				);
+				heartbeatFn = async () => push(await getMerged());
+			} else {
+				unsubs = [bus.subscribe(`event:${event.code}:checklist`, (data) => push(data as EventChecklist))];
+				heartbeatFn = () => push(event.checklist as EventChecklist);
+			}
+
+			const heartbeat = setInterval(heartbeatFn, 30_000);
 			try {
 				for await (const item of drain()) {
 					yield item;
 				}
 			} finally {
-				unsub();
+				unsubs.forEach((fn) => fn());
 				clearInterval(heartbeat);
 			}
 		}),

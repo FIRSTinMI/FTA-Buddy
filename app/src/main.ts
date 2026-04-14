@@ -72,6 +72,11 @@ function buildLinks(token: string, eventToken: string) {
 
 export let trpc = createTRPCClient<AppRouter>({ links: buildLinks(token, eventToken) });
 
+/** Create a one-off tRPC client that uses a different event token (e.g. a sub-event token in combined meshed view). */
+export function trpcWithEventToken(subEventToken: string) {
+	return createTRPCClient<AppRouter>({ links: buildLinks(token, subEventToken) });
+}
+
 userStore.subscribe((value) => {
 	token = value.token;
 	eventToken = value.eventToken;

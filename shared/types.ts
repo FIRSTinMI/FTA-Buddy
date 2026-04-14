@@ -714,6 +714,19 @@ export type AutoEventIssueType = (typeof AUTO_EVENT_ISSUE_TYPES)[number];
  */
 export type EventAutoEventSettings = Partial<Record<AutoEventIssueType, boolean>>;
 
+export const DEFAULT_AUTO_EVENT_SETTINGS: EventAutoEventSettings = {
+	Bypassed: true,
+	"Code disconnect": true,
+	"RIO disconnect": true,
+	"Radio disconnect": true,
+	"DS disconnect": true,
+	Brownout: false,
+	"Large spike in ping": false,
+	"Sustained high ping": false,
+	"Low signal": false,
+	"High BWU": false,
+};
+
 export type MatchEventStatus = "active" | "dismissed" | "converted";
 
 /** Detail for a single issue within a combined match event. */

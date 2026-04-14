@@ -49,50 +49,52 @@
 	}
 </script>
 
-<div class="container mx-auto md:max-w-4xl flex flex-col justify-center p-4 h-full gap-4 overflow-y-auto">
-	<h1 class="text-3xl font-bold">Create Meshed Event</h1>
-	<p class="text-lg">A meshed event combines multiple events into one</p>
-	<p class="text-lg">
-		Any user that joins this meshed event will be able to access each of the events that are part of it. There is
-		also a combined view that shows all the tickets and team info from the events in one place.
-	</p>
-	<form
-		class="flex flex-col gap-2 text-left"
-		onsubmit={(e) => {
-			e.preventDefault();
-			createMeshedEvent();
-		}}
-	>
-		<Label>
-			Meshed Event Code
-			<Input placeholder="2025micmp" bind:value={eventCode} disabled={blocked} />
-		</Label>
-		<Label>
-			Meshed Event Password
-			<Input bind:value={eventPin} placeholder="robot-field-42" disabled={blocked} />
-		</Label>
-		<Label class="mt-2">Sub Events</Label>
-		{#each subEvents as subEvent, i}
-			<div class="flex gap-2">
-				<Input
-					placeholder="2025micmp{i + 1}"
-					bind:value={subEvent.code}
-					onkeydown={checkIfAddSubEvent}
-					disabled={blocked}
-				/>
-				<Input
-					placeholder={["DTE", "Hemlock", "Consumers", "Aptive"][i]}
-					bind:value={subEvent.label}
-					disabled={blocked}
-				/>
-				<Button
-					onclick={() => (subEvents = subEvents.filter((_, index) => index !== i))}
-					disabled={subEvents.length <= 1 || blocked}>Remove</Button
-				>
-			</div>
-		{/each}
-		<Button class="mt-2" onclick={createMeshedEvent} disabled={!eventCode || !eventPin || blocked}
-			>Create Meshed Event</Button
+<div class="h-full overflow-y-auto">
+	<div class="container mx-auto md:max-w-4xl flex flex-col justify-center p-4 gap-4">
+		<h1 class="text-3xl font-bold">Create Meshed Event</h1>
+		<p class="text-lg">A meshed event combines multiple events into one</p>
+		<p class="text-lg">
+			Any user that joins this meshed event will be able to access each of the events that are part of it. There
+			is also a combined view that shows all the tickets and team info from the events in one place.
+		</p>
+		<form
+			class="flex flex-col gap-2 text-left"
+			onsubmit={(e) => {
+				e.preventDefault();
+				createMeshedEvent();
+			}}
 		>
-	</form>
+			<Label>
+				Meshed Event Code
+				<Input placeholder="2025micmp" bind:value={eventCode} disabled={blocked} />
+			</Label>
+			<Label>
+				Meshed Event Password
+				<Input bind:value={eventPin} placeholder="robot-field-42" disabled={blocked} />
+			</Label>
+			<Label class="mt-2">Sub Events</Label>
+			{#each subEvents as subEvent, i}
+				<div class="flex gap-2">
+					<Input
+						placeholder="2025micmp{i + 1}"
+						bind:value={subEvent.code}
+						onkeydown={checkIfAddSubEvent}
+						disabled={blocked}
+					/>
+					<Input
+						placeholder={["DTE", "Hemlock", "Consumers", "Aptive"][i]}
+						bind:value={subEvent.label}
+						disabled={blocked}
+					/>
+					<Button
+						onclick={() => (subEvents = subEvents.filter((_, index) => index !== i))}
+						disabled={subEvents.length <= 1 || blocked}>Remove</Button
+					>
+				</div>
+			{/each}
+			<Button class="mt-2" onclick={createMeshedEvent} disabled={!eventCode || !eventPin || blocked}
+				>Create Meshed Event</Button
+			>
+		</form>
+	</div>
 </div>

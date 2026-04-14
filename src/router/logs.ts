@@ -658,10 +658,13 @@ export const matchRouter = router({
 			}),
 		)
 		.query(async ({ input, ctx }) => {
+			const eventCodes = ctx.event.subEvents
+				? [ctx.event.code, ...(ctx.event.subEvents as Array<{ code: string }>).map((e) => e.code)]
+				: [ctx.event.code];
 			const match = await db.query.matchLogs.findFirst({
 				where: and(
 					eq(matchLogs.id, input.id),
-					eq(matchLogs.event, ctx.event.code), // Technically not required but like security ig?
+					eventCodes.length === 1 ? eq(matchLogs.event, eventCodes[0]) : inArray(matchLogs.event, eventCodes),
 				),
 			});
 
@@ -678,10 +681,13 @@ export const matchRouter = router({
 			}),
 		)
 		.query(async ({ input, ctx }) => {
+			const eventCodes = ctx.event.subEvents
+				? [ctx.event.code, ...(ctx.event.subEvents as Array<{ code: string }>).map((e) => e.code)]
+				: [ctx.event.code];
 			const match = await db.query.matchLogs.findFirst({
 				where: and(
 					eq(matchLogs.id, input.id),
-					eq(matchLogs.event, ctx.event.code), // Technically not required but like security ig?
+					eventCodes.length === 1 ? eq(matchLogs.event, eventCodes[0]) : inArray(matchLogs.event, eventCodes),
 				),
 			});
 

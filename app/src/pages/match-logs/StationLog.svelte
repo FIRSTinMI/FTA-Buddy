@@ -139,7 +139,7 @@
 	</div>
 </Modal>
 
-<div class="container h-full overflow-y-auto">
+<div class="h-full overflow-y-auto">
 	<div class=" mx-auto p-2 lg:max-w-7xl w-full flex flex-col gap-2 md:gap-4 pb-4">
 		<div class="flex justify-between w-full">
 			{#if $userStore.eventToken}

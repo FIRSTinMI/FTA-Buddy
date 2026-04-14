@@ -116,93 +116,100 @@
 	}
 </script>
 
-<div class="container mx-auto p-2 w-full flex flex-col gap-4 h-full overflow-y-auto">
-	<div class="flex gap-2">
-		<Button onclick={back} class="w-fit">Back</Button>
-	</div>
-	{#await match}
-		<Spinner />
-	{:then match}
-		<div>
-			<h1 class="text-xl">
-				{match.event.toUpperCase()}
-				{match.level === "None" ? "Test" : match.level} Match {match.match_number}/{match.play_number}
-			</h1>
-			<p>{formatTimeNoAgo(new Date(match.start_time))}</p>
-			<p class="md:hidden text-gray-600 text-sm">View on desktop for more detail</p>
+<div class="h-full overflow-y-auto">
+	<div class="container mx-auto p-2 w-full flex flex-col gap-4">
+		<div class="flex gap-2">
+			<Button onclick={back} class="w-fit">Back</Button>
 		</div>
-		{#if data}
-			<Tabs
-				tabStyle="none"
-				classes={{
-					active: "p-1 md:p-4 w-full flex-grow text-primary-500 border-b-2 border-primary-500",
-					inactive:
-						"p-1 md:p-4 w-full text-gray-500 dark:text-gray-400 hover:text-gray-700 focus:ring-4 focus:ring-primary-300 focus:outline-none dark:hover:text-white disabled:cursor-not-allowed disabled:opacity-50",
-					content: "mt-4",
-				}}
-			>
-				<TabItem
-					open={averageTripTimeOpen}
-					class="w-full"
-					onclick={() => tabClick("averageTripTime")}
-					title="Ping"
-				>
-					<MatchGraph {data} log={data.log} stat="averageTripTime" />
-				</TabItem>
-				<TabItem open={batteryOpen} class="w-full" onclick={() => tabClick("battery")} title="Battery">
-					<MatchGraph {data} log={data.log} stat="battery" />
-				</TabItem>
-				<TabItem open={dataRateTotalOpen} class="w-full" onclick={() => tabClick("dataRateTotal")} title="BWU">
-					<MatchGraph {data} log={data.log} stat="dataRateTotal" />
-				</TabItem>
-				<TabItem
-					open={lostPacketsOpen}
-					class="w-full"
-					onclick={() => tabClick("lostPackets")}
-					title="Lost Packets"
-				>
-					<MatchGraph {data} log={data.log} stat="lostPackets" />
-				</TabItem>
-				<TabItem open={signalOpen} class="w-full" onclick={() => tabClick("signal")} title="Signal">
-					<MatchGraph {data} log={data.log} stat="signal" />
-				</TabItem>
-				<TabItem open={noiseOpen} class="w-full" onclick={() => tabClick("noise")} title="Noise">
-					<MatchGraph {data} log={data.log} stat="noise" />
-				</TabItem>
-			</Tabs>
-			<h2>View a Team's Specific Log</h2>
-			<div class="grid grid-cols-2 gap-1">
-				<Button
-					color="blue"
-					onclick={() => navigate("/logs/:matchid/:station", { params: { matchid, station: "blue1" } })}
-					>{data?.blue1}</Button
-				>
-				<Button
-					color="red"
-					onclick={() => navigate("/logs/:matchid/:station", { params: { matchid, station: "red1" } })}
-					>{data?.red1}</Button
-				>
-				<Button
-					color="blue"
-					onclick={() => navigate("/logs/:matchid/:station", { params: { matchid, station: "blue2" } })}
-					>{data?.blue2}</Button
-				>
-				<Button
-					color="red"
-					onclick={() => navigate("/logs/:matchid/:station", { params: { matchid, station: "red2" } })}
-					>{data?.red2}</Button
-				>
-				<Button
-					color="blue"
-					onclick={() => navigate("/logs/:matchid/:station", { params: { matchid, station: "blue3" } })}
-					>{data?.blue3}</Button
-				>
-				<Button
-					color="red"
-					onclick={() => navigate("/logs/:matchid/:station", { params: { matchid, station: "red3" } })}
-					>{data?.red3}</Button
-				>
+		{#await match}
+			<Spinner />
+		{:then match}
+			<div>
+				<h1 class="text-xl">
+					{match.event.toUpperCase()}
+					{match.level === "None" ? "Test" : match.level} Match {match.match_number}/{match.play_number}
+				</h1>
+				<p>{formatTimeNoAgo(new Date(match.start_time))}</p>
+				<p class="md:hidden text-gray-600 text-sm">View on desktop for more detail</p>
 			</div>
-		{/if}
-	{/await}
+			{#if data}
+				<Tabs
+					tabStyle="none"
+					classes={{
+						active: "p-1 md:p-4 w-full flex-grow text-primary-500 border-b-2 border-primary-500",
+						inactive:
+							"p-1 md:p-4 w-full text-gray-500 dark:text-gray-400 hover:text-gray-700 focus:ring-4 focus:ring-primary-300 focus:outline-none dark:hover:text-white disabled:cursor-not-allowed disabled:opacity-50",
+						content: "mt-4",
+					}}
+				>
+					<TabItem
+						open={averageTripTimeOpen}
+						class="w-full"
+						onclick={() => tabClick("averageTripTime")}
+						title="Ping"
+					>
+						<MatchGraph {data} log={data.log} stat="averageTripTime" />
+					</TabItem>
+					<TabItem open={batteryOpen} class="w-full" onclick={() => tabClick("battery")} title="Battery">
+						<MatchGraph {data} log={data.log} stat="battery" />
+					</TabItem>
+					<TabItem
+						open={dataRateTotalOpen}
+						class="w-full"
+						onclick={() => tabClick("dataRateTotal")}
+						title="BWU"
+					>
+						<MatchGraph {data} log={data.log} stat="dataRateTotal" />
+					</TabItem>
+					<TabItem
+						open={lostPacketsOpen}
+						class="w-full"
+						onclick={() => tabClick("lostPackets")}
+						title="Lost Packets"
+					>
+						<MatchGraph {data} log={data.log} stat="lostPackets" />
+					</TabItem>
+					<TabItem open={signalOpen} class="w-full" onclick={() => tabClick("signal")} title="Signal">
+						<MatchGraph {data} log={data.log} stat="signal" />
+					</TabItem>
+					<TabItem open={noiseOpen} class="w-full" onclick={() => tabClick("noise")} title="Noise">
+						<MatchGraph {data} log={data.log} stat="noise" />
+					</TabItem>
+				</Tabs>
+				<h2>View a Team's Specific Log</h2>
+				<div class="grid grid-cols-2 gap-1">
+					<Button
+						color="blue"
+						onclick={() => navigate("/logs/:matchid/:station", { params: { matchid, station: "blue1" } })}
+						>{data?.blue1}</Button
+					>
+					<Button
+						color="red"
+						onclick={() => navigate("/logs/:matchid/:station", { params: { matchid, station: "red1" } })}
+						>{data?.red1}</Button
+					>
+					<Button
+						color="blue"
+						onclick={() => navigate("/logs/:matchid/:station", { params: { matchid, station: "blue2" } })}
+						>{data?.blue2}</Button
+					>
+					<Button
+						color="red"
+						onclick={() => navigate("/logs/:matchid/:station", { params: { matchid, station: "red2" } })}
+						>{data?.red2}</Button
+					>
+					<Button
+						color="blue"
+						onclick={() => navigate("/logs/:matchid/:station", { params: { matchid, station: "blue3" } })}
+						>{data?.blue3}</Button
+					>
+					<Button
+						color="red"
+						onclick={() => navigate("/logs/:matchid/:station", { params: { matchid, station: "red3" } })}
+						>{data?.red3}</Button
+					>
+				</div>
+			{/if}
+		{/await}
+	</div>
 </div>

@@ -11,10 +11,10 @@
 	} from "flowbite-svelte";
 	import { onDestroy, onMount } from "svelte";
 	import { get } from "svelte/store";
-	import type { EventChecklist, NexusStatus } from "../../../shared/types";
+	import type { EventChecklist, NexusStatus, TeamChecklist } from "../../../shared/types";
 	import PitMapModal from "../components/PitMapModal.svelte";
 	import Spinner from "../components/Spinner.svelte";
-	import { trpc } from "../main";
+	import { trpc, trpcWithEventToken } from "../main";
 	import { eventStore } from "../stores/event";
 	import { userStore } from "../stores/user";
 
@@ -54,6 +54,33 @@
 			}
 			return parseInt(teamA) - parseInt(teamB);
 		}),
+	);
+
+	// Meshed combined view: group teams by subevent
+	let isMeshedCombined = $derived(
+		!!$userStore.meshedEventToken &&
+			$userStore.meshedEventToken === $userStore.eventToken &&
+			!!$eventStore.subEvents?.length,
+	);
+
+	let meshedGroups = $derived(
+		isMeshedCombined && $eventStore.subEvents
+			? $eventStore.subEvents.map((subEvent) => {
+					const teams = subEvent.teams
+						.map((team) => [team.number, checklist[team.number]] as [string, TeamChecklist])
+						.filter(([_, items]) => items !== undefined)
+						.filter(([_, items]) => (sortBy ? !items[sortBy] : true))
+						.sort(([a], [b]) => parseInt(a) - parseInt(b));
+					return { label: subEvent.label || subEvent.code, teams };
+				})
+			: null,
+	);
+
+	// Map team number → sub-event token so combined-view updates hit the right event
+	let teamSubEventToken = $derived(
+		$eventStore.subEvents
+			? Object.fromEntries($eventStore.subEvents.flatMap((se) => se.teams.map((t) => [t.number, se.token])))
+			: ({} as Record<string, string>),
 	);
 
 	// Pit map
@@ -112,7 +139,9 @@
 			updated.push({ team: team, key: "radioProgrammed", value: true });
 		}
 
-		await trpc.checklist.update.mutate(updated);
+		const subToken = isMeshedCombined ? teamSubEventToken[team] : undefined;
+		const client = subToken ? trpcWithEventToken(subToken) : trpc;
+		await client.checklist.update.mutate(updated);
 		updateTotals(checklist);
 	}
 
@@ -208,153 +237,216 @@
 	});
 </script>
 
-<div class="container w-full flex flex-col h-full mx-auto gap-2 overflow-y-auto">
-	{#await checklistPromise}
-		<Spinner />
-	{:then c}
-		<div class="flex w-full justify-center py-2">
-			<div class="flex flex-col gap-2">
-				<h1 class="font-bold text-3xl">Team Checklist</h1>
-				{#if nexusStatus && nexusStatus.state !== "not_configured"}
-					<div class="flex flex-row gap-2 justify-center items-center text-sm">
-						<Indicator
-							color={nexusStatus.state === "complete" || nexusStatus.state === "polling_slow"
-								? "green"
-								: nexusStatus.state === "polling"
-									? "blue"
-									: nexusStatus.state === "unauthorized"
-										? "red"
-										: nexusStatus.state === "error"
-											? "yellow"
-											: "gray"}
-							class="shrink-0"
-						/>
-						<span class="text-gray-400">
-							{#if nexusStatus.state === "polling" || nexusStatus.state === "polling_slow"}
-								Nexus syncing
-							{:else if nexusStatus.state === "complete"}
-								Nexus synced ✓
-							{:else if nexusStatus.state === "unauthorized"}
-								Nexus: unauthorized
-							{:else if nexusStatus.state === "error"}
-								Nexus: error
-							{:else if nexusStatus.state === "event_over"}
-								Nexus: event ended
-							{/if}
-						</span>
+<div class="h-full overflow-y-auto">
+	<div class="container w-full flex flex-col mx-auto gap-2">
+		{#await checklistPromise}
+			<Spinner />
+		{:then c}
+			<div class="flex w-full justify-center py-2">
+				<div class="flex flex-col gap-2">
+					<h1 class="font-bold text-3xl">Team Checklist</h1>
+					{#if !isMeshedCombined && nexusStatus && nexusStatus.state !== "not_configured"}
+						<div class="flex flex-row gap-2 justify-center items-center text-sm">
+							<Indicator
+								color={nexusStatus.state === "complete" || nexusStatus.state === "polling_slow"
+									? "green"
+									: nexusStatus.state === "polling"
+										? "blue"
+										: nexusStatus.state === "unauthorized"
+											? "red"
+											: nexusStatus.state === "error"
+												? "yellow"
+												: "gray"}
+								class="shrink-0"
+							/>
+							<span class="text-gray-400">
+								{#if nexusStatus.state === "polling" || nexusStatus.state === "polling_slow"}
+									Nexus syncing
+								{:else if nexusStatus.state === "complete"}
+									Nexus synced ✓
+								{:else if nexusStatus.state === "unauthorized"}
+									Nexus: unauthorized
+								{:else if nexusStatus.state === "error"}
+									Nexus: error
+								{:else if nexusStatus.state === "event_over"}
+									Nexus: event ended
+								{/if}
+							</span>
+						</div>
+					{/if}
+					<div class="flex flex-row gap-2 place-content-center">
+						<p class="font-bold">Present:</p>
+						<p class="">
+							{present}/{total}{#if present === total}
+								🎉{/if}
+						</p>
 					</div>
-				{/if}
-				<div class="flex flex-row gap-2 place-content-center">
-					<p class="font-bold">Present:</p>
-					<p class="">
-						{present}/{total}{#if present === total}
-							🎉{/if}
-					</p>
-				</div>
-				<div class="flex flex-row gap-2 place-content-center">
-					<p class="font-bold">Inspected:</p>
-					<p class="">
-						{inspected}/{total}{#if inspected === total}
-							🎉{/if}
-					</p>
-				</div>
-				<div class="flex flex-row gap-2 place-content-center">
-					<p class="font-bold">Radio Programmed:</p>
-					<p class="">
-						{radioProgrammed}/{total}{#if radioProgrammed === total}
-							🎉{/if}
-					</p>
-				</div>
-				<div class="flex flex-row gap-2 place-content-center">
-					<p class="font-bold">Connection Tested:</p>
-					<p class="">
-						{connectionTested}/{total}{#if connectionTested === total}
-							🎉{/if}
-					</p>
+					<div class="flex flex-row gap-2 place-content-center">
+						<p class="font-bold">Inspected:</p>
+						<p class="">
+							{inspected}/{total}{#if inspected === total}
+								🎉{/if}
+						</p>
+					</div>
+					<div class="flex flex-row gap-2 place-content-center">
+						<p class="font-bold">Radio Programmed:</p>
+						<p class="">
+							{radioProgrammed}/{total}{#if radioProgrammed === total}
+								🎉{/if}
+						</p>
+					</div>
+					<div class="flex flex-row gap-2 place-content-center">
+						<p class="font-bold">Connection Tested:</p>
+						<p class="">
+							{connectionTested}/{total}{#if connectionTested === total}
+								🎉{/if}
+						</p>
+					</div>
 				</div>
 			</div>
-		</div>
-		<table class="text-center pt-2">
-			<thead class="sticky top-0 z-20 bg-gray-100 dark:bg-gray-700 font-bold">
-				<tr>
-					<td class="sticky left-0 z-30 p-1 md:p-2 bg-gray-100 dark:bg-gray-700">Team</td>
-					<td class="hidden sm:table-cell p-1 md:p-2">Name</td>
-					<td class="p-1 md:p-2">
-						<button
-							onclick={() => (sortBy = sortBy === "present" ? null : "present")}
-							class={sortBy === "present" ? "text-blue-400 font-bold" : "font-bold"}
-							>Present <span class={sortBy === "present" ? "" : "opacity-30"}>▲</span></button
-						>
-					</td>
-					<td class="p-1 md:p-2">
-						<button
-							onclick={() => (sortBy = sortBy === "inspected" ? null : "inspected")}
-							class={sortBy === "inspected" ? "text-blue-400 font-bold" : "font-bold"}
-							>Inspected <span class={sortBy === "inspected" ? "" : "opacity-30"}>▲</span></button
-						>
-					</td>
-					<td class="p-1 md:p-2">
-						<button
-							onclick={() => (sortBy = sortBy === "radioProgrammed" ? null : "radioProgrammed")}
-							class={sortBy === "radioProgrammed" ? "text-blue-400 font-bold" : "font-bold"}
-							>Radio <span class={sortBy === "radioProgrammed" ? "" : "opacity-30"}>▲</span></button
-						>
-					</td>
-					<td class="p-1 md:p-2">
-						<button
-							onclick={() => (sortBy = sortBy === "connectionTested" ? null : "connectionTested")}
-							class={sortBy === "connectionTested" ? "text-blue-400 font-bold" : "font-bold"}
-							>Connection <span class={sortBy === "connectionTested" ? "" : "opacity-30"}>▲</span></button
-						>
-					</td>
-				</tr>
-			</thead>
-			<tbody>
-				{#each sortedEntries as [team, items] (team)}
-					<tr class="border-b-1 border-gray-600">
-						<td class="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 px-6 py-4">
+			<table class="text-center pt-2">
+				<thead class="sticky top-0 z-20 bg-gray-100 dark:bg-gray-700 font-bold">
+					<tr>
+						<td class="sticky left-0 z-30 p-1 md:p-2 bg-gray-100 dark:bg-gray-700">Team</td>
+						<td class="hidden sm:table-cell p-1 md:p-2">Name</td>
+						<td class="p-1 md:p-2">
 							<button
-								class="font-medium hover:underline text-blue-600 dark:text-blue-400"
-								onclick={() => {
-									pitMapTeam = team;
-									pitMapOpen = true;
-								}}>{team}</button
+								onclick={() => (sortBy = sortBy === "present" ? null : "present")}
+								class={sortBy === "present" ? "text-blue-400 font-bold" : "font-bold"}
+								>Present <span class={sortBy === "present" ? "" : "opacity-30"}>▲</span></button
 							>
 						</td>
-						<td class="hidden sm:table-cell">{teamNames[team]}</td>
-						<td>
-							<Checkbox
-								class="justify-center"
-								bind:checked={items.present}
-								onchange={() => updateChecklist(team, "present", items.present)}
-							/></td
-						>
-						<td>
-							<Checkbox
-								class="justify-center"
-								bind:checked={items.inspected}
-								onchange={() => updateChecklist(team, "inspected", items.inspected)}
-							/></td
-						>
-						<td>
-							<Checkbox
-								class="justify-center"
-								bind:checked={items.radioProgrammed}
-								onchange={() => updateChecklist(team, "radioProgrammed", items.radioProgrammed)}
-							/></td
-						>
-						<td>
-							<Checkbox
-								class="justify-center"
-								bind:checked={items.connectionTested}
-								onchange={() => updateChecklist(team, "connectionTested", items.connectionTested)}
-							/></td
-						>
+						<td class="p-1 md:p-2">
+							<button
+								onclick={() => (sortBy = sortBy === "inspected" ? null : "inspected")}
+								class={sortBy === "inspected" ? "text-blue-400 font-bold" : "font-bold"}
+								>Inspected <span class={sortBy === "inspected" ? "" : "opacity-30"}>▲</span></button
+							>
+						</td>
+						<td class="p-1 md:p-2">
+							<button
+								onclick={() => (sortBy = sortBy === "radioProgrammed" ? null : "radioProgrammed")}
+								class={sortBy === "radioProgrammed" ? "text-blue-400 font-bold" : "font-bold"}
+								>Radio <span class={sortBy === "radioProgrammed" ? "" : "opacity-30"}>▲</span></button
+							>
+						</td>
+						<td class="p-1 md:p-2">
+							<button
+								onclick={() => (sortBy = sortBy === "connectionTested" ? null : "connectionTested")}
+								class={sortBy === "connectionTested" ? "text-blue-400 font-bold" : "font-bold"}
+								>Connection <span class={sortBy === "connectionTested" ? "" : "opacity-30"}>▲</span
+								></button
+							>
+						</td>
 					</tr>
-				{/each}
-			</tbody>
-		</table>
-	{/await}
+				</thead>
+				<tbody>
+					{#if meshedGroups}
+						{#each meshedGroups as group}
+							{#if group.teams.length > 0}
+								<tr>
+									<td
+										colspan="6"
+										class="bg-gray-200 dark:bg-gray-600 font-bold text-left px-3 py-1 text-sm uppercase tracking-wide"
+									>
+										{group.label}
+									</td>
+								</tr>
+								{#each group.teams as [team, items] (team)}
+									<tr class="border-b border-gray-600">
+										<td class="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 px-6 py-4">
+											<button
+												class="font-medium hover:underline text-blue-600 dark:text-blue-400"
+												onclick={() => {
+													pitMapTeam = team;
+													pitMapOpen = true;
+												}}>{team}</button
+											>
+										</td>
+										<td class="hidden sm:table-cell">{teamNames[team]}</td>
+										<td>
+											<Checkbox
+												class="justify-center"
+												bind:checked={items.present}
+												onchange={() => updateChecklist(team, "present", items.present)}
+											/></td
+										>
+										<td>
+											<Checkbox
+												class="justify-center"
+												bind:checked={items.inspected}
+												onchange={() => updateChecklist(team, "inspected", items.inspected)}
+											/></td
+										>
+										<td>
+											<Checkbox
+												class="justify-center"
+												bind:checked={items.radioProgrammed}
+												onchange={() =>
+													updateChecklist(team, "radioProgrammed", items.radioProgrammed)}
+											/></td
+										>
+										<td>
+											<Checkbox
+												class="justify-center"
+												bind:checked={items.connectionTested}
+												onchange={() =>
+													updateChecklist(team, "connectionTested", items.connectionTested)}
+											/></td
+										>
+									</tr>
+								{/each}
+							{/if}
+						{/each}
+					{:else}
+						{#each sortedEntries as [team, items] (team)}
+							<tr class="border-b border-gray-600">
+								<td class="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 px-6 py-4">
+									<button
+										class="font-medium hover:underline text-blue-600 dark:text-blue-400"
+										onclick={() => {
+											pitMapTeam = team;
+											pitMapOpen = true;
+										}}>{team}</button
+									>
+								</td>
+								<td class="hidden sm:table-cell">{teamNames[team]}</td>
+								<td>
+									<Checkbox
+										class="justify-center"
+										bind:checked={items.present}
+										onchange={() => updateChecklist(team, "present", items.present)}
+									/></td
+								>
+								<td>
+									<Checkbox
+										class="justify-center"
+										bind:checked={items.inspected}
+										onchange={() => updateChecklist(team, "inspected", items.inspected)}
+									/></td
+								>
+								<td>
+									<Checkbox
+										class="justify-center"
+										bind:checked={items.radioProgrammed}
+										onchange={() => updateChecklist(team, "radioProgrammed", items.radioProgrammed)}
+									/></td
+								>
+								<td>
+									<Checkbox
+										class="justify-center"
+										bind:checked={items.connectionTested}
+										onchange={() =>
+											updateChecklist(team, "connectionTested", items.connectionTested)}
+									/></td
+								>
+							</tr>
+						{/each}
+					{/if}
+				</tbody>
+			</table>
+		{/await}
+	</div>
 </div>
 
 <PitMapModal bind:open={pitMapOpen} teamNumber={pitMapTeam} onRemove={removeTeam} />

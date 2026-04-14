@@ -57,28 +57,30 @@
 	<Spinner />
 {/if}
 
-<div class="container mx-auto md:max-w-3xl flex flex-col justify-center p-4 h-full space-y-4 overflow-y-auto">
-	<h1 class="text-3xl">Welcome to FTA Buddy</h1>
-	<h2 class="text-xl">Finish Creating Account</h2>
-	<form class="flex flex-col space-y-2 mt-2 text-left" onsubmit={createGoogleUser}>
-		<div>
-			<Label for="username">Username</Label>
-			<Input id="username" bind:value={username} placeholder="John" disabled={loading} />
-		</div>
+<div class="h-full overflow-y-auto">
+	<div class="container mx-auto md:max-w-3xl flex flex-col justify-center p-4 space-y-4">
+		<h1 class="text-3xl">Welcome to FTA Buddy</h1>
+		<h2 class="text-xl">Finish Creating Account</h2>
+		<form class="flex flex-col space-y-2 mt-2 text-left" onsubmit={createGoogleUser}>
+			<div>
+				<Label for="username">Username</Label>
+				<Input id="username" bind:value={username} placeholder="John" disabled={loading} />
+			</div>
 
-		<div>
-			<Label for="role">Role</Label>
-			<Select
-				id="role"
-				bind:value={role}
-				items={["FTA", "FTAA", "CSA", "RI"].map((v) => ({
-					name: v,
-					value: v,
-				}))}
-				disabled={loading}
-			/>
-		</div>
+			<div>
+				<Label for="role">Role</Label>
+				<Select
+					id="role"
+					bind:value={role}
+					items={["FTA", "FTAA", "CSA", "RI"].map((v) => ({
+						name: v,
+						value: v,
+					}))}
+					disabled={loading}
+				/>
+			</div>
 
-		<Button type="submit" disabled={loading}>Create Account</Button>
-	</form>
+			<Button type="submit" disabled={loading}>Create Account</Button>
+		</form>
+	</div>
 </div>

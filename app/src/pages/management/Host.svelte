@@ -30,43 +30,46 @@
 	}
 </script>
 
-<div class="container mx-auto md:max-w-4xl flex flex-col p-4 h-full space-y-6 overflow-y-auto">
-	{#if route.pathname !== "/manage/event-settings"}
-		<div class="flex items-center w-full">
-			{#each STEPS as step, i}
-				{#if i > 0}
-					<div class="flex-1 h-px bg-gray-300 dark:bg-neutral-600 mx-2"></div>
-				{/if}
-				<button
-					class="flex items-center gap-2 {stepClickable(i) ? 'cursor-pointer' : 'cursor-default'}"
-					onclick={() => stepClickable(i) && navigate(step.path)}
-					disabled={(!stepClickable(i) && i + 1 !== currentStep) || undefined}
-				>
-					<span
-						class="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold shrink-0
+<div class="h-full overflow-y-auto">
+	<div class="container mx-auto md:max-w-4xl flex flex-col p-4 space-y-6">
+		{#if route.pathname !== "/manage/event-settings"}
+			<div class="flex items-center w-full">
+				{#each STEPS as step, i}
+					{#if i > 0}
+						<div class="flex-1 h-px bg-gray-300 dark:bg-neutral-600 mx-2"></div>
+					{/if}
+					<button
+						class="flex items-center gap-2 {stepClickable(i) ? 'cursor-pointer' : 'cursor-default'}"
+						onclick={() => stepClickable(i) && navigate(step.path)}
+						disabled={(!stepClickable(i) && i + 1 !== currentStep) || undefined}
+					>
+						<span
+							class="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold shrink-0
 							{currentStep > i + 1
-							? 'bg-blue-200 dark:bg-blue-800 text-blue-700 dark:text-blue-300'
-							: i + 1 === currentStep
-								? 'bg-blue-600 text-white'
-								: 'bg-gray-200 dark:bg-neutral-700 text-gray-500 dark:text-neutral-400'}">{i + 1}</span
-					>
-					<span
-						class="text-sm font-medium {i + 1 === currentStep
-							? 'text-gray-900 dark:text-white'
-							: 'text-gray-500 dark:text-neutral-400'} hidden sm:block"
-					>
-						{step.label}
-					</span>
-				</button>
-			{/each}
-		</div>
-	{/if}
+								? 'bg-blue-200 dark:bg-blue-800 text-blue-700 dark:text-blue-300'
+								: i + 1 === currentStep
+									? 'bg-blue-600 text-white'
+									: 'bg-gray-200 dark:bg-neutral-700 text-gray-500 dark:text-neutral-400'}"
+							>{i + 1}</span
+						>
+						<span
+							class="text-sm font-medium {i + 1 === currentStep
+								? 'text-gray-900 dark:text-white'
+								: 'text-gray-500 dark:text-neutral-400'} hidden sm:block"
+						>
+							{step.label}
+						</span>
+					</button>
+				{/each}
+			</div>
+		{/if}
 
-	{#if currentStep === 1}
-		<StepExtensionSetup />
-	{:else if currentStep === 2}
-		<StepCreateEvent />
-	{:else}
-		<StepEventManagement />
-	{/if}
+		{#if currentStep === 1}
+			<StepExtensionSetup />
+		{:else if currentStep === 2}
+			<StepCreateEvent />
+		{:else}
+			<StepEventManagement />
+		{/if}
+	</div>
 </div>

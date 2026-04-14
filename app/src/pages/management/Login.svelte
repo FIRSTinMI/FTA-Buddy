@@ -475,242 +475,264 @@
 	<Spinner />
 {/if}
 
-<div class="container mx-auto max-w-xl md:max-w-3xl flex flex-col justify-center h-full overflow-y-auto gap-4">
-	{#if !user || !$user.token}
-		<!-- Create Account -->
-		{#if view === "create"}
-			<h2 class="text-2xl" style="font-weight: bold;">Create Account</h2>
-			<form class="flex flex-col space-y-2 mt-2 text-left" onsubmit={createUser}>
-				<div>
-					<Label for="username">Username</Label>
-					<Input id="username" bind:value={username} placeholder="John" disabled={loading} />
-				</div>
+<div class="h-full overflow-y-auto">
+	<div class="container mx-auto max-w-xl md:max-w-3xl flex flex-col justify-center gap-4">
+		{#if !user || !$user.token}
+			<!-- Create Account -->
+			{#if view === "create"}
+				<h2 class="text-2xl" style="font-weight: bold;">Create Account</h2>
+				<form class="flex flex-col space-y-2 mt-2 text-left" onsubmit={createUser}>
+					<div>
+						<Label for="username">Username</Label>
+						<Input id="username" bind:value={username} placeholder="John" disabled={loading} />
+					</div>
 
-				<div>
-					<Label for="email">Email</Label>
-					<Input id="email" bind:value={email} placeholder="me@example.com" disabled={loading} type="email" />
-				</div>
+					<div>
+						<Label for="email">Email</Label>
+						<Input
+							id="email"
+							bind:value={email}
+							placeholder="me@example.com"
+							disabled={loading}
+							type="email"
+						/>
+					</div>
 
-				<div>
-					<Label for="password">Password</Label>
-					<Input id="password" bind:value={password} type="password" disabled={loading} />
-				</div>
+					<div>
+						<Label for="password">Password</Label>
+						<Input id="password" bind:value={password} type="password" disabled={loading} />
+					</div>
 
-				<div>
-					<Label for="verify-password">Verify Password</Label>
-					<Input id="verify-password" bind:value={verifyPassword} type="password" disabled={loading} />
-				</div>
+					<div>
+						<Label for="verify-password">Verify Password</Label>
+						<Input id="verify-password" bind:value={verifyPassword} type="password" disabled={loading} />
+					</div>
 
+					<div>
+						<Label for="role">Role</Label>
+						<Select
+							id="role"
+							bind:value={role}
+							items={["FTA", "FTAA", "CSA", "RI"].map((v) => ({
+								name: v,
+								value: v,
+							}))}
+							disabled={loading}
+						/>
+					</div>
+
+					<Button type="submit" disabled={loading}>Create Account</Button>
+				</form>
+				<Button onclick={() => (view = "login")} disabled={loading} outline>Log In</Button>
+
+				<!-- Login -->
+			{:else if view === "login"}
+				<h2 class="text-2xl" style="font-weight: bold;">Log In</h2>
+				<form class="flex flex-col space-y-2 mt-2 text-left" onsubmit={login}>
+					<div>
+						<Label for="email">Email</Label>
+						<Input
+							id="email"
+							bind:value={email}
+							placeholder="me@example.com"
+							disabled={loading}
+							type="email"
+						/>
+					</div>
+
+					<div>
+						<Label for="password">Password</Label>
+						<Input id="password" bind:value={password} type="password" disabled={loading} />
+					</div>
+					<Button type="submit" disabled={loading}>Log In</Button>
+				</form>
+				<Button onclick={() => (view = "create")} disabled={loading} outline>Create Account</Button>
+
+				<p>Or</p>
 				<div>
-					<Label for="role">Role</Label>
-					<Select
-						id="role"
-						bind:value={role}
-						items={["FTA", "FTAA", "CSA", "RI"].map((v) => ({
-							name: v,
-							value: v,
-						}))}
+					<Label for="event-token">Event Token</Label>
+					<Input
+						id="event-token"
+						bind:value={$user.eventToken}
+						placeholder="Event Token"
 						disabled={loading}
 					/>
 				</div>
+				<Button
+					onclick={() => {
+						user.set({ ...$user, eventToken: $user.eventToken });
+						if ($user.role === "FTA" || $user.role === "FTAA") setTimeout(() => navigate("/monitor"), 500);
+						else setTimeout(() => navigate("/notepad"), 500);
+					}}
+					disabled={loading}>Join Event</Button
+				>
 
-				<Button type="submit" disabled={loading}>Create Account</Button>
-			</form>
-			<Button onclick={() => (view = "login")} disabled={loading} outline>Log In</Button>
+				<!-- Login Prompt -->
+			{:else}
+				<div class="grid grid-cols-2 gap-4">
+					{#if desktop}
+						<div class="flex h-full">
+							<div class="my-auto w-full">
+								<h2 class="text-xl">Run FTA Buddy from this computer</h2>
+								{#if $user.eventToken}
+									<Button onclick={() => navigate("/")} class="w-full mt-4">Open Field Monitor</Button
+									>
+									<Button onclick={() => navigate("/manage/event-settings")} class="w-full mt-4"
+										>Event Management</Button
+									>
+									<Button onclick={hostNavigate} class="w-full mt-4">Host New Event</Button>
+								{:else}
+									<Button onclick={hostNavigate} class="w-full mt-4">Host</Button>
+								{/if}
+								<p class="text-gray-700 mt-2">Requires this computer to be on the field network</p>
+							</div>
+						</div>
+					{/if}
+					<div class="flex flex-col gap-4 {desktop ? '' : 'col-span-2'}">
+						<h2 class="text-xl">
+							{#if desktop}Or log in{:else}Log in{/if} to use FTA Buddy
+						</h2>
+						<div class="w-fit mx-auto">
+							<div
+								id="g_id_onload"
+								data-client_id="211223782093-ahalvkbdfdnjnv29svdvu3phsg40hlqi.apps.googleusercontent.com"
+								data-context="signin"
+								data-ux_mode="popup"
+								data-callback="googleLogin"
+								data-auto_prompt="false"
+							></div>
 
-			<!-- Login -->
-		{:else if view === "login"}
-			<h2 class="text-2xl" style="font-weight: bold;">Log In</h2>
-			<form class="flex flex-col space-y-2 mt-2 text-left" onsubmit={login}>
-				<div>
-					<Label for="email">Email</Label>
-					<Input id="email" bind:value={email} placeholder="me@example.com" disabled={loading} type="email" />
+							<div
+								class="g_id_signin"
+								data-type="standard"
+								data-shape="pill"
+								data-theme="filled_blue"
+								data-text="continue_with"
+								data-size="large"
+								data-logo_alignment="left"
+								style="color-scheme: light"
+							></div>
+						</div>
+						<div class="border-t border-neutral-500"></div>
+						<Button onclick={() => (view = "login")} disabled={loading}>Log In</Button>
+
+						<Button onclick={() => (view = "create")} disabled={loading}>Create Account</Button>
+					</div>
 				</div>
+			{/if}
 
-				<div>
-					<Label for="password">Password</Label>
-					<Input id="password" bind:value={password} type="password" disabled={loading} />
-				</div>
-				<Button type="submit" disabled={loading}>Log In</Button>
-			</form>
-			<Button onclick={() => (view = "create")} disabled={loading} outline>Create Account</Button>
-
-			<p>Or</p>
-			<div>
-				<Label for="event-token">Event Token</Label>
-				<Input id="event-token" bind:value={$user.eventToken} placeholder="Event Token" disabled={loading} />
-			</div>
-			<Button
-				onclick={() => {
-					user.set({ ...$user, eventToken: $user.eventToken });
-					if ($user.role === "FTA" || $user.role === "FTAA") setTimeout(() => navigate("/monitor"), 500);
-					else setTimeout(() => navigate("/notepad"), 500);
-				}}
-				disabled={loading}>Join Event</Button
-			>
-
-			<!-- Login Prompt -->
+			<!-- Logged In -->
 		{:else}
-			<div class="grid grid-cols-2 gap-4">
+			<div class="flex pt-4">
+				<div class="my-auto w-full">
+					<h2 class="text-4xl" style="font-weight: bold;">Welcome to FTA Buddy!</h2>
+					<h2 class="text-xl" style="font-weight: bold;">You are logged in as {$user.username}</h2>
+					<h1 class="text-xl" style="font-style: italic;">Your role is set to {$user.role}.</h1>
+				</div>
+			</div>
+			<div class="flex pt-4">
+				<div class="my-auto w-full">
+					<Button class="w-full" onclick={logout}>Log Out</Button>
+				</div>
+			</div>
+
+			<!-- Event selector for admins -->
+			{#if $user.admin === true}
 				{#if desktop}
-					<div class="flex h-full">
+					<div class="flex border-t border-neutral-500 pt-4">
 						<div class="my-auto w-full">
-							<h2 class="text-xl">Run FTA Buddy from this computer</h2>
-							{#if $user.eventToken}
-								<Button onclick={() => navigate("/")} class="w-full mt-4">Open Field Monitor</Button>
-								<Button onclick={() => navigate("/manage/event-settings")} class="w-full mt-4"
-									>Event Management</Button
-								>
-								<Button onclick={hostNavigate} class="w-full mt-4">Host New Event</Button>
-							{:else}
-								<Button onclick={hostNavigate} class="w-full mt-4">Host</Button>
-							{/if}
+							<h2 class="text-2xl" style="font-weight: bold;">Run FTA Buddy from this computer</h2>
+							<Button onclick={hostNavigate} class="w-full mt-4">Host</Button>
 							<p class="text-gray-700 mt-2">Requires this computer to be on the field network</p>
 						</div>
 					</div>
 				{/if}
-				<div class="flex flex-col gap-4 {desktop ? '' : 'col-span-2'}">
-					<h2 class="text-xl">
-						{#if desktop}Or log in{:else}Log in{/if} to use FTA Buddy
-					</h2>
-					<div class="w-fit mx-auto">
-						<div
-							id="g_id_onload"
-							data-client_id="211223782093-ahalvkbdfdnjnv29svdvu3phsg40hlqi.apps.googleusercontent.com"
-							data-context="signin"
-							data-ux_mode="popup"
-							data-callback="googleLogin"
-							data-auto_prompt="false"
-						></div>
-
-						<div
-							class="g_id_signin"
-							data-type="standard"
-							data-shape="pill"
-							data-theme="filled_blue"
-							data-text="continue_with"
-							data-size="large"
-							data-logo_alignment="left"
-							style="color-scheme: light"
-						></div>
-					</div>
-					<div class="border-t border-neutral-500"></div>
-					<Button onclick={() => (view = "login")} disabled={loading}>Log In</Button>
-
-					<Button onclick={() => (view = "create")} disabled={loading}>Create Account</Button>
-				</div>
-			</div>
-		{/if}
-
-		<!-- Logged In -->
-	{:else}
-		<div class="flex pt-4">
-			<div class="my-auto w-full">
-				<h2 class="text-4xl" style="font-weight: bold;">Welcome to FTA Buddy!</h2>
-				<h2 class="text-xl" style="font-weight: bold;">You are logged in as {$user.username}</h2>
-				<h1 class="text-xl" style="font-style: italic;">Your role is set to {$user.role}.</h1>
-			</div>
-		</div>
-		<div class="flex pt-4">
-			<div class="my-auto w-full">
-				<Button class="w-full" onclick={logout}>Log Out</Button>
-			</div>
-		</div>
-
-		<!-- Event selector for admins -->
-		{#if $user.admin === true}
-			{#if desktop}
-				<div class="flex border-t border-neutral-500 pt-4">
+				<div class="flex pt-4">
 					<div class="my-auto w-full">
-						<h2 class="text-2xl" style="font-weight: bold;">Run FTA Buddy from this computer</h2>
-						<Button onclick={hostNavigate} class="w-full mt-4">Host</Button>
-						<p class="text-gray-700 mt-2">Requires this computer to be on the field network</p>
+						<h1 class="text-xl" style="font-weight:bold;">
+							The Event Currently Selected Is: {$eventStore.code}
+						</h1>
 					</div>
 				</div>
-			{/if}
-			<div class="flex pt-4">
-				<div class="my-auto w-full">
+				<div class="flex flex-col pt-10 space-y-4">
+					<Label for="event-selector">Admin Event Selector</Label>
+					<Select
+						id="event-selector"
+						bind:value={$eventStore.code}
+						items={eventList}
+						placeholder="Select Event"
+						onchange={adminSelectEvent}
+					/>
+					<Button onclick={() => navigate("/")}>Go to App</Button>
+					<Button outline onclick={() => navigate("/manage/event-settings")}>Event Management</Button>
+					<Button outline href="/manage/meshed-event">Create Meshed Event</Button>
+				</div>
+
+				<!-- Currently have an event selected -->
+			{:else if $user.eventToken}
+				<div class="flex flex-col border-t border-neutral-500 pt-10 space-y-2">
 					<h1 class="text-xl" style="font-weight:bold;">
 						The Event Currently Selected Is: {$eventStore.code}
 					</h1>
+					<Button onclick={() => navigate("/")}>Go to App</Button>
+					<Button
+						outline
+						onclick={() => (
+							eventStore.set({ code: "", pin: "", teams: [], users: [] }),
+							user.set({ ...$user, eventToken: "" })
+						)}>Leave Event</Button
+					>
+					<Button outline onclick={() => navigate("/manage/event-settings")}>Event Management</Button>
 				</div>
-			</div>
-			<div class="flex flex-col pt-10 space-y-4">
-				<Label for="event-selector">Admin Event Selector</Label>
-				<Select
-					id="event-selector"
-					bind:value={$eventStore.code}
-					items={eventList}
-					placeholder="Select Event"
-					onchange={adminSelectEvent}
-				/>
-				<Button onclick={() => navigate("/")}>Go to App</Button>
-				<Button outline onclick={() => navigate("/manage/event-settings")}>Event Management</Button>
-				<Button outline href="/manage/meshed-event">Create Meshed Event</Button>
-			</div>
 
-			<!-- Currently have an event selected -->
-		{:else if $user.eventToken}
-			<div class="flex flex-col border-t border-neutral-500 pt-10 space-y-2">
-				<h1 class="text-xl" style="font-weight:bold;">The Event Currently Selected Is: {$eventStore.code}</h1>
-				<Button onclick={() => navigate("/")}>Go to App</Button>
-				<Button
-					outline
-					onclick={() => (
-						eventStore.set({ code: "", pin: "", teams: [], users: [] }),
-						user.set({ ...$user, eventToken: "" })
-					)}>Leave Event</Button
-				>
-				<Button outline onclick={() => navigate("/manage/event-settings")}>Event Management</Button>
-			</div>
-
-			<!-- No event selected -->
-		{:else}
-			{#if previousEventList.length > 0}
-				<div class="flex flex-col border-t border-neutral-500 pt-4 gap-2">
-					<h3 class="text-lg font-semibold">Previous Events</h3>
-					<div class="flex gap-2">
-						<Select
-							class="flex-1"
-							items={previousEventList}
-							bind:value={previousEventSelection}
-							placeholder="Select a previous event"
-						/>
-						<Button onclick={switchToPreviousEvent} disabled={!previousEventSelection}>Switch</Button>
+				<!-- No event selected -->
+			{:else}
+				{#if previousEventList.length > 0}
+					<div class="flex flex-col border-t border-neutral-500 pt-4 gap-2">
+						<h3 class="text-lg font-semibold">Previous Events</h3>
+						<div class="flex gap-2">
+							<Select
+								class="flex-1"
+								items={previousEventList}
+								bind:value={previousEventSelection}
+								placeholder="Select a previous event"
+							/>
+							<Button onclick={switchToPreviousEvent} disabled={!previousEventSelection}>Switch</Button>
+						</div>
 					</div>
+				{/if}
+				<div class="flex flex-col border-t border-neutral-500 pt-4">
+					<h3 class="text-lg">Join Event</h3>
+					{#if !desktop}<p class="text-gray-600 text-sm">
+							To create a new event, open ftabuddy.com on a computer connected to the field network.
+						</p>{/if}
+					<form class="flex flex-col gap-2 text-left mt-2" onsubmit={joinEvent}>
+						<div>
+							<Label for="event-code">Event Code</Label>
+							<Input id="event-code" bind:value={eventCode} placeholder="2024mitry" />
+						</div>
+						<div>
+							<Label for="event-pin">Event Password</Label>
+							<Input id="event-pin" bind:value={eventPin} placeholder="robot-field-42" />
+						</div>
+						<Button type="submit">Join Event</Button>
+					</form>
 				</div>
-			{/if}
-			<div class="flex flex-col border-t border-neutral-500 pt-4">
-				<h3 class="text-lg">Join Event</h3>
-				{#if !desktop}<p class="text-gray-600 text-sm">
-						To create a new event, open ftabuddy.com on a computer connected to the field network.
-					</p>{/if}
-				<form class="flex flex-col gap-2 text-left mt-2" onsubmit={joinEvent}>
-					<div>
-						<Label for="event-code">Event Code</Label>
-						<Input id="event-code" bind:value={eventCode} placeholder="2024mitry" />
+				{#if desktop}
+					<div class="flex border-t border-neutral-500 pt-4">
+						<div class="my-auto w-full">
+							<h2 class="text-xl">Run FTA Buddy from this computer</h2>
+							<Button onclick={hostNavigate} class="w-full mt-4">Host</Button>
+							<p class="text-gray-700 mt-2">Requires this computer to be on the field network</p>
+						</div>
 					</div>
-					<div>
-						<Label for="event-pin">Event Password</Label>
-						<Input id="event-pin" bind:value={eventPin} placeholder="robot-field-42" />
-					</div>
-					<Button type="submit">Join Event</Button>
-				</form>
-			</div>
-			{#if desktop}
-				<div class="flex border-t border-neutral-500 pt-4">
-					<div class="my-auto w-full">
-						<h2 class="text-xl">Run FTA Buddy from this computer</h2>
-						<Button onclick={hostNavigate} class="w-full mt-4">Host</Button>
-						<p class="text-gray-700 mt-2">Requires this computer to be on the field network</p>
-					</div>
-				</div>
+				{/if}
 			{/if}
 		{/if}
-	{/if}
-	<p class="text-sm text-neutral-500">
-		<a href="/privacy.html" class="underline">Privacy Policy</a>
-		&middot;
-		<a href="https://discord.gg/Kpnj55seHr" class="underline" target="_blank">Discord</a>
-	</p>
+		<p class="text-sm text-neutral-500">
+			<a href="/privacy.html" class="underline">Privacy Policy</a>
+			&middot;
+			<a href="https://discord.gg/Kpnj55seHr" class="underline" target="_blank">Discord</a>
+		</p>
+	</div>
 </div>

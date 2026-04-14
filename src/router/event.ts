@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { createHash, randomUUID } from "crypto";
 import { count, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
-import { AUTO_EVENT_ISSUE_TYPES } from "../../shared/types";
+import { AUTO_EVENT_ISSUE_TYPES, DEFAULT_AUTO_EVENT_SETTINGS } from "../../shared/types";
 import type {
 	AutoEventIssueType,
 	EventAutoEventSettings,
@@ -348,9 +348,7 @@ export const eventRouter = router({
 					startDate: eventData.start_date ?? null,
 					endDate: eventData.end_date ?? null,
 					timezone: eventData.timezone_id ?? null,
-					autoEventSettings: Object.fromEntries(
-						AUTO_EVENT_ISSUE_TYPES.map((t) => [t, true]),
-					) as EventAutoEventSettings,
+					autoEventSettings: DEFAULT_AUTO_EVENT_SETTINGS,
 					notepadOnly: input.notepadOnly ?? false,
 				})
 				.returning();
@@ -585,6 +583,7 @@ export const eventRouter = router({
 					users: [ctx.user.id],
 					meshedEvent: subEvents,
 					checklist: {},
+					autoEventSettings: DEFAULT_AUTO_EVENT_SETTINGS,
 				})
 				.returning();
 

@@ -93,74 +93,82 @@
 	<Spinner />
 {/if}
 
-<div
-	class="container mx-auto md:max-w-4xl flex flex-col justify-center p-4 h-full space-y-4 overflow-y-auto {waitingForFirstConnectionTest
-		? 'blur-sm'
-		: ''}"
->
-	<h1 class="text-3xl font-bold">Setup Radio Kiosk Extension</h1>
-	<div>
-		<div class="inline-flex gap-2 font-bold mx-auto">
-			{#if extensionDetected}
-				{#if extensionUpdate}
-					<Indicator color="yellow" class="my-auto" />
-					<span class="text-yellow-300"
-						>Extension Update Available ({extensionVersion} &rarr; {LATEST_EXTENSION_VERSION})</span
-					>
+<div class="h-full overflow-y-auto">
+	<div
+		class="container mx-auto md:max-w-4xl flex flex-col justify-center p-4 space-y-4 {waitingForFirstConnectionTest
+			? 'blur-sm'
+			: ''}"
+	>
+		<h1 class="text-3xl font-bold">Setup Radio Kiosk Extension</h1>
+		<div>
+			<div class="inline-flex gap-2 font-bold mx-auto">
+				{#if extensionDetected}
+					{#if extensionUpdate}
+						<Indicator color="yellow" class="my-auto" />
+						<span class="text-yellow-300"
+							>Extension Update Available ({extensionVersion} &rarr; {LATEST_EXTENSION_VERSION})</span
+						>
+						<a
+							href="https://chromewebstore.google.com/detail/fta-buddy/kddnhihfpfnehnnhbkfajdldlgigohjc"
+							class="text-blue-400 hover:underline"
+							target="_blank">Update</a
+						>
+					{:else if extensionEnabled}
+						<Indicator color="green" class="my-auto" />
+						<span class="text-green text-green-500">Extension Enabled ({extensionVersion})</span>
+					{:else}
+						<Indicator color="yellow" class="my-auto" />
+						<span class="text-yellow-300">Extension Not Enabled</span>
+						<button
+							class="text-blue-400 hover:underline"
+							onclick={() => window.postMessage({ source: "page", type: "enable" }, "*")}>Enable</button
+						>
+					{/if}
+				{:else}
+					<Indicator color="red" class="my-auto" />
+					<span class="text-red-500">Extension Not Detected</span>
 					<a
 						href="https://chromewebstore.google.com/detail/fta-buddy/kddnhihfpfnehnnhbkfajdldlgigohjc"
 						class="text-blue-400 hover:underline"
-						target="_blank">Update</a
-					>
-				{:else if extensionEnabled}
-					<Indicator color="green" class="my-auto" />
-					<span class="text-green text-green-500">Extension Enabled ({extensionVersion})</span>
-				{:else}
-					<Indicator color="yellow" class="my-auto" />
-					<span class="text-yellow-300">Extension Not Enabled</span>
-					<button
-						class="text-blue-400 hover:underline"
-						onclick={() => window.postMessage({ source: "page", type: "enable" }, "*")}>Enable</button
+						target="_blank">Install</a
 					>
 				{/if}
-			{:else}
-				<Indicator color="red" class="my-auto" />
-				<span class="text-red-500">Extension Not Detected</span>
-				<a
-					href="https://chromewebstore.google.com/detail/fta-buddy/kddnhihfpfnehnnhbkfajdldlgigohjc"
-					class="text-blue-400 hover:underline"
-					target="_blank">Install</a
-				>
+			</div>
+			{#if !extensionDetected}
+				<div class="text-sm text-gray-500">You may have to refresh the page after installing the extension</div>
 			{/if}
 		</div>
-		{#if !extensionDetected}
-			<div class="text-sm text-gray-500">You may have to refresh the page after installing the extension</div>
-		{/if}
+		<span class="inline-flex gap-2 font-bold mx-auto">
+			<Indicator color={fmsDetected ? "green" : "red"} class="my-auto" />
+			{#if fmsDetected}
+				<span class="text-green-500">FMS Detected</span>
+			{:else}
+				<span class="text-red-500">FMS Not Detected</span>
+			{/if}
+		</span>
+		<form class="grid gap-3 text-left" onsubmit={setupExtension}>
+			<div>
+				<Label for="event-code">Event Code</Label>
+				<Input
+					id="event-code"
+					bind:value={eventCode}
+					placeholder="2024mitry"
+					class="mt-1"
+					color={eventCodeError ? "red" : undefined}
+				/>
+				<Helper class="text-sm mt-1" color={eventCodeError ? "red" : undefined}>{eventCodeHelperText}</Helper>
+			</div>
+			<div>
+				<Label for="event-pin">Event Password</Label>
+				<Input
+					id="event-pin"
+					bind:value={eventPin}
+					placeholder="robot-field-42"
+					disabled={loading}
+					class="mt-1"
+				/>
+			</div>
+			<Button type="submit" disabled={blockSubmit}>Setup Extension</Button>
+		</form>
 	</div>
-	<span class="inline-flex gap-2 font-bold mx-auto">
-		<Indicator color={fmsDetected ? "green" : "red"} class="my-auto" />
-		{#if fmsDetected}
-			<span class="text-green-500">FMS Detected</span>
-		{:else}
-			<span class="text-red-500">FMS Not Detected</span>
-		{/if}
-	</span>
-	<form class="grid gap-3 text-left" onsubmit={setupExtension}>
-		<div>
-			<Label for="event-code">Event Code</Label>
-			<Input
-				id="event-code"
-				bind:value={eventCode}
-				placeholder="2024mitry"
-				class="mt-1"
-				color={eventCodeError ? "red" : undefined}
-			/>
-			<Helper class="text-sm mt-1" color={eventCodeError ? "red" : undefined}>{eventCodeHelperText}</Helper>
-		</div>
-		<div>
-			<Label for="event-pin">Event Password</Label>
-			<Input id="event-pin" bind:value={eventPin} placeholder="robot-field-42" disabled={loading} class="mt-1" />
-		</div>
-		<Button type="submit" disabled={blockSubmit}>Setup Extension</Button>
-	</form>
 </div>

@@ -913,7 +913,7 @@
 
 	{#if (!keyboardOpen || !isMobile) && !$fullscreen}
 		<div
-			class="shrink-0 flex justify-around pt-2 bg-white dark:bg-neutral-900 text-gray-700 dark:text-white border-t border-gray-200 dark:border-none"
+			class="shrink-0 flex justify-around pt-2 bg-white dark:bg-neutral-900 text-gray-600 dark:text-white border-t border-gray-300 dark:border-neutral-700"
 			style="padding-bottom: max(0.5rem, env(safe-area-inset-bottom));"
 		>
 			{#if $user.token && $user.eventToken}
@@ -924,7 +924,7 @@
 					<button class="p-2" onclick={() => navigate("/flashcards")}>
 						<Icon icon="mdi:message-alert" class="size-8" />
 					</button>
-					<button class="p-2" onclick={() => navigate("/references")}>
+					<button class="p-2" onclick={() => navigate("/references/statuslights")}>
 						<Icon icon="heroicons:sun-16-solid" class="size-8" />
 					</button>
 					<button class="p-2 relative" onclick={() => navigate("/notepad")}>

@@ -71,23 +71,27 @@
 	>
 </Modal>
 
-<div class="container max-w-6xl mx-auto px-2 pt-2 h-full flex flex-col gap-2 overflow-y-auto">
-	{#if noteCreated === false}
-		<h1 class="text-3xl font-bold text-black dark:text-white">Submit a Note</h1>
-		<form class="text-left flex flex-col gap-4" onsubmit={createNote}>
-			<div>
-				<Label class="w-full text-left">Team Number</Label>
-				<Input type="number" id="team" required bind:value={team}></Input>
-			</div>
-			<div>
-				<Label for="text">Describe your issue:</Label>
-				<Textarea id="text" class="w-full" rows={5} required bind:value={noteText} />
-			</div>
+<div class="h-full overflow-y-auto">
+	<div class="container max-w-6xl mx-auto px-2 pt-2 flex flex-col gap-2">
+		{#if noteCreated === false}
+			<h1 class="text-3xl font-bold text-black dark:text-white">Submit a Note</h1>
+			<form class="text-left flex flex-col gap-4" onsubmit={createNote}>
+				<div>
+					<Label class="w-full text-left">Team Number</Label>
+					<Input type="number" id="team" required bind:value={team}></Input>
+				</div>
+				<div>
+					<Label for="text">Describe your issue:</Label>
+					<Textarea id="text" class="w-full" rows={5} required bind:value={noteText} />
+				</div>
 
-			<Button type="submit" disabled={disableSubmit}>Submit Note</Button>
-		</form>
-	{:else}
-		<h1 class="text-3xl font-bold text-black dark:text-white">Note Has Been Created Successfully!</h1>
-		<p class="font-bold text-black dark:text-white">Please refresh the page if you wish to submit another Note.</p>
-	{/if}
+				<Button type="submit" disabled={disableSubmit}>Submit Note</Button>
+			</form>
+		{:else}
+			<h1 class="text-3xl font-bold text-black dark:text-white">Note Has Been Created Successfully!</h1>
+			<p class="font-bold text-black dark:text-white">
+				Please refresh the page if you wish to submit another Note.
+			</p>
+		{/if}
+	</div>
 </div>

@@ -130,51 +130,53 @@
 	}
 </script>
 
-<div class="container flex flex-col gap-2 p-4 mx-auto max-w-4xl h-full overflow-y-auto">
-	<h1 class="text-3xl font-bold">Event Reports</h1>
-	<div class="flex flex-col items-start">
-		<p>Cycle Time Report</p>
-		<Button onclick={downloadCycleTimeReport} class="mt-2">Download</Button>
-	</div>
-	<div class="flex flex-col items-start">
-		<p>Bypass Report</p>
-		<Button onclick={downloadBypassReport} class="mt-2">Download</Button>
-	</div>
-	<div class="flex flex-col items-start">
-		<p>Notes Report</p>
-		<Button onclick={downloadNotesReport} class="mt-2">Download</Button>
-	</div>
-	<div class="flex flex-col items-start">
-		<p>Robot Event Report</p>
-		<Button onclick={downloadRobotEventReport} class="mt-2">Download</Button>
-	</div>
+<div class="h-full overflow-y-auto">
+	<div class="container flex flex-col gap-2 p-4 mx-auto max-w-4xl">
+		<h1 class="text-3xl font-bold">Event Reports</h1>
+		<div class="flex flex-col items-start">
+			<p>Cycle Time Report</p>
+			<Button onclick={downloadCycleTimeReport} class="mt-2">Download</Button>
+		</div>
+		<div class="flex flex-col items-start">
+			<p>Bypass Report</p>
+			<Button onclick={downloadBypassReport} class="mt-2">Download</Button>
+		</div>
+		<div class="flex flex-col items-start">
+			<p>Notes Report</p>
+			<Button onclick={downloadNotesReport} class="mt-2">Download</Button>
+		</div>
+		<div class="flex flex-col items-start">
+			<p>Robot Event Report</p>
+			<Button onclick={downloadRobotEventReport} class="mt-2">Download</Button>
+		</div>
 
-	<div class="flex flex-col items-start">
-		<p>AI Event Report</p>
-		{#if aiStatus === null}
-			<Button onclick={startAiReport} class="mt-2">Generate</Button>
-		{:else if aiStatus === "pending" || aiStatus === "generating"}
-			<Button disabled class="mt-2 flex items-center gap-2">
-				<Spinner size="4" />
-				Generating…
-			</Button>
-		{:else if aiStatus === "ready"}
-			<div class="flex gap-2 mt-2">
-				<Button onclick={downloadAiReport}>Download</Button>
+		<div class="flex flex-col items-start">
+			<p>AI Event Report</p>
+			{#if aiStatus === null}
+				<Button onclick={startAiReport} class="mt-2">Generate</Button>
+			{:else if aiStatus === "pending" || aiStatus === "generating"}
+				<Button disabled class="mt-2 flex items-center gap-2">
+					<Spinner size="4" />
+					Generating…
+				</Button>
+			{:else if aiStatus === "ready"}
+				<div class="flex gap-2 mt-2">
+					<Button onclick={downloadAiReport}>Download</Button>
+					{#if regenCount < 5}
+						<Button onclick={startAiReport} color="alternative">Regenerate ({regenCount}/5)</Button>
+					{/if}
+				</div>
+			{:else if aiStatus === "error"}
+				<p class="mt-1 text-sm text-red-600 dark:text-red-400">Generation failed: {aiError}</p>
 				{#if regenCount < 5}
-					<Button onclick={startAiReport} color="alternative">Regenerate ({regenCount}/5)</Button>
+					<Button onclick={startAiReport} color="red" class="mt-2">Try Again ({regenCount}/5)</Button>
 				{/if}
-			</div>
-		{:else if aiStatus === "error"}
-			<p class="mt-1 text-sm text-red-600 dark:text-red-400">Generation failed: {aiError}</p>
-			{#if regenCount < 5}
-				<Button onclick={startAiReport} color="red" class="mt-2">Try Again ({regenCount}/5)</Button>
 			{/if}
-		{/if}
-		{#if regenCount === 4}
-			<p class="mt-1 text-xs text-yellow-600 dark:text-yellow-400">
-				This is your last regeneration. Make sure the event is fully completed before proceeding.
-			</p>
-		{/if}
+			{#if regenCount === 4}
+				<p class="mt-1 text-xs text-yellow-600 dark:text-yellow-400">
+					This is your last regeneration. Make sure the event is fully completed before proceeding.
+				</p>
+			{/if}
+		</div>
 	</div>
 </div>

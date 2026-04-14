@@ -18,6 +18,8 @@ export const VERSIONS: { [key: string]: Version } = {
         <li>Fix Slack integration not using the user's username</li>
         <li>Added QR Code for joining event</li>
         <li>Added link to support Discord server</li>
+        <li>Fixed light mode bugs</li>
+        <li>Combined view checklist shows all sub-events now</li>
         </ul>
         `,
 	},

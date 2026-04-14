@@ -98,7 +98,7 @@
 			}
 
 			// Field filter
-			if (hasMeshedFields && selectedFields.length < availableSubEvents.length) {
+			if (hasMeshedFields && selectedFields.length > 0 && selectedFields.length < availableSubEvents.length) {
 				feed = feed.filter((n) => selectedFields.includes(n.event_code));
 			}
 
@@ -127,7 +127,7 @@
 			let evts = [...matchEvents].filter((e) => e.status === "active");
 
 			// Field filter
-			if (hasMeshedFields && selectedFields.length < availableSubEvents.length) {
+			if (hasMeshedFields && selectedFields.length > 0 && selectedFields.length < availableSubEvents.length) {
 				evts = evts.filter((e) => selectedFields.includes(e.event_code));
 			}
 
@@ -740,7 +740,7 @@
 			color={typeFilter !== "all" ||
 			statusFilter !== "all" ||
 			feedFilter !== "all" ||
-			(hasMeshedFields && selectedFields.length < availableSubEvents.length)
+			(hasMeshedFields && selectedFields.length > 0 && selectedFields.length < availableSubEvents.length)
 				? "primary"
 				: "alternative"}
 			class="shrink-0"
@@ -797,16 +797,30 @@
 			{/if}
 			{#if hasMeshedFields}
 				<div>
-					<Label>Fields</Label>
+					<div class="flex items-center justify-between">
+						<Label>Fields</Label>
+						<button
+							type="button"
+							class="text-xs text-blue-400 hover:underline"
+							onclick={() => {
+								selectedFields =
+									selectedFields.length === availableSubEvents.length
+										? []
+										: availableSubEvents.map((s) => s.code);
+							}}
+						>
+							{selectedFields.length === availableSubEvents.length ? "Deselect all" : "Select all"}
+						</button>
+					</div>
 					<div class="flex flex-wrap gap-1.5 mt-1">
 						{#each availableSubEvents as sub}
 							{@const isSelected = selectedFields.includes(sub.code)}
-							{@const c = sub.color ?? "#6b7280"}
+							{@const color = sub.color ?? "#6b7280"}
 							<button
 								type="button"
 								class="text-xs px-2 py-1 rounded border transition-colors"
 								style={isSelected
-									? `border-color: ${c}; background-color: ${c}1a; color: ${c}`
+									? `border-color: ${color}; background-color: ${color}1a; color: ${color}`
 									: ""}
 								class:border-gray-300={!isSelected}
 								class:dark:border-gray-600={!isSelected}
@@ -816,9 +830,7 @@
 								class:dark:text-gray-300={!isSelected}
 								onclick={() => {
 									if (selectedFields.includes(sub.code)) {
-										if (selectedFields.length > 1) {
-											selectedFields = selectedFields.filter((c) => c !== sub.code);
-										}
+										selectedFields = selectedFields.filter((s) => s !== sub.code);
 									} else {
 										selectedFields = [...selectedFields, sub.code];
 									}
@@ -828,7 +840,7 @@
 							</button>
 						{/each}
 					</div>
-					<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Also filters notifications.</p>
+					<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Also filters notifications. Empty = show all.</p>
 				</div>
 			{/if}
 			<Button color="primary" onclick={() => (filterModalOpen = false)}>Done</Button>

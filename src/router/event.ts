@@ -624,19 +624,20 @@ export const eventRouter = router({
 		}),
 
 	updateMeshedEventLabels: eventProcedure
-		.input(z.array(z.object({ code: z.string(), label: z.string() })))
+		.input(z.array(z.object({ code: z.string(), label: z.string(), color: z.string().optional() })))
 		.mutation(async ({ ctx, input }) => {
 			const eventDB = await db.query.events.findFirst({ where: eq(events.token, ctx.eventToken as string) });
 			if (!eventDB) throw new TRPCError({ code: "NOT_FOUND", message: "Event not found" });
 			if (!eventDB.meshedEvent) throw new TRPCError({ code: "BAD_REQUEST", message: "Not a meshed event" });
 
-			const existing = eventDB.meshedEvent as Array<{ code: string; name: string; label: string; token: string; pin: string; teams: TeamList }>;
-			const labelMap = new Map(input.map((e) => [e.code, e.label]));
+			const existing = eventDB.meshedEvent as Array<{ code: string; name: string; label: string; color?: string; token: string; pin: string; teams: TeamList }>;
+			const updateMap = new Map(input.map((e) => [e.code, e]));
 
-			const updated = existing.map((sub) => ({
-				...sub,
-				label: labelMap.get(sub.code) ?? sub.label,
-			}));
+			const updated = existing.map((sub) => {
+				const upd = updateMap.get(sub.code);
+				if (!upd) return sub;
+				return { ...sub, label: upd.label, color: upd.color ?? sub.color };
+			});
 
 			const newName = "Meshed Event: " + updated.map((e) => e.label).join(", ");
 

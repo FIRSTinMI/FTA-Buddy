@@ -70,7 +70,7 @@
 		try {
 			blocked = true;
 			const res = await trpc.event.updateMeshedEventLabels.mutate(
-				subEvents.map((s) => ({ code: s.code, label: s.label })),
+				subEvents.map((s) => ({ code: s.code, label: s.label, color: s.color })),
 			);
 			eventStore.update((e) => ({ ...e, subEvents: res.subEvents }));
 			toast("Success", "Sub-event labels updated", "green-500");

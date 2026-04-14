@@ -427,6 +427,22 @@
 		}
 	});
 
+	// True when on the combined meshed-event view (not yet in inter-divisional playoffs mode).
+	// In this state the field monitor has no meaningful single field to show.
+	let isCombinedView = $derived(
+		!!$user.meshedEventToken &&
+			$user.meshedEventToken === $user.eventToken &&
+			!!$eventStore.subEvents?.length &&
+			!$eventStore.playoffMode,
+	);
+
+	// Redirect away from /monitor if we're in combined view (no single field to show)
+	$effect(() => {
+		if (isCombinedView && route.pathname.startsWith("/monitor")) {
+			navigate("/dashboard");
+		}
+	});
+
 	let statusPollInterval: ReturnType<typeof setInterval> | undefined;
 	let knownIssue = false;
 	async function checkStatus() {
@@ -587,7 +603,7 @@
 						label="Monitor"
 						onclick={() => {
 							drawerOpen = false;
-							navigate("/");
+							navigate(isCombinedView ? "/dashboard" : "/");
 						}}
 					>
 						{#snippet icon()}
@@ -686,7 +702,7 @@
 						label="Monitor"
 						onclick={() => {
 							drawerOpen = false;
-							navigate("/");
+							navigate(isCombinedView ? "/dashboard" : "/");
 						}}
 					>
 						{#snippet icon()}
@@ -922,7 +938,7 @@
 		>
 			{#if $user.token && $user.eventToken}
 				{#if $user?.role === "FTA" || $user?.role === "FTAA"}
-					<button class="p-2" onclick={() => navigate("/monitor")}>
+					<button class="p-2" onclick={() => navigate(isCombinedView ? "/dashboard" : "/monitor")}>
 						<Icon icon="mdi:television" class="size-8" />
 					</button>
 					<button class="p-2" onclick={() => navigate("/flashcards")}>

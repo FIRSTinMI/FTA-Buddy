@@ -53,7 +53,7 @@
 	});
 </script>
 
-<div class="rounded-xl border border-neutral-700 bg-neutral-900 overflow-hidden">
+<div class="rounded-xl border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 overflow-hidden">
 	<button
 		class="flex w-full items-center justify-between gap-3 p-4 text-left h-20"
 		onclick={() => (expanded = !expanded)}
@@ -66,7 +66,9 @@
 			</div>
 		</div>
 		<svg
-			class="size-5 text-neutral-400 shrink-0 transition-transform {expanded ? 'rotate-180' : ''}"
+			class="size-5 text-gray-500 dark:text-neutral-400 shrink-0 transition-transform {expanded
+				? 'rotate-180'
+				: ''}"
 			viewBox="0 0 20 20"
 			fill="currentColor"
 		>
@@ -79,8 +81,10 @@
 	</button>
 
 	{#if expanded}
-		<div class="flex flex-col gap-3 px-4 pb-4 border-t border-neutral-700 pt-4">
-			<p class="text-sm text-gray-400">Toggle which issue types automatically generate Notepad entries.</p>
+		<div class="flex flex-col gap-3 px-4 pb-4 border-t border-gray-200 dark:border-neutral-700 pt-4">
+			<p class="text-sm text-gray-600 dark:text-gray-400">
+				Toggle which issue types automatically generate Notepad entries.
+			</p>
 			<div class="flex flex-col gap-2">
 				{#each AUTO_EVENT_ISSUE_TYPES as issue}
 					<div class="flex items-center justify-between gap-2">

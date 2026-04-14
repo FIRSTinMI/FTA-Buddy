@@ -49,5 +49,7 @@ export async function downloadReport(fileName: string): Promise<Buffer> {
 }
 
 export function isGcsConfigured(): boolean {
-	return !!bucketName && !!process.env.GOOGLE_PROJECT_ID && !!process.env.GOOGLE_KEY_CLIENT && !!process.env.GOOGLE_KEY;
+	return (
+		!!bucketName && !!process.env.GOOGLE_PROJECT_ID && !!process.env.GOOGLE_KEY_CLIENT && !!process.env.GOOGLE_KEY
+	);
 }

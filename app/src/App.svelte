@@ -227,7 +227,7 @@
 	}
 
 	$effect(() => {
-		updateTheme(settings.darkMode);
+		updateTheme($settingsStore.darkMode);
 	});
 
 	$effect(() => {
@@ -406,7 +406,13 @@
 	onMount(() => {
 		if ($user.token && route.pathname === "/") {
 			if ($user.role === "FTA" || $user.role === "FTAA") {
-				if ($user.meshedEventToken && event && event.subEvents && $user.eventToken === $user.meshedEventToken && !event.playoffMode) {
+				if (
+					$user.meshedEventToken &&
+					event &&
+					event.subEvents &&
+					$user.eventToken === $user.meshedEventToken &&
+					!event.playoffMode
+				) {
 					navigate("/dashboard");
 				} else {
 					navigate("/monitor");
@@ -527,7 +533,10 @@
 			<Select
 				bind:value={multiEventSelection}
 				items={[
-					{ value: "combined", name: event.playoffMode ? getPlayoffViewLabel(event.meshedEventCode ?? event.code) : "Combined" },
+					{
+						value: "combined",
+						name: event.playoffMode ? getPlayoffViewLabel(event.meshedEventCode ?? event.code) : "Combined",
+					},
 					...event.subEvents.map((e) => ({ value: e.code, name: e.label })),
 				]}
 				class="w-full"
@@ -537,7 +546,13 @@
 							...$user,
 							eventToken: $user.meshedEventToken ?? "",
 						});
-						eventStore.set({ ...event, code: event.meshedEventCode ?? "", label: event.playoffMode ? getPlayoffViewLabel(event.meshedEventCode ?? event.code) : "Combined" });
+						eventStore.set({
+							...event,
+							code: event.meshedEventCode ?? "",
+							label: event.playoffMode
+								? getPlayoffViewLabel(event.meshedEventCode ?? event.code)
+								: "Combined",
+						});
 						if (event.meshedEventCode)
 							trpc.event.setActiveEvent.mutate({ eventCode: event.meshedEventCode }).catch(() => {});
 						if (route.pathname.startsWith("/monitor") && !event.playoffMode) {
@@ -898,7 +913,7 @@
 
 	{#if (!keyboardOpen || !isMobile) && !$fullscreen}
 		<div
-			class="shrink-0 flex justify-around pt-2 bg-neutral-900 dark:bg-neutral-700 text-white"
+			class="shrink-0 flex justify-around pt-2 bg-white dark:bg-neutral-900 text-gray-700 dark:text-white border-t border-gray-200 dark:border-none"
 			style="padding-bottom: max(0.5rem, env(safe-area-inset-bottom));"
 		>
 			{#if $user.token && $user.eventToken}

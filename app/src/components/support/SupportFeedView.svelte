@@ -737,7 +737,12 @@
 
 		<Button
 			size="sm"
-			color={typeFilter !== "all" || statusFilter !== "all" || feedFilter !== "all" || (hasMeshedFields && selectedFields.length < availableSubEvents.length) ? "primary" : "alternative"}
+			color={typeFilter !== "all" ||
+			statusFilter !== "all" ||
+			feedFilter !== "all" ||
+			(hasMeshedFields && selectedFields.length < availableSubEvents.length)
+				? "primary"
+				: "alternative"}
 			class="shrink-0"
 			onclick={() => (filterModalOpen = true)}
 			title="Filters"

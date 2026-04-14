@@ -466,7 +466,9 @@ connect().then(async () => {
 	} catch (err) {
 		console.error("[KnownIssue] Failed to load from Redis:", err);
 	}
-	bus.subscribe("global:known_issue", (data) => { knownIssue = data as typeof knownIssue; });
+	bus.subscribe("global:known_issue", (data) => {
+		knownIssue = data as typeof knownIssue;
+	});
 
 	// Log analysis loop - runs forever; errors are caught and logged so the loop never dies.
 	// acquireOrRenewLock: if we already hold the lock, renew it; if unclaimed, acquire it.

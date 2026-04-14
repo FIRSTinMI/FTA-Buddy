@@ -18,5 +18,4 @@ export const redisSub = new Redis(process.env.REDIS_URL, {
 redis.on("error", (err) => console.error("[Redis] error:", err));
 redisSub.on("error", (err) => console.error("[Redis sub] error:", err));
 
-
 console.log("Redis connections initialized");

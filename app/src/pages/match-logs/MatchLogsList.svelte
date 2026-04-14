@@ -91,7 +91,12 @@
 				<!-- Combined view: outer tab per field, inner tabs for Practice/Qual/Playoff -->
 				{#each $eventStore.subEvents as subEvent, i}
 					<TabItem class="w-full" open={i === 0} title={subEvent.label}>
-						{@const fm = fieldMatches[subEvent.code] ?? { test: [], practice: [], qualification: [], playoff: [] }}
+						{@const fm = fieldMatches[subEvent.code] ?? {
+							test: [],
+							practice: [],
+							qualification: [],
+							playoff: [],
+						}}
 						{@const innerOpen =
 							fm.playoff.length > 0
 								? "playoff"

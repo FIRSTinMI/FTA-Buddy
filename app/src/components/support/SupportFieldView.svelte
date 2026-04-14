@@ -51,8 +51,21 @@
 	let monitorFrame: MonitorFrame | undefined = $state(frameHandler.getFrame());
 
 	// Nexus live status (fallback when no field monitor connection)
-	type NexusTeamSet = { red1: number | null; red2: number | null; red3: number | null; blue1: number | null; blue2: number | null; blue3: number | null };
-	type NexusLiveStatus = { available: boolean; nowQueuing: string | null; nowOnField?: string | null; nowQueuingTeams: NexusTeamSet | null; dataAsOfTime: number | null };
+	type NexusTeamSet = {
+		red1: number | null;
+		red2: number | null;
+		red3: number | null;
+		blue1: number | null;
+		blue2: number | null;
+		blue3: number | null;
+	};
+	type NexusLiveStatus = {
+		available: boolean;
+		nowQueuing: string | null;
+		nowOnField?: string | null;
+		nowQueuingTeams: NexusTeamSet | null;
+		dataAsOfTime: number | null;
+	};
 	let nexusLiveStatus = $state<NexusLiveStatus | null>(null);
 
 	let nexusTeams = $derived.by(() => {
@@ -82,8 +95,25 @@
 			};
 		}
 		// Teams known from Nexus but not yet in allMatches
-		if (q.blue1 !== null && q.blue2 !== null && q.blue3 !== null && q.red1 !== null && q.red2 !== null && q.red3 !== null) {
-			return { blue1: q.blue1, blue2: q.blue2, blue3: q.blue3, red1: q.red1, red2: q.red2, red3: q.red3, match_number: 0, play_number: 1, level: "Qualification" };
+		if (
+			q.blue1 !== null &&
+			q.blue2 !== null &&
+			q.blue3 !== null &&
+			q.red1 !== null &&
+			q.red2 !== null &&
+			q.red3 !== null
+		) {
+			return {
+				blue1: q.blue1,
+				blue2: q.blue2,
+				blue3: q.blue3,
+				red1: q.red1,
+				red2: q.red2,
+				red3: q.red3,
+				match_number: 0,
+				play_number: 1,
+				level: "Qualification",
+			};
 		}
 		return null;
 	});
@@ -122,7 +152,18 @@
 		const tba = $tbaCurrentMatch;
 		if (matchIndex === -1 && tba && tba.matchNumber > 0) {
 			const m = allMatches.find((m) => m.match_number === tba.matchNumber && m.level === tba.level);
-			if (m) return { blue1: m.blue1 ?? 0, blue2: m.blue2 ?? 0, blue3: m.blue3 ?? 0, red1: m.red1 ?? 0, red2: m.red2 ?? 0, red3: m.red3 ?? 0, match_number: m.match_number, play_number: m.play_number, level: m.level };
+			if (m)
+				return {
+					blue1: m.blue1 ?? 0,
+					blue2: m.blue2 ?? 0,
+					blue3: m.blue3 ?? 0,
+					red1: m.red1 ?? 0,
+					red2: m.red2 ?? 0,
+					red3: m.red3 ?? 0,
+					match_number: m.match_number,
+					play_number: m.play_number,
+					level: m.level,
+				};
 		}
 		return null;
 	});
@@ -712,79 +753,83 @@
 				</button>
 			{/if}
 		</div>
-		{#if liveRobot && isLive && (teamsSource !== 'nexus' || hasOpenNote || liveRobot.warnings.includes(RobotWarnings.NOT_INSPECTED) || liveRobot.warnings.includes(RobotWarnings.RADIO_NOT_FLASHED) || liveRobot.warnings.includes(RobotWarnings.PREVIOUS_MATCH_EVENT))}
+		{#if liveRobot && isLive && (teamsSource !== "nexus" || hasOpenNote || liveRobot.warnings.includes(RobotWarnings.NOT_INSPECTED) || liveRobot.warnings.includes(RobotWarnings.RADIO_NOT_FLASHED) || liveRobot.warnings.includes(RobotWarnings.PREVIOUS_MATCH_EVENT))}
 			<div
 				class="shrink-0 flex items-center gap-1 sm:gap-2 px-2 {isShortScreen
 					? 'py-0.5'
 					: 'py-1 sm:py-1.5'} border-b border-gray-200 dark:border-gray-700 text-[11px] sm:text-xs lg:text-sm"
 			>
-				{#if teamsSource !== 'nexus'}
-				<div
-					class="{isShortScreen
-						? 'size-3.5'
-						: 'size-4 sm:size-6'} rounded-sm flex items-center justify-center text-black font-bold text-[9px] sm:text-[10px] shrink-0 {dsColor(
-						liveRobot.ds,
-					)}"
-					title="Driver Station: {liveRobot.ds === DSState.GREEN_X
-						? 'Green X'
-						: liveRobot.ds === DSState.BYPASS
-							? 'Bypass'
-							: liveRobot.ds === DSState.ESTOP
-								? 'E-Stop'
-								: liveRobot.ds === DSState.ASTOP
-									? 'A-Stop'
-									: liveRobot.ds === DSState.MOVE_STATION
-										? 'Move Station'
-										: liveRobot.ds === DSState.WAITING
-											? 'Waiting'
-											: liveRobot.ds === DSState.RED
-												? 'No DS'
-												: 'Connected'}"
-				>
-					{#if liveRobot.ds === DSState.GREEN_X}X
-					{:else if liveRobot.ds === DSState.BYPASS}B
-					{:else if liveRobot.ds === DSState.ESTOP}E
-					{:else if liveRobot.ds === DSState.ASTOP}A
-					{:else if liveRobot.ds === DSState.MOVE_STATION}M
-					{/if}
-				</div>
-				<div
-					class="{isShortScreen ? 'size-3.5' : 'size-4 sm:size-6'} rounded-sm shrink-0 {liveRobot.radio ||
-					liveRobot.radioConnected
-						? 'bg-green-500'
-						: 'bg-red-600'}"
-					title="Radio: {liveRobot.radio
-						? 'Connected'
-						: liveRobot.radioConnected
-							? 'Connected (no data)'
-							: 'No radio'}"
-				></div>
-				<div
-					class="{isShortScreen
-						? 'size-3.5'
-						: 'size-4 sm:size-6'} rounded-sm flex items-center justify-center text-black text-[9px] sm:text-[10px] font-bold shrink-0 {liveRobot.rio
-						? 'bg-green-500'
-						: 'bg-red-600'}"
-					title="RoboRIO: {liveRobot.rio ? (liveRobot.code ? 'Code running' : 'No code') : 'Not connected'}"
-				>
-					{#if liveRobot.rio && !liveRobot.code}X{/if}
-				</div>
-				<span
-					class="tabular-nums font-mono text-[9px] sm:text-xs lg:text-sm text-black dark:text-white shrink-0"
-					title="Battery voltage">{liveRobot.battery.toFixed(1)}v</span
-				>
-				<span
-					class="tabular-nums font-mono text-[9px] sm:text-xs lg:text-sm text-black dark:text-white shrink-0"
-					title="Round-trip ping">{liveRobot.ping}ms</span
-				>
-				<span
-					class="tabular-nums font-mono text-[9px] sm:text-xs lg:text-sm text-black dark:text-white shrink-0"
-					title="Bandwidth utilization">{liveRobot.bwu.toFixed(2)}</span
-				>
-				<span
-					class="tabular-nums font-mono text-[9px] sm:text-xs lg:text-sm text-black dark:text-white shrink-0"
-					title="Signal strength">{liveRobot.signal ?? 0}dBm</span
-				>
+				{#if teamsSource !== "nexus"}
+					<div
+						class="{isShortScreen
+							? 'size-3.5'
+							: 'size-4 sm:size-6'} rounded-sm flex items-center justify-center text-black font-bold text-[9px] sm:text-[10px] shrink-0 {dsColor(
+							liveRobot.ds,
+						)}"
+						title="Driver Station: {liveRobot.ds === DSState.GREEN_X
+							? 'Green X'
+							: liveRobot.ds === DSState.BYPASS
+								? 'Bypass'
+								: liveRobot.ds === DSState.ESTOP
+									? 'E-Stop'
+									: liveRobot.ds === DSState.ASTOP
+										? 'A-Stop'
+										: liveRobot.ds === DSState.MOVE_STATION
+											? 'Move Station'
+											: liveRobot.ds === DSState.WAITING
+												? 'Waiting'
+												: liveRobot.ds === DSState.RED
+													? 'No DS'
+													: 'Connected'}"
+					>
+						{#if liveRobot.ds === DSState.GREEN_X}X
+						{:else if liveRobot.ds === DSState.BYPASS}B
+						{:else if liveRobot.ds === DSState.ESTOP}E
+						{:else if liveRobot.ds === DSState.ASTOP}A
+						{:else if liveRobot.ds === DSState.MOVE_STATION}M
+						{/if}
+					</div>
+					<div
+						class="{isShortScreen ? 'size-3.5' : 'size-4 sm:size-6'} rounded-sm shrink-0 {liveRobot.radio ||
+						liveRobot.radioConnected
+							? 'bg-green-500'
+							: 'bg-red-600'}"
+						title="Radio: {liveRobot.radio
+							? 'Connected'
+							: liveRobot.radioConnected
+								? 'Connected (no data)'
+								: 'No radio'}"
+					></div>
+					<div
+						class="{isShortScreen
+							? 'size-3.5'
+							: 'size-4 sm:size-6'} rounded-sm flex items-center justify-center text-black text-[9px] sm:text-[10px] font-bold shrink-0 {liveRobot.rio
+							? 'bg-green-500'
+							: 'bg-red-600'}"
+						title="RoboRIO: {liveRobot.rio
+							? liveRobot.code
+								? 'Code running'
+								: 'No code'
+							: 'Not connected'}"
+					>
+						{#if liveRobot.rio && !liveRobot.code}X{/if}
+					</div>
+					<span
+						class="tabular-nums font-mono text-[9px] sm:text-xs lg:text-sm text-black dark:text-white shrink-0"
+						title="Battery voltage">{liveRobot.battery.toFixed(1)}v</span
+					>
+					<span
+						class="tabular-nums font-mono text-[9px] sm:text-xs lg:text-sm text-black dark:text-white shrink-0"
+						title="Round-trip ping">{liveRobot.ping}ms</span
+					>
+					<span
+						class="tabular-nums font-mono text-[9px] sm:text-xs lg:text-sm text-black dark:text-white shrink-0"
+						title="Bandwidth utilization">{liveRobot.bwu.toFixed(2)}</span
+					>
+					<span
+						class="tabular-nums font-mono text-[9px] sm:text-xs lg:text-sm text-black dark:text-white shrink-0"
+						title="Signal strength">{liveRobot.signal ?? 0}dBm</span
+					>
 				{/if}
 				{#if hasOpenNote || liveRobot.warnings.includes(RobotWarnings.NOT_INSPECTED) || liveRobot.warnings.includes(RobotWarnings.RADIO_NOT_FLASHED) || liveRobot.warnings.includes(RobotWarnings.PREVIOUS_MATCH_EVENT)}
 					<div class="{teamsSource !== 'nexus' ? 'ml-auto' : ''} flex items-center gap-0.5 sm:gap-1 shrink-0">
@@ -929,9 +974,7 @@
 		</div>
 		<button
 			class="w-full flex items-center justify-center gap-1.5 transition-colors text-[11px] sm:text-xs lg:text-sm text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-neutral-700
-				{itemCount === 0 && !td?.loading
-					? 'flex-1 py-4'
-					: 'shrink-0 text-left px-3 ' + (isShortScreen ? 'py-0.5' : 'py-1.5')}"
+				{itemCount === 0 && !td?.loading ? 'flex-1 py-4' : 'shrink-0 text-left px-3 ' + (isShortScreen ? 'py-0.5' : 'py-1.5')}"
 			onclick={() => openNoteModal(teamNum)}
 		>
 			<Icon icon="mdi:plus-circle-outline" class="size-3 sm:size-3.5 lg:size-4 shrink-0" />

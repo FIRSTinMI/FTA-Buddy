@@ -49,22 +49,49 @@
 							<table class="section-table">
 								<tbody>
 									<tr>
-										<td width="125"><code>F1</code></td>
+										<td width="125"
+											><code
+												class="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-1 rounded"
+												>F1</code
+											></td
+										>
 										<td>Joystick rescan</td>
 									</tr>
 									<tr>
 										<td
-											><code>[</code> + <code>]</code> +
-											<code>\</code></td
+											><code
+												class="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-1 rounded"
+												>[</code
+											>
+											+
+											<code
+												class="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-1 rounded"
+												>]</code
+											>
+											+
+											<code
+												class="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-1 rounded"
+												>\</code
+											></td
 										>
 										<td>Enable Robot</td>
 									</tr>
 									<tr>
-										<td><code>Enter</code></td>
+										<td
+											><code
+												class="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-1 rounded"
+												>Enter</code
+											></td
+										>
 										<td>Disable Robot</td>
 									</tr>
 									<tr>
-										<td><code>Space</code></td>
+										<td
+											><code
+												class="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-1 rounded"
+												>Space</code
+											></td
+										>
 										<td>E-Stop</td>
 									</tr>
 								</tbody>

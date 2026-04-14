@@ -243,7 +243,9 @@
 </Modal>
 
 <Modal bind:open={confirmRemoveOpen} size="xs" title="Remove Team">
-	<p class="text-sm">Are you sure you want to remove team <strong>{teamNumber}</strong> from this event? This cannot be undone.</p>
+	<p class="text-sm">
+		Are you sure you want to remove team <strong>{teamNumber}</strong> from this event? This cannot be undone.
+	</p>
 	{#snippet footer()}
 		<Button
 			color="red"
@@ -251,8 +253,8 @@
 				onRemove!(teamNumber);
 				confirmRemoveOpen = false;
 				open = false;
-			}}
-		>Yes, Remove Team</Button>
+			}}>Yes, Remove Team</Button
+		>
 		<Button color="alternative" onclick={() => (confirmRemoveOpen = false)}>Cancel</Button>
 	{/snippet}
 </Modal>

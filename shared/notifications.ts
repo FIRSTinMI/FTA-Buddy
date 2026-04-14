@@ -162,9 +162,11 @@ export function buildNotification(ctx: NotificationContext): Notification {
 				title = trunc(`Note Reopened${suffix}`, MAX_TITLE);
 			}
 			body = trunc(
-				ctx.newStatus === "Resolved" ? `Closed by ${ctx.actor}` :
-				ctx.newStatus === "Refused" ? `Refused by ${ctx.actor}` :
-				`Reopened by ${ctx.actor}`,
+				ctx.newStatus === "Resolved"
+					? `Closed by ${ctx.actor}`
+					: ctx.newStatus === "Refused"
+						? `Refused by ${ctx.actor}`
+						: `Reopened by ${ctx.actor}`,
 				MAX_BODY,
 			);
 			tag = `note-${ctx.note.noteId}`;

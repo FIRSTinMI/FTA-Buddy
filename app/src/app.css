@@ -222,7 +222,6 @@ html:not(.dark) .fieldmonitor-square-height.bg-blue-600 {
 	height: 100vh;
 	width: 100vw;
 	z-index: 100;
-	background-color: #424242;
 }
 
 a[aria-current="page"] {

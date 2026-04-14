@@ -82,7 +82,7 @@
 	});
 </script>
 
-<div class="rounded-xl border border-neutral-700 bg-neutral-900 overflow-hidden">
+<div class="rounded-xl border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 overflow-hidden">
 	<button
 		class="flex w-full items-center justify-between gap-3 p-4 text-left h-20"
 		onclick={() => (expanded = !expanded)}
@@ -91,7 +91,9 @@
 			<span class="text-2xl">🔍</span>
 			<div>
 				<p class="font-semibold">Nexus Inspection API</p>
-			<p class="text-sm text-gray-400">Pull inspection status, and backup data connection for notepad.</p>
+				<p class="text-sm text-gray-600 dark:text-gray-400">
+					Pull inspection status, and backup data connection for notepad.
+				</p>
 			</div>
 		</div>
 		<div class="flex items-center gap-2 shrink-0">
@@ -99,7 +101,7 @@
 				<Indicator color={stateColor(nexusStatus.state)} />
 			{/if}
 			<svg
-				class="size-5 text-neutral-400 transition-transform {expanded ? 'rotate-180' : ''}"
+				class="size-5 text-gray-500 dark:text-neutral-400 transition-transform {expanded ? 'rotate-180' : ''}"
 				viewBox="0 0 20 20"
 				fill="currentColor"
 			>
@@ -113,8 +115,8 @@
 	</button>
 
 	{#if expanded}
-		<div class="flex flex-col gap-3 px-4 pb-4 border-t border-neutral-700 pt-4">
-		<p class="text-sm text-gray-400">
+		<div class="flex flex-col gap-3 px-4 pb-4 border-t border-gray-200 dark:border-neutral-700 pt-4">
+			<p class="text-sm text-gray-400">
 				FTA Buddy polls every 2 minutes. Find your API key
 				<a href="https://frc.nexus/en/api" target="_blank" class="text-blue-400 hover:underline">here</a>.
 			</p>
@@ -140,7 +142,7 @@
 				<Helper color="red">{nexusSaveError}</Helper>
 			{/if}
 			{#if nexusStatus}
-				<div class="flex flex-col gap-1 pt-3 border-t border-neutral-700">
+				<div class="flex flex-col gap-1 pt-3 border-t border-gray-200 dark:border-neutral-700">
 					<span class="inline-flex items-center gap-2 text-sm">
 						<Indicator color={stateColor(nexusStatus.state)} class="shrink-0" />
 						<span class="font-medium">{stateLabel(nexusStatus)}</span>

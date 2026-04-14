@@ -304,7 +304,11 @@
 		evt.preventDefault();
 		try {
 			if (!note) return;
-			if (editNoteText !== note.text || matchIdVal !== (note.match_id ?? undefined) || editRequestType !== (note.request_type ?? null)) {
+			if (
+				editNoteText !== note.text ||
+				matchIdVal !== (note.match_id ?? undefined) ||
+				editRequestType !== (note.request_type ?? null)
+			) {
 				await trpc.notes.edit.mutate({
 					id: noteId,
 					new_text: editNoteText,
@@ -524,7 +528,8 @@
 						{editRequestType === opt.value
 						? 'border-blue-500 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
 						: 'border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-neutral-700 text-gray-700 dark:text-gray-300'}"
-					onclick={() => (editRequestType = editRequestType === opt.value ? null : (opt.value as "CSA" | "RI"))}
+					onclick={() =>
+						(editRequestType = editRequestType === opt.value ? null : (opt.value as "CSA" | "RI"))}
 				>
 					<span
 						class="size-3 rounded-full border-2 shrink-0

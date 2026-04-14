@@ -731,7 +731,7 @@ export const eventRouter = router({
 						blue1: parseTeam(m.blueTeams?.[0]),
 						blue2: parseTeam(m.blueTeams?.[1]),
 						blue3: parseTeam(m.blueTeams?.[2]),
-				  }
+					}
 				: null;
 
 		// Use array position: nowQueuing is at idx, on-deck is idx-1, on-field is idx-2.
@@ -831,25 +831,19 @@ export const eventRouter = router({
 	}),
 
 	/** Removes a single team from the event's team list and checklist. */
-	removeTeam: eventProcedure
-		.input(z.object({ teamNumber: z.string() }))
-		.mutation(async ({ ctx, input }) => {
-			const event = await getEvent(ctx.event.token);
-			const teams = event.teams as TeamList;
-			const checklist = event.checklist as EventChecklist;
+	removeTeam: eventProcedure.input(z.object({ teamNumber: z.string() })).mutation(async ({ ctx, input }) => {
+		const event = await getEvent(ctx.event.token);
+		const teams = event.teams as TeamList;
+		const checklist = event.checklist as EventChecklist;
 
-			event.teams = teams.filter((t) => t.number !== input.teamNumber);
-			delete checklist[input.teamNumber];
-			event.checklist = checklist;
+		event.teams = teams.filter((t) => t.number !== input.teamNumber);
+		delete checklist[input.teamNumber];
+		event.checklist = checklist;
 
-			await db
-				.update(events)
-				.set({ teams: event.teams, checklist })
-				.where(eq(events.code, event.code))
-				.execute();
+		await db.update(events).set({ teams: event.teams, checklist }).where(eq(events.code, event.code)).execute();
 
-			return { success: true };
-		}),
+		return { success: true };
+	}),
 
 	/** Returns the list of users currently joined to this event. */
 	getUsers: eventProcedure.query(async ({ ctx }) => {
@@ -1017,23 +1011,18 @@ export const eventRouter = router({
 	 * only to the parent event - its own field monitor, logs, and notes.
 	 * Divisional sub-events remain accessible via the sidebar selector.
 	 */
-	setPlayoffMode: eventProcedure
-		.input(z.object({ playoffMode: z.boolean() }))
-		.mutation(async ({ ctx, input }) => {
-			const event = await getEvent(ctx.event.token);
-			if (!event.meshedEvent) {
-				throw new TRPCError({
-					code: "BAD_REQUEST",
-					message: "Inter-divisional playoffs mode is only available for meshed events",
-				});
-			}
-			await db
-				.update(events)
-				.set({ playoffMode: input.playoffMode })
-				.where(eq(events.code, event.code));
-			event.playoffMode = input.playoffMode;
-			// Broadcast to all instances so their cached event stays in sync
-			bus.publish(`event:${event.code}:playoff_mode`, input.playoffMode);
-			return { playoffMode: input.playoffMode };
-		}),
+	setPlayoffMode: eventProcedure.input(z.object({ playoffMode: z.boolean() })).mutation(async ({ ctx, input }) => {
+		const event = await getEvent(ctx.event.token);
+		if (!event.meshedEvent) {
+			throw new TRPCError({
+				code: "BAD_REQUEST",
+				message: "Inter-divisional playoffs mode is only available for meshed events",
+			});
+		}
+		await db.update(events).set({ playoffMode: input.playoffMode }).where(eq(events.code, event.code));
+		event.playoffMode = input.playoffMode;
+		// Broadcast to all instances so their cached event stays in sync
+		bus.publish(`event:${event.code}:playoff_mode`, input.playoffMode);
+		return { playoffMode: input.playoffMode };
+	}),
 });

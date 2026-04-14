@@ -905,10 +905,18 @@ export const notesRouter = router({
 					await updateSlackMessage(note.slack_channel, event.slackTeam, note.slack_ts, slackMsg);
 				} else if (newRequestType !== null && !note.slack_ts) {
 					const messageTS = await sendSlackMessage(event.slackChannel, event.slackTeam, slackMsg);
-					await db.update(notes).set({ slack_ts: messageTS, slack_channel: event.slackChannel }).where(eq(notes.id, input.id)).execute();
+					await db
+						.update(notes)
+						.set({ slack_ts: messageTS, slack_channel: event.slackChannel })
+						.where(eq(notes.id, input.id))
+						.execute();
 				} else if (newRequestType === null && note.slack_ts && note.slack_channel) {
 					await deleteSlackMessage(note.slack_channel, event.slackTeam, note.slack_ts);
-					await db.update(notes).set({ slack_ts: null, slack_channel: null }).where(eq(notes.id, input.id)).execute();
+					await db
+						.update(notes)
+						.set({ slack_ts: null, slack_channel: null })
+						.where(eq(notes.id, input.id))
+						.execute();
 				}
 			}
 
@@ -979,7 +987,10 @@ export const notesRouter = router({
 					resolved_by_id: isClosing ? currentUserProfile.id : null,
 					resolved_by: isClosing ? currentUserProfile : null,
 					fms_metadata: note.fms_metadata
-						? { ...(note.fms_metadata as FmsNoteMetadata), resolutionStatus: input.new_status === "Refused" ? "Resolved" : input.new_status }
+						? {
+								...(note.fms_metadata as FmsNoteMetadata),
+								resolutionStatus: input.new_status === "Refused" ? "Resolved" : input.new_status,
+							}
 						: null,
 					updated_at: new Date(),
 				})
@@ -1457,9 +1468,7 @@ export const notesRouter = router({
 				push(data);
 			};
 
-			console.log(
-				`[notes sub] start event=${event.code} source=${input.source ?? "unknown"}`,
-			);
+			console.log(`[notes sub] start event=${event.code} source=${input.source ?? "unknown"}`);
 
 			const eventCodesToListen = [event.code];
 			if (event.meshedEvent && event.subEvents && !event.playoffMode) {
@@ -1527,7 +1536,8 @@ export const notesRouter = router({
 			}),
 		)
 		.mutation(async ({ input, ctx }) => {
-			await db.insert(pushSubscriptions)
+			await db
+				.insert(pushSubscriptions)
 				.values({
 					endpoint: input.endpoint,
 					expirationTime: input.expirationTime,
@@ -1782,9 +1792,7 @@ export async function createFromNexus(channel_id: string, message_ts: string, te
 		for (const row of linkedEventRows) {
 			const ev = await getEvent("", row.code);
 			if (ev.meshedEvent && ev.subEvents) {
-				const ownerSub = ev.subEvents.find((sub) =>
-					sub.teams.some((t) => parseInt(t.number, 10) === team),
-				);
+				const ownerSub = ev.subEvents.find((sub) => sub.teams.some((t) => parseInt(t.number, 10) === team));
 				if (ownerSub) {
 					targetEventCode = ownerSub.code;
 					linkEvent = ev; // meshed event has all users merged; use it for notifications + URL

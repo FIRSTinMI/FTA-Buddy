@@ -70,7 +70,9 @@ export const checklistRouter = router({
 			const unsub = bus.subscribe(`event:${event.code}:checklist`, (data) => push(data as EventChecklist));
 			const heartbeat = setInterval(() => push(event.checklist as EventChecklist), 30_000);
 			try {
-				for await (const item of drain()) { yield item; }
+				for await (const item of drain()) {
+					yield item;
+				}
 			} finally {
 				unsub();
 				clearInterval(heartbeat);

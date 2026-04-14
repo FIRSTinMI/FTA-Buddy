@@ -449,9 +449,15 @@ export const matchEventsRouter = router({
 
 		const unsubs: Array<() => void> = [];
 		for (const code of eventCodesToListen) {
-			unsubs.push(bus.subscribe(`event:${code}:match_event:create`, (data) => push(data as MatchEventUpdateEventData)));
-			unsubs.push(bus.subscribe(`event:${code}:match_event:dismiss`, (data) => push(data as MatchEventUpdateEventData)));
-			unsubs.push(bus.subscribe(`event:${code}:match_event:convert`, (data) => push(data as MatchEventUpdateEventData)));
+			unsubs.push(
+				bus.subscribe(`event:${code}:match_event:create`, (data) => push(data as MatchEventUpdateEventData)),
+			);
+			unsubs.push(
+				bus.subscribe(`event:${code}:match_event:dismiss`, (data) => push(data as MatchEventUpdateEventData)),
+			);
+			unsubs.push(
+				bus.subscribe(`event:${code}:match_event:convert`, (data) => push(data as MatchEventUpdateEventData)),
+			);
 		}
 
 		const heartbeat = setInterval(() => push({ kind: "heartbeat" }), 30_000);

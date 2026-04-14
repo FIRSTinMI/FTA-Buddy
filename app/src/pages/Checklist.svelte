@@ -141,7 +141,9 @@
 			if (generation !== subscriptionGeneration) return; // superseded
 			checklist = c;
 			updateTotals(checklist);
-		} catch { /* ignore */ }
+		} catch {
+			/* ignore */
+		}
 
 		if (generation !== subscriptionGeneration) return; // superseded
 

@@ -40,9 +40,9 @@ export const bus = {
 	 * will receive the message via their redisSub connection.
 	 */
 	publish(channel: string, data: unknown): void {
-		redis.publish(PREFIX + channel, SuperJSON.stringify(data)).catch((err) =>
-			console.error(`[EventBus] Publish failed on channel ${channel}:`, err),
-		);
+		redis
+			.publish(PREFIX + channel, SuperJSON.stringify(data))
+			.catch((err) => console.error(`[EventBus] Publish failed on channel ${channel}:`, err));
 	},
 
 	/**
@@ -59,9 +59,9 @@ export const bus = {
 		if (!handlers) {
 			handlers = new Set();
 			channelHandlers.set(fullChannel, handlers);
-			redisSub.subscribe(fullChannel).catch((err) =>
-				console.error(`[EventBus] Subscribe failed on channel ${channel}:`, err),
-			);
+			redisSub
+				.subscribe(fullChannel)
+				.catch((err) => console.error(`[EventBus] Subscribe failed on channel ${channel}:`, err));
 		}
 		handlers.add(handler);
 
@@ -71,9 +71,9 @@ export const bus = {
 			set.delete(handler);
 			if (set.size === 0) {
 				channelHandlers.delete(fullChannel);
-				redisSub.unsubscribe(fullChannel).catch((err) =>
-					console.error(`[EventBus] Unsubscribe failed on channel ${channel}:`, err),
-				);
+				redisSub
+					.unsubscribe(fullChannel)
+					.catch((err) => console.error(`[EventBus] Unsubscribe failed on channel ${channel}:`, err));
 			}
 		};
 	},

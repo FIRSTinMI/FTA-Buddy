@@ -152,43 +152,44 @@
 	</div>
 {/if}
 
-<div class="border border-neutral-700 rounded-xl p-4 mb-6">
-	<p class="text-sm text-gray-400 mb-2">Use this information to connect your app.</p>
+<div class="border border-gray-200 dark:border-neutral-700 rounded-xl p-4 mb-6">
+	<p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Use this information to connect your app.</p>
 	<div class="flex flex-col gap-1">
 		<div class="flex items-center gap-2">
-			<span class="text-sm text-gray-400 w-24">Event Code</span>
-			<code class="bg-neutral-800 px-2 py-0.5 rounded-lg text-sm">{$eventStore.code}</code>
+			<span class="text-sm text-gray-600 dark:text-gray-400 w-24">Event Code</span>
+			<code class="bg-gray-100 dark:bg-neutral-800 px-2 py-0.5 rounded-lg text-sm">{$eventStore.code}</code>
 			<button class="text-xs text-blue-400 hover:underline" onclick={() => copyToClipboard($eventStore.code)}
 				>copy</button
 			>
 		</div>
 		<div class="flex items-center gap-2">
-			<span class="text-sm text-gray-400 w-24">Event Pin</span>
-			<code class="bg-neutral-800 px-2 py-0.5 rounded-lg text-sm">{$eventStore.pin}</code>
+			<span class="text-sm text-gray-600 dark:text-gray-400 w-24">Event Pin</span>
+			<code class="bg-gray-100 dark:bg-neutral-800 px-2 py-0.5 rounded-lg text-sm">{$eventStore.pin}</code>
 			<button class="text-xs text-blue-400 hover:underline" onclick={() => copyToClipboard($eventStore.pin)}
 				>copy</button
 			>
 		</div>
 		{#if $userStore.eventToken}
 			<div class="flex items-center gap-2">
-				<span class="text-sm text-gray-400 w-24">Magic Link</span>
-				<code class="bg-neutral-800 px-2 py-0.5 rounded-lg text-xs text-gray-400 max-w-xs truncate"
+				<span class="text-sm text-gray-600 dark:text-gray-400 w-24">Magic Link</span>
+				<code
+					class="bg-gray-100 dark:bg-neutral-800 px-2 py-0.5 rounded-lg text-xs text-gray-600 dark:text-gray-400 max-w-xs truncate"
 					>https://ftabuddy.com/join/{$userStore.eventToken}</code
 				>
 				<button
 					class="text-xs text-blue-400 hover:underline"
 					onclick={() => copyToClipboard(`https://ftabuddy.com/join/${$userStore.eventToken}`)}>copy</button
 				>
-				<button
-					class="text-xs text-blue-400 hover:underline"
-					onclick={() => (qrModalOpen = true)}>QR Code</button
+				<button class="text-xs text-blue-400 hover:underline" onclick={() => (qrModalOpen = true)}
+					>QR Code</button
 				>
 			</div>
 		{/if}
 		{#if $userStore.eventToken}
 			<div class="flex items-center gap-2">
-				<span class="text-sm text-gray-400 w-24">API Token</span>
-				<code class="bg-neutral-800 px-2 py-0.5 rounded-lg text-xs text-gray-400 max-w-xs truncate"
+				<span class="text-sm text-gray-600 dark:text-gray-400 w-24">API Token</span>
+				<code
+					class="bg-gray-100 dark:bg-neutral-800 px-2 py-0.5 rounded-lg text-xs text-gray-600 dark:text-gray-400 max-w-xs truncate"
 					>{$userStore.eventToken}</code
 				>
 				<button
@@ -201,32 +202,38 @@
 </div>
 
 {#if $eventStore.subEvents?.length}
-<div class="border border-neutral-700 rounded-xl p-4 mb-6">
-	<div class="flex items-start justify-between gap-4">
-		<div>
-			<h2 class="text-base font-semibold">Inter-Divisional Playoffs</h2>
-			<p class="text-sm text-gray-400 mt-1">
-				When enabled, the <strong>{getPlayoffViewLabel($eventStore.meshedEventCode ?? $eventStore.code)}</strong> view
-				acts as a normal single-field event - field monitor, match logs, and notes are scoped to
-				<code class="bg-neutral-800 px-1 rounded">{$eventStore.meshedEventCode ?? $eventStore.code}</code>
-				only. Divisional sub-events remain accessible from the sidebar.
-			</p>
+	<div class="border border-gray-200 dark:border-neutral-700 rounded-xl p-4 mb-6">
+		<div class="flex items-start justify-between gap-4">
+			<div>
+				<h2 class="text-base font-semibold">Inter-Divisional Playoffs</h2>
+				<p class="text-sm text-gray-400 mt-1">
+					When enabled, the <strong
+						>{getPlayoffViewLabel($eventStore.meshedEventCode ?? $eventStore.code)}</strong
+					>
+					view acts as a normal single-field event - field monitor, match logs, and notes are scoped to
+					<code class="bg-gray-100 dark:bg-neutral-800 px-1 rounded"
+						>{$eventStore.meshedEventCode ?? $eventStore.code}</code
+					>
+					only. Divisional sub-events remain accessible from the sidebar.
+				</p>
+			</div>
+			<Button
+				color={$eventStore.playoffMode ? "red" : "blue"}
+				class="shrink-0"
+				disabled={playoffModeBlocked}
+				onclick={togglePlayoffMode}
+			>
+				{$eventStore.playoffMode ? "Disable" : "Enable"} Inter-Divisional Playoffs
+			</Button>
 		</div>
-		<Button
-			color={$eventStore.playoffMode ? "red" : "blue"}
-			class="shrink-0"
-			disabled={playoffModeBlocked}
-			onclick={togglePlayoffMode}
-		>
-			{$eventStore.playoffMode ? "Disable" : "Enable"} Inter-Divisional Playoffs
-		</Button>
+		{#if $eventStore.playoffMode}
+			<p class="text-sm text-blue-400 mt-3">
+				✓ Inter-divisional playoffs mode is active. Combined view is now <strong
+					>{getPlayoffViewLabel($eventStore.meshedEventCode ?? $eventStore.code)}</strong
+				>.
+			</p>
+		{/if}
 	</div>
-	{#if $eventStore.playoffMode}
-		<p class="text-sm text-blue-400 mt-3">
-			✓ Inter-divisional playoffs mode is active. Combined view is now <strong>{getPlayoffViewLabel($eventStore.meshedEventCode ?? $eventStore.code)}</strong>.
-		</p>
-	{/if}
-</div>
 {/if}
 
 <h2 class="text-lg font-bold mb-3">Integrations</h2>

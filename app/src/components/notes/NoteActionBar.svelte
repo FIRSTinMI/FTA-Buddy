@@ -42,10 +42,10 @@
 
 <div class="shrink-0 flex justify-center sm:justify-between flex-wrap gap-2 md:gap-3 pb-2 mb-3">
 	<div class="flex gap-2 md:gap-3">
-		<Button size="sm" color="alternative" onclick={onback}>
+		<Button size="sm" color="light" onclick={onback}>
 			<Icon icon="mdi:arrow-left" class="size-4" />
 		</Button>
-		<Button size="sm" color="alternative" onclick={ontogglefollow}>
+		<Button size="sm" color="light" onclick={ontogglefollow}>
 			<Icon
 				icon={note.followers.includes(userId)
 					? "simple-line-icons:user-unfollow"
@@ -81,22 +81,22 @@
 		{/if}
 
 		{#if hasMatch}
-			<Button size="sm" color="alternative" onclick={onviewlog}>
+			<Button size="sm" color="light" onclick={onviewlog}>
 				<Icon icon="mdi:chart-line" class="size-4 mr-1" />Log
 			</Button>
 		{/if}
 
 		{#if !readonly}
-			<Button id="note-action-more-btn" size="sm" color="alternative">
+			<Button id="note-action-more-btn" size="sm" color="light">
 				<Icon icon="mdi:dots-vertical" class="size-4" />
 			</Button>
 			<Dropdown triggeredBy="#note-action-more-btn" placement="bottom-end" class="list-none">
 				{#if isOwner}
-					<DropdownItem onclick={onopeneditnote} class="list-none">
+					<DropdownItem onclick={onopeneditnote} class="text-gray-700 dark:text-gray-200 list-none">
 						<Icon icon="mdi:pencil" class="size-4 mr-2 inline" />Edit
 					</DropdownItem>
 				{/if}
-				<DropdownItem onclick={onopenassignmodal} class="list-none">
+				<DropdownItem onclick={onopenassignmodal} class="text-gray-700 dark:text-gray-200 list-none">
 					<Icon icon="mdi:account-arrow-right" class="size-4 mr-2 inline" />Assign to…
 				</DropdownItem>
 				{#if isOpen && note.resolution_status !== "NotApplicable"}

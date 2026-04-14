@@ -75,7 +75,7 @@
 		{ name: "RxMCS", value: "rxMCS" },
 	];
 
-	let selectedColumns: (keyof FMSLogFrame)[] = [
+	let selectedColumns: (keyof FMSLogFrame)[] = $state([
 		"dsLinkActive",
 		"radioLink",
 		"rioLink",
@@ -84,7 +84,7 @@
 		"battery",
 		"averageTripTime",
 		"dataRateTotal",
-	];
+	]);
 
 	let shareid: string;
 	let shareOpen = false;
@@ -189,16 +189,18 @@
 				{/each}
 			</div>
 
-			<Label class="text-left">
-				Select Columns
-				<MultiSelect items={columns} bind:value={selectedColumns} size="sm" class="mt-2" />
-			</Label>
+			<div class="text-left">
+				<p class="text-sm font-medium text-gray-900 dark:text-white mb-1">Select Columns</p>
+				<MultiSelect items={columns} bind:value={selectedColumns} size="sm" />
+			</div>
 
-			<div class="overflow-x-auto text-center w-full">
-				<table class="relative overflow-x-auto text-sm text-left text-gray-500 dark:text-gray-400">
+			<div class="overflow-x-auto w-full">
+				<table class="min-w-full text-sm text-left text-gray-500 dark:text-gray-400 mx-auto">
 					<thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-black dark:text-white">
 						<tr>
-							<th class="px-4 py-3 sticky bg-black left-0">Time</th>
+							<th class="px-4 py-3 sticky bg-gray-50 dark:bg-black left-0 text-gray-700 dark:text-white"
+								>Time</th
+							>
 							{#each selectedColumns as col}
 								<th class="px-4 py-3">{columns.find((c) => c.value === col)?.name}</th>
 							{/each}
@@ -210,7 +212,8 @@
 								<tr
 									class="border-b text-center dark:border-gray-700 odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800"
 								>
-									<td class="px-4 py-2 text-white text-center sticky left-0 bg-gray-40 dark:bg-black"
+									<td
+										class="px-4 py-2 text-gray-800 dark:text-white text-center sticky left-0 bg-gray-50 dark:bg-gray-900"
 										>{frame.matchTime}</td
 									>
 									{#each selectedColumns as col}

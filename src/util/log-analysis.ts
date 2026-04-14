@@ -503,7 +503,9 @@ export async function logAnalysisLoop(limit: number) {
 			const state = analysisFailed.get(log.id) ?? { count: 0, retryAfter: 0 };
 			state.count++;
 			if (state.count > MAX_RETRIES) {
-				console.error(`[LogAnalysis] Log ${log.id} failed ${state.count} times - marking analyzed to stop retrying`);
+				console.error(
+					`[LogAnalysis] Log ${log.id} failed ${state.count} times - marking analyzed to stop retrying`,
+				);
 				analysisFailed.delete(log.id);
 				try {
 					await db.update(matchLogs).set({ analyzed: true }).where(eq(matchLogs.id, log.id)).execute();
@@ -514,7 +516,9 @@ export async function logAnalysisLoop(limit: number) {
 				const delayMs = RETRY_DELAYS_MS[state.count - 1];
 				state.retryAfter = Date.now() + delayMs;
 				analysisFailed.set(log.id, state);
-				console.warn(`[LogAnalysis] Log ${log.id} will retry in ${delayMs / 60_000} min (attempt ${state.count}/${MAX_RETRIES})`);
+				console.warn(
+					`[LogAnalysis] Log ${log.id} will retry in ${delayMs / 60_000} min (attempt ${state.count}/${MAX_RETRIES})`,
+				);
 			}
 		}
 	}

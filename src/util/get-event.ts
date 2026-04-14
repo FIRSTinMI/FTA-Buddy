@@ -106,7 +106,10 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 
 			if (event.meshedEvent) {
 				const subEvents = await db.query.events.findMany({
-					where: inArray(schema.events.code, (event.meshedEvent as Array<{ code: string }>).map((e) => e.code)),
+					where: inArray(
+						schema.events.code,
+						(event.meshedEvent as Array<{ code: string }>).map((e) => e.code),
+					),
 				});
 				for (const subEvent of subEvents) {
 					usersToGet = usersToGet.concat(subEvent.users as number[]);
@@ -191,4 +194,3 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 	delete loadingEvents[eventCode];
 	return events[eventCode];
 }
-

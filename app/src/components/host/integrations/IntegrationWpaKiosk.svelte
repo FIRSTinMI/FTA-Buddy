@@ -2,7 +2,7 @@
 	let expanded = $state(false);
 </script>
 
-<div class="rounded-xl border border-neutral-700 bg-neutral-900 overflow-hidden">
+<div class="rounded-xl border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 overflow-hidden">
 	<button
 		class="flex w-full items-center justify-between gap-3 p-4 text-left h-20"
 		onclick={() => (expanded = !expanded)}
@@ -15,7 +15,9 @@
 			</div>
 		</div>
 		<svg
-			class="size-5 text-neutral-400 shrink-0 transition-transform {expanded ? 'rotate-180' : ''}"
+			class="size-5 text-gray-500 dark:text-neutral-400 shrink-0 transition-transform {expanded
+				? 'rotate-180'
+				: ''}"
 			viewBox="0 0 20 20"
 			fill="currentColor"
 		>
@@ -28,10 +30,12 @@
 	</button>
 
 	{#if expanded}
-		<div class="flex flex-col gap-2 px-4 pb-4 border-t border-neutral-700 pt-4 text-sm text-gray-400">
+		<div
+			class="flex flex-col gap-2 px-4 pb-4 border-t border-gray-200 dark:border-neutral-700 pt-4 text-sm text-gray-600 dark:text-gray-400"
+		>
 			<p>
 				Connect your WPA Kiosk computer to WiFi and visit
-				<code class="bg-neutral-800 px-2 py-0.5 rounded-lg">ftabuddy.com/kiosk</code>
+				<code class="bg-gray-100 dark:bg-neutral-800 px-2 py-0.5 rounded-lg">ftabuddy.com/kiosk</code>
 				to set up the extension. Radio programming status will update the checklist automatically.
 			</p>
 		</div>

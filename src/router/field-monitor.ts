@@ -196,7 +196,13 @@ export const fieldMonitorRouter = router({
 		const event = await getEvent(ctx.eventToken ?? "");
 		const items = await redis.lrange(`ftabuddy:event:${event.code}:history`, 0, 49);
 		if (items.length > 0) {
-			const parsed = items.flatMap((i: string) => { try { return [SuperJSON.parse<MonitorFrame>(i)]; } catch { return []; } });
+			const parsed = items.flatMap((i: string) => {
+				try {
+					return [SuperJSON.parse<MonitorFrame>(i)];
+				} catch {
+					return [];
+				}
+			});
 			if (parsed.length > 0) return parsed.reverse();
 		}
 		return event.history;
@@ -213,8 +219,11 @@ export const fieldMonitorRouter = router({
 			console.log("robots subscription", event.code);
 			const { push, drain } = subscriptionQueue<MonitorFrame>(signal!);
 			const unsub = bus.subscribe(`event:${event.code}:frame`, (data) => push(data as MonitorFrame));
-			try { yield* drain(); }
-			finally { unsub(); }
+			try {
+				yield* drain();
+			} finally {
+				unsub();
+			}
 		}),
 
 	robotStatus: publicProcedure
@@ -228,8 +237,11 @@ export const fieldMonitorRouter = router({
 			console.log("robot status subscription", event.code);
 			const { push, drain } = subscriptionQueue<StateChange>(signal!);
 			const unsub = bus.subscribe(`event:${event.code}:robot_state`, (data) => push(data as StateChange));
-			try { yield* drain(); }
-			finally { unsub(); }
+			try {
+				yield* drain();
+			} finally {
+				unsub();
+			}
 		}),
 
 	fieldStatus: publicProcedure
@@ -243,8 +255,11 @@ export const fieldMonitorRouter = router({
 			console.log("field status subscription", event.code);
 			const { push, drain } = subscriptionQueue<FieldState>(signal!);
 			const unsub = bus.subscribe(`event:${event.code}:field_status`, (data) => push(data as FieldState));
-			try { yield* drain(); }
-			finally { unsub(); }
+			try {
+				yield* drain();
+			} finally {
+				unsub();
+			}
 		}),
 
 	combinedSubscription: publicProcedure
@@ -263,8 +278,13 @@ export const fieldMonitorRouter = router({
 			// Seed with current frame from Redis for late joiners
 			const stored = await redis.get(`ftabuddy:event:${event.code}:monitor_frame`);
 			if (stored) push(SuperJSON.parse<MonitorFrame>(stored));
-			try { yield* drain(); }
-			finally { unsubFrame(); unsubRobot(); unsubField(); }
+			try {
+				yield* drain();
+			} finally {
+				unsubFrame();
+				unsubRobot();
+				unsubField();
+			}
 		}),
 
 	management: publicProcedure
@@ -288,7 +308,11 @@ export const fieldMonitorRouter = router({
 				// If this instance hasn't loaded the event yet (e.g. it was created on another
 				// instance), load it now so we can push current state and wire the subscription.
 				if (!event) {
-					try { event = await getEvent("", eventCode); } catch { return; }
+					try {
+						event = await getEvent("", eventCode);
+					} catch {
+						return;
+					}
 				}
 				const unsub = bus.subscribe(`event:${eventCode}:frame`, (data) => {
 					const frame = data as MonitorFrame;
@@ -329,8 +353,11 @@ export const fieldMonitorRouter = router({
 			const unsubNew = bus.subscribe("global:new_event", (data) => addNewEvent(data as string));
 			cleanups.push(unsubNew);
 
-			try { yield* drain(); }
-			finally { for (const cleanup of cleanups) cleanup(); }
+			try {
+				yield* drain();
+			} finally {
+				for (const cleanup of cleanups) cleanup();
+			}
 		}),
 });
 

@@ -156,8 +156,12 @@ export const cycleRouter = router({
 			const unsubCycle = bus.subscribe(`event:${event.code}:cycle`, listener);
 			const unsubField = bus.subscribe(`event:${event.code}:field_status`, listener);
 
-			try { yield* drain(); }
-			finally { unsubCycle(); unsubField(); }
+			try {
+				yield* drain();
+			} finally {
+				unsubCycle();
+				unsubField();
+			}
 		}),
 
 	getCycle: publicProcedure
@@ -468,7 +472,10 @@ export const cycleRouter = router({
 				cycle.match_number,
 				cycle.play_number,
 				cycle.level,
-				cycle.start_time?.toLocaleString("en-US", ctx.event.timezone ? { timeZone: ctx.event.timezone } : undefined) ?? "",
+				cycle.start_time?.toLocaleString(
+					"en-US",
+					ctx.event.timezone ? { timeZone: ctx.event.timezone } : undefined,
+				) ?? "",
 				cycle.calculated_cycle_time ?? "",
 			]),
 			ctx.event.code,

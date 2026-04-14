@@ -310,7 +310,9 @@ export const matchRouter = router({
 					: [ctx.event.code, ...(ctx.event.meshedEvent as Array<{ code: string }>).map((e) => e.code)]
 				: [ctx.event.code];
 
-			const filters = [eventCodes.length === 1 ? eq(matchLogs.event, eventCodes[0]) : inArray(matchLogs.event, eventCodes)];
+			const filters = [
+				eventCodes.length === 1 ? eq(matchLogs.event, eventCodes[0]) : inArray(matchLogs.event, eventCodes),
+			];
 
 			if (input.level) filters.push(eq(matchLogs.level, input.level));
 			if (input.team)
@@ -577,20 +579,30 @@ export const matchRouter = router({
 			if (nexusStatus?.matches?.length) {
 				const resultKeys = new Set(result.map((m) => `${m.level}:${m.match_number}:${m.play_number}`));
 
-				const parseNexusLabel = (label: string): { level: string; match_number: number; play_number: number } | null => {
+				const parseNexusLabel = (
+					label: string,
+				): { level: string; match_number: number; play_number: number } | null => {
 					const finalMatch = label.match(/^Final (\d+)$/);
 					if (finalMatch) {
 						const n = parseInt(finalMatch[1], 10);
 						return { level: "Playoff", match_number: 13 + n, play_number: 1 }; // Final 1→14, 2→15, 3→16, 4→17
 					}
 					const playoffMatch = label.match(/^Playoff (\d+)$/);
-					if (playoffMatch) return { level: "Playoff", match_number: parseInt(playoffMatch[1], 10), play_number: 1 };
+					if (playoffMatch)
+						return { level: "Playoff", match_number: parseInt(playoffMatch[1], 10), play_number: 1 };
 					const qualReplayMatch = label.match(/^Qualification (\d+) Replay$/);
-					if (qualReplayMatch) return { level: "Qualification", match_number: parseInt(qualReplayMatch[1], 10), play_number: 2 };
+					if (qualReplayMatch)
+						return {
+							level: "Qualification",
+							match_number: parseInt(qualReplayMatch[1], 10),
+							play_number: 2,
+						};
 					const qualMatch = label.match(/^Qualification (\d+)$/);
-					if (qualMatch) return { level: "Qualification", match_number: parseInt(qualMatch[1], 10), play_number: 1 };
+					if (qualMatch)
+						return { level: "Qualification", match_number: parseInt(qualMatch[1], 10), play_number: 1 };
 					const practiceMatch = label.match(/^Practice (\d+)$/);
-					if (practiceMatch) return { level: "Practice", match_number: parseInt(practiceMatch[1], 10), play_number: 1 };
+					if (practiceMatch)
+						return { level: "Practice", match_number: parseInt(practiceMatch[1], 10), play_number: 1 };
 					return null;
 				};
 

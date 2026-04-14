@@ -15,6 +15,7 @@
 	import { settingsStore } from "../../stores/settings";
 	import { userStore } from "../../stores/user";
 	import { toast } from "../../util/toast";
+	import { getReadableTextColor } from "../../util/colorContrast";
 	import MatchEventCard from "../MatchEventCard.svelte";
 	import NoteCard from "../NoteCard.svelte";
 	import NotesPolicy from "../NotesPolicy.svelte";
@@ -820,11 +821,12 @@
 						{#each availableSubEvents as sub}
 							{@const isSelected = selectedFields.includes(sub.code)}
 							{@const color = sub.color ?? "#6b7280"}
+							{@const textColor = getReadableTextColor(color, $settingsStore.darkMode)}
 							<button
 								type="button"
 								class="text-xs px-2 py-1 rounded border transition-colors"
 								style={isSelected
-									? `border-color: ${color}; background-color: ${color}1a; color: ${color}`
+									? `border-color: ${color}; background-color: ${color}1a; color: ${textColor}`
 									: ""}
 								class:border-gray-300={!isSelected}
 								class:dark:border-gray-600={!isSelected}

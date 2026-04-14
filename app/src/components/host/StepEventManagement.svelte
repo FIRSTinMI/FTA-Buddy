@@ -74,7 +74,7 @@
 	}
 
 	function openConfigDialog() {
-		configFieldMonitor = $eventStore.notepadOnly ? false : (extensionDetected ? extensionFieldMonitor : true);
+		configFieldMonitor = $eventStore.notepadOnly ? false : extensionDetected ? extensionFieldMonitor : true;
 		configUseSignalR = extensionDetected ? extensionUseSignalR : true;
 		configFmsApiEnabled = extensionDetected ? extensionFmsApiEnabled : true;
 		extensionConfigDialogOpen = true;

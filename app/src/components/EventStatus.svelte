@@ -165,7 +165,9 @@
 		<div class="flex-1">
 			<h1 class="text-lg lg:text-2xl font-bold">{eventName}</h1>
 			{#if onselect}
-				<button onclick={onselect} class="text-xs text-blue-400 hover:text-blue-300 underline mt-0.5">Select Event</button>
+				<button onclick={onselect} class="text-xs text-blue-400 hover:text-blue-300 underline mt-0.5"
+					>Select Event</button
+				>
 			{/if}
 		</div>
 		{#if removable}

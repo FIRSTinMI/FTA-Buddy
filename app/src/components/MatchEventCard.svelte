@@ -11,6 +11,7 @@
 	import { get } from "svelte/store";
 	import { eventStore } from "../stores/event";
 	import { userStore } from "../stores/user";
+	import { getContrastTextColor } from "../util/colorContrast";
 
 	interface Props {
 		matchEvent: MatchEvent;
@@ -236,8 +237,9 @@
 				<div class="shrink-0 text-right text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
 					{#if isMeshedCombined && subEventForMatchEvent}
 						<span
-							class="inline-block px-1.5 py-0.5 rounded text-white font-medium text-[10px] mb-0.5"
-							style="background-color: {subEventForMatchEvent.color ?? '#6b7280'}"
+							class="inline-block px-1.5 py-0.5 rounded font-medium text-[10px] mb-0.5"
+							style="background-color: {subEventForMatchEvent.color ??
+								'#6b7280'}; color: {getContrastTextColor(subEventForMatchEvent.color ?? '#6b7280')}"
 							>{subEventForMatchEvent.label || subEventForMatchEvent.code}</span
 						>
 					{:else}

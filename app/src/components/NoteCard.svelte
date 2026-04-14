@@ -11,6 +11,7 @@
 	import { navigate } from "../router";
 	import { toast } from "../util/toast";
 	import { displayTeam } from "../util/team-name";
+	import { getContrastTextColor } from "../util/colorContrast";
 
 	let event = get(eventStore);
 	let user = get(userStore);
@@ -192,9 +193,10 @@
 			<div class="shrink-0 text-right text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
 				{#if isMeshedCombined && subEventForNote}
 					<span
-						class="inline-block px-1.5 py-0.5 rounded text-white font-medium text-[10px] mb-0.5"
-						style="background-color: {subEventForNote.color ?? '#6b7280'}"
-						>{subEventForNote.label || subEventForNote.code}</span
+						class="inline-block px-1.5 py-0.5 rounded font-medium text-[10px] mb-0.5"
+						style="background-color: {subEventForNote.color ?? '#6b7280'}; color: {getContrastTextColor(
+							subEventForNote.color ?? '#6b7280',
+						)}">{subEventForNote.label || subEventForNote.code}</span
 					>
 				{:else}
 					<p class="font-medium">{note.event_code}</p>

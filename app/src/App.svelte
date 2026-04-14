@@ -400,12 +400,11 @@
 		drawerOpen = true;
 	}
 
-	let multiEventSelection = $state("combined");
-	if ($user.meshedEventToken === $user.eventToken) {
-		multiEventSelection = "combined";
-	} else {
-		multiEventSelection = $eventStore.code;
-	}
+	let multiEventSelection = $state($user.meshedEventToken === $user.eventToken ? "combined" : $eventStore.code);
+
+	$effect(() => {
+		multiEventSelection = $user.meshedEventToken === $user.eventToken ? "combined" : $eventStore.code;
+	});
 
 	onMount(() => {
 		if ($user.token && route.pathname === "/") {

@@ -436,9 +436,12 @@
 			!$eventStore.playoffMode,
 	);
 
-	// Redirect away from /monitor if we're in combined view (no single field to show)
+	// Redirect away from /monitor (and / for FTA/FTAA) if we're in combined view (no single field to show)
 	$effect(() => {
+		const isFtaRole = $user.role === "FTA" || $user.role === "FTAA";
 		if (isCombinedView && route.pathname.startsWith("/monitor")) {
+			navigate("/dashboard");
+		} else if (isCombinedView && route.pathname === "/" && isFtaRole) {
 			navigate("/dashboard");
 		}
 	});

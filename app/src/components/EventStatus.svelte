@@ -13,10 +13,12 @@
 		eventCode,
 		remove,
 		removable = true,
+		onselect = undefined,
 	}: {
 		eventCode: string;
 		remove: (eventCode: string) => void;
 		removable?: boolean;
+		onselect?: () => void;
 	} = $props();
 
 	let cycleSubscription: ReturnType<typeof trpc.cycles.subscription.subscribe>;
@@ -160,7 +162,12 @@
 	{/if}
 
 	<div class="flex">
-		<h1 class="text-lg lg:text-2xl font-bold flex-1">{eventName}</h1>
+		<div class="flex-1">
+			<h1 class="text-lg lg:text-2xl font-bold">{eventName}</h1>
+			{#if onselect}
+				<button onclick={onselect} class="text-xs text-blue-400 hover:text-blue-300 underline mt-0.5">Select Event</button>
+			{/if}
+		</div>
 		{#if removable}
 			<button onclick={() => remove(eventCode)} class="p-0"><Icon icon="mdi:close" class="size-6" /></button>
 		{/if}

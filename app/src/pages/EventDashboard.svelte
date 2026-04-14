@@ -4,6 +4,7 @@
 	import { onMount } from "svelte";
 	import EventStatus from "../components/EventStatus.svelte";
 	import { trpc } from "../main";
+	import { navigate } from "../router";
 	import { eventStore } from "../stores/event";
 	import { userStore } from "../stores/user";
 
@@ -96,7 +97,20 @@
 			(events.length > 4 ? 'grid-cols-3' : 'grid-cols-2')} lg:flex grow justify-center gap-2 pt-2 px-2"
 	>
 		{#each events as eventCode}
-			<EventStatus {eventCode} remove={removeEvent} removable={false} />
+			{@const subEvent = $eventStore.subEvents?.find((s) => s.code === eventCode)}
+			<EventStatus
+				{eventCode}
+				remove={removeEvent}
+				removable={false}
+				onselect={subEvent
+					? () => {
+							userStore.update((u) => ({ ...u, eventToken: subEvent.token }));
+							eventStore.set({ ...$eventStore, ...subEvent });
+							trpc.event.setActiveEvent.mutate({ eventCode: subEvent.code }).catch(() => {});
+							navigate("/monitor");
+						}
+					: undefined}
+			/>
 		{/each}
 
 		{#if events.length < 4 && (window.innerWidth >= 640 || events.length === 0) && !defaultEvents}

@@ -8,6 +8,9 @@
 	import { toast } from "../util/toast";
 	import type { ComponentProps } from "svelte";
 	import { displayTeam } from "../util/team-name";
+	import { get } from "svelte/store";
+	import { eventStore } from "../stores/event";
+	import { userStore } from "../stores/user";
 
 	interface Props {
 		matchEvent: MatchEvent;
@@ -147,6 +150,11 @@
 				? "Playoff"
 				: (matchEvent.level ?? ""),
 	);
+
+	const _event = get(eventStore);
+	const _user = get(userStore);
+	let isMeshedCombined = $derived(!!_user.meshedEventToken && _user.eventToken === _user.meshedEventToken);
+	let subEventForMatchEvent = $derived(_event.subEvents?.find((se) => se.code === matchEvent.event_code));
 </script>
 
 {#if compact}
@@ -226,7 +234,14 @@
 					{/if}
 				</div>
 				<div class="shrink-0 text-right text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
-					<p class="font-medium">{matchEvent.event_code}</p>
+					{#if isMeshedCombined && subEventForMatchEvent}
+						<span
+							class="inline-block px-1.5 py-0.5 rounded text-white font-medium text-[10px] mb-0.5"
+							style="background-color: {subEventForMatchEvent.color ?? '#6b7280'}"
+						>{subEventForMatchEvent.label || subEventForMatchEvent.code}</span>
+					{:else}
+						<p class="font-medium">{matchEvent.event_code}</p>
+					{/if}
 					<p>{time}</p>
 				</div>
 			</div>

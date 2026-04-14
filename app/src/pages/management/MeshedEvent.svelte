@@ -10,7 +10,7 @@
 	let eventCode = $state("");
 	let eventPin = $state(generateEventPassword());
 
-	const DEFAULT_COLORS = ["#ef4444", "#3b82f6", "#22c55e", "#f97316", "#a855f7", "#ec4899"];
+	const DEFAULT_COLORS = ["#3878f8", "#22c55e", "#1e3a8a", "#ea580c", "#a855f7", "#ec4899"];
 
 	// Edit mode: we're already on a meshed event
 	let isEditMode = $derived(!!$eventStore.subEvents?.length);
@@ -19,7 +19,7 @@
 		$eventStore.subEvents?.map((s, i) => ({
 			code: s.code,
 			label: s.label,
-			color: DEFAULT_COLORS[i % DEFAULT_COLORS.length],
+			color: s.color ?? DEFAULT_COLORS[i % DEFAULT_COLORS.length],
 		})) ?? [{ code: "", label: "", color: DEFAULT_COLORS[0] }],
 	);
 
@@ -29,7 +29,7 @@
 			subEvents = $eventStore.subEvents.map((s, i) => ({
 				code: s.code,
 				label: s.label,
-				color: DEFAULT_COLORS[i % DEFAULT_COLORS.length],
+				color: s.color ?? DEFAULT_COLORS[i % DEFAULT_COLORS.length],
 			}));
 		}
 	});

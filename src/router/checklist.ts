@@ -10,8 +10,8 @@ import { subscriptionQueue } from "../util/subscription";
 
 export const checklistRouter = router({
 	get: eventProcedure.query(async ({ input, ctx }) => {
-		if (ctx.event.subEvents) {
-			const subEventCodes = (ctx.event.subEvents as Array<{ code: string }>).map((e) => e.code);
+		if (ctx.event.meshedEvent) {
+			const subEventCodes = (ctx.event.meshedEvent as Array<{ code: string }>).map((e) => e.code);
 			const rows = await db
 				.select({ checklist: events.checklist })
 				.from(events)

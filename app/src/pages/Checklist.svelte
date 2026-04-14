@@ -194,6 +194,16 @@
 		);
 	}
 
+	// Re-fetch and re-subscribe when the event token changes (e.g. switching between sub-event and combined view)
+	let _prevEventToken = $userStore.eventToken;
+	$effect(() => {
+		const token = $userStore.eventToken;
+		if (token !== _prevEventToken) {
+			_prevEventToken = token;
+			resubscribe();
+		}
+	});
+
 	onMount(() => {
 		resubscribe();
 

@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { createHash, randomUUID } from "crypto";
-import { count, desc, eq, inArray } from "drizzle-orm";
+import { count, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { AUTO_EVENT_ISSUE_TYPES, DEFAULT_AUTO_EVENT_SETTINGS } from "../../shared/types";
 import type {
@@ -54,6 +54,15 @@ async function updateFullEventList() {
 }
 
 updateFullEventList();
+
+async function getSubEventLabel(eventCode: string): Promise<string | undefined> {
+	const parentRow = await db.query.events.findFirst({
+		columns: { meshedEvent: true },
+		where: sql`${events.meshedEvent} @> ${JSON.stringify([{ code: eventCode }])}::jsonb`,
+	});
+	if (!parentRow) return undefined;
+	return (parentRow.meshedEvent as Array<{ code: string; label: string }>).find((e) => e.code === eventCode)?.label;
+}
 
 export const eventRouter = router({
 	checkCode: publicProcedure
@@ -137,7 +146,8 @@ export const eventRouter = router({
 				.set({ users: Array.from(new Set(event.users.map((u) => u.id))) })
 				.where(eq(events.code, event.code));
 
-			return event;
+			const subEventLabel = event.meshedEvent ? undefined : await getSubEventLabel(event.code);
+			return { ...event, label: subEventLabel ?? event.name };
 		}),
 
 	joinByToken: protectedProcedure.input(z.object({ token: z.string() })).mutation(async ({ input, ctx }) => {
@@ -171,7 +181,8 @@ export const eventRouter = router({
 			.set({ users: Array.from(new Set(event.users.map((u) => u.id))) })
 			.where(eq(events.code, event.code));
 
-		return event;
+		const subEventLabel = event.meshedEvent ? undefined : await getSubEventLabel(event.code);
+		return { ...event, label: subEventLabel ?? event.name };
 	}),
 
 	get: adminProcedure

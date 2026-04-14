@@ -658,8 +658,8 @@ export const matchRouter = router({
 			}),
 		)
 		.query(async ({ input, ctx }) => {
-			const eventCodes = ctx.event.subEvents
-				? [ctx.event.code, ...(ctx.event.subEvents as Array<{ code: string }>).map((e) => e.code)]
+			const eventCodes = ctx.event.meshedEvent
+				? [ctx.event.code, ...(ctx.event.meshedEvent as Array<{ code: string }>).map((e) => e.code)]
 				: [ctx.event.code];
 			const match = await db.query.matchLogs.findFirst({
 				where: and(
@@ -681,8 +681,8 @@ export const matchRouter = router({
 			}),
 		)
 		.query(async ({ input, ctx }) => {
-			const eventCodes = ctx.event.subEvents
-				? [ctx.event.code, ...(ctx.event.subEvents as Array<{ code: string }>).map((e) => e.code)]
+			const eventCodes = ctx.event.meshedEvent
+				? [ctx.event.code, ...(ctx.event.meshedEvent as Array<{ code: string }>).map((e) => e.code)]
 				: [ctx.event.code];
 			const match = await db.query.matchLogs.findFirst({
 				where: and(

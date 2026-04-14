@@ -102,6 +102,7 @@
 					eventStore.set({
 						code: res.code,
 						pin: res.pin,
+						label: res.label,
 						teams: res.teams as TeamList,
 						users: res.users as Profile[],
 						subEvents: res.subEvents,
@@ -113,6 +114,7 @@
 						code: res.code,
 						token: res.token,
 						pin: res.pin,
+						label: res.label,
 						teams: res.teams as TeamList,
 						users: res.users as Profile[],
 						subEvents: res.subEvents,
@@ -125,6 +127,7 @@
 					eventStore.set({
 						code: res.code,
 						pin: res.pin,
+						label: res.label,
 						teams: res.teams as TeamList,
 						users: res.users as Profile[],
 						startDate: res.startDate ?? undefined,
@@ -134,6 +137,7 @@
 						code: res.code,
 						token: res.token,
 						pin: res.pin,
+						label: res.label,
 						teams: res.teams as TeamList,
 						users: res.users as Profile[],
 						startDate: res.startDate ?? undefined,

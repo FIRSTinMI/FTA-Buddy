@@ -357,15 +357,22 @@
 								<tr>
 									<td
 										colspan="6"
-										class="bg-gray-200 dark:bg-gray-600 font-bold text-left px-3 py-1 text-sm uppercase tracking-wide"
-										style={group.color ? `border-left: 4px solid ${group.color}` : undefined}
+										class="font-bold text-left px-3 py-1 text-sm uppercase tracking-wide"
+										class:bg-gray-200={!group.color}
+										class:dark:bg-gray-600={!group.color}
+										style={group.color
+											? `border-left: 4px solid ${group.color}; background-color: ${group.color}26; color: ${group.color}`
+											: undefined}
 									>
 										{group.label}
 									</td>
 								</tr>
 								{#each group.teams as [team, items] (team)}
 									<tr class="border-b border-gray-600">
-										<td class="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 px-6 py-4">
+										<td
+											class="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 px-6 py-4"
+											style={group.color ? `border-left: 4px solid ${group.color}` : undefined}
+										>
 											<button
 												class="font-medium hover:underline text-blue-600 dark:text-blue-400"
 												onclick={() => {

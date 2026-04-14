@@ -840,7 +840,7 @@
 							</button>
 						{/each}
 					</div>
-					<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Also filters notifications. Empty = show all.</p>
+					<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Also filters notifications.</p>
 				</div>
 			{/if}
 			<Button color="primary" onclick={() => (filterModalOpen = false)}>Done</Button>

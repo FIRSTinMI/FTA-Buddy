@@ -51,8 +51,8 @@
 		{@const subEvent = $eventStore.subEvents.find((e) => e.code === note.event_code)}
 		<span
 			class="inline-block px-2 py-0.5 rounded text-white font-medium text-xs"
-			style="background-color: {subEvent?.color ?? '#6366f1'}"
-		>{subEvent?.label ?? note.event_code}</span>
+			style="background-color: {subEvent?.color ?? '#6366f1'}">{subEvent?.label ?? note.event_code}</span
+		>
 	{/if}
 
 	{#if note.request_type === "CSA"}

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, Indicator, Modal } from "flowbite-svelte";
+	import { Button, Indicator, Modal, Toggle } from "flowbite-svelte";
 	import { onMount } from "svelte";
 	import { eventStore } from "../../stores/event";
 	import { userStore } from "../../stores/user";
@@ -20,11 +20,16 @@
 	let extensionEnabled = $state(false);
 	let extensionFieldMonitor = $state(false);
 	let extensionUseSignalR = $state(true);
+	let extensionFmsApiEnabled = $state(true);
 	let extensionVersion = $state("");
 	let extensionOutdated = $state(false);
 	let extensionConfiguring = $state(false);
 	let extensionConfigured = $state(false);
 	let fmsExtensionConnected = $state(false);
+	let extensionConfigDialogOpen = $state(false);
+	let configFieldMonitor = $state(true);
+	let configUseSignalR = $state(true);
+	let configFmsApiEnabled = $state(true);
 
 	window.addEventListener("message", (event) => {
 		if (event.data?.type === "pong") {
@@ -33,32 +38,46 @@
 			extensionEnabled = event.data.enabled ?? false;
 			extensionFieldMonitor = event.data.fieldMonitor ?? false;
 			extensionUseSignalR = event.data.useSignalR ?? true;
+			extensionFmsApiEnabled = event.data.fmsApiEnabled ?? true;
 			extensionOutdated = extensionVersion < LATEST_EXTENSION_VERSION;
 			fmsExtensionConnected = event.data.fms ?? false;
 		}
 	});
 
-	async function configureExtension(useSignalR: boolean) {
+	async function configureExtension(fieldMonitor: boolean, useSignalR: boolean, fmsApiEnabled: boolean) {
 		extensionConfiguring = true;
 		extensionConfigured = false;
 		try {
+			const notepadOnly = !fieldMonitor;
+			await trpc.event.setNotepadOnly.mutate({ notepadOnly });
+			eventStore.update((e) => ({ ...e, notepadOnly }));
 			window.postMessage(
 				{
 					source: "page",
 					type: "eventCode",
 					code: $eventStore.code,
 					token: $userStore.eventToken,
-					fieldMonitor: true,
+					fieldMonitor,
 					useSignalR,
+					fmsApiEnabled,
 				},
 				"*",
 			);
 			await new Promise((resolve) => setTimeout(resolve, 600));
+			extensionFieldMonitor = fieldMonitor;
 			extensionUseSignalR = useSignalR;
+			extensionFmsApiEnabled = fmsApiEnabled;
 			extensionConfigured = true;
 		} finally {
 			extensionConfiguring = false;
 		}
+	}
+
+	function openConfigDialog() {
+		configFieldMonitor = $eventStore.notepadOnly ? false : (extensionDetected ? extensionFieldMonitor : true);
+		configUseSignalR = extensionDetected ? extensionUseSignalR : true;
+		configFmsApiEnabled = extensionDetected ? extensionFmsApiEnabled : true;
+		extensionConfigDialogOpen = true;
 	}
 
 	onMount(() => {
@@ -93,63 +112,48 @@
 <h1 class="text-2xl font-bold mb-4">Event Management</h1>
 
 {#if $eventStore.notepadOnly}
-	<div class="inline-flex gap-2 font-bold mb-4">
-		<Indicator color="yellow" class="my-auto" />
-		<span class="text-yellow-300">Notepad Only Mode - live field data streaming is disabled</span>
+	<div class="flex items-center gap-3 mb-4">
+		<div class="inline-flex gap-2 font-bold">
+			<Indicator color="yellow" class="my-auto" />
+			<span class="text-yellow-300">Notepad Only Mode - live field data streaming is disabled</span>
+		</div>
+		<Button size="xs" color="alternative" onclick={openConfigDialog}>Configure Extension</Button>
 	</div>
 {:else}
-	<div class="flex flex-col items-start gap-1 mb-4">
-		<span class="inline-flex gap-2 font-bold">
-			<Indicator color={fmsExtensionConnected ? "green" : "red"} class="my-auto" />
-			{#if fmsExtensionConnected}
-				<span class="text-green-500">Extension Connected</span>
-			{:else}
-				<span class="text-red-400">No Extension Connected</span>
-			{/if}
-		</span>
-		{#if extensionDetected}
-			<span class="text-xs text-gray-500">
-				{#if !extensionEnabled}
-					Extension not enabled ·
-				{:else if !extensionFieldMonitor}
-					Field monitor off ·
-				{:else if extensionUseSignalR}
-					SignalR mode ·
+	<div class="flex items-center gap-3 mb-4">
+		<div class="flex flex-col gap-0.5">
+			<span class="inline-flex gap-2 font-bold">
+				<Indicator color={fmsExtensionConnected ? "green" : "red"} class="my-auto" />
+				{#if fmsExtensionConnected}
+					<span class="text-green-500">Extension Connected</span>
 				{:else}
-					Scraping mode ·
+					<span class="text-red-400">No Extension Connected</span>
 				{/if}
-				<button
-					class="text-blue-400 hover:underline disabled:opacity-50"
-					disabled={extensionConfiguring}
-					onclick={() => configureExtension(extensionUseSignalR)}
-				>
-					{extensionConfiguring
-						? "Configuring…"
-						: extensionConfigured
-							? "Reconfigure extension"
-							: "Configure extension"}
-				</button>
-				{#if extensionEnabled && extensionFieldMonitor}
-					·
-					<button
-						class="text-blue-400 hover:underline disabled:opacity-50"
-						disabled={extensionConfiguring}
-						onclick={() => configureExtension(!extensionUseSignalR)}
+			</span>
+			{#if extensionDetected}
+				<span class="text-xs text-gray-500">
+					{#if !extensionEnabled}
+						Extension not enabled
+					{:else if !extensionFieldMonitor}
+						Field monitor off
+					{:else if extensionUseSignalR}
+						SignalR mode
+					{:else}
+						Scraping mode
+					{/if}
+				</span>
+			{:else}
+				<span class="text-xs text-gray-500">
+					No extension detected -
+					<a
+						href="https://chromewebstore.google.com/detail/fta-buddy/kddnhihfpfnehnnhbkfajdldlgigohjc"
+						target="_blank"
+						class="text-blue-400 hover:underline">Install</a
 					>
-						Switch to {extensionUseSignalR ? "scraping" : "SignalR"} mode
-					</button>
-				{/if}
-			</span>
-		{:else}
-			<span class="text-xs text-gray-500">
-				No extension detected -
-				<a
-					href="https://chromewebstore.google.com/detail/fta-buddy/kddnhihfpfnehnnhbkfajdldlgigohjc"
-					target="_blank"
-					class="text-blue-400 hover:underline">Install</a
-				>
-			</span>
-		{/if}
+				</span>
+			{/if}
+		</div>
+		<Button size="xs" color="alternative" onclick={openConfigDialog}>Configure Extension</Button>
 	</div>
 {/if}
 
@@ -257,6 +261,53 @@
 	<IntegrationSlack />
 	<IntegrationAutoEvents />
 </div>
+
+{#if $userStore.eventToken}
+	<Modal title="Configure Extension" bind:open={extensionConfigDialogOpen} outsideclose size="sm">
+		<div class="flex flex-col gap-4 text-left">
+			<div class="flex items-center justify-between">
+				<div>
+					<p class="font-semibold">Field Monitor</p>
+					<p class="text-sm text-gray-400">Stream live field data to this device.</p>
+				</div>
+				<Toggle bind:checked={configFieldMonitor} class="ml-4 shrink-0" />
+			</div>
+			{#if configFieldMonitor}
+				<div class="flex items-center justify-between border-t border-neutral-700 pt-3">
+					<div>
+						<p class="font-semibold">Use SignalR</p>
+						<p class="text-sm text-gray-400">
+							Connects via SignalR for live match state and cycle tracking. When off, scrapes the FMS
+							FieldMonitor page instead.
+						</p>
+					</div>
+					<Toggle bind:checked={configUseSignalR} class="ml-4 shrink-0" />
+				</div>
+			{/if}
+			<div class="flex items-center justify-between border-t border-neutral-700 pt-3">
+				<div>
+					<p class="font-semibold">FMS API</p>
+					<p class="text-sm text-gray-400">Poll FMS for team lists and match data.</p>
+				</div>
+				<Toggle bind:checked={configFmsApiEnabled} class="ml-4 shrink-0" />
+			</div>
+		</div>
+		{#snippet footer()}
+			<div class="flex gap-2 justify-end">
+				<Button color="alternative" onclick={() => (extensionConfigDialogOpen = false)}>Cancel</Button>
+				<Button
+					disabled={extensionConfiguring}
+					onclick={async () => {
+						await configureExtension(configFieldMonitor, configUseSignalR, configFmsApiEnabled);
+						extensionConfigDialogOpen = false;
+					}}
+				>
+					{extensionConfiguring ? "Applying…" : "Apply"}
+				</Button>
+			</div>
+		{/snippet}
+	</Modal>
+{/if}
 
 {#if $userStore.eventToken}
 	<Modal title="Join Event QR Code" bind:open={qrModalOpen} outsideclose size="xs">

@@ -472,7 +472,15 @@ export interface ServerEvent {
 	notes: Note[];
 	meshedEvent: boolean;
 	playoffMode: boolean;
-	subEvents?: { code: string; label: string; color?: string; token: string; teams: TeamList; pin: string; users: Profile[] }[];
+	subEvents?: {
+		code: string;
+		label: string;
+		color?: string;
+		token: string;
+		teams: TeamList;
+		pin: string;
+		users: Profile[];
+	}[];
 	slackChannel?: string;
 	slackTeam?: string;
 	publicNoteSubmit: boolean;

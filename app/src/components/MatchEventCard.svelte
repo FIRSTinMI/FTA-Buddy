@@ -238,7 +238,8 @@
 						<span
 							class="inline-block px-1.5 py-0.5 rounded text-white font-medium text-[10px] mb-0.5"
 							style="background-color: {subEventForMatchEvent.color ?? '#6b7280'}"
-						>{subEventForMatchEvent.label || subEventForMatchEvent.code}</span>
+							>{subEventForMatchEvent.label || subEventForMatchEvent.code}</span
+						>
 					{:else}
 						<p class="font-medium">{matchEvent.event_code}</p>
 					{/if}

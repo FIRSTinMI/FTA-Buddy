@@ -749,7 +749,9 @@
 			onclick={() => (filterModalOpen = true)}
 			title="Filters"
 		>
-			<Icon icon="mdi:filter-variant" class="size-4" />{#if activeFilterCount > 0}<span class="ml-1">{activeFilterCount}</span>{/if}
+			<Icon icon="mdi:filter-variant" class="size-4" />{#if activeFilterCount > 0}<span class="ml-1"
+					>{activeFilterCount}</span
+				>{/if}
 		</Button>
 	</div>
 

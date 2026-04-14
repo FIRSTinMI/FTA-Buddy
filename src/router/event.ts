@@ -630,7 +630,15 @@ export const eventRouter = router({
 			if (!eventDB) throw new TRPCError({ code: "NOT_FOUND", message: "Event not found" });
 			if (!eventDB.meshedEvent) throw new TRPCError({ code: "BAD_REQUEST", message: "Not a meshed event" });
 
-			const existing = eventDB.meshedEvent as Array<{ code: string; name: string; label: string; color?: string; token: string; pin: string; teams: TeamList }>;
+			const existing = eventDB.meshedEvent as Array<{
+				code: string;
+				name: string;
+				label: string;
+				color?: string;
+				token: string;
+				pin: string;
+				teams: TeamList;
+			}>;
 			const updateMap = new Map(input.map((e) => [e.code, e]));
 
 			const updated = existing.map((sub) => {
@@ -1057,6 +1065,13 @@ export const eventRouter = router({
 	 * only to the parent event - its own field monitor, logs, and notes.
 	 * Divisional sub-events remain accessible via the sidebar selector.
 	 */
+	setNotepadOnly: eventProcedure.input(z.object({ notepadOnly: z.boolean() })).mutation(async ({ ctx, input }) => {
+		const event = await getEvent(ctx.event.token);
+		await db.update(events).set({ notepadOnly: input.notepadOnly }).where(eq(events.code, event.code));
+		event.notepadOnly = input.notepadOnly;
+		return { notepadOnly: input.notepadOnly };
+	}),
+
 	setPlayoffMode: eventProcedure.input(z.object({ playoffMode: z.boolean() })).mutation(async ({ ctx, input }) => {
 		const event = await getEvent(ctx.event.token);
 		if (!event.meshedEvent) {

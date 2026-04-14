@@ -36,7 +36,10 @@
 
 	function checkIfAddSubEvent() {
 		if (!isEditMode && subEvents[subEvents.length - 1].code !== "") {
-			subEvents = [...subEvents, { code: "", label: "", color: DEFAULT_COLORS[subEvents.length % DEFAULT_COLORS.length] }];
+			subEvents = [
+				...subEvents,
+				{ code: "", label: "", color: DEFAULT_COLORS[subEvents.length % DEFAULT_COLORS.length] },
+			];
 		}
 	}
 
@@ -89,8 +92,8 @@
 		<p class="text-lg">A meshed event combines multiple events into one</p>
 		{#if !isEditMode}
 			<p class="text-lg">
-				Any user that joins this meshed event will be able to access each of the events that are part of it. There
-				is also a combined view that shows all the tickets and team info from the events in one place.
+				Any user that joins this meshed event will be able to access each of the events that are part of it.
+				There is also a combined view that shows all the tickets and team info from the events in one place.
 			</p>
 		{/if}
 		<form
@@ -127,7 +130,7 @@
 						disabled={blocked || isEditMode}
 					/>
 					<Input
-						placeholder={["DTE", "Hemlock", "Consumers", "Aptive"][i]}
+						placeholder={["DTE", "Consumers", "Hemlock", "Aptiv"][i]}
 						bind:value={subEvent.label}
 						disabled={blocked}
 					/>
@@ -142,7 +145,9 @@
 			{#if isEditMode}
 				<div class="flex gap-2 mt-2">
 					<Button type="submit" disabled={blocked}>Save Labels</Button>
-					<Button color="alternative" onclick={() => navigate("/manage/event-settings")} disabled={blocked}>Cancel</Button>
+					<Button color="alternative" onclick={() => navigate("/manage/event-settings")} disabled={blocked}
+						>Cancel</Button
+					>
 				</div>
 			{:else}
 				<Button class="mt-2" onclick={createMeshedEvent} disabled={!eventCode || !eventPin || blocked}

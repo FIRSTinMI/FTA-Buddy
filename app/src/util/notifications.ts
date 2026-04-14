@@ -109,7 +109,11 @@ export function startNotificationSubscription() {
 						// Field filter: if user has deselected some fields, suppress notifications for those
 						if (subEventCodes.length > 1 && subEventCodes.includes(data.eventCode)) {
 							const selectedFields = get(settingsStore).supportFeedSelectedFields;
-							if (selectedFields != null && selectedFields.length > 0 && !selectedFields.includes(data.eventCode)) {
+							if (
+								selectedFields != null &&
+								selectedFields.length > 0 &&
+								!selectedFields.includes(data.eventCode)
+							) {
 								console.log("[NOTIFICATIONS] suppressed by field filter:", data.eventCode);
 								return;
 							}

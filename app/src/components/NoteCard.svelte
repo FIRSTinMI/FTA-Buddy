@@ -194,7 +194,8 @@
 					<span
 						class="inline-block px-1.5 py-0.5 rounded text-white font-medium text-[10px] mb-0.5"
 						style="background-color: {subEventForNote.color ?? '#6b7280'}"
-					>{subEventForNote.label || subEventForNote.code}</span>
+						>{subEventForNote.label || subEventForNote.code}</span
+					>
 				{:else}
 					<p class="font-medium">{note.event_code}</p>
 				{/if}

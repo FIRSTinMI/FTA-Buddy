@@ -174,24 +174,25 @@
 
 	const eventTokenPaths = ["/monitor", "/checklist", "/logs", "/notepad"];
 
-	const pageIsPublicLog = route.pathname.startsWith("/logs/") && route.pathname.split("/")[3].length == 36;
-	const pageIsPublicNoteCreate = route.pathname.startsWith("/notepad/submit/");
-	const pageIsJoinLink = route.pathname.startsWith("/join/");
-
 	function redirectForAuth() {
+		const currentPath = route.pathname;
+		const isPublicLog = currentPath.startsWith("/logs/") && currentPath.split("/")[3]?.length == 36;
+		const isPublicNoteCreate = currentPath.startsWith("/notepad/submit/");
+		const isJoinLink = currentPath.startsWith("/join/");
+
 		// if user has event token and is trying to access a page that requires an event token
 		if (
 			$user.eventToken &&
-			(eventTokenPaths.includes(route.pathname) ||
-				route.pathname.startsWith("/logs") ||
-				route.pathname.startsWith("/notepad"))
+			(eventTokenPaths.includes(currentPath) ||
+				currentPath.startsWith("/logs") ||
+				currentPath.startsWith("/notepad"))
 		) {
 			return;
 		}
 
-		if (!publicPaths.includes(route.pathname)) {
+		if (!publicPaths.includes(currentPath)) {
 			//user trying to acces protected page
-			if (!pageIsPublicLog && !pageIsPublicNoteCreate && !pageIsJoinLink) {
+			if (!isPublicLog && !isPublicNoteCreate && !isJoinLink) {
 				//page is not public log or public note creation page
 				if (!$user.token || !$user.eventToken) {
 					navigate("/manage/login"); //user is either not logged in or does not have event token
@@ -199,7 +200,7 @@
 				//user is logged in and has event token -- no redirect
 			}
 			//page is public log/public note creation page -- no tokens needed
-		} else if (route.pathname == "/") {
+		} else if (currentPath == "/") {
 			//user is accessing public path that is /
 			if (!$user.eventToken) {
 				navigate("/manage/login"); //user is missing event token
@@ -279,7 +280,7 @@
 
 	// Update checking
 
-	update(settings.version, version, openWelcome, openChangelog, pageIsPublicLog || pageIsPublicNoteCreate);
+	update(settings.version, version, openWelcome, openChangelog, route.pathname.startsWith("/logs/") || route.pathname.startsWith("/notepad/submit/"));
 
 	// Toast manager
 

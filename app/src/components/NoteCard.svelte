@@ -69,6 +69,10 @@
 	);
 	let canEditOrDelete = $derived(user.id === note.author_id && note.author_id !== -1);
 
+	// Sub-event label badge for combined meshed view
+	let isMeshedCombined = $derived(!!user.meshedEventToken && user.eventToken === user.meshedEventToken);
+	let subEventForNote = $derived(event.subEvents?.find((se) => se.code === note.event_code));
+
 	async function editNote() {
 		try {
 			if (editNoteText !== note.text) {
@@ -174,9 +178,9 @@
 							: ""}
 					</Badge>
 				{/if}
-				{#if note.issue_type && note.issue_type !== "Other"}
+				<!-- {#if note.issue_type && note.issue_type !== "Other"}
 					<Badge color="purple">{ISSUE_TYPE_LABELS[note.issue_type] ?? note.issue_type}</Badge>
-				{/if}
+				{/if} -->
 				{#if canToggleStatus && isOpen}
 					<Badge color="green">Open</Badge>
 				{:else if canToggleStatus && isRefused}
@@ -186,7 +190,14 @@
 				{/if}
 			</div>
 			<div class="shrink-0 text-right text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
-				<p class="font-medium">{note.event_code}</p>
+				{#if isMeshedCombined && subEventForNote}
+					<span
+						class="inline-block px-1.5 py-0.5 rounded text-white font-medium text-[10px] mb-0.5"
+						style="background-color: {subEventForNote.color ?? '#6b7280'}"
+					>{subEventForNote.label || subEventForNote.code}</span>
+				{:else}
+					<p class="font-medium">{note.event_code}</p>
+				{/if}
 				<p>{time}</p>
 			</div>
 		</div>

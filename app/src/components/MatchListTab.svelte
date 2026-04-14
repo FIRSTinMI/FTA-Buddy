@@ -22,7 +22,7 @@
 		open?: boolean;
 	} = $props();
 
-	let searchTerm = $state("");
+	let searchTerm = $state(new URLSearchParams(window.location.search).get("q") ?? "");
 
 	let filteredMatches = $derived(
 		matches.filter((match) => {
@@ -41,13 +41,25 @@
 		// Hash navigation not supported by sv-router; update hash directly
 		window.location.hash = label.toLowerCase();
 	}
+
+	function onSearch(e: Event) {
+		searchTerm = (e.target as HTMLInputElement).value;
+		const url = new URL(window.location.href);
+		if (searchTerm) {
+			url.searchParams.set("q", searchTerm);
+		} else {
+			url.searchParams.delete("q");
+		}
+		window.history.replaceState(null, "", url.toString());
+	}
 </script>
 
 <TabItem class="w-full" disabled={matches.length <= 0} {open} onclick={tabClick} title={label}>
 	<input
 		type="text"
 		placeholder="Search by team number"
-		bind:value={searchTerm}
+		value={searchTerm}
+		oninput={onSearch}
 		class="sticky left-0 w-full px-4 py-2 border-b border-neutral-200 dark:border-neutral-600 bg-neutral-50 dark:bg-neutral-700 text-sm focus:outline-none"
 	/>
 	<div class="relative overflow-x-auto rounded-lg bg-neutral-50 dark:bg-neutral-700">

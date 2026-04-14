@@ -10,16 +10,19 @@
 	let eventCode = "";
 	let eventPin = generateEventPassword();
 
+	const DEFAULT_COLORS = ["#ef4444", "#3b82f6", "#22c55e", "#f97316", "#a855f7", "#ec4899"];
+
 	let subEvents = [
 		{
 			code: "",
 			label: "",
+			color: DEFAULT_COLORS[0],
 		},
 	];
 
 	function checkIfAddSubEvent() {
 		if (subEvents[subEvents.length - 1].code !== "") {
-			subEvents = [...subEvents, { code: "", label: "" }];
+			subEvents = [...subEvents, { code: "", label: "", color: DEFAULT_COLORS[subEvents.length % DEFAULT_COLORS.length] }];
 		}
 	}
 
@@ -74,7 +77,14 @@
 			</Label>
 			<Label class="mt-2">Sub Events</Label>
 			{#each subEvents as subEvent, i}
-				<div class="flex gap-2">
+				<div class="flex gap-2 items-center">
+					<input
+						type="color"
+						bind:value={subEvent.color}
+						disabled={blocked}
+						class="h-9 w-10 cursor-pointer rounded border border-gray-300 dark:border-gray-600 bg-transparent p-0.5"
+						title="Sub-event color"
+					/>
 					<Input
 						placeholder="2025micmp{i + 1}"
 						bind:value={subEvent.code}

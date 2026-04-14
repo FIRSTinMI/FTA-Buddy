@@ -528,6 +528,7 @@ export const eventRouter = router({
 						z.object({
 							code: z.string().min(4),
 							label: z.string(),
+							color: z.string().optional(),
 						}),
 					)
 					.min(2),
@@ -565,6 +566,7 @@ export const eventRouter = router({
 				code: string;
 				name: string;
 				label: string;
+				color?: string;
 				token: string;
 				teams: TeamList;
 				pin: string;
@@ -577,6 +579,7 @@ export const eventRouter = router({
 					code: event.code,
 					name: eventsData.find((e) => e.code === event.code)?.name ?? "",
 					label: event.label,
+					color: event.color,
 					token: eventsData.find((e) => e.code === event.code)?.token ?? "",
 					teams: eventsData.find((e) => e.code === event.code)?.teams as TeamList,
 					pin: eventsData.find((e) => e.code === event.code)?.pin ?? "",

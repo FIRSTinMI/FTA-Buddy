@@ -71,7 +71,7 @@
 						.filter(([_, items]) => items !== undefined)
 						.filter(([_, items]) => (sortBy ? !items[sortBy] : true))
 						.sort(([a], [b]) => parseInt(a) - parseInt(b));
-					return { label: subEvent.label || subEvent.code, teams };
+					return { label: subEvent.label || subEvent.code, color: subEvent.color, teams };
 				})
 			: null,
 	);
@@ -358,6 +358,7 @@
 									<td
 										colspan="6"
 										class="bg-gray-200 dark:bg-gray-600 font-bold text-left px-3 py-1 text-sm uppercase tracking-wide"
+										style={group.color ? `border-left: 4px solid ${group.color}` : undefined}
 									>
 										{group.label}
 									</td>

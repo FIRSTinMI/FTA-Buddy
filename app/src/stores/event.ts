@@ -6,7 +6,7 @@ export interface Event {
 	pin: string;
 	teams: { number: string; name: string; inspected: boolean }[];
 	users: Profile[];
-	subEvents?: { code: string; label: string; token: string; pin: string; teams: TeamList }[];
+	subEvents?: { code: string; label: string; color?: string; token: string; pin: string; teams: TeamList }[];
 	meshedEventCode?: string;
 	label?: string;
 	notepadOnly?: boolean;

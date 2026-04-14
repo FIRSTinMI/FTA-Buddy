@@ -800,12 +800,20 @@
 					<Label>Fields</Label>
 					<div class="flex flex-wrap gap-1.5 mt-1">
 						{#each availableSubEvents as sub}
+							{@const isSelected = selectedFields.includes(sub.code)}
+							{@const c = sub.color ?? "#6b7280"}
 							<button
 								type="button"
-								class="text-xs px-2 py-1 rounded border transition-colors
-								{selectedFields.includes(sub.code)
-									? 'border-blue-500 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-									: 'border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-neutral-700 text-gray-700 dark:text-gray-300'}"
+								class="text-xs px-2 py-1 rounded border transition-colors"
+								style={isSelected
+									? `border-color: ${c}; background-color: ${c}1a; color: ${c}`
+									: ""}
+								class:border-gray-300={!isSelected}
+								class:dark:border-gray-600={!isSelected}
+								class:hover:bg-gray-100={!isSelected}
+								class:dark:hover:bg-neutral-700={!isSelected}
+								class:text-gray-700={!isSelected}
+								class:dark:text-gray-300={!isSelected}
 								onclick={() => {
 									if (selectedFields.includes(sub.code)) {
 										if (selectedFields.length > 1) {

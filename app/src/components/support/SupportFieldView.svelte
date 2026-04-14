@@ -347,7 +347,10 @@
 
 	// When autoAdvance is turned on (via toggle), immediately snap back to live
 	$effect(() => {
-		if (autoAdvance) matchIndex = -1;
+		if (autoAdvance) {
+			matchIndex = -1;
+			updateMatchUrl();
+		}
 	});
 
 	function goToLive() {

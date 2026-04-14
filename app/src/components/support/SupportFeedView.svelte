@@ -459,9 +459,11 @@
 
 	let createModalOpen = $state(false);
 
-	const teamOptions = $eventStore.teams
-		.sort((a, b) => parseInt(a.number) - parseInt(b.number))
-		.map((v) => ({ value: parseInt(v.number), name: `${v.number} – ${v.name}` }));
+	const teamOptions = $derived(
+		$eventStore.teams
+			.sort((a, b) => parseInt(a.number) - parseInt(b.number))
+			.map((v) => ({ value: parseInt(v.number), name: `${v.number} – ${v.name}` })),
+	);
 
 	let newNoteType: "TeamIssue" | "EventNote" | "MatchNote" = $state("TeamIssue");
 	let newTeam: number | undefined = $state();

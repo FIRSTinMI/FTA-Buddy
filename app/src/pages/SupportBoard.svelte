@@ -5,6 +5,8 @@
 	import SupportFeedView from "../components/support/SupportFeedView.svelte";
 	import SupportFieldView from "../components/support/SupportFieldView.svelte";
 	import { route } from "../router";
+	import { eventStore } from "../stores/event";
+	import { userStore } from "../stores/user";
 	import { supportBoardViewStore } from "../stores/supportBoardView";
 	import { track } from "../util/telemetry";
 
@@ -13,6 +15,15 @@
 	let teamParam: string | undefined = $state(route.params.team);
 
 	let view = supportBoardViewStore;
+
+	// Field view only makes sense for a single field. Disable it in combined
+	// meshed-event view unless we're in inter-divisional playoffs mode (where
+	// there IS a single combined field).
+	const fieldViewDisabled = $derived(
+		!!$userStore.meshedEventToken &&
+			$userStore.meshedEventToken === $userStore.eventToken &&
+			!$eventStore.playoffMode,
+	);
 
 	let isShortScreen = $state(typeof window !== "undefined" && window.innerHeight < 900);
 	function handleResize() {
@@ -34,7 +45,12 @@
 				<Icon icon="mdi:format-list-bulleted" class="size-4 mr-1" />
 				Feed
 			</Button>
-			<Button size="sm" color={$view === "field" ? "primary" : "alternative"} onclick={() => ($view = "field")}>
+			<Button
+				size="sm"
+				color={$view === "field" ? "primary" : "alternative"}
+				disabled={fieldViewDisabled}
+				onclick={() => !fieldViewDisabled && ($view = "field")}
+			>
 				<Icon icon="mdi:monitor-dashboard" class="size-4 mr-1" />
 				Field
 			</Button>

@@ -21,6 +21,15 @@
 		$eventStore.teams = [];
 	}
 
+	// If already logged in and there's a pending join redirect, consume it immediately
+	{
+		const pendingRedirect = sessionStorage.getItem("redirectAfterLogin");
+		if ($user.token && pendingRedirect) {
+			sessionStorage.removeItem("redirectAfterLogin");
+			navigate(pendingRedirect as any);
+		}
+	}
+
 	let email = $state("");
 	let username = $state("");
 	let password = $state("");
@@ -71,6 +80,12 @@
 			});
 
 			toast("Success", "Account created successfully", "green-500");
+
+			const redirect = sessionStorage.getItem("redirectAfterLogin");
+			if (redirect) {
+				sessionStorage.removeItem("redirectAfterLogin");
+				navigate(redirect as any);
+			}
 		} catch (err: any) {
 			console.error("[AUTH] createUser error:", err);
 			if (err.message.startsWith("[")) {
@@ -330,6 +345,12 @@
 			});
 
 			toast("Success", "Logged in successfully", "green-500");
+
+			const redirect = sessionStorage.getItem("redirectAfterLogin");
+			if (redirect) {
+				sessionStorage.removeItem("redirectAfterLogin");
+				navigate(redirect as any);
+			}
 		} catch (err: any) {
 			if (err.code === 404 || err.message.startsWith("User not found")) {
 				user.set({

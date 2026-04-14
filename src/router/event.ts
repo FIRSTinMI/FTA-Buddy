@@ -505,16 +505,67 @@ export const eventRouter = router({
 		const existingTeams = event.teams as TeamList;
 		const checklist = event.checklist as EventChecklist;
 
-		const teamsData = await fetch(`https://www.thebluealliance.com/api/v3/event/${event.code}/teams/simple`, {
-			headers: { "X-TBA-Auth-Key": process.env.TBA_API_KEY ?? "" },
-		}).then((res) => res.json());
+		let newTeams: TeamList;
 
-		if (!teamsData || "Error" in teamsData) {
-			throw new TRPCError({ code: "BAD_REQUEST", message: "Failed to fetch teams from TBA" });
-		}
+		if (event.meshedEvent && event.subEvents?.length) {
+			// For meshed events, aggregate teams from each sub-event's current DB row
+			// rather than fetching from TBA (the meshed event code doesn't exist on TBA).
+			const subEventRows = await db.query.events.findMany({
+				where: inArray(
+					events.code,
+					event.subEvents.map((s) => s.code),
+				),
+				columns: { code: true, teams: true, meshedEvent: true },
+			});
 
-		const newTeams: TeamList = (teamsData as { team_number: number; nickname: string; name: string }[]).map(
-			(team) => {
+			// Merge, dedup by team number, preserve existing inspected/checklist state
+			const merged = new Map<string, TeamList[number]>();
+			for (const row of subEventRows) {
+				for (const team of row.teams as TeamList) {
+					const num = team.number.toString();
+					if (!merged.has(num)) {
+						const existing = existingTeams.find((t) => t.number.toString() === num);
+						merged.set(num, { ...team, inspected: existing?.inspected ?? team.inspected ?? false });
+					}
+					if (!checklist[num]) {
+						checklist[num] = {
+							present: false,
+							weighed: false,
+							inspected: false,
+							radioProgrammed: false,
+							connectionTested: false,
+						};
+					}
+				}
+			}
+			newTeams = Array.from(merged.values()).sort((a, b) => parseInt(String(a.number)) - parseInt(String(b.number)));
+
+			// Also refresh the teams snapshot inside the meshedEvent JSON
+			const updatedSubEvents = event.subEvents.map((se) => {
+				const row = subEventRows.find((r) => r.code === se.code);
+				return { ...se, teams: (row?.teams as TeamList) ?? se.teams };
+			});
+			event.subEvents = updatedSubEvents;
+
+			await db
+				.update(events)
+				.set({
+					teams: newTeams,
+					checklist,
+					meshedEvent: updatedSubEvents,
+				})
+				.where(eq(events.code, event.code))
+				.execute();
+		} else {
+			const teamsData = await fetch(`https://www.thebluealliance.com/api/v3/event/${event.code}/teams/simple`, {
+				headers: { "X-TBA-Auth-Key": process.env.TBA_API_KEY ?? "" },
+			}).then((res) => res.json());
+
+			if (!teamsData || "Error" in teamsData) {
+				throw new TRPCError({ code: "BAD_REQUEST", message: "Failed to fetch teams from TBA" });
+			}
+
+			newTeams = (teamsData as { team_number: number; nickname: string; name: string }[]).map((team) => {
 				const existing = existingTeams.find((t) => t.number.toString() === team.team_number.toString());
 				if (!checklist[team.team_number]) {
 					checklist[team.team_number] = {
@@ -530,13 +581,13 @@ export const eventRouter = router({
 					name: team.nickname ?? team.name,
 					inspected: existing?.inspected ?? false,
 				};
-			},
-		);
+			});
+
+			await db.update(events).set({ teams: newTeams, checklist }).where(eq(events.code, event.code)).execute();
+		}
 
 		event.teams = newTeams;
 		event.checklist = checklist;
-
-		await db.update(events).set({ teams: newTeams, checklist }).where(eq(events.code, event.code)).execute();
 
 		return { count: newTeams.length };
 	}),

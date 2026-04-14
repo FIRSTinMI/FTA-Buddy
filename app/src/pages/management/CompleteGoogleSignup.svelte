@@ -36,7 +36,14 @@
 			});
 
 			toast("Success", "Account created successfully", "green-500");
-			navigate("/manage/login");
+
+			const redirect = sessionStorage.getItem("redirectAfterLogin");
+			if (redirect) {
+				sessionStorage.removeItem("redirectAfterLogin");
+				navigate(redirect as any);
+			} else {
+				navigate("/manage/login");
+			}
 		} catch (err: any) {
 			console.error(err);
 			if (err.message.startsWith("[")) {

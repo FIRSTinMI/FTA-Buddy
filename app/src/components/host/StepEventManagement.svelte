@@ -7,6 +7,7 @@
 	import { toast } from "../../util/toast";
 	import { getPlayoffViewLabel } from "../../util/playoffViewLabel";
 	import { LATEST_EXTENSION_VERSION } from "../../util/updater";
+	import { navigate } from "../../router";
 	import QrCode from "svelte-qrcode";
 	import IntegrationAutoEvents from "./integrations/IntegrationAutoEvents.svelte";
 	import IntegrationFmsFtaApp from "./integrations/IntegrationFmsFtaApp.svelte";
@@ -203,6 +204,17 @@
 
 {#if $eventStore.subEvents?.length}
 	<div class="border border-gray-200 dark:border-neutral-700 rounded-xl p-4 mb-6">
+		<div class="flex items-center justify-between mb-3">
+			<h2 class="text-base font-semibold">Sub-Events</h2>
+			<Button size="sm" color="alternative" onclick={() => navigate("/manage/meshed-event")}>Edit Labels</Button>
+		</div>
+		<div class="flex flex-wrap gap-2 mb-4">
+			{#each $eventStore.subEvents ?? [] as sub}
+				<span class="text-sm bg-gray-100 dark:bg-neutral-800 px-2 py-0.5 rounded-lg"
+					>{sub.code} — {sub.label}</span
+				>
+			{/each}
+		</div>
 		<div class="flex items-start justify-between gap-4">
 			<div>
 				<h2 class="text-base font-semibold">Inter-Divisional Playoffs</h2>

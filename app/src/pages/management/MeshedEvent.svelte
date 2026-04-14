@@ -7,26 +7,41 @@
 	import { generateEventPassword } from "../../util/eventPassword";
 	import { toast } from "../../util/toast";
 
-	let eventCode = "";
-	let eventPin = generateEventPassword();
+	let eventCode = $state("");
+	let eventPin = $state(generateEventPassword());
 
 	const DEFAULT_COLORS = ["#ef4444", "#3b82f6", "#22c55e", "#f97316", "#a855f7", "#ec4899"];
 
-	let subEvents = [
-		{
-			code: "",
-			label: "",
-			color: DEFAULT_COLORS[0],
-		},
-	];
+	// Edit mode: we're already on a meshed event
+	let isEditMode = $derived(!!$eventStore.subEvents?.length);
+
+	let subEvents = $state(
+		$eventStore.subEvents?.map((s, i) => ({
+			code: s.code,
+			label: s.label,
+			color: DEFAULT_COLORS[i % DEFAULT_COLORS.length],
+		})) ?? [{ code: "", label: "", color: DEFAULT_COLORS[0] }],
+	);
+
+	// Keep subEvents in sync when the store changes (e.g. on initial load)
+	$effect(() => {
+		if ($eventStore.subEvents?.length && subEvents.every((s) => s.code === "")) {
+			subEvents = $eventStore.subEvents.map((s, i) => ({
+				code: s.code,
+				label: s.label,
+				color: DEFAULT_COLORS[i % DEFAULT_COLORS.length],
+			}));
+		}
+	});
 
 	function checkIfAddSubEvent() {
-		if (subEvents[subEvents.length - 1].code !== "") {
+		if (!isEditMode && subEvents[subEvents.length - 1].code !== "") {
 			subEvents = [...subEvents, { code: "", label: "", color: DEFAULT_COLORS[subEvents.length % DEFAULT_COLORS.length] }];
 		}
 	}
 
-	let blocked = false;
+	let blocked = $state(false);
+
 	async function createMeshedEvent() {
 		try {
 			blocked = true;
@@ -50,31 +65,51 @@
 		}
 		blocked = false;
 	}
+
+	async function updateMeshedEventLabels() {
+		try {
+			blocked = true;
+			const res = await trpc.event.updateMeshedEventLabels.mutate(
+				subEvents.map((s) => ({ code: s.code, label: s.label })),
+			);
+			eventStore.update((e) => ({ ...e, subEvents: res.subEvents }));
+			toast("Success", "Sub-event labels updated", "green-500");
+			navigate("/manage/event-settings");
+		} catch (e) {
+			console.error(e);
+			if (e instanceof Error) toast("Failed to update labels", e.message);
+		}
+		blocked = false;
+	}
 </script>
 
 <div class="h-full overflow-y-auto">
 	<div class="container mx-auto md:max-w-4xl flex flex-col justify-center p-4 gap-4">
-		<h1 class="text-3xl font-bold">Create Meshed Event</h1>
+		<h1 class="text-3xl font-bold">{isEditMode ? "Edit Meshed Event" : "Create Meshed Event"}</h1>
 		<p class="text-lg">A meshed event combines multiple events into one</p>
-		<p class="text-lg">
-			Any user that joins this meshed event will be able to access each of the events that are part of it. There
-			is also a combined view that shows all the tickets and team info from the events in one place.
-		</p>
+		{#if !isEditMode}
+			<p class="text-lg">
+				Any user that joins this meshed event will be able to access each of the events that are part of it. There
+				is also a combined view that shows all the tickets and team info from the events in one place.
+			</p>
+		{/if}
 		<form
 			class="flex flex-col gap-2 text-left"
 			onsubmit={(e) => {
 				e.preventDefault();
-				createMeshedEvent();
+				isEditMode ? updateMeshedEventLabels() : createMeshedEvent();
 			}}
 		>
-			<Label>
-				Meshed Event Code
-				<Input placeholder="2025micmp" bind:value={eventCode} disabled={blocked} />
-			</Label>
-			<Label>
-				Meshed Event Password
-				<Input bind:value={eventPin} placeholder="robot-field-42" disabled={blocked} />
-			</Label>
+			{#if !isEditMode}
+				<Label>
+					Meshed Event Code
+					<Input placeholder="2025micmp" bind:value={eventCode} disabled={blocked} />
+				</Label>
+				<Label>
+					Meshed Event Password
+					<Input bind:value={eventPin} placeholder="robot-field-42" disabled={blocked} />
+				</Label>
+			{/if}
 			<Label class="mt-2">Sub Events</Label>
 			{#each subEvents as subEvent, i}
 				<div class="flex gap-2 items-center">
@@ -89,22 +124,31 @@
 						placeholder="2025micmp{i + 1}"
 						bind:value={subEvent.code}
 						onkeydown={checkIfAddSubEvent}
-						disabled={blocked}
+						disabled={blocked || isEditMode}
 					/>
 					<Input
 						placeholder={["DTE", "Hemlock", "Consumers", "Aptive"][i]}
 						bind:value={subEvent.label}
 						disabled={blocked}
 					/>
-					<Button
-						onclick={() => (subEvents = subEvents.filter((_, index) => index !== i))}
-						disabled={subEvents.length <= 1 || blocked}>Remove</Button
-					>
+					{#if !isEditMode}
+						<Button
+							onclick={() => (subEvents = subEvents.filter((_, index) => index !== i))}
+							disabled={subEvents.length <= 1 || blocked}>Remove</Button
+						>
+					{/if}
 				</div>
 			{/each}
-			<Button class="mt-2" onclick={createMeshedEvent} disabled={!eventCode || !eventPin || blocked}
-				>Create Meshed Event</Button
-			>
+			{#if isEditMode}
+				<div class="flex gap-2 mt-2">
+					<Button type="submit" disabled={blocked}>Save Labels</Button>
+					<Button color="alternative" onclick={() => navigate("/manage/event-settings")} disabled={blocked}>Cancel</Button>
+				</div>
+			{:else}
+				<Button class="mt-2" onclick={createMeshedEvent} disabled={!eventCode || !eventPin || blocked}
+					>Create Meshed Event</Button
+				>
+			{/if}
 		</form>
 	</div>
 </div>

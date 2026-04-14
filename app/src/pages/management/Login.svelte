@@ -154,7 +154,7 @@
 
 	function updateEventList() {
 		trpc.event.getAll.query().then((res) => {
-			eventList = res.map((e) => ({ value: e.code, name: e.code }));
+			eventList = res.map((e) => ({ value: e.code, name: e.name ? `${e.code} - ${e.name}` : e.code }));
 			eventList.unshift({ value: "none", name: "None" });
 			eventList = eventList;
 		});

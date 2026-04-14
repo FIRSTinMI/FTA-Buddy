@@ -85,6 +85,22 @@
 	});
 
 	let playoffModeBlocked = $state(false);
+	let reimportingTeams = $state(false);
+
+	async function reimportTeamsFromTBA() {
+		reimportingTeams = true;
+		try {
+			const res = await trpc.event.reimportTeamsFromTBA.mutate();
+			const teams = await trpc.event.getTeams.query();
+			eventStore.update((e) => ({ ...e, teams: teams ?? [] }));
+			toast("Teams Reimported", `${res.count} teams imported from TBA`, "green-500");
+		} catch (e) {
+			if (e instanceof Error) toast("Error", e.message);
+		} finally {
+			reimportingTeams = false;
+		}
+	}
+
 	async function togglePlayoffMode() {
 		playoffModeBlocked = true;
 		try {
@@ -251,6 +267,21 @@
 		{/if}
 	</div>
 {/if}
+
+<h2 class="text-lg font-bold mb-3">Teams</h2>
+
+<div class="border border-gray-200 dark:border-neutral-700 rounded-xl p-4 mb-6 flex items-center justify-between gap-4">
+	<div>
+		<p class="font-semibold">Reimport Teams from TBA</p>
+		<p class="text-sm text-gray-400">
+			Replace the team list with the current team list from The Blue Alliance. Existing checklist data is
+			preserved.
+		</p>
+	</div>
+	<Button size="sm" color="alternative" disabled={reimportingTeams} onclick={reimportTeamsFromTBA}>
+		{reimportingTeams ? "Importing…" : "Reimport Teams"}
+	</Button>
+</div>
 
 <h2 class="text-lg font-bold mb-3">Integrations</h2>
 

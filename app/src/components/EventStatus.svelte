@@ -14,11 +14,13 @@
 		remove,
 		removable = true,
 		onselect = undefined,
+		subEvent = undefined,
 	}: {
 		eventCode: string;
 		remove: (eventCode: string) => void;
 		removable?: boolean;
 		onselect?: () => void;
+		subEvent?: { label?: string; color?: string };
 	} = $props();
 
 	let cycleSubscription: ReturnType<typeof trpc.cycles.subscription.subscribe>;
@@ -154,7 +156,11 @@
 	});
 </script>
 
-<Card class="py-1 px-2">
+<Card class="py-1 px-2 overflow-hidden">
+	{#if subEvent?.color}
+		<div class="-mt-1 -mx-2 mb-2 h-1" style="background-color: {subEvent.color}"></div>
+	{/if}
+
 	{#if loading}
 		<div class="inset-0 z-50">
 			<Spinner />
@@ -162,8 +168,12 @@
 	{/if}
 
 	<div class="flex">
-		<div class="flex-1">
-			<h1 class="text-lg lg:text-2xl font-bold">{eventName}</h1>
+		<div class="flex-1 min-w-0">
+			{#if subEvent?.label}
+				<h1 class="text-lg lg:text-2xl font-bold leading-tight">{subEvent.label}</h1>
+			{:else}
+				<h1 class="text-base lg:text-xl font-bold leading-tight line-clamp-2">{eventName}</h1>
+			{/if}
 			{#if onselect}
 				<button onclick={onselect} class="text-xs text-blue-400 hover:text-blue-300 underline mt-0.5"
 					>Select Event</button

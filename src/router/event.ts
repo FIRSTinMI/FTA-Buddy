@@ -500,6 +500,47 @@ export const eventRouter = router({
 			return { added: newTeams.length, removed: teamsToRemove.size };
 		}),
 
+	reimportTeamsFromTBA: eventProcedure.mutation(async ({ ctx }) => {
+		const event = await getEvent(ctx.event.token);
+		const existingTeams = event.teams as TeamList;
+		const checklist = event.checklist as EventChecklist;
+
+		const teamsData = await fetch(`https://www.thebluealliance.com/api/v3/event/${event.code}/teams/simple`, {
+			headers: { "X-TBA-Auth-Key": process.env.TBA_API_KEY ?? "" },
+		}).then((res) => res.json());
+
+		if (!teamsData || "Error" in teamsData) {
+			throw new TRPCError({ code: "BAD_REQUEST", message: "Failed to fetch teams from TBA" });
+		}
+
+		const newTeams: TeamList = (teamsData as { team_number: number; nickname: string; name: string }[]).map(
+			(team) => {
+				const existing = existingTeams.find((t) => t.number.toString() === team.team_number.toString());
+				if (!checklist[team.team_number]) {
+					checklist[team.team_number] = {
+						present: false,
+						weighed: false,
+						inspected: false,
+						radioProgrammed: false,
+						connectionTested: false,
+					};
+				}
+				return {
+					number: team.team_number,
+					name: team.nickname ?? team.name,
+					inspected: existing?.inspected ?? false,
+				};
+			},
+		);
+
+		event.teams = newTeams;
+		event.checklist = checklist;
+
+		await db.update(events).set({ teams: newTeams, checklist }).where(eq(events.code, event.code)).execute();
+
+		return { count: newTeams.length };
+	}),
+
 	getMusicOrder: eventProcedure
 		.input(
 			z.object({

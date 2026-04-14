@@ -100,6 +100,7 @@
 			{@const subEvent = $eventStore.subEvents?.find((s) => s.code === eventCode)}
 			<EventStatus
 				{eventCode}
+				{subEvent}
 				remove={removeEvent}
 				removable={false}
 				onselect={subEvent

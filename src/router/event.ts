@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { createHash, randomUUID } from "crypto";
-import { count, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { AUTO_EVENT_ISSUE_TYPES, DEFAULT_AUTO_EVENT_SETTINGS } from "../../shared/types";
 import type {
@@ -8,12 +8,13 @@ import type {
 	EventAutoEventSettings,
 	EventChecklist,
 	Profile,
+	ServerEvent,
 	TeamList,
 	TournamentLevel,
 } from "../../shared/types";
 import { autoEventSettingsCache } from "../util/log-analysis";
 import { db } from "../db/db";
-import { events, notes, users } from "../db/schema";
+import { eventUsers, events, notes, users } from "../db/schema";
 import { adminProcedure, eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
 import { events as inMemoryEvents } from "../state";
 import { getEvent } from "../util/get-event";
@@ -123,28 +124,15 @@ export const eventRouter = router({
 
 			const event = await getEvent(eventDB?.token ?? "");
 
-			const eventList = ctx.user.events as string[];
-
-			event.users = Array.from(
-				new Set([
+			if (!event.users.find((u) => u.id === ctx.user.id)) {
+				event.users = [
 					...event.users,
-					{
-						id: ctx.user.id,
-						username: ctx.user.username,
-						role: ctx.user.role,
-						admin: ctx.user.admin,
-					},
-				]),
-			);
+					{ id: ctx.user.id, username: ctx.user.username, role: ctx.user.role, admin: ctx.user.admin },
+				];
+			}
 
-			await db
-				.update(users)
-				.set({ events: Array.from(new Set([...eventList, event.code])), active_event_code: event.code })
-				.where(eq(users.id, ctx.user.id));
-			await db
-				.update(events)
-				.set({ users: Array.from(new Set(event.users.map((u) => u.id))) })
-				.where(eq(events.code, event.code));
+			await db.insert(eventUsers).values({ user_id: ctx.user.id, event_code: event.code }).onConflictDoNothing();
+			await db.update(users).set({ active_event_code: event.code }).where(eq(users.id, ctx.user.id));
 
 			const subEventLabel = event.meshedEvent ? undefined : await getSubEventLabel(event.code);
 			return { ...event, label: subEventLabel ?? event.name };
@@ -158,28 +146,15 @@ export const eventRouter = router({
 
 		const event = await getEvent(eventDB.token);
 
-		const eventList = ctx.user.events as string[];
-
-		event.users = Array.from(
-			new Set([
+		if (!event.users.find((u) => u.id === ctx.user.id)) {
+			event.users = [
 				...event.users,
-				{
-					id: ctx.user.id,
-					username: ctx.user.username,
-					role: ctx.user.role,
-					admin: ctx.user.admin,
-				},
-			]),
-		);
+				{ id: ctx.user.id, username: ctx.user.username, role: ctx.user.role, admin: ctx.user.admin },
+			];
+		}
 
-		await db
-			.update(users)
-			.set({ events: Array.from(new Set([...eventList, event.code])), active_event_code: event.code })
-			.where(eq(users.id, ctx.user.id));
-		await db
-			.update(events)
-			.set({ users: Array.from(new Set(event.users.map((u) => u.id))) })
-			.where(eq(events.code, event.code));
+		await db.insert(eventUsers).values({ user_id: ctx.user.id, event_code: event.code }).onConflictDoNothing();
+		await db.update(users).set({ active_event_code: event.code }).where(eq(users.id, ctx.user.id));
 
 		const subEventLabel = event.meshedEvent ? undefined : await getSubEventLabel(event.code);
 		return { ...event, label: subEventLabel ?? event.name };
@@ -202,7 +177,6 @@ export const eventRouter = router({
 						token: events.token,
 						teams: events.teams,
 						checklist: events.checklist,
-						users: events.users,
 						archived: events.archived,
 						subEvents: events.meshedEvent,
 						notepadOnly: events.notepadOnly,
@@ -220,40 +194,22 @@ export const eventRouter = router({
 
 			if (!event) throw new TRPCError({ code: "NOT_FOUND", message: "Event not found" });
 
-			const eventList = ctx.user.events as string[];
-
-			event.users = Array.from(
-				new Set([
+			if (!event.users.find((u) => u.id === ctx.user.id)) {
+				event.users = [
 					...event.users,
-					{
-						id: ctx.user.id,
-						username: ctx.user.username,
-						role: ctx.user.role,
-						admin: ctx.user.admin,
-					},
-				]),
-			);
+					{ id: ctx.user.id, username: ctx.user.username, role: ctx.user.role, admin: ctx.user.admin },
+				];
+			}
 
-			await db
-				.update(users)
-				.set({ events: Array.from(new Set([...eventList, event.code])), active_event_code: event.code })
-				.where(eq(users.id, ctx.user.id));
-			await db
-				.update(events)
-				.set({ users: Array.from(new Set(event.users.map((u) => u.id))) })
-				.where(eq(events.code, event.code));
+			await db.insert(eventUsers).values({ user_id: ctx.user.id, event_code: event.code }).onConflictDoNothing();
+			await db.update(users).set({ active_event_code: event.code }).where(eq(users.id, ctx.user.id));
 
+			const subEventLabel = event.meshedEvent ? undefined : await getSubEventLabel(event.code);
 			return {
 				...eventDB,
-				subEvents:
-					(eventDB.subEvents as {
-						code: string;
-						label: string;
-						token: string;
-						teams: TeamList;
-						pin: string;
-						users: Profile[];
-					}[]) ?? undefined,
+				users: event.users,
+				label: subEventLabel ?? event.name,
+				subEvents: (eventDB.subEvents as NonNullable<ServerEvent["subEvents"]>) ?? undefined,
 			};
 		}),
 
@@ -292,7 +248,7 @@ export const eventRouter = router({
 
 			if (teamsData) {
 				for (let team of teamsData) {
-					teams.push({ number: team.team_number, name: team.nickname, inspected: false });
+					teams.push({ number: team.team_number.toString(), name: team.nickname, inspected: false });
 					checklist[team.team_number] = {
 						present: false,
 						weighed: false,
@@ -355,7 +311,6 @@ export const eventRouter = router({
 					token,
 					teams: uniqueTeams,
 					checklist,
-					users: [user?.id],
 					startDate: eventData.start_date ?? null,
 					endDate: eventData.end_date ?? null,
 					timezone: eventData.timezone_id ?? null,
@@ -363,6 +318,10 @@ export const eventRouter = router({
 					notepadOnly: input.notepadOnly ?? false,
 				})
 				.returning();
+
+			if (user) {
+				await db.insert(eventUsers).values({ user_id: user.id, event_code: input.code }).onConflictDoNothing();
+			}
 
 			return event[0];
 		}),
@@ -397,44 +356,54 @@ export const eventRouter = router({
 
 	getAllWithUsers: adminProcedure.query(async () => {
 		const eventsData = await db
-			.select({
-				code: events.code,
-				name: events.name,
-				users: events.users,
-			})
+			.select({ code: events.code, name: events.name })
 			.from(events)
 			.where(eq(events.archived, false))
 			.orderBy(desc(events.created_at));
 
-		const allUserIds = Array.from(new Set(eventsData.flatMap((e) => (e.users as number[]) ?? [])));
-		const usersList =
-			allUserIds.length > 0
-				? await db
-						.select({ id: users.id, username: users.username, role: users.role })
-						.from(users)
-						.where(inArray(users.id, allUserIds))
-				: [];
-
-		const usersMap = new Map(usersList.map((u) => [u.id, u]));
-
 		const eventCodesList = eventsData.map((e) => e.code);
-		const noteCountRows =
+
+		const [memberRows, noteCountRows] = await Promise.all([
 			eventCodesList.length > 0
-				? await db
+				? db
+						.select({
+							event_code: eventUsers.event_code,
+							id: users.id,
+							username: users.username,
+							role: users.role,
+						})
+						.from(eventUsers)
+						.innerJoin(users, eq(eventUsers.user_id, users.id))
+						.where(inArray(eventUsers.event_code, eventCodesList))
+				: Promise.resolve(
+						[] as {
+							event_code: string;
+							id: number;
+							username: string;
+							role: "FTA" | "FTAA" | "CSA" | "RI";
+						}[],
+					),
+			eventCodesList.length > 0
+				? db
 						.select({ event_code: notes.event_code, cnt: count() })
 						.from(notes)
 						.where(inArray(notes.event_code, eventCodesList))
 						.groupBy(notes.event_code)
-				: [];
+				: Promise.resolve([] as { event_code: string; cnt: number }[]),
+		]);
+
+		const membersByEvent = new Map<string, typeof memberRows>();
+		for (const row of memberRows) {
+			if (!membersByEvent.has(row.event_code)) membersByEvent.set(row.event_code, []);
+			membersByEvent.get(row.event_code)!.push(row);
+		}
 		const noteCountMap = new Map(noteCountRows.map((r) => [r.event_code, r.cnt]));
 
 		return eventsData.map((event) => ({
 			code: event.code,
 			name: event.name,
 			noteCount: noteCountMap.get(event.code) ?? 0,
-			users: ((event.users as number[]) ?? [])
-				.map((id) => usersMap.get(id))
-				.filter((u): u is NonNullable<typeof u> => u != null),
+			users: (membersByEvent.get(event.code) ?? []).map(({ id, username, role }) => ({ id, username, role })),
 		}));
 	}),
 
@@ -586,7 +555,7 @@ export const eventRouter = router({
 					};
 				}
 				return {
-					number: team.team_number,
+					number: team.team_number.toString(),
 					name: team.nickname ?? team.name,
 					inspected: existing?.inspected ?? false,
 				};
@@ -673,7 +642,16 @@ export const eventRouter = router({
 				pin: string;
 			}[] = [];
 
-			let usersToGet = Array.from(new Set([...eventsData.flatMap((e) => e.users as number[]), ctx.user.id]));
+			const subEventUserRows = await db
+				.select({ user_id: eventUsers.user_id })
+				.from(eventUsers)
+				.where(
+					inArray(
+						eventUsers.event_code,
+						input.events.map((e) => e.code),
+					),
+				);
+			let usersToGet = Array.from(new Set([...subEventUserRows.map((r) => r.user_id), ctx.user.id]));
 
 			for (let event of input.events) {
 				subEvents.push({
@@ -695,18 +673,13 @@ export const eventRouter = router({
 					pin: input.pin,
 					token,
 					teams,
-					users: [ctx.user.id],
 					meshedEvent: subEvents,
 					checklist: {},
 					autoEventSettings: DEFAULT_AUTO_EVENT_SETTINGS,
 				})
 				.returning();
 
-			const eventList = ctx.user.events as string[];
-			await db
-				.update(users)
-				.set({ events: Array.from(new Set([...eventList, input.code])) })
-				.where(eq(users.id, ctx.user.id));
+			await db.insert(eventUsers).values({ user_id: ctx.user.id, event_code: input.code }).onConflictDoNothing();
 
 			return {
 				...meshedEvent[0],
@@ -758,7 +731,7 @@ export const eventRouter = router({
 			// Update in-memory cache
 			const cached = inMemoryEvents[eventDB.code];
 			if (cached) {
-				cached.subEvents = updated;
+				cached.subEvents = updated as NonNullable<ServerEvent["subEvents"]>;
 				cached.name = newName;
 			}
 
@@ -1127,13 +1100,10 @@ export const eventRouter = router({
 			await db.update(users).set({ active_event_code: null }).where(eq(users.id, ctx.user.id));
 			return true;
 		}
-		const eventDB = await db.query.events.findFirst({
-			where: eq(events.code, input.eventCode),
-			columns: { users: true },
+		const membership = await db.query.eventUsers.findFirst({
+			where: and(eq(eventUsers.user_id, ctx.user.id), eq(eventUsers.event_code, input.eventCode)),
 		});
-		const members = (eventDB?.users ?? []) as number[];
-		if (!members.includes(ctx.user.id))
-			throw new TRPCError({ code: "FORBIDDEN", message: "Not a member of this event" });
+		if (!membership) throw new TRPCError({ code: "FORBIDDEN", message: "Not a member of this event" });
 		await db.update(users).set({ active_event_code: input.eventCode }).where(eq(users.id, ctx.user.id));
 		return true;
 	}),

@@ -8,6 +8,7 @@ import {
 	jsonb,
 	pgEnum,
 	pgTable,
+	primaryKey,
 	serial,
 	text,
 	timestamp,
@@ -26,7 +27,6 @@ export const users = pgTable(
 		password: text("password").notNull(),
 		created_at: timestamp("created_at").notNull().defaultNow(),
 		last_seen: timestamp("last_seen").notNull().defaultNow(),
-		events: jsonb("events").notNull().default("[]"),
 		role: roleEnum("role").notNull().default("FTA"),
 		token: varchar("token").notNull().default(""),
 		admin: boolean("admin").notNull().default(false),
@@ -46,7 +46,6 @@ export const events = pgTable("events", {
 	created_at: timestamp("created_at").notNull().defaultNow(),
 	token: varchar("token").notNull().default("").unique(),
 	checklist: jsonb("checklist").notNull().default("[]"),
-	users: jsonb("users").notNull().default("[]"),
 	scheduleDetails: jsonb("scheduleDetails").notNull().default("{}"),
 	archived: boolean("archived").notNull().default(false),
 	meshedEvent: jsonb("meshedEvent"),
@@ -64,6 +63,19 @@ export const events = pgTable("events", {
 });
 
 export type Event = typeof events.$inferInsert;
+
+export const eventUsers = pgTable(
+	"event_users",
+	{
+		user_id: integer("user_id")
+			.references(() => users.id)
+			.notNull(),
+		event_code: varchar("event_code")
+			.references(() => events.code)
+			.notNull(),
+	},
+	(t) => [primaryKey({ columns: [t.user_id, t.event_code] }), index("event_users_event_code_idx").on(t.event_code)],
+);
 
 export const messages = pgTable("messages", {
 	id: uuid("id").primaryKey(),
@@ -133,7 +145,6 @@ export const notes = pgTable(
 		closed_at: timestamp("closed_at"),
 		assigned_to_id: integer("assigned_to_id").references(() => users.id),
 		assigned_to: jsonb("assigned_to").$type<Profile>(),
-		followers: jsonb("followers").$type<number[]>().default([]).notNull(),
 		slack_ts: varchar("slack_ts"),
 		slack_channel: varchar("slack_channel"),
 		match_id: uuid("match_id").references(() => matchLogs.id),
@@ -156,6 +167,19 @@ export const noteMessagesRelations = relations(notes, ({ many }) => ({
 export const messageNoteRelations = relations(messages, ({ one }) => ({
 	note: one(notes, { fields: [messages.note_id], references: [notes.id] }),
 }));
+
+export const noteFollowers = pgTable(
+	"note_followers",
+	{
+		note_id: uuid("note_id")
+			.references(() => notes.id, { onDelete: "cascade" })
+			.notNull(),
+		user_id: integer("user_id")
+			.references(() => users.id)
+			.notNull(),
+	},
+	(t) => [primaryKey({ columns: [t.note_id, t.user_id] }), index("note_followers_note_id_idx").on(t.note_id)],
+);
 
 export const issueEnum = pgEnum("issue", [
 	"Bypassed",
@@ -388,4 +412,4 @@ export const slackLinkTokens = pgTable("slack_link_tokens", {
 	expires_at: timestamp("expires_at").notNull(),
 });
 
-export default { events, users, messages, matchLogs, cycleLogs, logPublishing };
+export default { events, users, eventUsers, messages, noteFollowers, matchLogs, cycleLogs, logPublishing };

@@ -98,7 +98,14 @@
 				code: eventCode,
 				pin: eventPin,
 				teams: res.teams as { number: string; name: string; inspected: boolean }[],
-				users: res.users as Profile[],
+				users: [
+					{
+						id: $userStore.id,
+						username: $userStore.username,
+						role: $userStore.role,
+						admin: $userStore.admin,
+					},
+				] as Profile[],
 				notepadOnly,
 			});
 

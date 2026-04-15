@@ -471,6 +471,7 @@ export interface ServerEvent {
 	};
 	notes: Note[];
 	meshedEvent: boolean;
+	notepadOnly: boolean;
 	playoffMode: boolean;
 	subEvents?: {
 		code: string;
@@ -479,7 +480,7 @@ export interface ServerEvent {
 		token: string;
 		teams: TeamList;
 		pin: string;
-		users: Profile[];
+		users?: Profile[];
 	}[];
 	slackChannel?: string;
 	slackTeam?: string;

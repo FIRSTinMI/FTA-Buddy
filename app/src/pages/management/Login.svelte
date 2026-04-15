@@ -703,12 +703,7 @@
 				<p>Or</p>
 				<div>
 					<Label for="event-token">Event Token</Label>
-					<Input
-						id="event-token"
-						bind:value={eventTokenInput}
-						placeholder="Event Token"
-						disabled={loading}
-					/>
+					<Input id="event-token" bind:value={eventTokenInput} placeholder="Event Token" disabled={loading} />
 				</div>
 				<Button onclick={joinEventByToken} disabled={loading}>Join Event</Button>
 

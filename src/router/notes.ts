@@ -7,7 +7,7 @@ import { buildNotification, toNoteCtx } from "../../shared/notifications";
 import type { Notification } from "../../shared/types";
 import type { FmsNoteMetadata, Message, Note, NoteUpdateEventData, Profile } from "../../shared/types";
 import { db } from "../db/db";
-import { events, matchEvents, matchLogs, messages, notes, pushSubscriptions, users } from "../db/schema";
+import { events, matchEvents, matchLogs, messages, noteFollowers, notes, pushSubscriptions, users } from "../db/schema";
 import { eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
 import { getEvent } from "../util/get-event";
 import { createNotification } from "../util/push-notifications";
@@ -163,6 +163,33 @@ export async function getAllTeamNotesInfo(event_code: string, teamNumbers: numbe
 		.slice()
 		.sort((a, b) => b.totalOpenTime - a.totalOpenTime)
 		.filter((info) => info.notes.length !== 0);
+}
+
+async function getNoteFollowers(noteId: string): Promise<number[]> {
+	const rows = await db
+		.select({ user_id: noteFollowers.user_id })
+		.from(noteFollowers)
+		.where(eq(noteFollowers.note_id, noteId));
+	return rows.map((r) => r.user_id);
+}
+
+async function attachFollowers<T extends { id: string }>(noteList: T[]): Promise<(T & { followers: number[] })[]> {
+	if (noteList.length === 0) return noteList.map((n) => ({ ...n, followers: [] }));
+	const rows = await db
+		.select({ note_id: noteFollowers.note_id, user_id: noteFollowers.user_id })
+		.from(noteFollowers)
+		.where(
+			inArray(
+				noteFollowers.note_id,
+				noteList.map((n) => n.id),
+			),
+		);
+	const map = new Map<string, number[]>();
+	for (const row of rows) {
+		if (!map.has(row.note_id)) map.set(row.note_id, []);
+		map.get(row.note_id)!.push(row.user_id);
+	}
+	return noteList.map((n) => ({ ...n, followers: map.get(n.id) ?? [] }));
 }
 
 // #region Slack Integration
@@ -322,8 +349,9 @@ const messagesSubRouter = router({
 				message: insert[0] as Message,
 			});
 
+			const msgFollowers = await getNoteFollowers(note.id);
 			createNotification(
-				(note.followers ?? []).filter((id: number) => id !== resolvedProfile.id),
+				msgFollowers.filter((id: number) => id !== resolvedProfile.id),
 				buildNotification({
 					kind: "note.message",
 					eventCode: event.code,
@@ -484,7 +512,7 @@ export const notesRouter = router({
 			orderBy: [desc(notes.updated_at)],
 		});
 		if (!eventNotes) throw new TRPCError({ code: "NOT_FOUND", message: "Notes not found" });
-		return eventNotes as Note[];
+		return (await attachFollowers(eventNotes)) as Note[];
 	}),
 
 	getAllWithMessages: eventProcedure.query(async ({ ctx }) => {
@@ -501,7 +529,7 @@ export const notesRouter = router({
 			with: { messages: { orderBy: [asc(messages.id)] } },
 		});
 		if (!eventNotes) throw new TRPCError({ code: "NOT_FOUND", message: "Notes not found" });
-		return eventNotes as Note[];
+		return (await attachFollowers(eventNotes)) as Note[];
 	}),
 
 	getAllByWithMessages: eventProcedure
@@ -538,7 +566,7 @@ export const notesRouter = router({
 				with: { messages: { orderBy: [asc(messages.id)] } },
 			});
 			if (!results) throw new TRPCError({ code: "NOT_FOUND", message: "No Notes found" });
-			return results as Note[];
+			return (await attachFollowers(results)) as unknown as Note[];
 		}),
 
 	getAllByAuthor: eventProcedure.input(z.object({ author_id: z.number() })).query(async ({ ctx, input }) => {
@@ -547,7 +575,7 @@ export const notesRouter = router({
 			orderBy: [desc(notes.updated_at)],
 		});
 		if (!notesByAuthor) throw new TRPCError({ code: "NOT_FOUND", message: "No Notes found by provided user" });
-		return notesByAuthor as Note[];
+		return (await attachFollowers(notesByAuthor)) as Note[];
 	}),
 
 	getAllByTeam: eventProcedure.input(z.object({ team_number: z.number() })).query(async ({ ctx, input }) => {
@@ -567,12 +595,13 @@ export const notesRouter = router({
 		// When a note has a match_id, prefer the match log's authoritative match details
 		// to keep NoteCard in team history consistent with the ViewNote badge (which also
 		// looks up match details via match_id).
-		return notesByTeam.map((row: (typeof notesByTeam)[number]) => ({
+		const mappedNotes = notesByTeam.map((row: (typeof notesByTeam)[number]) => ({
 			...row.notes,
 			match_number: row.matchLogMatchNumber ?? row.notes.match_number,
 			play_number: row.matchLogPlayNumber ?? row.notes.play_number,
 			tournament_level: (row.matchLogLevel ?? row.notes.tournament_level) as Note["tournament_level"],
-		})) as Note[];
+		}));
+		return (await attachFollowers(mappedNotes)) as Note[];
 	}),
 
 	getById: eventProcedure
@@ -613,7 +642,8 @@ export const notesRouter = router({
 				}
 			}
 
-			return note as Note;
+			const noteFollowerIds = await getNoteFollowers(note.id);
+			return { ...note, followers: noteFollowerIds } as Note;
 		}),
 
 	publicCreate: publicProcedure
@@ -659,14 +689,14 @@ export const notesRouter = router({
 					note_type: "TeamIssue",
 					resolution_status: "Open",
 					event_code: event.code,
-					followers: [author[0].id],
 					created_at: new Date(),
 					updated_at: new Date(),
 				})
 				.returning();
 			if (!insert[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Note" });
 
-			bus.publish(`event:${event.code}:note_update`, { kind: "create", note: insert[0] as Note });
+			const publicNoteResult = { ...insert[0], followers: [] as number[] } as Note;
+			bus.publish(`event:${event.code}:note_update`, { kind: "create", note: publicNoteResult });
 
 			createNotification(
 				event.users.map((u) => u.id),
@@ -701,7 +731,7 @@ export const notesRouter = router({
 					.execute();
 			}
 
-			return insert[0] as Note;
+			return publicNoteResult;
 		}),
 
 	create: eventProcedure
@@ -769,14 +799,24 @@ export const notesRouter = router({
 					created_at: new Date(),
 					updated_at: new Date(),
 					closed_at: isTeamIssue && !hasRequest ? new Date() : null,
-					followers: [resolvedProfile.id],
 					match_id: matchId,
 					request_type: input.request_type ?? null,
 				})
 				.returning();
 			if (!insert[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Note" });
 
-			bus.publish(`event:${event.code}:note_update`, { kind: "create", note: insert[0] as Note });
+			if (resolvedProfile.id > 0) {
+				await db
+					.insert(noteFollowers)
+					.values({ note_id: noteId, user_id: resolvedProfile.id })
+					.onConflictDoNothing();
+			}
+			const createNoteResult = {
+				...insert[0],
+				followers: resolvedProfile.id > 0 ? [resolvedProfile.id] : [],
+			} as Note;
+
+			bus.publish(`event:${event.code}:note_update`, { kind: "create", note: createNoteResult });
 
 			// Auto-attach all active match events for the same team + match
 			if (input.note_type === "TeamIssue" && insert[0].team !== null && insert[0].match_number !== null) {
@@ -852,7 +892,7 @@ export const notesRouter = router({
 					.execute();
 			}
 
-			return insert[0] as Note;
+			return createNoteResult;
 		}),
 
 	edit: eventProcedure
@@ -887,7 +927,11 @@ export const notesRouter = router({
 			const update = await db.update(notes).set(setFields).where(eq(notes.id, input.id)).returning();
 			if (!update[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Note" });
 
-			bus.publish(`event:${event.code}:note_update`, { kind: "edit", note: update[0] as Note });
+			const editFollowers = await getNoteFollowers(update[0].id);
+			bus.publish(`event:${event.code}:note_update`, {
+				kind: "edit",
+				note: { ...update[0], followers: editFollowers } as Note,
+			});
 
 			const newRequestType = input.request_type !== undefined ? input.request_type : note.request_type;
 			const slackMsg = createSlackNoteMessage(
@@ -920,7 +964,7 @@ export const notesRouter = router({
 				}
 			}
 
-			return update[0] as Note;
+			return { ...update[0], followers: editFollowers } as Note;
 		}),
 
 	delete: eventProcedure.input(z.object({ id: z.string().uuid() })).mutation(async ({ ctx, input }) => {
@@ -1006,8 +1050,9 @@ export const notesRouter = router({
 				resolved_by: isClosing ? currentUserProfile : null,
 			});
 
+			const statusFollowers = await getNoteFollowers(note.id);
 			createNotification(
-				(note.followers ?? []).filter((id: number) => id !== currentUserProfile.id),
+				statusFollowers.filter((id: number) => id !== currentUserProfile.id),
 				buildNotification({
 					kind: "note.statusChanged",
 					eventCode: event.code,
@@ -1029,7 +1074,7 @@ export const notesRouter = router({
 				}
 			}
 
-			return update[0] as Note;
+			return { ...update[0], followers: statusFollowers } as Note;
 		}),
 
 	assign: eventProcedure
@@ -1083,8 +1128,9 @@ export const notesRouter = router({
 				assigned_to: profile[0] as Profile,
 			});
 
+			const assignFollowers = await getNoteFollowers(note.id);
 			createNotification(
-				(note.followers ?? []).filter((id: number) => id !== profile[0].id && id !== actorIdAssign),
+				assignFollowers.filter((id: number) => id !== profile[0].id && id !== actorIdAssign),
 				buildNotification({
 					kind: "note.assigned",
 					eventCode: event.code,
@@ -1113,7 +1159,7 @@ export const notesRouter = router({
 				await addSlackReaction(note.slack_channel, event.slackTeam, note.slack_ts, "eyes");
 			}
 
-			return update[0] as Note;
+			return { ...update[0], followers: assignFollowers } as Note;
 		}),
 
 	unAssign: eventProcedure
@@ -1168,8 +1214,9 @@ export const notesRouter = router({
 				assigned_to: null,
 			});
 
+			const unassignFollowers = await getNoteFollowers(note.id);
 			createNotification(
-				(note.followers ?? []).filter((id: number) => id !== actorIdUnassign),
+				unassignFollowers.filter((id: number) => id !== actorIdUnassign),
 				buildNotification({
 					kind: "note.unassigned",
 					eventCode: event.code,
@@ -1197,7 +1244,7 @@ export const notesRouter = router({
 				await removeSlackReaction(note.slack_channel, event.slackTeam, note.slack_ts, "eyes");
 			}
 
-			return update[0] as Note;
+			return { ...update[0], followers: unassignFollowers } as Note;
 		}),
 
 	follow: protectedProcedure
@@ -1216,47 +1263,32 @@ export const notesRouter = router({
 			});
 			if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
 
-			const currentUserProfile = await db
-				.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
-				.from(users)
-				.where(eq(users.token, ctx.token as string));
-			if (!currentUserProfile[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Current User not found" });
+			const existing = await db.query.noteFollowers.findFirst({
+				where: and(eq(noteFollowers.note_id, input.id), eq(noteFollowers.user_id, ctx.user.id)),
+			});
+			const isFollowing = !!existing;
 
-			const followers = (note.followers ?? []) as number[];
-			let updatedFollowers: number[] = [];
-			let update: Note[] = [];
-
-			if (!followers.includes(ctx.user.id) && input.follow === true) {
-				followers.push(ctx.user.id);
-				update = (await db
-					.update(notes)
-					.set({ followers })
-					.where(eq(notes.id, input.id))
-					.returning()) as Note[];
-			} else if (!followers.includes(ctx.user.id) && input.follow === false) {
+			if (!isFollowing && input.follow === false) {
 				throw new TRPCError({ code: "BAD_REQUEST", message: "Current User is not following this Note" });
-			} else if (followers.includes(ctx.user.id) && input.follow === true) {
+			} else if (isFollowing && input.follow === true) {
 				throw new TRPCError({ code: "BAD_REQUEST", message: "Current User is already following this Note" });
-			} else if (followers.includes(ctx.user.id) && input.follow === false) {
-				updatedFollowers = followers.filter((id) => id !== ctx.user.id);
-				update = (await db
-					.update(notes)
-					.set({ followers: updatedFollowers })
-					.where(eq(notes.id, input.id))
-					.returning()) as Note[];
+			} else if (input.follow === true) {
+				await db.insert(noteFollowers).values({ note_id: input.id, user_id: ctx.user.id });
+			} else {
+				await db
+					.delete(noteFollowers)
+					.where(and(eq(noteFollowers.note_id, input.id), eq(noteFollowers.user_id, ctx.user.id)));
 			}
 
-			if (!update || (Array.isArray(update) && update.length === 0)) {
-				throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Note followers" });
-			}
+			const followerIds = await getNoteFollowers(input.id);
 
 			bus.publish(`event:${event.code}:note_update`, {
 				kind: "follow",
-				note_id: update[0].id,
-				followers: update[0].followers,
+				note_id: input.id,
+				followers: followerIds,
 			});
 
-			return update[0] as Note;
+			return { ...note, followers: followerIds } as Note;
 		}),
 
 	generateNotesReport: eventProcedure.query(async ({ ctx }) => {
@@ -1321,8 +1353,9 @@ export const notesRouter = router({
 			if (!insert[0])
 				throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Note from FMS" });
 
-			bus.publish(`event:${event.code}:note_update`, { kind: "create", note: insert[0] as Note, source: "fms" });
-			return insert[0] as Note;
+			const fmsNoteResult = { ...insert[0], followers: [] as number[] } as Note;
+			bus.publish(`event:${event.code}:note_update`, { kind: "create", note: fmsNoteResult, source: "fms" });
+			return fmsNoteResult;
 		}),
 
 	editFromFMS: eventProcedure
@@ -1373,8 +1406,13 @@ export const notesRouter = router({
 			if (!update[0])
 				throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Note from FMS" });
 
-			bus.publish(`event:${event.code}:note_update`, { kind: "edit", note: update[0] as Note, source: "fms" });
-			return update[0] as Note;
+			const fmsEditFollowers = await getNoteFollowers(update[0].id);
+			bus.publish(`event:${event.code}:note_update`, {
+				kind: "edit",
+				note: { ...update[0], followers: fmsEditFollowers } as Note,
+				source: "fms",
+			});
+			return { ...update[0], followers: fmsEditFollowers } as Note;
 		}),
 
 	setFmsId: eventProcedure
@@ -1555,7 +1593,7 @@ export async function getEventNotes(event_code: string) {
 		orderBy: [desc(notes.team)],
 	});
 	if (!eventNotes) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to find notes for this event" });
-	return eventNotes as Note[];
+	return eventNotes.map((n) => ({ ...n, followers: [] as number[] })) as Note[];
 }
 
 export async function getEventMessages(event_code: string) {
@@ -1603,8 +1641,9 @@ export async function updateNoteStatusFromSlack(message_ts: string, resolved: bo
 		resolved_by: resolved ? resolverProfile : null,
 	});
 
+	const slackStatusFollowers = await getNoteFollowers(note.id);
 	createNotification(
-		note.followers ?? [],
+		slackStatusFollowers,
 		buildNotification({
 			kind: "note.statusChanged",
 			eventCode: event.code,
@@ -1641,6 +1680,7 @@ export async function updateNoteAssignmentFromSlack(message_ts: string, add: boo
 		.where(eq(notes.id, note.id))
 		.returning();
 
+	const slackAssignFollowers = await getNoteFollowers(note.id);
 	if (add) {
 		bus.publish(`event:${event.code}:note_update`, {
 			kind: "assign",
@@ -1649,7 +1689,7 @@ export async function updateNoteAssignmentFromSlack(message_ts: string, add: boo
 			assigned_to: profile,
 		});
 		createNotification(
-			note.followers ?? [],
+			slackAssignFollowers,
 			buildNotification({
 				kind: "note.assigned",
 				eventCode: event.code,
@@ -1667,7 +1707,7 @@ export async function updateNoteAssignmentFromSlack(message_ts: string, add: boo
 			assigned_to: null,
 		});
 		createNotification(
-			note.followers ?? [],
+			slackAssignFollowers,
 			buildNotification({
 				kind: "note.unassigned",
 				eventCode: event.code,
@@ -1833,7 +1873,6 @@ export async function createFromNexus(channel_id: string, message_ts: string, te
 			event_code: noteEvent.code,
 			created_at: new Date(),
 			updated_at: new Date(),
-			followers: [],
 			match_id: matchId,
 			request_type: "CSA",
 			slack_ts: message_ts,
@@ -1844,7 +1883,8 @@ export async function createFromNexus(channel_id: string, message_ts: string, te
 
 	if (!insert[0]) return;
 
-	bus.publish(`event:${noteEvent.code}:note_update`, { kind: "create", note: insert[0] as Note });
+	const nexusNoteResult = { ...insert[0], followers: [] as number[] } as Note;
+	bus.publish(`event:${noteEvent.code}:note_update`, { kind: "create", note: nexusNoteResult });
 
 	// Notify users on linkEvent (the meshed parent if applicable - it has all sub-event users merged)
 	createNotification(
@@ -1852,7 +1892,7 @@ export async function createFromNexus(channel_id: string, message_ts: string, te
 		buildNotification({
 			kind: "note.created",
 			eventCode: noteEvent.code,
-			note: toNoteCtx(insert[0] as any),
+			note: toNoteCtx(nexusNoteResult),
 			author: "Nexus",
 		}),
 		noteEvent.code,
@@ -1931,8 +1971,9 @@ export async function addNoteMessageFromSlack(
 		message: insert[0] as Message,
 	});
 
+	const slackMsgFollowers = await getNoteFollowers(note.id);
 	createNotification(
-		note.followers ?? [],
+		slackMsgFollowers,
 		buildNotification({
 			kind: "note.message",
 			eventCode: event.code,

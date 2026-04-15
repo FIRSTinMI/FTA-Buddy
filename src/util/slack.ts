@@ -147,7 +147,12 @@ export async function linkChannel(args: string[], channel_id: string, team_id: s
 	};
 }
 
-export async function sendEphemeralMessage(channel_id: string, team_id: string, user_id: string, message: SlackMessage) {
+export async function sendEphemeralMessage(
+	channel_id: string,
+	team_id: string,
+	user_id: string,
+	message: SlackMessage,
+) {
 	const response = await fetch("https://slack.com/api/chat.postEphemeral", {
 		method: "POST",
 		headers: {

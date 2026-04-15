@@ -64,6 +64,20 @@
       "when": 1776256977916,
       "tag": "0008_numerous_changeling",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1744934400000,
+      "tag": "0009_event_users_junction",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1776291901474,
+      "tag": "0010_pink_jazinda",
+      "breakpoints": true
     }
   ]
 }

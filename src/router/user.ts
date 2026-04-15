@@ -257,22 +257,20 @@ export const userRouter = router({
 		return true;
 	}),
 
-	redeemSlackLinkToken: protectedProcedure
-		.input(z.object({ token: z.string() }))
-		.mutation(async ({ ctx, input }) => {
-			const row = await db.query.slackLinkTokens.findFirst({
-				where: and(eq(slackLinkTokens.token, input.token), gt(slackLinkTokens.expires_at, new Date())),
-			});
+	redeemSlackLinkToken: protectedProcedure.input(z.object({ token: z.string() })).mutation(async ({ ctx, input }) => {
+		const row = await db.query.slackLinkTokens.findFirst({
+			where: and(eq(slackLinkTokens.token, input.token), gt(slackLinkTokens.expires_at, new Date())),
+		});
 
-			if (!row) {
-				throw new TRPCError({ code: "NOT_FOUND", message: "Link token not found or expired" });
-			}
+		if (!row) {
+			throw new TRPCError({ code: "NOT_FOUND", message: "Link token not found or expired" });
+		}
 
-			await db.update(users).set({ slack_user_id: row.slack_user_id }).where(eq(users.id, ctx.user.id));
-			await db.delete(slackLinkTokens).where(eq(slackLinkTokens.token, input.token));
+		await db.update(users).set({ slack_user_id: row.slack_user_id }).where(eq(users.id, ctx.user.id));
+		await db.delete(slackLinkTokens).where(eq(slackLinkTokens.token, input.token));
 
-			return { slackUserId: row.slack_user_id };
-		}),
+		return { slackUserId: row.slack_user_id };
+	}),
 });
 
 export function generateToken() {

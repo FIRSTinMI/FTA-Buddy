@@ -102,32 +102,25 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 				});
 			}
 
-			let usersToGet = event.users as number[];
-
+			const eventCodesToQuery = [eventCode];
 			if (event.meshedEvent) {
-				const subEvents = await db.query.events.findMany({
-					where: inArray(
-						schema.events.code,
-						(event.meshedEvent as Array<{ code: string }>).map((e) => e.code),
-					),
-				});
-				for (const subEvent of subEvents) {
-					usersToGet = usersToGet.concat(subEvent.users as number[]);
+				for (const sub of event.meshedEvent as Array<{ code: string }>) {
+					eventCodesToQuery.push(sub.code);
 				}
 			}
 
-			const users =
-				event.users.length > 0
-					? await db
-							.select({
-								id: schema.users.id,
-								username: schema.users.username,
-								role: schema.users.role,
-								admin: schema.users.admin,
-							})
-							.from(schema.users)
-							.where(inArray(schema.users.id, Array.from(new Set([...usersToGet]))))
-					: [];
+			const userRows = await db
+				.selectDistinct({
+					id: schema.users.id,
+					username: schema.users.username,
+					role: schema.users.role,
+					admin: schema.users.admin,
+				})
+				.from(schema.users)
+				.innerJoin(schema.eventUsers, eq(schema.users.id, schema.eventUsers.user_id))
+				.where(inArray(schema.eventUsers.event_code, eventCodesToQuery));
+
+			const users = userRows;
 
 			events[eventCode] = {
 				year: event.year,
@@ -149,6 +142,7 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 				robotCycleTracking: {},
 				notes: (await getEventNotes(eventCode)) as Note[],
 				meshedEvent: event.meshedEvent !== null,
+				notepadOnly: event.notepadOnly ?? false,
 				playoffMode: event.playoffMode ?? false,
 				subEvents: event.meshedEvent ? event.meshedEvent : undefined,
 				slackChannel: event.slackChannel,

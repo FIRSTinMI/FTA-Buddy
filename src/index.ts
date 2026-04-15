@@ -17,7 +17,7 @@ import SuperJSON from "superjson";
 import { cycleTimeToMS } from "../shared/cycleTimeToMS";
 import type { ROBOT, TournamentLevel } from "../shared/types";
 import { connect, db } from "./db/db";
-import { cycleLogs, logPublishing, matchLogs } from "./db/schema";
+import { cycleLogs, logPublishing, matchLogs, slackLinkTokens } from "./db/schema";
 import { adminRouter } from "./router/admin";
 import { checklistRouter } from "./router/checklist";
 import { cycleRouter } from "./router/cycles";
@@ -34,7 +34,7 @@ import {
 	updateNoteStatusFromSlack,
 } from "./router/notes";
 import { telemetryRouter } from "./router/telemetry";
-import { userRouter } from "./router/user";
+import { userRouter, generateToken } from "./router/user";
 import { adminProcedure, createContext, publicProcedure, router } from "./trpc";
 
 import { z } from "zod";
@@ -43,7 +43,7 @@ import schema from "./db/schema";
 import { ftcRouter } from "./router/ftc";
 import { getEvent } from "./util/get-event";
 import { decompressStationLog, logAnalysisLoop } from "./util/log-analysis";
-import { linkChannel, slackOAuth } from "./util/slack";
+import { linkChannel, sendEphemeralMessage, slackOAuth } from "./util/slack";
 import { getTeamAverageCycle } from "./util/team-cycles";
 import { eventLastSeen, events, eventCodes } from "./state";
 import * as nexusEventPoller from "./util/nexusEventPoller";
@@ -229,6 +229,47 @@ app.post("/slack/command", async (req, res) => {
 				text: "An unknown error occurred",
 			});
 		}
+	}
+});
+
+app.post("/slack/interact", async (req, res) => {
+	res.sendStatus(200);
+	try {
+		const payload = JSON.parse(req.body.payload);
+		const actionId = payload.actions?.[0]?.action_id;
+		if (actionId === "link_ftabuddy_account") {
+			const slack_user_id: string = payload.user.id;
+			const team_id: string = payload.team.id;
+			const channel_id: string = payload.channel.id;
+			const token = generateToken();
+			const expires_at = new Date(Date.now() + 30 * 60 * 1000);
+			await db.insert(slackLinkTokens).values({ token, slack_user_id, team_id, channel_id, expires_at });
+			await sendEphemeralMessage(channel_id, team_id, slack_user_id, {
+				text: "Link your FTA-Buddy account",
+				blocks: [
+					{
+						type: "section",
+						text: {
+							type: "mrkdwn",
+							text: ":link: Click the button below to link your FTA-Buddy account. This link expires in 30 minutes.",
+						},
+					},
+					{
+						type: "actions",
+						elements: [
+							{
+								type: "button",
+								text: { type: "plain_text", text: "Link My Account", emoji: true },
+								url: `https://ftabuddy.com/link-slack/${token}`,
+								style: "primary",
+							},
+						],
+					},
+				],
+			});
+		}
+	} catch (err) {
+		console.error("[slack/interact]", err);
 	}
 });
 

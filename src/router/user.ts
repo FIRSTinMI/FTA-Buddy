@@ -1,10 +1,10 @@
 import { TRPCError } from "@trpc/server";
 import { compare, hash } from "bcryptjs";
-import { eq } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 import { OAuth2Client } from "google-auth-library";
 import { z } from "zod";
 import { db } from "../db/db";
-import { events, users } from "../db/schema";
+import { events, slackLinkTokens, users } from "../db/schema";
 import { protectedProcedure, publicProcedure, router } from "../trpc";
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -256,6 +256,23 @@ export const userRouter = router({
 		await db.update(users).set({ slack_user_id: null }).where(eq(users.token, ctx.user.token));
 		return true;
 	}),
+
+	redeemSlackLinkToken: protectedProcedure
+		.input(z.object({ token: z.string() }))
+		.mutation(async ({ ctx, input }) => {
+			const row = await db.query.slackLinkTokens.findFirst({
+				where: and(eq(slackLinkTokens.token, input.token), gt(slackLinkTokens.expires_at, new Date())),
+			});
+
+			if (!row) {
+				throw new TRPCError({ code: "NOT_FOUND", message: "Link token not found or expired" });
+			}
+
+			await db.update(users).set({ slack_user_id: row.slack_user_id }).where(eq(users.id, ctx.user.id));
+			await db.delete(slackLinkTokens).where(eq(slackLinkTokens.token, input.token));
+
+			return { slackUserId: row.slack_user_id };
+		}),
 });
 
 export function generateToken() {

@@ -979,6 +979,25 @@ export const eventRouter = router({
 		return { fmsEventPassword: event.fmsEventPassword ?? null };
 	}),
 
+	/** Returns full event details needed to populate the client event store (usable with just an event token). */
+	getDetails: eventProcedure.query(async ({ ctx }) => {
+		const event = await getEvent(ctx.event.token);
+		const subEventLabel = event.meshedEvent ? undefined : await getSubEventLabel(event.code);
+		return {
+			code: event.code,
+			pin: event.pin,
+			token: event.token,
+			label: subEventLabel ?? event.name,
+			teams: event.teams,
+			users: event.users,
+			subEvents: event.subEvents,
+			meshedEventCode: event.subEvents ? event.code : undefined,
+			playoffMode: event.playoffMode,
+			startDate: event.startDate,
+			endDate: event.endDate,
+		};
+	}),
+
 	/** Returns the team list (number, name, inspected) for this event. */
 	getTeams: eventProcedure.query(async ({ ctx }) => {
 		const event = await getEvent(ctx.event.token);

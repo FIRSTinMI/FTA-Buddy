@@ -379,4 +379,13 @@ export const appTelemetry = pgTable("app_telemetry", {
 	created_at: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const slackLinkTokens = pgTable("slack_link_tokens", {
+	id: serial("id").primaryKey(),
+	token: varchar("token").notNull().unique(),
+	slack_user_id: varchar("slack_user_id").notNull(),
+	team_id: varchar("team_id").notNull(),
+	channel_id: varchar("channel_id").notNull(),
+	expires_at: timestamp("expires_at").notNull(),
+});
+
 export default { events, users, messages, matchLogs, cycleLogs, logPublishing };

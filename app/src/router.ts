@@ -42,6 +42,7 @@ export const { p, navigate, isActive, preload, route } = createRouter({
 	"/manage/google-signup": () => import("./pages/management/CompleteGoogleSignup.svelte"),
 	"/manage/meshed-event": () => import("./pages/management/MeshedEvent.svelte"),
 	"/join/:token": () => import("./pages/management/JoinByLink.svelte"),
+	"/link-slack/:token": () => import("./pages/management/LinkSlack.svelte"),
 
 	"/logs": () => import("./pages/match-logs/MatchLogsList.svelte"),
 	"/logs/event/:eventCode/:matchid/:station": () => import("./pages/EventSwitchRedirect.svelte"),

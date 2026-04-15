@@ -124,8 +124,45 @@ export async function linkChannel(args: string[], channel_id: string, team_id: s
 					text: ":eyes: - Assign yourself to the ticket (you're on your way)\n:white_check_mark: - Mark the ticket resolved, and leave a thread reply explaining what you did\n:x: - Mark the team as refusing help",
 				},
 			},
+			{ type: "divider" },
+			{
+				type: "section",
+				text: {
+					type: "mrkdwn",
+					text: ":link: *Link your FTA-Buddy account*\nClick the button below to connect your Slack identity to your FTA-Buddy account.",
+				},
+			},
+			{
+				type: "actions",
+				elements: [
+					{
+						type: "button",
+						text: { type: "plain_text", text: "Link My Account", emoji: true },
+						action_id: "link_ftabuddy_account",
+						style: "primary",
+					},
+				],
+			},
 		],
 	};
+}
+
+export async function sendEphemeralMessage(channel_id: string, team_id: string, user_id: string, message: SlackMessage) {
+	const response = await fetch("https://slack.com/api/chat.postEphemeral", {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${await getTokenByTeam(team_id)}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({ channel: channel_id, user: user_id, ...message }),
+		signal: AbortSignal.timeout(10_000),
+	});
+
+	const data = await response.json();
+	if (!data.ok) {
+		throw new Error(`Slack postEphemeral error: ${data.error}`);
+	}
+	return data;
 }
 
 async function isBotInChannel(channel_id: string, team_id: string): Promise<boolean> {

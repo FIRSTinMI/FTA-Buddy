@@ -57,6 +57,13 @@
       "when": 1776110789003,
       "tag": "0007_abandoned_dorian_gray",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1776256977916,
+      "tag": "0008_numerous_changeling",
+      "breakpoints": true
     }
   ]
 }

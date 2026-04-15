@@ -397,6 +397,93 @@
 
 	let notificationModalOpen = $state(false);
 
+	let eventTokenInput = $state("");
+
+	async function joinEventByToken() {
+		const tokenValue = eventTokenInput.trim();
+		if (!tokenValue) {
+			toast("Error", "Please enter an event token");
+			return;
+		}
+		if (isSubmitting) return;
+		isSubmitting = true;
+		loading = true;
+
+		try {
+			// Set the event token first so the tRPC client is rebuilt with it before calling getDetails
+			user.set({ ...$user, eventToken: tokenValue });
+
+			const res = await trpc.event.getDetails.query();
+
+			if (res.subEvents && Array.isArray(res.subEvents) && res.subEvents.length > 0) {
+				user.set({ ...$user, eventToken: tokenValue, meshedEventToken: tokenValue });
+				eventStore.set({
+					code: res.code,
+					pin: res.pin,
+					label: res.label,
+					teams: res.teams as TeamList,
+					users: res.users as Profile[],
+					subEvents: res.subEvents,
+					meshedEventCode: res.code,
+					playoffMode: res.playoffMode,
+					startDate: res.startDate ?? undefined,
+					endDate: res.endDate ?? undefined,
+					joinedAt: new Date().toISOString().split("T")[0],
+				});
+				saveEvent({
+					code: res.code,
+					token: tokenValue,
+					pin: res.pin,
+					label: res.label,
+					teams: res.teams as TeamList,
+					users: res.users as Profile[],
+					subEvents: res.subEvents,
+					meshedEventCode: res.code,
+					startDate: res.startDate ?? undefined,
+					endDate: res.endDate ?? undefined,
+				});
+			} else {
+				user.set({ ...$user, eventToken: tokenValue });
+				eventStore.set({
+					code: res.code,
+					pin: res.pin,
+					label: res.label,
+					teams: res.teams as TeamList,
+					users: res.users as Profile[],
+					startDate: res.startDate ?? undefined,
+					endDate: res.endDate ?? undefined,
+					joinedAt: new Date().toISOString().split("T")[0],
+				});
+				saveEvent({
+					code: res.code,
+					token: tokenValue,
+					pin: res.pin,
+					label: res.label,
+					teams: res.teams as TeamList,
+					users: res.users as Profile[],
+					startDate: res.startDate ?? undefined,
+					endDate: res.endDate ?? undefined,
+				});
+			}
+
+			toast("Success", "Event joined successfully", "green-500");
+			await tick();
+			const redirect = sessionStorage.getItem("redirectAfterLogin");
+			if (redirect) {
+				sessionStorage.removeItem("redirectAfterLogin");
+				navigate(redirect as any);
+			} else navigate($user.role === "FTA" || $user.role === "FTAA" ? "/monitor" : "/notepad");
+		} catch (err: any) {
+			// Revert the event token since the fetch failed
+			user.set({ ...$user, eventToken: "" });
+			toast("Error Joining Event", err.message);
+			console.error("[AUTH] joinEventByToken error:", err);
+		} finally {
+			loading = false;
+			isSubmitting = false;
+		}
+	}
+
 	// Build a list of previously-joined events for the quick-switch selector
 	let previousEventList = $derived(
 		Object.values($savedEventsStore).map((e) => {
@@ -618,19 +705,12 @@
 					<Label for="event-token">Event Token</Label>
 					<Input
 						id="event-token"
-						bind:value={$user.eventToken}
+						bind:value={eventTokenInput}
 						placeholder="Event Token"
 						disabled={loading}
 					/>
 				</div>
-				<Button
-					onclick={() => {
-						user.set({ ...$user, eventToken: $user.eventToken });
-						if ($user.role === "FTA" || $user.role === "FTAA") setTimeout(() => navigate("/monitor"), 500);
-						else setTimeout(() => navigate("/notepad"), 500);
-					}}
-					disabled={loading}>Join Event</Button
-				>
+				<Button onclick={joinEventByToken} disabled={loading}>Join Event</Button>
 
 				<!-- Login Prompt -->
 			{:else}

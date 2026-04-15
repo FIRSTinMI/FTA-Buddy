@@ -166,12 +166,32 @@
 	let eventPin = $state("");
 
 	let eventList: SelectOptionType<string>[] = $state([]);
+	let serverEventMap: Map<string, { name: string; isMeshed: boolean }> = $state(new Map());
+
+	function getMeshedPrefix(code: string): string {
+		if (code.includes("micmp")) return "MSC - ";
+		if (code.includes("cmp")) return "CMP - ";
+		return "DCMP - ";
+	}
 
 	function updateEventList() {
 		trpc.event.getAll.query().then((res) => {
-			eventList = res.map((e) => ({ value: e.code, name: e.name ? `${e.code} - ${e.name}` : e.code }));
-			eventList.unshift({ value: "none", name: "None" });
-			eventList = eventList;
+			serverEventMap = new Map(res.map((e) => [e.code, { name: e.name, isMeshed: e.isMeshed }]));
+			if ($user.admin) {
+				eventList = res.map((e) => {
+					const prefix = e.isMeshed ? getMeshedPrefix(e.code) : "";
+					let displayName = e.name ?? "";
+					if (e.isMeshed && displayName.startsWith("Meshed Event: ")) {
+						displayName = displayName.slice("Meshed Event: ".length);
+					}
+					return {
+						value: e.code,
+						name: displayName ? `${prefix}${e.code} - ${displayName}` : `${prefix}${e.code}`,
+					};
+				});
+				eventList.unshift({ value: "none", name: "None" });
+				eventList = eventList;
+			}
 		});
 	}
 
@@ -197,6 +217,7 @@
 					playoffMode: res.playoffMode,
 					startDate: res.startDate ?? undefined,
 					endDate: res.endDate ?? undefined,
+					joinedAt: new Date().toISOString().split("T")[0],
 				});
 				saveEvent({
 					code: $eventStore.code,
@@ -220,6 +241,7 @@
 					users: res.users as Profile[],
 					startDate: res.startDate ?? undefined,
 					endDate: res.endDate ?? undefined,
+					joinedAt: new Date().toISOString().split("T")[0],
 				});
 				saveEvent({
 					code: $eventStore.code,
@@ -267,6 +289,7 @@
 					playoffMode: res.playoffMode,
 					startDate: res.startDate ?? undefined,
 					endDate: res.endDate ?? undefined,
+					joinedAt: new Date().toISOString().split("T")[0],
 				});
 				saveEvent({
 					code: res.code,
@@ -297,6 +320,7 @@
 					users: res.users as Profile[],
 					startDate: res.startDate ?? undefined,
 					endDate: res.endDate ?? undefined,
+					joinedAt: new Date().toISOString().split("T")[0],
 				});
 				saveEvent({
 					code: res.code,
@@ -375,10 +399,21 @@
 
 	// Build a list of previously-joined events for the quick-switch selector
 	let previousEventList = $derived(
-		Object.values($savedEventsStore).map((e) => ({
-			value: e.code,
-			name: e.label ? `${e.code} - ${e.label}` : e.code,
-		})),
+		Object.values($savedEventsStore).map((e) => {
+			const isMeshed = !!(e.subEvents && e.subEvents.length > 0) || !!serverEventMap.get(e.code)?.isMeshed;
+			const prefix = isMeshed ? getMeshedPrefix(e.code) : "";
+			let displayName: string;
+			if (isMeshed && e.subEvents?.length) {
+				displayName = e.subEvents.map((se) => se.label).join(", ");
+			} else {
+				const serverInfo = serverEventMap.get(e.code);
+				displayName = serverInfo?.name ?? e.label ?? "";
+			}
+			return {
+				value: e.code,
+				name: displayName ? `${prefix}${e.code} - ${displayName}` : `${prefix}${e.code}`,
+			};
+		}),
 	);
 
 	let previousEventSelection = $state("");
@@ -398,6 +433,7 @@
 				subEvents: saved.subEvents,
 				meshedEventCode: saved.meshedEventCode,
 				label: saved.label,
+				joinedAt: new Date().toISOString().split("T")[0],
 			});
 		} else {
 			user.set({ ...$user, eventToken: saved.token, meshedEventToken: undefined });
@@ -407,6 +443,7 @@
 				teams: saved.teams,
 				users: saved.users,
 				label: saved.label,
+				joinedAt: new Date().toISOString().split("T")[0],
 			});
 		}
 

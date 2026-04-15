@@ -377,15 +377,22 @@ export const eventRouter = router({
 	}),
 
 	getAll: publicProcedure.query(async () => {
-		return await db
+		const rows = await db
 			.select({
 				code: events.code,
 				name: events.name,
 				created_at: events.created_at,
+				meshedEvent: events.meshedEvent,
 			})
 			.from(events)
 			.where(eq(events.archived, false))
 			.orderBy(desc(events.created_at));
+		return rows.map((e) => ({
+			code: e.code,
+			name: e.name,
+			created_at: e.created_at,
+			isMeshed: e.meshedEvent !== null,
+		}));
 	}),
 
 	getAllWithUsers: adminProcedure.query(async () => {
@@ -538,7 +545,9 @@ export const eventRouter = router({
 					}
 				}
 			}
-			newTeams = Array.from(merged.values()).sort((a, b) => parseInt(String(a.number)) - parseInt(String(b.number)));
+			newTeams = Array.from(merged.values()).sort(
+				(a, b) => parseInt(String(a.number)) - parseInt(String(b.number)),
+			);
 
 			// Also refresh the teams snapshot inside the meshedEvent JSON
 			const updatedSubEvents = event.subEvents.map((se) => {

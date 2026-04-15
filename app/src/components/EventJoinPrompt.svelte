@@ -36,6 +36,7 @@
 					meshedEventCode: res.code,
 					startDate: res.startDate ?? undefined,
 					endDate: res.endDate ?? undefined,
+					joinedAt: new Date().toISOString().split("T")[0],
 				});
 				saveEvent({
 					code: res.code,
@@ -59,6 +60,7 @@
 					users: res.users as Profile[],
 					startDate: res.startDate ?? undefined,
 					endDate: res.endDate ?? undefined,
+					joinedAt: new Date().toISOString().split("T")[0],
 				});
 				saveEvent({
 					code: res.code,

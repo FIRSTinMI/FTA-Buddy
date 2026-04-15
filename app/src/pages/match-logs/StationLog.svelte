@@ -19,20 +19,17 @@
 	import Icon from "@iconify/svelte";
 
 	const { matchid, station } = route.getParams("/logs/:matchid/:station");
-	let actualStation: ROBOT;
+	let actualStation: ROBOT = $state(undefined as any);
 
-	let log: FMSLogFrame[];
-	let team: number;
-	let logGraph: LogGraph;
+	let log: FMSLogFrame[] = $state(undefined as any);
+	let team: number = $state(undefined as any);
+	let logGraph: LogGraph = $state(undefined as any);
 
-	let match: Awaited<ReturnType<typeof trpc.match.getStationMatch.query>>;
-	let matchPromise: Promise<any>;
+	let match: Awaited<ReturnType<typeof trpc.match.getStationMatch.query>> = $state(undefined as any);
 
-	if ($userStore.eventToken) {
-		matchPromise = trpc.match.getStationMatch.query({ id: matchid, station: station });
-	} else {
-		matchPromise = trpc.match.getPublicMatch.query({ id: matchid, sharecode: station });
-	}
+	const matchPromise: Promise<any> = $userStore.eventToken
+		? trpc.match.getStationMatch.query({ id: matchid, station: station })
+		: trpc.match.getPublicMatch.query({ id: matchid, sharecode: station });
 
 	matchPromise.then((m) => {
 		match = m;
@@ -86,8 +83,8 @@
 		"dataRateTotal",
 	]);
 
-	let shareid: string;
-	let shareOpen = false;
+	let shareid: string = $state(undefined as any);
+	let shareOpen = $state(false);
 
 	async function share() {
 		if (["blue1", "blue2", "blue3", "red1", "red2", "red3"].includes(station)) {

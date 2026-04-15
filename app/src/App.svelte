@@ -109,6 +109,7 @@
 						meshedEventCode: res.code,
 						startDate: res.startDate ?? undefined,
 						endDate: res.endDate ?? undefined,
+						joinedAt: new Date().toISOString().split("T")[0],
 					});
 					saveEvent({
 						code: res.code,
@@ -132,6 +133,7 @@
 						users: res.users as Profile[],
 						startDate: res.startDate ?? undefined,
 						endDate: res.endDate ?? undefined,
+						joinedAt: new Date().toISOString().split("T")[0],
 					});
 					saveEvent({
 						code: res.code,
@@ -280,7 +282,13 @@
 
 	// Update checking
 
-	update(settings.version, version, openWelcome, openChangelog, route.pathname.startsWith("/logs/") || route.pathname.startsWith("/notepad/submit/"));
+	update(
+		settings.version,
+		version,
+		openWelcome,
+		openChangelog,
+		route.pathname.startsWith("/logs/") || route.pathname.startsWith("/notepad/submit/"),
+	);
 
 	// Toast manager
 
@@ -313,7 +321,14 @@
 	function checkAndKickFromStaleEvent() {
 		const event = get(eventStore);
 		if (!event.code || !event.endDate) return;
-		const kickDate = getTuesdayAfter(event.endDate);
+		const endKickDate = getTuesdayAfter(event.endDate);
+		let kickDate = endKickDate;
+		if (event.joinedAt) {
+			const d = new Date(event.joinedAt + "T00:00:00");
+			d.setDate(d.getDate() + 7);
+			const joinedKickDate = getTuesdayAfter(d.toISOString().split("T")[0]);
+			if (joinedKickDate.getTime() > endKickDate.getTime()) kickDate = joinedKickDate;
+		}
 		const today = new Date();
 		today.setHours(0, 0, 0, 0);
 		if (today >= kickDate) {

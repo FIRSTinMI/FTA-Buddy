@@ -13,6 +13,7 @@ export interface Event {
 	playoffMode?: boolean;
 	startDate?: string;
 	endDate?: string;
+	joinedAt?: string;
 }
 
 let initialEvent = localStorage.getItem("event");

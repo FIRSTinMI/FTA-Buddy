@@ -68,7 +68,7 @@
 			const subEvent = event.subEvents.find((e) => e.code.toLowerCase() === normalizedCode);
 			if (subEvent) {
 				userStore.update((u) => ({ ...u, eventToken: subEvent.token }));
-				eventStore.set({ ...event, ...subEvent });
+				eventStore.set({ ...event, ...subEvent, joinedAt: new Date().toISOString().split("T")[0] });
 				trpc.event.setActiveEvent.mutate({ eventCode: subEvent.code }).catch(() => {});
 				navigate(redirectPath as any, { replace: true, params: {} });
 				return;
@@ -94,6 +94,7 @@
 					subEvents: savedEntry.subEvents,
 					meshedEventCode: savedEntry.meshedEventCode,
 					label: savedEntry.label,
+					joinedAt: new Date().toISOString().split("T")[0],
 				});
 			} else {
 				userStore.update((u) => ({ ...u, eventToken: savedEntry.token, meshedEventToken: undefined }));
@@ -104,6 +105,7 @@
 					teams: savedEntry.teams,
 					users: savedEntry.users,
 					label: savedEntry.label,
+					joinedAt: new Date().toISOString().split("T")[0],
 				});
 			}
 			navigate(redirectPath as any, { replace: true, params: {} });
@@ -130,6 +132,7 @@
 					subEvents: savedEvent.subEvents,
 					meshedEventCode: savedEvent.meshedEventCode,
 					label: subEvent.label,
+					joinedAt: new Date().toISOString().split("T")[0],
 				});
 				navigate(redirectPath as any, { replace: true, params: {} });
 				return;

@@ -167,7 +167,7 @@
 			const update = await trpc.notes.updateStatus.mutate({
 				id: note.id,
 				new_status: newStatus,
-				event_code: event.code,
+				event_code: note.event_code,
 			});
 			note.resolution_status = update.resolution_status;
 		} catch (err: any) {
@@ -182,7 +182,7 @@
 			const update = await trpc.notes.updateStatus.mutate({
 				id: note.id,
 				new_status: "Refused",
-				event_code: event.code,
+				event_code: note.event_code,
 			});
 			note.resolution_status = update.resolution_status;
 		} catch (err: any) {
@@ -195,9 +195,9 @@
 		if (!note) return;
 		try {
 			if (note.assigned_to_id === user.id) {
-				await trpc.notes.unAssign.mutate({ note_id: note.id, event_code: event.code });
+				await trpc.notes.unAssign.mutate({ note_id: note.id, event_code: note.event_code });
 			} else {
-				await trpc.notes.assign.mutate({ id: note.id, user_id: user.id, event_code: event.code });
+				await trpc.notes.assign.mutate({ id: note.id, user_id: user.id, event_code: note.event_code });
 			}
 		} catch (err: any) {
 			toast("An error occurred while updating the note", err.message);
@@ -223,9 +223,9 @@
 		assignPending = true;
 		try {
 			if (userId === null) {
-				await trpc.notes.unAssign.mutate({ note_id: note.id, event_code: event.code });
+				await trpc.notes.unAssign.mutate({ note_id: note.id, event_code: note.event_code });
 			} else {
-				await trpc.notes.assign.mutate({ id: note.id, user_id: userId, event_code: event.code });
+				await trpc.notes.assign.mutate({ id: note.id, user_id: userId, event_code: note.event_code });
 			}
 			assignModalOpen = false;
 		} catch (err: any) {
@@ -315,7 +315,7 @@
 				await trpc.notes.edit.mutate({
 					id: noteId,
 					new_text: editNoteText,
-					event_code: event.code,
+					event_code: note.event_code,
 					match_id: matchIdVal,
 					request_type: editRequestType,
 				});
@@ -366,9 +366,9 @@
 		try {
 			if (!note) return;
 			if (!note.followers.includes(user.id)) {
-				await trpc.notes.follow.mutate({ id: noteId, follow: true, event_code: event.code });
+				await trpc.notes.follow.mutate({ id: noteId, follow: true, event_code: note.event_code });
 			} else {
-				await trpc.notes.follow.mutate({ id: noteId, follow: false, event_code: event.code });
+				await trpc.notes.follow.mutate({ id: noteId, follow: false, event_code: note.event_code });
 			}
 		} catch (err: any) {
 			toast("An error occurred while following the Note", err.message);

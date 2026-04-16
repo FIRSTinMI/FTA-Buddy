@@ -80,7 +80,7 @@
 				const res = await trpc.notes.edit.mutate({
 					id: note.id,
 					new_text: editNoteText,
-					event_code: event.code,
+					event_code: note.event_code,
 				});
 				toast("Note edited successfully", "", "green-500");
 				editNoteView = false;
@@ -114,7 +114,7 @@
 			await trpc.notes.updateStatus.mutate({
 				id: note.id,
 				new_status: newStatus,
-				event_code: event.code,
+				event_code: note.event_code,
 			});
 			toast(`Note ${newStatus === "Resolved" ? "resolved" : "reopened"}`, "", "green-500");
 		} catch (err: any) {

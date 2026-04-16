@@ -220,15 +220,6 @@
 				>
 					{checklistTotals.present}/{checklistTotals.total}
 				</p>
-				<p class="text-sm lg:py-1 text-right">Weighed</p>
-				<p
-					class="lg:text-lg text-left font-bold {checklistTotals.weighed === checklistTotals.total &&
-					checklistTotals.total > 0
-						? 'text-green-500'
-						: ''}"
-				>
-					{checklistTotals.weighed}/{checklistTotals.total}
-				</p>
 				<p class="text-sm lg:py-1 text-right">Inspected</p>
 				<p
 					class="lg:text-lg text-left font-bold {checklistTotals.inspected === checklistTotals.total &&

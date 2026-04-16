@@ -274,7 +274,7 @@
 			await trpc.notes.messages.create.mutate({
 				text: message_text.trim(),
 				note_id: note.id,
-				event_code: event.code,
+				event_code: note.event_code,
 			});
 
 			message_text = "";

@@ -100,7 +100,7 @@
 				</div>
 			{:else if modalRobot.ds === DSState.WAITING}
 				<div>
-					<p class="font-bold">Team is in wrong match</p>
+					<p class="font-bold">Team mismatch / wrong match</p>
 					<p>
 						{modalRobot.improved ? "Plugged in " : ""}<FormattedTime
 							date={modalRobot?.lastChange}

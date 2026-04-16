@@ -215,7 +215,7 @@ export interface SignalRMonitorFrame {
 	BWUtilization: FMSEnums.BWUtilizationType;
 	WPAKeyStatus: FMSEnums.WPAKeyStatusType;
 	DriverStationIsOfficial: boolean;
-	StationStatus: "Good" | "WrongStation" | "Waiting" | "Unknown";
+	StationStatus: "Good" | "WrongStation" | "WrongMatch" | "Waiting" | "Unknown";
 	Brownout: boolean;
 	EStopSource: string;
 	IsAStopPressed: boolean;

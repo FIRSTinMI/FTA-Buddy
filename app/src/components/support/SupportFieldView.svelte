@@ -780,7 +780,7 @@
 										: liveRobot.ds === DSState.MOVE_STATION
 											? 'Move Station'
 											: liveRobot.ds === DSState.WAITING
-												? 'Waiting'
+												? 'Wrong Match'
 												: liveRobot.ds === DSState.RED
 													? 'No DS'
 													: 'Connected'}"
@@ -790,6 +790,7 @@
 						{:else if liveRobot.ds === DSState.ESTOP}E
 						{:else if liveRobot.ds === DSState.ASTOP}A
 						{:else if liveRobot.ds === DSState.MOVE_STATION}M
+						{:else if liveRobot.ds === DSState.WAITING}W
 						{/if}
 					</div>
 					<div

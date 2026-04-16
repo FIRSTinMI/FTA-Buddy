@@ -89,13 +89,28 @@ function toRadioQuality(v: unknown): "Warning" | "Caution" | "Good" | "Excellent
 	return null;
 }
 
+const STATION_STATUS_MAP: Record<number, "Good" | "WrongStation" | "WrongMatch" | "Unknown"> = {
+	0: "Good",
+	1: "WrongStation",
+	2: "WrongMatch",
+	3: "Unknown",
+};
+
+function toStationStatus(v: unknown): "Good" | "WrongStation" | "WrongMatch" | "Unknown" {
+	if (v === "Good" || v === "WrongStation" || v === "WrongMatch" || v === "Unknown") return v as "Good" | "WrongStation" | "WrongMatch" | "Unknown";
+	if (typeof v === "number") return STATION_STATUS_MAP[v] ?? "Unknown";
+	return "Unknown";
+}
+
 function dsState(s: StationData): DSState {
 	if (s.IsEStopped) return DSState.ESTOP;
 	if (s.IsAStopped) return DSState.ASTOP;
 	if (s.IsBypassed) return DSState.BYPASS;
-	if (s.StationStatus === "WrongStation" || s.StationStatus === "WrongMatch") return DSState.MOVE_STATION;
+	const status = toStationStatus(s.StationStatus);
+	if (status === "WrongStation") return DSState.MOVE_STATION; // M = move to another station
+	if (status === "WrongMatch") return DSState.WAITING;        // W = wrong match / waiting
 	if (!s.Connection) return DSState.RED;
-	if (!s.StationStatus || s.StationStatus === "Good") return DSState.GREEN;
+	if (status === "Good") return DSState.GREEN;
 	return DSState.GREEN_X;
 }
 
@@ -294,7 +309,11 @@ function parseTitleAttr(title: string) {
 
 function iconToDsState(el: Element): DSState {
 	if (el.querySelector(".bg-yellow")) return DSState.BYPASS;
-	if (el.querySelector(".move-indicator")) return DSState.MOVE_STATION;
+	const moveIndicator = el.querySelector(".move-indicator");
+	if (moveIndicator) {
+		// "TEAM MISMATCH" = WrongMatch (W), otherwise "MOVE TO..." = WrongStation (M)
+		return (moveIndicator.textContent ?? "").includes("MISMATCH") ? DSState.WAITING : DSState.MOVE_STATION;
+	}
 	const col1 = el.querySelectorAll(".col-3, .col-xl-2")[0];
 	if (!col1) return DSState.RED;
 	const i = col1.querySelector("i");

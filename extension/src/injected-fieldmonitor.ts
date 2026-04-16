@@ -81,9 +81,11 @@ function dsState(s: StationData): DSState {
 	if (s.IsEStopped) return DSState.ESTOP;
 	if (s.IsAStopped) return DSState.ASTOP;
 	if (s.IsBypassed) return DSState.BYPASS;
-	if (s.StationStatus === "WrongStation" || s.StationStatus === "WrongMatch") return DSState.MOVE_STATION;
+	const status = toStationStatus(s.StationStatus);
+	if (status === "WrongStation") return DSState.MOVE_STATION; // M = move to another station
+	if (status === "WrongMatch") return DSState.WAITING;        // W = wrong match / waiting
 	if (!s.Connection) return DSState.RED;
-	if (!s.StationStatus || s.StationStatus === "Good") return DSState.GREEN;
+	if (status === "Good") return DSState.GREEN;
 	return DSState.GREEN_X;
 }
 
@@ -127,6 +129,20 @@ function toRadioQuality(v: unknown): "Warning" | "Caution" | "Good" | "Excellent
 	if (typeof v === "string" && (v === "Warning" || v === "Caution" || v === "Good" || v === "Excellent")) return v;
 	if (typeof v === "number") return RADIO_QUALITY_MAP[v] ?? null;
 	return null;
+}
+
+// Angular exposes StationStatus as a numeric enum; handle both numeric and string forms.
+const STATION_STATUS_MAP: Record<number, "Good" | "WrongStation" | "WrongMatch" | "Unknown"> = {
+	0: "Good",
+	1: "WrongStation",
+	2: "WrongMatch",
+	3: "Unknown",
+};
+
+function toStationStatus(v: unknown): "Good" | "WrongStation" | "WrongMatch" | "Unknown" {
+	if (v === "Good" || v === "WrongStation" || v === "WrongMatch" || v === "Unknown") return v as "Good" | "WrongStation" | "WrongMatch" | "Unknown";
+	if (typeof v === "number") return STATION_STATUS_MAP[v] ?? "Unknown";
+	return "Unknown";
 }
 
 function stationToRobotInfo(s: StationData): PartialRobotInfo {
@@ -289,11 +305,19 @@ function parseTitleAttr(title: string): {
 	};
 }
 
+function moveIndicatorToDsState(el: Element): DSState | null {
+	const mi = el.querySelector(".move-indicator");
+	if (!mi) return null;
+	// "TEAM MISMATCH" = WrongMatch (W = waiting/wrong match), otherwise "MOVE TO..." = WrongStation (M = move station)
+	return (mi.textContent ?? "").includes("MISMATCH") ? DSState.WAITING : DSState.MOVE_STATION;
+}
+
 function iconToDsState(topRowEl: Element): DSState {
 	// Check for bypass badge first
 	if (topRowEl.querySelector(".bg-yellow")) return DSState.BYPASS;
-	// Check move-to indicator (wrong station / wrong match)
-	if (topRowEl.querySelector(".move-indicator")) return DSState.MOVE_STATION;
+	// Check move-to indicator inside topRow
+	const fromMoveIndicator = moveIndicatorToDsState(topRowEl);
+	if (fromMoveIndicator !== null) return fromMoveIndicator;
 
 	// DS connection icon is in the first col-3 of the bottom area
 	const col1 = topRowEl.querySelectorAll(".col-3, .col-xl-2")[0];
@@ -360,7 +384,9 @@ function scrapeStation(stationEl: Element, isInMatch: boolean): PartialRobotInfo
 	const teamNumber = parseIntSafe(teamBadge?.textContent);
 
 	// DS / radio / rio / enable state
-	const ds = topRow ? iconToDsState(topRow) : DSState.RED;
+	// Check stationEl directly first: the move-indicator may be a sibling of field-monitor-station-top-row
+	const stationLevelDs = moveIndicatorToDsState(stationEl);
+	const ds = stationLevelDs !== null ? stationLevelDs : topRow ? iconToDsState(topRow) : DSState.RED;
 	const radio = topRow ? iconToRadio(topRow) : false;
 	const rio = topRow ? iconToRio(topRow) : false;
 	const radioQuality = topRow ? iconToRadioQuality(topRow) : null;

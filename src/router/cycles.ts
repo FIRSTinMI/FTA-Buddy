@@ -3,7 +3,7 @@ import { and, asc, desc, eq, isNotNull } from "drizzle-orm";
 import { z } from "zod";
 import { cycleTimeToMS } from "../../shared/cycleTimeToMS";
 import { formatTimeShortNoAgoSeconds } from "../../shared/formatTime";
-import type { CycleData } from "../../shared/types";
+import type { CycleData, EventChecklist } from "../../shared/types";
 import { db } from "../db/db";
 import { cycleLogs, events } from "../db/schema";
 import { eventProcedure, publicProcedure, router } from "../trpc";
@@ -13,6 +13,19 @@ import { subscriptionQueue } from "../util/subscription";
 import { computeOvernightOffset } from "../util/frame-processing";
 import { getTeamAverageCycle } from "../util/team-cycles";
 import { bus } from "../util/eventBus";
+
+function computeChecklistTotals(checklist: EventChecklist | null | undefined) {
+	let present = 0, weighed = 0, inspected = 0, radioProgrammed = 0, connectionTested = 0, total = 0;
+	for (const team of Object.values(checklist ?? {})) {
+		if (team.present) present++;
+		if (team.weighed) weighed++;
+		if (team.inspected) inspected++;
+		if (team.radioProgrammed) radioProgrammed++;
+		if (team.connectionTested) connectionTested++;
+		total++;
+	}
+	return { present, weighed, inspected, radioProgrammed, connectionTested, total };
+}
 
 /** Format milliseconds as "M:SS" - compatible with cycleTimeToMS(). */
 function msTocycleTimeString(ms: number): string {
@@ -382,6 +395,7 @@ export const cycleRouter = router({
 				aheadBehind: event.monitorFrame.time,
 				exactAheadBehind: event.monitorFrame.exactAheadBehind,
 				state: event.monitorFrame.field,
+				checklistTotals: computeChecklistTotals(event.checklist as EventChecklist),
 			};
 		}),
 

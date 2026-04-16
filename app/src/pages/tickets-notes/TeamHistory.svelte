@@ -8,6 +8,7 @@
 	import Spinner from "../../components/Spinner.svelte";
 	import { trpc } from "../../main";
 	import { route } from "../../router";
+	import { eventStore } from "../../stores/event";
 	import { track } from "../../util/telemetry";
 
 	const { team } = route.getParams("/notepad/team/:team");
@@ -81,6 +82,9 @@
 	let convertedEvents = $derived(matchEvents.filter((e) => e.status === "converted").length);
 
 	let pitMapOpen = $state(false);
+	let pitMapSubEventToken = $derived(
+		$eventStore.subEvents?.find((se) => se.teams.some((t) => String(t.number) === team))?.token,
+	);
 
 	function back() {
 		history.back();
@@ -208,4 +212,4 @@
 	</div>
 </div>
 
-<PitMapModal bind:open={pitMapOpen} teamNumber={team} />
+<PitMapModal bind:open={pitMapOpen} teamNumber={team} subEventToken={pitMapSubEventToken} />

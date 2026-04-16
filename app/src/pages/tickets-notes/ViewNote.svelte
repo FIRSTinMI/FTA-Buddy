@@ -55,6 +55,9 @@
 	);
 
 	let pitMapOpen = $state(false);
+	let pitMapSubEventToken = $derived(
+		$eventStore.subEvents?.find((se) => se.teams.some((t) => String(t.number) === note?.team?.toString()))?.token,
+	);
 	let deleteNotePopup = $state(false);
 
 	let editNoteView = $state(false);
@@ -660,7 +663,7 @@
 	</div>
 </div>
 
-<PitMapModal bind:open={pitMapOpen} teamNumber={note?.team?.toString() ?? ""} />
+<PitMapModal bind:open={pitMapOpen} teamNumber={note?.team?.toString() ?? ""} subEventToken={pitMapSubEventToken} />
 
 <!-- Assign-to modal -->
 <NoteAssignModal

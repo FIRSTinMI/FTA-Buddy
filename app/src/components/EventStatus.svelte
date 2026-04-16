@@ -39,6 +39,11 @@
 	let aheadBehind = $state("");
 	let eventName = $state("");
 
+	type ChecklistTotals = { present: number; weighed: number; inspected: number; radioProgrammed: number; connectionTested: number; total: number };
+	let checklistTotals: ChecklistTotals = $state({ present: 0, weighed: 0, inspected: 0, radioProgrammed: 0, connectionTested: 0, total: 0 });
+
+	let qualsStarted = $derived(level === "Qualification" || level === "Playoff");
+
 	const FieldStates = {
 		0: "Unknown",
 		1: "Match Running Teleop",
@@ -90,6 +95,7 @@
 			level = cycleData.level;
 			aheadBehind = cycleData.exactAheadBehind || cycleData.aheadBehind;
 			fieldState = cycleData.state;
+				if (cycleData.checklistTotals) checklistTotals = cycleData.checklistTotals;
 		}
 
 		if (cycleSubscription) cycleSubscription.unsubscribe();
@@ -99,33 +105,31 @@
 			},
 			{
 				onData: (data) => {
-					averageCycleTimeMS = data.averageCycleTime ?? 8 * 60 * 1000;
-					calculatedCycleTime = data.lastCycleTime ? cycleTimeToMS(data.lastCycleTime) : 0;
-					matchStartTime = data.startTime ? new Date(data.startTime) : new Date();
+						averageCycleTimeMS = data.averageCycleTime ?? 8 * 60 * 1000;
+						calculatedCycleTime = data.lastCycleTime ? cycleTimeToMS(data.lastCycleTime) : 0;
+						matchStartTime = data.startTime ? new Date(data.startTime) : new Date();
 
-					lastCycleTimeMS = cycleTimeToMS(data.lastCycleTime ?? "");
-					lastCycleTime = formatTimeShortNoAgo(new Date(new Date().getTime() - lastCycleTimeMS));
+						lastCycleTimeMS = cycleTimeToMS(data.lastCycleTime ?? "");
+						lastCycleTime = formatTimeShortNoAgo(new Date(new Date().getTime() - lastCycleTimeMS));
 
-					if (lastCycleTimeMS < bestCycleTimeMS) {
-						bestCycleTimeMS = lastCycleTimeMS;
-						currentCycleIsBest = true;
-					} else {
-						currentCycleIsBest = false;
-					}
+						if (lastCycleTimeMS < bestCycleTimeMS) {
+							bestCycleTimeMS = lastCycleTimeMS;
+							currentCycleIsBest = true;
+						} else {
+							currentCycleIsBest = false;
+						}
 
-					averageCycleTimeMS = data.averageCycleTime ?? 8 * 60 * 1000;
-					scheduleDetails = data.scheduleDetails;
-					match = data.matchNumber;
-					level = data.level;
-					aheadBehind = data.exactAheadBehind || data.aheadBehind;
-					fieldState = data.state;
+						averageCycleTimeMS = data.averageCycleTime ?? 8 * 60 * 1000;
+						scheduleDetails = data.scheduleDetails;
+						match = data.matchNumber;
+						level = data.level;
+						aheadBehind = data.exactAheadBehind || data.aheadBehind;
+						fieldState = data.state;
 
-					scheduleText = updateScheduleText(match, scheduleDetails, level, averageCycleTimeMS);
-				},
+						scheduleText = updateScheduleText(match, scheduleDetails, level, averageCycleTimeMS);
+					},
 			},
 		);
-
-		scheduleText = updateScheduleText(match, scheduleDetails, level, averageCycleTimeMS);
 
 		console.log({
 			matchStartTime,
@@ -190,24 +194,40 @@
 		<p class="text-lg">{fieldStateText}</p>
 		<h4 class="text-lg font-bold lg:text-xl">{aheadBehind}</h4>
 
-		<div
-			class="lg:text-lg lg:mt-2"
-			style="color: rgba({75 * currentCycleTimeRedness + 180}, {180 * (1 - currentCycleTimeRedness)}, {180 *
-				(1 - currentCycleTimeRedness)}, 1)"
-		>
-			T: {currentCycleTime}
-		</div>
+		{#if !qualsStarted}
+			<h2 class="lg:text-lg font-bold mt-2">Checklist</h2>
+			<div class="grid grid-cols-2 gap-1">
+				<p class="text-sm lg:py-1 text-right">Present</p>
+				<p class="lg:text-lg text-left font-bold {checklistTotals.present === checklistTotals.total && checklistTotals.total > 0 ? 'text-green-500' : ''}">{checklistTotals.present}/{checklistTotals.total}</p>
+				<p class="text-sm lg:py-1 text-right">Weighed</p>
+				<p class="lg:text-lg text-left font-bold {checklistTotals.weighed === checklistTotals.total && checklistTotals.total > 0 ? 'text-green-500' : ''}">{checklistTotals.weighed}/{checklistTotals.total}</p>
+				<p class="text-sm lg:py-1 text-right">Inspected</p>
+				<p class="lg:text-lg text-left font-bold {checklistTotals.inspected === checklistTotals.total && checklistTotals.total > 0 ? 'text-green-500' : ''}">{checklistTotals.inspected}/{checklistTotals.total}</p>
+				<p class="text-sm lg:py-1 text-right">Radio</p>
+				<p class="lg:text-lg text-left font-bold {checklistTotals.radioProgrammed === checklistTotals.total && checklistTotals.total > 0 ? 'text-green-500' : ''}">{checklistTotals.radioProgrammed}/{checklistTotals.total}</p>
+				<p class="text-sm lg:py-1 text-right">Conn. Tested</p>
+				<p class="lg:text-lg text-left font-bold {checklistTotals.connectionTested === checklistTotals.total && checklistTotals.total > 0 ? 'text-green-500' : ''}">{checklistTotals.connectionTested}/{checklistTotals.total}</p>
+			</div>
+		{:else}
+			<div
+				class="lg:text-lg lg:mt-2"
+				style="color: rgba({75 * currentCycleTimeRedness + 180}, {180 * (1 - currentCycleTimeRedness)}, {180 *
+					(1 - currentCycleTimeRedness)}, 1)"
+			>
+				T: {currentCycleTime}
+			</div>
 
-		<h2 class="lg:text-lg font-bold mt-2">Cycle Times</h2>
-		<div class="grid grid-cols-2 gap-2">
-			<p class="text-sm lg:py-1 text-right">Last Match</p>
-			<p class="lg:text-lg text-left font-bold {currentCycleIsBest && 'text-green-500'}">{lastCycleTime}</p>
-			<p class="text-sm lg:py-1 text-right">Best</p>
-			<p class="lg:text-lg text-left font-bold">{formatTimeShortNoAgoSeconds(bestCycleTimeMS)}</p>
-			<p class="text-sm lg:py-1 text-right">Average</p>
-			<p class="lg:text-lg text-left font-bold">{formatTimeShortNoAgoSeconds(averageCycleTimeMS)}</p>
-		</div>
+			<h2 class="lg:text-lg font-bold mt-2">Cycle Times</h2>
+			<div class="grid grid-cols-2 gap-2">
+				<p class="text-sm lg:py-1 text-right">Last Match</p>
+				<p class="lg:text-lg text-left font-bold {currentCycleIsBest && 'text-green-500'}">{lastCycleTime}</p>
+				<p class="text-sm lg:py-1 text-right">Best</p>
+				<p class="lg:text-lg text-left font-bold">{formatTimeShortNoAgoSeconds(bestCycleTimeMS)}</p>
+				<p class="text-sm lg:py-1 text-right">Average</p>
+				<p class="lg:text-lg text-left font-bold">{formatTimeShortNoAgoSeconds(averageCycleTimeMS)}</p>
+			</div>
 
-		<p class="lg:text-lg mt-1 lg:mt-2">{scheduleText}</p>
+			<p class="lg:text-lg mt-1 lg:mt-2">{scheduleText}</p>
+		{/if}
 	</div>
 </Card>

@@ -86,6 +86,7 @@
 	// Pit map
 	let pitMapOpen = $state(false);
 	let pitMapTeam = $state("");
+	let pitMapSubEventToken = $state<string | undefined>(undefined);
 
 	// Nexus status
 	let nexusStatus: NexusStatus | null = $state(null);
@@ -377,6 +378,7 @@
 												class="font-medium hover:underline text-blue-600 dark:text-blue-400"
 												onclick={() => {
 													pitMapTeam = team;
+													pitMapSubEventToken = teamSubEventToken[team];
 													pitMapOpen = true;
 												}}>{team}</button
 											>
@@ -424,6 +426,7 @@
 										class="font-medium hover:underline text-blue-600 dark:text-blue-400"
 										onclick={() => {
 											pitMapTeam = team;
+											pitMapSubEventToken = teamSubEventToken[team];
 											pitMapOpen = true;
 										}}>{team}</button
 									>
@@ -467,4 +470,4 @@
 	</div>
 </div>
 
-<PitMapModal bind:open={pitMapOpen} teamNumber={pitMapTeam} onRemove={removeTeam} />
+<PitMapModal bind:open={pitMapOpen} teamNumber={pitMapTeam} subEventToken={pitMapSubEventToken} onRemove={removeTeam} />

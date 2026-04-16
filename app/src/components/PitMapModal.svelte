@@ -1,16 +1,17 @@
 <script lang="ts">
 	import { Button, Modal } from "flowbite-svelte";
 	import type { PitMapData, PitMapElement } from "../../../shared/types";
-	import { trpc } from "../main";
+	import { trpc, trpcWithEventToken } from "../main";
 	import Spinner from "./Spinner.svelte";
 
 	interface Props {
 		open: boolean;
 		teamNumber: string;
+		subEventToken?: string;
 		onRemove?: (teamNumber: string) => void;
 	}
 
-	let { open = $bindable(), teamNumber, onRemove }: Props = $props();
+	let { open = $bindable(), teamNumber, subEventToken, onRemove }: Props = $props();
 
 	let pitMapData: PitMapData | null = $state(null);
 	let loading = $state(false);
@@ -34,7 +35,8 @@
 		loading = true;
 		error = null;
 		try {
-			pitMapData = await trpc.event.getPitMap.query();
+			const client = subEventToken ? trpcWithEventToken(subEventToken) : trpc;
+			pitMapData = await client.event.getPitMap.query();
 		} catch (e: any) {
 			error = e?.message ?? "Failed to load pit map";
 		} finally {

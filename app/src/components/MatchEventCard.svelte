@@ -12,6 +12,7 @@
 	import { eventStore } from "../stores/event";
 	import { userStore } from "../stores/user";
 	import { getContrastTextColor } from "../util/colorContrast";
+	import { trpcForTeam } from "../util/sub-event-trpc";
 
 	interface Props {
 		matchEvent: MatchEvent;
@@ -55,8 +56,9 @@
 				throw new Error("Missing match event id");
 			}
 
+			const t = trpcForTeam(matchEvent.team);
 			for (const id of eventIds) {
-				await trpc.matchEvents.dismiss.mutate({ id });
+				await t.matchEvents.dismiss.mutate({ id });
 				onDismiss?.(id);
 			}
 		} catch (err: any) {
@@ -75,7 +77,7 @@
 		}
 		converting = true;
 		try {
-			const res = await trpc.matchEvents.convertToNote.mutate({ id });
+			const res = await trpcForTeam(matchEvent.team).matchEvents.convertToNote.mutate({ id });
 			toast("Converted to note", "", "green-500");
 			onConvert?.(id, res.noteId);
 			// If consolidated bypass, dismiss the other events
@@ -83,7 +85,7 @@
 				for (const evt of bypassGroup) {
 					const evtId = evt?.id;
 					if (evtId && evtId !== id) {
-						await trpc.matchEvents.dismiss.mutate({ id: evtId });
+						await trpcForTeam(matchEvent.team).matchEvents.dismiss.mutate({ id: evtId });
 						onDismiss?.(evtId);
 					}
 				}

@@ -586,6 +586,7 @@
 						});
 						eventStore.set({
 							...event,
+							teams: event.subEvents?.flatMap((se) => se.teams) ?? event.teams,
 							code: event.meshedEventCode ?? "",
 							label: event.playoffMode
 								? getPlayoffViewLabel(event.meshedEventCode ?? event.code)

@@ -51,7 +51,11 @@
 
 	// Sub-event field filter for meshed events (hidden in inter-divisional playoffs mode)
 	const availableSubEvents = $derived($eventStore.subEvents ?? []);
-	const hasMeshedFields = $derived(availableSubEvents.length > 1 && !$eventStore.playoffMode);
+	const hasMeshedFields = $derived(
+		availableSubEvents.length > 1 &&
+			!$eventStore.playoffMode &&
+			$userStore.eventToken === $userStore.meshedEventToken,
+	);
 	let selectedFields: string[] = $state(
 		(() => {
 			const subs = $eventStore.subEvents;
@@ -350,7 +354,12 @@
 			const subs = $eventStore.subEvents;
 			if (subs && subs.length > 1) {
 				const isCombined = value.eventToken === value.meshedEventToken;
-				selectedFields = isCombined ? subs.map((e) => e.code) : [$eventStore.code];
+				if (isCombined) {
+					selectedFields = subs.map((e) => e.code);
+				} else {
+					const matchingSub = subs.find((s) => s.token === value.eventToken);
+					selectedFields = matchingSub ? [matchingSub.code] : [];
+				}
 			}
 			fetchAll();
 			startSubscription();
@@ -461,7 +470,7 @@
 	let createModalOpen = $state(false);
 
 	const teamOptions = $derived(
-		$eventStore.teams
+		[...$eventStore.teams]
 			.sort((a, b) => parseInt(a.number) - parseInt(b.number))
 			.map((v) => ({ value: parseInt(v.number), name: `${v.number} – ${v.name}` })),
 	);

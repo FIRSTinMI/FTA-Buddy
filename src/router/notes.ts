@@ -366,10 +366,12 @@ const messagesSubRouter = router({
 				event.code,
 			);
 
-			if (event.slackTeam && note.slack_channel && note.slack_ts) {
+			const noteEvent = note.event_code !== event.code ? await getEvent("", note.event_code) : event;
+
+			if (noteEvent.slackTeam && note.slack_channel && note.slack_ts) {
 				const messageTS = await sendSlackMessage(
 					note.slack_channel,
-					event.slackTeam,
+					noteEvent.slackTeam,
 					{
 						blocks: [
 							{
@@ -391,7 +393,7 @@ const messagesSubRouter = router({
 				);
 				await db
 					.update(messages)
-					.set({ slack_ts: messageTS, slack_channel: event.slackChannel })
+					.set({ slack_ts: messageTS, slack_channel: noteEvent.slackChannel })
 					.where(eq(messages.id, insert[0].id))
 					.execute();
 			}

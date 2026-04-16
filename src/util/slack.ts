@@ -446,6 +446,26 @@ export async function fetchSlackMessage(
 }
 
 /**
+ * Resolves Slack user mentions (<@UXXX>) in a message body to readable names.
+ * Uses FTA-Buddy usernames for linked accounts, falls back to Slack display names.
+ */
+export async function resolveSlackMentions(text: string, teamId: string): Promise<string> {
+	const mentionPattern = /<@([UW][A-Z0-9]+)>/g;
+	const ids = [...new Set([...text.matchAll(mentionPattern)].map((m) => m[1]))];
+	if (!ids.length) return text;
+
+	const resolved = new Map<string, string>();
+	await Promise.all(
+		ids.map(async (id) => {
+			const profile = await resolveSlackUserProfile(id, teamId);
+			resolved.set(id, `@${profile.username}`);
+		}),
+	);
+
+	return text.replace(mentionPattern, (_, id) => resolved.get(id) ?? `@${id}`);
+}
+
+/**
  * Resolves a Slack user ID to an FTA-Buddy Profile.
  * First checks if the Slack user has linked their FTA-Buddy account.
  * Falls back to fetching their display name from the Slack API.

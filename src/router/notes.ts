@@ -20,6 +20,7 @@ import {
 	fetchSlackMessageReactions,
 	fetchSlackThreadReplies,
 	removeSlackReaction,
+	resolveSlackMentions,
 	resolveSlackUserProfile,
 	sendSlackMessage,
 	updateSlackMessage,
@@ -1789,8 +1790,8 @@ function parseNexusMessage(
 
 	// Note text - try "FTA notes: ..." blocks first, then volunteer "needs help with" block, then fall back to text suffix
 	let noteText = "";
-	const ftaNotesMatch = combined.match(/FTA notes[:\s]+(.+?)(?:\n|$)/i);
-	const volunteerNotesMatch = combined.match(/(?:needs|has requested) help with the following:\s*(.+?)(?:\n|$)/i);
+	const ftaNotesMatch = combined.match(/FTA notes[:\s]+([\s\S]+)$/i);
+	const volunteerNotesMatch = combined.match(/(?:needs|has requested) help with the following:\s*([\s\S]+)$/i);
 	if (ftaNotesMatch) {
 		noteText = ftaNotesMatch[1].trim();
 	} else if (volunteerNotesMatch) {
@@ -1954,6 +1955,8 @@ export async function addNoteMessageFromSlack(
 		: { id: -1, role: "CSA", admin: false, username: "Slack User", source: "Slack" };
 	if (!user.source) user.source = "Slack";
 
+	const resolvedText = event.slackTeam ? await resolveSlackMentions(text, event.slackTeam) : text;
+
 	const insert = await db
 		.insert(messages)
 		.values({
@@ -1961,7 +1964,7 @@ export async function addNoteMessageFromSlack(
 			note_id: note.id,
 			author_id: user.id,
 			author: user,
-			text,
+			text: resolvedText,
 			event_code: note.event_code,
 			created_at: new Date(),
 			updated_at: new Date(),
@@ -2120,7 +2123,7 @@ export async function createFromSlashCommand(
 			note_id: insert[0].id,
 			author_id: replyAuthor.id,
 			author: replyAuthor,
-			text: reply.text,
+			text: await resolveSlackMentions(reply.text, slack_workspace_id),
 			event_code: noteEvent.code,
 			created_at: new Date(parseFloat(reply.ts) * 1000),
 			updated_at: new Date(parseFloat(reply.ts) * 1000),

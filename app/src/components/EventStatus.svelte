@@ -78,7 +78,7 @@
 	let scheduleDetails: ScheduleDetails | undefined;
 	let scheduleText = $state("");
 
-	let fieldState: FieldState = 0;
+	let fieldState: FieldState = $state(0);
 	let fieldStateText = $derived(FieldStates[fieldState]);
 
 	onMount(async () => {

@@ -154,6 +154,15 @@
 	<div class="flex flex-col gap-2.5">
 		<div class="flex items-start justify-between gap-3">
 			<div class="flex items-center flex-wrap gap-1.5 min-w-0">
+				{#if isMeshedCombined && subEventForNote}
+					<span
+						class="inline-block px-1.5 py-0.5 rounded font-medium text-[10px]"
+						style="background-color: {subEventForNote.color ?? '#6b7280'}; color: {getContrastTextColor(
+							subEventForNote.color ?? '#6b7280',
+						)}"
+					>{subEventForNote.label || subEventForNote.code}</span
+					>
+				{/if}
 				{#if note.team !== null}
 					<button
 						class="font-bold text-base hover:underline"
@@ -191,14 +200,7 @@
 				{/if}
 			</div>
 			<div class="shrink-0 text-right text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
-				{#if isMeshedCombined && subEventForNote}
-					<span
-						class="inline-block px-1.5 py-0.5 rounded font-medium text-[10px] mb-0.5"
-						style="background-color: {subEventForNote.color ?? '#6b7280'}; color: {getContrastTextColor(
-							subEventForNote.color ?? '#6b7280',
-						)}">{subEventForNote.label || subEventForNote.code}</span
-					>
-				{:else}
+				{#if !isMeshedCombined}
 					<p class="font-medium">{note.event_code}</p>
 				{/if}
 				<p>{time}</p>

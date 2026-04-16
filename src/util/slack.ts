@@ -329,6 +329,31 @@ export async function removeSlackReaction(
 }
 
 /**
+ * Fetches the text of a specific Slack message (typically the parent of a thread).
+ * Uses conversations.replies with limit=1 so the first result is always the parent.
+ */
+export async function fetchSlackMessage(
+	channel_id: string,
+	team_id: string,
+	message_ts: string,
+): Promise<string | null> {
+	const token = await getTokenByTeam(team_id);
+	const url = new URL("https://slack.com/api/conversations.replies");
+	url.searchParams.set("channel", channel_id);
+	url.searchParams.set("ts", message_ts);
+	url.searchParams.set("limit", "1");
+
+	const response = await fetch(url.toString(), {
+		headers: { Authorization: `Bearer ${token}` },
+		signal: AbortSignal.timeout(10_000),
+	});
+
+	const data = await response.json();
+	if (!data.ok || !data.messages?.length) return null;
+	return (data.messages[0].text as string) ?? null;
+}
+
+/**
  * Resolves a Slack user ID to an FTA-Buddy Profile.
  * First checks if the Slack user has linked their FTA-Buddy account.
  * Falls back to fetching their display name from the Slack API.

@@ -16,6 +16,7 @@ import { generateNotesReportPdf } from "../util/notes-report-generator";
 import {
 	addSlackReaction,
 	deleteSlackMessage,
+	fetchSlackMessage,
 	removeSlackReaction,
 	resolveSlackUserProfile,
 	sendSlackMessage,
@@ -1983,4 +1984,149 @@ export async function addNoteMessageFromSlack(
 		}),
 		event.code,
 	);
+}
+
+/**
+ * Handles the /ftabuddy-ticket slash command.
+ * Fetches the parent message of the thread, creates a note, and returns
+ * an ephemeral confirmation with a link to the ticket.
+ */
+export async function createFromSlashCommand(
+	channel_id: string,
+	slack_workspace_id: string,
+	slack_user_id: string,
+	thread_ts: string,
+	teamNumber: number,
+): Promise<{ response_type: "ephemeral"; text?: string; blocks?: any[] }> {
+	const linkedEventRows = await db
+		.select({ code: events.code, slackTeam: events.slackTeam })
+		.from(events)
+		.where(eq(events.slackChannel, channel_id))
+		.execute();
+
+	if (linkedEventRows.length === 0) {
+		return {
+			response_type: "ephemeral",
+			text: "This channel is not linked to an FTA-Buddy event. Use /ftabuddy to link it first.",
+		};
+	}
+
+	const messageText = await fetchSlackMessage(channel_id, slack_workspace_id, thread_ts);
+	if (!messageText) {
+		return {
+			response_type: "ephemeral",
+			text: "Could not fetch the thread message. Make sure the bot has access to this channel.",
+		};
+	}
+
+	const author: Profile = await resolveSlackUserProfile(slack_user_id, slack_workspace_id);
+	if (!author.source) author.source = "Slack";
+
+	// Find the right sub-event for this team (same logic as createFromNexus)
+	let targetEventCode = linkedEventRows[0].code;
+	let linkEvent = await getEvent("", targetEventCode);
+
+	for (const row of linkedEventRows) {
+		const ev = await getEvent("", row.code);
+		if (ev.meshedEvent && ev.subEvents) {
+			const ownerSub = ev.subEvents.find((sub) => sub.teams.some((t) => parseInt(t.number, 10) === teamNumber));
+			if (ownerSub) {
+				targetEventCode = ownerSub.code;
+				linkEvent = ev;
+				break;
+			}
+		} else if (ev.teams.some((t) => parseInt(t.number, 10) === teamNumber)) {
+			targetEventCode = row.code;
+			linkEvent = ev;
+			break;
+		}
+	}
+
+	const noteEvent = targetEventCode === linkEvent.code ? linkEvent : await getEvent("", targetEventCode);
+
+	const noteId = randomUUID();
+	const insert = await db
+		.insert(notes)
+		.values({
+			id: noteId,
+			team: teamNumber,
+			text: messageText,
+			author_id: author.id,
+			author,
+			note_type: "TeamIssue",
+			resolution_status: "Open",
+			match_number: null,
+			play_number: null,
+			tournament_level: null,
+			fms_note_id: null,
+			fms_record_version: null,
+			fms_metadata: null,
+			event_code: noteEvent.code,
+			created_at: new Date(),
+			updated_at: new Date(),
+			request_type: null,
+			slack_ts: thread_ts,
+			slack_channel: channel_id,
+			is_nexus: false,
+		})
+		.returning();
+
+	if (!insert[0]) {
+		return { response_type: "ephemeral", text: "Failed to create ticket." };
+	}
+
+	const noteResult = { ...insert[0], followers: [] as number[] } as Note;
+	bus.publish(`event:${noteEvent.code}:note_update`, { kind: "create", note: noteResult });
+
+	createNotification(
+		linkEvent.users.map((u) => u.id),
+		buildNotification({
+			kind: "note.created",
+			eventCode: noteEvent.code,
+			note: toNoteCtx(noteResult),
+			author: author.username,
+		}),
+		noteEvent.code,
+	);
+
+	const ticketUrl = `https://ftabuddy.com/notepad/view/${linkEvent.code}/${noteId}?token=${linkEvent.token}`;
+
+	// Post a public reply in the thread so everyone in the channel sees the ticket link
+	try {
+		await sendSlackMessage(
+			channel_id,
+			slack_workspace_id,
+			{
+				blocks: [
+					{
+						type: "section",
+						text: { type: "mrkdwn", text: `Ticket created in FTA Buddy for Team ${teamNumber}.` },
+						accessory: {
+							type: "button",
+							text: { type: "plain_text", text: "View Ticket", emoji: true },
+							url: ticketUrl,
+						},
+					},
+				],
+			},
+			thread_ts,
+		);
+	} catch (err) {
+		console.error("[/ftabuddy-ticket] Failed to post thread reply:", err);
+	}
+
+	return {
+		response_type: "ephemeral",
+		blocks: [
+			{
+				type: "section",
+				text: { type: "mrkdwn", text: `Ticket created for Team ${teamNumber}.` },
+				accessory: {
+					type: "button",
+					text: { type: "plain_text", text: "View Ticket", emoji: true },
+					url: ticketUrl,
+				},
+			},
+		],
+	};
 }

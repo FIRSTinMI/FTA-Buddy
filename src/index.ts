@@ -29,6 +29,7 @@ import { matchEventsRouter } from "./router/match-events";
 import {
 	addNoteMessageFromSlack,
 	createFromNexus,
+	createFromSlashCommand,
 	notesRouter,
 	updateNoteAssignmentFromSlack,
 	updateNoteStatusFromSlack,
@@ -214,6 +215,22 @@ app.post("/slack/command", async (req, res) => {
 	try {
 		if (command === "/ftabuddy") {
 			res.send(await linkChannel(args, channel_id, team_id));
+		} else if (command === "/ftabuddy-ticket") {
+			const teamNumber = parseInt(args[0], 10);
+			if (!args[0] || isNaN(teamNumber) || teamNumber < 1 || teamNumber > 9999) {
+				return res.send({
+					response_type: "ephemeral",
+					text: "Usage: /ftabuddy-ticket <team number> (1–9999). Must be run inside a thread.",
+				});
+			}
+			const thread_ts: string | undefined = req.body.thread_ts;
+			if (!thread_ts) {
+				return res.send({
+					response_type: "ephemeral",
+					text: "This command must be used inside a thread. Reply to the message you want to create a ticket from.",
+				});
+			}
+			res.send(await createFromSlashCommand(channel_id, team_id, user_id, thread_ts, teamNumber));
 		} else {
 			throw new Error("Invalid command");
 		}

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { db } from "../db/db";
 import { events, slackServers, users } from "../db/schema";
 import type { Profile } from "../../shared/types";
@@ -71,6 +71,13 @@ export async function linkChannel(args: string[], channel_id: string, team_id: s
 	if (!botInChannel) {
 		throw new Error(`Bot is not in channel, invite the bot using \`/invite @FTA Buddy\`, then try again!`);
 	}
+
+	// Unlink this channel from any previously linked events so stale events don't receive future tickets
+	await db
+		.update(events)
+		.set({ slackChannel: null, slackTeam: null })
+		.where(and(eq(events.slackChannel, channel_id), ne(events.code, eventCode)))
+		.execute();
 
 	// Store the channel in the database
 	await db

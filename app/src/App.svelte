@@ -606,7 +606,10 @@
 						trpc.event.setActiveEvent.mutate({ eventCode: multiEventSelection }).catch(() => {});
 						if (route.pathname.startsWith("/dashboard")) {
 							navigate("/monitor");
-						} else if (route.pathname.startsWith("/monitor")) {
+						} else if (
+							route.pathname.startsWith("/monitor") ||
+							route.pathname.startsWith("/notepad")
+						) {
 							window.location.reload();
 						}
 					}

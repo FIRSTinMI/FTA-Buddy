@@ -110,6 +110,14 @@ export const fieldMonitorRouter = router({
 			// Detects raising and falling edges
 			const processed = detectStatusChange(input, event.monitorFrame);
 
+			// Preserve lastCycleTime BEFORE the async gap in processTeamWarnings.
+			// Two sources (SignalR + scraper) post frames concurrently; if the scraper frame
+			// reads event.monitorFrame.lastCycleTime after the await it may see a stale "unk"
+			// value that was set before the SignalR frame finished writing its valid value.
+			if (!processed.currentFrame.lastCycleTime || processed.currentFrame.lastCycleTime === "unk") {
+				processed.currentFrame.lastCycleTime = event.monitorFrame.lastCycleTime;
+			}
+
 			// Add emoji warnings
 			processed.currentFrame = await processTeamWarnings(event.code, processed.currentFrame, event.monitorFrame);
 
@@ -154,12 +162,6 @@ export const fieldMonitorRouter = router({
 
 			if (!processed.currentFrame.exactAheadBehind && processed.currentFrame.level === "Qualification")
 				processed.currentFrame.exactAheadBehind = event.monitorFrame.exactAheadBehind;
-
-			// Scraper sources always send lastCycleTime: "" - preserve the existing value so
-			// the server-computed cycle time (set by postCycleTime) is not overwritten.
-			if (!processed.currentFrame.lastCycleTime) {
-				processed.currentFrame.lastCycleTime = event.monitorFrame.lastCycleTime;
-			}
 
 			event.monitorFrame = processed.currentFrame;
 			eventLastSeen[event.code] = new Date();

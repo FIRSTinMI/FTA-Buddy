@@ -17,6 +17,8 @@ import {
 	addSlackReaction,
 	deleteSlackMessage,
 	fetchSlackMessage,
+	fetchSlackMessageReactions,
+	fetchSlackThreadReplies,
 	removeSlackReaction,
 	resolveSlackUserProfile,
 	sendSlackMessage,
@@ -2011,6 +2013,28 @@ export async function createFromSlashCommand(
 		};
 	}
 
+	const existingNote = await db.query.notes.findFirst({ where: eq(notes.slack_ts, thread_ts) });
+	if (existingNote) {
+		const existingEvent = await getEvent("", existingNote.event_code);
+		return {
+			response_type: "ephemeral",
+			blocks: [
+				{
+					type: "section",
+					text: {
+						type: "mrkdwn",
+						text: "A ticket already exists for this thread.",
+					},
+					accessory: {
+						type: "button",
+						text: { type: "plain_text", text: "View Ticket", emoji: true },
+						url: `https://ftabuddy.com/notepad/view/${existingEvent.code}/${existingNote.id}?token=${existingEvent.token}`,
+					},
+				},
+			],
+		};
+	}
+
 	const messageText = await fetchSlackMessage(channel_id, slack_workspace_id, thread_ts);
 	if (!messageText) {
 		return {
@@ -2075,8 +2099,46 @@ export async function createFromSlashCommand(
 		return { response_type: "ephemeral", text: "Failed to create ticket." };
 	}
 
+	// Import existing thread replies and reactions before publishing so clients
+	// see a fully-populated note the moment it arrives.
+	const [existingReplies, existingReactions] = await Promise.all([
+		fetchSlackThreadReplies(channel_id, slack_workspace_id, thread_ts).catch(() => []),
+		fetchSlackMessageReactions(channel_id, slack_workspace_id, thread_ts).catch(() => []),
+	]);
+
+	for (const reply of existingReplies) {
+		// Skip bots and system messages
+		if (!reply.user || reply.bot_id) continue;
+		const alreadyExists = await db.query.messages.findFirst({ where: eq(messages.slack_ts, reply.ts) });
+		if (alreadyExists) continue;
+		const replyAuthor = await resolveSlackUserProfile(reply.user, slack_workspace_id);
+		if (!replyAuthor.source) replyAuthor.source = "Slack";
+		await db.insert(messages).values({
+			id: randomUUID(),
+			note_id: insert[0].id,
+			author_id: replyAuthor.id,
+			author: replyAuthor,
+			text: reply.text,
+			event_code: noteEvent.code,
+			created_at: new Date(parseFloat(reply.ts) * 1000),
+			updated_at: new Date(parseFloat(reply.ts) * 1000),
+			slack_ts: reply.ts,
+			slack_channel: channel_id,
+		});
+	}
+
 	const noteResult = { ...insert[0], followers: [] as number[] } as Note;
 	bus.publish(`event:${noteEvent.code}:note_update`, { kind: "create", note: noteResult });
+
+	// Apply existing reactions after the note is published; each fires its own bus update.
+	const checkmarkReaction = existingReactions.find((r) => r.name === "white_check_mark");
+	if (checkmarkReaction?.users.length) {
+		await updateNoteStatusFromSlack(thread_ts, true, checkmarkReaction.users[0]).catch(() => null);
+	}
+	const eyesReaction = existingReactions.find((r) => r.name === "eyes");
+	if (eyesReaction?.users.length) {
+		await updateNoteAssignmentFromSlack(thread_ts, true, eyesReaction.users[0]).catch(() => null);
+	}
 
 	createNotification(
 		linkEvent.users.map((u) => u.id),

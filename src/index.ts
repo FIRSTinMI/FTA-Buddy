@@ -44,7 +44,7 @@ import schema from "./db/schema";
 import { ftcRouter } from "./router/ftc";
 import { getEvent } from "./util/get-event";
 import { decompressStationLog, logAnalysisLoop } from "./util/log-analysis";
-import { linkChannel, sendEphemeralMessage, slackOAuth } from "./util/slack";
+import { linkChannel, openTicketModal, sendEphemeralMessage, slackOAuth } from "./util/slack";
 import { getTeamAverageCycle } from "./util/team-cycles";
 import { eventLastSeen, events, eventCodes } from "./state";
 import * as nexusEventPoller from "./util/nexusEventPoller";
@@ -215,22 +215,6 @@ app.post("/slack/command", async (req, res) => {
 	try {
 		if (command === "/ftabuddy") {
 			res.send(await linkChannel(args, channel_id, team_id));
-		} else if (command === "/ftabuddy-ticket") {
-			const teamNumber = parseInt(args[0], 10);
-			if (!args[0] || isNaN(teamNumber) || teamNumber < 1 || teamNumber > 9999) {
-				return res.send({
-					response_type: "ephemeral",
-					text: "Usage: /ftabuddy-ticket <team number> (1–9999). Must be run inside a thread.",
-				});
-			}
-			const thread_ts: string | undefined = req.body.thread_ts;
-			if (!thread_ts) {
-				return res.send({
-					response_type: "ephemeral",
-					text: "This command must be used inside a thread. Reply to the message you want to create a ticket from.",
-				});
-			}
-			res.send(await createFromSlashCommand(channel_id, team_id, user_id, thread_ts, teamNumber));
 		} else {
 			throw new Error("Invalid command");
 		}
@@ -250,9 +234,56 @@ app.post("/slack/command", async (req, res) => {
 });
 
 app.post("/slack/interact", async (req, res) => {
-	res.sendStatus(200);
 	try {
 		const payload = JSON.parse(req.body.payload);
+
+		// Message shortcut: "Create FTA-Buddy Ticket" from the ⋮ menu on any message.
+		// Must respond 200 first, then open a modal (views.open requires trigger_id within 3s).
+		if (payload.type === "message_action" && payload.callback_id === "create_ftabuddy_ticket") {
+			res.sendStatus(200);
+			await openTicketModal(payload.trigger_id, payload.team.id, payload.channel.id, payload.message.ts);
+			return;
+		}
+
+		// Modal submission: user entered a team number in the ticket creation modal.
+		// Must respond with a JSON body (errors or clear), NOT just 200.
+		if (payload.type === "view_submission" && payload.view.callback_id === "ftabuddy_ticket_modal") {
+			const teamNumberStr: string = payload.view.state.values.team_number_block.team_number_input.value ?? "";
+			const teamNumber = parseInt(teamNumberStr, 10);
+			if (!teamNumberStr || isNaN(teamNumber) || teamNumber < 1 || teamNumber > 9999) {
+				return res.json({
+					response_action: "errors",
+					errors: { team_number_block: "Enter a valid FRC team number (1–9999)." },
+				});
+			}
+
+			const { channel_id, message_ts } = JSON.parse(payload.view.private_metadata);
+			const result = await createFromSlashCommand(
+				channel_id,
+				payload.team.id,
+				payload.user.id,
+				message_ts,
+				teamNumber,
+			);
+
+			// createFromSlashCommand returns { text } for errors, { blocks } for success.
+			if (result.text && !result.blocks) {
+				return res.json({
+					response_action: "update",
+					view: {
+						type: "modal",
+						title: { type: "plain_text", text: "Error" },
+						close: { type: "plain_text", text: "Close" },
+						blocks: [{ type: "section", text: { type: "mrkdwn", text: result.text } }],
+					},
+				});
+			}
+
+			return res.json({ response_action: "clear" });
+		}
+
+		// Block action: link FTA-Buddy account button
+		res.sendStatus(200);
 		const actionId = payload.actions?.[0]?.action_id;
 		if (actionId === "link_ftabuddy_account") {
 			const slack_user_id: string = payload.user.id;
@@ -287,6 +318,7 @@ app.post("/slack/interact", async (req, res) => {
 		}
 	} catch (err) {
 		console.error("[slack/interact]", err);
+		if (!res.headersSent) res.sendStatus(200);
 	}
 });
 

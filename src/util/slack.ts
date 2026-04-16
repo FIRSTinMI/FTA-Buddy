@@ -329,6 +329,98 @@ export async function removeSlackReaction(
 }
 
 /**
+ * Opens a modal prompting the user to enter a team number for ticket creation.
+ * Stores channel_id and message_ts in private_metadata so they survive the modal round-trip.
+ */
+export async function openTicketModal(trigger_id: string, team_id: string, channel_id: string, message_ts: string) {
+	const token = await getTokenByTeam(team_id);
+	const response = await fetch("https://slack.com/api/views.open", {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${token}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			trigger_id,
+			view: {
+				type: "modal",
+				callback_id: "ftabuddy_ticket_modal",
+				private_metadata: JSON.stringify({ channel_id, message_ts }),
+				title: { type: "plain_text", text: "Create FTA-Buddy Ticket" },
+				submit: { type: "plain_text", text: "Create" },
+				close: { type: "plain_text", text: "Cancel" },
+				blocks: [
+					{
+						type: "input",
+						block_id: "team_number_block",
+						label: { type: "plain_text", text: "Team Number" },
+						element: {
+							type: "plain_text_input",
+							action_id: "team_number_input",
+							placeholder: { type: "plain_text", text: "e.g. 254" },
+						},
+					},
+				],
+			},
+		}),
+		signal: AbortSignal.timeout(10_000),
+	});
+	const data = await response.json();
+	if (!data.ok) throw new Error(`views.open error: ${data.error}`);
+}
+
+/**
+ * Fetches all non-parent messages in a thread (replies only, parent excluded).
+ * Returns up to 200 replies; bots and messages without a user are included so
+ * callers can filter as needed.
+ */
+export async function fetchSlackThreadReplies(
+	channel_id: string,
+	team_id: string,
+	message_ts: string,
+): Promise<Array<{ ts: string; text: string; user?: string; bot_id?: string }>> {
+	const token = await getTokenByTeam(team_id);
+	const url = new URL("https://slack.com/api/conversations.replies");
+	url.searchParams.set("channel", channel_id);
+	url.searchParams.set("ts", message_ts);
+	url.searchParams.set("limit", "200");
+
+	const response = await fetch(url.toString(), {
+		headers: { Authorization: `Bearer ${token}` },
+		signal: AbortSignal.timeout(10_000),
+	});
+
+	const data = await response.json();
+	if (!data.ok || !data.messages?.length) return [];
+	// Index 0 is always the parent message; skip it.
+	return data.messages.slice(1);
+}
+
+/**
+ * Fetches the current reactions on a specific Slack message.
+ */
+export async function fetchSlackMessageReactions(
+	channel_id: string,
+	team_id: string,
+	message_ts: string,
+): Promise<Array<{ name: string; users: string[] }>> {
+	const token = await getTokenByTeam(team_id);
+	const url = new URL("https://slack.com/api/reactions.get");
+	url.searchParams.set("channel", channel_id);
+	url.searchParams.set("timestamp", message_ts);
+	url.searchParams.set("full", "true");
+
+	const response = await fetch(url.toString(), {
+		headers: { Authorization: `Bearer ${token}` },
+		signal: AbortSignal.timeout(10_000),
+	});
+
+	const data = await response.json();
+	if (!data.ok) return [];
+	return data.message?.reactions ?? [];
+}
+
+/**
  * Fetches the text of a specific Slack message (typically the parent of a thread).
  * Uses conversations.replies with limit=1 so the first result is always the parent.
  */

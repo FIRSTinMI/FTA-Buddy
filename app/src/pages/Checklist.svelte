@@ -79,7 +79,9 @@
 	// Map team number → sub-event token so combined-view updates hit the right event
 	let teamSubEventToken = $derived(
 		$eventStore.subEvents
-			? Object.fromEntries($eventStore.subEvents.flatMap((se) => se.teams.map((t) => [String(t.number), se.token])))
+			? Object.fromEntries(
+					$eventStore.subEvents.flatMap((se) => se.teams.map((t) => [String(t.number), se.token])),
+				)
 			: ({} as Record<string, string>),
 	);
 

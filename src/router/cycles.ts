@@ -15,7 +15,12 @@ import { getTeamAverageCycle } from "../util/team-cycles";
 import { bus } from "../util/eventBus";
 
 function computeChecklistTotals(checklist: EventChecklist | null | undefined) {
-	let present = 0, weighed = 0, inspected = 0, radioProgrammed = 0, connectionTested = 0, total = 0;
+	let present = 0,
+		weighed = 0,
+		inspected = 0,
+		radioProgrammed = 0,
+		connectionTested = 0,
+		total = 0;
 	for (const team of Object.values(checklist ?? {})) {
 		if (team.present) present++;
 		if (team.weighed) weighed++;

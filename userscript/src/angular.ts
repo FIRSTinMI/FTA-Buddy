@@ -97,7 +97,8 @@ const STATION_STATUS_MAP: Record<number, "Good" | "WrongStation" | "WrongMatch" 
 };
 
 function toStationStatus(v: unknown): "Good" | "WrongStation" | "WrongMatch" | "Unknown" {
-	if (v === "Good" || v === "WrongStation" || v === "WrongMatch" || v === "Unknown") return v as "Good" | "WrongStation" | "WrongMatch" | "Unknown";
+	if (v === "Good" || v === "WrongStation" || v === "WrongMatch" || v === "Unknown")
+		return v as "Good" | "WrongStation" | "WrongMatch" | "Unknown";
 	if (typeof v === "number") return STATION_STATUS_MAP[v] ?? "Unknown";
 	return "Unknown";
 }
@@ -108,7 +109,7 @@ function dsState(s: StationData): DSState {
 	if (s.IsBypassed) return DSState.BYPASS;
 	const status = toStationStatus(s.StationStatus);
 	if (status === "WrongStation") return DSState.MOVE_STATION; // M = move to another station
-	if (status === "WrongMatch") return DSState.WAITING;        // W = wrong match / waiting
+	if (status === "WrongMatch") return DSState.WAITING; // W = wrong match / waiting
 	if (!s.Connection) return DSState.RED;
 	if (status === "Good") return DSState.GREEN;
 	return DSState.GREEN_X;

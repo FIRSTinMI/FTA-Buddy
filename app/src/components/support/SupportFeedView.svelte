@@ -10,6 +10,7 @@
 		TournamentLevel,
 	} from "../../../../shared/types";
 	import { trpc } from "../../main";
+	import { trpcForTeam } from "../../util/sub-event-trpc";
 	import { navigate } from "../../router";
 	import { eventStore } from "../../stores/event";
 	import { settingsStore } from "../../stores/settings";
@@ -592,7 +593,8 @@
 				}
 			}
 
-			const createdNote = await trpc.notes.create.mutate({
+			const client = newNoteType === "TeamIssue" && newTeam != null ? trpcForTeam(newTeam) : trpc;
+			const createdNote = await client.notes.create.mutate({
 				team: newNoteType === "TeamIssue" ? (newTeam ?? null) : null,
 				text: newNoteText,
 				note_type: newNoteType,

@@ -15,7 +15,9 @@ import type { TeamList, EventChecklist } from "../../shared/types";
 async function normalize() {
 	await connect();
 
-	const allEvents = await db.select({ code: events.code, teams: events.teams, checklist: events.checklist }).from(events);
+	const allEvents = await db
+		.select({ code: events.code, teams: events.teams, checklist: events.checklist })
+		.from(events);
 
 	let fixed = 0;
 
@@ -36,7 +38,10 @@ async function normalize() {
 			normalizedChecklist[String(key)] = value;
 		}
 
-		await db.update(events).set({ teams: normalizedTeams, checklist: normalizedChecklist }).where(eq(events.code, event.code));
+		await db
+			.update(events)
+			.set({ teams: normalizedTeams, checklist: normalizedChecklist })
+			.where(eq(events.code, event.code));
 
 		console.log(`Fixed event ${event.code}`);
 		fixed++;

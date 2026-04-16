@@ -346,7 +346,7 @@ export class SignalR extends TypedEventEmitter<SignalREventMap> {
 		if (data.Connection) {
 			if (data.DSLinkActive) return DSState.GREEN;
 			if (data.StationStatus === "WrongStation") return DSState.MOVE_STATION; // M = move to another station
-			if (data.StationStatus === "WrongMatch") return DSState.WAITING;        // W = wrong match / waiting
+			if (data.StationStatus === "WrongMatch") return DSState.WAITING; // W = wrong match / waiting
 			if (data.StationStatus === "Waiting") return DSState.WAITING;
 			return DSState.GREEN_X;
 		}

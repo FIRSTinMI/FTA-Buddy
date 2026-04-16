@@ -271,7 +271,11 @@ export const eventRouter = router({
 				})
 					.then((res) => res.json())
 					.then((teamData) => {
-						teams.push({ number: teamData.team_number.toString(), name: teamData.nickname, inspected: false });
+						teams.push({
+							number: teamData.team_number.toString(),
+							name: teamData.nickname,
+							inspected: false,
+						});
 						checklist[teamData.team_number.toString()] = {
 							present: false,
 							weighed: false,

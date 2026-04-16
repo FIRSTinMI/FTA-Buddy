@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Button, Modal, Textarea } from "flowbite-svelte";
 	import type { TournamentLevel } from "../../../../shared/types";
-	import { trpc } from "../../main";
 	import { toast } from "../../util/toast";
+	import { trpcForTeam } from "../../util/sub-event-trpc";
 
 	interface Props {
 		open: boolean;
@@ -80,7 +80,7 @@
 		if (!text || saving) return;
 		saving = true;
 		try {
-			await trpc.notes.create.mutate({
+			await trpcForTeam(teamNumber).notes.create.mutate({
 				team: teamNumber,
 				text,
 				note_type: "TeamIssue",

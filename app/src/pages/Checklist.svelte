@@ -10,7 +10,6 @@
 		TableHeadCell,
 	} from "flowbite-svelte";
 	import { onDestroy, onMount } from "svelte";
-	import { get } from "svelte/store";
 	import type { EventChecklist, NexusStatus, TeamChecklist } from "../../../shared/types";
 	import PitMapModal from "../components/PitMapModal.svelte";
 	import Spinner from "../components/Spinner.svelte";
@@ -20,19 +19,9 @@
 
 	let checklist: EventChecklist = $state({});
 	let checklistPromise = trpc.checklist.get.query();
-	const teamNames: { [key: string]: string } = $state({});
-
-	for (let team of get(eventStore).teams) {
-		let name = team.name;
-		if (name.length > 20) {
-			name = name.slice(0, 20) + "...";
-		}
-
-		teamNames[team.number] = name;
-	}
 
 	checklistPromise.then((c: EventChecklist) => {
-		checklist = c;
+		mergeChecklist(c);
 		updateTotals(checklist);
 	});
 
@@ -62,6 +51,17 @@
 			$userStore.meshedEventToken === $userStore.eventToken &&
 			!!$eventStore.subEvents?.length,
 	);
+
+	// Team names are derived reactively so combined-view teams are always populated
+	let teamNames = $derived.by(() => {
+		const map: Record<string, string> = {};
+		for (const team of $eventStore.teams ?? []) {
+			let name = team.name;
+			if (name.length > 20) name = name.slice(0, 20) + "...";
+			map[String(team.number)] = name;
+		}
+		return map;
+	});
 
 	let meshedGroups = $derived(
 		isMeshedCombined && $eventStore.subEvents
@@ -122,9 +122,53 @@
 	async function removeTeam(team: string) {
 		await trpc.event.removeTeam.mutate({ teamNumber: team });
 		delete checklist[team];
-		delete teamNames[team];
-		checklist = { ...checklist };
 		updateTotals(checklist);
+	}
+
+	// Merge incoming server data into the existing checklist in place.
+	// Mutating existing objects (rather than replacing the whole checklist) keeps
+	// Svelte's fine-grained reactivity from re-rendering every row on each push.
+	function mergeChecklist(c: EventChecklist) {
+		for (const team of Object.keys(checklist)) {
+			if (!c[team]) delete checklist[team];
+		}
+		for (const [team, data] of Object.entries(c)) {
+			if (checklist[team]) {
+				Object.assign(checklist[team], data);
+			} else {
+				checklist[team] = data;
+			}
+		}
+	}
+
+	// Updates that failed to reach the server while offline - flushed on reconnect.
+	let pendingUpdates: Array<{
+		team: string;
+		key: "present" | "inspected" | "radioProgrammed" | "connectionTested";
+		value: boolean;
+		subToken: string | undefined;
+	}> = [];
+	let isFlushing = false;
+
+	async function flushPending() {
+		if (isFlushing || pendingUpdates.length === 0) return;
+		isFlushing = true;
+		const toFlush = pendingUpdates.splice(0);
+		const byToken = new Map<string | undefined, typeof toFlush>();
+		for (const u of toFlush) {
+			if (!byToken.has(u.subToken)) byToken.set(u.subToken, []);
+			byToken.get(u.subToken)!.push(u);
+		}
+		try {
+			for (const [subToken, updates] of byToken) {
+				const client = subToken ? trpcWithEventToken(subToken) : trpc;
+				await client.checklist.update.mutate(updates.map(({ team, key, value }) => ({ team, key, value })));
+			}
+		} catch {
+			// Still offline - restore items for the next flush attempt
+			pendingUpdates.unshift(...toFlush);
+		}
+		isFlushing = false;
 	}
 
 	async function updateChecklist(
@@ -132,20 +176,38 @@
 		key: "present" | "inspected" | "radioProgrammed" | "connectionTested",
 		value: boolean,
 	) {
-		const updated = [{ team: team, key, value }];
+		const updated: Array<{
+			team: string;
+			key: "present" | "inspected" | "radioProgrammed" | "connectionTested";
+			value: boolean;
+		}> = [{ team, key, value }];
 
 		if (["inspected", "radioProgrammed", "connectionTested"].includes(key) && value) {
-			updated.push({ team: team, key: "present", value: true });
+			updated.push({ team, key: "present", value: true });
 		}
 
 		if (key === "connectionTested" && value) {
-			updated.push({ team: team, key: "radioProgrammed", value: true });
+			updated.push({ team, key: "radioProgrammed", value: true });
 		}
+
+		// Apply optimistically so the UI is instant
+		for (const u of updated) {
+			checklist[u.team][u.key] = u.value;
+		}
+		updateTotals(checklist);
 
 		const subToken = isMeshedCombined ? teamSubEventToken[team] : undefined;
 		const client = subToken ? trpcWithEventToken(subToken) : trpc;
-		await client.checklist.update.mutate(updated);
-		updateTotals(checklist);
+		try {
+			await client.checklist.update.mutate(updated);
+		} catch {
+			// Roll back optimistic update and queue for retry when connection returns
+			for (const u of updated) {
+				checklist[u.team][u.key] = !u.value;
+			}
+			updateTotals(checklist);
+			pendingUpdates.push(...updated.map((u) => ({ ...u, subToken })));
+		}
 	}
 
 	// How long without data before the connection is considered stale.
@@ -168,10 +230,13 @@
 		// (visibilitychange, onError, and watchdog can all fire simultaneously).
 		const generation = ++subscriptionGeneration;
 
+		// Flush any updates that were queued while the connection was poor
+		await flushPending();
+
 		try {
 			const c = await trpc.checklist.get.query();
 			if (generation !== subscriptionGeneration) return; // superseded
-			checklist = c;
+			mergeChecklist(c);
 			updateTotals(checklist);
 		} catch {
 			/* ignore */
@@ -186,7 +251,7 @@
 			{
 				onData: (c: EventChecklist) => {
 					lastReceivedAt = Date.now();
-					checklist = c;
+					mergeChecklist(c);
 					updateTotals(checklist);
 				},
 				onError: (err) => {

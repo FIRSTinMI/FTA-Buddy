@@ -159,8 +159,7 @@
 						class="inline-block px-1.5 py-0.5 rounded font-medium text-[10px]"
 						style="background-color: {subEventForNote.color ?? '#6b7280'}; color: {getContrastTextColor(
 							subEventForNote.color ?? '#6b7280',
-						)}"
-					>{subEventForNote.label || subEventForNote.code}</span
+						)}">{subEventForNote.label || subEventForNote.code}</span
 					>
 				{/if}
 				{#if note.team !== null}

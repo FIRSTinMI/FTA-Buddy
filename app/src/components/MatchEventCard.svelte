@@ -204,10 +204,9 @@
 					{#if isMeshedCombined && subEventForMatchEvent}
 						<span
 							class="inline-block px-1.5 py-0.5 rounded font-medium text-[10px]"
-							style="background-color: {subEventForMatchEvent.color ?? '#6b7280'}; color: {getContrastTextColor(
-								subEventForMatchEvent.color ?? '#6b7280',
-							)}"
-						>{subEventForMatchEvent.label || subEventForMatchEvent.code}</span
+							style="background-color: {subEventForMatchEvent.color ??
+								'#6b7280'}; color: {getContrastTextColor(subEventForMatchEvent.color ?? '#6b7280')}"
+							>{subEventForMatchEvent.label || subEventForMatchEvent.code}</span
 						>
 					{/if}
 					{#if matchEvent.team !== null}

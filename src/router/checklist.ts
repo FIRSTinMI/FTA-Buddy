@@ -80,22 +80,41 @@ export const checklistRouter = router({
 
 			let unsubs: Array<() => void>;
 			let heartbeatFn: () => void;
+			// Hoisted so the finally block can always clear it, even if only the
+			// meshed-event path sets it.
+			let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 			if (event.subEvents) {
 				const subEventCodes = (event.subEvents as Array<{ code: string }>).map((e) => e.code);
-				async function getMerged(): Promise<EventChecklist> {
-					const rows = await db
-						.select({ checklist: events.checklist })
-						.from(events)
-						.where(inArray(events.code, subEventCodes));
-					const merged: EventChecklist = {};
-					for (const row of rows) Object.assign(merged, row.checklist as EventChecklist);
-					return merged;
+
+				// Seed merged state from the DB once at subscription creation.
+				// Bus handlers patch it in-place afterwards — no further DB queries needed.
+				const rows = await db
+					.select({ checklist: events.checklist })
+					.from(events)
+					.where(inArray(events.code, subEventCodes));
+				const merged: EventChecklist = {};
+				for (const row of rows) Object.assign(merged, row.checklist as EventChecklist);
+
+				// Coalesce rapid updates (e.g. Nexus bulk-syncing 30 teams at once)
+				// into a single push every 50 ms at most.
+				function schedulePush() {
+					if (signal?.aborted) return;
+					if (debounceTimer) clearTimeout(debounceTimer);
+					debounceTimer = setTimeout(() => {
+						debounceTimer = null;
+						push({ ...merged });
+					}, 50);
 				}
+
 				unsubs = subEventCodes.map((code) =>
-					bus.subscribe(`event:${code}:checklist`, async () => push(await getMerged())),
+					bus.subscribe(`event:${code}:checklist`, (data) => {
+						// Patch only this division's teams into the shared snapshot.
+						Object.assign(merged, data as EventChecklist);
+						schedulePush();
+					}),
 				);
-				heartbeatFn = async () => push(await getMerged());
+				heartbeatFn = () => push({ ...merged });
 			} else {
 				unsubs = [bus.subscribe(`event:${event.code}:checklist`, (data) => push(data as EventChecklist))];
 				heartbeatFn = () => push(event.checklist as EventChecklist);
@@ -109,6 +128,7 @@ export const checklistRouter = router({
 			} finally {
 				unsubs.forEach((fn) => fn());
 				clearInterval(heartbeat);
+				if (debounceTimer) clearTimeout(debounceTimer);
 			}
 		}),
 });

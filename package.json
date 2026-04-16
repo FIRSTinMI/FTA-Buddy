@@ -16,6 +16,7 @@
 		"generate-migration": "drizzle-kit generate",
 		"migrate": "bun run src/db/migrate",
 		"userscript": "bun run --cwd userscript build",
+		"normalize-teams": "bun run src/db/normalize-team-numbers.ts",
 		"format": "prettier --write ."
 	},
 	"engines": {

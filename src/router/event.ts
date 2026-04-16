@@ -249,7 +249,7 @@ export const eventRouter = router({
 			if (teamsData) {
 				for (let team of teamsData) {
 					teams.push({ number: team.team_number.toString(), name: team.nickname, inspected: false });
-					checklist[team.team_number] = {
+					checklist[team.team_number.toString()] = {
 						present: false,
 						weighed: false,
 						inspected: false,
@@ -545,8 +545,8 @@ export const eventRouter = router({
 
 			newTeams = (teamsData as { team_number: number; nickname: string; name: string }[]).map((team) => {
 				const existing = existingTeams.find((t) => t.number.toString() === team.team_number.toString());
-				if (!checklist[team.team_number]) {
-					checklist[team.team_number] = {
+				if (!checklist[team.team_number.toString()]) {
+					checklist[team.team_number.toString()] = {
 						present: false,
 						weighed: false,
 						inspected: false,
@@ -983,7 +983,7 @@ export const eventRouter = router({
 		const teams = event.teams as TeamList;
 		const checklist = event.checklist as EventChecklist;
 
-		event.teams = teams.filter((t) => t.number !== input.teamNumber);
+		event.teams = teams.filter((t) => String(t.number) !== input.teamNumber);
 		delete checklist[input.teamNumber];
 		event.checklist = checklist;
 

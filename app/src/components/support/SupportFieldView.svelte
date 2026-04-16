@@ -709,7 +709,7 @@
 	{@const liveRobot = monitorFrame?.[stationKey] as RobotInfo | undefined}
 	{@const currentMatchId = matchIndex >= 0 ? (allMatches[matchIndex]?.id ?? undefined) : undefined}
 	{@const td = teamData[teamNum]}
-	{@const teamName = $eventStore.teams.find((t) => t.number === String(teamNum))?.name ?? ""}
+	{@const teamName = $eventStore.teams.find((t) => String(t.number) === String(teamNum))?.name ?? ""}
 	{@const currentEventCodes = [$eventStore.code, ...($eventStore.subEvents?.map((se) => se.code) ?? [])]}
 	{@const currentNotes = td && !td.loading ? td.notes.filter((n) => currentEventCodes.includes(n.event_code)) : []}
 	{@const hasOpenNote = currentNotes.some((n) => n.resolution_status === "Open" || n.resolution_status === null)}
@@ -1013,7 +1013,7 @@
 <AddQuickNoteModal
 	bind:open={modalOpen}
 	teamNumber={modalTeamNum}
-	teamName={$eventStore.teams.find((t) => t.number === String(modalTeamNum))?.name ?? ""}
+	teamName={$eventStore.teams.find((t) => String(t.number) === String(modalTeamNum))?.name ?? ""}
 	alliance={modalTeamNum > 0 && teams
 		? [teams.blue1, teams.blue2, teams.blue3].includes(modalTeamNum)
 			? "blue"

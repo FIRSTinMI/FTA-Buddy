@@ -67,7 +67,7 @@
 		isMeshedCombined && $eventStore.subEvents
 			? $eventStore.subEvents.map((subEvent) => {
 					const teams = subEvent.teams
-						.map((team) => [team.number, checklist[team.number]] as [string, TeamChecklist])
+						.map((team) => [String(team.number), checklist[String(team.number)]] as [string, TeamChecklist])
 						.filter(([_, items]) => items !== undefined)
 						.filter(([_, items]) => (sortBy ? !items[sortBy] : true))
 						.sort(([a], [b]) => parseInt(a) - parseInt(b));
@@ -79,7 +79,7 @@
 	// Map team number → sub-event token so combined-view updates hit the right event
 	let teamSubEventToken = $derived(
 		$eventStore.subEvents
-			? Object.fromEntries($eventStore.subEvents.flatMap((se) => se.teams.map((t) => [t.number, se.token])))
+			? Object.fromEntries($eventStore.subEvents.flatMap((se) => se.teams.map((t) => [String(t.number), se.token])))
 			: ({} as Record<string, string>),
 	);
 

@@ -1,10 +1,12 @@
 import { TRPCError } from "@trpc/server";
 import { eq, inArray } from "drizzle-orm";
+import SuperJSON from "superjson";
 import { eventCodes, eventLastSeen, events } from "../state";
 import { DEFAULT_MONITOR } from "../../shared/constants";
 import type {
 	EventAutoEventSettings,
 	EventChecklist,
+	MonitorFrame,
 	NexusStatus,
 	Note,
 	ScheduleDetails,
@@ -12,6 +14,7 @@ import type {
 	TeamList,
 } from "../../shared/types";
 import { bus } from "./eventBus";
+import { redis } from "./redis";
 import { db } from "../db/db";
 import schema from "../db/schema";
 import { getEventNotes } from "../router/notes";
@@ -168,12 +171,31 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 			eventLastSeen[eventCode] = new Date();
 			bus.publish("global:new_event", eventCode);
 
+			// Hydrate monitorFrame from Redis so this instance starts with
+			// the latest state even if another instance has been handling frames.
+			try {
+				const stored = await redis.get(`ftabuddy:event:${eventCode}:monitor_frame`);
+				if (stored) {
+					events[eventCode].monitorFrame = SuperJSON.parse<MonitorFrame>(stored);
+				}
+			} catch (err) {
+				console.warn(`[getEvent] Failed to hydrate monitorFrame from Redis for ${eventCode}:`, err);
+			}
+
+			// Keep monitorFrame in sync across instances: when another instance
+			// publishes a frame, update our local copy so that any code reading
+			// event.monitorFrame (e.g. cycle subscription field_status listener,
+			// getLastCycleTime query) sees current data.
+			const frameUnsub = bus.subscribe(`event:${eventCode}:frame`, (data) => {
+				if (events[eventCode]) events[eventCode].monitorFrame = data as MonitorFrame;
+			});
+
 			// Keep playoffMode in sync across instances; track unsub for cleanup on eviction
 			const playoffUnsub = bus.subscribe(`event:${eventCode}:playoff_mode`, (data) => {
 				if (events[eventCode]) events[eventCode].playoffMode = data as boolean;
 			});
 			const cleanups = eventBusCleanups.get(eventCode) ?? [];
-			cleanups.push(playoffUnsub);
+			cleanups.push(frameUnsub, playoffUnsub);
 			eventBusCleanups.set(eventCode, cleanups);
 
 			if (event.nexusApiKey) {

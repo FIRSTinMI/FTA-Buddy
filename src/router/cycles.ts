@@ -130,7 +130,26 @@ export const cycleRouter = router({
 				}
 			}
 
-			bus.publish(`event:${event.code}:cycle`, {});
+			// Build the full cycle data payload so all instances (including those
+			// that didn't handle this request) can push accurate data to subscribers
+			// without reading stale local in-memory state.
+			const cyclePayload: CycleData = {
+				eventCode: event.code,
+				startTime: event.lastMatchStart,
+				refEndTime: event.lastMatchRefDone,
+				scoresPostedTime: event.lastMatchScoresPosted,
+				prestartTime: event.lastPrestartDone,
+				endTime: event.lastMatchEnd,
+				matchNumber: event.monitorFrame.match,
+				lastCycleTime: event.monitorFrame.lastCycleTime,
+				averageCycleTime: await getAverageCycleTime(event.code),
+				level: event.monitorFrame.level,
+				aheadBehind: event.monitorFrame.time,
+				state: event.monitorFrame.field,
+				scheduleDetails: event.scheduleDetails,
+				exactAheadBehind: event.monitorFrame.exactAheadBehind || event.monitorFrame.time,
+			};
+			bus.publish(`event:${event.code}:cycle`, cyclePayload);
 		}),
 
 	subscription: publicProcedure
@@ -152,7 +171,16 @@ export const cycleRouter = router({
 
 			const { push, drain } = subscriptionQueue<CycleData>(signal!);
 
-			const listener = async () => {
+			// Use the payload from the bus directly — avoids reading stale local
+			// in-memory state when this instance didn't handle the original request.
+			const cycleListener = (data: unknown) => {
+				const payload = data as CycleData;
+				push(payload);
+			};
+
+			// field_status events don't carry CycleData, so build it from local state
+			// (best-effort; the authoritative cycle updates come from the cycle channel).
+			const fieldListener = async () => {
 				push({
 					eventCode: event.code,
 					startTime: event.lastMatchStart,
@@ -171,8 +199,8 @@ export const cycleRouter = router({
 				});
 			};
 
-			const unsubCycle = bus.subscribe(`event:${event.code}:cycle`, listener);
-			const unsubField = bus.subscribe(`event:${event.code}:field_status`, listener);
+			const unsubCycle = bus.subscribe(`event:${event.code}:cycle`, cycleListener);
+			const unsubField = bus.subscribe(`event:${event.code}:field_status`, fieldListener);
 
 			try {
 				yield* drain();

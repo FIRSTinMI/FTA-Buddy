@@ -435,9 +435,7 @@
 				teams: event.subEvents?.flatMap((se) => se.teams) ?? event.teams,
 				code: event.meshedEventCode ?? "",
 				pin: event.meshedEventPin ?? event.pin,
-				label: event.playoffMode
-					? getPlayoffViewLabel(event.meshedEventCode ?? event.code)
-					: "Combined",
+				label: event.playoffMode ? getPlayoffViewLabel(event.meshedEventCode ?? event.code) : "Combined",
 			});
 			if (event.meshedEventCode)
 				trpc.event.setActiveEvent.mutate({ eventCode: event.meshedEventCode }).catch(() => {});
@@ -612,13 +610,18 @@
 					onclick={() => (eventSwitcherOpen = !eventSwitcherOpen)}
 				>
 					<span>
-						{#if multiEventSelection === 'combined'}
+						{#if multiEventSelection === "combined"}
 							{event.playoffMode ? getPlayoffViewLabel(event.meshedEventCode ?? event.code) : "Combined"}
 						{:else}
 							{event.subEvents.find((e) => e.code === multiEventSelection)?.label ?? multiEventSelection}
 						{/if}
 					</span>
-					<svg class="w-3 h-3 ml-2 transition-transform {eventSwitcherOpen ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<svg
+						class="w-3 h-3 ml-2 transition-transform {eventSwitcherOpen ? 'rotate-180' : ''}"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" />
 					</svg>
 				</button>
@@ -626,7 +629,9 @@
 					<div class="flex flex-col gap-1 mt-1">
 						<button
 							type="button"
-							class="w-full text-left px-3 py-1.5 rounded-lg text-sm {multiEventSelection === 'combined' ? 'bg-primary-700 text-white' : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white'}"
+							class="w-full text-left px-3 py-1.5 rounded-lg text-sm {multiEventSelection === 'combined'
+								? 'bg-primary-700 text-white'
+								: 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white'}"
 							onclick={() => selectMeshedEvent("combined")}
 						>
 							{event.playoffMode ? getPlayoffViewLabel(event.meshedEventCode ?? event.code) : "Combined"}
@@ -634,7 +639,10 @@
 						{#each event.subEvents as subEvent (subEvent.code)}
 							<button
 								type="button"
-								class="w-full text-left px-3 py-1.5 rounded-lg text-sm {multiEventSelection === subEvent.code ? 'bg-primary-700 text-white' : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white'}"
+								class="w-full text-left px-3 py-1.5 rounded-lg text-sm {multiEventSelection ===
+								subEvent.code
+									? 'bg-primary-700 text-white'
+									: 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white'}"
 								onclick={() => selectMeshedEvent(subEvent.code)}
 							>
 								{subEvent.label}

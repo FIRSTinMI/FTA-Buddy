@@ -25,6 +25,8 @@
 		<Badge color="green">Open</Badge>
 	{:else if note.resolution_status === "Resolved"}
 		<Badge color="gray">Resolved{note.resolved_by ? ` by ${note.resolved_by.username}` : ""}</Badge>
+	{:else if note.resolution_status === "Refused"}
+		<Badge color="gray">Refused{note.resolved_by ? ` by ${note.resolved_by.username}` : ""}</Badge>
 	{:else}
 		<Badge color="gray">N/A</Badge>
 	{/if}

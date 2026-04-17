@@ -76,7 +76,7 @@
 	});
 
 	let openNotes = $derived(notes.filter((n) => n.resolution_status === "Open").length);
-	let resolvedNotes = $derived(notes.filter((n) => n.resolution_status === "Resolved").length);
+	let resolvedNotes = $derived(notes.filter((n) => n.resolution_status === "Resolved" || n.resolution_status === "Refused").length);
 	let activeEvents = $derived(matchEvents.filter((e) => e.status === "active").length);
 	let dismissedEvents = $derived(matchEvents.filter((e) => e.status === "dismissed").length);
 	let convertedEvents = $derived(matchEvents.filter((e) => e.status === "converted").length);

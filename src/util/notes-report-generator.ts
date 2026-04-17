@@ -47,6 +47,8 @@ function humanizeStatus(s: string | null | undefined): string {
 			return "Resolved";
 		case "NotApplicable":
 			return "N/A";
+		case "Refused":
+			return "Refused";
 		default:
 			return s;
 	}
@@ -193,7 +195,7 @@ export async function generateNotesReportPdf(eventCode: string, eventName: strin
 		}
 		const avgOpenMs = closedCount > 0 ? totalOpenMs / closedCount : null;
 		const openCount = teamNotes.filter((n) => n.resolution_status === "Open").length;
-		const resolvedCount = teamNotes.filter((n) => n.resolution_status === "Resolved").length;
+		const resolvedCount = teamNotes.filter((n) => n.resolution_status === "Resolved" || n.resolution_status === "Refused").length;
 
 		ensureSpace(16);
 

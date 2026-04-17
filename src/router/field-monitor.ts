@@ -104,7 +104,13 @@ export const fieldMonitorRouter = router({
 			// Infer level from schedule when scraping mode reports "None" - match 999 is always a test match
 			if (input.level === "None" && input.match > 0 && input.match !== 999) {
 				const scheduledMatch = event.scheduleDetails?.matches?.find((m) => m.match === input.match);
-				if (scheduledMatch) (input as any).level = scheduledMatch.level;
+				if (scheduledMatch) {
+					(input as any).level = scheduledMatch.level;
+				} else if (event.monitorFrame.level !== "None") {
+					// Preserve current level when scraper reports transient "None"
+					// (Angular component may briefly report no tournament level during state transitions)
+					(input as any).level = event.monitorFrame.level;
+				}
 			}
 
 			// Detects raising and falling edges
@@ -121,7 +127,10 @@ export const fieldMonitorRouter = router({
 			// Add emoji warnings
 			processed.currentFrame = await processTeamWarnings(event.code, processed.currentFrame, event.monitorFrame);
 
-			if (event.monitorFrame.field !== processed.currentFrame.field) {
+			const prevField = event.monitorFrame.field;
+			const fieldChanged = prevField !== processed.currentFrame.field;
+
+			if (fieldChanged) {
 				if (processed.currentFrame.field === FieldState.PRESTART_COMPLETED) {
 					event.lastPrestartDone = new Date();
 				} else if (processed.currentFrame.field === FieldState.MATCH_RUNNING_AUTO) {
@@ -153,17 +162,21 @@ export const fieldMonitorRouter = router({
 					processed.currentFrame.exactAheadBehind = exactAheadBehind;
 				} else if (processed.currentFrame.field === FieldState.MATCH_OVER) {
 					event.lastMatchEnd = new Date();
-				} else if (event.monitorFrame.field === FieldState.READY_FOR_POST_RESULT) {
+				} else if (prevField === FieldState.READY_FOR_POST_RESULT) {
 					event.lastMatchScoresPosted = new Date();
 				}
-
-				bus.publish(`event:${event.code}:field_status`, processed.currentFrame.field);
 			}
 
 			if (!processed.currentFrame.exactAheadBehind && processed.currentFrame.level === "Qualification")
 				processed.currentFrame.exactAheadBehind = event.monitorFrame.exactAheadBehind;
 
+			// Update monitorFrame BEFORE publishing field_status so that
+			// subscription listeners (which read event.monitorFrame) see current data.
 			event.monitorFrame = processed.currentFrame;
+
+			if (fieldChanged) {
+				bus.publish(`event:${event.code}:field_status`, processed.currentFrame.field);
+			}
 			eventLastSeen[event.code] = new Date();
 
 			event.history.push(processed.currentFrame);

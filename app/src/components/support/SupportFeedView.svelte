@@ -100,7 +100,7 @@
 			if (statusFilter === "Open") {
 				feed = feed.filter((n) => n.resolution_status === "Open");
 			} else if (statusFilter === "Resolved") {
-				feed = feed.filter((n) => n.resolution_status === "Resolved");
+				feed = feed.filter((n) => n.resolution_status === "Resolved" || n.resolution_status === "Refused");
 			}
 
 			// Field filter

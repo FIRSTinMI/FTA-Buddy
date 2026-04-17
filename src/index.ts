@@ -250,10 +250,10 @@ app.post("/slack/interact", async (req, res) => {
 		if (payload.type === "view_submission" && payload.view.callback_id === "ftabuddy_ticket_modal") {
 			const teamNumberStr: string = payload.view.state.values.team_number_block.team_number_input.value ?? "";
 			const teamNumber = parseInt(teamNumberStr, 10);
-			if (!teamNumberStr || isNaN(teamNumber) || teamNumber < 1 || teamNumber > 9999) {
+			if (!teamNumberStr || isNaN(teamNumber) || teamNumber < 1 || teamNumber > 99999) {
 				return res.json({
 					response_action: "errors",
-					errors: { team_number_block: "Enter a valid FRC team number (1–9999)." },
+					errors: { team_number_block: "Enter a valid team number (1–99999)." },
 				});
 			}
 

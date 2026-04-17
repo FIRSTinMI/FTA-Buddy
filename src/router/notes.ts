@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { randomUUID } from "crypto";
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { formatTimeShortNoAgoMinutes } from "../../shared/formatTime";
 import { buildNotification, toNoteCtx } from "../../shared/notifications";
@@ -1002,6 +1002,118 @@ export const notesRouter = router({
 
 		return note.id;
 	}),
+
+	merge: eventProcedure
+		.input(
+			z.object({
+				source_id: z.string().uuid(),
+				target_id: z.string().uuid(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			if (input.source_id === input.target_id) {
+				throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot merge a note with itself" });
+			}
+
+			const event = await getEvent(ctx.eventToken as string);
+
+			let eventCodes = [event.code];
+			if (event.meshedEvent && event.subEvents && !event.playoffMode) {
+				eventCodes = eventCodes.concat(event.subEvents.map((se) => se.code));
+			}
+
+			const [sourceNote, targetNote] = await Promise.all([
+				db.query.notes.findFirst({
+					where: and(eq(notes.id, input.source_id), inArray(notes.event_code, eventCodes)),
+					with: { messages: { orderBy: [asc(messages.id)] } },
+				}),
+				db.query.notes.findFirst({
+					where: and(eq(notes.id, input.target_id), inArray(notes.event_code, eventCodes)),
+				}),
+			]);
+
+			if (!sourceNote)
+				throw new TRPCError({ code: "NOT_FOUND", message: "Source note not found or not accessible" });
+			if (!targetNote)
+				throw new TRPCError({ code: "NOT_FOUND", message: "Target note not found or not accessible" });
+
+			// Move all messages from source to target (update event_code for cross-division merges)
+			if (sourceNote.messages && sourceNote.messages.length > 0) {
+				await db
+					.update(messages)
+					.set({ note_id: input.target_id, event_code: targetNote.event_code })
+					.where(eq(messages.note_id, input.source_id));
+			}
+
+			// Add system message noting the merge origin
+			const systemProfile: Profile = { id: -1, username: "Field", role: "FTA", admin: false };
+			const mergeLabel = sourceNote.team
+				? `Merged from ticket for team ${sourceNote.team}`
+				: `Merged from note ${input.source_id.slice(0, 8)}`;
+			const systemMsgInsert = await db
+				.insert(messages)
+				.values({
+					id: randomUUID(),
+					note_id: input.target_id,
+					author_id: -1,
+					author: systemProfile,
+					text: mergeLabel,
+					event_code: targetNote.event_code,
+					created_at: new Date(),
+					updated_at: new Date(),
+				})
+				.returning();
+
+			await db.update(notes).set({ updated_at: new Date() }).where(eq(notes.id, input.target_id));
+
+			// Clean up source: unlink matchEvents, then delete
+			await db
+				.update(matchEvents)
+				.set({ converted_note_id: null, status: "active" })
+				.where(eq(matchEvents.converted_note_id, input.source_id));
+			await db.delete(notes).where(eq(notes.id, input.source_id));
+
+			// Slack cleanup for source (may be a different sub-event's Slack integration)
+			const sourceEvent =
+				sourceNote.event_code !== event.code ? await getEvent("", sourceNote.event_code) : event;
+			if (sourceEvent.slackTeam && sourceNote.slack_ts && sourceNote.slack_channel) {
+				await deleteSlackMessage(sourceNote.slack_channel, sourceEvent.slackTeam, sourceNote.slack_ts);
+			}
+
+			// Notify clients viewing the source that it was deleted
+			bus.publish(`event:${sourceNote.event_code}:note_update`, {
+				kind: "delete",
+				note: { ...sourceNote, followers: [] } as Note,
+			});
+
+			// Notify clients viewing the target about each moved message + system message
+			if (sourceNote.messages) {
+				for (const msg of sourceNote.messages) {
+					bus.publish(`event:${targetNote.event_code}:note_update`, {
+						kind: "add_message",
+						note_id: input.target_id,
+						message: { ...msg, note_id: input.target_id, event_code: targetNote.event_code } as Message,
+					});
+				}
+			}
+			if (systemMsgInsert[0]) {
+				bus.publish(`event:${targetNote.event_code}:note_update`, {
+					kind: "add_message",
+					note_id: input.target_id,
+					message: systemMsgInsert[0] as Message,
+				});
+			}
+
+			// Return updated target with all messages and followers
+			const updatedTarget = await db.query.notes.findFirst({
+				where: eq(notes.id, input.target_id),
+				with: { messages: { orderBy: [asc(messages.id)] } },
+			});
+			if (!updatedTarget)
+				throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch updated target note" });
+			const targetFollowers = await getNoteFollowers(input.target_id);
+			return { ...updatedTarget, followers: targetFollowers } as Note;
+		}),
 
 	updateStatus: eventProcedure
 		.input(
@@ -2005,17 +2117,36 @@ export async function createFromSlashCommand(
 	thread_ts: string,
 	teamNumber: number,
 ): Promise<{ response_type: "ephemeral"; text?: string; blocks?: any[] }> {
-	const linkedEventRows = await db
+	let linkedEventRows = await db
 		.select({ code: events.code, slackTeam: events.slackTeam })
 		.from(events)
 		.where(eq(events.slackChannel, channel_id))
 		.execute();
 
 	if (linkedEventRows.length === 0) {
-		return {
-			response_type: "ephemeral",
-			text: "This channel is not linked to an FTA-Buddy event. Use /ftabuddy to link it first.",
-		};
+		// Channel isn't directly linked — try to find the right sub-event by team number.
+		// Only consider non-meshed, non-archived events that have Slack configured
+		// (slackChannel IS NOT NULL indicates an active, Slack-enabled event).
+		// Meshed/combined parent events are excluded (meshedEvent IS NULL) because they
+		// duplicate all sub-event teams and would produce false matches.
+		const candidateRows = await db
+			.select({ code: events.code, slackTeam: events.slackTeam, teams: events.teams })
+			.from(events)
+			.where(and(isNotNull(events.slackChannel), isNull(events.meshedEvent), eq(events.archived, false)))
+			.execute();
+
+		const match = candidateRows.find((c) =>
+			((c.teams ?? []) as { number: string }[]).some((t) => parseInt(t.number, 10) === teamNumber),
+		);
+
+		if (!match) {
+			return {
+				response_type: "ephemeral",
+				text: `This channel is not linked to an FTA-Buddy event, and no active event was found for team ${teamNumber}.`,
+			};
+		}
+
+		linkedEventRows = [{ code: match.code, slackTeam: match.slackTeam }];
 	}
 
 	const existingNote = await db.query.notes.findFirst({ where: eq(notes.slack_ts, thread_ts) });

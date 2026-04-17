@@ -89,6 +89,7 @@
 				eventStore.set({
 					code: savedEntry.code,
 					pin: savedEntry.pin,
+					meshedEventPin: savedEntry.pin,
 					teams: savedEntry.teams,
 					users: savedEntry.users,
 					subEvents: savedEntry.subEvents,
@@ -127,6 +128,7 @@
 				eventStore.set({
 					code: subEvent.code,
 					pin: subEvent.pin,
+					meshedEventPin: savedEvent.pin,
 					teams: subEvent.teams,
 					users: savedEvent.users,
 					subEvents: savedEvent.subEvents,

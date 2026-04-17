@@ -102,6 +102,7 @@
 					eventStore.set({
 						code: res.code,
 						pin: res.pin,
+						meshedEventPin: res.pin,
 						label: res.label,
 						teams: res.teams as TeamList,
 						users: res.users as Profile[],
@@ -588,6 +589,7 @@
 							...event,
 							teams: event.subEvents?.flatMap((se) => se.teams) ?? event.teams,
 							code: event.meshedEventCode ?? "",
+							pin: event.meshedEventPin ?? event.pin,
 							label: event.playoffMode
 								? getPlayoffViewLabel(event.meshedEventCode ?? event.code)
 								: "Combined",

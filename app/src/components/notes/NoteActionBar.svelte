@@ -19,6 +19,7 @@
 		ondelete: () => void;
 		onopenassignmodal: () => void;
 		onviewlog: () => void;
+		onmerge: () => void;
 	}
 
 	let {
@@ -37,6 +38,7 @@
 		ondelete,
 		onopenassignmodal,
 		onviewlog,
+		onmerge,
 	}: Props = $props();
 </script>
 
@@ -98,6 +100,9 @@
 				{/if}
 				<DropdownItem onclick={onopenassignmodal} class="text-gray-700 dark:text-gray-200 list-none">
 					<Icon icon="mdi:account-arrow-right" class="size-4 mr-2 inline" />Assign to…
+				</DropdownItem>
+				<DropdownItem onclick={onmerge} class="text-gray-700 dark:text-gray-200 list-none">
+					<Icon icon="mdi:merge" class="size-4 mr-2 inline" />Merge with…
 				</DropdownItem>
 				{#if isOpen && note.resolution_status !== "NotApplicable"}
 					<DropdownItem onclick={onrefuse} class="text-orange-600 dark:text-orange-400 list-none">

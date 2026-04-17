@@ -58,6 +58,7 @@
 			$userStore.eventToken = meshedEvent.token;
 			$eventStore.code = eventCode;
 			$eventStore.pin = eventPin;
+			$eventStore.meshedEventPin = eventPin;
 			$eventStore.teams = meshedEvent.teams;
 			$eventStore.users = meshedEvent.users;
 			$eventStore.subEvents = meshedEvent.subEvents;

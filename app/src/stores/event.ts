@@ -8,6 +8,7 @@ export interface Event {
 	users: Profile[];
 	subEvents?: { code: string; label: string; color?: string; token: string; pin: string; teams: TeamList }[];
 	meshedEventCode?: string;
+	meshedEventPin?: string;
 	label?: string;
 	notepadOnly?: boolean;
 	playoffMode?: boolean;

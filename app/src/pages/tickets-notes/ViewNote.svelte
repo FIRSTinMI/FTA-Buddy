@@ -10,6 +10,7 @@
 	import NoteActionBar from "../../components/notes/NoteActionBar.svelte";
 	import PitMapModal from "../../components/PitMapModal.svelte";
 	import NoteAssignModal from "../../components/notes/NoteAssignModal.svelte";
+	import NoteMergeModal from "../../components/notes/NoteMergeModal.svelte";
 	import NoteMatchInfo from "../../components/notes/NoteMatchInfo.svelte";
 	import NoteMetaBadges from "../../components/notes/NoteMetaBadges.svelte";
 	import NotesPolicy from "../../components/NotesPolicy.svelte";
@@ -209,6 +210,10 @@
 	let eventUsers = $state<Profile[]>([]);
 	let assignPending = $state(false);
 
+	let mergeModalOpen = $state(false);
+	let mergeNotes = $state<Note[]>([]);
+	let mergePending = $state(false);
+
 	async function openAssignModal() {
 		assignModalOpen = true;
 		try {
@@ -233,6 +238,35 @@
 			console.error(err);
 		} finally {
 			assignPending = false;
+		}
+	}
+
+	async function openMergeModal() {
+		mergeModalOpen = true;
+		try {
+			mergeNotes = await trpc.notes.getAll.query();
+		} catch (err: any) {
+			toast("Could not load notes for merge", err.message);
+			mergeModalOpen = false;
+		}
+	}
+
+	async function mergeWith(targetNoteId: string) {
+		if (!note) return;
+		mergePending = true;
+		try {
+			await trpc.notes.merge.mutate({
+				source_id: note.id,
+				target_id: targetNoteId,
+			});
+			mergeModalOpen = false;
+			toast("Notes merged successfully", "", "green-500");
+			navigate("/notepad/view/:id", { params: { id: targetNoteId } });
+		} catch (err: any) {
+			toast("An error occurred while merging notes", err.message);
+			console.error(err);
+		} finally {
+			mergePending = false;
 		}
 	}
 
@@ -433,8 +467,11 @@
 							break;
 						case "add_message":
 							if (data.note_id === note.id) {
-								const nextMessages = [...(note.messages ?? []), data.message];
-								note = { ...note, messages: nextMessages };
+								const alreadyPresent = note.messages?.some((m) => m.id === data.message.id);
+								if (!alreadyPresent) {
+									const nextMessages = [...(note.messages ?? []), data.message];
+									note = { ...note, messages: nextMessages };
+								}
 							}
 							break;
 						case "edit_message":
@@ -583,6 +620,7 @@
 						ondelete={() => (deleteNotePopup = true)}
 						onopenassignmodal={openAssignModal}
 						onviewlog={viewLog}
+						onmerge={openMergeModal}
 					/>
 
 					<!-- Scrollable content -->
@@ -672,4 +710,13 @@
 	{eventUsers}
 	{assignPending}
 	onassign={assignTo}
+/>
+
+<NoteMergeModal
+	bind:open={mergeModalOpen}
+	notes={mergeNotes}
+	currentNoteId={noteId}
+	subEvents={$eventStore.subEvents}
+	{mergePending}
+	onmerge={mergeWith}
 />

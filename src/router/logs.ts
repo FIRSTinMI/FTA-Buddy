@@ -200,6 +200,12 @@ export const matchRouter = router({
 			}),
 		)
 		.query(async ({ ctx, input }) => {
+			const eventCodes: string[] = ctx.event.meshedEvent
+				? ctx.event.playoffMode
+					? [ctx.event.code]
+					: [ctx.event.code, ...(ctx.event.meshedEvent as Array<{ code: string }>).map((e) => e.code)]
+				: [ctx.event.code];
+
 			return await db
 				.select({
 					id: matchLogs.id,
@@ -210,7 +216,9 @@ export const matchRouter = router({
 				.from(matchLogs)
 				.where(
 					and(
-						eq(matchLogs.event, ctx.event.code),
+						eventCodes.length === 1
+							? eq(matchLogs.event, eventCodes[0])
+							: inArray(matchLogs.event, eventCodes),
 						or(
 							eq(matchLogs.blue1, input.team),
 							eq(matchLogs.blue2, input.team),
@@ -233,6 +241,12 @@ export const matchRouter = router({
 			}),
 		)
 		.query(async ({ ctx, input }) => {
+			const eventCodes: string[] = ctx.event.meshedEvent
+				? ctx.event.playoffMode
+					? [ctx.event.code]
+					: [ctx.event.code, ...(ctx.event.meshedEvent as Array<{ code: string }>).map((e) => e.code)]
+				: [ctx.event.code];
+
 			const teamFilter = or(
 				eq(matchLogs.blue1, input.team),
 				eq(matchLogs.blue2, input.team),
@@ -241,7 +255,9 @@ export const matchRouter = router({
 				eq(matchLogs.red2, input.team),
 				eq(matchLogs.red3, input.team),
 			);
-			const filters = [eq(matchLogs.event, ctx.event.code), gt(matchLogs.start_time, input.since), teamFilter];
+			const eventFilter =
+				eventCodes.length === 1 ? eq(matchLogs.event, eventCodes[0]) : inArray(matchLogs.event, eventCodes);
+			const filters = [eventFilter, gt(matchLogs.start_time, input.since), teamFilter];
 			if (input.exclude_match_id) {
 				filters.push(ne(matchLogs.id, input.exclude_match_id));
 			}

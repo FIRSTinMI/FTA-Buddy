@@ -480,7 +480,7 @@
 	let matchId: string | undefined = $state();
 	let allMatchOptions: { value: string; name: string; match_number: number; play_number: number; level: string }[] =
 		$state([]);
-	let matchOptions: { value: string; name: string }[] = $state([]);
+	let matchOptions: { value: string; name: string; hasLog?: boolean }[] = $state([]);
 	let issueType: string | undefined = $state();
 	let selectedLabel: string | undefined = $state();
 	let newNoteText: string = $state("");
@@ -542,10 +542,12 @@
 
 	async function loadMatchesForTeam(t: number) {
 		try {
-			const matches = await trpc.match.getMatchNumbers.query({ team: t });
-			matchOptions = matches.map((m: any) => ({
-				value: m.id,
+			const client = trpcForTeam(t);
+			const matches = await client.matchEvents.getCompletedMatchesForTeam.query({ team_number: t });
+			matchOptions = matches.map((m) => ({
+				value: m.match_log_id ?? `tba-${m.level}-${m.match_number}-${m.play_number}`,
 				name: `${m.level} ${m.match_number}/${m.play_number}`,
+				hasLog: !!m.match_log_id,
 			}));
 		} catch {
 			matchOptions = [];

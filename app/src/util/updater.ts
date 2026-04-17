@@ -11,6 +11,19 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.7.2": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.7.2</h1>
+        <ul>
+        <li>Added ability to merge tickets</li>
+        <li>Added ability to create ticket from Slack message</li>
+        <li>Handle @ mentions from Slack correctly</li>
+        <li>Fix a bunch of combined view bugs</li>
+        <li>Fixed handling of new lines in Nexus requests</li>
+        <li>Added backup data source for match list when creating a ticket, for when extension is not in use</li>
+        </ul>
+        `,
+	},
 	"2.7.7.1": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.7.1</h1>

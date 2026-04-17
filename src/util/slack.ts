@@ -259,6 +259,8 @@ export interface SlackMessage {
 	blocks?: any[];
 	text?: string;
 	username?: string;
+	unfurl_links?: boolean;
+	unfurl_media?: boolean;
 }
 
 export async function updateSlackMessage(

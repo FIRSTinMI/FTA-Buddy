@@ -1,11 +1,11 @@
 import { TRPCError } from "@trpc/server";
 import { randomUUID } from "crypto";
-import { and, count, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, count, desc, eq, inArray, ne, or } from "drizzle-orm";
 import { z } from "zod";
 import type { MatchEvent, MatchEventUpdateEventData, Note, Profile } from "../../shared/types";
 import { ISSUE_SEVERITY, ISSUE_TYPE_MAP } from "../../shared/issue-severity";
 import { db } from "../db/db";
-import { matchEvents, notes, users } from "../db/schema";
+import { matchEvents, matchLogs, notes, users } from "../db/schema";
 import { eventProcedure, publicProcedure, router } from "../trpc";
 import { generateReport } from "../util/report-generator";
 import { getEvent } from "../util/get-event";
@@ -96,34 +96,146 @@ export const matchEventsRouter = router({
 	}),
 
 	/** Get the next unplayed match for a team from TBA (not stored, fetched on demand). */
-	getNextMatchForTeam: eventProcedure.input(z.object({ team_number: z.number() })).query(async ({ ctx, input }) => {
-		const event = await getEvent(ctx.event.token);
-		const tbaKey = process.env.TBA_API_KEY;
-		if (!tbaKey) return null;
+	getNextMatchForTeam: eventProcedure
+		.input(z.object({ team_number: z.number(), event_code: z.string().optional() }))
+		.query(async ({ ctx, input }) => {
+			const event = await getEvent(ctx.event.token);
+			const tbaKey = process.env.TBA_API_KEY;
+			if (!tbaKey) return null;
 
-		try {
-			const res = await fetch(
-				`https://www.thebluealliance.com/api/v3/team/frc${input.team_number}/event/${event.code}/matches/simple`,
-				{ headers: { "X-TBA-Auth-Key": tbaKey } },
+			const tbaEventCode = input.event_code ?? event.code;
+
+			try {
+				const res = await fetch(
+					`https://www.thebluealliance.com/api/v3/team/frc${input.team_number}/event/${tbaEventCode}/matches/simple`,
+					{ headers: { "X-TBA-Auth-Key": tbaKey } },
+				);
+				if (!res.ok) return null;
+				const matches: TBASimpleMatch[] = await res.json();
+				if (!Array.isArray(matches)) return null;
+
+				// Unplayed = actual_time is null or 0
+				const upcoming = matches
+					.filter((m) => !m.actual_time)
+					.sort((a, b) => {
+						const ta = a.predicted_time ?? a.time ?? 0;
+						const tb = b.predicted_time ?? b.time ?? 0;
+						return ta - tb;
+					});
+
+				return upcoming[0] ?? null;
+			} catch {
+				return null;
+			}
+		}),
+
+	/** Get completed matches for a team from TBA, merged with match log availability. */
+	getCompletedMatchesForTeam: eventProcedure
+		.input(z.object({ team_number: z.number() }))
+		.query(async ({ ctx, input }) => {
+			const event = await getEvent(ctx.event.token);
+			const tbaKey = process.env.TBA_API_KEY;
+
+			// Determine which event codes to query for match logs
+			const eventCodes: string[] = event.meshedEvent
+				? event.playoffMode
+					? [event.code]
+					: [event.code, ...(event.subEvents ?? []).map((e) => e.code)]
+				: [event.code];
+
+			// Map TBA comp_level to DB level names
+			const tbaLevelMap: Record<string, string> = {
+				qm: "Qualification",
+				ef: "Playoff",
+				qf: "Playoff",
+				sf: "Playoff",
+				f: "Playoff",
+			};
+
+			type CompletedMatch = {
+				match_number: number;
+				play_number: number;
+				level: string;
+				match_log_id: string | null;
+			};
+
+			// Get match logs from DB
+			const teamFilter = or(
+				eq(matchLogs.blue1, input.team_number),
+				eq(matchLogs.blue2, input.team_number),
+				eq(matchLogs.blue3, input.team_number),
+				eq(matchLogs.red1, input.team_number),
+				eq(matchLogs.red2, input.team_number),
+				eq(matchLogs.red3, input.team_number),
 			);
-			if (!res.ok) return null;
-			const matches: TBASimpleMatch[] = await res.json();
-			if (!Array.isArray(matches)) return null;
+			const eventFilter =
+				eventCodes.length === 1 ? eq(matchLogs.event, eventCodes[0]) : inArray(matchLogs.event, eventCodes);
+			const dbMatches = await db
+				.select({
+					id: matchLogs.id,
+					match_number: matchLogs.match_number,
+					play_number: matchLogs.play_number,
+					level: matchLogs.level,
+				})
+				.from(matchLogs)
+				.where(and(eventFilter, teamFilter));
 
-			// Unplayed = actual_time is null or 0
-			const upcoming = matches
-				.filter((m) => !m.actual_time)
-				.sort((a, b) => {
-					const ta = a.predicted_time ?? a.time ?? 0;
-					const tb = b.predicted_time ?? b.time ?? 0;
-					return ta - tb;
-				});
+			const results: CompletedMatch[] = dbMatches.map((m) => ({
+				match_number: m.match_number,
+				play_number: m.play_number,
+				level: m.level,
+				match_log_id: m.id,
+			}));
 
-			return upcoming[0] ?? null;
-		} catch {
-			return null;
-		}
-	}),
+			// Fetch completed matches from TBA and merge
+			if (tbaKey) {
+				// For meshed events, try all sub-event codes on TBA
+				const tbaEventCodes = eventCodes;
+				for (const code of tbaEventCodes) {
+					try {
+						const res = await fetch(
+							`https://www.thebluealliance.com/api/v3/team/frc${input.team_number}/event/${code}/matches/simple`,
+							{ headers: { "X-TBA-Auth-Key": tbaKey } },
+						);
+						if (!res.ok) continue;
+						const matches: TBASimpleMatch[] = await res.json();
+						if (!Array.isArray(matches)) continue;
+
+						for (const m of matches) {
+							if (!m.actual_time) continue; // Skip unplayed matches
+							const level = tbaLevelMap[m.comp_level] ?? m.comp_level;
+							const matchNum = m.match_number;
+							const playNum = m.set_number;
+							// Check if already in results from DB
+							const existing = results.find(
+								(r) => r.match_number === matchNum && r.level === level && r.play_number === playNum,
+							);
+							if (!existing) {
+								results.push({
+									match_number: matchNum,
+									play_number: playNum,
+									level,
+									match_log_id: null,
+								});
+							}
+						}
+					} catch {
+						// TBA fetch failed for this code, continue with others
+					}
+				}
+			}
+
+			// Sort by level priority then match number
+			const levelOrder: Record<string, number> = { Qualification: 0, Playoff: 1 };
+			results.sort((a, b) => {
+				const la = levelOrder[a.level] ?? 2;
+				const lb = levelOrder[b.level] ?? 2;
+				if (la !== lb) return la - lb;
+				return a.match_number - b.match_number;
+			});
+
+			return results;
+		}),
 
 	/** Dismiss a match event (mark as not needing follow-up). */
 	dismiss: eventProcedure.input(z.object({ id: z.uuid() })).mutation(async ({ ctx, input }) => {

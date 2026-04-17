@@ -35,6 +35,7 @@
 					note_id: message.note_id,
 					message_id: message.id,
 					new_text: editMessageText,
+					event_code: message.event_code,
 				});
 				editMessageView = false;
 				toast("Message Edited successfully", "success", "green-500");
@@ -53,6 +54,7 @@
 			const res = await trpc.notes.messages.delete.mutate({
 				note_id: message.note_id,
 				message_id: message.id,
+				event_code: message.event_code,
 			});
 			deleteMessagePopup = false;
 			toast("Message deleted successfully", "success", "green-500");

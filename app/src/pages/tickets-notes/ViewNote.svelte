@@ -92,7 +92,7 @@
 		if (note) {
 			if (note.team) {
 				trpc.matchEvents.getNextMatchForTeam
-					.query({ team_number: note.team })
+					.query({ team_number: note.team, event_code: note.event_code })
 					.then((m) => {
 						nextMatch = m;
 					})

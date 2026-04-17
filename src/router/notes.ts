@@ -208,6 +208,7 @@ type SlackElements = {
 				style?: { bold?: boolean };
 				emoji?: boolean;
 		  };
+	url?: string;
 	style?: { bold?: boolean };
 	emoji?: boolean;
 	elements?: SlackElements[];
@@ -224,11 +225,12 @@ export function createSlackNoteMessage(
 	event_token?: string,
 ) {
 	const tokenParam = event_token ? `?token=${event_token}` : "";
+	const noteUrl = `https://ftabuddy.com/notepad/view/${event_code}/${note_id}${tokenParam}`;
 	const buttons: any[] = [];
 	buttons.push({
 		type: "button",
 		text: { type: "plain_text", text: "View Note", emoji: true },
-		url: `https://ftabuddy.com/notepad/view/${event_code}/${note_id}${tokenParam}`,
+		url: noteUrl,
 	});
 	if (match_id) {
 		buttons.push({
@@ -275,12 +277,24 @@ export function createSlackNoteMessage(
 	});
 
 	blocks.push({
+		type: "rich_text",
+		elements: [
+			{
+				type: "rich_text_section",
+				elements: [{ type: "link", url: noteUrl, text: "View in FTA Buddy" }],
+			},
+		],
+	});
+
+	blocks.push({
 		type: "actions",
 		elements: buttons,
 	});
 
 	return {
 		blocks,
+		unfurl_links: false,
+		unfurl_media: false,
 	};
 }
 
@@ -347,7 +361,7 @@ const messagesSubRouter = router({
 
 			if (!insert[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Message" });
 
-			bus.publish(`event:${event.code}:note_update`, {
+			bus.publish(`event:${note.event_code}:note_update`, {
 				kind: "add_message",
 				note_id: note.id,
 				message: insert[0] as Message,
@@ -358,13 +372,13 @@ const messagesSubRouter = router({
 				msgFollowers.filter((id: number) => id !== resolvedProfile.id),
 				buildNotification({
 					kind: "note.message",
-					eventCode: event.code,
+					eventCode: note.event_code,
 					note: toNoteCtx(note as any),
 					author: resolvedProfile.username,
 					messageText: insert[0].text,
 					messageId: insert[0].id,
 				}),
-				event.code,
+				note.event_code,
 			);
 
 			const noteEvent = note.event_code !== event.code ? await getEvent("", note.event_code) : event;
@@ -408,13 +422,15 @@ const messagesSubRouter = router({
 				note_id: z.string().uuid(),
 				message_id: z.string().uuid(),
 				new_text: z.string(),
+				event_code: z.string().optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
 			const event = await getEvent(ctx.eventToken as string);
+			const noteEventCode = input.event_code ?? event.code;
 
 			const note = await db.query.notes.findFirst({
-				where: and(eq(notes.id, input.note_id), eq(notes.event_code, event.code)),
+				where: and(eq(notes.id, input.note_id), eq(notes.event_code, noteEventCode)),
 			});
 			if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
 
@@ -437,14 +453,15 @@ const messagesSubRouter = router({
 
 			if (!update[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Message" });
 
-			bus.publish(`event:${event.code}:note_update`, {
+			bus.publish(`event:${note.event_code}:note_update`, {
 				kind: "edit_message",
 				note_id: note.id,
 				message: update[0] as Message,
 			});
 
-			if (event.slackTeam && message.slack_ts && note.slack_channel) {
-				await updateSlackMessage(note.slack_channel, event.slackTeam, message.slack_ts, {
+			const editNoteEvent = note.event_code !== event.code ? await getEvent("", note.event_code) : event;
+			if (editNoteEvent.slackTeam && message.slack_ts && note.slack_channel) {
+				await updateSlackMessage(note.slack_channel, editNoteEvent.slackTeam, message.slack_ts, {
 					blocks: [
 						{
 							type: "context",
@@ -471,12 +488,21 @@ const messagesSubRouter = router({
 			z.object({
 				note_id: z.string().uuid(),
 				message_id: z.string().uuid(),
+				event_code: z.string().optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
 			const event = await getEvent(ctx.eventToken as string);
+			const deleteNoteEventCode = input.event_code ?? event.code;
 
-			const message = await db.query.messages.findFirst({ where: eq(messages.id, input.message_id) });
+			const note = await db.query.notes.findFirst({
+				where: and(eq(notes.id, input.note_id), eq(notes.event_code, deleteNoteEventCode)),
+			});
+			if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
+
+			const message = await db.query.messages.findFirst({
+				where: and(eq(messages.id, input.message_id), eq(messages.note_id, input.note_id)),
+			});
 			if (!message) throw new TRPCError({ code: "NOT_FOUND", message: "Message not found" });
 
 			const currentUserProfile = await db
@@ -488,14 +514,16 @@ const messagesSubRouter = router({
 			const result = await db.delete(messages).where(eq(messages.id, input.message_id));
 			if (!result) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to delete Message" });
 
-			bus.publish(`event:${event.code}:note_update`, {
+			bus.publish(`event:${deleteNoteEventCode}:note_update`, {
 				kind: "delete_message",
 				note_id: input.note_id,
 				message_id: message.id,
 			});
 
-			if (event.slackTeam && message.slack_ts && message.slack_channel) {
-				await deleteSlackMessage(message.slack_channel, event.slackTeam, message.slack_ts);
+			const deleteNoteEvent =
+				deleteNoteEventCode !== event.code ? await getEvent("", deleteNoteEventCode) : event;
+			if (deleteNoteEvent.slackTeam && message.slack_ts && message.slack_channel) {
+				await deleteSlackMessage(message.slack_channel, deleteNoteEvent.slackTeam, message.slack_ts);
 			}
 
 			return message.id;
@@ -1161,7 +1189,7 @@ export const notesRouter = router({
 			if (!update[0])
 				throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update note status" });
 
-			bus.publish(`event:${event.code}:note_update`, {
+			bus.publish(`event:${input.event_code}:note_update`, {
 				kind: "status",
 				note_id: update[0].id,
 				resolution_status: update[0].resolution_status ?? "Open",
@@ -1173,22 +1201,33 @@ export const notesRouter = router({
 				statusFollowers.filter((id: number) => id !== currentUserProfile.id),
 				buildNotification({
 					kind: "note.statusChanged",
-					eventCode: event.code,
+					eventCode: input.event_code,
 					note: toNoteCtx(note as any),
 					newStatus: input.new_status as "Open" | "Resolved" | "Refused",
 					actor: currentUserProfile.username,
 				}),
-				event.code,
+				input.event_code,
 			);
 
-			if (event.slackTeam && note.slack_ts && note.slack_channel) {
+			const statusNoteEvent = input.event_code !== event.code ? await getEvent("", input.event_code) : event;
+			if (statusNoteEvent.slackTeam && note.slack_ts && note.slack_channel) {
 				if (input.new_status === "Resolved") {
-					await addSlackReaction(note.slack_channel, event.slackTeam, note.slack_ts, "white_check_mark");
+					await addSlackReaction(
+						note.slack_channel,
+						statusNoteEvent.slackTeam,
+						note.slack_ts,
+						"white_check_mark",
+					);
 				} else if (input.new_status === "Refused") {
-					await addSlackReaction(note.slack_channel, event.slackTeam, note.slack_ts, "x");
+					await addSlackReaction(note.slack_channel, statusNoteEvent.slackTeam, note.slack_ts, "x");
 				} else {
-					await removeSlackReaction(note.slack_channel, event.slackTeam, note.slack_ts, "white_check_mark");
-					await removeSlackReaction(note.slack_channel, event.slackTeam, note.slack_ts, "x");
+					await removeSlackReaction(
+						note.slack_channel,
+						statusNoteEvent.slackTeam,
+						note.slack_ts,
+						"white_check_mark",
+					);
+					await removeSlackReaction(note.slack_channel, statusNoteEvent.slackTeam, note.slack_ts, "x");
 				}
 			}
 
@@ -1239,7 +1278,7 @@ export const notesRouter = router({
 				.returning();
 			if (!update[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to assign User" });
 
-			bus.publish(`event:${event.code}:note_update`, {
+			bus.publish(`event:${input.event_code}:note_update`, {
 				kind: "assign",
 				note_id: update[0].id,
 				assigned_to_id: update[0].assigned_to_id,
@@ -1251,12 +1290,12 @@ export const notesRouter = router({
 				assignFollowers.filter((id: number) => id !== profile[0].id && id !== actorIdAssign),
 				buildNotification({
 					kind: "note.assigned",
-					eventCode: event.code,
+					eventCode: input.event_code,
 					note: toNoteCtx(note as any),
 					assignee: profile[0].username,
 					actor: actorUsernameAssign,
 				}),
-				event.code,
+				input.event_code,
 			);
 
 			// Only notify the assignee if they didn't assign themselves
@@ -1265,16 +1304,17 @@ export const notesRouter = router({
 					[profile[0].id],
 					buildNotification({
 						kind: "note.assignedToYou",
-						eventCode: event.code,
+						eventCode: input.event_code,
 						note: toNoteCtx(note as any),
 						actor: actorUsernameAssign,
 					}),
-					event.code,
+					input.event_code,
 				);
 			}
 
-			if (event.slackTeam && note.slack_ts && note.slack_channel) {
-				await addSlackReaction(note.slack_channel, event.slackTeam, note.slack_ts, "eyes");
+			const assignNoteEvent = input.event_code !== event.code ? await getEvent("", input.event_code) : event;
+			if (assignNoteEvent.slackTeam && note.slack_ts && note.slack_channel) {
+				await addSlackReaction(note.slack_channel, assignNoteEvent.slackTeam, note.slack_ts, "eyes");
 			}
 
 			return { ...update[0], followers: assignFollowers } as Note;
@@ -1325,7 +1365,7 @@ export const notesRouter = router({
 			if (!update[0])
 				throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update assignment" });
 
-			bus.publish(`event:${event.code}:note_update`, {
+			bus.publish(`event:${input.event_code}:note_update`, {
 				kind: "assign",
 				note_id: update[0].id,
 				assigned_to_id: update[0].assigned_to_id,
@@ -1337,11 +1377,11 @@ export const notesRouter = router({
 				unassignFollowers.filter((id: number) => id !== actorIdUnassign),
 				buildNotification({
 					kind: "note.unassigned",
-					eventCode: event.code,
+					eventCode: input.event_code,
 					note: toNoteCtx(note as any),
 					actor: actorUsernameUnassign,
 				}),
-				event.code,
+				input.event_code,
 			);
 
 			// Only notify the previously-assigned user if they didn't unassign themselves
@@ -1350,16 +1390,17 @@ export const notesRouter = router({
 					[profile[0].id],
 					buildNotification({
 						kind: "note.unassignedFromYou",
-						eventCode: event.code,
+						eventCode: input.event_code,
 						note: toNoteCtx(note as any),
 						actor: actorUsernameUnassign,
 					}),
-					event.code,
+					input.event_code,
 				);
 			}
 
-			if (event.slackTeam && note.slack_ts && note.slack_channel) {
-				await removeSlackReaction(note.slack_channel, event.slackTeam, note.slack_ts, "eyes");
+			const unassignNoteEvent = input.event_code !== event.code ? await getEvent("", input.event_code) : event;
+			if (unassignNoteEvent.slackTeam && note.slack_ts && note.slack_channel) {
+				await removeSlackReaction(note.slack_channel, unassignNoteEvent.slackTeam, note.slack_ts, "eyes");
 			}
 
 			return { ...update[0], followers: unassignFollowers } as Note;

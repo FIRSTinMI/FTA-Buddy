@@ -83,11 +83,20 @@
 	let playedMatchesSince: PlayedMatch[] = $state([]);
 
 	async function getNoteAndMatch() {
-		notePromise = trpc.notes.getByIdWithMessages.query({
-			id: noteId,
-			event_code: event.code,
-		});
-		note = await notePromise;
+		try {
+			notePromise = trpc.notes.getByIdWithMessages.query({
+				id: noteId,
+				event_code: event.code,
+			});
+			note = await notePromise;
+		} catch (err: any) {
+			// PRECONDITION_FAILED means the note was merged into another – redirect to the target
+			if (err?.data?.code === "PRECONDITION_FAILED" && err?.message) {
+				navigate("/notepad/view/:id", { params: { id: err.message }, replace: true });
+				return;
+			}
+			throw err;
+		}
 
 		if (note) {
 			if (note.team) {

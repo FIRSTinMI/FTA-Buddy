@@ -621,6 +621,7 @@ export interface Note {
 	resolved_by: Profile | null;
 	request_type: "CSA" | "RI" | null;
 	is_nexus?: boolean;
+	merged_into?: string | null;
 	messages?: Message[];
 }
 

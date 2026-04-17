@@ -31,6 +31,21 @@ interface TBASimpleMatch {
 	post_result_time: number | null;
 }
 
+/** Convert a Nexus match label (e.g. "Qualification 24") to TBA comp_level / match_number fields. */
+function parseNexusLabelToTBA(
+	label: string,
+): { comp_level: TBASimpleMatch["comp_level"]; match_number: number; set_number: number } | null {
+	const qual = label.match(/^Qualification (\d+)( Replay)?$/);
+	if (qual) return { comp_level: "qm", match_number: parseInt(qual[1], 10), set_number: 1 };
+	const playoff = label.match(/^Playoff (\d+)$/);
+	if (playoff) return { comp_level: "sf", match_number: parseInt(playoff[1], 10), set_number: 1 };
+	const final_ = label.match(/^Final (\d+)$/);
+	if (final_) return { comp_level: "f", match_number: parseInt(final_[1], 10), set_number: 1 };
+	const practice = label.match(/^Practice (\d+)$/);
+	if (practice) return { comp_level: "qm", match_number: parseInt(practice[1], 10), set_number: 1 };
+	return null;
+}
+
 export const matchEventsRouter = router({
 	/** Get all match events for the current event, filtered by status. */
 	getAll: eventProcedure
@@ -95,11 +110,58 @@ export const matchEventsRouter = router({
 		return rows as MatchEvent[];
 	}),
 
-	/** Get the next unplayed match for a team from TBA (not stored, fetched on demand). */
+	/** Get the next unplayed match for a team. Prefers Nexus real-time data when available, falls back to TBA. */
 	getNextMatchForTeam: eventProcedure
 		.input(z.object({ team_number: z.number(), event_code: z.string().optional() }))
 		.query(async ({ ctx, input }) => {
 			const event = await getEvent(ctx.event.token);
+			const teamStr = String(input.team_number);
+
+			// --- Try Nexus first (real-time field data) ---
+			const nexusStatus = event.nexusEventStatus;
+			if (nexusStatus?.matches?.length && nexusStatus.nowQueuing) {
+				const queuingIdx = nexusStatus.matches.findIndex((m) => m.label === nexusStatus.nowQueuing);
+				// Field layout: on-field (queuingIdx-2), on-deck (queuingIdx-1), now-queuing (queuingIdx).
+				// The current match on the field is queuingIdx-2; it hasn't completed yet,
+				// so start searching from there for the team's next unfinished match.
+				const currentMatchIdx = Math.max(0, queuingIdx - 2);
+
+				for (let i = currentMatchIdx; i < nexusStatus.matches.length; i++) {
+					const nm = nexusStatus.matches[i];
+					const red = nm.redTeams ?? [];
+					const blue = nm.blueTeams ?? [];
+					const isOnTeam = red.includes(teamStr) || blue.includes(teamStr);
+					if (!isOnTeam) continue;
+
+					// Parse Nexus label into TBA-compatible fields
+					const parsed = parseNexusLabelToTBA(nm.label);
+					if (!parsed) continue;
+
+					return {
+						key: `nexus_${nm.label}`,
+						comp_level: parsed.comp_level,
+						set_number: parsed.set_number,
+						match_number: parsed.match_number,
+						alliances: {
+							red: { score: -1, team_keys: red.filter(Boolean).map((t) => `frc${t}`) },
+							blue: { score: -1, team_keys: blue.filter(Boolean).map((t) => `frc${t}`) },
+						},
+						winning_alliance: null,
+						event_key: event.code,
+						time: nm.times.estimatedStartTime ? Math.floor(nm.times.estimatedStartTime / 1000) : null,
+						actual_time: null,
+						predicted_time: nm.times.estimatedStartTime
+							? Math.floor(nm.times.estimatedStartTime / 1000)
+							: null,
+						post_result_time: null,
+					} satisfies TBASimpleMatch;
+				}
+
+				// Team has no upcoming Nexus matches — return null (don't fall through to stale TBA data)
+				return null;
+			}
+
+			// --- Fall back to TBA + local match logs ---
 			const tbaKey = process.env.TBA_API_KEY;
 			if (!tbaKey) return null;
 
@@ -114,9 +176,49 @@ export const matchEventsRouter = router({
 				const matches: TBASimpleMatch[] = await res.json();
 				if (!Array.isArray(matches)) return null;
 
-				// Unplayed = actual_time is null or 0
+				// Also check local match logs so we don't show matches already played locally
+				// (TBA's actual_time field can lag behind real-time FMS data)
+				const eventCodes: string[] = event.meshedEvent
+					? event.playoffMode
+						? [event.code]
+						: [event.code, ...(event.subEvents ?? []).map((e: { code: string }) => e.code)]
+					: [event.code];
+				const teamFilter = or(
+					eq(matchLogs.blue1, input.team_number),
+					eq(matchLogs.blue2, input.team_number),
+					eq(matchLogs.blue3, input.team_number),
+					eq(matchLogs.red1, input.team_number),
+					eq(matchLogs.red2, input.team_number),
+					eq(matchLogs.red3, input.team_number),
+				);
+				const eventFilter =
+					eventCodes.length === 1 ? eq(matchLogs.event, eventCodes[0]) : inArray(matchLogs.event, eventCodes);
+				const localMatches = await db
+					.select({
+						match_number: matchLogs.match_number,
+						play_number: matchLogs.play_number,
+						level: matchLogs.level,
+					})
+					.from(matchLogs)
+					.where(and(eventFilter, teamFilter));
+
+				const tbaLevelToLocal: Record<string, string> = {
+					qm: "Qualification",
+					ef: "Playoff",
+					qf: "Playoff",
+					sf: "Playoff",
+					f: "Playoff",
+				};
+
+				const playedLocally = new Set(localMatches.map((m) => `${m.level}:${m.match_number}:${m.play_number}`));
+
 				const upcoming = matches
-					.filter((m) => !m.actual_time)
+					.filter((m) => {
+						if (m.actual_time) return false;
+						const localLevel = tbaLevelToLocal[m.comp_level] ?? m.comp_level;
+						const key = `${localLevel}:${m.match_number}:${m.set_number}`;
+						return !playedLocally.has(key);
+					})
 					.sort((a, b) => {
 						const ta = a.predicted_time ?? a.time ?? 0;
 						const tb = b.predicted_time ?? b.time ?? 0;
@@ -240,10 +342,20 @@ export const matchEventsRouter = router({
 	/** Dismiss a match event (mark as not needing follow-up). */
 	dismiss: eventProcedure.input(z.object({ id: z.uuid() })).mutation(async ({ ctx, input }) => {
 		const event = await getEvent(ctx.event.token);
+		// For meshed events in combined mode, allow dismissing events from any sub-event
+		const eventCodes: string[] = event.meshedEvent
+			? event.playoffMode
+				? [event.code]
+				: [event.code, ...(event.subEvents ?? []).map((e) => e.code)]
+			: [event.code];
+		const codeFilter =
+			eventCodes.length === 1
+				? eq(matchEvents.event_code, eventCodes[0])
+				: inArray(matchEvents.event_code, eventCodes);
 		const result = await db
 			.update(matchEvents)
 			.set({ status: "dismissed" })
-			.where(and(eq(matchEvents.id, input.id), eq(matchEvents.event_code, event.code)))
+			.where(and(eq(matchEvents.id, input.id), codeFilter))
 			.returning()
 			.execute();
 
@@ -251,7 +363,7 @@ export const matchEventsRouter = router({
 			throw new TRPCError({ code: "NOT_FOUND", message: "Match event not found" });
 		}
 
-		bus.publish(`event:${event.code}:match_event:dismiss`, {
+		bus.publish(`event:${result[0].event_code}:match_event:dismiss`, {
 			kind: "match_event_dismiss",
 			id: input.id,
 		});
@@ -270,11 +382,22 @@ export const matchEventsRouter = router({
 		.mutation(async ({ ctx, input }) => {
 			const event = await getEvent(ctx.event.token);
 
+			// For meshed events in combined mode, allow converting events from any sub-event
+			const eventCodes: string[] = event.meshedEvent
+				? event.playoffMode
+					? [event.code]
+					: [event.code, ...(event.subEvents ?? []).map((e) => e.code)]
+				: [event.code];
+			const codeFilter =
+				eventCodes.length === 1
+					? eq(matchEvents.event_code, eventCodes[0])
+					: inArray(matchEvents.event_code, eventCodes);
+
 			// Get the match event
 			const [matchEvent] = await db
 				.select()
 				.from(matchEvents)
-				.where(and(eq(matchEvents.id, input.id), eq(matchEvents.event_code, event.code)))
+				.where(and(eq(matchEvents.id, input.id), codeFilter))
 				.execute();
 
 			if (!matchEvent) {
@@ -394,15 +517,25 @@ export const matchEventsRouter = router({
 	/** Dismiss all active match events for this event. */
 	dismissAll: eventProcedure.mutation(async ({ ctx }) => {
 		const event = await getEvent(ctx.event.token);
+		// For meshed events in combined mode, dismiss events from all sub-events
+		const eventCodes: string[] = event.meshedEvent
+			? event.playoffMode
+				? [event.code]
+				: [event.code, ...(event.subEvents ?? []).map((e) => e.code)]
+			: [event.code];
+		const codeFilter =
+			eventCodes.length === 1
+				? eq(matchEvents.event_code, eventCodes[0])
+				: inArray(matchEvents.event_code, eventCodes);
 		const dismissed = await db
 			.update(matchEvents)
 			.set({ status: "dismissed" })
-			.where(and(eq(matchEvents.event_code, event.code), eq(matchEvents.status, "active")))
-			.returning({ id: matchEvents.id })
+			.where(and(codeFilter, eq(matchEvents.status, "active")))
+			.returning({ id: matchEvents.id, event_code: matchEvents.event_code })
 			.execute();
 
 		for (const row of dismissed) {
-			bus.publish(`event:${event.code}:match_event:dismiss`, {
+			bus.publish(`event:${row.event_code}:match_event:dismiss`, {
 				kind: "match_event_dismiss",
 				id: row.id,
 			});

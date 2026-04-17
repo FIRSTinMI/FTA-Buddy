@@ -540,6 +540,23 @@
 		trpc.cycles.getScheduleDetails.query().then((d) => {
 			if (d) scheduleDetails = d;
 		});
+		// Subscribe to cycle updates for stable lastCycleTime (avoids flicker from frame data)
+		cycleSubscription = trpc.cycles.subscription.subscribe(
+			{ eventToken: $userStore.eventToken },
+			{
+				onData: (data) => {
+					if (data.lastCycleTime && data.lastCycleTime !== "unk") {
+						lastCycleTimeFromSub = data.lastCycleTime;
+					}
+					if (data.startTime) matchStartTime = new Date(data.startTime);
+					if (data.scheduleDetails) scheduleDetails = data.scheduleDetails;
+				},
+			},
+		);
+		// Also seed lastCycleTime from the server
+		trpc.cycles.getLastCycleTime.query().then((ct) => {
+			if (ct && ct !== "unk") lastCycleTimeFromSub = ct;
+		});
 		cycleInterval = setInterval(() => {
 			currentCycleTime = formatTimeShortNoAgo(matchStartTime);
 		}, 1000);
@@ -558,6 +575,7 @@
 		frameHandler.removeEventListener("match-start", onMatchStart);
 		subscription?.unsubscribe();
 		matchEventSubscription?.unsubscribe();
+		cycleSubscription?.unsubscribe();
 		window.removeEventListener("resize", handleResize);
 		if (cycleInterval) clearInterval(cycleInterval);
 		if (nexusInterval) clearInterval(nexusInterval);
@@ -610,6 +628,8 @@
 	let matchStartTime = $state(new Date());
 	let currentCycleTime = $state("0");
 	let cycleInterval: ReturnType<typeof setInterval> | undefined;
+	let lastCycleTimeFromSub = $state<string | null>(null);
+	let cycleSubscription: ReturnType<typeof trpc.cycles.subscription.subscribe> | undefined;
 
 	// Schedule details for confetti
 	let scheduleDetails: ScheduleDetails | undefined;
@@ -689,8 +709,8 @@
 		if (isLive) {
 			const isRunning = monitorFrame && MatchStateMap[monitorFrame.field] === MatchState.RUNNING;
 			if (isRunning) {
-				// Match is running - show last completed cycle time
-				const c = fmtCT(monitorFrame?.lastCycleTime ?? null);
+				// Match is running - show last completed cycle time from subscription (stable, no flicker)
+				const c = fmtCT(lastCycleTimeFromSub);
 				return c ? `C: ${c}` : null;
 			}
 			// Prestart / waiting - show counting-up timer

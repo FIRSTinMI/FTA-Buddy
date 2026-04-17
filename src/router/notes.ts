@@ -662,6 +662,25 @@ export const notesRouter = router({
 			});
 			if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
 
+			// If this note was merged into another, follow the redirect chain
+			if (note.merged_into) {
+				let targetId = note.merged_into;
+				// Follow up to 10 hops (in case of chained merges)
+				for (let i = 0; i < 10; i++) {
+					const target = await db.query.notes.findFirst({
+						where: eq(notes.id, targetId),
+						columns: { id: true, merged_into: true },
+					});
+					if (!target) break;
+					if (!target.merged_into) break;
+					targetId = target.merged_into;
+				}
+				throw new TRPCError({
+					code: "PRECONDITION_FAILED",
+					message: targetId,
+				});
+			}
+
 			// Lazy back-fill: if the note has a match_number but no match_id, try to resolve it now
 			if (note.match_number && !note.match_id) {
 				const resolved = await resolveMatchId(
@@ -1094,12 +1113,12 @@ export const notesRouter = router({
 
 			await db.update(notes).set({ updated_at: new Date() }).where(eq(notes.id, input.target_id));
 
-			// Clean up source: unlink matchEvents, then delete
+			// Clean up source: unlink matchEvents, then mark as merged (keep row for redirect)
 			await db
 				.update(matchEvents)
 				.set({ converted_note_id: null, status: "active" })
 				.where(eq(matchEvents.converted_note_id, input.source_id));
-			await db.delete(notes).where(eq(notes.id, input.source_id));
+			await db.update(notes).set({ merged_into: input.target_id }).where(eq(notes.id, input.source_id));
 
 			// Slack cleanup for source (may be a different sub-event's Slack integration)
 			const sourceEvent =

@@ -152,6 +152,7 @@ export const notes = pgTable(
 		resolved_by: jsonb("resolved_by").$type<Profile>(),
 		request_type: noteRequestTypeEnum("request_type"),
 		is_nexus: boolean("is_nexus").notNull().default(false),
+		merged_into: uuid("merged_into"),
 	},
 	(t) => [
 		index("notes_event_code_idx").on(t.event_code),

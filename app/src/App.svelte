@@ -5,9 +5,7 @@
 		CloseButton,
 		Drawer,
 		Indicator,
-		Label,
 		Modal,
-		Select,
 		Sidebar,
 		SidebarGroup,
 		SidebarItem,
@@ -418,10 +416,48 @@
 	}
 
 	let multiEventSelection = $state($user.meshedEventToken === $user.eventToken ? "combined" : $eventStore.code);
+	let eventSwitcherOpen = $state(false);
 
 	$effect(() => {
 		multiEventSelection = $user.meshedEventToken === $user.eventToken ? "combined" : $eventStore.code;
 	});
+
+	function selectMeshedEvent(value: string) {
+		multiEventSelection = value;
+		eventSwitcherOpen = false;
+		if (value === "combined") {
+			user.set({
+				...$user,
+				eventToken: $user.meshedEventToken ?? "",
+			});
+			eventStore.set({
+				...event,
+				teams: event.subEvents?.flatMap((se) => se.teams) ?? event.teams,
+				code: event.meshedEventCode ?? "",
+				pin: event.meshedEventPin ?? event.pin,
+				label: event.playoffMode
+					? getPlayoffViewLabel(event.meshedEventCode ?? event.code)
+					: "Combined",
+			});
+			if (event.meshedEventCode)
+				trpc.event.setActiveEvent.mutate({ eventCode: event.meshedEventCode }).catch(() => {});
+			if (route.pathname.startsWith("/monitor") && !event.playoffMode) {
+				navigate("/dashboard");
+			}
+		} else {
+			user.set({
+				...$user,
+				eventToken: event.subEvents?.find((e) => e.code === value)?.token ?? "",
+			});
+			eventStore.set({ ...event, ...event.subEvents?.find((e) => e.code === value) });
+			trpc.event.setActiveEvent.mutate({ eventCode: value }).catch(() => {});
+			if (route.pathname.startsWith("/dashboard")) {
+				navigate("/monitor");
+			} else if (route.pathname.startsWith("/monitor") || route.pathname.startsWith("/notepad")) {
+				window.location.reload();
+			}
+		}
+	}
 
 	onMount(() => {
 		if ($user.token && route.pathname === "/") {
@@ -567,54 +603,47 @@
 		<CloseButton onclick={() => (drawerOpen = false)} class="text-black dark:text-white" />
 	</div>
 	{#if $user.meshedEventToken && event.subEvents}
-		<Label class="text-left px-4 pb-2 block">
-			Event Selection
-			<Select
-				bind:value={multiEventSelection}
-				items={[
-					{
-						value: "combined",
-						name: event.playoffMode ? getPlayoffViewLabel(event.meshedEventCode ?? event.code) : "Combined",
-					},
-					...event.subEvents.map((e) => ({ value: e.code, name: e.label })),
-				]}
-				class="w-full"
-				onchange={() => {
-					if (multiEventSelection === "combined") {
-						user.set({
-							...$user,
-							eventToken: $user.meshedEventToken ?? "",
-						});
-						eventStore.set({
-							...event,
-							teams: event.subEvents?.flatMap((se) => se.teams) ?? event.teams,
-							code: event.meshedEventCode ?? "",
-							pin: event.meshedEventPin ?? event.pin,
-							label: event.playoffMode
-								? getPlayoffViewLabel(event.meshedEventCode ?? event.code)
-								: "Combined",
-						});
-						if (event.meshedEventCode)
-							trpc.event.setActiveEvent.mutate({ eventCode: event.meshedEventCode }).catch(() => {});
-						if (route.pathname.startsWith("/monitor") && !event.playoffMode) {
-							navigate("/dashboard");
-						}
-					} else {
-						user.set({
-							...$user,
-							eventToken: event.subEvents?.find((e) => e.code === multiEventSelection)?.token ?? "",
-						});
-						eventStore.set({ ...event, ...event.subEvents?.find((e) => e.code === multiEventSelection) });
-						trpc.event.setActiveEvent.mutate({ eventCode: multiEventSelection }).catch(() => {});
-						if (route.pathname.startsWith("/dashboard")) {
-							navigate("/monitor");
-						} else if (route.pathname.startsWith("/monitor") || route.pathname.startsWith("/notepad")) {
-							window.location.reload();
-						}
-					}
-				}}
-			/>
-		</Label>
+		<div class="text-left px-4 pb-2">
+			<span class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">Event Selection</span>
+			<div class="relative">
+				<button
+					type="button"
+					class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm bg-primary-600 text-white"
+					onclick={() => (eventSwitcherOpen = !eventSwitcherOpen)}
+				>
+					<span>
+						{#if multiEventSelection === 'combined'}
+							{event.playoffMode ? getPlayoffViewLabel(event.meshedEventCode ?? event.code) : "Combined"}
+						{:else}
+							{event.subEvents.find((e) => e.code === multiEventSelection)?.label ?? multiEventSelection}
+						{/if}
+					</span>
+					<svg class="w-3 h-3 ml-2 transition-transform {eventSwitcherOpen ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" />
+					</svg>
+				</button>
+				{#if eventSwitcherOpen}
+					<div class="flex flex-col gap-1 mt-1">
+						<button
+							type="button"
+							class="w-full text-left px-3 py-1.5 rounded-lg text-sm {multiEventSelection === 'combined' ? 'bg-primary-700 text-white' : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white'}"
+							onclick={() => selectMeshedEvent("combined")}
+						>
+							{event.playoffMode ? getPlayoffViewLabel(event.meshedEventCode ?? event.code) : "Combined"}
+						</button>
+						{#each event.subEvents as subEvent (subEvent.code)}
+							<button
+								type="button"
+								class="w-full text-left px-3 py-1.5 rounded-lg text-sm {multiEventSelection === subEvent.code ? 'bg-primary-700 text-white' : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white'}"
+								onclick={() => selectMeshedEvent(subEvent.code)}
+							>
+								{subEvent.label}
+							</button>
+						{/each}
+					</div>
+				{/if}
+			</div>
+		</div>
 	{/if}
 	<Sidebar alwaysOpen={true} position="static" class="w-full" classes={{ div: "overflow-y-auto" }}>
 		<SidebarWrapper class="rounded-sm py-4 dark:bg-gray-800">

@@ -200,9 +200,7 @@ export const matchRouter = router({
 		)
 		.query(async ({ ctx, input }) => {
 			const eventCodes: string[] = ctx.event.meshedEvent
-				? ctx.event.playoffMode
-					? [ctx.event.code]
-					: [ctx.event.code, ...(ctx.event.subEvents ?? []).map((e) => e.code)]
+				? [ctx.event.code, ...(ctx.event.subEvents ?? []).map((e) => e.code)]
 				: [ctx.event.code];
 
 			return await db
@@ -241,9 +239,7 @@ export const matchRouter = router({
 		)
 		.query(async ({ ctx, input }) => {
 			const eventCodes: string[] = ctx.event.meshedEvent
-				? ctx.event.playoffMode
-					? [ctx.event.code]
-					: [ctx.event.code, ...(ctx.event.subEvents ?? []).map((e) => e.code)]
+				? [ctx.event.code, ...(ctx.event.subEvents ?? []).map((e) => e.code)]
 				: [ctx.event.code];
 
 			const teamFilter = or(
@@ -318,11 +314,8 @@ export const matchRouter = router({
 		)
 		.query(async ({ input, ctx }) => {
 			// For meshed events, query all sub-event codes (and the parent); otherwise just the current event.
-			// In inter-divisional playoffs mode, only query the parent event.
 			const eventCodes: string[] = ctx.event.meshedEvent
-				? ctx.event.playoffMode
-					? [ctx.event.code]
-					: [ctx.event.code, ...(ctx.event.subEvents ?? []).map((e) => e.code)]
+				? [ctx.event.code, ...(ctx.event.subEvents ?? []).map((e) => e.code)]
 				: [ctx.event.code];
 
 			const filters = [

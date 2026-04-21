@@ -24,6 +24,7 @@ import { bus } from "../util/eventBus";
 import { createNotification } from "../util/push-notifications";
 import { generateToken } from "./user";
 import { setChecklist } from "../util/event-state";
+import { subscriptionQueue } from "../util/subscription";
 
 const fullEventList: {
 	fetched: Date | undefined;
@@ -173,7 +174,20 @@ export const eventRouter = router({
 					event.subEvents?.map((e) => e.code),
 				),
 			]);
-			return { ...event, label: subEventLabel ?? event.name, teams };
+			return {
+				code: event.code,
+				pin: event.pin,
+				token: event.token,
+				name: event.name,
+				label: subEventLabel ?? event.name,
+				teams,
+				users: event.users,
+				subEvents: event.subEvents,
+				playoffMode: event.playoffMode,
+				notepadOnly: event.notepadOnly,
+				startDate: event.startDate,
+				endDate: event.endDate,
+			};
 		}),
 
 	joinByToken: protectedProcedure.input(z.object({ token: z.string() })).mutation(async ({ input, ctx }) => {
@@ -201,7 +215,20 @@ export const eventRouter = router({
 				event.subEvents?.map((e) => e.code),
 			),
 		]);
-		return { ...event, label: subEventLabel ?? event.name, teams };
+		return {
+			code: event.code,
+			pin: event.pin,
+			token: event.token,
+			name: event.name,
+			label: subEventLabel ?? event.name,
+			teams,
+			users: event.users,
+			subEvents: event.subEvents,
+			playoffMode: event.playoffMode,
+			notepadOnly: event.notepadOnly,
+			startDate: event.startDate,
+			endDate: event.endDate,
+		};
 	}),
 
 	get: adminProcedure
@@ -1339,5 +1366,24 @@ export const eventRouter = router({
 		// Broadcast to all instances so their cached event stays in sync
 		bus.publish(`event:${event.code}:playoff_mode`, input.playoffMode);
 		return { playoffMode: input.playoffMode };
+	}),
+
+	settings: eventProcedure.subscription(async function* ({ ctx, signal }) {
+		const event = ctx.event;
+		const { push, drain } = subscriptionQueue<{ playoffMode: boolean; notepadOnly: boolean }>(signal!);
+
+		const playoffUnsub = bus.subscribe(`event:${event.code}:playoff_mode`, (data) => {
+			push({ playoffMode: data as boolean, notepadOnly: event.notepadOnly });
+		});
+		const notepadUnsub = bus.subscribe(`event:${event.code}:notepad_only`, (data) => {
+			push({ playoffMode: event.playoffMode, notepadOnly: data as boolean });
+		});
+
+		try {
+			yield* drain();
+		} finally {
+			playoffUnsub();
+			notepadUnsub();
+		}
 	}),
 });

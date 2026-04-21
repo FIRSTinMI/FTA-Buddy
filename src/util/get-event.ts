@@ -115,7 +115,6 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 			const users = userRows;
 
 			events[eventCode] = {
-				year: event.year,
 				name: event.name,
 				pin: event.pin,
 				code: eventCode,

@@ -394,6 +394,19 @@
 		}
 	});
 
+	// Subscribe to server-side event settings changes (playoffMode, notepadOnly) so all
+	// connected clients update immediately when an FTA toggles them.
+	$effect(() => {
+		const eventToken = $user.eventToken;
+		if (!eventToken) return;
+		const sub = trpc.event.settings.subscribe(undefined, {
+			onData: (data) => {
+				eventStore.update((e) => ({ ...e, playoffMode: data.playoffMode, notepadOnly: data.notepadOnly }));
+			},
+		});
+		return () => sub.unsubscribe();
+	});
+
 	// App install prompt
 
 	window.addEventListener("beforeinstallprompt", (event) => {

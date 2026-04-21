@@ -3,7 +3,12 @@ import jsPDF from "jspdf";
 import { uploadReport } from "./gcs";
 import OpenAI from "openai";
 import { db } from "../db/db";
-import { matchEvents, messages, notes } from "../db/schema";
+import schema, { matchEvents, messages, notes } from "../db/schema";
+
+export interface SubEventInfo {
+	code: string;
+	label: string;
+}
 
 const openaiApiKey = process.env.OPENAI_API_KEY ?? process.env.OPENAI_KEY;
 const model = process.env.OPENAI_MODEL ?? "gpt-5";
@@ -11,6 +16,7 @@ const model = process.env.OPENAI_MODEL ?? "gpt-5";
 interface NoteContext {
 	id: string;
 	team: number | null;
+	division?: string;
 	note_type: string;
 	issue_type: string | null;
 	resolution_status: string | null;
@@ -33,6 +39,7 @@ interface NoteContext {
 
 interface MatchEventSummary {
 	team: number;
+	division?: string;
 	total: number;
 	dismissed: number;
 	follow_up_note_count: number;
@@ -74,12 +81,22 @@ interface ClosedNoteDetail {
 	messages: Array<{ text: string; author: string; created_at: string | null }>;
 }
 
+interface DivisionStats {
+	label: string;
+	team_count: number;
+	note_count: number;
+	open_notes: number;
+	resolved_notes: number;
+	match_event_count: number;
+}
+
 interface EventContext {
 	event_name: string;
 	event_code: string;
 	start_date: string | null;
 	end_date: string | null;
 	team_count: number;
+	divisions?: DivisionStats[];
 	stats: {
 		total_notes: number;
 		team_issue_notes: number;
@@ -335,19 +352,49 @@ async function collectEventData(
 	endDate: string | null,
 	teamCount: number,
 	options: CollectEventDataOptions = {},
+	subEvents?: SubEventInfo[],
 ): Promise<EventContext> {
 	const { includeTestMatches = true } = options;
 	const includedLevels: readonly ("None" | "Practice" | "Qualification" | "Playoff")[] = includeTestMatches
 		? ["None", "Practice", "Qualification", "Playoff"]
 		: ["Qualification", "Playoff"];
 
-	const allNotes = await db.select().from(notes).where(eq(notes.event_code, eventCode)).execute();
-	const allMessages = await db.select().from(messages).where(eq(messages.event_code, eventCode)).execute();
+	const isMeshed = !!subEvents?.length;
+	const allCodes = isMeshed ? [eventCode, ...subEvents!.map((s) => s.code)] : [eventCode];
+	const codeFilter = allCodes.length === 1 ? eq(notes.event_code, allCodes[0]) : inArray(notes.event_code, allCodes);
+	const meCodeFilter =
+		allCodes.length === 1 ? eq(matchEvents.event_code, allCodes[0]) : inArray(matchEvents.event_code, allCodes);
+
+	const allNotes = await db.select().from(notes).where(codeFilter).execute();
+	const allMessages = await db
+		.select()
+		.from(messages)
+		.where(allCodes.length === 1 ? eq(messages.event_code, allCodes[0]) : inArray(messages.event_code, allCodes))
+		.execute();
 
 	const messagesByNote = new Map<string, typeof allMessages>();
 	for (const msg of allMessages) {
 		if (!messagesByNote.has(msg.note_id)) messagesByNote.set(msg.note_id, []);
 		messagesByNote.get(msg.note_id)!.push(msg);
+	}
+
+	// Build team → division label map from checklist (only for meshed events)
+	const teamToDivision = new Map<number, string>();
+	if (isMeshed) {
+		const checklistRows = await db
+			.select({ teamNumber: schema.checklist.teamNumber, eventCode: schema.checklist.eventCode })
+			.from(schema.checklist)
+			.where(
+				inArray(
+					schema.checklist.eventCode,
+					subEvents!.map((s) => s.code),
+				),
+			);
+		const subEventByCode = new Map(subEvents!.map((s) => [s.code, s.label]));
+		for (const row of checklistRows) {
+			const num = parseInt(row.teamNumber, 10);
+			if (!isNaN(num)) teamToDivision.set(num, subEventByCode.get(row.eventCode) ?? row.eventCode);
+		}
 	}
 
 	const allMatchEvents = await db
@@ -360,7 +407,7 @@ async function collectEventData(
 			match_number: matchEvents.match_number,
 		})
 		.from(matchEvents)
-		.where(and(eq(matchEvents.event_code, eventCode), inArray(matchEvents.level, includedLevels)))
+		.where(and(meCodeFilter, inArray(matchEvents.level, includedLevels)))
 		.execute();
 
 	const noteContexts: NoteContext[] = allNotes.map((n) => {
@@ -391,9 +438,11 @@ async function collectEventData(
 			noteText: n.text,
 		});
 
+		const division = isMeshed && n.team != null ? teamToDivision.get(n.team) : undefined;
 		return {
 			id: n.id,
 			team: n.team ?? null,
+			...(division ? { division } : {}),
 			note_type: n.note_type ?? "TeamIssue",
 			issue_type: humanizeIssueType(n.issue_type),
 			resolution_status: n.resolution_status ?? null,
@@ -422,8 +471,10 @@ async function collectEventData(
 	const meSummaryMap = new Map<number, MatchEventSummary>();
 	for (const me of allMatchEvents) {
 		if (!meSummaryMap.has(me.team)) {
+			const division = isMeshed ? teamToDivision.get(me.team) : undefined;
 			meSummaryMap.set(me.team, {
 				team: me.team,
+				...(division ? { division } : {}),
 				total: 0,
 				dismissed: 0,
 				follow_up_note_count: 0,
@@ -586,12 +637,31 @@ async function collectEventData(
 			return a.team - b.team;
 		});
 
+	// Compute per-division stats for meshed events
+	let divisions: DivisionStats[] | undefined;
+	if (isMeshed && subEvents) {
+		divisions = subEvents.map((se) => {
+			const divNotes = noteContexts.filter((n) => n.division === se.label);
+			const divME = matchEventSummaries.filter((m) => m.division === se.label);
+			const divTeamCount = Array.from(teamToDivision.entries()).filter(([, label]) => label === se.label).length;
+			return {
+				label: se.label,
+				team_count: divTeamCount,
+				note_count: divNotes.length,
+				open_notes: divNotes.filter((n) => n.resolution_status === "Open").length,
+				resolved_notes: divNotes.filter((n) => n.resolution_status === "Resolved").length,
+				match_event_count: divME.reduce((sum, m) => sum + m.total, 0),
+			};
+		});
+	}
+
 	return {
 		event_name: eventName,
 		event_code: eventCode,
 		start_date: startDate,
 		end_date: endDate,
 		team_count: teamCount,
+		...(divisions ? { divisions } : {}),
 		stats: {
 			total_notes: noteContexts.length,
 			team_issue_notes: teamIssueNotes.length,
@@ -619,6 +689,7 @@ async function collectEventData(
 }
 
 function buildPrompt(ctx: EventContext): string {
+	const isMeshed = !!ctx.divisions?.length;
 	return `You are writing a technical event operations summary for FIRST HQ.
 
 Audience: Lead FTA and Program Technical Staff.
@@ -630,6 +701,16 @@ Do NOT include training suggestions.
 Do NOT include motivational language.
 Do NOT describe the event atmosphere.
 Use concise, operations-focused FRC language.
+${
+	isMeshed
+		? `
+MULTI-DIVISION EVENT
+This is a multi-division championship event. Notes and match events are tagged with a "division" field.
+Organize the report by division where relevant. When reporting stats, break them down per division.
+The "divisions" field in the event data provides per-division team counts, note counts, and match event counts.
+`
+		: ""
+}
 
 VERY IMPORTANT INTERPRETATION RULES
 
@@ -670,18 +751,18 @@ CRITICAL GROUNDING RULES
 - If a ticket remains open, state the exact unresolved condition from the note and excerpts.
 
 TARGET LENGTH
-Aim for approximately 1.5 to 2.5 pages of text when rendered to PDF.
+Aim for approximately ${isMeshed ? "2.5 to 4" : "1.5 to 2.5"} pages of text when rendered to PDF.
 
 Use ONLY these section headings:
 
 EVENT METRICS
 Provide team count, total notes, breakdown by note type, open vs resolved, CSA involvement, and total match events.
-Separate official match events from test-match events.
+${isMeshed ? "Break down each metric per division using the divisions array." : ""}Separate official match events from test-match events.
 Distinguish dismissed automatic detections from detections that produced follow-up notes.
 
 ISSUE BREAKDOWN
 Summarize issue categories factually, but do not over-trust the labels.
-List the top 5 teams by total match events.
+${isMeshed ? "Group the following lists by division where significant differences exist between divisions." : ""}List the top 5 teams by total match events.
 List the top 5 teams by high-impact match events.
 List teams with the most formal notes.
 Identify the most active troubleshooting threads.
@@ -702,13 +783,14 @@ Focus on the most operationally significant tickets.
 These are usually tickets with long threads, high recurrence, long open time, CSA involvement, or repeated match impact.
 Use the order already provided in stats.ticket_digest and discuss the highest-priority incidents first.
 This section should be selective and emphasize the tickets the reader would care most about.
+${isMeshed ? "Note the division for each key incident." : ""}
 
 TICKET SUMMARY
-Provide a concise bullet summary for EVERY ticket in the dataset, listed in ascending team number order (as already ordered in stats.ticket_digest). Tickets without a team number appear last.
+Provide a concise bullet summary for EVERY ticket in the dataset, ${isMeshed ? "grouped by division (use the division field on each ticket), then sorted by ascending team number within each division. Tickets without a division appear last." : "listed in ascending team number order (as already ordered in stats.ticket_digest). Tickets without a team number appear last."}
 Use one bullet per ticket.
 Each bullet should include:
 - team number when present
-- match number / level when useful
+${isMeshed ? "- division name\n" : ""}- match number / level when useful
 - the concrete issue description from the note text
 - recurrence if supported
 - the key fix or outcome from resolution excerpts if present
@@ -795,15 +877,24 @@ export async function generateAiEventReport(
 	startDate: string | null,
 	endDate: string | null,
 	teamCount: number,
+	subEvents?: SubEventInfo[],
 ): Promise<string> {
 	if (!openaiApiKey) {
 		throw new Error("AI report generation is disabled: OPENAI_API_KEY is not configured.");
 	}
 
 	const openai = new OpenAI({ apiKey: openaiApiKey });
-	const ctx = await collectEventData(eventCode, eventName, startDate, endDate, teamCount, {
-		includeTestMatches: true,
-	});
+	const ctx = await collectEventData(
+		eventCode,
+		eventName,
+		startDate,
+		endDate,
+		teamCount,
+		{
+			includeTestMatches: true,
+		},
+		subEvents,
+	);
 
 	const systemPrompt = `
 You are an experienced FRC FTA writing an internal technical event report.

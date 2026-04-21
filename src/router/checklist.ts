@@ -1,4 +1,4 @@
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { bus } from "../util/eventBus";
 import type { EventChecklist, TeamChecklist } from "../../shared/types";
@@ -91,10 +91,10 @@ export const checklistRouter = router({
 				.onConflictDoUpdate({
 					target: [schema.checklist.eventCode, schema.checklist.teamNumber],
 					set: {
-						present: schema.checklist.present,
-						inspected: schema.checklist.inspected,
-						radioProgrammed: schema.checklist.radioProgrammed,
-						connectionTested: schema.checklist.connectionTested,
+						present: sql`excluded.present`,
+						inspected: sql`excluded.inspected`,
+						radioProgrammed: sql`excluded.radio_programmed`,
+						connectionTested: sql`excluded.connection_tested`,
 					},
 				});
 
@@ -163,9 +163,10 @@ export const checklistRouter = router({
 				heartbeatFn = () => push({ ...merged });
 			} else {
 				unsubs = [bus.subscribe(`event:${event.code}:checklist`, (data) => push(data as EventChecklist))];
-				heartbeatFn = async () => {
-					const cl = await getChecklist(event.code);
-					push(cl);
+				heartbeatFn = () => {
+					getChecklist(event.code)
+						.then(push)
+						.catch((err) => console.error("[Checklist] heartbeat error:", err));
 				};
 			}
 

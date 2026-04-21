@@ -11,6 +11,7 @@
 
 import type { ServerEvent } from "../../shared/types";
 import { bus } from "./eventBus";
+import { sql } from "drizzle-orm";
 import { db } from "../db/db";
 import schema from "../db/schema";
 import { getChecklist, setChecklist } from "./event-state";
@@ -192,8 +193,8 @@ async function pollNexus(event: ServerEvent): Promise<void> {
 				.onConflictDoUpdate({
 					target: [schema.checklist.eventCode, schema.checklist.teamNumber],
 					set: {
-						inspected: schema.checklist.inspected,
-						present: schema.checklist.present,
+						inspected: sql`excluded.inspected`,
+						present: sql`excluded.present`,
 					},
 				});
 		} catch (err: any) {

@@ -9,11 +9,11 @@
  * The API key is never written to logs.
  */
 
-import { eq } from "drizzle-orm";
 import type { ServerEvent } from "../../shared/types";
 import { bus } from "./eventBus";
 import { db } from "../db/db";
-import { events } from "../db/schema";
+import schema from "../db/schema";
+import { getChecklist, setChecklist } from "./event-state";
 
 const NEXUS_BASE = "https://frc.nexus/api/v1";
 
@@ -156,7 +156,7 @@ async function pollNexus(event: ServerEvent): Promise<void> {
 		return;
 	}
 
-	const checklist = event.checklist;
+	const checklist = await getChecklist(event.code);
 	const updates: { team: string; inspected: boolean }[] = [];
 
 	for (const [teamNum, nexusTeam] of Object.entries(data)) {
@@ -177,18 +177,35 @@ async function pollNexus(event: ServerEvent): Promise<void> {
 		}
 
 		try {
-			await db.update(events).set({ checklist }).where(eq(events.code, event.code));
+			await db
+				.insert(schema.checklist)
+				.values(
+					updates.map((u) => ({
+						eventCode: event.code,
+						teamNumber: u.team,
+						present: checklist[u.team].present,
+						inspected: checklist[u.team].inspected,
+						radioProgrammed: checklist[u.team].radioProgrammed,
+						connectionTested: checklist[u.team].connectionTested,
+					})),
+				)
+				.onConflictDoUpdate({
+					target: [schema.checklist.eventCode, schema.checklist.teamNumber],
+					set: {
+						inspected: schema.checklist.inspected,
+						present: schema.checklist.present,
+					},
+				});
 		} catch (err: any) {
-			// Log the error but don't surface key; continue
 			console.error(`[Nexus] Failed to persist checklist for ${event.code}:`, err?.message);
 		}
 
-		event.checklist = checklist;
+		setChecklist(event.code, checklist);
 		bus.publish(`event:${event.code}:checklist`, checklist);
 	}
 
 	// -- Update poll metadata ------------------------------------------------
-	const allInspected = event.teams.every((t) => checklist[String(t.number)]?.inspected === true);
+	const allInspected = Object.values(checklist).every((t) => t.inspected === true);
 
 	event.nexus.isAllInspected = allInspected;
 	event.nexus.lastSuccessAt = new Date();

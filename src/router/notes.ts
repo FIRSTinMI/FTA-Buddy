@@ -7,7 +7,7 @@ import { buildNotification, toNoteCtx } from "../../shared/notifications";
 import type { Notification } from "../../shared/types";
 import type { FmsNoteMetadata, Message, Note, NoteUpdateEventData, Profile } from "../../shared/types";
 import { db } from "../db/db";
-import { events, matchEvents, matchLogs, messages, noteFollowers, notes, pushSubscriptions, users } from "../db/schema";
+import schema, { events, matchEvents, matchLogs, messages, noteFollowers, notes, pushSubscriptions, users } from "../db/schema";
 import { eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
 import { getEvent } from "../util/get-event";
 import { createNotification } from "../util/push-notifications";
@@ -716,7 +716,12 @@ export const notesRouter = router({
 				.where(eq(users.id, -1));
 			if (!author[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
 
-			if (!event.teams.find((t) => parseInt(t.number) === input.team)) {
+			const teamInEvent = await db
+				.select({ teamNumber: schema.checklist.teamNumber })
+				.from(schema.checklist)
+				.where(and(eq(schema.checklist.eventCode, event.code), eq(schema.checklist.teamNumber, String(input.team))))
+				.limit(1);
+			if (teamInEvent.length === 0) {
 				throw new TRPCError({
 					code: "NOT_FOUND",
 					message: "Provided Team number is not associated with this Event",
@@ -769,7 +774,7 @@ export const notesRouter = router({
 					createSlackNoteMessage(
 						insert[0].id,
 						insert[0].team,
-						event.teams.find((t) => parseInt(t.number) === insert[0].team)?.name ?? null,
+						insert[0].team !== null ? (await db.select({ name: schema.teams.name }).from(schema.teams).where(eq(schema.teams.number, String(insert[0].team))).limit(1))[0]?.name ?? null : null,
 						"Team Submission",
 						insert[0].text,
 						event.code,
@@ -930,7 +935,7 @@ export const notesRouter = router({
 					createSlackNoteMessage(
 						insert[0].id,
 						insert[0].team,
-						event.teams.find((t) => parseInt(t.number) === insert[0].team)?.name ?? null,
+						insert[0].team !== null ? (await db.select({ name: schema.teams.name }).from(schema.teams).where(eq(schema.teams.number, String(insert[0].team))).limit(1))[0]?.name ?? null : null,
 						resolvedProfile.username,
 						insert[0].text,
 						event.code,
@@ -990,7 +995,7 @@ export const notesRouter = router({
 			const slackMsg = createSlackNoteMessage(
 				update[0].id,
 				update[0].team,
-				event.teams.find((t) => parseInt(t.number) === update[0].team)?.name ?? null,
+				update[0].team !== null ? (await db.select({ name: schema.teams.name }).from(schema.teams).where(eq(schema.teams.number, String(update[0].team))).limit(1))[0]?.name ?? null : null,
 				update[0].author?.username ?? "Unknown",
 				update[0].text,
 				event.code,
@@ -2016,10 +2021,17 @@ export async function createFromNexus(channel_id: string, message_ts: string, te
 					linkEvent = ev; // meshed event has all users merged; use it for notifications + URL
 					break;
 				}
-			} else if (ev.teams.some((t) => parseInt(t.number, 10) === team)) {
-				targetEventCode = row.code;
-				linkEvent = ev;
-				break;
+			} else {
+				const teamInEvent = await db
+					.select({ teamNumber: schema.checklist.teamNumber })
+					.from(schema.checklist)
+					.where(and(eq(schema.checklist.eventCode, ev.code), eq(schema.checklist.teamNumber, String(team))))
+					.limit(1);
+				if (teamInEvent.length > 0) {
+					targetEventCode = row.code;
+					linkEvent = ev;
+					break;
+				}
 			}
 		}
 	}
@@ -2255,10 +2267,17 @@ export async function createFromSlashCommand(
 				linkEvent = ev;
 				break;
 			}
-		} else if (ev.teams.some((t) => parseInt(t.number, 10) === teamNumber)) {
-			targetEventCode = row.code;
-			linkEvent = ev;
-			break;
+		} else {
+			const teamInEvent = await db
+				.select({ teamNumber: schema.checklist.teamNumber })
+				.from(schema.checklist)
+				.where(and(eq(schema.checklist.eventCode, ev.code), eq(schema.checklist.teamNumber, String(teamNumber))))
+				.limit(1);
+			if (teamInEvent.length > 0) {
+				targetEventCode = row.code;
+				linkEvent = ev;
+				break;
+			}
 		}
 	}
 

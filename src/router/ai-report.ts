@@ -1,8 +1,8 @@
-import { eq } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { TRPCError } from "@trpc/server";
 import { db } from "../db/db";
-import { aiEventReports } from "../db/schema";
+import schema, { aiEventReports } from "../db/schema";
 import { eventProcedure, router } from "../trpc";
 import { getEvent } from "../util/get-event";
 import { generateAiEventReport } from "../util/ai-report-generator";
@@ -67,7 +67,10 @@ export const aiReportRouter = router({
 					.where(eq(aiEventReports.event_code, event.code))
 					.execute();
 
-				const teamCount = Array.isArray(event.teams) ? event.teams.length : 0;
+				const [{ teamCount }] = await db
+						.select({ teamCount: count() })
+						.from(schema.checklist)
+						.where(eq(schema.checklist.eventCode, event.code));
 				const filePath = await generateAiEventReport(
 					event.code,
 					event.name,

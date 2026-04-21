@@ -6,7 +6,8 @@ import { bus } from "../util/eventBus";
 import { redis } from "../util/redis";
 import { formatTimeShortNoAgoSeconds } from "../../shared/formatTime";
 import { DSState, EnableState, FieldState } from "../../shared/types";
-import type { MonitorFrame, StateChange, TournamentLevel } from "../../shared/types";
+import type { EventTiming, MonitorFrame, StateChange, TournamentLevel } from "../../shared/types";
+import { DEFAULT_MONITOR } from "../../shared/constants";
 import { db } from "../db/db";
 import { users } from "../db/schema";
 import { eventProcedure, publicProcedure, router } from "../trpc";
@@ -18,6 +19,7 @@ import {
 	computeOvernightOffset,
 } from "../util/frame-processing";
 import { getEvent } from "../util/get-event";
+import { getMonitorFrame, getTiming, setTiming } from "../util/event-state";
 import { subscriptionQueue } from "../util/subscription";
 
 export interface Post {
@@ -101,40 +103,45 @@ export const fieldMonitorRouter = router({
 				connection.frames++;
 			}
 
+			// Read previous frame and timing from Redis (single source of truth across instances)
+			const [prevFrame, timing] = await Promise.all([
+				getMonitorFrame(event.code),
+				getTiming(event.code),
+			]);
+
 			// Infer level from schedule when scraping mode reports "None" - match 999 is always a test match
 			if (input.level === "None" && input.match > 0 && input.match !== 999) {
 				const scheduledMatch = event.scheduleDetails?.matches?.find((m) => m.match === input.match);
 				if (scheduledMatch) {
 					(input as any).level = scheduledMatch.level;
-				} else if (event.monitorFrame.level !== "None") {
+				} else if (prevFrame.level !== "None") {
 					// Preserve current level when scraper reports transient "None"
-					// (Angular component may briefly report no tournament level during state transitions)
-					(input as any).level = event.monitorFrame.level;
+					(input as any).level = prevFrame.level;
 				}
 			}
 
 			// Detects raising and falling edges
-			const processed = detectStatusChange(input, event.monitorFrame);
+			const processed = detectStatusChange(input, prevFrame);
 
 			// Preserve lastCycleTime BEFORE the async gap in processTeamWarnings.
-			// Two sources (SignalR + scraper) post frames concurrently; if the scraper frame
-			// reads event.monitorFrame.lastCycleTime after the await it may see a stale "unk"
-			// value that was set before the SignalR frame finished writing its valid value.
 			if (!processed.currentFrame.lastCycleTime || processed.currentFrame.lastCycleTime === "unk") {
-				processed.currentFrame.lastCycleTime = event.monitorFrame.lastCycleTime;
+				processed.currentFrame.lastCycleTime = prevFrame.lastCycleTime;
 			}
 
 			// Add emoji warnings
-			processed.currentFrame = await processTeamWarnings(event.code, processed.currentFrame, event.monitorFrame);
+			processed.currentFrame = await processTeamWarnings(event.code, processed.currentFrame, prevFrame);
 
-			const prevField = event.monitorFrame.field;
+			const prevField = prevFrame.field;
 			const fieldChanged = prevField !== processed.currentFrame.field;
+			let timingChanged = false;
 
 			if (fieldChanged) {
 				if (processed.currentFrame.field === FieldState.PRESTART_COMPLETED) {
-					event.lastPrestartDone = new Date();
+					timing.lastPrestartDone = new Date();
+					timingChanged = true;
 				} else if (processed.currentFrame.field === FieldState.MATCH_RUNNING_AUTO) {
-					event.lastMatchStart = new Date();
+					timing.lastMatchStart = new Date();
+					timingChanged = true;
 
 					let exactAheadBehind = undefined;
 					if (event.scheduleDetails.matches) {
@@ -149,10 +156,10 @@ export const fieldMonitorRouter = router({
 							}
 							let timeDelta =
 								processed.currentFrame.matchScheduledStartTime.getTime() -
-								event.lastMatchStart.getTime();
+								timing.lastMatchStart.getTime();
 							timeDelta += computeOvernightOffset(
 								processed.currentFrame.matchScheduledStartTime,
-								event.lastMatchStart,
+								timing.lastMatchStart,
 								event.scheduleDetails,
 							);
 							exactAheadBehind =
@@ -161,33 +168,32 @@ export const fieldMonitorRouter = router({
 					}
 					processed.currentFrame.exactAheadBehind = exactAheadBehind;
 				} else if (processed.currentFrame.field === FieldState.MATCH_OVER) {
-					event.lastMatchEnd = new Date();
+					timing.lastMatchEnd = new Date();
+					timingChanged = true;
 				} else if (prevField === FieldState.READY_FOR_POST_RESULT) {
-					event.lastMatchScoresPosted = new Date();
+					timing.lastMatchScoresPosted = new Date();
+					timingChanged = true;
 				}
 			}
 
 			if (!processed.currentFrame.exactAheadBehind && processed.currentFrame.level === "Qualification")
-				processed.currentFrame.exactAheadBehind = event.monitorFrame.exactAheadBehind;
-
-			// Update monitorFrame BEFORE publishing field_status so that
-			// subscription listeners (which read event.monitorFrame) see current data.
-			event.monitorFrame = processed.currentFrame;
+				processed.currentFrame.exactAheadBehind = prevFrame.exactAheadBehind;
 
 			if (fieldChanged) {
 				bus.publish(`event:${event.code}:field_status`, processed.currentFrame.field);
 			}
+			if (timingChanged) {
+				setTiming(event.code, timing);
+				bus.publish(`event:${event.code}:timing`, timing);
+			}
 			eventLastSeen[event.code] = new Date();
 
-			event.history.push(processed.currentFrame);
-			if (event.history.length > 50) event.history.shift();
-
-			bus.publish(`event:${event.code}:frame`, event.monitorFrame);
+			bus.publish(`event:${event.code}:frame`, processed.currentFrame);
 			// Pipeline the four Redis writes so trim/expire always follow the push atomically
 			redis
 				.multi()
-				.set(`ftabuddy:event:${event.code}:monitor_frame`, SuperJSON.stringify(event.monitorFrame))
-				.lpush(`ftabuddy:event:${event.code}:history`, SuperJSON.stringify(event.monitorFrame))
+				.set(`ftabuddy:event:${event.code}:monitor_frame`, SuperJSON.stringify(processed.currentFrame))
+				.lpush(`ftabuddy:event:${event.code}:history`, SuperJSON.stringify(processed.currentFrame))
 				.ltrim(`ftabuddy:event:${event.code}:history`, 0, 49)
 				.expire(`ftabuddy:event:${event.code}:history`, 86400)
 				.exec()
@@ -197,12 +203,12 @@ export const fieldMonitorRouter = router({
 				bus.publish(`event:${event.code}:robot_state`, change);
 			}
 
-			const checklist = await processFrameForTeamData(event.code, processed.currentFrame, processed.changes);
-			if (checklist) {
-				bus.publish(`event:${event.code}:checklist`, checklist);
+			const updatedChecklist = await processFrameForTeamData(event.code, processed.currentFrame, processed.changes);
+			if (updatedChecklist) {
+				bus.publish(`event:${event.code}:checklist`, updatedChecklist);
 			}
 
-			processTeamCycles(event.code, processed.currentFrame, processed.changes);
+			processTeamCycles(event.code, processed.currentFrame, processed.changes, timing.lastPrestartDone);
 
 			return;
 		}),
@@ -220,7 +226,7 @@ export const fieldMonitorRouter = router({
 			});
 			if (parsed.length > 0) return parsed.reverse();
 		}
-		return event.history;
+		return [];
 	}),
 
 	robots: publicProcedure
@@ -346,16 +352,17 @@ export const fieldMonitorRouter = router({
 					});
 				});
 				cleanups.push(unsub);
+				const frame = await getMonitorFrame(event.code);
 				push({
 					code: event.code,
 					name: event.name,
 					token: event.token,
 					pin: event.pin,
-					field: event.monitorFrame.field,
-					match: event.monitorFrame.match,
-					level: event.monitorFrame.level,
-					aheadBehind: event.monitorFrame.time,
-					exactAheadBehind: event.monitorFrame.exactAheadBehind,
+					field: frame.field,
+					match: frame.match,
+					level: frame.level,
+					aheadBehind: frame.time,
+					exactAheadBehind: frame.exactAheadBehind,
 					clients: event.stats.clients,
 					extensions: event.stats.extensions,
 				});

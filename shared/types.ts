@@ -358,13 +358,20 @@ export const FMSLevelMap: { [key in FMSEnums.Level]: "None" | "Practice" | "Qual
 
 export interface TeamChecklist {
 	present: boolean;
-	weighed: boolean;
 	inspected: boolean;
 	radioProgrammed: boolean;
 	connectionTested: boolean;
 }
 export type EventChecklist = { [key: string]: TeamChecklist };
 export type TeamList = { number: string; name: string; inspected: boolean }[];
+
+export interface EventTiming {
+	lastPrestartDone: Date | null;
+	lastMatchStart: Date | null;
+	lastMatchEnd: Date | null;
+	lastMatchRefDone: Date | null;
+	lastMatchScoresPosted: Date | null;
+}
 
 export interface PitMapElement {
 	position: { x: number; y: number };
@@ -449,17 +456,8 @@ export interface ServerEvent {
 	pin: string;
 	token: string;
 	year: number;
-	teams: TeamList;
-	checklist: EventChecklist;
 	users: Profile[];
-	monitorFrame: MonitorFrame;
-	history: MonitorFrame[];
 	scheduleDetails: ScheduleDetails;
-	lastPrestartDone: Date | null;
-	lastMatchStart: Date | null;
-	lastMatchEnd: Date | null;
-	lastMatchRefDone: Date | null;
-	lastMatchScoresPosted: Date | null;
 	robotCycleTracking: {
 		prestart?: Date;
 		blue1?: RobotCycleTracking;

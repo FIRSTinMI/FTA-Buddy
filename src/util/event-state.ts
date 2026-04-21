@@ -11,7 +11,7 @@ const TIMING_TTL = 86400 * 3; // 3 days
 
 export async function getMonitorFrame(eventCode: string): Promise<MonitorFrame> {
 	const stored = await redis.get(`ftabuddy:event:${eventCode}:monitor_frame`);
-	return stored ? SuperJSON.parse<MonitorFrame>(stored) : { ...DEFAULT_MONITOR };
+	return stored ? SuperJSON.parse<MonitorFrame>(stored) : structuredClone(DEFAULT_MONITOR);
 }
 
 export async function getTiming(eventCode: string): Promise<EventTiming> {

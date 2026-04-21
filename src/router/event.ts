@@ -415,7 +415,7 @@ export const eventRouter = router({
 				await db
 					.insert(schema.teams)
 					.values(uniqueTeams.map((t) => ({ number: t!.number, name: t!.name })))
-					.onConflictDoUpdate({ target: schema.teams.number, set: { name: schema.teams.name } });
+					.onConflictDoUpdate({ target: schema.teams.number, set: { name: sql`excluded.name` } });
 
 				await db
 					.insert(schema.checklist)
@@ -559,7 +559,7 @@ export const eventRouter = router({
 				await db
 					.insert(schema.teams)
 					.values(newTeams.map((t) => ({ number: t.number, name: t.name })))
-					.onConflictDoUpdate({ target: schema.teams.number, set: { name: schema.teams.name } });
+					.onConflictDoUpdate({ target: schema.teams.number, set: { name: sql`excluded.name` } });
 
 				await db
 					.insert(schema.checklist)

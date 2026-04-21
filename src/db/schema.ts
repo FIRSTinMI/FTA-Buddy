@@ -12,7 +12,6 @@ import {
 	serial,
 	text,
 	timestamp,
-	unique,
 	uuid,
 	varchar,
 } from "drizzle-orm/pg-core";

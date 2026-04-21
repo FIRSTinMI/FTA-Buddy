@@ -57,6 +57,37 @@ async function updateFullEventList() {
 
 updateFullEventList();
 
+async function getTeamsForEvent(eventCode: string, subEventCodes?: string[]): Promise<TeamList> {
+	const rows =
+		subEventCodes && subEventCodes.length > 0
+			? await db
+					.select({
+						number: schema.checklist.teamNumber,
+						name: schema.teams.name,
+						inspected: schema.checklist.inspected,
+					})
+					.from(schema.checklist)
+					.leftJoin(schema.teams, eq(schema.checklist.teamNumber, schema.teams.number))
+					.where(inArray(schema.checklist.eventCode, subEventCodes))
+			: await db
+					.select({
+						number: schema.checklist.teamNumber,
+						name: schema.teams.name,
+						inspected: schema.checklist.inspected,
+					})
+					.from(schema.checklist)
+					.leftJoin(schema.teams, eq(schema.checklist.teamNumber, schema.teams.number))
+					.where(eq(schema.checklist.eventCode, eventCode));
+	const seen = new Set<string>();
+	return rows
+		.filter((r) => {
+			if (seen.has(r.number)) return false;
+			seen.add(r.number);
+			return true;
+		})
+		.map((r) => ({ number: r.number, name: r.name ?? "", inspected: r.inspected }));
+}
+
 async function getSubEventLabel(eventCode: string): Promise<string | undefined> {
 	const parentRow = await db.query.events.findFirst({
 		columns: { meshedEvent: true },
@@ -135,8 +166,14 @@ export const eventRouter = router({
 			await db.insert(eventUsers).values({ user_id: ctx.user.id, event_code: event.code }).onConflictDoNothing();
 			await db.update(users).set({ active_event_code: event.code }).where(eq(users.id, ctx.user.id));
 
-			const subEventLabel = event.meshedEvent ? undefined : await getSubEventLabel(event.code);
-			return { ...event, label: subEventLabel ?? event.name };
+			const [subEventLabel, teams] = await Promise.all([
+				event.meshedEvent ? undefined : getSubEventLabel(event.code),
+				getTeamsForEvent(
+					event.code,
+					event.subEvents?.map((e) => e.code),
+				),
+			]);
+			return { ...event, label: subEventLabel ?? event.name, teams };
 		}),
 
 	joinByToken: protectedProcedure.input(z.object({ token: z.string() })).mutation(async ({ input, ctx }) => {
@@ -157,8 +194,14 @@ export const eventRouter = router({
 		await db.insert(eventUsers).values({ user_id: ctx.user.id, event_code: event.code }).onConflictDoNothing();
 		await db.update(users).set({ active_event_code: event.code }).where(eq(users.id, ctx.user.id));
 
-		const subEventLabel = event.meshedEvent ? undefined : await getSubEventLabel(event.code);
-		return { ...event, label: subEventLabel ?? event.name };
+		const [subEventLabel, teams] = await Promise.all([
+			event.meshedEvent ? undefined : getSubEventLabel(event.code),
+			getTeamsForEvent(
+				event.code,
+				event.subEvents?.map((e) => e.code),
+			),
+		]);
+		return { ...event, label: subEventLabel ?? event.name, teams };
 	}),
 
 	get: adminProcedure
@@ -256,7 +299,6 @@ export const eventRouter = router({
 			input.code = input.code.trim().toLowerCase();
 			const token = generateToken();
 			const teams: TeamList = [];
-			const checklist: EventChecklist = {};
 
 			if (await db.query.events.findFirst({ where: eq(events.code, input.code) })) {
 				throw new TRPCError({ code: "CONFLICT", message: "Event already exists" });
@@ -279,12 +321,6 @@ export const eventRouter = router({
 			if (teamsData) {
 				for (let team of teamsData) {
 					teams.push({ number: team.team_number.toString(), name: team.nickname, inspected: false });
-					checklist[team.team_number.toString()] = {
-						present: false,
-						inspected: false,
-						radioProgrammed: false,
-						connectionTested: false,
-					};
 				}
 			}
 
@@ -305,12 +341,6 @@ export const eventRouter = router({
 							name: teamData.nickname,
 							inspected: false,
 						});
-						checklist[teamData.team_number.toString()] = {
-							present: false,
-							inspected: false,
-							radioProgrammed: false,
-							connectionTested: false,
-						};
 					});
 
 				promises.push(teamData);
@@ -341,8 +371,6 @@ export const eventRouter = router({
 					name: name.trim(),
 					pin: input.pin,
 					token,
-					teams: uniqueTeams,
-					checklist,
 					startDate: eventData.start_date ?? null,
 					endDate: eventData.end_date ?? null,
 					timezone: eventData.timezone_id ?? null,
@@ -377,7 +405,10 @@ export const eventRouter = router({
 					.onConflictDoNothing();
 			}
 
-			return event[0];
+			return {
+				...event[0],
+				teams: uniqueTeams.map((t) => ({ number: t!.number, name: t!.name, inspected: false })),
+			};
 		}),
 
 	// Returns codes of events that have an active FMS extension connection
@@ -468,7 +499,7 @@ export const eventRouter = router({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const event = await getEvent(ctx.event.token);
+			const event = ctx.event;
 
 			const existingRows = await db
 				.select({ teamNumber: schema.checklist.teamNumber })
@@ -530,10 +561,7 @@ export const eventRouter = router({
 			}
 
 			// Rebuild and warm the Redis checklist cache
-			const allRows = await db
-				.select()
-				.from(schema.checklist)
-				.where(eq(schema.checklist.eventCode, event.code));
+			const allRows = await db.select().from(schema.checklist).where(eq(schema.checklist.eventCode, event.code));
 			const checklistMap: EventChecklist = {};
 			for (const row of allRows) {
 				checklistMap[row.teamNumber] = {
@@ -550,7 +578,7 @@ export const eventRouter = router({
 		}),
 
 	reimportTeamsFromTBA: eventProcedure.mutation(async ({ ctx }) => {
-		const event = await getEvent(ctx.event.token);
+		const event = ctx.event;
 
 		if (event.meshedEvent && event.subEvents?.length) {
 			// For meshed events, count unique teams across all sub-event checklist tables
@@ -562,10 +590,9 @@ export const eventRouter = router({
 			return { count: rows.length };
 		}
 
-		const teamsData = await fetch(
-			`https://www.thebluealliance.com/api/v3/event/${event.code}/teams/simple`,
-			{ headers: { "X-TBA-Auth-Key": process.env.TBA_API_KEY ?? "" } },
-		).then((res) => res.json());
+		const teamsData = await fetch(`https://www.thebluealliance.com/api/v3/event/${event.code}/teams/simple`, {
+			headers: { "X-TBA-Auth-Key": process.env.TBA_API_KEY ?? "" },
+		}).then((res) => res.json());
 
 		if (!teamsData || "Error" in teamsData) {
 			throw new TRPCError({ code: "BAD_REQUEST", message: "Failed to fetch teams from TBA" });
@@ -599,10 +626,7 @@ export const eventRouter = router({
 			.onConflictDoNothing();
 
 		// Rebuild Redis cache
-		const allRows = await db
-			.select()
-			.from(schema.checklist)
-			.where(eq(schema.checklist.eventCode, event.code));
+		const allRows = await db.select().from(schema.checklist).where(eq(schema.checklist.eventCode, event.code));
 		const checklistMap: EventChecklist = {};
 		for (const row of allRows) {
 			checklistMap[row.teamNumber] = {
@@ -677,7 +701,38 @@ export const eventRouter = router({
 				});
 			}
 
-			const teams: TeamList = eventsData.flatMap((e) => e.teams as TeamList);
+			const subEventCodes = input.events.map((e) => e.code);
+
+			// Query sub-event teams from normalized tables
+			const teamRowsFromDB = await db
+				.select({
+					eventCode: schema.checklist.eventCode,
+					number: schema.checklist.teamNumber,
+					name: schema.teams.name,
+					inspected: schema.checklist.inspected,
+				})
+				.from(schema.checklist)
+				.leftJoin(schema.teams, eq(schema.checklist.teamNumber, schema.teams.number))
+				.where(inArray(schema.checklist.eventCode, subEventCodes));
+
+			// Per-event team map
+			const teamsByEvent = new Map<string, TeamList>();
+			for (const row of teamRowsFromDB) {
+				if (!teamsByEvent.has(row.eventCode)) teamsByEvent.set(row.eventCode, []);
+				teamsByEvent
+					.get(row.eventCode)!
+					.push({ number: row.number, name: row.name ?? "", inspected: row.inspected });
+			}
+
+			// Deduplicated combined teams list
+			const teams: TeamList = [
+				...new Map(
+					teamRowsFromDB.map((r) => [
+						r.number,
+						{ number: r.number, name: r.name ?? "", inspected: r.inspected },
+					]),
+				).values(),
+			];
 
 			let subEvents: {
 				code: string;
@@ -692,23 +747,19 @@ export const eventRouter = router({
 			const subEventUserRows = await db
 				.select({ user_id: eventUsers.user_id })
 				.from(eventUsers)
-				.where(
-					inArray(
-						eventUsers.event_code,
-						input.events.map((e) => e.code),
-					),
-				);
+				.where(inArray(eventUsers.event_code, subEventCodes));
 			let usersToGet = Array.from(new Set([...subEventUserRows.map((r) => r.user_id), ctx.user.id]));
 
 			for (let event of input.events) {
+				const data = eventsData.find((e) => e.code === event.code);
 				subEvents.push({
 					code: event.code,
-					name: eventsData.find((e) => e.code === event.code)?.name ?? "",
+					name: data?.name ?? "",
 					label: event.label,
 					color: event.color,
-					token: eventsData.find((e) => e.code === event.code)?.token ?? "",
-					teams: eventsData.find((e) => e.code === event.code)?.teams as TeamList,
-					pin: eventsData.find((e) => e.code === event.code)?.pin ?? "",
+					token: data?.token ?? "",
+					teams: teamsByEvent.get(event.code) ?? [],
+					pin: data?.pin ?? "",
 				});
 			}
 
@@ -719,9 +770,7 @@ export const eventRouter = router({
 					name: "Meshed Event: " + subEvents.map((e) => e.label).join(", "),
 					pin: input.pin,
 					token,
-					teams,
 					meshedEvent: subEvents,
-					checklist: {},
 					autoEventSettings: DEFAULT_AUTO_EVENT_SETTINGS,
 				})
 				.returning();
@@ -730,7 +779,7 @@ export const eventRouter = router({
 
 			return {
 				...meshedEvent[0],
-				teams: meshedEvent[0].teams as TeamList,
+				teams,
 				users: await db
 					.select({
 						id: users.id,
@@ -862,7 +911,7 @@ export const eventRouter = router({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const event = await getEvent(ctx.event.token);
+			const event = ctx.event;
 			await db
 				.update(events)
 				.set({ nexusApiKey: input.nexusApiKey || null })
@@ -874,12 +923,12 @@ export const eventRouter = router({
 		}),
 
 	getNexusStatus: eventProcedure.query(async ({ ctx }) => {
-		const event = await getEvent(ctx.event.token);
+		const event = ctx.event;
 		return { ...event.nexus, nexusApiKeyIsSet: !!event.nexusApiKey };
 	}),
 
 	getNexusLiveStatus: eventProcedure.query(async ({ ctx }) => {
-		const event = await getEvent(ctx.event.token);
+		const event = ctx.event;
 		const status = event.nexusEventStatus;
 
 		if (!status || !status.nowQueuing) {
@@ -924,7 +973,7 @@ export const eventRouter = router({
 	}),
 
 	getPitMap: eventProcedure.query(async ({ ctx }) => {
-		const event = await getEvent(ctx.event.token);
+		const event = ctx.event;
 		if (!event.nexusApiKey) return null;
 
 		const CACHE_MS = 5 * 60 * 1000;
@@ -960,7 +1009,7 @@ export const eventRouter = router({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const event = await getEvent(ctx.event.token);
+			const event = ctx.event;
 			await db
 				.update(events)
 				.set({ fmsEventPassword: input.fmsEventPassword || null })
@@ -971,7 +1020,7 @@ export const eventRouter = router({
 
 	/** Returns whether a FMS event password is configured (without revealing the value). */
 	getFmsPasswordIsSet: eventProcedure.query(async ({ ctx }) => {
-		const event = await getEvent(ctx.event.token);
+		const event = ctx.event;
 		return { isSet: !!event.fmsEventPassword };
 	}),
 
@@ -980,7 +1029,7 @@ export const eventRouter = router({
 	 * any extension has sent a frame in the last 90 seconds.
 	 */
 	getFmsIntegrationStatus: eventProcedure.query(async ({ ctx }) => {
-		const event = await getEvent(ctx.event.token);
+		const event = ctx.event;
 		const cutoff = new Date(Date.now() - 90_000);
 		const activeExtension =
 			event.stats.extensions
@@ -995,17 +1044,16 @@ export const eventRouter = router({
 
 	/** Returns the FMS event password for use by the extension to authenticate against FMS APIs. */
 	getFmsEventPassword: eventProcedure.query(async ({ ctx }) => {
-		const event = await getEvent(ctx.event.token);
+		const event = ctx.event;
 		return { fmsEventPassword: event.fmsEventPassword ?? null };
 	}),
 
 	/** Returns full event details needed to populate the client event store (usable with just an event token). */
 	getDetails: eventProcedure.query(async ({ ctx }) => {
-		const event = await getEvent(ctx.event.token);
+		const event = ctx.event;
 		const subEventLabel = event.meshedEvent ? undefined : await getSubEventLabel(event.code);
 
-		const teamEventCodes =
-			event.meshedEvent && event.subEvents?.length ? event.subEvents.map((s) => s.code) : null;
+		const teamEventCodes = event.meshedEvent && event.subEvents?.length ? event.subEvents.map((s) => s.code) : null;
 		const teamRows = teamEventCodes
 			? await db
 					.select({
@@ -1051,9 +1099,8 @@ export const eventRouter = router({
 
 	/** Returns the team list (number, name, inspected) for this event. */
 	getTeams: eventProcedure.query(async ({ ctx }) => {
-		const event = await getEvent(ctx.event.token);
-		const teamEventCodes =
-			event.meshedEvent && event.subEvents?.length ? event.subEvents.map((s) => s.code) : null;
+		const event = ctx.event;
+		const teamEventCodes = event.meshedEvent && event.subEvents?.length ? event.subEvents.map((s) => s.code) : null;
 		const rows = teamEventCodes
 			? await db
 					.select({
@@ -1085,22 +1132,14 @@ export const eventRouter = router({
 
 	/** Removes a single team from the event's team list and checklist. */
 	removeTeam: eventProcedure.input(z.object({ teamNumber: z.string() })).mutation(async ({ ctx, input }) => {
-		const event = await getEvent(ctx.event.token);
+		const event = ctx.event;
 
 		await db
 			.delete(schema.checklist)
-			.where(
-				and(
-					eq(schema.checklist.eventCode, event.code),
-					eq(schema.checklist.teamNumber, input.teamNumber),
-				),
-			);
+			.where(and(eq(schema.checklist.eventCode, event.code), eq(schema.checklist.teamNumber, input.teamNumber)));
 
 		// Rebuild Redis cache and notify subscribers
-		const allRows = await db
-			.select()
-			.from(schema.checklist)
-			.where(eq(schema.checklist.eventCode, event.code));
+		const allRows = await db.select().from(schema.checklist).where(eq(schema.checklist.eventCode, event.code));
 		const checklistMap: EventChecklist = {};
 		for (const row of allRows) {
 			checklistMap[row.teamNumber] = {
@@ -1118,7 +1157,7 @@ export const eventRouter = router({
 
 	/** Returns the list of users currently joined to this event. */
 	getUsers: eventProcedure.query(async ({ ctx }) => {
-		const event = await getEvent(ctx.event.token);
+		const event = ctx.event;
 		return (event.users as Profile[]).map((u) => ({
 			id: u.id,
 			username: u.username,
@@ -1129,7 +1168,7 @@ export const eventRouter = router({
 
 	/** Get the auto-event settings for this event. Missing keys default to true (enabled). */
 	getAutoEventSettings: eventProcedure.query(async ({ ctx }) => {
-		const event = await getEvent(ctx.event.token);
+		const event = ctx.event;
 		// Fill in defaults: any missing key is treated as enabled
 		const settings: EventAutoEventSettings = {};
 		for (const issue of AUTO_EVENT_ISSUE_TYPES) {
@@ -1153,7 +1192,7 @@ export const eventRouter = router({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const event = await getEvent(ctx.event.token);
+			const event = ctx.event;
 			// Only persist keys that belong to the known issue type set
 			const newSettings: EventAutoEventSettings = {};
 			for (const issue of AUTO_EVENT_ISSUE_TYPES) {
@@ -1280,7 +1319,7 @@ export const eventRouter = router({
 	 * Divisional sub-events remain accessible via the sidebar selector.
 	 */
 	setNotepadOnly: eventProcedure.input(z.object({ notepadOnly: z.boolean() })).mutation(async ({ ctx, input }) => {
-		const event = await getEvent(ctx.event.token);
+		const event = ctx.event;
 		await db.update(events).set({ notepadOnly: input.notepadOnly }).where(eq(events.code, event.code));
 		event.notepadOnly = input.notepadOnly;
 		bus.publish(`event:${event.code}:notepad_only`, input.notepadOnly);
@@ -1288,7 +1327,7 @@ export const eventRouter = router({
 	}),
 
 	setPlayoffMode: eventProcedure.input(z.object({ playoffMode: z.boolean() })).mutation(async ({ ctx, input }) => {
-		const event = await getEvent(ctx.event.token);
+		const event = ctx.event;
 		if (!event.meshedEvent) {
 			throw new TRPCError({
 				code: "BAD_REQUEST",

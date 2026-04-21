@@ -458,15 +458,6 @@ export interface ServerEvent {
 	year: number;
 	users: Profile[];
 	scheduleDetails: ScheduleDetails;
-	robotCycleTracking: {
-		prestart?: Date;
-		blue1?: RobotCycleTracking;
-		blue2?: RobotCycleTracking;
-		blue3?: RobotCycleTracking;
-		red1?: RobotCycleTracking;
-		red2?: RobotCycleTracking;
-		red3?: RobotCycleTracking;
-	};
 	notes: Note[];
 	meshedEvent: boolean;
 	notepadOnly: boolean;
@@ -514,6 +505,16 @@ export interface ServerEvent {
 export type NotificationEvents = {
 	send: (data: { users: number[]; notification: Notification }) => void;
 };
+
+export interface EventCycleTracking {
+	prestart?: Date;
+	blue1?: RobotCycleTracking;
+	blue2?: RobotCycleTracking;
+	blue3?: RobotCycleTracking;
+	red1?: RobotCycleTracking;
+	red2?: RobotCycleTracking;
+	red3?: RobotCycleTracking;
+}
 
 export interface RobotCycleTracking {
 	team: number;

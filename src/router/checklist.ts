@@ -9,7 +9,15 @@ import { getEvent } from "../util/get-event";
 import { getChecklist, setChecklist } from "../util/event-state";
 import { subscriptionQueue } from "../util/subscription";
 
-function rowsToChecklist(rows: { teamNumber: string; present: boolean; inspected: boolean; radioProgrammed: boolean; connectionTested: boolean }[]): EventChecklist {
+function rowsToChecklist(
+	rows: {
+		teamNumber: string;
+		present: boolean;
+		inspected: boolean;
+		radioProgrammed: boolean;
+		connectionTested: boolean;
+	}[],
+): EventChecklist {
 	const cl: EventChecklist = {};
 	for (const row of rows) {
 		cl[row.teamNumber] = {
@@ -25,17 +33,14 @@ function rowsToChecklist(rows: { teamNumber: string; present: boolean; inspected
 export const checklistRouter = router({
 	get: eventProcedure.query(async ({ ctx }) => {
 		if (ctx.event.meshedEvent) {
-			const subEventCodes = (ctx.event.meshedEvent as Array<{ code: string }>).map((e) => e.code);
+			const subEventCodes = (ctx.event.subEvents ?? []).map((e) => e.code);
 			const rows = await db
 				.select()
 				.from(schema.checklist)
 				.where(inArray(schema.checklist.eventCode, subEventCodes));
 			return rowsToChecklist(rows);
 		}
-		const rows = await db
-			.select()
-			.from(schema.checklist)
-			.where(eq(schema.checklist.eventCode, ctx.event.code));
+		const rows = await db.select().from(schema.checklist).where(eq(schema.checklist.eventCode, ctx.event.code));
 		return rowsToChecklist(rows);
 	}),
 
@@ -50,13 +55,18 @@ export const checklistRouter = router({
 			),
 		)
 		.mutation(async ({ input, ctx }) => {
-			const event = await getEvent(ctx.event.token);
+			const event = ctx.event;
 
 			// Read current checklist from Redis (fast), apply mutations, write back
 			const checklist = await getChecklist(event.code);
 			for (const i of input) {
 				if (!checklist[i.team]) {
-					checklist[i.team] = { present: false, inspected: false, radioProgrammed: false, connectionTested: false };
+					checklist[i.team] = {
+						present: false,
+						inspected: false,
+						radioProgrammed: false,
+						connectionTested: false,
+					};
 				}
 				(checklist[i.team] as any)[i.key] = i.value;
 			}
@@ -126,7 +136,7 @@ export const checklistRouter = router({
 			let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 			if (event.subEvents) {
-				const subEventCodes = (event.subEvents as Array<{ code: string }>).map((e) => e.code);
+				const subEventCodes = event.subEvents.map((e) => e.code);
 
 				// Seed merged state from DB once at subscription creation.
 				const rows = await db

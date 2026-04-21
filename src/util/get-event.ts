@@ -1,18 +1,12 @@
 import { TRPCError } from "@trpc/server";
 import { eq, inArray } from "drizzle-orm";
 import { eventCodes, eventLastSeen, events } from "../state";
-import type {
-	EventAutoEventSettings,
-	NexusStatus,
-	Note,
-	ScheduleDetails,
-	ServerEvent,
-} from "../../shared/types";
+import type { EventAutoEventSettings, NexusStatus, Note, ScheduleDetails, ServerEvent } from "../../shared/types";
 import { bus } from "./eventBus";
 import { getChecklist } from "./event-state";
 import { db } from "../db/db";
 import schema from "../db/schema";
-import { getEventNotes } from "../router/notes";
+import { getEventNotes } from "./event-notes";
 import * as nexusPoller from "./nexusInspectionPoller";
 
 let loadingEvents: { [key: string]: Promise<ServerEvent> } = {};
@@ -128,7 +122,6 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 				token: eventToken,
 				users: users,
 				scheduleDetails: event.scheduleDetails as ScheduleDetails,
-				robotCycleTracking: {},
 				notes: (await getEventNotes(eventCode)) as Note[],
 				meshedEvent: event.meshedEvent !== null,
 				notepadOnly: event.notepadOnly ?? false,

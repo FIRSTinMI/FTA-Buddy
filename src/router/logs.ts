@@ -8,7 +8,6 @@ import { analyzedLogs, cycleLogs, events, logPublishing, matchLogs } from "../db
 import { eventProcedure, publicProcedure, router } from "../trpc";
 import { compressStationLog } from "../util/log-analysis";
 import { generateReport } from "../util/report-generator";
-import { getEvent } from "../util/get-event";
 
 // FMS generates Windows-style GUIDs which may have version nibbles outside [1-8],
 // so we use a permissive hex pattern instead of the strict RFC 4122 z.string().uuid().
@@ -203,7 +202,7 @@ export const matchRouter = router({
 			const eventCodes: string[] = ctx.event.meshedEvent
 				? ctx.event.playoffMode
 					? [ctx.event.code]
-					: [ctx.event.code, ...(ctx.event.meshedEvent as Array<{ code: string }>).map((e) => e.code)]
+					: [ctx.event.code, ...(ctx.event.subEvents ?? []).map((e) => e.code)]
 				: [ctx.event.code];
 
 			return await db
@@ -244,7 +243,7 @@ export const matchRouter = router({
 			const eventCodes: string[] = ctx.event.meshedEvent
 				? ctx.event.playoffMode
 					? [ctx.event.code]
-					: [ctx.event.code, ...(ctx.event.meshedEvent as Array<{ code: string }>).map((e) => e.code)]
+					: [ctx.event.code, ...(ctx.event.subEvents ?? []).map((e) => e.code)]
 				: [ctx.event.code];
 
 			const teamFilter = or(
@@ -323,7 +322,7 @@ export const matchRouter = router({
 			const eventCodes: string[] = ctx.event.meshedEvent
 				? ctx.event.playoffMode
 					? [ctx.event.code]
-					: [ctx.event.code, ...(ctx.event.meshedEvent as Array<{ code: string }>).map((e) => e.code)]
+					: [ctx.event.code, ...(ctx.event.subEvents ?? []).map((e) => e.code)]
 				: [ctx.event.code];
 
 			const filters = [
@@ -590,8 +589,7 @@ export const matchRouter = router({
 			}
 
 			// Third pass: fill in unscheduled matches from Nexus (e.g. playoff/finals not yet in TBA)
-			const liveEvent = await getEvent(ctx.event.token);
-			const nexusStatus = liveEvent.nexusEventStatus;
+			const nexusStatus = ctx.event.nexusEventStatus;
 			if (nexusStatus?.matches?.length) {
 				const resultKeys = new Set(result.map((m) => `${m.level}:${m.match_number}:${m.play_number}`));
 
@@ -675,7 +673,7 @@ export const matchRouter = router({
 		)
 		.query(async ({ input, ctx }) => {
 			const eventCodes = ctx.event.meshedEvent
-				? [ctx.event.code, ...(ctx.event.meshedEvent as Array<{ code: string }>).map((e) => e.code)]
+				? [ctx.event.code, ...(ctx.event.subEvents ?? []).map((e) => e.code)]
 				: [ctx.event.code];
 			const match = await db.query.matchLogs.findFirst({
 				where: and(
@@ -698,7 +696,7 @@ export const matchRouter = router({
 		)
 		.query(async ({ input, ctx }) => {
 			const eventCodes = ctx.event.meshedEvent
-				? [ctx.event.code, ...(ctx.event.meshedEvent as Array<{ code: string }>).map((e) => e.code)]
+				? [ctx.event.code, ...(ctx.event.subEvents ?? []).map((e) => e.code)]
 				: [ctx.event.code];
 			const match = await db.query.matchLogs.findFirst({
 				where: and(

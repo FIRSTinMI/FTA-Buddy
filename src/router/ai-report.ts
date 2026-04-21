@@ -4,7 +4,6 @@ import { TRPCError } from "@trpc/server";
 import { db } from "../db/db";
 import schema, { aiEventReports } from "../db/schema";
 import { eventProcedure, router } from "../trpc";
-import { getEvent } from "../util/get-event";
 import { generateAiEventReport } from "../util/ai-report-generator";
 
 export const aiReportRouter = router({
@@ -20,7 +19,7 @@ export const aiReportRouter = router({
 
 	/** Kick off AI report generation. Retryable up to 5 times total per event. */
 	start: eventProcedure.mutation(async ({ ctx }) => {
-		const event = await getEvent(ctx.eventToken as string);
+		const event = ctx.event;
 
 		const [existing] = await db
 			.select()
@@ -68,9 +67,9 @@ export const aiReportRouter = router({
 					.execute();
 
 				const [{ teamCount }] = await db
-						.select({ teamCount: count() })
-						.from(schema.checklist)
-						.where(eq(schema.checklist.eventCode, event.code));
+					.select({ teamCount: count() })
+					.from(schema.checklist)
+					.where(eq(schema.checklist.eventCode, event.code));
 				const filePath = await generateAiEventReport(
 					event.code,
 					event.name,

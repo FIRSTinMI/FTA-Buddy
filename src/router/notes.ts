@@ -7,7 +7,16 @@ import { buildNotification, toNoteCtx } from "../../shared/notifications";
 import type { Notification } from "../../shared/types";
 import type { FmsNoteMetadata, Message, Note, NoteUpdateEventData, Profile } from "../../shared/types";
 import { db } from "../db/db";
-import schema, { events, matchEvents, matchLogs, messages, noteFollowers, notes, pushSubscriptions, users } from "../db/schema";
+import schema, {
+	events,
+	matchEvents,
+	matchLogs,
+	messages,
+	noteFollowers,
+	notes,
+	pushSubscriptions,
+	users,
+} from "../db/schema";
 import { eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
 import { getEvent } from "../util/get-event";
 import { createNotification } from "../util/push-notifications";
@@ -323,7 +332,7 @@ const messagesSubRouter = router({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const event = await getEvent(ctx.eventToken as string);
+			const event = ctx.event;
 
 			const note = await db.query.notes.findFirst({
 				where: and(eq(notes.id, input.note_id), eq(notes.event_code, input.event_code)),
@@ -426,7 +435,7 @@ const messagesSubRouter = router({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const event = await getEvent(ctx.eventToken as string);
+			const event = ctx.event;
 			const noteEventCode = input.event_code ?? event.code;
 
 			const note = await db.query.notes.findFirst({
@@ -492,7 +501,7 @@ const messagesSubRouter = router({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const event = await getEvent(ctx.eventToken as string);
+			const event = ctx.event;
 			const deleteNoteEventCode = input.event_code ?? event.code;
 
 			const note = await db.query.notes.findFirst({
@@ -534,7 +543,7 @@ const messagesSubRouter = router({
 
 export const notesRouter = router({
 	getAll: eventProcedure.query(async ({ ctx }) => {
-		const event = await getEvent(ctx.eventToken as string);
+		const event = ctx.event;
 
 		let eventCodes = [event.code];
 		if (event.meshedEvent && event.subEvents && !event.playoffMode) {
@@ -550,7 +559,7 @@ export const notesRouter = router({
 	}),
 
 	getAllWithMessages: eventProcedure.query(async ({ ctx }) => {
-		const event = await getEvent(ctx.eventToken as string);
+		const event = ctx.event;
 
 		let eventCodes = [event.code];
 		if (event.meshedEvent && event.subEvents && !event.playoffMode) {
@@ -719,7 +728,12 @@ export const notesRouter = router({
 			const teamInEvent = await db
 				.select({ teamNumber: schema.checklist.teamNumber })
 				.from(schema.checklist)
-				.where(and(eq(schema.checklist.eventCode, event.code), eq(schema.checklist.teamNumber, String(input.team))))
+				.where(
+					and(
+						eq(schema.checklist.eventCode, event.code),
+						eq(schema.checklist.teamNumber, String(input.team)),
+					),
+				)
 				.limit(1);
 			if (teamInEvent.length === 0) {
 				throw new TRPCError({
@@ -774,7 +788,15 @@ export const notesRouter = router({
 					createSlackNoteMessage(
 						insert[0].id,
 						insert[0].team,
-						insert[0].team !== null ? (await db.select({ name: schema.teams.name }).from(schema.teams).where(eq(schema.teams.number, String(insert[0].team))).limit(1))[0]?.name ?? null : null,
+						insert[0].team !== null
+							? ((
+									await db
+										.select({ name: schema.teams.name })
+										.from(schema.teams)
+										.where(eq(schema.teams.number, String(insert[0].team)))
+										.limit(1)
+								)[0]?.name ?? null)
+							: null,
 						"Team Submission",
 						insert[0].text,
 						event.code,
@@ -807,7 +829,7 @@ export const notesRouter = router({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const event = await getEvent(ctx.eventToken as string);
+			const event = ctx.event;
 
 			const localProfile: Profile = { id: -1, username: "Field", role: "FTA", admin: false };
 			let resolvedProfile: Profile;
@@ -935,7 +957,15 @@ export const notesRouter = router({
 					createSlackNoteMessage(
 						insert[0].id,
 						insert[0].team,
-						insert[0].team !== null ? (await db.select({ name: schema.teams.name }).from(schema.teams).where(eq(schema.teams.number, String(insert[0].team))).limit(1))[0]?.name ?? null : null,
+						insert[0].team !== null
+							? ((
+									await db
+										.select({ name: schema.teams.name })
+										.from(schema.teams)
+										.where(eq(schema.teams.number, String(insert[0].team)))
+										.limit(1)
+								)[0]?.name ?? null)
+							: null,
 						resolvedProfile.username,
 						insert[0].text,
 						event.code,
@@ -964,7 +994,7 @@ export const notesRouter = router({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const event = await getEvent(ctx.eventToken as string);
+			const event = ctx.event;
 
 			const note = await db.query.notes.findFirst({
 				where: and(eq(notes.id, input.id), eq(notes.event_code, input.event_code)),
@@ -995,7 +1025,15 @@ export const notesRouter = router({
 			const slackMsg = createSlackNoteMessage(
 				update[0].id,
 				update[0].team,
-				update[0].team !== null ? (await db.select({ name: schema.teams.name }).from(schema.teams).where(eq(schema.teams.number, String(update[0].team))).limit(1))[0]?.name ?? null : null,
+				update[0].team !== null
+					? ((
+							await db
+								.select({ name: schema.teams.name })
+								.from(schema.teams)
+								.where(eq(schema.teams.number, String(update[0].team)))
+								.limit(1)
+						)[0]?.name ?? null)
+					: null,
 				update[0].author?.username ?? "Unknown",
 				update[0].text,
 				event.code,
@@ -1026,7 +1064,7 @@ export const notesRouter = router({
 		}),
 
 	delete: eventProcedure.input(z.object({ id: z.string().uuid() })).mutation(async ({ ctx, input }) => {
-		const event = await getEvent(ctx.eventToken as string);
+		const event = ctx.event;
 
 		const note = await db.query.notes.findFirst({ where: eq(notes.id, input.id) });
 		if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
@@ -1067,7 +1105,7 @@ export const notesRouter = router({
 				throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot merge a note with itself" });
 			}
 
-			const event = await getEvent(ctx.eventToken as string);
+			const event = ctx.event;
 
 			let eventCodes = [event.code];
 			if (event.meshedEvent && event.subEvents && !event.playoffMode) {
@@ -1176,7 +1214,7 @@ export const notesRouter = router({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const event = await getEvent(ctx.eventToken as string);
+			const event = ctx.event;
 
 			const note = await db.query.notes.findFirst({
 				where: and(eq(notes.id, input.id), eq(notes.event_code, input.event_code)),
@@ -1267,7 +1305,7 @@ export const notesRouter = router({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const event = await getEvent(ctx.eventToken as string);
+			const event = ctx.event;
 
 			const note = await db.query.notes.findFirst({
 				where: and(eq(notes.id, input.id), eq(notes.event_code, input.event_code)),
@@ -1352,7 +1390,7 @@ export const notesRouter = router({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const event = await getEvent(ctx.eventToken as string);
+			const event = ctx.event;
 
 			const note = await db.query.notes.findFirst({
 				where: and(eq(notes.id, input.note_id), eq(notes.event_code, input.event_code)),
@@ -1475,7 +1513,7 @@ export const notesRouter = router({
 		}),
 
 	generateNotesReport: eventProcedure.query(async ({ ctx }) => {
-		const event = await getEvent(ctx.eventToken as string);
+		const event = ctx.event;
 		const path = await generateNotesReportPdf(event.code, event.name);
 		return { path };
 	}),
@@ -1496,7 +1534,7 @@ export const notesRouter = router({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const event = await getEvent(ctx.eventToken as string);
+			const event = ctx.event;
 
 			const author: Profile = {
 				id: -1,
@@ -1559,7 +1597,7 @@ export const notesRouter = router({
 				}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const event = await getEvent(ctx.eventToken as string);
+			const event = ctx.event;
 
 			const whereClause = input.id
 				? and(eq(notes.id, input.id), eq(notes.event_code, event.code))
@@ -1607,7 +1645,7 @@ export const notesRouter = router({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const event = await getEvent(ctx.eventToken as string);
+			const event = ctx.event;
 			const update = await db
 				.update(notes)
 				.set({
@@ -1623,7 +1661,7 @@ export const notesRouter = router({
 		}),
 
 	getByFmsNoteId: eventProcedure.input(z.object({ fms_note_id: z.string() })).query(async ({ ctx, input }) => {
-		const event = await getEvent(ctx.eventToken as string);
+		const event = ctx.event;
 		const note = await db.query.notes.findFirst({
 			where: and(eq(notes.fms_note_id, input.fms_note_id), eq(notes.event_code, event.code)),
 		});
@@ -1632,7 +1670,7 @@ export const notesRouter = router({
 	}),
 
 	deleteByFmsNoteId: eventProcedure.input(z.object({ fms_note_id: z.string() })).mutation(async ({ ctx, input }) => {
-		const event = await getEvent(ctx.eventToken as string);
+		const event = ctx.event;
 		const note = await db.query.notes.findFirst({
 			where: and(eq(notes.fms_note_id, input.fms_note_id), eq(notes.event_code, event.code)),
 		});
@@ -1769,15 +1807,6 @@ export const notesRouter = router({
 			return true;
 		}),
 });
-
-export async function getEventNotes(event_code: string) {
-	const eventNotes = await db.query.notes.findMany({
-		where: eq(notes.event_code, event_code),
-		orderBy: [desc(notes.team)],
-	});
-	if (!eventNotes) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to find notes for this event" });
-	return eventNotes.map((n) => ({ ...n, followers: [] as number[] })) as Note[];
-}
 
 export async function getEventMessages(event_code: string) {
 	const eventMessages = await db.query.messages.findMany({
@@ -2197,28 +2226,32 @@ export async function createFromSlashCommand(
 
 	if (linkedEventRows.length === 0) {
 		// Channel isn't directly linked — try to find the right sub-event by team number.
-		// Only consider non-meshed, non-archived events that have Slack configured
-		// (slackChannel IS NOT NULL indicates an active, Slack-enabled event).
+		// Only consider non-meshed, non-archived events that have Slack configured.
 		// Meshed/combined parent events are excluded (meshedEvent IS NULL) because they
 		// duplicate all sub-event teams and would produce false matches.
-		const candidateRows = await db
-			.select({ code: events.code, slackTeam: events.slackTeam, teams: events.teams })
+		const matchRows = await db
+			.select({ code: events.code, slackTeam: events.slackTeam })
 			.from(events)
-			.where(and(isNotNull(events.slackChannel), isNull(events.meshedEvent), eq(events.archived, false)))
+			.innerJoin(schema.checklist, eq(schema.checklist.eventCode, events.code))
+			.where(
+				and(
+					isNotNull(events.slackChannel),
+					isNull(events.meshedEvent),
+					eq(events.archived, false),
+					eq(schema.checklist.teamNumber, teamNumber.toString()),
+				),
+			)
+			.limit(1)
 			.execute();
 
-		const match = candidateRows.find((c) =>
-			((c.teams ?? []) as { number: string }[]).some((t) => parseInt(t.number, 10) === teamNumber),
-		);
-
-		if (!match) {
+		if (matchRows.length === 0) {
 			return {
 				response_type: "ephemeral",
 				text: `This channel is not linked to an FTA-Buddy event, and no active event was found for team ${teamNumber}.`,
 			};
 		}
 
-		linkedEventRows = [{ code: match.code, slackTeam: match.slackTeam }];
+		linkedEventRows = [{ code: matchRows[0].code, slackTeam: matchRows[0].slackTeam }];
 	}
 
 	const existingNote = await db.query.notes.findFirst({ where: eq(notes.slack_ts, thread_ts) });
@@ -2271,7 +2304,9 @@ export async function createFromSlashCommand(
 			const teamInEvent = await db
 				.select({ teamNumber: schema.checklist.teamNumber })
 				.from(schema.checklist)
-				.where(and(eq(schema.checklist.eventCode, ev.code), eq(schema.checklist.teamNumber, String(teamNumber))))
+				.where(
+					and(eq(schema.checklist.eventCode, ev.code), eq(schema.checklist.teamNumber, String(teamNumber))),
+				)
 				.limit(1);
 			if (teamInEvent.length > 0) {
 				targetEventCode = row.code;

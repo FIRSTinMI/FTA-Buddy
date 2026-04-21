@@ -43,10 +43,8 @@ export const events = pgTable("events", {
 	code: varchar("code").primaryKey(),
 	name: varchar("name").notNull(),
 	pin: varchar("pin").notNull(),
-	teams: jsonb("teams").notNull().default("[]"),
 	created_at: timestamp("created_at").notNull().defaultNow(),
 	token: varchar("token").notNull().default("").unique(),
-	checklist: jsonb("checklist").notNull().default("[]"),
 	scheduleDetails: jsonb("scheduleDetails").notNull().default("{}"),
 	archived: boolean("archived").notNull().default(false),
 	meshedEvent: jsonb("meshedEvent"),
@@ -442,4 +440,15 @@ export const slackLinkTokens = pgTable("slack_link_tokens", {
 	expires_at: timestamp("expires_at").notNull(),
 });
 
-export default { events, users, eventUsers, messages, noteFollowers, matchLogs, cycleLogs, logPublishing, teams, checklist };
+export default {
+	events,
+	users,
+	eventUsers,
+	messages,
+	noteFollowers,
+	matchLogs,
+	cycleLogs,
+	logPublishing,
+	teams,
+	checklist,
+};

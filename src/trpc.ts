@@ -3,7 +3,8 @@ import type { CreateExpressContextOptions } from "@trpc/server/adapters/express"
 import { and, eq, gt } from "drizzle-orm";
 import SuperJSON from "superjson";
 import { db } from "./db/db";
-import { events, users } from "./db/schema";
+import { users } from "./db/schema";
+import { getEvent } from "./util/get-event";
 
 export const createContext = (opts: CreateExpressContextOptions) => {
 	const h = opts.req.headers;
@@ -55,8 +56,7 @@ export const eventProcedure = t.procedure.use(async (opts) => {
 	const { ctx } = opts;
 	if (!ctx.eventToken) throw new TRPCError({ code: "UNAUTHORIZED", message: "Missing Event Token Header" });
 
-	const event = await db.query.events.findFirst({ where: eq(events.token, ctx.eventToken) });
-	if (!event) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+	const event = await getEvent(ctx.eventToken);
 
 	return opts.next({
 		ctx: {

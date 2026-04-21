@@ -21,7 +21,7 @@ import { eventProcedure, protectedProcedure, publicProcedure, router } from "../
 import { getEvent } from "../util/get-event";
 import { createNotification } from "../util/push-notifications";
 import { generateReport } from "../util/report-generator";
-import { generateNotesReportPdf } from "../util/notes-report-generator";
+import { generateNotesReportPdf, type SubEventInfo } from "../util/notes-report-generator";
 import {
 	addSlackReaction,
 	deleteSlackMessage,
@@ -1514,7 +1514,11 @@ export const notesRouter = router({
 
 	generateNotesReport: eventProcedure.query(async ({ ctx }) => {
 		const event = ctx.event;
-		const path = await generateNotesReportPdf(event.code, event.name);
+		const subEvents: SubEventInfo[] | undefined =
+			event.meshedEvent && event.subEvents?.length
+				? event.subEvents.map((s) => ({ code: s.code, label: s.label }))
+				: undefined;
+		const path = await generateNotesReportPdf(event.code, event.name, subEvents);
 		return { path };
 	}),
 

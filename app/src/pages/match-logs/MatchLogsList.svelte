@@ -6,6 +6,7 @@
 	import { trpc } from "../../main";
 	import { eventStore } from "../../stores/event";
 	import { userStore } from "../../stores/user";
+	import { getPlayoffViewLabel } from "../../util/playoffViewLabel";
 
 	const matches = trpc.match.getMatches.query({});
 
@@ -76,8 +77,46 @@
 			{#if isCombined}
 				<!-- Combined view: outer tab per field, inner tabs for Practice/Qual/Playoff -->
 				<Tabs tabStyle="none" classes={tabClasses}>
+					{#if $eventStore.playoffMode}
+						<!-- Inter-divisional playoffs: show the parent (Fimstein/Einstein) field first -->
+						{@const parentFm = fieldMatches[$eventStore.code] ?? {
+							test: [],
+							practice: [],
+							qualification: [],
+							playoff: [],
+						}}
+						{@const parentLabel = getPlayoffViewLabel($eventStore.code)}
+						{@const parentOpen =
+							parentFm.playoff.length > 0
+								? "playoff"
+								: parentFm.qualification.length > 0
+									? "qualification"
+									: parentFm.practice.length > 0
+										? "practice"
+										: "test"}
+						<TabItem class="w-full" open={true} title={parentLabel}>
+							<Tabs tabStyle="none" classes={tabClasses}>
+								<MatchListTab matches={parentFm.test} open={parentOpen === "test"} label="Test" />
+								<MatchListTab
+									matches={parentFm.practice}
+									open={parentOpen === "practice"}
+									label="Practice"
+								/>
+								<MatchListTab
+									matches={parentFm.qualification}
+									open={parentOpen === "qualification"}
+									label="Qualification"
+								/>
+								<MatchListTab
+									matches={parentFm.playoff}
+									open={parentOpen === "playoff"}
+									label="Playoff"
+								/>
+							</Tabs>
+						</TabItem>
+					{/if}
 					{#each $eventStore.subEvents ?? [] as subEvent, i}
-						<TabItem class="w-full" open={i === 0} title={subEvent.label}>
+						<TabItem class="w-full" open={i === 0 && !$eventStore.playoffMode} title={subEvent.label}>
 							{@const fm = fieldMatches[subEvent.code] ?? {
 								test: [],
 								practice: [],

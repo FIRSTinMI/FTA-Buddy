@@ -455,7 +455,6 @@ export interface ServerEvent {
 	name: string;
 	pin: string;
 	token: string;
-	year: number;
 	users: Profile[];
 	scheduleDetails: ScheduleDetails;
 	notes: Note[];

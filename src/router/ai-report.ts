@@ -1,10 +1,10 @@
-import { count, eq } from "drizzle-orm";
+import { count, eq, inArray } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { TRPCError } from "@trpc/server";
 import { db } from "../db/db";
 import schema, { aiEventReports } from "../db/schema";
 import { eventProcedure, router } from "../trpc";
-import { generateAiEventReport } from "../util/ai-report-generator";
+import { generateAiEventReport, type SubEventInfo } from "../util/ai-report-generator";
 
 export const aiReportRouter = router({
 	/** Get the current AI report status for this event (null if never started). */
@@ -66,16 +66,26 @@ export const aiReportRouter = router({
 					.where(eq(aiEventReports.event_code, event.code))
 					.execute();
 
+				const subEvents: SubEventInfo[] | undefined =
+					event.meshedEvent && event.subEvents?.length
+						? event.subEvents.map((s) => ({ code: s.code, label: s.label }))
+						: undefined;
+				const allCodes = subEvents ? [event.code, ...subEvents.map((s) => s.code)] : [event.code];
 				const [{ teamCount }] = await db
 					.select({ teamCount: count() })
 					.from(schema.checklist)
-					.where(eq(schema.checklist.eventCode, event.code));
+					.where(
+						allCodes.length === 1
+							? eq(schema.checklist.eventCode, allCodes[0])
+							: inArray(schema.checklist.eventCode, allCodes),
+					);
 				const filePath = await generateAiEventReport(
 					event.code,
 					event.name,
 					event.startDate ?? null,
 					event.endDate ?? null,
 					teamCount,
+					subEvents,
 				);
 
 				await db

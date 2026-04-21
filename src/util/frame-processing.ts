@@ -11,8 +11,9 @@ import {
 } from "../../shared/types";
 import type { MonitorFrame, PartialMonitorFrame, RobotInfo, ScheduleDetails, StateChange } from "../../shared/types";
 import { db } from "../db/db";
-import { events, matchEvents, notes, robotCycleLogs } from "../db/schema";
+import schema, { matchEvents, notes, robotCycleLogs } from "../db/schema";
 import { getEvent } from "./get-event";
+import { getChecklist, setChecklist } from "./event-state";
 
 export function detectRadioNoDs(currentFrame: PartialMonitorFrame, pastFrames: MonitorFrame[]) {
 	// Only in prestart
@@ -118,38 +119,54 @@ export function detectStatusChange(currentFrame: PartialMonitorFrame, previousFr
 }
 
 export async function processFrameForTeamData(eventCode: string, frame: MonitorFrame, changes: StateChange[]) {
-	const event = await getEvent("", eventCode);
-	const checklist = event.checklist;
-	let changed = false;
+	const checklist = await getChecklist(eventCode);
+	const teamsToUpdate: { number: string; inspected: boolean }[] = [];
 
-	// Automatically check off connection test and prereqs for teams that have a connected radio
-	for (let team of [frame.blue1, frame.blue2, frame.blue3, frame.red1, frame.red2, frame.red3]) {
-		if (team.radio) {
-			changed = true;
+	for (const team of [frame.blue1, frame.blue2, frame.blue3, frame.red1, frame.red2, frame.red3]) {
+		if (team.radio && checklist[team.number]) {
 			checklist[team.number].present = true;
 			checklist[team.number].radioProgrammed = true;
 			checklist[team.number].connectionTested = true;
+			teamsToUpdate.push({ number: String(team.number), inspected: checklist[team.number].inspected });
 		}
 	}
 
-	if (changed) {
-		await db.update(events).set({ checklist }).where(eq(events.code, eventCode));
-		return checklist;
-	}
+	if (teamsToUpdate.length === 0) return false;
 
-	return false;
+	setChecklist(eventCode, checklist);
+
+	// Upsert changed rows to Postgres; preserve existing inspected status
+	await db
+		.insert(schema.checklist)
+		.values(
+			teamsToUpdate.map((t) => ({
+				eventCode,
+				teamNumber: t.number,
+				present: true,
+				radioProgrammed: true,
+				connectionTested: true,
+				inspected: t.inspected,
+			})),
+		)
+		.onConflictDoUpdate({
+			target: [schema.checklist.eventCode, schema.checklist.teamNumber],
+			set: { present: true, radioProgrammed: true, connectionTested: true },
+		});
+
+	return checklist;
 }
 
 export async function processTeamWarnings(eventCode: string, frame: MonitorFrame, previousFrame: MonitorFrame) {
-	const event = await getEvent("", eventCode);
+	const checklist = await getChecklist(eventCode);
 
 	for (let station in ROBOT) {
 		let robot = frame[station as keyof MonitorFrame] as RobotInfo;
-		if (!event.checklist[robot.number]) continue;
-		if (!event.checklist[robot.number].inspected) {
+		const teamChecklist = checklist[robot.number];
+		if (!teamChecklist) continue;
+		if (!teamChecklist.inspected) {
 			robot.warnings.push(RobotWarnings.NOT_INSPECTED);
 		}
-		if (!event.checklist[robot.number].radioProgrammed) {
+		if (!teamChecklist.radioProgrammed) {
 			robot.warnings.push(RobotWarnings.RADIO_NOT_FLASHED);
 		}
 
@@ -158,7 +175,7 @@ export async function processTeamWarnings(eventCode: string, frame: MonitorFrame
 			const teamNotes = await db
 				.select()
 				.from(notes)
-				.where(and(eq(notes.team, robot.number), eq(notes.event_code, event.code)))
+				.where(and(eq(notes.team, robot.number), eq(notes.event_code, eventCode)))
 				.orderBy(notes.updated_at);
 
 			const openNote = teamNotes.find((note) => note.resolution_status === "Open");
@@ -169,7 +186,7 @@ export async function processTeamWarnings(eventCode: string, frame: MonitorFrame
 				const previousMatch = await db
 					.select()
 					.from(robotCycleLogs)
-					.where(and(eq(robotCycleLogs.team, robot.number), eq(robotCycleLogs.event, event.code)))
+					.where(and(eq(robotCycleLogs.team, robot.number), eq(robotCycleLogs.event, eventCode)))
 					.orderBy(desc(robotCycleLogs.prestart))
 					.limit(1);
 
@@ -192,7 +209,7 @@ export async function processTeamWarnings(eventCode: string, frame: MonitorFrame
 				.from(matchEvents)
 				.where(
 					and(
-						eq(matchEvents.event_code, event.code),
+						eq(matchEvents.event_code, eventCode),
 						eq(matchEvents.team, robot.number),
 						eq(matchEvents.status, "active"),
 					),
@@ -225,7 +242,12 @@ export async function processTeamWarnings(eventCode: string, frame: MonitorFrame
 	return frame;
 }
 
-export async function processTeamCycles(eventCode: string, frame: MonitorFrame, changes: StateChange[]) {
+export async function processTeamCycles(
+	eventCode: string,
+	frame: MonitorFrame,
+	changes: StateChange[],
+	lastPrestartDone: Date | null,
+) {
 	const event = await getEvent("", eventCode);
 
 	// If the match is running and there is data, commit it and reset the tracking object
@@ -273,7 +295,7 @@ export async function processTeamCycles(eventCode: string, frame: MonitorFrame, 
 	if (MatchStateMap[frame.field] !== MatchState.PRESTART) return;
 
 	// If new match, set the prestart time
-	if (!event.robotCycleTracking.prestart) event.robotCycleTracking.prestart = event.lastPrestartDone || new Date();
+	if (!event.robotCycleTracking.prestart) event.robotCycleTracking.prestart = lastPrestartDone || new Date();
 
 	for (let change of changes) {
 		let cycle = event.robotCycleTracking[change.station];

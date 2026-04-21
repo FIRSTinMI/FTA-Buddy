@@ -1,20 +1,15 @@
 import { TRPCError } from "@trpc/server";
 import { eq, inArray } from "drizzle-orm";
-import SuperJSON from "superjson";
 import { eventCodes, eventLastSeen, events } from "../state";
-import { DEFAULT_MONITOR } from "../../shared/constants";
 import type {
 	EventAutoEventSettings,
-	EventChecklist,
-	MonitorFrame,
 	NexusStatus,
 	Note,
 	ScheduleDetails,
 	ServerEvent,
-	TeamList,
 } from "../../shared/types";
 import { bus } from "./eventBus";
-import { redis } from "./redis";
+import { getChecklist } from "./event-state";
 import { db } from "../db/db";
 import schema from "../db/schema";
 import { getEventNotes } from "../router/notes";
@@ -131,17 +126,8 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 				pin: event.pin,
 				code: eventCode,
 				token: eventToken,
-				teams: event.teams as TeamList,
-				checklist: event.checklist as EventChecklist,
 				users: users,
-				monitorFrame: DEFAULT_MONITOR,
-				history: [DEFAULT_MONITOR],
-				lastMatchStart: null,
-				lastMatchRefDone: null,
-				lastMatchScoresPosted: null,
 				scheduleDetails: event.scheduleDetails as ScheduleDetails,
-				lastPrestartDone: null,
-				lastMatchEnd: null,
 				robotCycleTracking: {},
 				notes: (await getEventNotes(eventCode)) as Note[],
 				meshedEvent: event.meshedEvent !== null,
@@ -171,31 +157,21 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 			eventLastSeen[eventCode] = new Date();
 			bus.publish("global:new_event", eventCode);
 
-			// Hydrate monitorFrame from Redis so this instance starts with
-			// the latest state even if another instance has been handling frames.
-			try {
-				const stored = await redis.get(`ftabuddy:event:${eventCode}:monitor_frame`);
-				if (stored) {
-					events[eventCode].monitorFrame = SuperJSON.parse<MonitorFrame>(stored);
-				}
-			} catch (err) {
-				console.warn(`[getEvent] Failed to hydrate monitorFrame from Redis for ${eventCode}:`, err);
-			}
-
-			// Keep monitorFrame in sync across instances: when another instance
-			// publishes a frame, update our local copy so that any code reading
-			// event.monitorFrame (e.g. cycle subscription field_status listener,
-			// getLastCycleTime query) sees current data.
-			const frameUnsub = bus.subscribe(`event:${eventCode}:frame`, (data) => {
-				if (events[eventCode]) events[eventCode].monitorFrame = data as MonitorFrame;
-			});
+			// Warm the Redis checklist cache so frame processing has it immediately.
+			getChecklist(eventCode).catch((err) =>
+				console.warn(`[getEvent] Failed to warm checklist cache for ${eventCode}:`, err),
+			);
 
 			// Keep playoffMode in sync across instances; track unsub for cleanup on eviction
 			const playoffUnsub = bus.subscribe(`event:${eventCode}:playoff_mode`, (data) => {
 				if (events[eventCode]) events[eventCode].playoffMode = data as boolean;
 			});
+			// Keep notepadOnly in sync across instances
+			const notepadUnsub = bus.subscribe(`event:${eventCode}:notepad_only`, (data) => {
+				if (events[eventCode]) events[eventCode].notepadOnly = data as boolean;
+			});
 			const cleanups = eventBusCleanups.get(eventCode) ?? [];
-			cleanups.push(frameUnsub, playoffUnsub);
+			cleanups.push(playoffUnsub, notepadUnsub);
 			eventBusCleanups.set(eventCode, cleanups);
 
 			if (event.nexusApiKey) {

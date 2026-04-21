@@ -12,6 +12,7 @@ import {
 	serial,
 	text,
 	timestamp,
+	unique,
 	uuid,
 	varchar,
 } from "drizzle-orm/pg-core";
@@ -63,6 +64,34 @@ export const events = pgTable("events", {
 });
 
 export type Event = typeof events.$inferInsert;
+
+/** Global team registry — upserted whenever an event is created or teams imported. */
+export const teams = pgTable("teams", {
+	number: text("number").primaryKey(),
+	name: text("name").notNull().default(""),
+});
+
+export type Team = typeof teams.$inferInsert;
+
+/** Per-event team checklist — one row per (event, team). Doubles as the team roster for the event. */
+export const checklist = pgTable(
+	"checklist",
+	{
+		eventCode: text("event_code")
+			.notNull()
+			.references(() => events.code),
+		teamNumber: text("team_number")
+			.notNull()
+			.references(() => teams.number),
+		present: boolean("present").notNull().default(false),
+		inspected: boolean("inspected").notNull().default(false),
+		radioProgrammed: boolean("radio_programmed").notNull().default(false),
+		connectionTested: boolean("connection_tested").notNull().default(false),
+	},
+	(t) => [primaryKey({ columns: [t.eventCode, t.teamNumber] })],
+);
+
+export type ChecklistRow = typeof checklist.$inferSelect;
 
 export const eventUsers = pgTable(
 	"event_users",
@@ -413,4 +442,4 @@ export const slackLinkTokens = pgTable("slack_link_tokens", {
 	expires_at: timestamp("expires_at").notNull(),
 });
 
-export default { events, users, eventUsers, messages, noteFollowers, matchLogs, cycleLogs, logPublishing };
+export default { events, users, eventUsers, messages, noteFollowers, matchLogs, cycleLogs, logPublishing, teams, checklist };

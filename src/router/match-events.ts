@@ -5,7 +5,7 @@ import { z } from "zod";
 import type { MatchEvent, MatchEventUpdateEventData, Note, Profile } from "../../shared/types";
 import { ISSUE_SEVERITY, ISSUE_TYPE_MAP } from "../../shared/issue-severity";
 import { db } from "../db/db";
-import { matchEvents, matchLogs, notes, users } from "../db/schema";
+import schema, { matchEvents, matchLogs, notes, users } from "../db/schema";
 import { eventProcedure, publicProcedure, router } from "../trpc";
 import { generateReport } from "../util/report-generator";
 import { getEvent } from "../util/get-event";
@@ -493,7 +493,7 @@ export const matchEventsRouter = router({
 						createSlackNoteMessage(
 							noteId,
 							newNote.team,
-							event.teams.find((t) => parseInt(t.number) === newNote.team)?.name ?? null,
+							newNote.team !== null ? (await db.select({ name: schema.teams.name }).from(schema.teams).where(eq(schema.teams.number, String(newNote.team))).limit(1))[0]?.name ?? null : null,
 							authorProfile[0].username,
 							newNote.text,
 							event.code,

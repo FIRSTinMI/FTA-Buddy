@@ -1,26 +1,42 @@
 import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { bus } from "../util/eventBus";
-import type { EventChecklist } from "../../shared/types";
+import type { EventChecklist, TeamChecklist } from "../../shared/types";
 import { db } from "../db/db";
-import { events } from "../db/schema";
+import schema from "../db/schema";
 import { eventProcedure, publicProcedure, router } from "../trpc";
 import { getEvent } from "../util/get-event";
+import { getChecklist, setChecklist } from "../util/event-state";
 import { subscriptionQueue } from "../util/subscription";
 
+function rowsToChecklist(rows: { teamNumber: string; present: boolean; inspected: boolean; radioProgrammed: boolean; connectionTested: boolean }[]): EventChecklist {
+	const cl: EventChecklist = {};
+	for (const row of rows) {
+		cl[row.teamNumber] = {
+			present: row.present,
+			inspected: row.inspected,
+			radioProgrammed: row.radioProgrammed,
+			connectionTested: row.connectionTested,
+		};
+	}
+	return cl;
+}
+
 export const checklistRouter = router({
-	get: eventProcedure.query(async ({ input, ctx }) => {
+	get: eventProcedure.query(async ({ ctx }) => {
 		if (ctx.event.meshedEvent) {
 			const subEventCodes = (ctx.event.meshedEvent as Array<{ code: string }>).map((e) => e.code);
 			const rows = await db
-				.select({ checklist: events.checklist })
-				.from(events)
-				.where(inArray(events.code, subEventCodes));
-			const merged: EventChecklist = {};
-			for (const row of rows) Object.assign(merged, row.checklist as EventChecklist);
-			return merged;
+				.select()
+				.from(schema.checklist)
+				.where(inArray(schema.checklist.eventCode, subEventCodes));
+			return rowsToChecklist(rows);
 		}
-		return ctx.event.checklist as EventChecklist;
+		const rows = await db
+			.select()
+			.from(schema.checklist)
+			.where(eq(schema.checklist.eventCode, ctx.event.code));
+		return rowsToChecklist(rows);
 	}),
 
 	update: eventProcedure
@@ -28,25 +44,53 @@ export const checklistRouter = router({
 			z.array(
 				z.object({
 					team: z.string(),
-					key: z.enum(["present", "weighed", "inspected", "radioProgrammed", "connectionTested"]),
+					key: z.enum(["present", "inspected", "radioProgrammed", "connectionTested"]),
 					value: z.boolean(),
 				}),
 			),
 		)
 		.mutation(async ({ input, ctx }) => {
-			const checklist = ctx.event.checklist as EventChecklist;
+			const event = await getEvent(ctx.event.token);
+
+			// Read current checklist from Redis (fast), apply mutations, write back
+			const checklist = await getChecklist(event.code);
 			for (const i of input) {
-				checklist[i.team][i.key] = i.value;
+				if (!checklist[i.team]) {
+					checklist[i.team] = { present: false, inspected: false, radioProgrammed: false, connectionTested: false };
+				}
+				(checklist[i.team] as any)[i.key] = i.value;
 			}
 
-			await db.update(events).set({ checklist }).where(eq(events.code, ctx.event.code));
+			// Write to Redis and Postgres
+			setChecklist(event.code, checklist);
 
-			const event = await getEvent(ctx.event.token);
-			event.checklist = checklist;
+			// Upsert all changed team rows to Postgres
+			const teams = [...new Set(input.map((i) => i.team))];
+			await db
+				.insert(schema.checklist)
+				.values(
+					teams.map((team) => ({
+						eventCode: event.code,
+						teamNumber: team,
+						present: checklist[team]?.present ?? false,
+						inspected: checklist[team]?.inspected ?? false,
+						radioProgrammed: checklist[team]?.radioProgrammed ?? false,
+						connectionTested: checklist[team]?.connectionTested ?? false,
+					})),
+				)
+				.onConflictDoUpdate({
+					target: [schema.checklist.eventCode, schema.checklist.teamNumber],
+					set: {
+						present: schema.checklist.present,
+						inspected: schema.checklist.inspected,
+						radioProgrammed: schema.checklist.radioProgrammed,
+						connectionTested: schema.checklist.connectionTested,
+					},
+				});
+
 			bus.publish(`event:${event.code}:checklist`, checklist);
 
 			let extensionId = ctx.extensionId;
-			console.log("extensionId", extensionId, input.length);
 			if (extensionId) {
 				let connection = event.stats.extensions.find((e) => e.id === extensionId);
 				if (!connection) {
@@ -61,7 +105,6 @@ export const checklistRouter = router({
 					};
 					event.stats.extensions.push(connection);
 				}
-
 				connection.checklistUpdates += input.length;
 			}
 
@@ -80,24 +123,18 @@ export const checklistRouter = router({
 
 			let unsubs: Array<() => void>;
 			let heartbeatFn: () => void;
-			// Hoisted so the finally block can always clear it, even if only the
-			// meshed-event path sets it.
 			let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 			if (event.subEvents) {
 				const subEventCodes = (event.subEvents as Array<{ code: string }>).map((e) => e.code);
 
-				// Seed merged state from the DB once at subscription creation.
-				// Bus handlers patch it in-place afterwards — no further DB queries needed.
+				// Seed merged state from DB once at subscription creation.
 				const rows = await db
-					.select({ checklist: events.checklist })
-					.from(events)
-					.where(inArray(events.code, subEventCodes));
-				const merged: EventChecklist = {};
-				for (const row of rows) Object.assign(merged, row.checklist as EventChecklist);
+					.select()
+					.from(schema.checklist)
+					.where(inArray(schema.checklist.eventCode, subEventCodes));
+				const merged: EventChecklist = rowsToChecklist(rows);
 
-				// Coalesce rapid updates (e.g. Nexus bulk-syncing 30 teams at once)
-				// into a single push every 50 ms at most.
 				function schedulePush() {
 					if (signal?.aborted) return;
 					if (debounceTimer) clearTimeout(debounceTimer);
@@ -109,7 +146,6 @@ export const checklistRouter = router({
 
 				unsubs = subEventCodes.map((code) =>
 					bus.subscribe(`event:${code}:checklist`, (data) => {
-						// Patch only this division's teams into the shared snapshot.
 						Object.assign(merged, data as EventChecklist);
 						schedulePush();
 					}),
@@ -117,7 +153,10 @@ export const checklistRouter = router({
 				heartbeatFn = () => push({ ...merged });
 			} else {
 				unsubs = [bus.subscribe(`event:${event.code}:checklist`, (data) => push(data as EventChecklist))];
-				heartbeatFn = () => push(event.checklist as EventChecklist);
+				heartbeatFn = async () => {
+					const cl = await getChecklist(event.code);
+					push(cl);
+				};
 			}
 
 			const heartbeat = setInterval(heartbeatFn, 30_000);

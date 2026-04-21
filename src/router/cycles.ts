@@ -79,17 +79,12 @@ export const cycleRouter = router({
 					.returning();
 			}
 
-			const [timing, frame] = await Promise.all([
-				getTiming(event.code),
-				getMonitorFrame(event.code),
-			]);
+			const [timing, frame] = await Promise.all([getTiming(event.code), getMonitorFrame(event.code)]);
 
 			if (input.type === "lastCycleTime" && input.lastCycleTime) {
 				// Update lastCycleTime in the Redis frame
 				frame.lastCycleTime = input.lastCycleTime;
-				redis
-					.set(`ftabuddy:event:${event.code}:monitor_frame`, SuperJSON.stringify(frame))
-					.catch(() => {});
+				redis.set(`ftabuddy:event:${event.code}:monitor_frame`, SuperJSON.stringify(frame)).catch(() => {});
 				await db
 					.update(cycleLogs)
 					.set({ calculated_cycle_time: input.lastCycleTime })
@@ -264,7 +259,7 @@ export const cycleRouter = router({
 		}),
 
 	getLastPrestart: eventProcedure.query(async ({ ctx }) => {
-		const event = await getEvent(ctx.eventToken ?? "");
+		const event = ctx.event;
 		const timing = await getTiming(event.code);
 		if (timing.lastPrestartDone) {
 			return timing.lastPrestartDone;
@@ -280,13 +275,13 @@ export const cycleRouter = router({
 	}),
 
 	getLastMatchStart: eventProcedure.query(async ({ ctx }) => {
-		const event = await getEvent(ctx.eventToken ?? "");
+		const event = ctx.event;
 		const timing = await getTiming(event.code);
 		return timing.lastMatchStart ?? null;
 	}),
 
 	getLastCycleTime: eventProcedure.query(async ({ ctx }) => {
-		const event = await getEvent(ctx.eventToken ?? "");
+		const event = ctx.event;
 		const frame = await getMonitorFrame(event.code);
 		if (frame.lastCycleTime == "unk") {
 			const [lastRecordedCycleTime, lastComputedCycle] = await Promise.all([
@@ -354,44 +349,51 @@ export const cycleRouter = router({
 		.query(async ({ input }) => {
 			const event = await getEvent("", input.eventCode);
 
-			const [allCyclesWithTime, lastRecordedCycleTime, lastPrestartFromDB, lastComputedCycle, timing, frame, checklist] =
-				await Promise.all([
-					db
-						.select()
-						.from(cycleLogs)
-						.where(and(eq(cycleLogs.event, event.code), isNotNull(cycleLogs.calculated_cycle_time)))
-						.execute(),
-					db
-						.select()
-						.from(cycleLogs)
-						.where(and(eq(cycleLogs.event, event.code), isNotNull(cycleLogs.calculated_cycle_time)))
-						.orderBy(desc(cycleLogs.start_time))
-						.limit(1)
-						.execute(),
-					db
-						.select()
-						.from(cycleLogs)
-						.where(and(eq(cycleLogs.event, event.code), isNotNull(cycleLogs.prestart_time)))
-						.orderBy(desc(cycleLogs.prestart_time))
-						.limit(1)
-						.execute(),
-					db
-						.select()
-						.from(cycleLogs)
-						.where(
-							and(
-								eq(cycleLogs.event, event.code),
-								isNotNull(cycleLogs.prestart_time),
-								isNotNull(cycleLogs.scores_posted_time),
-							),
-						)
-						.orderBy(desc(cycleLogs.scores_posted_time))
-						.limit(1)
-						.execute(),
-					getTiming(event.code),
-					getMonitorFrame(event.code),
-					getChecklist(event.code),
-				]);
+			const [
+				allCyclesWithTime,
+				lastRecordedCycleTime,
+				lastPrestartFromDB,
+				lastComputedCycle,
+				timing,
+				frame,
+				checklist,
+			] = await Promise.all([
+				db
+					.select()
+					.from(cycleLogs)
+					.where(and(eq(cycleLogs.event, event.code), isNotNull(cycleLogs.calculated_cycle_time)))
+					.execute(),
+				db
+					.select()
+					.from(cycleLogs)
+					.where(and(eq(cycleLogs.event, event.code), isNotNull(cycleLogs.calculated_cycle_time)))
+					.orderBy(desc(cycleLogs.start_time))
+					.limit(1)
+					.execute(),
+				db
+					.select()
+					.from(cycleLogs)
+					.where(and(eq(cycleLogs.event, event.code), isNotNull(cycleLogs.prestart_time)))
+					.orderBy(desc(cycleLogs.prestart_time))
+					.limit(1)
+					.execute(),
+				db
+					.select()
+					.from(cycleLogs)
+					.where(
+						and(
+							eq(cycleLogs.event, event.code),
+							isNotNull(cycleLogs.prestart_time),
+							isNotNull(cycleLogs.scores_posted_time),
+						),
+					)
+					.orderBy(desc(cycleLogs.scores_posted_time))
+					.limit(1)
+					.execute(),
+				getTiming(event.code),
+				getMonitorFrame(event.code),
+				getChecklist(event.code),
+			]);
 
 			let bestCycleTime: string | null = null;
 			if (allCyclesWithTime.length > 0) {
@@ -487,13 +489,15 @@ export const cycleRouter = router({
 			if (input.matches) {
 				const [timing, frame] = await Promise.all([getTiming(event.code), getMonitorFrame(event.code)]);
 				if (!frame.exactAheadBehind && timing.lastMatchStart) {
-					const scheduled = input.matches.find(
-						(m) => m.match === frame.match && m.level === frame.level,
-					);
+					const scheduled = input.matches.find((m) => m.match === frame.match && m.level === frame.level);
 					if (scheduled) {
 						const scheduledStart = new Date(scheduled.scheduledStartTime);
 						let timeDelta = scheduledStart.getTime() - timing.lastMatchStart.getTime();
-						timeDelta += computeOvernightOffset(scheduledStart, timing.lastMatchStart, event.scheduleDetails);
+						timeDelta += computeOvernightOffset(
+							scheduledStart,
+							timing.lastMatchStart,
+							event.scheduleDetails,
+						);
 						frame.exactAheadBehind =
 							formatTimeShortNoAgoSeconds(timeDelta) + (timeDelta >= 0 ? " ahead" : " behind");
 						redis
@@ -507,7 +511,7 @@ export const cycleRouter = router({
 		}),
 
 	getScheduleDetails: eventProcedure.query(async ({ ctx }) => {
-		const event = await getEvent(ctx.eventToken ?? "");
+		const event = ctx.event;
 
 		return event.scheduleDetails;
 	}),

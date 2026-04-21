@@ -4,10 +4,10 @@ import { redis } from "./redis";
 import { db } from "../db/db";
 import schema from "../db/schema";
 import { DEFAULT_MONITOR } from "../../shared/constants";
-import type { EventChecklist, EventTiming, MonitorFrame } from "../../shared/types";
+import type { EventChecklist, EventCycleTracking, EventTiming, MonitorFrame } from "../../shared/types";
 
 const CHECKLIST_TTL = 86400 * 7; // 7 days
-const TIMING_TTL = 86400 * 3;   // 3 days
+const TIMING_TTL = 86400 * 3; // 3 days
 
 export async function getMonitorFrame(eventCode: string): Promise<MonitorFrame> {
 	const stored = await redis.get(`ftabuddy:event:${eventCode}:monitor_frame`);
@@ -37,10 +37,7 @@ export async function getChecklist(eventCode: string): Promise<EventChecklist> {
 	const stored = await redis.get(`ftabuddy:event:${eventCode}:checklist`);
 	if (stored) return SuperJSON.parse<EventChecklist>(stored);
 
-	const rows = await db
-		.select()
-		.from(schema.checklist)
-		.where(eq(schema.checklist.eventCode, eventCode));
+	const rows = await db.select().from(schema.checklist).where(eq(schema.checklist.eventCode, eventCode));
 
 	const cl: EventChecklist = {};
 	for (const row of rows) {
@@ -66,6 +63,19 @@ export function setChecklist(eventCode: string, checklist: EventChecklist): void
 	redis
 		.set(`ftabuddy:event:${eventCode}:checklist`, SuperJSON.stringify(checklist), "EX", CHECKLIST_TTL)
 		.catch((err) => console.error(`[EventState] setChecklist failed for ${eventCode}:`, err));
+}
+
+const CYCLE_TTL = 86400 * 3; // 3 days
+
+export async function getCycleTracking(eventCode: string): Promise<EventCycleTracking> {
+	const stored = await redis.get(`ftabuddy:event:${eventCode}:cycle_tracking`);
+	return stored ? SuperJSON.parse<EventCycleTracking>(stored) : {};
+}
+
+export function setCycleTracking(eventCode: string, tracking: EventCycleTracking): void {
+	redis
+		.set(`ftabuddy:event:${eventCode}:cycle_tracking`, SuperJSON.stringify(tracking), "EX", CYCLE_TTL)
+		.catch((err) => console.error(`[EventState] setCycleTracking failed for ${eventCode}:`, err));
 }
 
 /** Upsert a team into the global teams table. */

@@ -58,7 +58,7 @@ export const matchEventsRouter = router({
 				.optional(),
 		)
 		.query(async ({ ctx, input }) => {
-			const event = await getEvent(ctx.event.token);
+			const event = ctx.event;
 			// For meshed events, query all sub-event codes (and the parent); otherwise just the current event.
 			// In inter-divisional playoffs mode, only query the parent event.
 			const eventCodes: string[] = event.meshedEvent
@@ -86,7 +86,7 @@ export const matchEventsRouter = router({
 
 	/** Get match events for a specific team across all their matches (for field view summaries). Includes dismissed/converted events. */
 	getByTeam: eventProcedure.input(z.object({ team_number: z.number() })).query(async ({ ctx, input }) => {
-		const event = await getEvent(ctx.event.token);
+		const event = ctx.event;
 		const rows = await db
 			.select()
 			.from(matchEvents)
@@ -99,7 +99,7 @@ export const matchEventsRouter = router({
 
 	/** Get ALL match events for a team (including dismissed/converted) for team history page. */
 	getAllByTeam: eventProcedure.input(z.object({ team_number: z.number() })).query(async ({ ctx, input }) => {
-		const event = await getEvent(ctx.event.token);
+		const event = ctx.event;
 		const rows = await db
 			.select()
 			.from(matchEvents)
@@ -114,7 +114,7 @@ export const matchEventsRouter = router({
 	getNextMatchForTeam: eventProcedure
 		.input(z.object({ team_number: z.number(), event_code: z.string().optional() }))
 		.query(async ({ ctx, input }) => {
-			const event = await getEvent(ctx.event.token);
+			const event = ctx.event;
 			const teamStr = String(input.team_number);
 
 			// --- Try Nexus first (real-time field data) ---
@@ -235,7 +235,7 @@ export const matchEventsRouter = router({
 	getCompletedMatchesForTeam: eventProcedure
 		.input(z.object({ team_number: z.number() }))
 		.query(async ({ ctx, input }) => {
-			const event = await getEvent(ctx.event.token);
+			const event = ctx.event;
 			const tbaKey = process.env.TBA_API_KEY;
 
 			// Determine which event codes to query for match logs
@@ -341,7 +341,7 @@ export const matchEventsRouter = router({
 
 	/** Dismiss a match event (mark as not needing follow-up). */
 	dismiss: eventProcedure.input(z.object({ id: z.uuid() })).mutation(async ({ ctx, input }) => {
-		const event = await getEvent(ctx.event.token);
+		const event = ctx.event;
 		// For meshed events in combined mode, allow dismissing events from any sub-event
 		const eventCodes: string[] = event.meshedEvent
 			? event.playoffMode
@@ -380,7 +380,7 @@ export const matchEventsRouter = router({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const event = await getEvent(ctx.event.token);
+			const event = ctx.event;
 
 			// For meshed events in combined mode, allow converting events from any sub-event
 			const eventCodes: string[] = event.meshedEvent
@@ -493,7 +493,15 @@ export const matchEventsRouter = router({
 						createSlackNoteMessage(
 							noteId,
 							newNote.team,
-							newNote.team !== null ? (await db.select({ name: schema.teams.name }).from(schema.teams).where(eq(schema.teams.number, String(newNote.team))).limit(1))[0]?.name ?? null : null,
+							newNote.team !== null
+								? ((
+										await db
+											.select({ name: schema.teams.name })
+											.from(schema.teams)
+											.where(eq(schema.teams.number, String(newNote.team)))
+											.limit(1)
+									)[0]?.name ?? null)
+								: null,
 							authorProfile[0].username,
 							newNote.text,
 							event.code,
@@ -516,7 +524,7 @@ export const matchEventsRouter = router({
 
 	/** Dismiss all active match events for this event. */
 	dismissAll: eventProcedure.mutation(async ({ ctx }) => {
-		const event = await getEvent(ctx.event.token);
+		const event = ctx.event;
 		// For meshed events in combined mode, dismiss events from all sub-events
 		const eventCodes: string[] = event.meshedEvent
 			? event.playoffMode

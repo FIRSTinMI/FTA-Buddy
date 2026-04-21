@@ -104,10 +104,7 @@ export const fieldMonitorRouter = router({
 			}
 
 			// Read previous frame and timing from Redis (single source of truth across instances)
-			const [prevFrame, timing] = await Promise.all([
-				getMonitorFrame(event.code),
-				getTiming(event.code),
-			]);
+			const [prevFrame, timing] = await Promise.all([getMonitorFrame(event.code), getTiming(event.code)]);
 
 			// Infer level from schedule when scraping mode reports "None" - match 999 is always a test match
 			if (input.level === "None" && input.match > 0 && input.match !== 999) {
@@ -203,7 +200,11 @@ export const fieldMonitorRouter = router({
 				bus.publish(`event:${event.code}:robot_state`, change);
 			}
 
-			const updatedChecklist = await processFrameForTeamData(event.code, processed.currentFrame, processed.changes);
+			const updatedChecklist = await processFrameForTeamData(
+				event.code,
+				processed.currentFrame,
+				processed.changes,
+			);
 			if (updatedChecklist) {
 				bus.publish(`event:${event.code}:checklist`, updatedChecklist);
 			}
@@ -214,8 +215,7 @@ export const fieldMonitorRouter = router({
 		}),
 
 	history: eventProcedure.query(async ({ ctx }) => {
-		const event = await getEvent(ctx.eventToken ?? "");
-		const items = await redis.lrange(`ftabuddy:event:${event.code}:history`, 0, 49);
+		const items = await redis.lrange(`ftabuddy:event:${ctx.event.code}:history`, 0, 49);
 		if (items.length > 0) {
 			const parsed = items.flatMap((i: string) => {
 				try {

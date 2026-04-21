@@ -12,8 +12,7 @@ import {
 import type { MonitorFrame, PartialMonitorFrame, RobotInfo, ScheduleDetails, StateChange } from "../../shared/types";
 import { db } from "../db/db";
 import schema, { matchEvents, notes, robotCycleLogs } from "../db/schema";
-import { getEvent } from "./get-event";
-import { getChecklist, setChecklist } from "./event-state";
+import { getCycleTracking, getChecklist, setCycleTracking, setChecklist } from "./event-state";
 
 export function detectRadioNoDs(currentFrame: PartialMonitorFrame, pastFrames: MonitorFrame[]) {
 	// Only in prestart
@@ -248,14 +247,14 @@ export async function processTeamCycles(
 	changes: StateChange[],
 	lastPrestartDone: Date | null,
 ) {
-	const event = await getEvent("", eventCode);
+	let tracking = await getCycleTracking(eventCode);
 
 	// If the match is running and there is data, commit it and reset the tracking object
-	if (MatchStateMap[frame.field] === MatchState.RUNNING && event.robotCycleTracking.prestart) {
+	if (MatchStateMap[frame.field] === MatchState.RUNNING && tracking.prestart) {
 		const insert = [];
 
 		for (let robot in ROBOT) {
-			const robotCycle = event.robotCycleTracking[robot as ROBOT];
+			const robotCycle = tracking[robot as ROBOT];
 			if (!robotCycle) continue;
 			insert.push({
 				id: randomUUID(),
@@ -264,7 +263,7 @@ export async function processTeamCycles(
 				play_number: frame.play,
 				level: frame.level,
 				team: robotCycle.team,
-				prestart: event.robotCycleTracking.prestart,
+				prestart: tracking.prestart,
 				first_ds: robotCycle.firstDS,
 				last_ds: robotCycle.lastDS,
 				time_ds: robotCycle.timeDS,
@@ -280,60 +279,64 @@ export async function processTeamCycles(
 			});
 		}
 
-		// console.log(insert);
-
-		if (insert.length < 1) return;
-
-		await db.insert(robotCycleLogs).values(insert);
-		event.robotCycleTracking = {};
+		if (insert.length > 0) await db.insert(robotCycleLogs).values(insert);
+		setCycleTracking(eventCode, {});
+		return;
 	}
 
 	// Make sure to clear the cycle tracking if we re-prestart
-	if (frame.field === FieldState.PRESTART_INITIATED) event.robotCycleTracking = {};
+	if (frame.field === FieldState.PRESTART_INITIATED) {
+		setCycleTracking(eventCode, {});
+		return;
+	}
 
 	// Only process in prestart
 	if (MatchStateMap[frame.field] !== MatchState.PRESTART) return;
 
+	let changed = false;
+
 	// If new match, set the prestart time
-	if (!event.robotCycleTracking.prestart) event.robotCycleTracking.prestart = lastPrestartDone || new Date();
+	if (!tracking.prestart) {
+		tracking.prestart = lastPrestartDone || new Date();
+		changed = true;
+	}
 
 	for (let change of changes) {
-		let cycle = event.robotCycleTracking[change.station];
-
-		if (!cycle) {
-			event.robotCycleTracking[change.station] = {
-				team: change.robot.number,
-			};
-			cycle = event.robotCycleTracking[change.station];
+		if (change.type !== StateChangeType.RisingEdge || change.robot.ds !== DSState.GREEN) {
+			if (changed) setCycleTracking(eventCode, tracking);
+			return;
 		}
 
-		if (!cycle)
-			throw new Error(
-				"You should never see this error, but if you do look at the processTeamCycles function in util/frameProcessing",
-			);
-
-		if (change.type !== StateChangeType.RisingEdge || change.robot.ds !== DSState.GREEN) return;
+		if (!tracking[change.station]) {
+			tracking[change.station] = { team: change.robot.number };
+		}
+		const cycle = tracking[change.station]!;
 
 		switch (change.key) {
 			case "code":
 				if (!cycle.firstCode) cycle.firstCode = change.robot.lastChange || new Date();
 				cycle.lastCode = change.robot.lastChange || new Date();
-				cycle.timeCode = cycle.lastCode.getTime() - event.robotCycleTracking.prestart.getTime();
+				cycle.timeCode = cycle.lastCode.getTime() - tracking.prestart!.getTime();
+			// falls through
 			case "rio":
 				if (!cycle.firstRio) cycle.firstRio = change.robot.lastChange || new Date();
 				cycle.lastRio = change.robot.lastChange || new Date();
-				cycle.timeRio = cycle.lastRio.getTime() - event.robotCycleTracking.prestart.getTime();
+				cycle.timeRio = cycle.lastRio.getTime() - tracking.prestart!.getTime();
+			// falls through
 			case "radio":
 				if (!cycle.firstRadio) cycle.firstRadio = change.robot.lastChange || new Date();
 				cycle.lastRadio = change.robot.lastChange || new Date();
-				cycle.timeRadio = cycle.lastRadio.getTime() - event.robotCycleTracking.prestart.getTime();
+				cycle.timeRadio = cycle.lastRadio.getTime() - tracking.prestart!.getTime();
 				break;
 			case "ds":
 				if (!cycle.firstDS) cycle.firstDS = change.robot.lastChange || new Date();
 				cycle.lastDS = change.robot.lastChange || new Date();
-				cycle.timeDS = cycle.lastDS.getTime() - event.robotCycleTracking.prestart.getTime();
+				cycle.timeDS = cycle.lastDS.getTime() - tracking.prestart!.getTime();
 		}
+		changed = true;
 	}
+
+	if (changed) setCycleTracking(eventCode, tracking);
 }
 
 /**

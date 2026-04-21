@@ -26,7 +26,6 @@
 	});
 
 	let present = $state(0);
-	let weighed = 0;
 	let inspected = $state(0);
 	let radioProgrammed = $state(0);
 	let connectionTested = $state(0);
@@ -104,14 +103,12 @@
 
 	function updateTotals(c: EventChecklist) {
 		present = 0;
-		weighed = 0;
 		inspected = 0;
 		radioProgrammed = 0;
 		connectionTested = 0;
 		total = 0;
 		for (let team of Object.values(c)) {
 			if (team.present) present++;
-			if (team.weighed) weighed++;
 			if (team.inspected) inspected++;
 			if (team.radioProgrammed) radioProgrammed++;
 			if (team.connectionTested) connectionTested++;

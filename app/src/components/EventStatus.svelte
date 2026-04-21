@@ -41,7 +41,6 @@
 
 	type ChecklistTotals = {
 		present: number;
-		weighed: number;
 		inspected: number;
 		radioProgrammed: number;
 		connectionTested: number;
@@ -49,7 +48,6 @@
 	};
 	let checklistTotals: ChecklistTotals = $state({
 		present: 0,
-		weighed: 0,
 		inspected: 0,
 		radioProgrammed: 0,
 		connectionTested: 0,

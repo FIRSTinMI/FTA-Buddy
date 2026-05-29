@@ -2,60 +2,94 @@ name: Deploy
 
 on:
     push:
-        branches: [main, dev]
+        branches: [main]
     workflow_dispatch:
 
-# Build the image on the self-hosted NAS runner (off the cloud box), push it to
-# the Forgejo registry, then have Coolify pull + deploy it. Same Dockerfile for
-# every branch so dev and prod are built identically (tag = branch name).
 jobs:
-    build:
-        runs-on: [self-hosted, nas]
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
-
-            - name: Log in to the Forgejo registry
-              run: echo "${{ secrets.REGISTRY_TOKEN }}" | docker login git.filipkin.com -u "${{ secrets.REGISTRY_USER }}" --password-stdin
-
-            - name: Build and push image
-              run: |
-                  set -eux
-                  IMAGE=git.filipkin.com/filip/fta-buddy
-                  docker build -t "$IMAGE:${{ github.ref_name }}" -t "$IMAGE:${{ github.sha }}" .
-                  docker push "$IMAGE:${{ github.ref_name }}"
-                  docker push "$IMAGE:${{ github.sha }}"
-
     deploy:
-        needs: build
-        runs-on: [self-hosted, nas]
+        runs-on: ubuntu-latest
+
         steps:
-            - name: Deploy via Coolify (pulls the new image)
+            - name: Deploy instance A
+              id: deploy_a
               run: |
-                  set -u
-                  if [ "${{ github.ref_name }}" = "main" ]; then APP="${{ secrets.INSTANCE_A_UUID }}"; else APP="${{ secrets.DEV_UUID }}"; fi
-                  if [ -z "$APP" ]; then echo "No Coolify app configured for ${{ github.ref_name }}; skipping deploy."; exit 0; fi
-                  dep=$(curl -s "https://panel.filipkin.com/api/v1/deploy?uuid=$APP&force=false" \
-                    -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" | grep -o '"deployment_uuid":"[^"]*"' | head -1 | cut -d'"' -f4)
-                  echo "Triggered Coolify deploy for $APP -> $dep"
-                  for i in $(seq 1 90); do
-                    s=$(curl -s "https://panel.filipkin.com/api/v1/deployments/$dep" \
-                      -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
-                    echo "  attempt $i: $s"
-                    [ "$s" = "finished" ] && exit 0
-                    { [ "$s" = "failed" ] || [ "$s" = "error" ]; } && { echo "deployment failed"; exit 1; }
+                  response=$(curl -s -X POST https://panel.filipkin.com/api/v1/applications/${{ secrets.INSTANCE_A_UUID }}/start \
+                    -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}")
+                  echo "response=$response"
+                  uuid=$(echo $response | jq -r '.deployment_uuid')
+                  echo "deployment_uuid=$uuid" >> $GITHUB_OUTPUT
+
+            - name: Wait for instance A deployment to finish
+              run: |
+                  echo "Tracking deployment ${{ steps.deploy_a.outputs.deployment_uuid }}..."
+                  for i in $(seq 1 60); do
+                    status=$(curl -s https://panel.filipkin.com/api/v1/deployments/${{ steps.deploy_a.outputs.deployment_uuid }} \
+                      -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" | jq -r '.status')
+                    echo "Attempt $i: status=$status"
+                    if [ "$status" = "finished" ]; then
+                      echo "Instance A deployed successfully"
+                      exit 0
+                    fi
+                    if [ "$status" = "failed" ] || [ "$status" = "error" ]; then
+                      echo "Instance A deployment failed"
+                      exit 1
+                    fi
                     sleep 10
                   done
-                  echo "timed out waiting for deployment"; exit 1
+                  echo "Timed out waiting for instance A"
+                  exit 1
 
-            - name: Notify Discord (success)
+            - name: Deploy instance B
+              id: deploy_b
+              run: |
+                  response=$(curl -s -X POST https://panel.filipkin.com/api/v1/applications/${{ secrets.INSTANCE_B_UUID }}/start \
+                    -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}")
+                  echo "response=$response"
+                  uuid=$(echo $response | jq -r '.deployment_uuid')
+                  echo "deployment_uuid=$uuid" >> $GITHUB_OUTPUT
+
+            - name: Wait for instance B deployment to finish
+              run: |
+                  echo "Tracking deployment ${{ steps.deploy_b.outputs.deployment_uuid }}..."
+                  for i in $(seq 1 60); do
+                    status=$(curl -s https://panel.filipkin.com/api/v1/deployments/${{ steps.deploy_b.outputs.deployment_uuid }} \
+                      -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" | jq -r '.status')
+                    echo "Attempt $i: status=$status"
+                    if [ "$status" = "finished" ]; then
+                      echo "Instance B deployed successfully"
+                      exit 0
+                    fi
+                    if [ "$status" = "failed" ] || [ "$status" = "error" ]; then
+                      echo "Instance B deployment failed"
+                      exit 1
+                    fi
+                    sleep 10
+                  done
+                  echo "Timed out waiting for instance B"
+                  exit 1
+
+            - name: Notify Discord success
               if: success()
               run: |
-                  curl -s -X POST ${{ secrets.DISCORD_WEBHOOK }} -H "Content-Type: application/json" \
-                    -d '{"embeds":[{"title":"✅ FTA Buddy Deployed","description":"Built on the NAS runner; Coolify pulled the image.","color":3066993}]}'
+                  curl -s -X POST ${{ secrets.DISCORD_WEBHOOK }} \
+                    -H "Content-Type: application/json" \
+                    -d '{
+                      "embeds": [{
+                        "title": "✅ FTA Buddy Deployed",
+                        "description": "Both instances deployed successfully.",
+                        "color": 3066993
+                      }]
+                    }'
 
-            - name: Notify Discord (failure)
+            - name: Notify Discord failure
               if: failure()
               run: |
-                  curl -s -X POST ${{ secrets.DISCORD_WEBHOOK }} -H "Content-Type: application/json" \
-                    -d '{"embeds":[{"title":"❌ FTA Buddy Deploy Failed","description":"Check [GitHub Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).","color":15158332}]}'
+                  curl -s -X POST ${{ secrets.DISCORD_WEBHOOK }} \
+                    -H "Content-Type: application/json" \
+                    -d '{
+                      "embeds": [{
+                        "title": "❌ FTA Buddy Deployment Failed",
+                        "description": "Check [GitHub Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.",
+                        "color": 15158332
+                      }]
+                    }'

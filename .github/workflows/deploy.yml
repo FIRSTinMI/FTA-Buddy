@@ -2,94 +2,70 @@ name: Deploy
 
 on:
     push:
-        branches: [main]
+        branches: [main, dev]
     workflow_dispatch:
 
+# Build the image on the self-hosted NAS runner (off the cloud box), push it to the
+# Forgejo registry, then have Coolify pull + redeploy. Same Dockerfile for every
+# branch (tag = branch). main deploys both load-balanced instances A then B,
+# verifying each separately so the site never drops.
 jobs:
-    deploy:
-        runs-on: ubuntu-latest
-
+    build:
+        runs-on: [self-hosted, nas]
         steps:
-            - name: Deploy instance A
-              id: deploy_a
-              run: |
-                  response=$(curl -s -X POST https://panel.filipkin.com/api/v1/applications/${{ secrets.INSTANCE_A_UUID }}/start \
-                    -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}")
-                  echo "response=$response"
-                  uuid=$(echo $response | jq -r '.deployment_uuid')
-                  echo "deployment_uuid=$uuid" >> $GITHUB_OUTPUT
+            - name: Checkout
+              uses: actions/checkout@v4
 
-            - name: Wait for instance A deployment to finish
-              run: |
-                  echo "Tracking deployment ${{ steps.deploy_a.outputs.deployment_uuid }}..."
-                  for i in $(seq 1 60); do
-                    status=$(curl -s https://panel.filipkin.com/api/v1/deployments/${{ steps.deploy_a.outputs.deployment_uuid }} \
-                      -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" | jq -r '.status')
-                    echo "Attempt $i: status=$status"
-                    if [ "$status" = "finished" ]; then
-                      echo "Instance A deployed successfully"
-                      exit 0
-                    fi
-                    if [ "$status" = "failed" ] || [ "$status" = "error" ]; then
-                      echo "Instance A deployment failed"
-                      exit 1
-                    fi
-                    sleep 10
-                  done
-                  echo "Timed out waiting for instance A"
-                  exit 1
+            - name: Log in to the Forgejo registry
+              run: echo "${{ secrets.REGISTRY_TOKEN }}" | docker login git.filipkin.com -u "${{ secrets.REGISTRY_USER }}" --password-stdin
 
-            - name: Deploy instance B
-              id: deploy_b
+            - name: Build and push image
               run: |
-                  response=$(curl -s -X POST https://panel.filipkin.com/api/v1/applications/${{ secrets.INSTANCE_B_UUID }}/start \
-                    -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}")
-                  echo "response=$response"
-                  uuid=$(echo $response | jq -r '.deployment_uuid')
-                  echo "deployment_uuid=$uuid" >> $GITHUB_OUTPUT
+                  set -eux
+                  IMAGE=git.filipkin.com/filip/fta-buddy
+                  docker build -t "$IMAGE:${{ github.ref_name }}" -t "$IMAGE:${{ github.sha }}" .
+                  docker push "$IMAGE:${{ github.ref_name }}"
+                  docker push "$IMAGE:${{ github.sha }}"
 
-            - name: Wait for instance B deployment to finish
+    deploy:
+        needs: build
+        runs-on: [self-hosted, nas]
+        steps:
+            - name: Deploy + verify each instance
               run: |
-                  echo "Tracking deployment ${{ steps.deploy_b.outputs.deployment_uuid }}..."
-                  for i in $(seq 1 60); do
-                    status=$(curl -s https://panel.filipkin.com/api/v1/deployments/${{ steps.deploy_b.outputs.deployment_uuid }} \
-                      -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" | jq -r '.status')
-                    echo "Attempt $i: status=$status"
-                    if [ "$status" = "finished" ]; then
-                      echo "Instance B deployed successfully"
-                      exit 0
-                    fi
-                    if [ "$status" = "failed" ] || [ "$status" = "error" ]; then
-                      echo "Instance B deployment failed"
-                      exit 1
-                    fi
-                    sleep 10
-                  done
-                  echo "Timed out waiting for instance B"
-                  exit 1
+                  set -u
+                  CO=https://panel.filipkin.com/api/v1
+                  AUTH="Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
+                  deploy_and_wait() {
+                    local uuid="$1" name="$2"
+                    if [ -z "$uuid" ]; then echo "$name: no UUID configured, skipping"; return 0; fi
+                    local dep
+                    dep=$(curl -s "$CO/deploy?uuid=$uuid&force=false" -H "$AUTH" | grep -o '"deployment_uuid":"[^"]*"' | head -1 | cut -d'"' -f4)
+                    echo "$name -> deployment $dep"
+                    for i in $(seq 1 90); do
+                      s=$(curl -s "$CO/deployments/$dep" -H "$AUTH" | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
+                      echo "  $name attempt $i: $s"
+                      [ "$s" = "finished" ] && return 0
+                      { [ "$s" = "failed" ] || [ "$s" = "error" ]; } && { echo "$name failed"; return 1; }
+                      sleep 10
+                    done
+                    echo "$name timed out"; return 1
+                  }
+                  if [ "${{ github.ref_name }}" = "main" ]; then
+                    deploy_and_wait "${{ secrets.INSTANCE_A_UUID }}" "Instance A" || exit 1
+                    deploy_and_wait "${{ secrets.INSTANCE_B_UUID }}" "Instance B" || exit 1
+                  else
+                    deploy_and_wait "${{ secrets.DEV_UUID }}" "Dev" || exit 1
+                  fi
 
-            - name: Notify Discord success
+            - name: Notify Discord (success)
               if: success()
               run: |
-                  curl -s -X POST ${{ secrets.DISCORD_WEBHOOK }} \
-                    -H "Content-Type: application/json" \
-                    -d '{
-                      "embeds": [{
-                        "title": "✅ FTA Buddy Deployed",
-                        "description": "Both instances deployed successfully.",
-                        "color": 3066993
-                      }]
-                    }'
+                  curl -s -X POST ${{ secrets.DISCORD_WEBHOOK }} -H "Content-Type: application/json" \
+                    -d '{"embeds":[{"title":"✅ FTA Buddy Deployed","description":"Built on the NAS runner; Coolify pulled the image.","color":3066993}]}'
 
-            - name: Notify Discord failure
+            - name: Notify Discord (failure)
               if: failure()
               run: |
-                  curl -s -X POST ${{ secrets.DISCORD_WEBHOOK }} \
-                    -H "Content-Type: application/json" \
-                    -d '{
-                      "embeds": [{
-                        "title": "❌ FTA Buddy Deployment Failed",
-                        "description": "Check [GitHub Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.",
-                        "color": 15158332
-                      }]
-                    }'
+                  curl -s -X POST ${{ secrets.DISCORD_WEBHOOK }} -H "Content-Type: application/json" \
+                    -d '{"embeds":[{"title":"❌ FTA Buddy Deploy Failed","description":"Check [GitHub Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).","color":15158332}]}'

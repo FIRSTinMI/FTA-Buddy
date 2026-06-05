@@ -17,6 +17,10 @@ Shared types live in `shared/` and are imported by both the server and app.
 ## Commands
 
 ```bash
+# First-time setup: start Redis + Postgres, then migrate
+docker compose up -d
+bun run migrate
+
 # Run everything (server + app hot-reload)
 bun run dev
 
@@ -41,9 +45,13 @@ bun run format
 
 ## Environment
 
-Copy `.env.example` to `.env` and fill in values. Required keys:
+Copy `.env.example` to `.env` and fill in values. `docker-compose.yml` provides
+Redis + Postgres locally with the credentials already in `.env.example`. The
+server exits at startup if Redis or Postgres is unreachable, so both must be
+running. Required keys:
 
-- `DB_*` - PostgreSQL connection
+- `REDIS_URL` - Redis connection (pub/sub + caching); required at boot
+- `DB_*` - PostgreSQL connection; required at boot
 - `TBA_API_KEY` - The Blue Alliance API key (for event code validation)
 - `GOOGLE_CLIENT_ID` + `GOOGLE_KEY*` - Google OAuth
 - `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` - Web Push notifications
@@ -53,7 +61,7 @@ Copy `.env.example` to `.env` and fill in values. Required keys:
 
 ## Tech Stack
 
-**Server:** Bun, Express 5, tRPC v11, Drizzle ORM, PostgreSQL, Zod, Firebase Auth, OpenAI, web-push
+**Server:** Bun, Express 5, tRPC v11, Drizzle ORM, PostgreSQL, Redis (ioredis), Zod, Firebase Auth, OpenAI, web-push
 
 **App:** Svelte 5 (Runes syntax), TypeScript, Vite, Tailwind CSS v4, Flowbite-Svelte, tRPC client, ECharts, localforage, sv-router
 

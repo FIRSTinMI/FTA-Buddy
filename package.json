@@ -2,8 +2,7 @@
 	"name": "fta-buddy",
 	"workspaces": [
 		"app",
-		"extension",
-		"userscript"
+		"extension"
 	],
 	"version": "2.7.7.2",
 	"description": "",
@@ -15,7 +14,6 @@
 		"build": "cd app && bun run build",
 		"generate-migration": "drizzle-kit generate",
 		"migrate": "bun run src/db/migrate",
-		"userscript": "bun run --cwd userscript build",
 		"format": "prettier --write ."
 	},
 	"engines": {

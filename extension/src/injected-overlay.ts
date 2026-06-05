@@ -11,10 +11,10 @@
  *   - Schedule text (from server getCycleData)
  */
 
-import { CSS } from "../../userscript/src/styles";
-import { buildFrame, isAppReady } from "../../userscript/src/angular";
-import { makeFrameHistory, updateHistory } from "../../userscript/src/history";
-import { buildRoot, updateAll, makeFullscreenBtn, type RootElements } from "../../userscript/src/ui";
+import { CSS } from "./styles";
+import { buildFrame, isAppReady } from "./angular";
+import { makeFrameHistory, updateHistory } from "./history";
+import { buildRoot, updateAll, makeFullscreenBtn, type RootElements } from "./ui";
 import { trpc, updateValues } from "./injected-trpc";
 import {
 	makeCycleTimeState,

@@ -1,10 +1,37 @@
 import { TRPCError, initTRPC } from "@trpc/server";
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
-import { and, eq, gt } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import SuperJSON from "superjson";
 import { db } from "./db/db";
 import { users } from "./db/schema";
+import { verifyIdToken } from "./util/firebase-admin";
 import { getEvent } from "./util/get-event";
+
+/**
+ * Verify a Firebase ID token and resolve the matching user profile row.
+ *
+ * Matches first by `firebase_uid`, then falls back to email (and backfills the
+ * uid) so users imported/created before their uid was linked still resolve on
+ * first authenticated request. Returns null when the token is invalid or no
+ * profile exists yet (the latter happens before account setup completes).
+ */
+export async function resolveUserFromToken(idToken: string | undefined) {
+	if (!idToken) return null;
+	const decoded = await verifyIdToken(idToken);
+	if (!decoded) return null;
+
+	let user = await db.query.users.findFirst({ where: eq(users.firebase_uid, decoded.uid) });
+
+	if (!user && decoded.email) {
+		const byEmail = await db.query.users.findFirst({ where: eq(users.email, decoded.email) });
+		if (byEmail) {
+			await db.update(users).set({ firebase_uid: decoded.uid }).where(eq(users.id, byEmail.id));
+			user = { ...byEmail, firebase_uid: decoded.uid };
+		}
+	}
+
+	return user ?? null;
+}
 
 export const createContext = (opts: CreateExpressContextOptions) => {
 	const h = opts.req.headers;
@@ -39,9 +66,7 @@ export const protectedProcedure = t.procedure.use(async (opts) => {
 	const { ctx } = opts;
 	if (!ctx.token) throw new TRPCError({ code: "UNAUTHORIZED", message: "Missing Authorization Header" });
 
-	const user = await db.query.users.findFirst({
-		where: and(eq(users.token, ctx.token), gt(users.id, -1)),
-	});
+	const user = await resolveUserFromToken(ctx.token);
 	if (!user) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
 
 	return opts.next({
@@ -70,9 +95,7 @@ export const adminProcedure = t.procedure.use(async (opts) => {
 	const { ctx } = opts;
 	if (!ctx.token) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
 
-	const user = await db.query.users.findFirst({
-		where: and(eq(users.token, ctx.token), gt(users.id, -1)),
-	});
+	const user = await resolveUserFromToken(ctx.token);
 	if (!user || user.admin !== true) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
 
 	return opts.next({

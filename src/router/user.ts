@@ -1,200 +1,72 @@
 import { TRPCError } from "@trpc/server";
-import { compare, hash } from "bcryptjs";
 import { and, eq, gt } from "drizzle-orm";
-import { OAuth2Client } from "google-auth-library";
 import { z } from "zod";
 import { db } from "../db/db";
 import { events, slackLinkTokens, users } from "../db/schema";
-import { protectedProcedure, publicProcedure, router } from "../trpc";
+import { protectedProcedure, publicProcedure, resolveUserFromToken, router } from "../trpc";
+import { verifyIdToken } from "../util/firebase-admin";
 
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const ROLES = ["FTA", "FTAA", "CSA", "RI"] as const;
+
+/** Fields safe to return to the client (never the deprecated password/token columns). */
+function publicProfile(user: typeof users.$inferSelect) {
+	return {
+		id: user.id,
+		username: user.username,
+		email: user.email,
+		role: user.role,
+		admin: user.admin,
+		slack_user_id: user.slack_user_id,
+		active_event_code: user.active_event_code,
+	};
+}
 
 export const userRouter = router({
-	login: publicProcedure
+	/**
+	 * Called after a successful Firebase sign-in. Ensures a profile row exists
+	 * for the authenticated user and returns it. Authentication is the Firebase
+	 * ID token in the Authorization header (ctx.token).
+	 *
+	 * On first sign-in there is no profile yet: if username/role are supplied the
+	 * row is created, otherwise `{ needsProfile: true }` is returned so the client
+	 * can collect them (the "finish creating account" screen).
+	 */
+	syncProfile: publicProcedure
 		.input(
 			z.object({
-				email: z.string(),
-				password: z.string(),
-			}),
-		)
-		.mutation(async ({ input }) => {
-			const user = await db.query.users.findFirst({ where: eq(users.email, input.email) });
-
-			//console.log(user);
-
-			if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
-
-			if (await compare(input.password, user.password)) {
-				db.update(users).set({ last_seen: new Date() }).where(eq(users.id, user.id));
-				if (user.token === "") {
-					let token = generateToken();
-					await db.update(users).set({ token }).where(eq(users.id, user.id));
-					return { ...user, token };
-				}
-				return user;
-			} else {
-				throw new TRPCError({ code: "UNAUTHORIZED", message: "Incorrect password" });
-			}
-		}),
-
-	changePassword: publicProcedure
-		.input(
-			z.object({
-				email: z.string(),
-				oldPassword: z.string(),
-				newPassword: z.string(),
-			}),
-		)
-		.mutation(async ({ input }) => {
-			const user = await db.query.users.findFirst({ where: eq(users.email, input.email) });
-
-			if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
-
-			if (await compare(input.oldPassword, user.password)) {
-				const hashedPassword = await hash(input.newPassword, 12);
-				await db.update(users).set({ password: hashedPassword }).where(eq(users.id, user.id));
-				return true;
-			} else {
-				throw new TRPCError({ code: "UNAUTHORIZED", message: "Incorrect password" });
-			}
-		}),
-
-	changeRole: protectedProcedure
-		.input(
-			z.object({
-				newRole: z.enum(["FTA", "FTAA", "CSA", "RI"]),
+				username: z.string().min(3, "Username must be at least 3 characters long").optional(),
+				role: z.enum(ROLES).optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			if (!["FTA", "FTAA", "CSA", "RI"].includes(input.newRole)) {
-				throw new TRPCError({
-					code: "BAD_REQUEST",
-					message: "Entered Role is invalid. Ensure value is 'FTA', 'FTAA', 'CSA', or 'RI'",
-				});
+			if (!ctx.token) throw new TRPCError({ code: "UNAUTHORIZED", message: "Missing Authorization Header" });
+
+			const decoded = await verifyIdToken(ctx.token);
+			if (!decoded || !decoded.email)
+				throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid or expired session" });
+
+			const existing = await resolveUserFromToken(ctx.token);
+			if (existing) {
+				await db.update(users).set({ last_seen: new Date() }).where(eq(users.id, existing.id));
+				return { user: publicProfile(existing) };
 			}
 
-			await db.update(users).set({ role: input.newRole }).where(eq(users.token, ctx.user.token));
+			// No profile yet - need a username + role to create one.
+			if (!input.username || !input.role) {
+				return { needsProfile: true as const, email: decoded.email };
+			}
 
-			return {
-				newRole: input.newRole,
-			};
-		}),
-
-	createAccount: publicProcedure
-		.input(
-			z.object({
-				email: z.string().email("Invalid email address"),
-				username: z.string().min(3, "Username must be at least 3 characters long"),
-				password: z.string().min(8, "Password must be at least 8 characters long"),
-				role: z.enum(["FTA", "FTAA", "CSA", "RI"]),
-			}),
-		)
-		.mutation(async ({ input }) => {
-			if (z.string().email().safeParse(input.email).success === false)
-				throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid email address" });
-			if (input.username.length < 3)
-				throw new TRPCError({ code: "BAD_REQUEST", message: "Username must be at least 3 characters long" });
-			if (input.password.length < 8)
-				throw new TRPCError({ code: "BAD_REQUEST", message: "Password must be at least 8 characters long" });
-
-			const hashedPassword = await hash(input.password, 12);
-			const token = generateToken();
 			await db.insert(users).values({
-				email: input.email,
+				email: decoded.email,
+				firebase_uid: decoded.uid,
 				username: input.username,
-				password: hashedPassword,
 				role: input.role,
-				token: token,
 			});
 
-			const res = await db.query.users.findFirst({ where: eq(users.email, input.email) });
-			if (!res) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "User not created" });
+			const created = await db.query.users.findFirst({ where: eq(users.firebase_uid, decoded.uid) });
+			if (!created) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "User not created" });
 
-			return {
-				token,
-				id: res.id,
-			};
-		}),
-
-	googleLogin: publicProcedure
-		.input(
-			z.object({
-				token: z.string(),
-			}),
-		)
-		.mutation(async ({ input }) => {
-			const ticket = await client.verifyIdToken({
-				idToken: input.token,
-				audience: process.env.GOOGLE_CLIENT_ID,
-			});
-
-			const payload = ticket.getPayload();
-			if (!payload) throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid token" });
-
-			console.log(payload);
-
-			const email = payload["email"] as string;
-			const user = await db.query.users.findFirst({ where: eq(users.email, email) });
-
-			if (!user) {
-				throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
-			} else {
-				db.update(users).set({ last_seen: new Date() }).where(eq(users.id, user.id));
-				if (user.token === "") {
-					let token = generateToken();
-					await db.update(users).set({ token }).where(eq(users.id, user.id));
-					return { ...user, token };
-				}
-				return user;
-			}
-		}),
-
-	createGoogleUser: publicProcedure
-		.input(
-			z.object({
-				token: z.string(),
-				username: z.string().min(3, "Username must be at least 3 characters long"),
-				role: z.enum(["ADMIN", "FTA", "FTAA", "CSA", "RI"]),
-			}),
-		)
-		.mutation(async ({ input }) => {
-			if (input.role === "ADMIN")
-				throw new TRPCError({ code: "FORBIDDEN", message: "Cannot create an admin account" });
-
-			const ticket = await client.verifyIdToken({
-				idToken: input.token,
-				audience: process.env.GOOGLE_CLIENT_ID,
-			});
-
-			const payload = ticket.getPayload();
-			if (!payload) throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid token" });
-
-			console.log(payload);
-
-			const email = payload["email"] as string;
-			const user = await db.query.users.findFirst({ where: eq(users.email, email) });
-
-			if (user) {
-				throw new TRPCError({ code: "CONFLICT", message: "User already exists" });
-			} else {
-				const token = generateToken();
-				await db.insert(users).values({
-					email,
-					username: input.username,
-					password: "google",
-					role: input.role,
-					token,
-				});
-
-				const res = await db.query.users.findFirst({ where: eq(users.email, email) });
-				if (!res) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "User not created" });
-
-				return {
-					token,
-					id: res.id,
-					email,
-				};
-			}
+			return { user: publicProfile(created) };
 		}),
 
 	checkAuth: publicProcedure
@@ -204,33 +76,20 @@ export const userRouter = router({
 				eventToken: z.string().optional(),
 			}),
 		)
-		.query(async ({ input }) => {
-			if (!input.token && !input.eventToken) throw new Error("No token provided");
+		.query(async ({ ctx, input }) => {
+			const idToken = input.token ?? ctx.token;
+			if (!idToken && !input.eventToken) throw new Error("No token provided");
 
 			const returnObj: {
-				user?: Omit<typeof users.$inferSelect, "password" | "token" | "events" | "created_at" | "last_seen">;
+				user?: ReturnType<typeof publicProfile>;
 				event?: typeof events.$inferSelect;
 			} = {};
 
-			if (input.token) {
-				returnObj.user = (
-					await db
-						.select({
-							username: users.username,
-							email: users.email,
-							role: users.role,
-							id: users.id,
-							admin: users.admin,
-							slack_user_id: users.slack_user_id,
-							active_event_code: users.active_event_code,
-						})
-						.from(users)
-						.where(eq(users.token, input.token))
-						.execute()
-				)[0];
-
-				if (returnObj.user) {
-					await db.update(users).set({ last_seen: new Date() }).where(eq(users.token, input.token));
+			if (idToken) {
+				const user = await resolveUserFromToken(idToken);
+				if (user) {
+					await db.update(users).set({ last_seen: new Date() }).where(eq(users.id, user.id));
+					returnObj.user = publicProfile(user);
 				}
 			}
 
@@ -241,6 +100,17 @@ export const userRouter = router({
 			return returnObj;
 		}),
 
+	changeRole: protectedProcedure
+		.input(
+			z.object({
+				newRole: z.enum(ROLES),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			await db.update(users).set({ role: input.newRole }).where(eq(users.id, ctx.user.id));
+			return { newRole: input.newRole };
+		}),
+
 	linkSlackAccount: protectedProcedure
 		.input(
 			z.object({
@@ -248,12 +118,12 @@ export const userRouter = router({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			await db.update(users).set({ slack_user_id: input.slackUserId }).where(eq(users.token, ctx.user.token));
+			await db.update(users).set({ slack_user_id: input.slackUserId }).where(eq(users.id, ctx.user.id));
 			return true;
 		}),
 
 	unlinkSlackAccount: protectedProcedure.mutation(async ({ ctx }) => {
-		await db.update(users).set({ slack_user_id: null }).where(eq(users.token, ctx.user.token));
+		await db.update(users).set({ slack_user_id: null }).where(eq(users.id, ctx.user.id));
 		return true;
 	}),
 
@@ -273,6 +143,10 @@ export const userRouter = router({
 	}),
 });
 
+/**
+ * Generate a random opaque token. Still used for event tokens and Slack link
+ * tokens (NOT user auth, which now uses Firebase ID tokens).
+ */
 export function generateToken() {
 	return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 }

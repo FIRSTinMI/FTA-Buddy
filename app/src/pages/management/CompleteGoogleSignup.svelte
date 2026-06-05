@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { Button, Input, Label, Select } from "flowbite-svelte";
-	import { get } from "svelte/store";
 	import Spinner from "../../components/Spinner.svelte";
 	import { trpc } from "../../main";
 	import { navigate } from "../../router";
 	import { userStore } from "../../stores/user";
+	import { currentIdToken } from "../../util/firebase";
+	import { firebaseAuthErrorMessage } from "../../util/firebaseErrors";
 	import { toast } from "../../util/toast";
 
 	let username = $state("");
@@ -12,27 +13,32 @@
 
 	let loading = $state(false);
 
-	async function createGoogleUser(evt: Event) {
+	async function finishSignup(evt: Event) {
 		evt.preventDefault();
+		if (!role) {
+			toast("Error", "Please select a role");
+			return;
+		}
 		loading = true;
-		const googleToken = get(userStore).googleToken;
 
 		try {
-			const res = await trpc.user.createGoogleUser.mutate({
-				token: googleToken || "",
-				username,
-				role: role || "FTA",
-			});
+			const res = await trpc.user.syncProfile.mutate({ username, role });
+			if ("needsProfile" in res && res.needsProfile) {
+				// Should not happen here, but guard anyway.
+				toast("Error Creating Account", "Could not finish account setup. Please try again.");
+				loading = false;
+				return;
+			}
 
+			const p = res.user!;
 			userStore.set({
-				token: res.token,
+				token: await currentIdToken(),
 				eventToken: "",
-				username,
-				email: res.email,
-				role: role || "FTA",
-				id: res.id,
-				googleToken,
-				admin: false,
+				username: p.username,
+				email: p.email,
+				role: p.role,
+				id: p.id,
+				admin: p.admin,
 			});
 
 			toast("Success", "Account created successfully", "green-500");
@@ -46,14 +52,7 @@
 			}
 		} catch (err: any) {
 			console.error(err);
-			if (err.message.startsWith("[")) {
-				const obj = JSON.parse(err.message);
-				for (const key in obj) {
-					toast("Error Creating Account", obj[key].message);
-				}
-			} else {
-				toast("Error Creating Account", err.message);
-			}
+			toast("Error Creating Account", firebaseAuthErrorMessage(err));
 		}
 
 		loading = false;
@@ -68,7 +67,7 @@
 	<div class="container mx-auto md:max-w-3xl flex flex-col justify-center p-4 space-y-4">
 		<h1 class="text-3xl">Welcome to FTA Buddy</h1>
 		<h2 class="text-xl">Finish Creating Account</h2>
-		<form class="flex flex-col space-y-2 mt-2 text-left" onsubmit={createGoogleUser}>
+		<form class="flex flex-col space-y-2 mt-2 text-left" onsubmit={finishSignup}>
 			<div>
 				<Label for="username">Username</Label>
 				<Input id="username" bind:value={username} placeholder="John" disabled={loading} />

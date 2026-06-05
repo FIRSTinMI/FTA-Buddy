@@ -24,10 +24,15 @@ export const users = pgTable(
 		id: serial("id").primaryKey(),
 		username: varchar("username").notNull(),
 		email: varchar("email").unique().notNull(),
-		password: text("password").notNull(),
+		// Firebase Auth UID. Source of truth for authentication; the password/token
+		// columns below are deprecated and retained only for the migration window.
+		firebase_uid: varchar("firebase_uid").unique(),
+		// @deprecated Legacy bcrypt hash. No longer written; auth lives in Firebase.
+		password: text("password"),
 		created_at: timestamp("created_at").notNull().defaultNow(),
 		last_seen: timestamp("last_seen").notNull().defaultNow(),
 		role: roleEnum("role").notNull().default("FTA"),
+		// @deprecated Legacy homegrown session token. Auth now uses Firebase ID tokens.
 		token: varchar("token").notNull().default(""),
 		admin: boolean("admin").notNull().default(false),
 		slack_user_id: varchar("slack_user_id"),

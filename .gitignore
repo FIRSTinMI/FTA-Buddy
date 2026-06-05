@@ -6,6 +6,9 @@ dist/*
 .env
 reports/*
 oauth2.keys.json
+# Firebase service-account credentials - never commit
+*-firebase-adminsdk-*.json
+serviceAccount*.json
 app/public/music/*
 app/public/audio/*
 scripts/

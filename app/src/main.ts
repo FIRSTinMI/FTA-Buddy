@@ -1,4 +1,5 @@
 import { createTRPCClient, httpBatchLink, httpLink, httpSubscriptionLink, loggerLink, splitLink } from "@trpc/client";
+import { onIdTokenChanged } from "firebase/auth";
 import SuperJSON from "superjson";
 import { mount } from "svelte";
 import { get } from "svelte/store";
@@ -7,6 +8,7 @@ import "./app.css";
 import App from "./App.svelte";
 import { settingsStore } from "./stores/settings";
 import { userStore } from "./stores/user";
+import { auth, currentIdToken } from "./util/firebase";
 
 let token = get(userStore).token;
 let eventToken = get(userStore).eventToken;
@@ -28,12 +30,15 @@ const BIG_MUTATION_PATHS = new Set(["field.post", "match.putMatchLogs", "match.p
 
 function buildLinks(token: string, eventToken: string) {
 	const trpcUrl = server + (localServer ? ":3001" : "") + "/trpc";
-	const headers = {
-		Authorization: `Bearer ${token}`,
+	// Auth is the Firebase ID token. Resolved per-request (async) so HTTP calls
+	// always get a fresh, auto-refreshed token from the SDK.
+	const headers = async () => ({
+		Authorization: `Bearer ${await currentIdToken()}`,
 		"Event-Token": eventToken,
-	};
+	});
 
-	// SSE (EventSource) cannot send custom headers, so pass auth via query params
+	// SSE (EventSource) cannot send custom headers, so pass auth via query params.
+	// The connection is rebuilt by onIdTokenChanged when the token refreshes.
 	const sseUrl = `${trpcUrl}?token=${encodeURIComponent(token)}&eventToken=${encodeURIComponent(eventToken)}`;
 
 	// Dev-only tRPC logger: prints procedure + direction; masks the password field
@@ -80,8 +85,20 @@ export function trpcWithEventToken(subEventToken: string) {
 userStore.subscribe((value) => {
 	token = value.token;
 	eventToken = value.eventToken;
-	console.info(`[AUTH] trpc client rebuilt - token length: ${token?.length ?? 0}, origin: ${window.location.origin}`);
 	trpc = createTRPCClient<AppRouter>({ links: buildLinks(token, eventToken) });
+});
+
+// Rebuild the client whenever Firebase signs in/out or refreshes the ID token
+// (~hourly). Keeps the SSE URL and the persisted "logged in" token current.
+onIdTokenChanged(auth, async (fbUser) => {
+	token = fbUser ? await fbUser.getIdToken() : "";
+	const cur = get(userStore);
+	if (cur.token !== token) {
+		userStore.set({ ...cur, token });
+	} else {
+		trpc = createTRPCClient<AppRouter>({ links: buildLinks(token, eventToken) });
+	}
+	console.info(`[AUTH] trpc client rebuilt - token length: ${token.length}, origin: ${window.location.origin}`);
 });
 
 const target = document.getElementById("app");

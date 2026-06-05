@@ -1,5 +1,13 @@
 <script lang="ts">
 	import { Button, Input, Label, Modal, Select, type SelectOptionType } from "flowbite-svelte";
+	import {
+		createUserWithEmailAndPassword,
+		sendEmailVerification,
+		sendPasswordResetEmail,
+		signInWithEmailAndPassword,
+		signInWithPopup,
+		signOut,
+	} from "firebase/auth";
 	import { tick } from "svelte";
 	import type { Profile, TeamList } from "../../../../shared/types";
 	import Spinner from "../../components/Spinner.svelte";
@@ -10,8 +18,42 @@
 	import { savedEventsStore, saveEvent } from "../../stores/savedEvents";
 	import { settingsStore } from "../../stores/settings";
 	import { userStore as user } from "../../stores/user";
+	import { auth, currentIdToken, googleProvider } from "../../util/firebase";
+	import { firebaseAuthErrorMessage } from "../../util/firebaseErrors";
 	import { subscribeToPush } from "../../util/notifications";
 	import { toast } from "../../util/toast";
+
+	/**
+	 * After a successful Firebase sign-in, ensure a profile exists server-side and
+	 * load it into the user store. Returns true if fully logged in, false if the
+	 * account still needs a username/role (redirects to the finish-signup screen).
+	 */
+	async function applyProfile(profileInput: { username?: string; role?: typeof role } = {}): Promise<boolean> {
+		const res = await trpc.user.syncProfile.mutate(profileInput);
+		if ("needsProfile" in res && res.needsProfile) {
+			navigate("/manage/google-signup");
+			return false;
+		}
+		const p = res.user!;
+		user.set({
+			token: await currentIdToken(),
+			eventToken: "",
+			username: p.username,
+			email: p.email,
+			role: p.role,
+			id: p.id,
+			admin: p.admin,
+		});
+		return true;
+	}
+
+	function consumeRedirect() {
+		const redirect = sessionStorage.getItem("redirectAfterLogin");
+		if (redirect) {
+			sessionStorage.removeItem("redirectAfterLogin");
+			navigate(redirect as any);
+		}
+	}
 
 	// If event token is missing, reset the event
 	// This prevents the admin event selector from showing that an event is selected when it's not
@@ -62,40 +104,18 @@
 		}
 
 		try {
-			const res = await trpc.user.createAccount.mutate({
-				email,
-				username,
-				password,
-				role,
-			});
+			const cred = await createUserWithEmailAndPassword(auth, email, password);
+			// Best-effort verification email; don't block account creation on it.
+			sendEmailVerification(cred.user).catch((e) => console.warn("[AUTH] verification email failed", e));
 
-			user.set({
-				token: res.token,
-				eventToken: "",
-				username,
-				email,
-				role,
-				id: res.id,
-				admin: false,
-			});
-
-			toast("Success", "Account created successfully", "green-500");
-
-			const redirect = sessionStorage.getItem("redirectAfterLogin");
-			if (redirect) {
-				sessionStorage.removeItem("redirectAfterLogin");
-				navigate(redirect as any);
+			const loggedIn = await applyProfile({ username, role });
+			if (loggedIn) {
+				toast("Success", "Account created successfully", "green-500");
+				consumeRedirect();
 			}
 		} catch (err: any) {
 			console.error("[AUTH] createUser error:", err);
-			if (err.message.startsWith("[")) {
-				const obj = JSON.parse(err.message);
-				for (const key in obj) {
-					toast("Error Creating Account", obj[key].message);
-				}
-			} else {
-				toast("Error Creating Account", err.message);
-			}
+			toast("Error Creating Account", firebaseAuthErrorMessage(err));
 		} finally {
 			loading = false;
 			isSubmitting = false;
@@ -109,27 +129,14 @@
 		loading = true;
 
 		try {
-			const res = await trpc.user.login.mutate({ email, password });
-
-			user.set({
-				token: res.token,
-				eventToken: "",
-				username: res.username,
-				email: res.email,
-				role: res.role,
-				id: res.id,
-				admin: res.admin,
-			});
-
-			toast("Success", "Logged in successfully", "green-500");
-
-			const redirect = sessionStorage.getItem("redirectAfterLogin");
-			if (redirect) {
-				sessionStorage.removeItem("redirectAfterLogin");
-				navigate(redirect as any);
+			await signInWithEmailAndPassword(auth, email, password);
+			const loggedIn = await applyProfile();
+			if (loggedIn) {
+				toast("Success", "Logged in successfully", "green-500");
+				consumeRedirect();
 			}
 		} catch (err: any) {
-			toast("Error Logging In", err.message);
+			toast("Error Logging In", firebaseAuthErrorMessage(err));
 			console.error("[AUTH] login error:", err);
 		} finally {
 			loading = false;
@@ -137,7 +144,49 @@
 		}
 	}
 
-	function logout() {
+	async function forgotPassword() {
+		if (!email) {
+			toast("Reset Password", "Enter your email above first, then tap Forgot Password.");
+			return;
+		}
+		try {
+			await sendPasswordResetEmail(auth, email);
+			toast("Reset Password", "If an account exists for that email, a reset link is on its way.", "green-500");
+		} catch (err: any) {
+			console.error("[AUTH] forgotPassword error:", err);
+			toast("Reset Password", firebaseAuthErrorMessage(err));
+		}
+	}
+
+	async function googleSignIn() {
+		if (isSubmitting) return;
+		isSubmitting = true;
+		loading = true;
+		try {
+			await signInWithPopup(auth, googleProvider);
+			const loggedIn = await applyProfile();
+			if (loggedIn) {
+				toast("Success", "Logged in successfully", "green-500");
+				consumeRedirect();
+			}
+		} catch (err: any) {
+			// Popup closed/cancelled by the user is not an error worth surfacing.
+			if (err?.code !== "auth/popup-closed-by-user" && err?.code !== "auth/cancelled-popup-request") {
+				toast("Error Logging In", firebaseAuthErrorMessage(err));
+				console.error("[AUTH] googleSignIn error:", err);
+			}
+		} finally {
+			loading = false;
+			isSubmitting = false;
+		}
+	}
+
+	async function logout() {
+		try {
+			await signOut(auth);
+		} catch (e) {
+			console.error("[AUTH] signOut error:", e);
+		}
 		user.set({
 			token: "",
 			eventToken: "",
@@ -350,51 +399,6 @@
 		}
 	}
 
-	// @ts-ignore
-	window.googleLogin = async (googleUser: any) => {
-		try {
-			const res = await trpc.user.googleLogin.mutate({
-				token: googleUser.credential,
-			});
-
-			user.set({
-				token: res.token,
-				eventToken: "",
-				username: res.username,
-				email: res.email,
-				role: res.role,
-				id: res.id,
-				admin: res.admin,
-				googleToken: googleUser.credential,
-			});
-
-			toast("Success", "Logged in successfully", "green-500");
-
-			const redirect = sessionStorage.getItem("redirectAfterLogin");
-			if (redirect) {
-				sessionStorage.removeItem("redirectAfterLogin");
-				navigate(redirect as any);
-			}
-		} catch (err: any) {
-			if (err.code === 404 || err.message.startsWith("User not found")) {
-				user.set({
-					token: "",
-					eventToken: "",
-					username: "",
-					email: "",
-					role: "FTA",
-					id: -1,
-					admin: false,
-					googleToken: googleUser.credential,
-				});
-				navigate("/manage/google-signup");
-			} else {
-				toast("Error Logging In", err.message);
-				console.error("[AUTH] googleLogin error:", err);
-			}
-		}
-	};
-
 	let notificationModalOpen = $state(false);
 
 	let eventTokenInput = $state("");
@@ -550,10 +554,6 @@
 	};
 </script>
 
-<svelte:head>
-	<script src="https://accounts.google.com/gsi/client" async></script>
-</svelte:head>
-
 <Modal bind:open={notificationModalOpen} outsideclose size="sm" onclose={() => (notificationModalOpen = false)}>
 	<h1 class="font-bold text-xl">Enable Notifications</h1>
 	<h2>Enable to get notifications for Tickets, and/or when a robot loses connection during a match</h2>
@@ -698,6 +698,12 @@
 					</div>
 					<Button type="submit" disabled={loading}>Log In</Button>
 				</form>
+				<button
+					type="button"
+					class="text-sm text-blue-500 hover:underline w-fit"
+					onclick={forgotPassword}
+					disabled={loading}>Forgot password?</button
+				>
 				<Button onclick={() => (view = "create")} disabled={loading} outline>Create Account</Button>
 
 				<p>Or</p>
@@ -732,26 +738,28 @@
 						<h2 class="text-xl">
 							{#if desktop}Or log in{:else}Log in{/if} to use FTA Buddy
 						</h2>
-						<div class="w-fit mx-auto">
-							<div
-								id="g_id_onload"
-								data-client_id="211223782093-ahalvkbdfdnjnv29svdvu3phsg40hlqi.apps.googleusercontent.com"
-								data-context="signin"
-								data-ux_mode="popup"
-								data-callback="googleLogin"
-								data-auto_prompt="false"
-							></div>
-
-							<div
-								class="g_id_signin"
-								data-type="standard"
-								data-shape="pill"
-								data-theme="filled_blue"
-								data-text="continue_with"
-								data-size="large"
-								data-logo_alignment="left"
-								style="color-scheme: light"
-							></div>
+						<div class="w-full mx-auto">
+							<Button color="light" class="w-full" onclick={googleSignIn} disabled={loading}>
+								<svg class="w-5 h-5 me-2" viewBox="0 0 48 48" aria-hidden="true">
+									<path
+										fill="#EA4335"
+										d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
+									/>
+									<path
+										fill="#4285F4"
+										d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
+									/>
+									<path
+										fill="#FBBC05"
+										d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
+									/>
+									<path
+										fill="#34A853"
+										d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
+									/>
+								</svg>
+								Continue with Google
+							</Button>
 						</div>
 						<div class="border-t border-neutral-500"></div>
 						<Button onclick={() => (view = "login")} disabled={loading}>Log In</Button>

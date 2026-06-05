@@ -65,7 +65,7 @@ The project is a [Bun](https://bun.sh) workspace with three components:
 ### Prerequisites
 
 - [Bun](https://bun.sh) (v1+)
-- [Docker](https://docs.docker.com/get-docker/) (for the local Redis + Postgres)
+- [Docker](https://docs.docker.com/get-docker/) (for the local Redis, Postgres, and Firebase Auth emulator)
 
 ### Setup
 
@@ -76,7 +76,7 @@ bun install
 # 2. Create your env file
 cp .env.example .env
 
-# 3. Start Redis + Postgres (defaults match .env.example)
+# 3. Start Redis + Postgres + Firebase Auth emulator (defaults match .env.example)
 docker compose up -d
 
 # 4. Apply database migrations
@@ -88,16 +88,33 @@ bun run dev
 
 The server **requires Redis and Postgres at startup** (it exits if `REDIS_URL`
 or the `DB_*` vars are unreachable), so step 3 is not optional. The bundled
-`docker-compose.yml` provides both with the credentials already in
+`docker-compose.yml` provides everything with the credentials already in
 `.env.example`.
 
 Most other keys in `.env.example` are feature-gated and can be left as
 placeholders for local work. The notable ones:
 
-- `GOOGLE_CLIENT_ID` / `GOOGLE_KEY*` - required to log in (Google OAuth)
 - `TBA_API_KEY` - event-code validation
 - `OPENAI_KEY` - AI event reports
 - `SLACK_*`, `TOA_KEY`/`FTC_KEY`/`TOA_APP_NAME`, `GCS_BUCKET`, `VAPID_*` - their respective integrations
+
+### Authentication (Firebase)
+
+Auth runs on [Firebase Authentication](https://firebase.google.com/docs/auth)
+(email/password + Google). Locally it uses the **Firebase Auth emulator** from
+docker-compose, so dev never touches the real project and needs no credentials:
+
+- The app auto-connects to the emulator in dev mode (`http://localhost:9099`).
+  Emulator UI (create/inspect test users, see "sent" reset emails) is at
+  **http://localhost:4000**.
+- The server's Admin SDK auto-connects via `FIREBASE_AUTH_EMULATOR_HOST` from
+  `.env.example`.
+- Create a test account right from the app's login screen, or in the emulator UI.
+
+In production the server needs a Firebase **service-account** credential, set as
+inline JSON in `FIREBASE_SERVICE_ACCOUNT` (or a file via
+`GOOGLE_APPLICATION_CREDENTIALS`). The web `apiKey` in `app/src/util/firebase.ts`
+is a public client identifier, not a secret.
 
 ### Other commands
 

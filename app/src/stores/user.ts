@@ -8,7 +8,6 @@ export interface User {
 	eventToken: string;
 	role: "FTA" | "FTAA" | "CSA" | "RI";
 	admin: boolean;
-	googleToken?: string;
 	meshedEventToken?: string;
 	slack_user_id?: string | null;
 }

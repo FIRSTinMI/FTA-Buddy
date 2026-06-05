@@ -1,4 +1,4 @@
-# Local development dependencies (Redis + Postgres).
+# Local development dependencies (Redis + Postgres + Firebase Auth emulator).
 # Defaults match .env.example. Start with: docker compose up -d
 services:
     redis:
@@ -17,6 +17,20 @@ services:
             - "5432:5432"
         volumes:
             - ftabuddy-pgdata:/var/lib/postgresql/data
+        restart: unless-stopped
+
+    # Local Firebase Auth so dev never touches the real project. No Google login
+    # or service-account needed. UI at http://localhost:4000, Auth on :9099.
+    firebase-auth:
+        image: andreysenov/firebase-tools:latest
+        command: firebase emulators:start --only auth --project fta-buddy
+        working_dir: /home/node
+        volumes:
+            - ./firebase.json:/home/node/firebase.json:ro
+            - ./.firebaserc:/home/node/.firebaserc:ro
+        ports:
+            - "9099:9099"
+            - "4000:4000"
         restart: unless-stopped
 
 volumes:

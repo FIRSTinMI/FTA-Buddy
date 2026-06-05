@@ -52,22 +52,45 @@ running. Required keys:
 
 - `REDIS_URL` - Redis connection (pub/sub + caching); required at boot
 - `DB_*` - PostgreSQL connection; required at boot
+- `FIREBASE_AUTH_EMULATOR_HOST` - points the Admin SDK at the local Auth emulator (dev). Unset in prod.
+- `FIREBASE_SERVICE_ACCOUNT` / `GOOGLE_APPLICATION_CREDENTIALS` - Admin SDK credential (prod only)
 - `TBA_API_KEY` - The Blue Alliance API key (for event code validation)
-- `GOOGLE_CLIENT_ID` + `GOOGLE_KEY*` - Google OAuth
 - `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` - Web Push notifications
 - `OPENAI_KEY` / `OPENAI_MODEL` - Event report generation
 - `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET` - Slack bot integration
 - `TOA_KEY` / `FTC_KEY` - FTC event data
+- `GOOGLE_KEY*` / `GCS_BUCKET` - Google Cloud Storage (log uploads)
 
 ## Tech Stack
 
-**Server:** Bun, Express 5, tRPC v11, Drizzle ORM, PostgreSQL, Redis (ioredis), Zod, Firebase Auth, OpenAI, web-push
+**Server:** Bun, Express 5, tRPC v11, Drizzle ORM, PostgreSQL, Redis (ioredis), Zod, Firebase Admin (Auth), OpenAI, web-push
 
 **App:** Svelte 5 (Runes syntax), TypeScript, Vite, Tailwind CSS v4, Flowbite-Svelte, tRPC client, ECharts, localforage, sv-router
 
 **Extension:** Chrome Manifest v3, SignalR client, injected scripts for FMS FieldMonitor page / Nexus / VIVID
 
 ## Key Patterns
+
+### Authentication (Firebase)
+
+Auth is [Firebase Authentication](https://firebase.google.com/docs/auth)
+(email/password + Google). The client (`app/src/util/firebase.ts`) signs the user
+in and sends the **Firebase ID token** as `Authorization: Bearer <token>` (and as
+a `?token=` query param for SSE, which can't set headers).
+
+The server verifies the token with the Admin SDK (`src/util/firebase-admin.ts`).
+`resolveUserFromToken()` in `src/trpc.ts` decodes it and looks up the profile row
+by `users.firebase_uid` (falling back to email and backfilling the uid). The
+`users` table is the **profile/authorization** record (role, admin, slack link,
+event memberships); Firebase owns credentials. After sign-in the client calls
+`user.syncProfile` to create/fetch its profile row.
+
+Local dev uses the **Firebase Auth emulator** (docker-compose, UI at
+`localhost:4000`). The legacy `users.password` (bcrypt) and `users.token` columns
+are deprecated and retained only for the migration window; existing passwords are
+imported into Firebase via `src/scripts/import-users-to-firebase.ts`.
+`generateToken()` in `user.ts` still mints **event** and **Slack link** tokens
+(not user auth).
 
 ### Svelte 5 Runes
 

@@ -88,7 +88,7 @@ event memberships); Firebase owns credentials. After sign-in the client calls
 Local dev uses the **Firebase Auth emulator** (docker-compose, UI at
 `localhost:4000`). The legacy `users.password` (bcrypt) and `users.token` columns
 are deprecated and retained only for the migration window; existing passwords are
-imported into Firebase via `src/scripts/import-users-to-firebase.ts`.
+imported into Firebase via `src/db/import-users-to-firebase.ts`.
 `generateToken()` in `user.ts` still mints **event** and **Slack link** tokens
 (not user auth).
 

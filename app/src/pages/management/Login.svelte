@@ -628,7 +628,7 @@
 {/if}
 
 <div class="h-full overflow-y-auto">
-	<div class="container mx-auto max-w-xl md:max-w-3xl flex flex-col justify-center gap-4">
+	<div class="container mx-auto max-w-xl md:max-w-3xl flex flex-col justify-center gap-4 min-h-full">
 		{#if !user || !$user.token}
 			<!-- Create Account -->
 			{#if view === "create"}
@@ -695,15 +695,15 @@
 					<div>
 						<Label for="password">Password</Label>
 						<Input id="password" bind:value={password} type="password" disabled={loading} />
+						<button
+							type="button"
+							class="text-xs text-blue-500 hover:underline mt-1"
+							onclick={forgotPassword}
+							disabled={loading}>Forgot password?</button
+						>
 					</div>
 					<Button type="submit" disabled={loading}>Log In</Button>
 				</form>
-				<button
-					type="button"
-					class="text-sm text-blue-500 hover:underline w-fit"
-					onclick={forgotPassword}
-					disabled={loading}>Forgot password?</button
-				>
 				<Button onclick={() => (view = "create")} disabled={loading} outline>Create Account</Button>
 
 				<p>Or</p>

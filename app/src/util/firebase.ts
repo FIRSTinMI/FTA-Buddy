@@ -20,7 +20,7 @@ import {
 // be swapped in here once their DNS + Firebase Hosting verification is set up.
 const PROD_CONFIG = {
 	apiKey: "AIzaSyBrpZ3mQfa8Br1b-TXii01R4aQ8f9RDIFk",
-	authDomain: "fta-buddy.firebaseapp.com",
+	authDomain: "auth.ftabuddy.com",
 	projectId: "fta-buddy",
 	storageBucket: "fta-buddy.firebasestorage.app",
 	messagingSenderId: "668109512883",

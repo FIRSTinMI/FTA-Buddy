@@ -36,17 +36,20 @@ const DRY_RUN = process.argv.includes("--dry-run");
 async function main() {
 	await connect();
 
-	const all = await db.query.users.findMany({ where: isNotNull(users.email) });
+	// Select only columns that exist pre-migration so --dry-run works before
+	// firebase_uid has been added.
+	const all = await db
+		.select({ id: users.id, email: users.email, password: users.password })
+		.from(users)
+		.where(isNotNull(users.email));
 
 	const bcryptUsers = all.filter((u) => typeof u.password === "string" && u.password.startsWith("$2"));
 	const googleOnly = all.filter((u) => u.password === "google");
-	const alreadyLinked = all.filter((u) => u.firebase_uid);
 	const skipped = all.length - bcryptUsers.length - googleOnly.length;
 
 	console.log(
 		`Found ${all.length} users: ${bcryptUsers.length} with bcrypt passwords, ` +
-			`${googleOnly.length} Google-only (self-provision on first login), ${skipped} other/skipped. ` +
-			`${alreadyLinked.length} already have firebase_uid.`,
+			`${googleOnly.length} Google-only (self-provision on first login), ${skipped} other/skipped.`,
 	);
 
 	if (DRY_RUN) {

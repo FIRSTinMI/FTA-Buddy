@@ -52,27 +52,79 @@ The cloud server also enables the notes functionality. The notes are also persis
 
 - Tracking connection time per team, and display 🕜 emoji when there's a team that takes 1 std deviation longer than the average team to connect
 
-## Deployment
+## Development
 
-### SSE Subscriptions & HTTP/2
+The project is a [Bun](https://bun.sh) workspace with three components:
 
-SSE subscriptions require **HTTP/2** in production so multiple browser tabs can
-share a single multiplexed connection (HTTP/1.1 limits concurrent connections to
-~6 per origin, which gets exhausted by long-lived SSE streams).
+| Component     | Location     | Stack                                                  |
+| ------------- | ------------ | ------------------------------------------------------ |
+| **Server**    | `src/`       | Bun + Express + tRPC, PostgreSQL via Drizzle ORM       |
+| **App**       | `app/`       | Svelte 5 + TypeScript + Vite (PWA)                     |
+| **Extension** | `extension/` | Chrome MV3 extension that scrapes FMS and relays data  |
 
-A [Caddyfile](Caddyfile) is included that:
+### Prerequisites
 
-- Terminates TLS and negotiates h2 via ALPN (automatic with Caddy's built-in ACME).
-- Proxies `/trpc` to the Bun upstream with `flush_interval -1` (no response buffering for SSE).
-- Proxies `/ws` for the Chrome extension's WebSocket connection.
+- [Bun](https://bun.sh) (v1+)
+- [Docker](https://docs.docker.com/get-docker/) (for the local Redis + Postgres)
+
+### Setup
 
 ```bash
-# Install Caddy: https://caddyserver.com/docs/install
-caddy run          # foreground, auto-HTTPS via Let's Encrypt
+# 1. Install dependencies (covers the app/extension workspaces too)
+bun install
+
+# 2. Create your env file
+cp .env.example .env
+
+# 3. Start Redis + Postgres (defaults match .env.example)
+docker compose up -d
+
+# 4. Apply database migrations
+bun run migrate
+
+# 5. Run the server + app with hot-reload
+bun run dev
 ```
 
-**Verify HTTP/2:** Open Chrome DevTools → Network tab → right-click column
-headers → enable "Protocol". Subscription requests to `/trpc` should show `h2`.
+The server **requires Redis and Postgres at startup** (it exits if `REDIS_URL`
+or the `DB_*` vars are unreachable), so step 3 is not optional. The bundled
+`docker-compose.yml` provides both with the credentials already in
+`.env.example`.
+
+Most other keys in `.env.example` are feature-gated and can be left as
+placeholders for local work. The notable ones:
+
+- `GOOGLE_CLIENT_ID` / `GOOGLE_KEY*` - required to log in (Google OAuth)
+- `TBA_API_KEY` - event-code validation
+- `OPENAI_KEY` - AI event reports
+- `SLACK_*`, `TOA_KEY`/`FTC_KEY`/`TOA_APP_NAME`, `GCS_BUCKET`, `VAPID_*` - their respective integrations
+
+### Other commands
+
+```bash
+bun run server              # server only
+bun run app                 # app only
+bun run build               # production build of the app
+bun run generate-migration  # create a migration after editing src/db/schema.ts
+bun run format              # prettier
+```
+
+## Deployment
+
+Production runs as a single Docker image (see [`Dockerfile`](Dockerfile)) built
+by CI and deployed through Coolify. Two instances, **A** and **B**, run behind
+[ftabuddy.com](https://ftabuddy.com) and are load-balanced by Traefik with
+sticky sessions; deploys roll out to A first, then B, for zero-downtime
+releases. Each instance is also reachable directly at `a.ftabuddy.com` and
+`b.ftabuddy.com` for debugging.
+
+Traefik terminates TLS and serves **HTTP/2**, which the live tRPC subscriptions
+rely on: SSE streams are long-lived, and HTTP/1.1's ~6-connection-per-origin
+limit gets exhausted when several tabs subscribe. HTTP/2 multiplexes them over
+one connection.
+
+> **Verify HTTP/2:** Chrome DevTools → Network → enable the "Protocol" column.
+> Subscription requests to `/trpc` should show `h2`.
 
 ## License
 

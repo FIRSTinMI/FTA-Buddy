@@ -1,6 +1,23 @@
+# Local development dependencies (Redis + Postgres).
+# Defaults match .env.example. Start with: docker compose up -d
 services:
     redis:
         image: redis:7-alpine
         ports:
             - "6379:6379"
         restart: unless-stopped
+
+    postgres:
+        image: postgres:16-alpine
+        environment:
+            POSTGRES_USER: user
+            POSTGRES_PASSWORD: password
+            POSTGRES_DB: ftabuddy
+        ports:
+            - "5432:5432"
+        volumes:
+            - ftabuddy-pgdata:/var/lib/postgresql/data
+        restart: unless-stopped
+
+volumes:
+    ftabuddy-pgdata:

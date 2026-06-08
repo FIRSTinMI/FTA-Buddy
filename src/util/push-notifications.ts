@@ -11,7 +11,11 @@ const publicVapidKey = process.env.VAPID_PUBLIC_KEY || "";
 const privateVapidKey = process.env.VAPID_PRIVATE_KEY || "";
 
 export function initializePushNotifications() {
-	webpush.setVapidDetails("mailto:me@filipkin.com", publicVapidKey, privateVapidKey);
+	try {
+		webpush.setVapidDetails("mailto:me@filipkin.com", publicVapidKey, privateVapidKey);
+	} catch (err) {
+		console.warn("[push-notifications] VAPID keys invalid or missing — web push disabled:", (err as Error).message);
+	}
 }
 
 export async function createNotification(userIds: number[], data: Notification, eventCode?: string) {

@@ -49,6 +49,10 @@ async function updateFullEventList() {
 		).json();
 
 		fullEventList.fetched = new Date();
+		if (!Array.isArray(updatedEventList)) {
+			console.warn("[TBA] Unexpected response from TBA API (bad key?):", updatedEventList);
+			return;
+		}
 		fullEventList.events = updatedEventList.map((event: any) => ({
 			key: event.key,
 			first_event_code: event.first_event_code,

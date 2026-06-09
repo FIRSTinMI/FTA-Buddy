@@ -412,12 +412,12 @@ export const matchEventsRouter = router({
 			if (!ctx.token) {
 				throw new TRPCError({ code: "UNAUTHORIZED", message: "Missing auth token, please log in" });
 			}
-			const authorProfile = (await db
-				.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
-				.from(users)
-				.where(eq(users.token, ctx.token))) as Profile[];
-			if (!authorProfile[0])
+
+			if (!ctx.user) {
 				throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author profile" });
+			}
+
+			const authorProfile = ctx.user as Profile;
 
 			// Map log issue types to note issue types
 			const issueTypeMap: Record<string, string> = {
@@ -452,8 +452,8 @@ export const matchEventsRouter = router({
 					.values({
 						id: newNoteId,
 						text: noteText,
-						author_id: authorProfile[0].id,
-						author: authorProfile[0],
+						author_id: authorProfile.id,
+						author: authorProfile,
 						team: matchEvent.team,
 						note_type: "TeamIssue",
 						resolution_status: "Open",
@@ -502,7 +502,7 @@ export const matchEventsRouter = router({
 											.limit(1)
 									)[0]?.name ?? null)
 								: null,
-							authorProfile[0].username,
+							authorProfile.username,
 							newNote.text,
 							event.code,
 							newNote.match_id ?? undefined,

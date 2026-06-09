@@ -344,12 +344,8 @@ const messagesSubRouter = router({
 			if (!ctx.token) {
 				resolvedProfile = localProfile;
 			} else {
-				const rows = (await db
-					.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
-					.from(users)
-					.where(eq(users.token, ctx.token))) as Profile[];
-				if (!rows[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
-				resolvedProfile = rows[0];
+				if (!ctx.user) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
+				resolvedProfile = ctx.user as Profile;
 			}
 
 			const insert = await db
@@ -446,11 +442,12 @@ const messagesSubRouter = router({
 			const message = await db.query.messages.findFirst({ where: eq(messages.id, input.message_id) });
 			if (!message) throw new TRPCError({ code: "NOT_FOUND", message: "Message not found" });
 
-			const currentUserProfile = await db
-				.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
-				.from(users)
-				.where(eq(users.token, ctx.token as string));
-			if (!currentUserProfile[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Current User not found" });
+			const messageAuthorId = message.author_id;
+
+			if (!ctx.user) throw new TRPCError({ code: "NOT_FOUND", message: "Current User not found" });
+			const currentUserProfile = ctx.user as Profile;
+
+			if (currentUserProfile.id != messageAuthorId) throw new TRPCError({ code: "BAD_REQUEST", message: "Current User is not Message Author"}); 
 
 			const update = await db
 				.update(messages)
@@ -514,11 +511,12 @@ const messagesSubRouter = router({
 			});
 			if (!message) throw new TRPCError({ code: "NOT_FOUND", message: "Message not found" });
 
-			const currentUserProfile = await db
-				.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
-				.from(users)
-				.where(eq(users.token, ctx.token as string));
-			if (!currentUserProfile[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Current User not found" });
+			const messageAuthorId = message.author_id;
+
+			if (!ctx.user) throw new TRPCError({ code: "NOT_FOUND", message: "Current User not found" });
+			const currentUserProfile = ctx.user as Profile;
+
+			if (currentUserProfile.id != messageAuthorId) throw new TRPCError({ code: "BAD_REQUEST", message: "Current User is not Message Author"}); 
 
 			const result = await db.delete(messages).where(eq(messages.id, input.message_id));
 			if (!result) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to delete Message" });
@@ -719,11 +717,7 @@ export const notesRouter = router({
 		.mutation(async ({ input }) => {
 			const event = await getEvent("", input.event_code);
 
-			const author = await db
-				.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
-				.from(users)
-				.where(eq(users.id, -1));
-			if (!author[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
+			const publicAuthor: Profile = { id: -2, username: "Public", role: "FTA", admin: false };
 
 			const teamInEvent = await db
 				.select({ teamNumber: schema.checklist.teamNumber })
@@ -756,8 +750,8 @@ export const notesRouter = router({
 					id: noteId,
 					team: input.team,
 					text: input.text,
-					author_id: author[0].id,
-					author: author[0] as Profile,
+					author_id: publicAuthor.id,
+					author: publicAuthor as Profile,
 					note_type: "TeamIssue",
 					resolution_status: "Open",
 					event_code: event.code,
@@ -831,17 +825,16 @@ export const notesRouter = router({
 		.mutation(async ({ ctx, input }) => {
 			const event = ctx.event;
 
-			const localProfile: Profile = { id: -1, username: "Field", role: "FTA", admin: false };
+			const fieldProfile: Profile = { id: -1, username: "Field", role: "FTA", admin: false };
 			let resolvedProfile: Profile;
 			if (!ctx.token) {
-				resolvedProfile = localProfile;
+				resolvedProfile = fieldProfile;
 			} else {
-				const rows = (await db
-					.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
-					.from(users)
-					.where(eq(users.token, ctx.token))) as Profile[];
-				if (!rows[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
-				resolvedProfile = rows[0];
+				if (ctx.user) {
+					resolvedProfile = ctx.user
+				} else {
+					throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve Current Profile" });
+				}
 			}
 
 			const isTeamIssue = input.note_type === "TeamIssue";
@@ -1001,12 +994,12 @@ export const notesRouter = router({
 			});
 			if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
 
-			if (!ctx.token) throw new TRPCError({ code: "BAD_REQUEST", message: "User token not provided" });
-			const currentUserProfile = await db
-				.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
-				.from(users)
-				.where(eq(users.token, ctx.token));
-			if (!currentUserProfile[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Current User not found" });
+			const noteAuthorId = note.author_id;
+
+			if (!ctx.user) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve Current User Profile"});
+			const currentUserProfile = ctx.user as Profile;
+
+			if (currentUserProfile.id != noteAuthorId) throw new TRPCError({ code: "BAD_REQUEST", message: "Current User is not Note Author"}); 
 
 			const setFields: Record<string, any> = { text: input.new_text, updated_at: new Date() };
 			if (input.match_id !== undefined) setFields.match_id = input.match_id;
@@ -1069,12 +1062,12 @@ export const notesRouter = router({
 		const note = await db.query.notes.findFirst({ where: eq(notes.id, input.id) });
 		if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
 
-		if (!ctx.token) throw new TRPCError({ code: "BAD_REQUEST", message: "User token not provided" });
-		const currentUserProfile = await db
-			.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
-			.from(users)
-			.where(eq(users.token, ctx.token));
-		if (!currentUserProfile[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Current User not found" });
+		const noteAuthorId = note.author_id;
+
+		if (!ctx.user) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve Current User Profile" });
+		const currentUser = ctx.user as Profile;
+
+		if (currentUser.id !== noteAuthorId) throw new TRPCError({ code: "BAD_REQUEST", message: "Current User is not Note Author"});
 
 		await db.delete(messages).where(eq(messages.note_id, input.id));
 		await db
@@ -1221,13 +1214,8 @@ export const notesRouter = router({
 			});
 			if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
 
-			if (!ctx.token) throw new TRPCError({ code: "BAD_REQUEST", message: "User token not provided" });
-			const currentUserProfileRows = await db
-				.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
-				.from(users)
-				.where(eq(users.token, ctx.token));
-			const currentUserProfile = currentUserProfileRows[0];
-			if (!currentUserProfile) throw new TRPCError({ code: "NOT_FOUND", message: "Current User not found" });
+			if (!ctx.user) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve Current User Profile" });
+			const currentUserProfile = ctx.user as Profile;
 
 			const isClosing = input.new_status === "Resolved" || input.new_status === "Refused";
 
@@ -1312,18 +1300,15 @@ export const notesRouter = router({
 			});
 			if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
 
-			const profile = await db
+			const assigneeProfileRow = await db
 				.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
 				.from(users)
 				.where(eq(users.id, input.user_id));
-			if (!profile[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve User profile" });
+			if (!assigneeProfileRow[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve Assignee profile" });
+			const assigneeProfile = assigneeProfileRow[0] as Profile;
 
-			const actorProfileAssign = await db
-				.select({ id: users.id, username: users.username })
-				.from(users)
-				.where(eq(users.token, ctx.token as string));
-			const actorIdAssign = actorProfileAssign[0]?.id;
-			const actorUsernameAssign = actorProfileAssign[0]?.username ?? "Unknown";
+			if (!ctx.user) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve Current User Profile"});
+			const actorProfile = ctx.user as Profile;
 
 			if (note.assigned_to_id === input.user_id) {
 				throw new TRPCError({ code: "BAD_REQUEST", message: "User is already assigned to this note" });
@@ -1333,7 +1318,7 @@ export const notesRouter = router({
 				.update(notes)
 				.set({
 					assigned_to_id: input.user_id,
-					assigned_to: profile[0] as Profile,
+					assigned_to: assigneeProfile as Profile,
 					updated_at: new Date(),
 				})
 				.where(eq(notes.id, input.id))
@@ -1344,31 +1329,31 @@ export const notesRouter = router({
 				kind: "assign",
 				note_id: update[0].id,
 				assigned_to_id: update[0].assigned_to_id,
-				assigned_to: profile[0] as Profile,
+				assigned_to: assigneeProfile as Profile,
 			});
 
 			const assignFollowers = await getNoteFollowers(note.id);
 			createNotification(
-				assignFollowers.filter((id: number) => id !== profile[0].id && id !== actorIdAssign),
+				assignFollowers.filter((id: number) => id !== assigneeProfile.id && id !== actorProfile.id),
 				buildNotification({
 					kind: "note.assigned",
 					eventCode: input.event_code,
 					note: toNoteCtx(note as any),
-					assignee: profile[0].username,
-					actor: actorUsernameAssign,
+					assignee: assigneeProfile.username,
+					actor: actorProfile.username,
 				}),
 				input.event_code,
 			);
 
 			// Only notify the assignee if they didn't assign themselves
-			if (profile[0].id !== actorIdAssign) {
+			if (assigneeProfile.id !== actorProfile.id) {
 				createNotification(
-					[profile[0].id],
+					[assigneeProfile.id],
 					buildNotification({
 						kind: "note.assignedToYou",
 						eventCode: input.event_code,
 						note: toNoteCtx(note as any),
-						actor: actorUsernameAssign,
+						actor: actorProfile.username,
 					}),
 					input.event_code,
 				);
@@ -1401,23 +1386,20 @@ export const notesRouter = router({
 				throw new TRPCError({ code: "NOT_FOUND", message: "No user currently assigned to this Note" });
 			}
 
-			let profile: Profile[] = [];
+			let assignedToProfileArr: Profile[] = [];
 			if (note.assigned_to === null && note.assigned_to_id) {
-				profile = await db
+				assignedToProfileArr = await db
 					.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
 					.from(users)
 					.where(eq(users.id, note.assigned_to_id));
 			} else if (note.assigned_to !== null) {
-				profile.push(note.assigned_to as Profile);
+				assignedToProfileArr.push(note.assigned_to as Profile);
 			}
-			if (!profile[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to find assigned User" });
-
-			const actorProfileUnassign = await db
-				.select({ id: users.id, username: users.username })
-				.from(users)
-				.where(eq(users.token, ctx.token as string));
-			const actorIdUnassign = actorProfileUnassign[0]?.id;
-			const actorUsernameUnassign = actorProfileUnassign[0]?.username ?? "Unknown";
+			if (!assignedToProfileArr[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to find assigned User" });
+			let assignedToProfile = assignedToProfileArr[0];
+			
+			if (!ctx.user) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve Current User Profile"})
+			const actorProfile = ctx.user as Profile;
 
 			const update = await db
 				.update(notes)
@@ -1436,25 +1418,25 @@ export const notesRouter = router({
 
 			const unassignFollowers = await getNoteFollowers(note.id);
 			createNotification(
-				unassignFollowers.filter((id: number) => id !== actorIdUnassign),
+				unassignFollowers.filter((id: number) => id !== actorProfile.id),
 				buildNotification({
 					kind: "note.unassigned",
 					eventCode: input.event_code,
 					note: toNoteCtx(note as any),
-					actor: actorUsernameUnassign,
+					actor: actorProfile.username,
 				}),
 				input.event_code,
 			);
 
 			// Only notify the previously-assigned user if they didn't unassign themselves
-			if (profile[0].id !== actorIdUnassign) {
+			if (assignedToProfile.id !== actorProfile.id) {
 				createNotification(
-					[profile[0].id],
+					[assignedToProfile.id],
 					buildNotification({
 						kind: "note.unassignedFromYou",
 						eventCode: input.event_code,
 						note: toNoteCtx(note as any),
-						actor: actorUsernameUnassign,
+						actor: actorProfile.username,
 					}),
 					input.event_code,
 				);

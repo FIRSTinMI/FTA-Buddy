@@ -79,14 +79,18 @@ export const protectedProcedure = t.procedure.use(async (opts) => {
 
 export const eventProcedure = t.procedure.use(async (opts) => {
 	const { ctx } = opts;
-	if (!ctx.eventToken) throw new TRPCError({ code: "UNAUTHORIZED", message: "Missing Event Token Header" });
+	let user = null;
 
+	if (!ctx.eventToken) throw new TRPCError({ code: "UNAUTHORIZED", message: "Missing Event Token Header" });
 	const event = await getEvent(ctx.eventToken);
+
+	if (ctx.token) user = await resolveUserFromToken(ctx.token);
 
 	return opts.next({
 		ctx: {
 			...ctx,
 			event,
+			user,
 		},
 	});
 });

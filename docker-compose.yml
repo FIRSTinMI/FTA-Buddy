@@ -21,17 +21,28 @@ services:
 
     # Local Firebase Auth so dev never touches the real project. No Google login
     # or service-account needed. UI at http://localhost:4000, Auth on :9099.
+    # Data persists across restarts: it imports on start and exports on a clean
+    # stop (SIGTERM). The named volume is mounted at the PARENT dir and import/
+    # export points at a subdirectory, because the emulator wipes-and-recreates
+    # the export dir on shutdown and can't if that dir is the mount point itself
+    # ("Device or resource busy"). Runs as root so it can write the (root-owned)
+    # named volume; the default `node` user cannot.
     firebase-auth:
         image: andreysenov/firebase-tools:latest
-        command: firebase emulators:start --only auth --project fta-buddy
+        user: "0:0"
+        command: firebase emulators:start --only auth --project fta-buddy --import=/home/node/emulator/data --export-on-exit
         working_dir: /home/node
         volumes:
             - ./firebase.json:/home/node/firebase.json:ro
             - ./.firebaserc:/home/node/.firebaserc:ro
+            - ftabuddy-fbdata:/home/node/emulator
         ports:
             - "9099:9099"
             - "4000:4000"
+        # Give the export time to finish on `docker compose stop/down` before kill.
+        stop_grace_period: 30s
         restart: unless-stopped
 
 volumes:
     ftabuddy-pgdata:
+    ftabuddy-fbdata:

@@ -10,10 +10,11 @@ import { getEvent } from "./util/get-event";
 /**
  * Verify a Firebase ID token and resolve the matching user profile row.
  *
- * Matches first by `firebase_uid`, then falls back to email (and backfills the
- * uid) so users imported/created before their uid was linked still resolve on
- * first authenticated request. Returns null when the token is invalid or no
- * profile exists yet (the latter happens before account setup completes).
+ * Matches first by `firebase_uid`. Falls back to email only when the token's
+ * email is verified AND the profile row has no uid yet, so legacy/imported
+ * users link on first sign-in without exposing an account-takeover path
+ * (Firebase email/password sign-up does not prove ownership of the address).
+ * Returns null when the token is invalid or no profile exists yet.
  */
 export async function resolveUserFromToken(idToken: string | undefined) {
 	if (!idToken) return null;
@@ -22,9 +23,9 @@ export async function resolveUserFromToken(idToken: string | undefined) {
 
 	let user = await db.query.users.findFirst({ where: eq(users.firebase_uid, decoded.uid) });
 
-	if (!user && decoded.email) {
+	if (!user && decoded.email && decoded.email_verified) {
 		const byEmail = await db.query.users.findFirst({ where: eq(users.email, decoded.email) });
-		if (byEmail) {
+		if (byEmail && byEmail.firebase_uid == null) {
 			await db.update(users).set({ firebase_uid: decoded.uid }).where(eq(users.id, byEmail.id));
 			user = { ...byEmail, firebase_uid: decoded.uid };
 		}

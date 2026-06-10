@@ -551,7 +551,7 @@ export interface CycleData {
 export interface Profile {
 	id: number;
 	username: string;
-	role: "FTAA" | "FTA" | "CSA" | "RI";
+	role: "FTAA" | "FTA" | "CSA" | "RI" | "System";
 	admin: boolean;
 	source?: "FMS" | "Slack";
 }

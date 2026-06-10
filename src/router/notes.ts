@@ -19,6 +19,7 @@ import schema, {
 } from "../db/schema";
 import { eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
 import { getEvent } from "../util/get-event";
+import { getFieldProfile, getPublicProfile, toProfile } from "../util/system-profiles";
 import { createNotification } from "../util/push-notifications";
 import { generateReport } from "../util/report-generator";
 import { generateNotesReportPdf, type SubEventInfo } from "../util/notes-report-generator";
@@ -339,14 +340,8 @@ const messagesSubRouter = router({
 			});
 			if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
 
-			const localProfile: Profile = { id: -1, username: "Field", role: "FTA", admin: false };
-			let resolvedProfile: Profile;
-			if (!ctx.token) {
-				resolvedProfile = localProfile;
-			} else {
-				if (!ctx.user) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve author Profile" });
-				resolvedProfile = ctx.user as Profile;
-			}
+			if (ctx.token && !ctx.user) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unable to retrieve author Profile" });
+			const resolvedProfile = ctx.user ? toProfile(ctx.user) : await getFieldProfile();
 
 			const insert = await db
 				.insert(messages)
@@ -717,7 +712,7 @@ export const notesRouter = router({
 		.mutation(async ({ input }) => {
 			const event = await getEvent("", input.event_code);
 
-			const publicAuthor: Profile = { id: -2, username: "Public", role: "FTA", admin: false };
+			const publicAuthor = await getPublicProfile();
 
 			const teamInEvent = await db
 				.select({ teamNumber: schema.checklist.teamNumber })
@@ -751,7 +746,7 @@ export const notesRouter = router({
 					team: input.team,
 					text: input.text,
 					author_id: publicAuthor.id,
-					author: publicAuthor as Profile,
+					author: publicAuthor,
 					note_type: "TeamIssue",
 					resolution_status: "Open",
 					event_code: event.code,
@@ -825,17 +820,8 @@ export const notesRouter = router({
 		.mutation(async ({ ctx, input }) => {
 			const event = ctx.event;
 
-			const fieldProfile: Profile = { id: -1, username: "Field", role: "FTA", admin: false };
-			let resolvedProfile: Profile;
-			if (!ctx.token) {
-				resolvedProfile = fieldProfile;
-			} else {
-				if (ctx.user) {
-					resolvedProfile = ctx.user
-				} else {
-					throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve Current Profile" });
-				}
-			}
+			if (ctx.token && !ctx.user) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unable to retrieve Current Profile" });
+			const resolvedProfile = ctx.user ? toProfile(ctx.user) : await getFieldProfile();
 
 			const isTeamIssue = input.note_type === "TeamIssue";
 			const hasRequest = !!input.request_type;
@@ -996,7 +982,7 @@ export const notesRouter = router({
 
 			const noteAuthorId = note.author_id;
 
-			if (!ctx.user) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve Current User Profile"});
+			if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unable to retrieve Current User Profile"});
 			const currentUserProfile = ctx.user as Profile;
 
 			if (currentUserProfile.id != noteAuthorId) throw new TRPCError({ code: "BAD_REQUEST", message: "Current User is not Note Author"}); 
@@ -1064,7 +1050,7 @@ export const notesRouter = router({
 
 		const noteAuthorId = note.author_id;
 
-		if (!ctx.user) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve Current User Profile" });
+		if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unable to retrieve Current User Profile" });
 		const currentUser = ctx.user as Profile;
 
 		if (currentUser.id !== noteAuthorId) throw new TRPCError({ code: "BAD_REQUEST", message: "Current User is not Note Author"});
@@ -1129,7 +1115,7 @@ export const notesRouter = router({
 			}
 
 			// Add system message noting the merge origin
-			const systemProfile: Profile = { id: -1, username: "Field", role: "FTA", admin: false };
+			const systemProfile = await getFieldProfile();
 			const mergeLabel = sourceNote.team
 				? `Merged from ticket for team ${sourceNote.team}`
 				: `Merged from note ${input.source_id.slice(0, 8)}`;
@@ -1138,7 +1124,7 @@ export const notesRouter = router({
 				.values({
 					id: randomUUID(),
 					note_id: input.target_id,
-					author_id: -1,
+					author_id: systemProfile.id,
 					author: systemProfile,
 					text: mergeLabel,
 					event_code: targetNote.event_code,
@@ -1214,7 +1200,7 @@ export const notesRouter = router({
 			});
 			if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
 
-			if (!ctx.user) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve Current User Profile" });
+			if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unable to retrieve Current User Profile" });
 			const currentUserProfile = ctx.user as Profile;
 
 			const isClosing = input.new_status === "Resolved" || input.new_status === "Refused";
@@ -1307,7 +1293,7 @@ export const notesRouter = router({
 			if (!assigneeProfileRow[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve Assignee profile" });
 			const assigneeProfile = assigneeProfileRow[0] as Profile;
 
-			if (!ctx.user) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve Current User Profile"});
+			if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unable to retrieve Current User Profile"});
 			const actorProfile = ctx.user as Profile;
 
 			if (note.assigned_to_id === input.user_id) {
@@ -1398,7 +1384,7 @@ export const notesRouter = router({
 			if (!assignedToProfileArr[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to find assigned User" });
 			let assignedToProfile = assignedToProfileArr[0];
 			
-			if (!ctx.user) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to retrieve Current User Profile"})
+			if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unable to retrieve Current User Profile"})
 			const actorProfile = ctx.user as Profile;
 
 			const update = await db

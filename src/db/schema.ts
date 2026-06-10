@@ -16,7 +16,7 @@ import {
 	varchar,
 } from "drizzle-orm/pg-core";
 import type { EventAutoEventSettings, FmsNoteMetadata, Profile } from "../../shared/types";
-export const roleEnum = pgEnum("role", ["FTA", "FTAA", "CSA", "RI"]);
+export const roleEnum = pgEnum("role", ["FTA", "FTAA", "CSA", "RI", "System"]);
 
 export const users = pgTable(
 	"users",

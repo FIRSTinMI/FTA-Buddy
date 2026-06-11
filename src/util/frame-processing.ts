@@ -247,6 +247,11 @@ export async function processTeamCycles(
 	changes: StateChange[],
 	lastPrestartDone: Date | null,
 ) {
+	// Skip test matches (match 999) and frames whose level couldn't be resolved
+	// from the schedule — FMS reports placeholder teams 1-6 in these slots and
+	// they otherwise look identical to real qualification rows.
+	if (frame.level === "None" || frame.match === 999) return;
+
 	let tracking = await getCycleTracking(eventCode);
 
 	// If the match is running and there is data, commit it and reset the tracking object
@@ -302,10 +307,10 @@ export async function processTeamCycles(
 	}
 
 	for (let change of changes) {
-		if (change.type !== StateChangeType.RisingEdge || change.robot.ds !== DSState.GREEN) {
-			if (changed) setCycleTracking(eventCode, tracking);
-			return;
-		}
+		// Skip falling edges and any change for a robot whose DS isn't green —
+		// but keep processing the rest of the frame's changes; one bad apple
+		// shouldn't drop sibling robots' rising edges.
+		if (change.type !== StateChangeType.RisingEdge || change.robot.ds !== DSState.GREEN) continue;
 
 		if (!tracking[change.station]) {
 			tracking[change.station] = { team: change.robot.number };

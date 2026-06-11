@@ -18,6 +18,7 @@ import { cycleTimeToMS } from "../shared/cycleTimeToMS";
 import type { ROBOT, TournamentLevel } from "../shared/types";
 import { connect, db } from "./db/db";
 import { cycleLogs, logPublishing, matchLogs, slackLinkTokens } from "./db/schema";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { adminRouter } from "./router/admin";
 import { startDebugLogBackground } from "./util/debug-log";
 import { checklistRouter } from "./router/checklist";
@@ -547,6 +548,17 @@ if (process.env.NODE_ENV === "dev") {
 }
 
 connect().then(async () => {
+	// Apply any pending DB migrations before doing anything else. Without this
+	// the server starts against a schema that may not match the code, and
+	// foreign-key / column-missing errors surface at runtime instead of boot.
+	try {
+		await migrate(db, { migrationsFolder: "./drizzle" });
+		console.log("✅ Migrations up to date");
+	} catch (err) {
+		console.error("❌ Migrations failed:", err);
+		process.exit(1);
+	}
+
 	// Load knownIssue from Redis
 	try {
 		const storedIssue = await redis.get("ftabuddy:global:known_issue");

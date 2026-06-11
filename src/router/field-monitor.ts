@@ -20,6 +20,7 @@ import {
 } from "../util/frame-processing";
 import { getEvent } from "../util/get-event";
 import { getMonitorFrame, getTiming, setTiming } from "../util/event-state";
+import { withEventLock } from "../util/event-mutex";
 import { subscriptionQueue } from "../util/subscription";
 
 export interface Post {
@@ -80,6 +81,12 @@ export const fieldMonitorRouter = router({
 			}
 
 			const event = await getEvent(input.eventToken || "", input.eventCode);
+
+			// Serialize per-event so the read-modify-write sequences against Redis
+			// (timing, monitor_frame, checklist, cycle_tracking) and the bus publishes
+			// run in the order frames arrived. The extension is the only frame source
+			// per event so this doesn't lose any genuine concurrency.
+			return withEventLock(event.code, async () => {
 
 			let extensionId = input.extensionId || ctx.extensionId;
 			if (extensionId) {
@@ -212,9 +219,10 @@ export const fieldMonitorRouter = router({
 				bus.publish(`event:${event.code}:checklist`, updatedChecklist);
 			}
 
-			processTeamCycles(event.code, processed.currentFrame, processed.changes, timing.lastPrestartDone);
+			await processTeamCycles(event.code, processed.currentFrame, processed.changes, timing.lastPrestartDone);
 
 			return;
+			});
 		}),
 
 	history: eventProcedure.query(async ({ ctx }) => {

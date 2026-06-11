@@ -127,6 +127,13 @@
       "when": 1781600000000,
       "tag": "0017_notes_integration",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1781700000000,
+      "tag": "0018_debug_logs",
+      "breakpoints": true
     }
   ]
 }

@@ -19,6 +19,7 @@ import type { ROBOT, TournamentLevel } from "../shared/types";
 import { connect, db } from "./db/db";
 import { cycleLogs, logPublishing, matchLogs, slackLinkTokens } from "./db/schema";
 import { adminRouter } from "./router/admin";
+import { startDebugLogBackground } from "./util/debug-log";
 import { checklistRouter } from "./router/checklist";
 import { cycleRouter } from "./router/cycles";
 import { eventRouter } from "./router/event";
@@ -635,6 +636,8 @@ connect().then(async () => {
 
 	server.listen(port);
 	console.log("✅ HTTP Server listening on http://localhost:" + port);
+
+	startDebugLogBackground();
 
 	// Evict events with no activity for more than 3 days
 	setInterval(

@@ -1,6 +1,17 @@
-import { count, gt, eq, and, sql } from "drizzle-orm";
+import { and, count, desc, eq, gt, gte, ilike, lte, sql } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "../db/db";
-import { appTelemetry, events, matchEvents, matchLogs, messages, notes, users } from "../db/schema";
+import {
+	appTelemetry,
+	debugLogCategories,
+	debugLogs,
+	events,
+	matchEvents,
+	matchLogs,
+	messages,
+	notes,
+	users,
+} from "../db/schema";
 import { adminProcedure, router } from "../trpc";
 
 /** Returns midnight on the most recent Tuesday (the start of the FRC event week). */
@@ -232,4 +243,100 @@ export const adminRouter = router({
 
 		return { ytd, weeks, eventTypes };
 	}),
+
+	// #region Debug logs
+
+	/**
+	 * Returns the union of (a) categories that have a row in `debug_log_categories`
+	 * (i.e. were ever toggled) and (b) categories that appear in `debug_logs` even
+	 * without an explicit toggle row. Lets new categories show up automatically as
+	 * the first `debugLog` call lands.
+	 */
+	getLogCategories: adminProcedure.query(async () => {
+		const [stored, seen] = await Promise.all([
+			db
+				.select({
+					category: debugLogCategories.category,
+					enabled: debugLogCategories.enabled,
+					updated_at: debugLogCategories.updated_at,
+				})
+				.from(debugLogCategories),
+			db
+				.selectDistinct({ category: debugLogs.category })
+				.from(debugLogs),
+		]);
+		const map = new Map<string, { category: string; enabled: boolean; updated_at: Date | null }>();
+		for (const row of stored) {
+			map.set(row.category, { category: row.category, enabled: row.enabled, updated_at: row.updated_at });
+		}
+		for (const row of seen) {
+			if (!map.has(row.category)) {
+				map.set(row.category, { category: row.category, enabled: false, updated_at: null });
+			}
+		}
+		return [...map.values()].sort((a, b) => a.category.localeCompare(b.category));
+	}),
+
+	toggleLogCategory: adminProcedure
+		.input(z.object({ category: z.string().min(1), enabled: z.boolean() }))
+		.mutation(async ({ input }) => {
+			await db
+				.insert(debugLogCategories)
+				.values({ category: input.category, enabled: input.enabled, updated_at: new Date() })
+				.onConflictDoUpdate({
+					target: debugLogCategories.category,
+					set: { enabled: input.enabled, updated_at: new Date() },
+				})
+				.execute();
+			return { category: input.category, enabled: input.enabled };
+		}),
+
+	queryLogs: adminProcedure
+		.input(
+			z.object({
+				eventCode: z.string().optional(),
+				category: z.string().optional(),
+				level: z.enum(["debug", "info", "warn", "error"]).optional(),
+				search: z.string().optional(),
+				since: z.date().optional(),
+				until: z.date().optional(),
+				limit: z.number().int().min(1).max(1000).default(200),
+				cursor: z.date().optional(),
+			}),
+		)
+		.query(async ({ input }) => {
+			const filters = [];
+			if (input.eventCode) filters.push(eq(debugLogs.event_code, input.eventCode));
+			if (input.category) filters.push(eq(debugLogs.category, input.category));
+			if (input.level) filters.push(eq(debugLogs.level, input.level));
+			if (input.search) filters.push(ilike(debugLogs.message, `%${input.search}%`));
+			if (input.since) filters.push(gte(debugLogs.timestamp, input.since));
+			if (input.until) filters.push(lte(debugLogs.timestamp, input.until));
+			if (input.cursor) filters.push(lte(debugLogs.timestamp, input.cursor));
+
+			const rows = await db
+				.select()
+				.from(debugLogs)
+				.where(filters.length ? and(...filters) : undefined)
+				.orderBy(desc(debugLogs.timestamp))
+				.limit(input.limit + 1);
+
+			const hasMore = rows.length > input.limit;
+			const items = hasMore ? rows.slice(0, input.limit) : rows;
+			const nextCursor = hasMore ? items[items.length - 1].timestamp : null;
+			return { items, nextCursor };
+		}),
+
+	clearLogs: adminProcedure
+		.input(z.object({ category: z.string().optional(), eventCode: z.string().optional() }).optional())
+		.mutation(async ({ input }) => {
+			const filters = [];
+			if (input?.category) filters.push(eq(debugLogs.category, input.category));
+			if (input?.eventCode) filters.push(eq(debugLogs.event_code, input.eventCode));
+			const result = await db
+				.delete(debugLogs)
+				.where(filters.length ? and(...filters) : undefined)
+				.execute();
+			return { deleted: result.rowCount ?? 0 };
+		}),
 });

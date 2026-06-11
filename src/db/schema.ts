@@ -466,6 +466,43 @@ export const slackLinkTokens = pgTable("slack_link_tokens", {
 	expires_at: timestamp("expires_at").notNull(),
 });
 
+export const logLevelEnum = pgEnum("log_level", ["debug", "info", "warn", "error"]);
+
+/**
+ * Persistent toggle for which app sections emit debug logs. The util reads
+ * this through an in-memory cache (5s refresh) so calls on hot paths are
+ * essentially free when disabled. Categories are arbitrary strings — call
+ * sites can use whatever name fits and the admin page picks them up.
+ */
+export const debugLogCategories = pgTable("debug_log_categories", {
+	category: varchar("category").primaryKey(),
+	enabled: boolean("enabled").notNull().default(false),
+	updated_at: timestamp("updated_at").notNull().defaultNow(),
+});
+
+/**
+ * General-purpose debug log table. Capped at 100k rows by a background
+ * pruner — old entries are deleted, not rotated. Filter by event_code,
+ * category, level, time range, or free-text on message via the admin page.
+ */
+export const debugLogs = pgTable(
+	"debug_logs",
+	{
+		id: uuid("id").primaryKey(),
+		timestamp: timestamp("timestamp").notNull().defaultNow(),
+		event_code: varchar("event_code"),
+		category: varchar("category").notNull(),
+		level: logLevelEnum("level").notNull().default("info"),
+		message: varchar("message").notNull(),
+		data: jsonb("data"),
+	},
+	(t) => [
+		index("debug_logs_timestamp_idx").on(t.timestamp.desc()),
+		index("debug_logs_event_timestamp_idx").on(t.event_code, t.timestamp.desc()),
+		index("debug_logs_category_timestamp_idx").on(t.category, t.timestamp.desc()),
+	],
+);
+
 export default {
 	events,
 	users,

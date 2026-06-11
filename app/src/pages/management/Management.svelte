@@ -154,6 +154,17 @@
 
 <div class="h-full overflow-y-auto bg-gray-50 dark:bg-neutral-900">
 	<div class="max-w-6xl mx-auto p-4 flex flex-col gap-6">
+		{#if $userStore.admin}
+			<div class="flex justify-end">
+				<a
+					href="/manage/debug-logs"
+					class="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-primary-500"
+				>
+					<Icon icon="mdi:bug-outline" class="w-4 h-4" />
+					Debug Logs
+				</a>
+			</div>
+		{/if}
 		<!-- Stats Cards -->
 		{#if statsLoading}
 			<div class="flex items-center justify-center py-8">

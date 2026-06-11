@@ -12,6 +12,7 @@ import {
 import type { MonitorFrame, PartialMonitorFrame, RobotInfo, ScheduleDetails, StateChange } from "../../shared/types";
 import { db } from "../db/db";
 import schema, { matchEvents, notes, robotCycleLogs } from "../db/schema";
+import { debugLog } from "./debug-log";
 import { getCycleTracking, getChecklist, setCycleTracking, setChecklist } from "./event-state";
 
 export function detectRadioNoDs(currentFrame: PartialMonitorFrame, pastFrames: MonitorFrame[]) {
@@ -284,6 +285,14 @@ export async function processTeamCycles(
 			});
 		}
 
+		debugLog({
+			eventCode,
+			category: "cycle",
+			level: "info",
+			message: `commit ${insert.length} robot cycles for match ${frame.match}-${frame.play}`,
+			data: { match: frame.match, play: frame.play, level: frame.level, rows: insert },
+		});
+
 		if (insert.length > 0) await db.insert(robotCycleLogs).values(insert);
 		setCycleTracking(eventCode, {});
 		return;
@@ -291,6 +300,15 @@ export async function processTeamCycles(
 
 	// Make sure to clear the cycle tracking if we re-prestart
 	if (frame.field === FieldState.PRESTART_INITIATED) {
+		if (tracking.prestart || Object.keys(tracking).filter((k) => k !== "prestart").length > 0) {
+			debugLog({
+				eventCode,
+				category: "cycle",
+				level: "debug",
+				message: "PRESTART_INITIATED — wiping cycle tracking",
+				data: { hadPrestart: !!tracking.prestart, stations: Object.keys(tracking).filter((k) => k !== "prestart") },
+			});
+		}
 		setCycleTracking(eventCode, {});
 		return;
 	}
@@ -304,18 +322,53 @@ export async function processTeamCycles(
 	if (!tracking.prestart) {
 		tracking.prestart = lastPrestartDone || new Date();
 		changed = true;
+		debugLog({
+			eventCode,
+			category: "cycle",
+			level: "info",
+			message: `prestart anchor set for match ${frame.match}-${frame.play}`,
+			data: { prestart: tracking.prestart, lastPrestartDone, match: frame.match, play: frame.play, level: frame.level },
+		});
 	}
 
 	for (let change of changes) {
 		// Skip falling edges and any change for a robot whose DS isn't green —
 		// but keep processing the rest of the frame's changes; one bad apple
 		// shouldn't drop sibling robots' rising edges.
-		if (change.type !== StateChangeType.RisingEdge || change.robot.ds !== DSState.GREEN) continue;
+		if (change.type !== StateChangeType.RisingEdge || change.robot.ds !== DSState.GREEN) {
+			debugLog({
+				eventCode,
+				category: "cycle",
+				level: "debug",
+				message: `skip change station=${change.station} key=${change.key}`,
+				data: {
+					reason: change.type !== StateChangeType.RisingEdge ? "not-rising" : "ds-not-green",
+					type: change.type,
+					ds: change.robot.ds,
+					team: change.robot.number,
+				},
+			});
+			continue;
+		}
 
 		if (!tracking[change.station]) {
 			tracking[change.station] = { team: change.robot.number };
 		}
 		const cycle = tracking[change.station]!;
+
+		debugLog({
+			eventCode,
+			category: "cycle",
+			level: "debug",
+			message: `apply ${change.key} for ${change.station} team ${change.robot.number}`,
+			data: {
+				station: change.station,
+				team: change.robot.number,
+				key: change.key,
+				lastChange: change.robot.lastChange,
+				before: { ...cycle },
+			},
+		});
 
 		switch (change.key) {
 			case "code":

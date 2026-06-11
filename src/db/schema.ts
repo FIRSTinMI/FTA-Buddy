@@ -15,7 +15,7 @@ import {
 	uuid,
 	varchar,
 } from "drizzle-orm/pg-core";
-import type { EventAutoEventSettings, FmsNoteMetadata, Profile } from "../../shared/types";
+import type { EventAutoEventSettings, FmsNoteMetadata } from "../../shared/types";
 export const roleEnum = pgEnum("role", ["FTA", "FTAA", "CSA", "RI", "System"]);
 
 export const users = pgTable(
@@ -108,6 +108,8 @@ export const eventUsers = pgTable(
 	(t) => [primaryKey({ columns: [t.user_id, t.event_code] }), index("event_users_event_code_idx").on(t.event_code)],
 );
 
+export const integrationEnum = pgEnum("integration", ["Slack", "FMS"]);
+
 export const messages = pgTable("messages", {
 	id: uuid("id").primaryKey(),
 	note_id: uuid("note_id")
@@ -117,7 +119,6 @@ export const messages = pgTable("messages", {
 	author_id: integer("author_id")
 		.references(() => users.id)
 		.notNull(),
-	author: jsonb("author").$type<Profile>(),
 	event_code: varchar("event_code")
 		.references(() => events.code)
 		.notNull(),
@@ -125,6 +126,8 @@ export const messages = pgTable("messages", {
 	updated_at: timestamp("updated_at").notNull().defaultNow(),
 	slack_ts: varchar("slack_ts"),
 	slack_channel: varchar("slack_channel"),
+	integration: integrationEnum("integration"),
+	author_display_name: varchar("author_display_name"),
 });
 
 export const levelEnum = pgEnum("level", ["None", "Practice", "Qualification", "Playoff"]);
@@ -157,7 +160,6 @@ export const notes = pgTable(
 		author_id: integer("author_id")
 			.references(() => users.id)
 			.notNull(),
-		author: jsonb("author").$type<Profile>(),
 		team: integer("team"),
 		note_type: noteTypeEnum("note_type").notNull().default("TeamIssue"),
 		resolution_status: resolutionStatusEnum("resolution_status").default("NotApplicable"),
@@ -175,15 +177,15 @@ export const notes = pgTable(
 		updated_at: timestamp("updated_at").notNull().defaultNow(),
 		closed_at: timestamp("closed_at"),
 		assigned_to_id: integer("assigned_to_id").references(() => users.id),
-		assigned_to: jsonb("assigned_to").$type<Profile>(),
 		slack_ts: varchar("slack_ts"),
 		slack_channel: varchar("slack_channel"),
 		match_id: uuid("match_id").references(() => matchLogs.id),
 		resolved_by_id: integer("resolved_by_id").references(() => users.id),
-		resolved_by: jsonb("resolved_by").$type<Profile>(),
 		request_type: noteRequestTypeEnum("request_type"),
 		is_nexus: boolean("is_nexus").notNull().default(false),
 		merged_into: uuid("merged_into"),
+		integration: integrationEnum("integration"),
+		author_display_name: varchar("author_display_name"),
 	},
 	(t) => [
 		index("notes_event_code_idx").on(t.event_code),
@@ -192,12 +194,31 @@ export const notes = pgTable(
 	],
 );
 
-export const noteMessagesRelations = relations(notes, ({ many }) => ({
+export const usersRelations = relations(users, ({ many }) => ({
+	authoredNotes: many(notes, { relationName: "noteAuthor" }),
+	assignedNotes: many(notes, { relationName: "noteAssignedTo" }),
+	resolvedNotes: many(notes, { relationName: "noteResolvedBy" }),
+	authoredMessages: many(messages, { relationName: "messageAuthor" }),
+}));
+
+export const noteMessagesRelations = relations(notes, ({ many, one }) => ({
 	messages: many(messages),
+	author: one(users, { fields: [notes.author_id], references: [users.id], relationName: "noteAuthor" }),
+	assigned_to: one(users, {
+		fields: [notes.assigned_to_id],
+		references: [users.id],
+		relationName: "noteAssignedTo",
+	}),
+	resolved_by: one(users, {
+		fields: [notes.resolved_by_id],
+		references: [users.id],
+		relationName: "noteResolvedBy",
+	}),
 }));
 
 export const messageNoteRelations = relations(messages, ({ one }) => ({
 	note: one(notes, { fields: [messages.note_id], references: [notes.id] }),
+	author: one(users, { fields: [messages.author_id], references: [users.id], relationName: "messageAuthor" }),
 }));
 
 export const noteFollowers = pgTable(

@@ -2,9 +2,9 @@ import { asc, eq, inArray } from "drizzle-orm";
 import jsPDF from "jspdf";
 import { uploadReport } from "./gcs";
 import { formatTimeShortNoAgoMinutes } from "../../shared/formatTime";
-import type { Profile } from "../../shared/types";
 import { db } from "../db/db";
 import schema, { messages, notes } from "../db/schema";
+import { messageWith, noteWith } from "./notes-projection";
 
 export interface SubEventInfo {
 	code: string;
@@ -20,9 +20,9 @@ const MB = 16; // margin bottom
 const USABLE_W = PAGE_W - ML - MR;
 const BOTTOM_LIMIT = PAGE_H - MB - 10; // leave room for footer
 
-function authorName(val: unknown): string {
-	if (!val) return "unknown";
-	if (typeof val === "object" && val !== null && "username" in val) return (val as any).username;
+function authorName(profile: { username?: string } | null | undefined, displayNameOverride?: string | null): string {
+	if (displayNameOverride) return displayNameOverride;
+	if (profile?.username) return profile.username;
 	return "unknown";
 }
 
@@ -91,19 +91,18 @@ export async function generateNotesReportPdf(
 	const allCodes = isMeshed ? [eventCode, ...subEvents!.map((s) => s.code)] : [eventCode];
 
 	// ── load data ────────────────────────────────────────────────────────────
-	const allNotes = await db
-		.select()
-		.from(notes)
-		.where(allCodes.length === 1 ? eq(notes.event_code, allCodes[0]) : inArray(notes.event_code, allCodes))
-		.orderBy(asc(notes.team), asc(notes.created_at))
-		.execute();
+	const allNotes = await db.query.notes.findMany({
+		where: allCodes.length === 1 ? eq(notes.event_code, allCodes[0]) : inArray(notes.event_code, allCodes),
+		orderBy: [asc(notes.team), asc(notes.created_at)],
+		with: noteWith,
+	});
 
-	const allMessages = await db
-		.select()
-		.from(messages)
-		.where(allCodes.length === 1 ? eq(messages.event_code, allCodes[0]) : inArray(messages.event_code, allCodes))
-		.orderBy(asc(messages.created_at))
-		.execute();
+	const allMessages = await db.query.messages.findMany({
+		where:
+			allCodes.length === 1 ? eq(messages.event_code, allCodes[0]) : inArray(messages.event_code, allCodes),
+		orderBy: [asc(messages.created_at)],
+		with: messageWith,
+	});
 
 	const msgByNote = new Map<string, typeof allMessages>();
 	for (const m of allMessages) {
@@ -338,7 +337,7 @@ export async function generateNotesReportPdf(
 						`Opened: ${fmtDate(note.created_at)}`,
 						note.closed_at ? `Closed: ${fmtDate(note.closed_at)}` : "Open",
 						openTimeMs ? `Open time: ${fmtMs(openTimeMs)}` : null,
-						`Author: ${authorName(note.author)}`,
+						`Author: ${authorName(note.author, note.author_display_name)}`,
 						note.assigned_to ? `CSA: ${authorName(note.assigned_to)}` : null,
 						note.resolved_by ? `Resolved by: ${authorName(note.resolved_by)}` : null,
 					]
@@ -360,7 +359,7 @@ export async function generateNotesReportPdf(
 						y += 3.5;
 
 						for (const msg of noteMessages) {
-							const header = `${authorName(msg.author)}  ·  ${fmtDate(msg.created_at)}`;
+							const header = `${authorName(msg.author, msg.author_display_name)}  ·  ${fmtDate(msg.created_at)}`;
 							ensureSpace(8);
 							doc.setFontSize(7.5);
 							doc.setFont("helvetica", "bold");

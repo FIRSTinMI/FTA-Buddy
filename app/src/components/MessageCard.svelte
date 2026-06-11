@@ -90,14 +90,16 @@
 <div class="rounded-lg bg-gray-100 dark:bg-neutral-700 px-3 py-2.5 flex flex-col gap-1">
 	<div class="flex items-center justify-between gap-2">
 		<div class="flex items-center gap-1.5 text-xs">
-			<span class="font-semibold text-gray-700 dark:text-gray-200">{message.author.username}</span>
-			{#if message.author.username !== message.author.role}
+			<span class="font-semibold text-gray-700 dark:text-gray-200"
+				>{message.author_display_name ?? message.author.username}</span
+			>
+			{#if !message.author_display_name && message.author.username !== message.author.role}
 				<span class="text-gray-400 dark:text-gray-500">·</span>
 				<span class="text-gray-400 dark:text-gray-500">{message.author.role}</span>
 			{/if}
-			{#if message.author.source === "FMS"}
+			{#if message.integration === "FMS"}
 				<Badge color="indigo" class="text-[10px] py-0 px-1">FMS</Badge>
-			{:else if message.author.source === "Slack"}
+			{:else if message.integration === "Slack"}
 				<Badge color="purple" class="text-[10px] py-0 px-1">Slack</Badge>
 			{/if}
 		</div>

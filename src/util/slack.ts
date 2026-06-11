@@ -3,6 +3,7 @@ import { db } from "../db/db";
 import { events, slackServers, users } from "../db/schema";
 import type { Profile } from "../../shared/types";
 import { getEvent } from "./get-event";
+import { getFieldProfile } from "./system-profiles";
 
 export async function slackOAuth(code: string) {
 	const url = new URL("https://slack.com/api/oauth.v2.access");
@@ -468,18 +469,63 @@ export async function resolveSlackMentions(text: string, teamId: string): Promis
 }
 
 /**
- * Resolves a Slack user ID to an FTA-Buddy Profile.
- * First checks if the Slack user has linked their FTA-Buddy account.
- * Falls back to fetching their display name from the Slack API.
+ * Result of resolving a Slack user ID to author fields for a note or message.
+ *
+ * - When the Slack user has linked their FTA-Buddy account, `author_id` points
+ *   at that user and `author_display_name` is null (the UI uses the linked
+ *   user's username via the loaded relation).
+ * - When unlinked, `author_id` falls back to the Field profile (-1) so the FK
+ *   is satisfied, and the Slack display name is preserved in
+ *   `author_display_name`. The `integration: "Slack"` flag disambiguates this
+ *   from a real FTA-laptop post.
+ */
+export interface SlackAuthorFields {
+	author_id: number;
+	author_display_name: string | null;
+	integration: "Slack";
+	/** Wire-shape Profile to use when emitting events before re-reading. */
+	profile: Profile;
+}
+
+/**
+ * Resolves a Slack user ID to an FTA-Buddy Profile (linked user) or a synthetic
+ * profile using the Slack display name (unlinked). Used for human-readable
+ * labels — e.g. mention rendering. Write callsites should use
+ * `resolveSlackAuthor` instead.
  */
 export async function resolveSlackUserProfile(slackUserId: string, teamId: string): Promise<Profile> {
-	// Check for a linked FTA-Buddy account
+	const resolved = await resolveSlackAuthor(slackUserId, teamId);
+	return resolved.profile;
+}
+
+/**
+ * Resolves a Slack user to the fields needed when inserting a note or message
+ * authored by that Slack user. See {@link SlackAuthorFields}.
+ */
+export async function resolveSlackAuthor(slackUserId: string, teamId: string): Promise<SlackAuthorFields> {
+	// Linked FTA-Buddy account → use the real user id.
 	const linked = await db.query.users.findFirst({ where: eq(users.slack_user_id, slackUserId) });
 	if (linked) {
-		return { id: linked.id, username: linked.username, role: linked.role, admin: linked.admin };
+		return {
+			author_id: linked.id,
+			author_display_name: null,
+			integration: "Slack",
+			profile: { id: linked.id, username: linked.username, role: linked.role, admin: linked.admin },
+		};
 	}
 
-	// Fall back to Slack display name via users.info
+	// Unlinked → fall back to Field (-1) FK target and stash the Slack display name.
+	const displayName = await fetchSlackDisplayName(slackUserId, teamId);
+	const field = await getFieldProfile();
+	return {
+		author_id: field.id,
+		author_display_name: displayName,
+		integration: "Slack",
+		profile: { id: field.id, username: displayName, role: field.role, admin: field.admin },
+	};
+}
+
+async function fetchSlackDisplayName(slackUserId: string, teamId: string): Promise<string> {
 	try {
 		const token = await getTokenByTeam(teamId);
 		const response = await fetch(`https://slack.com/api/users.info?user=${encodeURIComponent(slackUserId)}`, {
@@ -491,19 +537,17 @@ export async function resolveSlackUserProfile(slackUserId: string, teamId: strin
 		});
 		const data = await response.json();
 		if (data.ok && data.user) {
-			const displayName: string =
+			return (
 				data.user.profile?.display_name ||
 				data.user.profile?.real_name ||
 				data.user.real_name ||
 				data.user.name ||
-				"Slack User";
-			return { id: -1, role: "CSA", admin: false, username: displayName, source: "Slack" };
-		} else {
-			console.warn(`[Slack] users.info failed for ${slackUserId}:`, data.error ?? "unknown error");
+				"Slack User"
+			);
 		}
+		console.warn(`[Slack] users.info failed for ${slackUserId}:`, data.error ?? "unknown error");
 	} catch (err) {
-		console.warn(`[Slack] resolveSlackUserProfile error for ${slackUserId}:`, err);
+		console.warn(`[Slack] fetchSlackDisplayName error for ${slackUserId}:`, err);
 	}
-
-	return { id: -1, role: "CSA", admin: false, username: "Slack User", source: "Slack" };
+	return "Slack User";
 }

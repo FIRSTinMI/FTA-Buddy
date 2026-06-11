@@ -554,8 +554,9 @@ export interface Profile {
 	username: string;
 	role: "FTAA" | "FTA" | "CSA" | "RI" | "System";
 	admin: boolean;
-	source?: "FMS" | "Slack";
 }
+
+export type Integration = "Slack" | "FMS";
 
 export interface FmsNoteMetadata {
 	issueType: FTAEventNoteIssueType;
@@ -622,6 +623,8 @@ export interface Note {
 	is_nexus?: boolean;
 	merged_into?: string | null;
 	messages?: Message[];
+	integration: Integration | null;
+	author_display_name: string | null;
 }
 
 export interface Message {
@@ -633,6 +636,8 @@ export interface Message {
 	event_code: string;
 	created_at: Date;
 	updated_at: Date;
+	integration: Integration | null;
+	author_display_name: string | null;
 }
 
 export type NotificationTopic =

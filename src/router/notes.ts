@@ -23,6 +23,7 @@ import { getFieldProfile, getPublicProfile, toProfile } from "../util/system-pro
 import { createNotification } from "../util/push-notifications";
 import { generateReport } from "../util/report-generator";
 import { generateNotesReportPdf, type SubEventInfo } from "../util/notes-report-generator";
+import { messageToWire, messageWith, noteToWire, noteWith } from "../util/notes-projection";
 import {
 	addSlackReaction,
 	deleteSlackMessage,
@@ -30,6 +31,7 @@ import {
 	fetchSlackMessageReactions,
 	fetchSlackThreadReplies,
 	removeSlackReaction,
+	resolveSlackAuthor,
 	resolveSlackMentions,
 	resolveSlackUserProfile,
 	sendSlackMessage,
@@ -312,16 +314,21 @@ export function createSlackNoteMessage(
 
 const messagesSubRouter = router({
 	loadAllForEvent: eventProcedure.input(z.object({ event_code: z.string() })).query(async ({ input }) => {
-		return (await db.query.messages.findMany({
+		const rows = await db.query.messages.findMany({
 			where: eq(messages.event_code, input.event_code),
 			orderBy: [asc(messages.created_at)],
-		})) as Message[];
+			with: messageWith,
+		});
+		return rows.map(messageToWire);
 	}),
 
 	getById: eventProcedure.input(z.object({ id: z.string().uuid() })).query(async ({ input }) => {
-		const message = await db.query.messages.findFirst({ where: eq(messages.id, input.id) });
+		const message = await db.query.messages.findFirst({
+			where: eq(messages.id, input.id),
+			with: messageWith,
+		});
 		if (!message) throw new TRPCError({ code: "NOT_FOUND", message: "Message not found" });
-		return message as Message;
+		return messageToWire(message);
 	}),
 
 	create: eventProcedure
@@ -343,28 +350,33 @@ const messagesSubRouter = router({
 			if (ctx.token && !ctx.user) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unable to retrieve author Profile" });
 			const resolvedProfile = ctx.user ? toProfile(ctx.user) : await getFieldProfile();
 
-			const insert = await db
+			const newMessageId = randomUUID();
+			await db
 				.insert(messages)
 				.values({
-					id: randomUUID(),
+					id: newMessageId,
 					note_id: note.id,
 					author_id: resolvedProfile.id,
-					author: resolvedProfile,
 					text: input.text,
 					event_code: note.event_code,
 					created_at: new Date(),
 					updated_at: new Date(),
 				})
-				.returning();
+				.execute();
 
 			await db.update(notes).set({ updated_at: new Date() }).where(eq(notes.id, note.id));
 
-			if (!insert[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Message" });
+			const inserted = await db.query.messages.findFirst({
+				where: eq(messages.id, newMessageId),
+				with: messageWith,
+			});
+			if (!inserted) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Message" });
+			const wireMessage = messageToWire(inserted);
 
 			bus.publish(`event:${note.event_code}:note_update`, {
 				kind: "add_message",
 				note_id: note.id,
-				message: insert[0] as Message,
+				message: wireMessage,
 			});
 
 			const msgFollowers = await getNoteFollowers(note.id);
@@ -375,8 +387,8 @@ const messagesSubRouter = router({
 					eventCode: note.event_code,
 					note: toNoteCtx(note as any),
 					author: resolvedProfile.username,
-					messageText: insert[0].text,
-					messageId: insert[0].id,
+					messageText: wireMessage.text,
+					messageId: wireMessage.id,
 				}),
 				note.event_code,
 			);
@@ -392,28 +404,28 @@ const messagesSubRouter = router({
 							{
 								type: "context",
 								elements: [
-									{ type: "plain_text", text: `From: ${insert[0].author?.username}`, emoji: true },
+									{ type: "plain_text", text: `From: ${wireMessage.author.username}`, emoji: true },
 								],
 							},
 							{
 								type: "rich_text",
 								elements: [
-									{ type: "rich_text_section", elements: [{ type: "text", text: insert[0].text }] },
+									{ type: "rich_text_section", elements: [{ type: "text", text: wireMessage.text }] },
 								],
 							},
 						],
-						username: insert[0].author?.username,
+						username: wireMessage.author.username,
 					},
 					note.slack_ts,
 				);
 				await db
 					.update(messages)
 					.set({ slack_ts: messageTS, slack_channel: noteEvent.slackChannel })
-					.where(eq(messages.id, insert[0].id))
+					.where(eq(messages.id, wireMessage.id))
 					.execute();
 			}
 
-			return insert[0] as Message;
+			return wireMessage;
 		}),
 
 	edit: eventProcedure
@@ -444,20 +456,25 @@ const messagesSubRouter = router({
 
 			if (currentUserProfile.id != messageAuthorId) throw new TRPCError({ code: "BAD_REQUEST", message: "Current User is not Message Author"}); 
 
-			const update = await db
+			await db
 				.update(messages)
 				.set({ text: input.new_text, updated_at: new Date() })
 				.where(eq(messages.id, input.message_id))
-				.returning();
+				.execute();
 
 			await db.update(notes).set({ updated_at: new Date() }).where(eq(notes.id, note.id));
 
-			if (!update[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Message" });
+			const updated = await db.query.messages.findFirst({
+				where: eq(messages.id, input.message_id),
+				with: messageWith,
+			});
+			if (!updated) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Message" });
+			const wireMessage = messageToWire(updated);
 
 			bus.publish(`event:${note.event_code}:note_update`, {
 				kind: "edit_message",
 				note_id: note.id,
-				message: update[0] as Message,
+				message: wireMessage,
 			});
 
 			const editNoteEvent = note.event_code !== event.code ? await getEvent("", note.event_code) : event;
@@ -467,21 +484,21 @@ const messagesSubRouter = router({
 						{
 							type: "context",
 							elements: [
-								{ type: "plain_text", text: `From: ${update[0].author?.username}`, emoji: true },
+								{ type: "plain_text", text: `From: ${wireMessage.author.username}`, emoji: true },
 							],
 						},
 						{
 							type: "rich_text",
 							elements: [
-								{ type: "rich_text_section", elements: [{ type: "text", text: update[0].text }] },
+								{ type: "rich_text_section", elements: [{ type: "text", text: wireMessage.text }] },
 							],
 						},
 					],
-					username: update[0].author?.username,
+					username: wireMessage.author.username,
 				});
 			}
 
-			return update[0] as Message;
+			return wireMessage;
 		}),
 
 	delete: eventProcedure
@@ -546,9 +563,11 @@ export const notesRouter = router({
 		const eventNotes = await db.query.notes.findMany({
 			where: inArray(notes.event_code, eventCodes),
 			orderBy: [desc(notes.updated_at)],
+			with: noteWith,
 		});
 		if (!eventNotes) throw new TRPCError({ code: "NOT_FOUND", message: "Notes not found" });
-		return (await attachFollowers(eventNotes)) as Note[];
+		const withFollowers = await attachFollowers(eventNotes);
+		return withFollowers.map((n) => noteToWire(n, n.followers));
 	}),
 
 	getAllWithMessages: eventProcedure.query(async ({ ctx }) => {
@@ -562,10 +581,11 @@ export const notesRouter = router({
 		const eventNotes = await db.query.notes.findMany({
 			where: inArray(notes.event_code, eventCodes),
 			orderBy: [desc(notes.updated_at)],
-			with: { messages: { orderBy: [asc(messages.id)] } },
+			with: { ...noteWith, messages: { with: { author: { columns: { id: true, username: true, role: true, admin: true } } }, orderBy: [asc(messages.id)] } },
 		});
 		if (!eventNotes) throw new TRPCError({ code: "NOT_FOUND", message: "Notes not found" });
-		return (await attachFollowers(eventNotes)) as Note[];
+		const withFollowers = await attachFollowers(eventNotes);
+		return withFollowers.map((n) => noteToWire(n, n.followers));
 	}),
 
 	getAllByWithMessages: eventProcedure
@@ -599,45 +619,66 @@ export const notesRouter = router({
 			const results = await db.query.notes.findMany({
 				where: and(...query),
 				orderBy: [desc(notes.updated_at)],
-				with: { messages: { orderBy: [asc(messages.id)] } },
+				with: { ...noteWith, messages: { with: { author: { columns: { id: true, username: true, role: true, admin: true } } }, orderBy: [asc(messages.id)] } },
 			});
 			if (!results) throw new TRPCError({ code: "NOT_FOUND", message: "No Notes found" });
-			return (await attachFollowers(results)) as unknown as Note[];
+			const withFollowers = await attachFollowers(results);
+			return withFollowers.map((n) => noteToWire(n, n.followers));
 		}),
 
 	getAllByAuthor: eventProcedure.input(z.object({ author_id: z.number() })).query(async ({ ctx, input }) => {
 		const notesByAuthor = await db.query.notes.findMany({
 			where: eq(notes.author_id, input.author_id),
 			orderBy: [desc(notes.updated_at)],
+			with: noteWith,
 		});
 		if (!notesByAuthor) throw new TRPCError({ code: "NOT_FOUND", message: "No Notes found by provided user" });
-		return (await attachFollowers(notesByAuthor)) as Note[];
+		const withFollowers = await attachFollowers(notesByAuthor);
+		return withFollowers.map((n) => noteToWire(n, n.followers));
 	}),
 
 	getAllByTeam: eventProcedure.input(z.object({ team_number: z.number() })).query(async ({ ctx, input }) => {
-		const notesByTeam = await db
-			.select({
-				notes,
-				matchLogMatchNumber: matchLogs.match_number,
-				matchLogPlayNumber: matchLogs.play_number,
-				matchLogLevel: matchLogs.level,
-			})
+		const eligibleIds = await db
+			.select({ id: notes.id })
 			.from(notes)
 			.leftJoin(events, eq(notes.event_code, events.code))
-			.leftJoin(matchLogs, eq(notes.match_id, matchLogs.id))
-			.where(and(eq(notes.team, input.team_number), eq(events.archived, false)))
-			.orderBy(desc(notes.updated_at));
-		if (!notesByTeam) throw new TRPCError({ code: "NOT_FOUND", message: "No Notes found for provided team" });
-		// When a note has a match_id, prefer the match log's authoritative match details
-		// to keep NoteCard in team history consistent with the ViewNote badge (which also
-		// looks up match details via match_id).
-		const mappedNotes = notesByTeam.map((row: (typeof notesByTeam)[number]) => ({
-			...row.notes,
-			match_number: row.matchLogMatchNumber ?? row.notes.match_number,
-			play_number: row.matchLogPlayNumber ?? row.notes.play_number,
-			tournament_level: (row.matchLogLevel ?? row.notes.tournament_level) as Note["tournament_level"],
-		}));
-		return (await attachFollowers(mappedNotes)) as Note[];
+			.where(and(eq(notes.team, input.team_number), eq(events.archived, false)));
+		if (eligibleIds.length === 0) return [] as Note[];
+
+		const notesByTeam = await db.query.notes.findMany({
+			where: inArray(
+				notes.id,
+				eligibleIds.map((r) => r.id),
+			),
+			orderBy: [desc(notes.updated_at)],
+			with: noteWith,
+		});
+		const matchIds = notesByTeam.map((n) => n.match_id).filter((id): id is string => id != null);
+		const matchLogRows = matchIds.length
+			? await db
+					.select({
+						id: matchLogs.id,
+						match_number: matchLogs.match_number,
+						play_number: matchLogs.play_number,
+						level: matchLogs.level,
+					})
+					.from(matchLogs)
+					.where(inArray(matchLogs.id, matchIds))
+			: [];
+		const matchLogMap = new Map(matchLogRows.map((row) => [row.id, row]));
+		const withFollowers = await attachFollowers(notesByTeam);
+		return withFollowers.map((n) => {
+			const log = n.match_id ? matchLogMap.get(n.match_id) : undefined;
+			return noteToWire(
+				{
+					...n,
+					match_number: log?.match_number ?? n.match_number,
+					play_number: log?.play_number ?? n.play_number,
+					tournament_level: (log?.level ?? n.tournament_level) as Note["tournament_level"],
+				},
+				n.followers,
+			);
+		});
 	}),
 
 	getById: eventProcedure
@@ -645,9 +686,10 @@ export const notesRouter = router({
 		.query(async ({ ctx, input }) => {
 			const note = await db.query.notes.findFirst({
 				where: and(eq(notes.id, input.id), eq(notes.event_code, input.event_code)),
+				with: noteWith,
 			});
 			if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
-			return note as Note;
+			return noteToWire(note);
 		}),
 
 	getByIdWithMessages: eventProcedure
@@ -660,7 +702,7 @@ export const notesRouter = router({
 			}
 			const note = await db.query.notes.findFirst({
 				where: eq(notes.id, input.id),
-				with: { messages: { orderBy: [asc(messages.id)] } },
+				with: { ...noteWith, messages: { with: { author: { columns: { id: true, username: true, role: true, admin: true } } }, orderBy: [asc(messages.id)] } },
 			});
 			if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
 
@@ -698,7 +740,7 @@ export const notesRouter = router({
 			}
 
 			const noteFollowerIds = await getNoteFollowers(note.id);
-			return { ...note, followers: noteFollowerIds } as Note;
+			return noteToWire(note, noteFollowerIds);
 		}),
 
 	publicCreate: publicProcedure
@@ -739,24 +781,25 @@ export const notesRouter = router({
 			}
 
 			const noteId = randomUUID();
-			const insert = await db
+			await db
 				.insert(notes)
 				.values({
 					id: noteId,
 					team: input.team,
 					text: input.text,
 					author_id: publicAuthor.id,
-					author: publicAuthor,
 					note_type: "TeamIssue",
 					resolution_status: "Open",
 					event_code: event.code,
 					created_at: new Date(),
 					updated_at: new Date(),
 				})
-				.returning();
-			if (!insert[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Note" });
+				.execute();
 
-			const publicNoteResult = { ...insert[0], followers: [] as number[] } as Note;
+			const inserted = await db.query.notes.findFirst({ where: eq(notes.id, noteId), with: noteWith });
+			if (!inserted) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Note" });
+			const publicNoteResult = noteToWire(inserted);
+
 			bus.publish(`event:${event.code}:note_update`, { kind: "create", note: publicNoteResult });
 
 			createNotification(
@@ -764,8 +807,8 @@ export const notesRouter = router({
 				buildNotification({
 					kind: "note.created",
 					eventCode: event.code,
-					note: toNoteCtx(insert[0] as any),
-					author: `Team #${insert[0].team}`,
+					note: toNoteCtx(publicNoteResult as any),
+					author: `Team #${publicNoteResult.team}`,
 				}),
 				event.code,
 			);
@@ -775,19 +818,19 @@ export const notesRouter = router({
 					event.slackChannel,
 					event.slackTeam,
 					createSlackNoteMessage(
-						insert[0].id,
-						insert[0].team,
-						insert[0].team !== null
+						publicNoteResult.id,
+						publicNoteResult.team,
+						publicNoteResult.team !== null
 							? ((
 									await db
 										.select({ name: schema.teams.name })
 										.from(schema.teams)
-										.where(eq(schema.teams.number, String(insert[0].team)))
+										.where(eq(schema.teams.number, String(publicNoteResult.team)))
 										.limit(1)
 								)[0]?.name ?? null)
 							: null,
 						"Team Submission",
-						insert[0].text,
+						publicNoteResult.text,
 						event.code,
 						undefined,
 						event.token,
@@ -796,7 +839,7 @@ export const notesRouter = router({
 				await db
 					.update(notes)
 					.set({ slack_ts: messageTS, slack_channel: event.slackChannel })
-					.where(eq(notes.id, insert[0].id))
+					.where(eq(notes.id, publicNoteResult.id))
 					.execute();
 			}
 
@@ -837,13 +880,12 @@ export const notesRouter = router({
 				(await resolveMatchId(event.code, input.match_number, input.play_number, input.tournament_level));
 
 			const noteId = randomUUID();
-			const insert = await db
+			await db
 				.insert(notes)
 				.values({
 					id: noteId,
 					team: input.team ?? null,
 					author_id: resolvedProfile.id,
-					author: resolvedProfile,
 					text: input.text,
 					note_type: input.note_type,
 					resolution_status: resolutionStatus as any,
@@ -861,8 +903,7 @@ export const notesRouter = router({
 					match_id: matchId,
 					request_type: input.request_type ?? null,
 				})
-				.returning();
-			if (!insert[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Note" });
+				.execute();
 
 			if (resolvedProfile.id > 0) {
 				await db
@@ -870,30 +911,30 @@ export const notesRouter = router({
 					.values({ note_id: noteId, user_id: resolvedProfile.id })
 					.onConflictDoNothing();
 			}
-			const createNoteResult = {
-				...insert[0],
-				followers: resolvedProfile.id > 0 ? [resolvedProfile.id] : [],
-			} as Note;
+
+			const inserted = await db.query.notes.findFirst({ where: eq(notes.id, noteId), with: noteWith });
+			if (!inserted) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Note" });
+			const createNoteResult = noteToWire(inserted, resolvedProfile.id > 0 ? [resolvedProfile.id] : []);
 
 			bus.publish(`event:${event.code}:note_update`, { kind: "create", note: createNoteResult });
 
 			// Auto-attach all active match events for the same team + match
-			if (input.note_type === "TeamIssue" && insert[0].team !== null && insert[0].match_number !== null) {
+			if (input.note_type === "TeamIssue" && createNoteResult.team !== null && createNoteResult.match_number !== null) {
 				// Prefer matching on match_id for precision; fall back to match_number + play_number + tournament_level
 				const matchEventFilters = [
 					eq(matchEvents.event_code, event.code),
-					eq(matchEvents.team, insert[0].team),
+					eq(matchEvents.team, createNoteResult.team),
 					eq(matchEvents.status, "active"),
 				];
-				if (insert[0].match_id !== null) {
-					matchEventFilters.push(eq(matchEvents.match_id, insert[0].match_id));
+				if (createNoteResult.match_id != null) {
+					matchEventFilters.push(eq(matchEvents.match_id, createNoteResult.match_id));
 				} else {
-					matchEventFilters.push(eq(matchEvents.match_number, insert[0].match_number));
-					if (insert[0].play_number !== null) {
-						matchEventFilters.push(eq(matchEvents.play_number, insert[0].play_number));
+					matchEventFilters.push(eq(matchEvents.match_number, createNoteResult.match_number));
+					if (createNoteResult.play_number !== null) {
+						matchEventFilters.push(eq(matchEvents.play_number, createNoteResult.play_number));
 					}
-					if (insert[0].tournament_level !== null) {
-						matchEventFilters.push(eq(matchEvents.level, insert[0].tournament_level));
+					if (createNoteResult.tournament_level !== null) {
+						matchEventFilters.push(eq(matchEvents.level, createNoteResult.tournament_level));
 					}
 				}
 				const activeEvents = await db
@@ -906,14 +947,14 @@ export const notesRouter = router({
 
 				// If the note had no match_id yet but the linked events share a single match_id,
 				// back-fill it so the Slack message below includes the "View Match Log" button
-				if (insert[0].match_id === null && activeEvents.length > 0) {
+				if (createNoteResult.match_id == null && activeEvents.length > 0) {
 					const uniqueMatchIds = [
 						...new Set(activeEvents.map((e: (typeof activeEvents)[number]) => e.match_id).filter(Boolean)),
 					];
 					if (uniqueMatchIds.length === 1) {
 						const resolvedMatchId = uniqueMatchIds[0];
 						await db.update(notes).set({ match_id: resolvedMatchId }).where(eq(notes.id, noteId)).execute();
-						(insert[0] as any).match_id = resolvedMatchId;
+						createNoteResult.match_id = resolvedMatchId;
 					}
 				}
 			}
@@ -923,39 +964,39 @@ export const notesRouter = router({
 				buildNotification({
 					kind: "note.created",
 					eventCode: event.code,
-					note: toNoteCtx(insert[0] as any),
+					note: toNoteCtx(createNoteResult as any),
 					author: resolvedProfile.username,
 				}),
 				event.code,
 			);
 
-			if (event.slackChannel && event.slackTeam && insert[0].request_type !== null) {
+			if (event.slackChannel && event.slackTeam && createNoteResult.request_type !== null) {
 				const messageTS = await sendSlackMessage(
 					event.slackChannel,
 					event.slackTeam,
 					createSlackNoteMessage(
-						insert[0].id,
-						insert[0].team,
-						insert[0].team !== null
+						createNoteResult.id,
+						createNoteResult.team,
+						createNoteResult.team !== null
 							? ((
 									await db
 										.select({ name: schema.teams.name })
 										.from(schema.teams)
-										.where(eq(schema.teams.number, String(insert[0].team)))
+										.where(eq(schema.teams.number, String(createNoteResult.team)))
 										.limit(1)
 								)[0]?.name ?? null)
 							: null,
 						resolvedProfile.username,
-						insert[0].text,
+						createNoteResult.text,
 						event.code,
-						insert[0].match_id ?? undefined,
+						createNoteResult.match_id ?? undefined,
 						event.token,
 					),
 				);
 				await db
 					.update(notes)
 					.set({ slack_ts: messageTS, slack_channel: event.slackChannel })
-					.where(eq(notes.id, insert[0].id))
+					.where(eq(notes.id, createNoteResult.id))
 					.execute();
 			}
 
@@ -991,32 +1032,34 @@ export const notesRouter = router({
 			if (input.match_id !== undefined) setFields.match_id = input.match_id;
 			if (input.request_type !== undefined) setFields.request_type = input.request_type;
 
-			const update = await db.update(notes).set(setFields).where(eq(notes.id, input.id)).returning();
-			if (!update[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Note" });
+			await db.update(notes).set(setFields).where(eq(notes.id, input.id)).execute();
+			const updated = await db.query.notes.findFirst({ where: eq(notes.id, input.id), with: noteWith });
+			if (!updated) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Note" });
 
-			const editFollowers = await getNoteFollowers(update[0].id);
+			const editFollowers = await getNoteFollowers(updated.id);
+			const wireNote = noteToWire(updated, editFollowers);
 			bus.publish(`event:${event.code}:note_update`, {
 				kind: "edit",
-				note: { ...update[0], followers: editFollowers } as Note,
+				note: wireNote,
 			});
 
 			const newRequestType = input.request_type !== undefined ? input.request_type : note.request_type;
 			const slackMsg = createSlackNoteMessage(
-				update[0].id,
-				update[0].team,
-				update[0].team !== null
+				wireNote.id,
+				wireNote.team,
+				wireNote.team !== null
 					? ((
 							await db
 								.select({ name: schema.teams.name })
 								.from(schema.teams)
-								.where(eq(schema.teams.number, String(update[0].team)))
+								.where(eq(schema.teams.number, String(wireNote.team)))
 								.limit(1)
 						)[0]?.name ?? null)
 					: null,
-				update[0].author?.username ?? "Unknown",
-				update[0].text,
+				wireNote.author_display_name ?? wireNote.author.username,
+				wireNote.text,
 				event.code,
-				update[0].match_id ?? undefined,
+				wireNote.match_id ?? undefined,
 				event.token,
 			);
 			if (event.slackTeam && event.slackChannel) {
@@ -1039,13 +1082,13 @@ export const notesRouter = router({
 				}
 			}
 
-			return { ...update[0], followers: editFollowers } as Note;
+			return wireNote;
 		}),
 
 	delete: eventProcedure.input(z.object({ id: z.string().uuid() })).mutation(async ({ ctx, input }) => {
 		const event = ctx.event;
 
-		const note = await db.query.notes.findFirst({ where: eq(notes.id, input.id) });
+		const note = await db.query.notes.findFirst({ where: eq(notes.id, input.id), with: noteWith });
 		if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
 
 		const noteAuthorId = note.author_id;
@@ -1063,7 +1106,7 @@ export const notesRouter = router({
 		const result = await db.delete(notes).where(eq(notes.id, input.id));
 		if (!result) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to delete Note" });
 
-		bus.publish(`event:${event.code}:note_update`, { kind: "delete", note: note as Note });
+		bus.publish(`event:${event.code}:note_update`, { kind: "delete", note: noteToWire(note) });
 
 		if (event.slackTeam && note.slack_ts && note.slack_channel) {
 			await deleteSlackMessage(note.slack_channel, event.slackTeam, note.slack_ts);
@@ -1094,7 +1137,7 @@ export const notesRouter = router({
 			const [sourceNote, targetNote] = await Promise.all([
 				db.query.notes.findFirst({
 					where: and(eq(notes.id, input.source_id), inArray(notes.event_code, eventCodes)),
-					with: { messages: { orderBy: [asc(messages.id)] } },
+					with: { ...noteWith, messages: { with: { author: { columns: { id: true, username: true, role: true, admin: true } } }, orderBy: [asc(messages.id)] } },
 				}),
 				db.query.notes.findFirst({
 					where: and(eq(notes.id, input.target_id), inArray(notes.event_code, eventCodes)),
@@ -1119,19 +1162,19 @@ export const notesRouter = router({
 			const mergeLabel = sourceNote.team
 				? `Merged from ticket for team ${sourceNote.team}`
 				: `Merged from note ${input.source_id.slice(0, 8)}`;
-			const systemMsgInsert = await db
+			const systemMsgId = randomUUID();
+			await db
 				.insert(messages)
 				.values({
-					id: randomUUID(),
+					id: systemMsgId,
 					note_id: input.target_id,
 					author_id: systemProfile.id,
-					author: systemProfile,
 					text: mergeLabel,
 					event_code: targetNote.event_code,
 					created_at: new Date(),
 					updated_at: new Date(),
 				})
-				.returning();
+				.execute();
 
 			await db.update(notes).set({ updated_at: new Date() }).where(eq(notes.id, input.target_id));
 
@@ -1152,7 +1195,7 @@ export const notesRouter = router({
 			// Notify clients viewing the source that it was deleted
 			bus.publish(`event:${sourceNote.event_code}:note_update`, {
 				kind: "delete",
-				note: { ...sourceNote, followers: [] } as Note,
+				note: noteToWire(sourceNote, []),
 			});
 
 			// Notify clients viewing the target about each moved message + system message
@@ -1161,27 +1204,31 @@ export const notesRouter = router({
 					bus.publish(`event:${targetNote.event_code}:note_update`, {
 						kind: "add_message",
 						note_id: input.target_id,
-						message: { ...msg, note_id: input.target_id, event_code: targetNote.event_code } as Message,
+						message: messageToWire({ ...msg, note_id: input.target_id, event_code: targetNote.event_code }),
 					});
 				}
 			}
-			if (systemMsgInsert[0]) {
+			const systemMsgInserted = await db.query.messages.findFirst({
+				where: eq(messages.id, systemMsgId),
+				with: messageWith,
+			});
+			if (systemMsgInserted) {
 				bus.publish(`event:${targetNote.event_code}:note_update`, {
 					kind: "add_message",
 					note_id: input.target_id,
-					message: systemMsgInsert[0] as Message,
+					message: messageToWire(systemMsgInserted),
 				});
 			}
 
 			// Return updated target with all messages and followers
 			const updatedTarget = await db.query.notes.findFirst({
 				where: eq(notes.id, input.target_id),
-				with: { messages: { orderBy: [asc(messages.id)] } },
+				with: { ...noteWith, messages: { with: { author: { columns: { id: true, username: true, role: true, admin: true } } }, orderBy: [asc(messages.id)] } },
 			});
 			if (!updatedTarget)
 				throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch updated target note" });
 			const targetFollowers = await getNoteFollowers(input.target_id);
-			return { ...updatedTarget, followers: targetFollowers } as Note;
+			return noteToWire(updatedTarget, targetFollowers);
 		}),
 
 	updateStatus: eventProcedure
@@ -1205,13 +1252,12 @@ export const notesRouter = router({
 
 			const isClosing = input.new_status === "Resolved" || input.new_status === "Refused";
 
-			const update = await db
+			await db
 				.update(notes)
 				.set({
 					resolution_status: input.new_status as any,
 					closed_at: isClosing ? new Date() : null,
 					resolved_by_id: isClosing ? currentUserProfile.id : null,
-					resolved_by: isClosing ? currentUserProfile : null,
 					fms_metadata: note.fms_metadata
 						? {
 								...(note.fms_metadata as FmsNoteMetadata),
@@ -1221,18 +1267,20 @@ export const notesRouter = router({
 					updated_at: new Date(),
 				})
 				.where(eq(notes.id, input.id))
-				.returning();
-			if (!update[0])
+				.execute();
+			const updated = await db.query.notes.findFirst({ where: eq(notes.id, input.id), with: noteWith });
+			if (!updated)
 				throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update note status" });
+			const statusFollowers = await getNoteFollowers(note.id);
+			const wireNote = noteToWire(updated, statusFollowers);
 
 			bus.publish(`event:${input.event_code}:note_update`, {
 				kind: "status",
-				note_id: update[0].id,
-				resolution_status: update[0].resolution_status ?? "Open",
+				note_id: wireNote.id,
+				resolution_status: wireNote.resolution_status ?? "Open",
 				resolved_by: isClosing ? currentUserProfile : null,
 			});
 
-			const statusFollowers = await getNoteFollowers(note.id);
 			createNotification(
 				statusFollowers.filter((id: number) => id !== currentUserProfile.id),
 				buildNotification({
@@ -1267,7 +1315,7 @@ export const notesRouter = router({
 				}
 			}
 
-			return { ...update[0], followers: statusFollowers } as Note;
+			return wireNote;
 		}),
 
 	assign: eventProcedure
@@ -1300,25 +1348,26 @@ export const notesRouter = router({
 				throw new TRPCError({ code: "BAD_REQUEST", message: "User is already assigned to this note" });
 			}
 
-			const update = await db
+			await db
 				.update(notes)
 				.set({
 					assigned_to_id: input.user_id,
-					assigned_to: assigneeProfile as Profile,
 					updated_at: new Date(),
 				})
 				.where(eq(notes.id, input.id))
-				.returning();
-			if (!update[0]) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to assign User" });
+				.execute();
+			const updated = await db.query.notes.findFirst({ where: eq(notes.id, input.id), with: noteWith });
+			if (!updated) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to assign User" });
+			const assignFollowers = await getNoteFollowers(note.id);
+			const wireNote = noteToWire(updated, assignFollowers);
 
 			bus.publish(`event:${input.event_code}:note_update`, {
 				kind: "assign",
-				note_id: update[0].id,
-				assigned_to_id: update[0].assigned_to_id,
+				note_id: wireNote.id,
+				assigned_to_id: wireNote.assigned_to_id,
 				assigned_to: assigneeProfile as Profile,
 			});
 
-			const assignFollowers = await getNoteFollowers(note.id);
 			createNotification(
 				assignFollowers.filter((id: number) => id !== assigneeProfile.id && id !== actorProfile.id),
 				buildNotification({
@@ -1350,7 +1399,7 @@ export const notesRouter = router({
 				await addSlackReaction(note.slack_channel, assignNoteEvent.slackTeam, note.slack_ts, "eyes");
 			}
 
-			return { ...update[0], followers: assignFollowers } as Note;
+			return wireNote;
 		}),
 
 	unAssign: eventProcedure
@@ -1372,37 +1421,34 @@ export const notesRouter = router({
 				throw new TRPCError({ code: "NOT_FOUND", message: "No user currently assigned to this Note" });
 			}
 
-			let assignedToProfileArr: Profile[] = [];
-			if (note.assigned_to === null && note.assigned_to_id) {
-				assignedToProfileArr = await db
-					.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
-					.from(users)
-					.where(eq(users.id, note.assigned_to_id));
-			} else if (note.assigned_to !== null) {
-				assignedToProfileArr.push(note.assigned_to as Profile);
-			}
+			const assignedToProfileArr = await db
+				.select({ id: users.id, username: users.username, role: users.role, admin: users.admin })
+				.from(users)
+				.where(eq(users.id, note.assigned_to_id));
 			if (!assignedToProfileArr[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to find assigned User" });
-			let assignedToProfile = assignedToProfileArr[0];
-			
+			const assignedToProfile = assignedToProfileArr[0];
+
 			if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unable to retrieve Current User Profile"})
 			const actorProfile = ctx.user as Profile;
 
-			const update = await db
+			await db
 				.update(notes)
-				.set({ assigned_to_id: null, assigned_to: null, updated_at: new Date() })
+				.set({ assigned_to_id: null, updated_at: new Date() })
 				.where(eq(notes.id, input.note_id))
-				.returning();
-			if (!update[0])
+				.execute();
+			const updated = await db.query.notes.findFirst({ where: eq(notes.id, input.note_id), with: noteWith });
+			if (!updated)
 				throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update assignment" });
+			const unassignFollowers = await getNoteFollowers(note.id);
+			const wireNote = noteToWire(updated, unassignFollowers);
 
 			bus.publish(`event:${input.event_code}:note_update`, {
 				kind: "assign",
-				note_id: update[0].id,
-				assigned_to_id: update[0].assigned_to_id,
+				note_id: wireNote.id,
+				assigned_to_id: wireNote.assigned_to_id,
 				assigned_to: null,
 			});
 
-			const unassignFollowers = await getNoteFollowers(note.id);
 			createNotification(
 				unassignFollowers.filter((id: number) => id !== actorProfile.id),
 				buildNotification({
@@ -1433,7 +1479,7 @@ export const notesRouter = router({
 				await removeSlackReaction(note.slack_channel, unassignNoteEvent.slackTeam, note.slack_ts, "eyes");
 			}
 
-			return { ...update[0], followers: unassignFollowers } as Note;
+			return wireNote;
 		}),
 
 	follow: protectedProcedure
@@ -1477,7 +1523,9 @@ export const notesRouter = router({
 				followers: followerIds,
 			});
 
-			return { ...note, followers: followerIds } as Note;
+			const reloaded = await db.query.notes.findFirst({ where: eq(notes.id, input.id), with: noteWith });
+			if (!reloaded) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
+			return noteToWire(reloaded, followerIds);
 		}),
 
 	generateNotesReport: eventProcedure.query(async ({ ctx }) => {
@@ -1508,26 +1556,21 @@ export const notesRouter = router({
 		.mutation(async ({ ctx, input }) => {
 			const event = ctx.event;
 
-			const author: Profile = {
-				id: -1,
-				username: input.display_name,
-				role: "FTA",
-				admin: false,
-				source: "FMS",
-			};
-
+			const field = await getFieldProfile();
 			const meta = input.fms_metadata as FmsNoteMetadata | null;
 			const resStatus = meta?.resolutionStatus ?? (input.note_type === "TeamIssue" ? "Open" : "NotApplicable");
 			const issueTypeVal = meta?.issueType ?? null;
 
-			const insert = await db
+			const noteId = randomUUID();
+			await db
 				.insert(notes)
 				.values({
-					id: randomUUID(),
+					id: noteId,
 					team: input.team ?? null,
 					text: input.text,
-					author_id: -1,
-					author,
+					author_id: field.id,
+					integration: "FMS",
+					author_display_name: input.display_name,
 					note_type: input.note_type,
 					resolution_status: resStatus as any,
 					issue_type: issueTypeVal as any,
@@ -1542,11 +1585,12 @@ export const notesRouter = router({
 					updated_at: new Date(),
 					request_type: "CSA",
 				})
-				.returning();
-			if (!insert[0])
-				throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Note from FMS" });
+				.execute();
 
-			const fmsNoteResult = { ...insert[0], followers: [] as number[] } as Note;
+			const inserted = await db.query.notes.findFirst({ where: eq(notes.id, noteId), with: noteWith });
+			if (!inserted)
+				throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Note from FMS" });
+			const fmsNoteResult = noteToWire(inserted);
 			bus.publish(`event:${event.code}:note_update`, { kind: "create", note: fmsNoteResult, source: "fms" });
 			return fmsNoteResult;
 		}),
@@ -1583,7 +1627,7 @@ export const notesRouter = router({
 			const editIssueType = editMeta?.issueType ?? null;
 			const isResolving = editResStatus === "Resolved";
 
-			const update = await db
+			await db
 				.update(notes)
 				.set({
 					text: input.text,
@@ -1595,17 +1639,19 @@ export const notesRouter = router({
 					updated_at: new Date(),
 				})
 				.where(eq(notes.id, note.id))
-				.returning();
-			if (!update[0])
+				.execute();
+			const updated = await db.query.notes.findFirst({ where: eq(notes.id, note.id), with: noteWith });
+			if (!updated)
 				throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Note from FMS" });
 
-			const fmsEditFollowers = await getNoteFollowers(update[0].id);
+			const fmsEditFollowers = await getNoteFollowers(updated.id);
+			const wireNote = noteToWire(updated, fmsEditFollowers);
 			bus.publish(`event:${event.code}:note_update`, {
 				kind: "edit",
-				note: { ...update[0], followers: fmsEditFollowers } as Note,
+				note: wireNote,
 				source: "fms",
 			});
-			return { ...update[0], followers: fmsEditFollowers } as Note;
+			return wireNote;
 		}),
 
 	setFmsId: eventProcedure
@@ -1618,7 +1664,7 @@ export const notesRouter = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			const event = ctx.event;
-			const update = await db
+			await db
 				.update(notes)
 				.set({
 					fms_note_id: input.fms_note_id,
@@ -1626,30 +1672,36 @@ export const notesRouter = router({
 					updated_at: new Date(),
 				})
 				.where(and(eq(notes.id, input.id), eq(notes.event_code, event.code)))
-				.returning();
-			if (!update[0])
+				.execute();
+			const updated = await db.query.notes.findFirst({
+				where: and(eq(notes.id, input.id), eq(notes.event_code, event.code)),
+				with: noteWith,
+			});
+			if (!updated)
 				throw new TRPCError({ code: "NOT_FOUND", message: "Note not found or does not belong to this event" });
-			return update[0] as Note;
+			return noteToWire(updated);
 		}),
 
 	getByFmsNoteId: eventProcedure.input(z.object({ fms_note_id: z.string() })).query(async ({ ctx, input }) => {
 		const event = ctx.event;
 		const note = await db.query.notes.findFirst({
 			where: and(eq(notes.fms_note_id, input.fms_note_id), eq(notes.event_code, event.code)),
+			with: noteWith,
 		});
 		if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found for given FMS note ID" });
-		return note as Note;
+		return noteToWire(note);
 	}),
 
 	deleteByFmsNoteId: eventProcedure.input(z.object({ fms_note_id: z.string() })).mutation(async ({ ctx, input }) => {
 		const event = ctx.event;
 		const note = await db.query.notes.findFirst({
 			where: and(eq(notes.fms_note_id, input.fms_note_id), eq(notes.event_code, event.code)),
+			with: noteWith,
 		});
 		if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found for given FMS note ID" });
 		await db.delete(messages).where(eq(messages.note_id, note.id));
 		await db.delete(notes).where(eq(notes.id, note.id));
-		bus.publish(`event:${event.code}:note_update`, { kind: "delete", note: note as Note, source: "fms" });
+		bus.publish(`event:${event.code}:note_update`, { kind: "delete", note: noteToWire(note), source: "fms" });
 		return note.id;
 	}),
 
@@ -1784,9 +1836,10 @@ export async function getEventMessages(event_code: string) {
 	const eventMessages = await db.query.messages.findMany({
 		where: eq(messages.event_code, event_code),
 		orderBy: [asc(messages.created_at)],
+		with: messageWith,
 	});
 	if (!eventMessages) throw new TRPCError({ code: "NOT_FOUND", message: "Unable to find Messages for this event" });
-	return eventMessages;
+	return eventMessages.map(messageToWire);
 }
 
 export async function updateNoteStatusFromSlack(message_ts: string, resolved: boolean, slackUserId?: string) {
@@ -1795,34 +1848,38 @@ export async function updateNoteStatusFromSlack(message_ts: string, resolved: bo
 
 	const event = await getEvent("", note.event_code);
 
-	// Resolve who performed the action
-	let resolverProfile: Profile | null = null;
+	// Resolve who performed the action — uses the linked FTA-Buddy account when
+	// available, otherwise falls back to the Field profile with the Slack display
+	// name preserved in author_display_name.
+	let resolverAuthor = null;
 	if (resolved && slackUserId && event.slackTeam) {
 		try {
-			resolverProfile = await resolveSlackUserProfile(slackUserId, event.slackTeam);
+			resolverAuthor = await resolveSlackAuthor(slackUserId, event.slackTeam);
 		} catch {
-			resolverProfile = { id: -1, role: "CSA", admin: false, username: "Slack User", source: "Slack" };
+			resolverAuthor = null;
 		}
 	}
 
 	const newStatus = resolved ? "Resolved" : "Open";
-	const update = await db
+	await db
 		.update(notes)
 		.set({
 			resolution_status: newStatus as any,
 			closed_at: resolved ? new Date() : null,
-			resolved_by_id: resolved ? (resolverProfile?.id ?? null) : null,
-			resolved_by: resolved ? resolverProfile : null,
+			resolved_by_id: resolved ? (resolverAuthor?.author_id ?? null) : null,
 			updated_at: new Date(),
 		})
 		.where(eq(notes.id, note.id))
-		.returning();
+		.execute();
+	const updated = await db.query.notes.findFirst({ where: eq(notes.id, note.id), with: noteWith });
+	if (!updated) return null;
+	const wireNote = noteToWire(updated);
 
 	bus.publish(`event:${event.code}:note_update`, {
 		kind: "status",
-		note_id: update[0].id,
-		resolution_status: update[0].resolution_status ?? "Open",
-		resolved_by: resolved ? resolverProfile : null,
+		note_id: wireNote.id,
+		resolution_status: wireNote.resolution_status ?? "Open",
+		resolved_by: resolved ? (resolverAuthor?.profile ?? null) : null,
 	});
 
 	const slackStatusFollowers = await getNoteFollowers(note.id);
@@ -1833,7 +1890,7 @@ export async function updateNoteStatusFromSlack(message_ts: string, resolved: bo
 			eventCode: event.code,
 			note: toNoteCtx(note as any),
 			newStatus: newStatus as "Open" | "Resolved",
-			actor: resolverProfile?.username ?? "Slack",
+			actor: resolverAuthor?.profile.username ?? "Slack",
 		}),
 		event.code,
 	);
@@ -1842,7 +1899,7 @@ export async function updateNoteStatusFromSlack(message_ts: string, resolved: bo
 		removeSlackReaction(note.slack_channel, event.slackTeam, note.slack_ts, "white_check_mark");
 	}
 
-	return update[0] as Note;
+	return wireNote;
 }
 
 export async function updateNoteAssignmentFromSlack(message_ts: string, add: boolean, slackUser: string) {
@@ -1850,27 +1907,35 @@ export async function updateNoteAssignmentFromSlack(message_ts: string, add: boo
 	if (!note) return null;
 
 	const event = await getEvent("", note.event_code);
-	const profile: Profile = event.slackTeam
-		? await resolveSlackUserProfile(slackUser, event.slackTeam)
-		: { id: -1, role: "CSA", admin: false, username: "Slack User" };
+	const slackAuthor = event.slackTeam
+		? await resolveSlackAuthor(slackUser, event.slackTeam)
+		: null;
+	const fallbackProfile: Profile = slackAuthor?.profile ?? {
+		id: -1,
+		role: "System",
+		admin: false,
+		username: "Slack User",
+	};
 
-	const update = await db
+	await db
 		.update(notes)
 		.set({
-			assigned_to_id: add ? profile.id : null,
-			assigned_to: add ? profile : null,
+			assigned_to_id: add ? fallbackProfile.id : null,
 			updated_at: new Date(),
 		})
 		.where(eq(notes.id, note.id))
-		.returning();
+		.execute();
+	const updated = await db.query.notes.findFirst({ where: eq(notes.id, note.id), with: noteWith });
+	if (!updated) return null;
+	const wireNote = noteToWire(updated);
 
 	const slackAssignFollowers = await getNoteFollowers(note.id);
 	if (add) {
 		bus.publish(`event:${event.code}:note_update`, {
 			kind: "assign",
-			note_id: update[0].id,
-			assigned_to_id: update[0].assigned_to_id,
-			assigned_to: profile,
+			note_id: wireNote.id,
+			assigned_to_id: wireNote.assigned_to_id,
+			assigned_to: fallbackProfile,
 		});
 		createNotification(
 			slackAssignFollowers,
@@ -1878,7 +1943,7 @@ export async function updateNoteAssignmentFromSlack(message_ts: string, add: boo
 				kind: "note.assigned",
 				eventCode: event.code,
 				note: toNoteCtx(note as any),
-				assignee: profile.username,
+				assignee: fallbackProfile.username,
 				actor: "Slack",
 			}),
 			event.code,
@@ -1886,8 +1951,8 @@ export async function updateNoteAssignmentFromSlack(message_ts: string, add: boo
 	} else {
 		bus.publish(`event:${event.code}:note_update`, {
 			kind: "assign",
-			note_id: update[0].id,
-			assigned_to_id: update[0].assigned_to_id,
+			note_id: wireNote.id,
+			assigned_to_id: wireNote.assigned_to_id,
 			assigned_to: null,
 		});
 		createNotification(
@@ -1905,7 +1970,7 @@ export async function updateNoteAssignmentFromSlack(message_ts: string, add: boo
 		}
 	}
 
-	return update[0] as Note;
+	return wireNote;
 }
 
 /**
@@ -2042,17 +2107,18 @@ export async function createFromNexus(channel_id: string, message_ts: string, te
 
 	const matchId = await resolveMatchId(noteEvent.code, matchNumber, playNumber, tournamentLevel);
 
-	const author: Profile = { id: -1, username: "Nexus", role: "FTA", admin: false, source: "Slack" };
+	const field = await getFieldProfile();
 
 	const noteId = randomUUID();
-	const insert = await db
+	await db
 		.insert(notes)
 		.values({
 			id: noteId,
 			team: team ?? null,
 			text: noteText,
-			author_id: -1,
-			author,
+			author_id: field.id,
+			integration: "Slack",
+			author_display_name: "Nexus",
 			note_type: "TeamIssue",
 			resolution_status: "Open",
 			match_number: matchNumber ?? null,
@@ -2070,11 +2136,11 @@ export async function createFromNexus(channel_id: string, message_ts: string, te
 			slack_channel: channel_id,
 			is_nexus: true,
 		})
-		.returning();
+		.execute();
 
-	if (!insert[0]) return;
-
-	const nexusNoteResult = { ...insert[0], followers: [] as number[] } as Note;
+	const inserted = await db.query.notes.findFirst({ where: eq(notes.id, noteId), with: noteWith });
+	if (!inserted) return;
+	const nexusNoteResult = noteToWire(inserted);
 	bus.publish(`event:${noteEvent.code}:note_update`, { kind: "create", note: nexusNoteResult });
 
 	// Notify users on linkEvent (the meshed parent if applicable - it has all sub-event users merged)
@@ -2135,20 +2201,27 @@ export async function addNoteMessageFromSlack(
 	if (existing) return;
 
 	const event = await getEvent("", note.event_code);
-	const user: Profile = event.slackTeam
-		? await resolveSlackUserProfile(author_id, event.slackTeam)
-		: { id: -1, role: "CSA", admin: false, username: "Slack User", source: "Slack" };
-	if (!user.source) user.source = "Slack";
+	const slackAuthor = event.slackTeam
+		? await resolveSlackAuthor(author_id, event.slackTeam)
+		: null;
+	const authorFields = slackAuthor ?? {
+		author_id: (await getFieldProfile()).id,
+		author_display_name: "Slack User",
+		integration: "Slack" as const,
+		profile: { id: -1, role: "System" as const, admin: false, username: "Slack User" },
+	};
 
 	const resolvedText = event.slackTeam ? await resolveSlackMentions(text, event.slackTeam) : text;
 
-	const insert = await db
+	const messageId = randomUUID();
+	await db
 		.insert(messages)
 		.values({
-			id: randomUUID(),
+			id: messageId,
 			note_id: note.id,
-			author_id: user.id,
-			author: user,
+			author_id: authorFields.author_id,
+			integration: authorFields.integration,
+			author_display_name: authorFields.author_display_name,
 			text: resolvedText,
 			event_code: note.event_code,
 			created_at: new Date(),
@@ -2156,12 +2229,16 @@ export async function addNoteMessageFromSlack(
 			slack_ts: message_ts,
 			slack_channel: channel_id,
 		})
-		.returning();
+		.execute();
+
+	const inserted = await db.query.messages.findFirst({ where: eq(messages.id, messageId), with: messageWith });
+	if (!inserted) return;
+	const wireMessage = messageToWire(inserted);
 
 	bus.publish(`event:${event.code}:note_update`, {
 		kind: "add_message",
 		note_id: note.id,
-		message: insert[0] as Message,
+		message: wireMessage,
 	});
 
 	const slackMsgFollowers = await getNoteFollowers(note.id);
@@ -2171,7 +2248,7 @@ export async function addNoteMessageFromSlack(
 			kind: "note.message",
 			eventCode: event.code,
 			note: toNoteCtx(note as any),
-			author: user.username,
+			author: authorFields.profile.username,
 			messageText: text,
 		}),
 		event.code,
@@ -2256,8 +2333,7 @@ export async function createFromSlashCommand(
 		};
 	}
 
-	const author: Profile = await resolveSlackUserProfile(slack_user_id, slack_workspace_id);
-	if (!author.source) author.source = "Slack";
+	const authorFields = await resolveSlackAuthor(slack_user_id, slack_workspace_id);
 
 	// Find the right sub-event for this team (same logic as createFromNexus)
 	let targetEventCode = linkedEventRows[0].code;
@@ -2291,14 +2367,15 @@ export async function createFromSlashCommand(
 	const noteEvent = targetEventCode === linkEvent.code ? linkEvent : await getEvent("", targetEventCode);
 
 	const noteId = randomUUID();
-	const insert = await db
+	await db
 		.insert(notes)
 		.values({
 			id: noteId,
 			team: teamNumber,
 			text: messageText,
-			author_id: author.id,
-			author,
+			author_id: authorFields.author_id,
+			integration: authorFields.integration,
+			author_display_name: authorFields.author_display_name,
 			note_type: "TeamIssue",
 			resolution_status: "Open",
 			match_number: null,
@@ -2315,9 +2392,10 @@ export async function createFromSlashCommand(
 			slack_channel: channel_id,
 			is_nexus: false,
 		})
-		.returning();
+		.execute();
 
-	if (!insert[0]) {
+	const insertedNote = await db.query.notes.findFirst({ where: eq(notes.id, noteId), with: noteWith });
+	if (!insertedNote) {
 		return { response_type: "ephemeral", text: "Failed to create ticket." };
 	}
 
@@ -2333,13 +2411,13 @@ export async function createFromSlashCommand(
 		if (!reply.user || reply.bot_id) continue;
 		const alreadyExists = await db.query.messages.findFirst({ where: eq(messages.slack_ts, reply.ts) });
 		if (alreadyExists) continue;
-		const replyAuthor = await resolveSlackUserProfile(reply.user, slack_workspace_id);
-		if (!replyAuthor.source) replyAuthor.source = "Slack";
+		const replyAuthorFields = await resolveSlackAuthor(reply.user, slack_workspace_id);
 		await db.insert(messages).values({
 			id: randomUUID(),
-			note_id: insert[0].id,
-			author_id: replyAuthor.id,
-			author: replyAuthor,
+			note_id: insertedNote.id,
+			author_id: replyAuthorFields.author_id,
+			integration: replyAuthorFields.integration,
+			author_display_name: replyAuthorFields.author_display_name,
 			text: await resolveSlackMentions(reply.text, slack_workspace_id),
 			event_code: noteEvent.code,
 			created_at: new Date(parseFloat(reply.ts) * 1000),
@@ -2349,7 +2427,7 @@ export async function createFromSlashCommand(
 		});
 	}
 
-	const noteResult = { ...insert[0], followers: [] as number[] } as Note;
+	const noteResult = noteToWire(insertedNote);
 	bus.publish(`event:${noteEvent.code}:note_update`, { kind: "create", note: noteResult });
 
 	// Apply existing reactions after the note is published; each fires its own bus update.
@@ -2368,7 +2446,7 @@ export async function createFromSlashCommand(
 			kind: "note.created",
 			eventCode: noteEvent.code,
 			note: toNoteCtx(noteResult),
-			author: author.username,
+			author: authorFields.profile.username,
 		}),
 		noteEvent.code,
 	);

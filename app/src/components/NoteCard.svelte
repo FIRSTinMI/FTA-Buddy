@@ -210,10 +210,13 @@
 
 		<div class="flex items-center justify-between gap-2">
 			<p class="text-xs text-gray-400 dark:text-gray-500">
-				{note.author.username}{note.author.username !== note.author.role ? ` · ${note.author.role}` : ""}
-				{#if note.author.source === "FMS"}
+				{note.author_display_name ?? note.author.username}{!note.author_display_name &&
+				note.author.username !== note.author.role
+					? ` · ${note.author.role}`
+					: ""}
+				{#if note.integration === "FMS"}
 					<Badge color="indigo" class="ml-1 text-[10px]">FMS</Badge>
-				{:else if note.author.source === "Slack"}
+				{:else if note.integration === "Slack"}
 					<Badge color="purple" class="ml-1 text-[10px]">Slack</Badge>
 				{/if}
 			</p>
@@ -232,7 +235,8 @@
 				<Icon icon="mdi:reply" class="size-3.5 mt-0.5 text-gray-400 dark:text-gray-500 shrink-0" />
 				<div class="min-w-0">
 					<span class="text-xs text-left font-semibold text-gray-500 dark:text-gray-400">
-						{latestMsg.author?.username ?? "Unknown"}{latestMsg.author?.username !== latestMsg.author?.role
+						{latestMsg.author_display_name ?? latestMsg.author?.username ?? "Unknown"}{!latestMsg.author_display_name &&
+						latestMsg.author?.username !== latestMsg.author?.role
 							? ` · ${latestMsg.author?.role}`
 							: ""}:
 					</span>

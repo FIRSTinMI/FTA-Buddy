@@ -4,6 +4,7 @@ import { uploadReport } from "./gcs";
 import OpenAI from "openai";
 import { db } from "../db/db";
 import schema, { matchEvents, messages, notes } from "../db/schema";
+import { messageWith, noteWith } from "./notes-projection";
 
 export interface SubEventInfo {
 	code: string;
@@ -269,9 +270,11 @@ function isDiagnosticLike(text: string): boolean {
 	);
 }
 
+type MessageExcerptInput = { text: string; created_at: Date; author?: { username: string } | null; author_display_name?: string | null };
+
 function selectMessageExcerpts(
 	noteText: string,
-	rawMessages: Array<{ text: string; created_at: Date; author: any }>,
+	rawMessages: MessageExcerptInput[],
 ): {
 	diagnostic_excerpt: string[];
 	resolution_excerpt: string[];
@@ -279,8 +282,8 @@ function selectMessageExcerpts(
 } {
 	const sorted = [...rawMessages].sort((a, b) => a.created_at.getTime() - b.created_at.getTime());
 
-	const formatMessage = (m: { text: string; created_at: Date; author: any }, max = 220): string => {
-		const author = (m.author as any)?.username ?? "?";
+	const formatMessage = (m: MessageExcerptInput, max = 220): string => {
+		const author = m.author_display_name ?? m.author?.username ?? "?";
 		const ts = formatTimestamp(m.created_at) ?? "?";
 		return `[${ts}] ${author}: ${truncate(cleanLine(m.text), max)}`;
 	};
@@ -365,12 +368,11 @@ async function collectEventData(
 	const meCodeFilter =
 		allCodes.length === 1 ? eq(matchEvents.event_code, allCodes[0]) : inArray(matchEvents.event_code, allCodes);
 
-	const allNotes = await db.select().from(notes).where(codeFilter).execute();
-	const allMessages = await db
-		.select()
-		.from(messages)
-		.where(allCodes.length === 1 ? eq(messages.event_code, allCodes[0]) : inArray(messages.event_code, allCodes))
-		.execute();
+	const allNotes = await db.query.notes.findMany({ where: codeFilter, with: noteWith });
+	const allMessages = await db.query.messages.findMany({
+		where: allCodes.length === 1 ? eq(messages.event_code, allCodes[0]) : inArray(messages.event_code, allCodes),
+		with: messageWith,
+	});
 
 	const messagesByNote = new Map<string, typeof allMessages>();
 	for (const msg of allMessages) {
@@ -431,7 +433,7 @@ async function collectEventData(
 			messageCount: noteMessages.length,
 			openMinutes: openTimeMinutes,
 			recurrenceScore: recurrence.score,
-			hasCsa: n.assigned_to !== null,
+			hasCsa: n.assigned_to_id !== null,
 			isOpen: n.resolution_status === "Open",
 			isAutoNote: n.text.trim().startsWith("[Auto]"),
 			tournamentLevel: n.tournament_level ?? null,
@@ -449,8 +451,8 @@ async function collectEventData(
 			text: truncate(cleanLine(n.text), 420),
 			match_number: n.match_number ?? null,
 			tournament_level: n.tournament_level ?? null,
-			author: (n.author as any)?.username ?? "unknown",
-			assigned_to: (n.assigned_to as any)?.username ?? null,
+			author: n.author_display_name ?? n.author?.username ?? "unknown",
+			assigned_to: n.assigned_to?.username ?? null,
 			open_time_minutes: openTimeMinutes,
 			message_count: noteMessages.length,
 			is_auto_note: n.text.trim().startsWith("[Auto]"),
@@ -462,7 +464,7 @@ async function collectEventData(
 			priority_score: priorityScore,
 			messages: noteMessages.map((m) => ({
 				text: truncate(cleanLine(m.text), 500),
-				author: (m.author as any)?.username ?? "unknown",
+				author: m.author_display_name ?? m.author?.username ?? "unknown",
 				created_at: formatTimestamp(m.created_at),
 			})),
 		};

@@ -1,9 +1,11 @@
 import { randomUUID } from "crypto";
 import { and, desc, eq, inArray } from "drizzle-orm";
-import type { MatchEventIssueDetail, Message, Profile, ServerEvent } from "../../shared/types";
+import type { MatchEventIssueDetail, ServerEvent } from "../../shared/types";
 import { bus } from "./eventBus";
 import { db } from "../db/db";
 import { matchEvents, messages, notes } from "../db/schema";
+import { messageToWire, messageWith } from "./notes-projection";
+import { getFieldProfile } from "./system-profiles";
 
 /**
  * Format a single issue detail into a human-readable description.
@@ -20,8 +22,6 @@ function formatIssue(d: {
 		d.start_time != null && d.end_time != null ? ` (${d.start_time}s \u2192 ${d.end_time}s match time)` : "";
 	return `${d.issue} for ${durLabel} total${timeRange}`;
 }
-
-const systemAuthor: Profile = { id: -1, username: "System", role: "FTA", admin: false };
 
 /**
  * Auto-link a list of active match events to an existing note.
@@ -53,7 +53,8 @@ export async function autoLinkEventsToNote(
 	});
 	const summaryText = `[Auto-linked] ${issueDescriptions.join(", ")}`;
 
-	let autoMsg: typeof messages.$inferSelect | undefined;
+	const field = await getFieldProfile();
+	const autoMsgId = randomUUID();
 
 	await db.transaction(async (tx) => {
 		await tx
@@ -62,30 +63,28 @@ export async function autoLinkEventsToNote(
 			.where(inArray(matchEvents.id, eventIds))
 			.execute();
 
-		const [msg] = await tx
+		await tx
 			.insert(messages)
 			.values({
-				id: randomUUID(),
+				id: autoMsgId,
 				note_id: noteId,
-				author_id: -1,
-				author: systemAuthor,
+				author_id: field.id,
 				text: summaryText,
 				event_code: event.code,
 				created_at: new Date(),
 				updated_at: new Date(),
 			})
-			.returning();
+			.execute();
 
 		await tx.update(notes).set({ updated_at: new Date() }).where(eq(notes.id, noteId));
-
-		autoMsg = msg;
 	});
 
+	const autoMsg = await db.query.messages.findFirst({ where: eq(messages.id, autoMsgId), with: messageWith });
 	if (autoMsg) {
 		bus.publish(`event:${event.code}:note_update`, {
 			kind: "add_message",
 			note_id: noteId,
-			message: autoMsg as Message,
+			message: messageToWire(autoMsg),
 		});
 	}
 

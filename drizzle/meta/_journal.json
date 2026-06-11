@@ -120,6 +120,13 @@
       "when": 1781147362630,
       "tag": "0016_black_omega_red",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1781600000000,
+      "tag": "0017_notes_integration",
+      "breakpoints": true
     }
   ]
 }

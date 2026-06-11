@@ -646,8 +646,8 @@
 						<div
 							class="justify-center text-center sm:justify-start sm:text-left text-xs text-gray-400 dark:text-gray-500"
 						>
-							<FormattedTime date={note.created_at} formatter={formatTimeNoAgoHourMins} /> ago by {note
-								.author.username}
+							<FormattedTime date={note.created_at} formatter={formatTimeNoAgoHourMins} /> ago by {note.author_display_name ??
+								note.author.username}
 						</div>
 
 						<!-- Status / match / assignment badges -->

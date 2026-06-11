@@ -453,7 +453,6 @@ export const matchEventsRouter = router({
 						id: newNoteId,
 						text: noteText,
 						author_id: authorProfile.id,
-						author: authorProfile,
 						team: matchEvent.team,
 						note_type: "TeamIssue",
 						resolution_status: "Open",

@@ -19,6 +19,7 @@
 	let filterSearch = $state("");
 	let tail = $state(true);
 	let limit = $state(200);
+	let newCategoryName = $state("");
 
 	let tailTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -54,6 +55,18 @@
 		try {
 			await trpc.admin.toggleLogCategory.mutate({ category: cat.category, enabled: next });
 			categories = categories.map((c) => (c.category === cat.category ? { ...c, enabled: next } : c));
+		} catch (err) {
+			error = err instanceof Error ? err.message : String(err);
+		}
+	}
+
+	async function addCategory() {
+		const name = newCategoryName.trim();
+		if (!name) return;
+		try {
+			await trpc.admin.toggleLogCategory.mutate({ category: name, enabled: false });
+			newCategoryName = "";
+			await loadCategories();
 		} catch (err) {
 			error = err instanceof Error ? err.message : String(err);
 		}
@@ -162,12 +175,30 @@
 
 		<!-- Categories -->
 		<section class="bg-white dark:bg-neutral-800 rounded-lg border border-gray-200 dark:border-neutral-700 p-4">
-			<h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">Sections</h2>
+			<div class="flex items-center justify-between mb-3">
+				<h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200">Sections</h2>
+				<form
+					class="flex items-center gap-2"
+					onsubmit={(e) => {
+						e.preventDefault();
+						addCategory();
+					}}
+				>
+					<Input
+						placeholder="New category name"
+						bind:value={newCategoryName}
+						class="text-sm"
+					/>
+					<Button type="submit" size="xs" disabled={!newCategoryName.trim()}>
+						<Icon icon="mdi:plus" class="w-4 h-4 mr-1" />
+						Add
+					</Button>
+				</form>
+			</div>
 			{#if categories.length === 0}
 				<p class="text-sm text-gray-500 dark:text-gray-400">
-					No categories registered yet. As soon as any code calls
-					<code class="bg-gray-100 dark:bg-neutral-700 px-1 rounded">debugLog</code>
-					with a category, it'll show up here even if disabled.
+					No categories registered yet. Start the server (it pre-registers known ones) or
+					add one above to start toggling.
 				</p>
 			{:else}
 				<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">

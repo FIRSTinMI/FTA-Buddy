@@ -16,8 +16,26 @@ const CACHE_REFRESH_MS = 5_000;
 const RETENTION_LIMIT = 100_000;
 const RETENTION_INTERVAL_MS = 60_000;
 
+/**
+ * Categories registered up-front at server boot so admins see switches for
+ * them on the debug-logs page even before any code has called `debugLog`.
+ * Add new entries here when a new section starts emitting debug logs — the
+ * lazy registration below handles ad-hoc cases but boot-time entries are
+ * what gives the page a populated set on a fresh deploy.
+ */
+const KNOWN_CATEGORIES = [
+	"cycle",
+	"field-monitor",
+	"slack",
+	"fms",
+	"match-events",
+	"notifications",
+	"general",
+];
+
 let enabledCategories = new Set<string>();
 let cacheInitialized = false;
+const registeredCategories = new Set<string>();
 
 async function refreshCategoryCache(): Promise<void> {
 	try {
@@ -48,11 +66,38 @@ async function pruneOldLogs(): Promise<void> {
 	}
 }
 
+async function ensureKnownCategoriesRegistered(): Promise<void> {
+	try {
+		for (const category of KNOWN_CATEGORIES) {
+			await db
+				.insert(debugLogCategories)
+				.values({ category, enabled: false, updated_at: new Date() })
+				.onConflictDoNothing()
+				.execute();
+			registeredCategories.add(category);
+		}
+	} catch (err) {
+		console.error("[debugLog] failed to register known categories:", err);
+	}
+}
+
+function registerCategoryLazily(category: string): void {
+	if (registeredCategories.has(category)) return;
+	registeredCategories.add(category);
+	db.insert(debugLogCategories)
+		.values({ category, enabled: false, updated_at: new Date() })
+		.onConflictDoNothing()
+		.execute()
+		.catch((err) => console.error(`[debugLog] failed to register ${category}:`, err));
+}
+
 let started = false;
 export function startDebugLogBackground(): void {
 	if (started) return;
 	started = true;
-	refreshCategoryCache().catch(() => {});
+	ensureKnownCategoriesRegistered()
+		.then(() => refreshCategoryCache())
+		.catch(() => {});
 	setInterval(() => refreshCategoryCache().catch(() => {}), CACHE_REFRESH_MS);
 	setInterval(() => pruneOldLogs().catch(() => {}), RETENTION_INTERVAL_MS);
 }
@@ -76,6 +121,10 @@ export interface DebugLogOptions {
  * console but never thrown, so callers can fire-and-forget safely.
  */
 export function debugLog(opts: DebugLogOptions): void {
+	// Always make sure the category is registered so it shows up as a switch
+	// on the admin page, even if it's currently disabled and we drop the log.
+	registerCategoryLazily(opts.category);
+
 	if (!cacheInitialized) return;
 	if (!enabledCategories.has(opts.category)) return;
 

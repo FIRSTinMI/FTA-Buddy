@@ -46,7 +46,7 @@ export const cycleRouter = router({
 		.input(
 			z.object({
 				eventToken: z.string(),
-				type: z.enum(["lastCycleTime", "prestart", "start", "end", "refsDone", "scoresPosted"]),
+				type: z.enum(["lastCycleTime", "prestart", "matchReady", "start", "end", "refsDone", "scoresPosted"]),
 				lastCycleTime: z.string().optional(),
 				matchNumber: z.number(),
 				playNumber: z.number(),
@@ -100,11 +100,22 @@ export const cycleRouter = router({
 							.where(eq(cycleLogs.id, cycle.id))
 							.execute();
 						break;
+					case "matchReady":
+						timing.lastMatchReady = new Date();
+						await db
+							.update(cycleLogs)
+							.set({ match_ready_time: timing.lastMatchReady })
+							.where(eq(cycleLogs.id, cycle.id))
+							.execute();
+						break;
 					case "start":
 						timing.lastMatchStart = new Date();
 						await db
 							.update(cycleLogs)
-							.set({ start_time: timing.lastMatchStart })
+							.set({
+								start_time: timing.lastMatchStart,
+								match_ready_time: timing.lastMatchReady,
+							})
 							.where(eq(cycleLogs.id, cycle.id))
 							.execute();
 						break;
@@ -524,25 +535,41 @@ export const cycleRouter = router({
 			.orderBy(asc(cycleLogs.start_time))
 			.execute();
 
-		const averageCycleTime = await getAverageCycleTime(ctx.event.code, -1);
+		const [averageCycleTime, averageTimeToStart] = await Promise.all([
+			getAverageCycleTime(ctx.event.code, -1),
+			getAverageTimeToStart(ctx.event.code),
+		]);
 
 		const path = await generateReport(
 			{
 				title: `Cycle Time Report for ${ctx.event.code}`,
-				description: `Average Cycle Time: ${formatTimeShortNoAgoSeconds(averageCycleTime)}`,
-				headers: ["Match Number", "Play Number", "Level", "Start Time", "Cycle Time"],
+				description:
+					`Average Cycle Time: ${formatTimeShortNoAgoSeconds(averageCycleTime)}` +
+					(averageTimeToStart !== null
+						? `    Average Time to Start: ${formatTimeShortNoAgoSeconds(averageTimeToStart)}`
+						: ""),
+				headers: ["Match Number", "Play Number", "Level", "Start Time", "Cycle Time", "Time to Start"],
 				fileName: "CycleTimeReport",
 			},
-			cycles.map((cycle) => [
-				cycle.match_number,
-				cycle.play_number,
-				cycle.level,
-				cycle.start_time?.toLocaleString(
-					"en-US",
-					ctx.event.timezone ? { timeZone: ctx.event.timezone } : undefined,
-				) ?? "",
-				cycle.calculated_cycle_time ?? "",
-			]),
+			cycles.map((cycle) => {
+				const timeToStart =
+					cycle.start_time && cycle.match_ready_time
+						? formatTimeShortNoAgoSeconds(
+								cycle.start_time.getTime() - cycle.match_ready_time.getTime(),
+							)
+						: "";
+				return [
+					cycle.match_number,
+					cycle.play_number,
+					cycle.level,
+					cycle.start_time?.toLocaleString(
+						"en-US",
+						ctx.event.timezone ? { timeZone: ctx.event.timezone } : undefined,
+					) ?? "",
+					cycle.calculated_cycle_time ?? "",
+					timeToStart,
+				];
+			}),
 			ctx.event.code,
 		);
 
@@ -595,4 +622,33 @@ async function getAverageCycleTime(eventCode: string, rollingAverage: number = 1
 	const total = filteredTimes.reduce((acc, time) => (acc ?? 0) + (time ?? 0), 0);
 
 	return (total ?? 0) / filteredTimes.length;
+}
+
+async function getAverageTimeToStart(eventCode: string): Promise<number | null> {
+	const cycles = await db.query.cycleLogs.findMany({
+		where: and(
+			eq(cycleLogs.event, eventCode),
+			isNotNull(cycleLogs.start_time),
+			isNotNull(cycleLogs.match_ready_time),
+		),
+	});
+
+	let deltas = cycles
+		.map((c) => c.start_time!.getTime() - c.match_ready_time!.getTime())
+		.filter((d) => d > 0);
+
+	if (deltas.length < 3) return null;
+
+	deltas = deltas.sort((a, b) => a - b);
+
+	const q1 = deltas[Math.floor(deltas.length / 4)];
+	const q3 = deltas[Math.floor((deltas.length * 3) / 4)];
+	const iqr = q3 - q1;
+	const lowerBound = q1 - 1.5 * iqr;
+	const upperBound = q3 + 1.5 * iqr;
+
+	const filtered = deltas.filter((d) => d >= lowerBound && d <= upperBound);
+	if (filtered.length < 3) return null;
+
+	return filtered.reduce((acc, d) => acc + d, 0) / filtered.length;
 }

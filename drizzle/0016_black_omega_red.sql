@@ -1,0 +1,1 @@
+ALTER TABLE "cycle_logs" ADD COLUMN "match_ready_time" timestamp;

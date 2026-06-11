@@ -303,6 +303,7 @@ export const cycleLogs = pgTable(
 		play_number: integer("play_number").notNull(),
 		level: levelEnum("level").notNull(),
 		prestart_time: timestamp("prestart_time"),
+		match_ready_time: timestamp("match_ready_time"),
 		start_time: timestamp("start_time"),
 		calculated_cycle_time: varchar("calculated_cycle_time"),
 		ref_done_time: timestamp("ref_done_time"),

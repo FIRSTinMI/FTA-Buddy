@@ -19,6 +19,7 @@ export async function getTiming(eventCode: string): Promise<EventTiming> {
 	if (stored) return SuperJSON.parse<EventTiming>(stored);
 	return {
 		lastPrestartDone: null,
+		lastMatchReady: null,
 		lastMatchStart: null,
 		lastMatchEnd: null,
 		lastMatchRefDone: null,

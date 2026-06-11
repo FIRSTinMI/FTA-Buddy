@@ -367,6 +367,7 @@ export type TeamList = { number: string; name: string; inspected: boolean }[];
 
 export interface EventTiming {
 	lastPrestartDone: Date | null;
+	lastMatchReady: Date | null;
 	lastMatchStart: Date | null;
 	lastMatchEnd: Date | null;
 	lastMatchRefDone: Date | null;

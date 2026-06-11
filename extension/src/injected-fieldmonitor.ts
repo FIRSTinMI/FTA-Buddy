@@ -618,6 +618,10 @@ async function postFrame() {
 				trpc.cycles.postCycleTime
 					.mutate({ ...cycleArgs, type: "prestart" })
 					.catch((err) => console.warn("[FTA Buddy] postCycleTime prestart failed:", err));
+			} else if (cur === FieldState.MATCH_READY) {
+				trpc.cycles.postCycleTime
+					.mutate({ ...cycleArgs, type: "matchReady" })
+					.catch((err) => console.warn("[FTA Buddy] postCycleTime matchReady failed:", err));
 			} else if (cur === FieldState.MATCH_RUNNING_AUTO) {
 				// Post the completed cycle time to the PREVIOUS match's DB row (match-start to match-start),
 				// mirroring what SignalR's lastcycletimecalculated event does.

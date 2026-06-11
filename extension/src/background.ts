@@ -466,7 +466,7 @@ async function sendFrame(data: any) {
 }
 
 async function sendCycletime(
-	type: "lastCycleTime" | "prestart" | "start" | "end" | "refsDone" | "scoresPosted",
+	type: "lastCycleTime" | "prestart" | "matchReady" | "start" | "end" | "refsDone" | "scoresPosted",
 	data: string,
 ) {
 	if (!fieldMonitor) return;

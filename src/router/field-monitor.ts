@@ -136,6 +136,9 @@ export const fieldMonitorRouter = router({
 				if (processed.currentFrame.field === FieldState.PRESTART_COMPLETED) {
 					timing.lastPrestartDone = new Date();
 					timingChanged = true;
+				} else if (processed.currentFrame.field === FieldState.MATCH_READY) {
+					timing.lastMatchReady = new Date();
+					timingChanged = true;
 				} else if (processed.currentFrame.field === FieldState.MATCH_RUNNING_AUTO) {
 					timing.lastMatchStart = new Date();
 					timingChanged = true;

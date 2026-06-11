@@ -50,7 +50,7 @@ type SignalREventMap = {
 	/** Emitted every time a field monitor frame is processed. */
 	frame: [frame: PartialMonitorFrame];
 	/** Emitted for match cycle time milestones. */
-	cycleTime: [type: "lastCycleTime" | "prestart" | "start" | "end" | "refsDone" | "scoresPosted", time: string];
+	cycleTime: [type: "lastCycleTime" | "prestart" | "matchReady" | "start" | "end" | "refsDone" | "scoresPosted", time: string];
 	/** Emitted when the active tournament level changes and the schedule should be re-fetched. */
 	sendSchedule: [];
 	/** Emitted when a note is added/updated/resolved/etc on ftaAppHub. */
@@ -174,6 +174,7 @@ export class SignalR extends TypedEventEmitter<SignalREventMap> {
 					break;
 				case "WaitingForMatchStart":
 					this.frame.field = FieldState.MATCH_READY;
+					this.emit("cycleTime", "matchReady", "");
 					break;
 				case "GameSpecific":
 					this.frame.field = FieldState.UNKNOWN;

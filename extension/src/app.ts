@@ -8,6 +8,8 @@ const appExtensionData = chrome.runtime.getManifest();
 		fieldMonitor: boolean,
 		useSignalR: boolean,
 		fmsApiEnabled: boolean,
+		sourceMode: "fms" | "cheesy",
+		cheesyHost: string,
 		eventCode: string,
 		eventToken: string,
 		id: string;
@@ -23,6 +25,8 @@ const appExtensionData = chrome.runtime.getManifest();
 				"fieldMonitor",
 				"useSignalR",
 				"fmsApiEnabled",
+				"sourceMode",
+				"cheesyHost",
 				"eventToken",
 				"id",
 			],
@@ -36,6 +40,8 @@ const appExtensionData = chrome.runtime.getManifest();
 				fieldMonitor = Boolean(item.fieldMonitor);
 				useSignalR = item.useSignalR !== false; // default true
 				fmsApiEnabled = item.fmsApiEnabled !== false; // default true
+				sourceMode = item.sourceMode === "cheesy" ? "cheesy" : "fms"; // default fms
+				cheesyHost = item.cheesyHost ? String(item.cheesyHost) : "";
 				eventToken = String(item.eventToken);
 				id = String(item.id);
 				resolve(void 0);
@@ -54,11 +60,25 @@ const appExtensionData = chrome.runtime.getManifest();
 			fieldMonitor,
 			useSignalR,
 			fmsApiEnabled,
+			sourceMode,
+			cheesyHost,
 			signalR: enabled,
 			fms: extra?.fms ?? false,
 			id,
 			...extra,
 		});
+	}
+
+	/** Apply the optional source-mode fields from a page message to the storage update set. */
+	function applySourceFields(data: Record<string, any>, updates: Record<string, any>) {
+		if ("sourceMode" in data) {
+			sourceMode = data.sourceMode === "cheesy" ? "cheesy" : "fms";
+			updates.sourceMode = sourceMode;
+		}
+		if ("cheesyHost" in data) {
+			cheesyHost = String(data.cheesyHost);
+			updates.cheesyHost = cheesyHost;
+		}
 	}
 
 	window.addEventListener("message", async (evt) => {
@@ -84,6 +104,7 @@ const appExtensionData = chrome.runtime.getManifest();
 				fmsApiEnabled = Boolean(evt.data.fmsApiEnabled);
 				updates.fmsApiEnabled = fmsApiEnabled;
 			}
+			applySourceFields(evt.data, updates);
 			await chrome.storage.local.set(updates);
 			// Storage change triggers background restart automatically
 			const fms = await pingFMS();
@@ -106,6 +127,7 @@ const appExtensionData = chrome.runtime.getManifest();
 				fmsApiEnabled = Boolean(evt.data.fmsApiEnabled);
 				updates.fmsApiEnabled = fmsApiEnabled;
 			}
+			applySourceFields(evt.data, updates);
 			await chrome.storage.local.set(updates);
 			// Storage change triggers background restart automatically
 			const fms = await pingFMS();

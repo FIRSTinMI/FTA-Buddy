@@ -1,4 +1,3 @@
-import { HubConnectionState } from "@microsoft/signalr";
 import {
 	FTAEventNoteIssueTypeNumeric,
 	FTAEventNoteResolutionTypeNumeric,
@@ -9,19 +8,13 @@ import {
 	type FTANoteRecord,
 	type TournamentLevel,
 } from "../../shared/fmsApiTypes";
-import {
-	addNote,
-	deleteNote,
-	getCurrentMatch,
-	getEventCode,
-	getScheduleBreakdown,
-	getTeamNumbers,
-	setFmsEventPassword,
-	updateNote,
-} from "./fmsapi";
-import { SignalR } from "./signalR";
-import { trpc, updateValues, uploadAllUnimportedMatchLogs } from "./trpc";
+import { addNote, deleteNote, getEventCode, getTeamNumbers, updateNote } from "./fmsapi";
+import { CheesyArenaSource } from "./sources/cheesyArenaSource";
+import { FmsSource } from "./sources/fmsSource";
+import type { FieldDataSource } from "./sources/types";
+import { trpc, updateValues } from "./trpc";
 import { MatchState, MatchStateMap } from "../../shared/types";
+import { clearCheesyOriginRule, setCheesyOriginRule } from "./sources/cheesyOriginRule";
 
 const ALARM_TEAM_POLL = "teamPoll";
 const ALARM_MATCH_IMPORT = "matchImport";
@@ -55,11 +48,13 @@ let outboundNoteSubscription: OutboundSubscription;
 
 const manifestData = chrome.runtime.getManifest();
 export const FMS = "10.0.100.5";
+export const DEFAULT_CHEESY_HOST = "10.0.100.5:8080";
 
-export const signalRConnection = new SignalR(FMS, manifestData.version);
-signalRConnection.on("frame", sendFrame);
-signalRConnection.on("cycleTime", sendCycletime);
-signalRConnection.on("sendSchedule", sendScheduleDetails);
+/**
+ * The active field data source. Rebuilt in {@link start} from the current
+ * settings (FMS over SignalR, or a Cheesy Arena websocket).
+ */
+let source: FieldDataSource | null = null;
 
 export let eventCode: string;
 export let eventToken: string;
@@ -68,6 +63,8 @@ export let id: string;
 export let enabled: boolean;
 export let fieldMonitor: boolean = false;
 export let useSignalR: boolean = true;
+export let sourceMode: "fms" | "cheesy" = "fms";
+export let cheesyHost: string = DEFAULT_CHEESY_HOST;
 export let cloud: boolean;
 export let useDev: boolean;
 export let changed: number;
@@ -81,7 +78,7 @@ async function stop() {
 	stopSchedulePolling();
 	outboundNoteSubscription?.unsubscribe();
 	outboundNoteSubscription = undefined;
-	await signalRConnection.stop();
+	await source?.stop();
 }
 
 async function start() {
@@ -98,6 +95,8 @@ async function start() {
 				"enabled",
 				"fieldMonitor",
 				"useSignalR",
+				"sourceMode",
+				"cheesyHost",
 				"id",
 				"eventToken",
 				"fmsApiEnabled",
@@ -138,6 +137,8 @@ async function start() {
 				fieldMonitor = Boolean(item.fieldMonitor);
 				useSignalR = item.useSignalR !== false; // default true
 				fmsApiEnabled = item.fmsApiEnabled !== false; // default true
+				sourceMode = item.sourceMode === "cheesy" ? "cheesy" : "fms"; // default fms
+				cheesyHost = item.cheesyHost ? String(item.cheesyHost) : DEFAULT_CHEESY_HOST;
 				eventToken = String(item.eventToken);
 				id = String(item.id) || crypto.randomUUID();
 				if (id !== item.id) chrome.storage.local.set({ id });
@@ -154,10 +155,21 @@ async function start() {
 		return;
 	}
 
+	// (Re)build the field data source for the selected mode and wire its events.
+	source = buildSource();
+	source.on("frame", sendFrame);
+	source.on("cycleTime", sendCycletime);
+	source.on("sendSchedule", sendScheduleDetails);
+
+	// Cheesy Arena's websocket enforces a same-origin check; strip the extension
+	// Origin header on requests to it so the connection is accepted.
+	if (sourceMode === "cheesy") await setCheesyOriginRule(cheesyHost);
+	else await clearCheesyOriginRule();
+
 	await pingFMS();
 
 	if (!fieldMonitor) {
-		console.log("Field monitor disabled, skipping SignalR");
+		console.log("Field monitor disabled, skipping realtime source");
 		if (!(eventCode || eventToken)) return;
 		await updateValues();
 		if (fmsApiEnabled) {
@@ -168,9 +180,14 @@ async function start() {
 		return;
 	}
 
-	if (useSignalR) {
+	// The Cheesy Arena source is the realtime feed for its mode; for FMS the
+	// SignalR feed is optional (scraping mode posts frames from a content script).
+	if (sourceMode === "cheesy") {
+		console.log("Starting Cheesy Arena source");
+		await source.start();
+	} else if (useSignalR) {
 		console.log("Starting SignalR");
-		await signalRConnection.start();
+		await source.start();
 	} else {
 		console.log("SignalR disabled, using scraping mode");
 	}
@@ -184,17 +201,26 @@ async function start() {
 		startMatchAutoImport();
 	}
 
-	// Fetch FMS event password from the server and propagate to FTA App API
-	try {
-		const { fmsEventPassword } = await trpc.event.getFmsEventPassword.query();
-		setFmsEventPassword(fmsEventPassword);
-		if (useSignalR) {
-			signalRConnection.on("noteChanged", handleFmsNoteChanged);
+	// FMS-only: fetch the FMS event password and wire two-way note sync.
+	if (source.supportsNotes) {
+		try {
+			const { fmsEventPassword } = await trpc.event.getFmsEventPassword.query();
+			source.setFmsEventPassword(fmsEventPassword);
+			if (useSignalR) {
+				source.on("noteChanged", handleFmsNoteChanged);
+			}
+			startOutboundNoteSync();
+		} catch (err) {
+			console.warn("Could not fetch FMS event password:", err);
 		}
-		startOutboundNoteSync();
-	} catch (err) {
-		console.warn("Could not fetch FMS event password:", err);
 	}
+}
+
+function buildSource(): FieldDataSource {
+	if (sourceMode === "cheesy") {
+		return new CheesyArenaSource(cheesyHost, manifestData.version, () => eventCode);
+	}
+	return new FmsSource(FMS, manifestData.version);
 }
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
@@ -210,16 +236,16 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 		});
 		return true;
 	} else if (msg?.type === "getEventCode") {
-		getEventCode().then((code) => {
-			getTeamNumbers().then((teams) => {
-				sendResponse({
-					source: "ext",
-					version: manifestData.version,
-					type: "eventCode",
-					code,
-					teams,
-					id,
-				});
+		const codeP = source ? source.getEventCode() : getEventCode();
+		const teamsP = source ? source.getTeamNumbers() : getTeamNumbers();
+		Promise.all([codeP, teamsP]).then(([code, teams]) => {
+			sendResponse({
+				source: "ext",
+				version: manifestData.version,
+				type: "eventCode",
+				code,
+				teams,
+				id,
 			});
 		});
 		return true;
@@ -242,6 +268,8 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 			enabled,
 			fieldMonitor,
 			useSignalR,
+			sourceMode,
+			cheesyHost,
 			fmsApiEnabled,
 			id,
 			fmsApi,
@@ -260,7 +288,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 	}
 
 	if (msg?.type === "getStatuses") {
-		const signalrStatus: HubConnectionState | string = (signalRConnection as any)?.connection?.state ?? "Unknown";
+		const signalrStatus: string = source?.getConnectionStatus() ?? "Unknown";
 
 		sendResponse({
 			signalrStatus,
@@ -273,6 +301,12 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
 export async function pingFMS() {
 	try {
+		// Use the active source when available; fall back to a direct FMS probe
+		// (e.g. for popup pings before the source has been built).
+		if (source) {
+			fmsApi = await source.ping();
+			return fmsApi;
+		}
 		const controller = new AbortController();
 		setTimeout(() => controller.abort(), 500);
 		const res = await fetch(`http://${FMS}/FieldMonitor`, { signal: controller.signal });
@@ -459,7 +493,10 @@ function startOutboundNoteSync() {
 }
 
 async function sendFrame(data: any) {
-	if (!fieldMonitor || !useSignalR) return;
+	// In FMS mode the SignalR feed is gated by useSignalR (scraping mode posts
+	// frames separately); the Cheesy Arena source always feeds frames.
+	if (!fieldMonitor) return;
+	if (sourceMode === "fms" && !useSignalR) return;
 	await trpc.field.post.mutate(
 		eventToken ? { eventToken, ...data, extensionId: id } : { eventCode, ...data, extensionId: id },
 	);
@@ -469,14 +506,14 @@ async function sendCycletime(
 	type: "lastCycleTime" | "prestart" | "matchReady" | "start" | "end" | "refsDone" | "scoresPosted",
 	data: string,
 ) {
-	if (!fieldMonitor) return;
+	if (!fieldMonitor || !source) return;
 	let matchNumber: number, playNumber: number, level: "None" | "Practice" | "Qualification" | "Playoff";
 	if (fmsApiEnabled) {
-		({ matchNumber, playNumber, level } = await getCurrentMatch());
+		({ matchNumber, playNumber, level } = await source.getCurrentMatch());
 	} else {
-		matchNumber = signalRConnection.frame.match;
-		playNumber = signalRConnection.frame.play;
-		level = signalRConnection.frame.level;
+		matchNumber = source.frame.match;
+		playNumber = source.frame.play;
+		level = source.frame.level;
 	}
 	await trpc.cycles.postCycleTime.mutate({
 		eventToken,
@@ -490,21 +527,22 @@ async function sendCycletime(
 }
 
 async function sendScheduleDetails() {
-	const schedule = await getScheduleBreakdown();
+	if (!source) return;
+	const schedule = await source.getScheduleBreakdown();
 	if (schedule.days.length === 0) return;
 	await trpc.cycles.postScheduleDetails.mutate({ eventToken, ...schedule, extensionId: id });
 }
 
 function isMatchRunning(): boolean {
-	return fieldMonitor && useSignalR && MatchStateMap[signalRConnection.frame.field] === MatchState.RUNNING;
+	return fieldMonitor && !!source && MatchStateMap[source.frame.field] === MatchState.RUNNING;
 }
 
 async function pollTeams() {
-	if (!fmsApi || !eventToken || qualsScheduleAvailable) return;
+	if (!fmsApi || !eventToken || qualsScheduleAvailable || !source) return;
 	if (isMatchRunning()) return; // Skip iteration if a match is running
 
 	try {
-		const schedule = await getScheduleBreakdown();
+		const schedule = await source.getScheduleBreakdown();
 		if (schedule.days.length > 0) {
 			console.log("Quals schedule available, stopping team polling");
 			qualsScheduleAvailable = true;
@@ -512,7 +550,7 @@ async function pollTeams() {
 			return;
 		}
 
-		const teams: number[] = await getTeamNumbers();
+		const teams: number[] = await source.getTeamNumbers();
 		if (teams && teams.length > 0) {
 			const result = await trpc.event.syncTeams.mutate({ teamNumbers: teams });
 			if (result.added > 0 || result.removed > 0) {
@@ -537,10 +575,10 @@ function stopTeamPolling() {
 }
 
 async function runMatchAutoImport() {
-	if (!enabled || !eventToken) return;
+	if (!enabled || !eventToken || !source) return;
 	if (isMatchRunning()) return; // Skip iteration if a match is running
 	try {
-		await uploadAllUnimportedMatchLogs();
+		await source.uploadAllUnimportedMatchLogs();
 	} catch (err) {
 		console.warn("Match auto-import error:", err);
 	}

@@ -2,11 +2,12 @@
     "manifest_version": 3,
     "name": "FTA Buddy",
     "description": "Enable the field monitor and notes sync for FTA Buddy app",
-    "version": "1.26.16",
+    "version": "1.27.0",
     "permissions": [
         "storage",
         "scripting",
-        "alarms"
+        "alarms",
+        "declarativeNetRequestWithHostAccess"
     ],
     "host_permissions": [
         "http://10.0.100.5/*",

@@ -174,7 +174,9 @@ app.get("/report/:filename", async (req, res) => {
 		res.setHeader("Content-Disposition", `attachment; filename="${req.params.filename}"`);
 		res.send(buffer);
 	} catch (err: any) {
-		res.status(404).send("Report not found");
+		if (err?.code === 404) return res.status(404).send("Report not found");
+		console.error("Failed to serve report", req.params.filename, err);
+		res.status(500).send(`Failed to serve report: ${err?.message ?? "unknown error"}`);
 	}
 });
 

@@ -11,9 +11,9 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
-	"2.7.9.0": {
+	"2.7.8.1": {
 		changelog: `
-        <h1 class="text-lg font-bold">v2.7.9.0</h1>
+        <h1 class="text-lg font-bold">v2.7.8.1</h1>
         <ul>
         <li>Reconfigure a connected extension from any device - event settings now works through the server, not just the browser the extension is installed in</li>
         <li>Extension <strong>v1.26.19</strong>: manage every setting, including the field system and Cheesy Arena port, from the popup</li>

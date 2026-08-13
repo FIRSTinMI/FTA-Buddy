@@ -25,8 +25,6 @@ import { compressStationLog, trpc } from "../trpc";
 import type { FieldDataSource, MatchRef, ScheduleResult } from "./types";
 import type { SourceEventMap } from "./emitter";
 
-const RECONNECT_DELAY_MS = 3000;
-
 /** Cheesy Arena station id -> FTA-Buddy robot key, with literal types preserved. */
 const STATION_ENTRIES = Object.entries(CHEESY_STATION_TO_ROBOT) as [CheesyStation, ROBOT][];
 
@@ -60,9 +58,8 @@ export class CheesyArenaSource extends TypedEventEmitter<SourceEventMap> impleme
 	public readonly supportsNotes = false;
 	public frame: PartialMonitorFrame = structuredClone(DEFAULT_MONITOR);
 
-	private ws: WebSocket | null = null;
-	private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 	private stopped = false;
+	private connected = false;
 
 	// Latest notifier state.
 	private matchLoad: CheesyMatchLoad | null = null;
@@ -90,7 +87,6 @@ export class CheesyArenaSource extends TypedEventEmitter<SourceEventMap> impleme
 		private readonly host: string,
 		version: string,
 		private readonly eventCodeProvider: () => string,
-		private readonly displayId: string,
 	) {
 		super();
 		this.frame.version = version;
@@ -99,77 +95,38 @@ export class CheesyArenaSource extends TypedEventEmitter<SourceEventMap> impleme
 	// #region Lifecycle
 
 	public async start(): Promise<void> {
+		// The field monitor websocket is NOT opened here. Cheesy Arena's upgrader
+		// enforces a same-origin check that rejects the service worker's
+		// chrome-extension:// origin, and Chrome's declarativeNetRequest cannot
+		// strip the Origin header on a websocket handshake. Instead the
+		// `cheesy-inject` content script opens the feed from the Cheesy Arena field
+		// monitor page (whose origin is the Cheesy Arena host, so it passes) and
+		// relays every message here via chrome.runtime -> background -> ingest().
 		this.stopped = false;
-		this.connect();
 	}
 
 	public async stop(): Promise<void> {
 		this.stopped = true;
-		if (this.reconnectTimer) {
-			clearTimeout(this.reconnectTimer);
-			this.reconnectTimer = null;
-		}
-		if (this.ws) {
-			this.ws.onclose = null;
-			try {
-				this.ws.close();
-			} catch {
-				/* already closing */
-			}
-			this.ws = null;
-		}
+		this.connected = false;
 	}
 
-	private connect(): void {
+	/**
+	 * Feed a raw Cheesy Arena message relayed from the page-context websocket.
+	 * background.ts calls this for each `cheesyWs` runtime message.
+	 */
+	public ingest(msg: CheesyMessage): void {
 		if (this.stopped) return;
-		// The field monitor feed is a Cheesy Arena "display" and needs a displayId.
-		const displayId = encodeURIComponent(this.displayId || "fta-buddy");
-		const url = `ws://${this.host}/displays/field_monitor/websocket?displayId=${displayId}`;
-		console.log(`Connecting to Cheesy Arena (${url})`);
-		let ws: WebSocket;
-		try {
-			ws = new WebSocket(url);
-		} catch (err) {
-			console.error("Cheesy Arena websocket construction failed:", err);
-			this.scheduleReconnect();
-			return;
-		}
-		this.ws = ws;
-
-		ws.onopen = () => console.log("Cheesy Arena websocket connected");
-		ws.onmessage = (ev) => {
-			try {
-				this.handleMessage(JSON.parse(ev.data as string) as CheesyMessage);
-			} catch (err) {
-				console.error("Failed to handle Cheesy Arena message:", err, ev.data);
-			}
-		};
-		ws.onerror = (ev) => console.warn("Cheesy Arena websocket error:", ev);
-		ws.onclose = () => {
-			console.warn("Cheesy Arena websocket closed");
-			this.scheduleReconnect();
-		};
+		this.handleMessage(msg);
 	}
 
-	private scheduleReconnect(): void {
-		if (this.stopped || this.reconnectTimer) return;
-		this.reconnectTimer = setTimeout(() => {
-			this.reconnectTimer = null;
-			this.connect();
-		}, RECONNECT_DELAY_MS);
+	/** Track whether the page-context websocket is currently connected. */
+	public setConnected(connected: boolean): void {
+		this.connected = connected;
 	}
 
 	public getConnectionStatus(): string {
-		switch (this.ws?.readyState) {
-			case WebSocket.CONNECTING:
-				return "Connecting";
-			case WebSocket.OPEN:
-				return "Connected";
-			case WebSocket.CLOSING:
-				return "Disconnecting";
-			default:
-				return "Disconnected";
-		}
+		if (this.stopped) return "Disconnected";
+		return this.connected ? "Connected" : "Waiting for Cheesy Arena page";
 	}
 
 	// #region Message handling

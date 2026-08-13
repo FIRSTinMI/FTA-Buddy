@@ -14,7 +14,6 @@ import { FmsSource } from "./sources/fmsSource";
 import type { FieldDataSource } from "./sources/types";
 import { trpc, updateValues } from "./trpc";
 import { MatchState, MatchStateMap } from "../../shared/types";
-import { clearCheesyOriginRule, setCheesyOriginRule } from "./sources/cheesyOriginRule";
 
 const ALARM_TEAM_POLL = "teamPoll";
 const ALARM_MATCH_IMPORT = "matchImport";
@@ -181,10 +180,12 @@ async function start() {
 	source.on("cycleTime", sendCycletime);
 	source.on("sendSchedule", sendScheduleDetails);
 
-	// Cheesy Arena's websocket enforces a same-origin check; strip the extension
-	// Origin header on requests to it so the connection is accepted.
-	if (sourceMode === "cheesy") await setCheesyOriginRule(cheesyHost());
-	else await clearCheesyOriginRule();
+	// Cheesy Arena's websocket enforces a same-origin check that rejects the
+	// service worker's chrome-extension:// origin, and Chrome won't let DNR strip
+	// the Origin header on a ws handshake. So in Cheesy mode the `cheesy-inject`
+	// content script opens the feed from the Cheesy Arena field monitor page and
+	// relays it here (see the "cheesyWs" runtime message handler). Nothing to do
+	// in the worker beyond building the source.
 
 	await pingFMS();
 
@@ -240,7 +241,7 @@ async function start() {
 
 function buildSource(): FieldDataSource {
 	if (sourceMode === "cheesy") {
-		return new CheesyArenaSource(cheesyHost(), manifestData.version, () => eventCode, id);
+		return new CheesyArenaSource(cheesyHost(), manifestData.version, () => eventCode);
 	}
 	return new FmsSource(FMS, manifestData.version);
 }
@@ -289,6 +290,17 @@ function startExtensionConfigSync() {
 }
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+	// Cheesy Arena field monitor messages relayed from the `cheesy-inject` content
+	// script (it owns the page-origin websocket; see cheesy-inject.ts).
+	if (msg?.type === "cheesyWs") {
+		if (sourceMode === "cheesy" && source instanceof CheesyArenaSource) {
+			if (msg.event === "open") source.setConnected(true);
+			else if (msg.event === "close") source.setConnected(false);
+			else if (msg.event === "message" && msg.data) source.ingest(msg.data);
+		}
+		return false;
+	}
+
 	if (msg?.type === "ping") {
 		pingFMS().then((fms) => {
 			sendResponse({

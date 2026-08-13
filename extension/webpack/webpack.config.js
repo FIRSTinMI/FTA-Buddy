@@ -6,6 +6,7 @@ module.exports = {
 	entry: {
 		background: path.resolve(__dirname, "..", "src", "background.ts"),
 		injector: path.resolve(__dirname, "..", "src", "injector.ts"),
+		"cheesy-inject": path.resolve(__dirname, "..", "src", "cheesy-inject.ts"),
 		menu: path.resolve(__dirname, "..", "src", "menu.ts"),
 		app: path.resolve(__dirname, "..", "src", "app.ts"),
 		nexus: path.resolve(__dirname, "..", "src", "nexus.ts"),

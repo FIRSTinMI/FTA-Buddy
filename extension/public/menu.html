@@ -337,6 +337,49 @@
 
 			<div class="spaced">
 				<span class="hstack" style="gap: 10px">
+					<span style="font-weight: 700">Field System</span>
+				</span>
+				<select
+					id="sourceMode"
+					style="
+						background: var(--input-bg, #1f2937);
+						color: inherit;
+						border: 1px solid var(--border, #374151);
+						border-radius: 6px;
+						padding: 4px 8px;
+						font: inherit;
+					"
+				>
+					<option value="fms">FMS</option>
+					<option value="cheesy">Cheesy Arena</option>
+				</select>
+			</div>
+
+			<div class="spaced" style="margin-top: 6px; display: none" id="cheesy-port-row">
+				<span class="hstack" style="gap: 10px">
+					<span style="font-weight: 700">Cheesy Port</span>
+					<span style="font-size: 11px; color: var(--muted)">on 10.0.100.5</span>
+				</span>
+				<input
+					id="cheesyPort"
+					type="number"
+					min="1"
+					max="65535"
+					placeholder="8080"
+					style="
+						width: 80px;
+						background: var(--input-bg, #1f2937);
+						color: inherit;
+						border: 1px solid var(--border, #374151);
+						border-radius: 6px;
+						padding: 4px 8px;
+						font: inherit;
+					"
+				/>
+			</div>
+
+			<div class="spaced" style="margin-top: 6px">
+				<span class="hstack" style="gap: 10px">
 					<span style="font-weight: 700">Enabled</span>
 				</span>
 				<label class="switch" aria-label="Enabled">

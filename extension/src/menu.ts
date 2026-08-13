@@ -11,6 +11,9 @@ const useSignalRInput = document.getElementById("useSignalR") as HTMLInputElemen
 const signalRRow = document.getElementById("signalr-row") as HTMLDivElement;
 const tokenInput = document.getElementById("eventToken") as HTMLInputElement;
 const fmsApiEnabledInput = document.getElementById("fmsApiEnabled") as HTMLInputElement;
+const sourceModeSelect = document.getElementById("sourceMode") as HTMLSelectElement;
+const cheesyPortInput = document.getElementById("cheesyPort") as HTMLInputElement;
+const cheesyPortRow = document.getElementById("cheesy-port-row") as HTMLDivElement;
 const saveButton = document.getElementById("save") as HTMLButtonElement;
 
 const extensionStatusIndicator = document.getElementById("extension-status") as HTMLDivElement;
@@ -60,6 +63,8 @@ function load() {
 			"fieldMonitor",
 			"useSignalR",
 			"fmsApiEnabled",
+			"sourceMode",
+			"cheesyPort",
 		],
 		(item) => {
 			if (
@@ -95,6 +100,9 @@ function load() {
 			useSignalRInput.checked = item.useSignalR !== false; // default true
 			fmsApiEnabledInput.checked = item.fmsApiEnabled !== false; // default true
 			signalRRow.style.display = Boolean(item.fieldMonitor) ? "flex" : "none";
+			sourceModeSelect.value = item.sourceMode === "cheesy" ? "cheesy" : "fms";
+			cheesyPortInput.value = String(item.cheesyPort || 8080);
+			cheesyPortRow.style.display = sourceModeSelect.value === "cheesy" ? "flex" : "none";
 			tokenInput.value = String(item.eventToken);
 			let changed = Number(item.changed);
 
@@ -110,6 +118,8 @@ function load() {
 			fieldMonitorInput.addEventListener("input", handleUpdate);
 			useSignalRInput.addEventListener("input", handleUpdate);
 			fmsApiEnabledInput.addEventListener("input", handleUpdate);
+			sourceModeSelect.addEventListener("input", handleUpdate);
+			cheesyPortInput.addEventListener("input", handleUpdate);
 			if (useDevCheckbox) useDevCheckbox.addEventListener("input", handleUpdate);
 			saveButton.addEventListener("click", handleUpdate);
 			refreshButton.addEventListener("click", () => chrome.runtime.reload());
@@ -230,10 +240,13 @@ function handleUpdate() {
 		useSignalR: useSignalRInput.checked,
 		fmsApiEnabled: fmsApiEnabledInput.checked,
 		eventToken: tokenInput.value,
+		sourceMode: sourceModeSelect.value === "cheesy" ? "cheesy" : "fms",
+		cheesyPort: Number(cheesyPortInput.value) || 8080,
 	});
 
 	urlContainer.style.display = cloudCheckbox.checked ? "none" : "block";
 	signalRRow.style.display = fieldMonitorInput.checked ? "flex" : "none";
+	cheesyPortRow.style.display = sourceModeSelect.value === "cheesy" ? "flex" : "none";
 	// Storage change triggers background restart automatically
 }
 
@@ -247,7 +260,9 @@ function updatePopup(
 		| "useSignalR"
 		| "fmsApiEnabled"
 		| "event"
-		| "eventToken",
+		| "eventToken"
+		| "sourceMode"
+		| "cheesyPort",
 	value: boolean | string,
 ) {
 	const elm = document?.getElementById(setting);
@@ -255,11 +270,15 @@ function updatePopup(
 	if (typeof value === "boolean") {
 		(elm as HTMLInputElement).checked = value;
 	} else {
-		(elm as HTMLInputElement).value = value;
+		(elm as HTMLInputElement).value = String(value);
 	}
 	// Keep the SignalR row visibility in sync
 	if (setting === "fieldMonitor") {
 		signalRRow.style.display = (value as boolean) ? "flex" : "none";
+	}
+	// Keep the Cheesy port row visibility in sync with the field system
+	if (setting === "sourceMode") {
+		cheesyPortRow.style.display = value === "cheesy" ? "flex" : "none";
 	}
 }
 
@@ -276,7 +295,9 @@ chrome.storage.local.onChanged.addListener((changes) => {
 				| "useSignalR"
 				| "fmsApiEnabled"
 				| "event"
-				| "eventToken",
+				| "eventToken"
+				| "sourceMode"
+				| "cheesyPort",
 			changes[key].newValue as string | boolean,
 		);
 	}

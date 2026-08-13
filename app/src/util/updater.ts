@@ -3,7 +3,7 @@ import { eventStore } from "../stores/event";
 import { settingsStore } from "../stores/settings";
 import { userStore } from "../stores/user";
 
-export const LATEST_EXTENSION_VERSION = "1.26.18";
+export const LATEST_EXTENSION_VERSION = "1.26.19";
 
 interface Version {
 	changelog?: string;
@@ -11,12 +11,20 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.9.0": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.9.0</h1>
+        <ul>
+        <li>Reconfigure a connected extension from any device - event settings now works through the server, not just the browser the extension is installed in</li>
+        <li>Extension <strong>v1.26.19</strong>: manage every setting, including the field system and Cheesy Arena port, from the popup</li>
+        </ul>
+        `,
+	},
 	"2.7.8.0": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.8.0</h1>
         <ul>
-        <li>Added Cheesy Arena support for offseason events not running official FMS</li>
-        <li>Extension <strong>v1.26.18</strong>: read a Cheesy Arena field directly, with a configurable port</li>
+        <li>Added Cheesy Arena support for offseason events not running official FMS, with a configurable port</li>
         </ul>
         `,
 	},

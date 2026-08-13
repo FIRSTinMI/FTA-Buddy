@@ -175,7 +175,12 @@
 		"/join",
 	];
 
-	const eventTokenPaths = ["/monitor", "/checklist", "/logs", "/notepad"];
+	const eventTokenPaths = ["/monitor", "/checklist", "/logs", "/notepad", "/scorekeeper"];
+
+	// Roles that can see the Scorekeeper view (playoff lineups).
+	let canScorekeep = $derived(
+		$user.admin || ["Scorekeeper", "FTA", "FTAA", "System"].includes($user.role),
+	);
 
 	function redirectForAuth() {
 		const currentPath = route.pathname;
@@ -483,6 +488,8 @@
 				}
 			} else if ($user.role === "CSA" || $user.role === "RI") {
 				navigate("/notepad");
+			} else if ($user.role === "Scorekeeper") {
+				navigate("/scorekeeper");
 			}
 		}
 	});
@@ -722,6 +729,19 @@
 							<Icon icon="mdi:clipboard-outline" class="size-8" />
 						{/snippet}
 					</SidebarItem>
+					{#if canScorekeep}
+						<SidebarItem
+							label="Scorekeeper"
+							onclick={() => {
+								drawerOpen = false;
+								navigate("/scorekeeper");
+							}}
+						>
+							{#snippet icon()}
+								<Icon icon="mdi:clipboard-list-outline" class="size-8" />
+							{/snippet}
+						</SidebarItem>
+					{/if}
 					<SidebarItem
 						label="Event Reports"
 						onclick={() => {

@@ -6,7 +6,7 @@ import { events, slackLinkTokens, users } from "../db/schema";
 import { protectedProcedure, publicProcedure, resolveUserFromToken, router } from "../trpc";
 import { verifyIdToken } from "../util/firebase-admin";
 
-const ROLES = ["FTA", "FTAA", "CSA", "RI"] as const;
+const ROLES = ["FTA", "FTAA", "CSA", "RI", "Scorekeeper"] as const;
 
 /** Fields safe to return to the client (never the deprecated password/token columns). */
 function publicProfile(user: typeof users.$inferSelect) {

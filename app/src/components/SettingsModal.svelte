@@ -22,9 +22,12 @@
 		{ value: "FTAA", name: "FTAA" },
 		{ value: "CSA", name: "CSA" },
 		{ value: "RI", name: "RI" },
+		{ value: "Scorekeeper", name: "Scorekeeper" },
 	];
 
 	async function updateUser() {
+		// The System role is assigned server-side only, never self-selected.
+		if ($userStore.role === "System") return;
 		try {
 			await trpc.user.changeRole.mutate({
 				newRole: $userStore.role,

@@ -1,7 +1,15 @@
 import { TRPCError } from "@trpc/server";
 import { eq, inArray } from "drizzle-orm";
 import { eventCodes, eventLastSeen, events } from "../state";
-import type { EventAutoEventSettings, NexusStatus, Note, ScheduleDetails, ServerEvent } from "../../shared/types";
+import { DEFAULT_SLOW_WARNING_SETTINGS } from "../../shared/types";
+import type {
+	EventAutoEventSettings,
+	NexusStatus,
+	Note,
+	ScheduleDetails,
+	ServerEvent,
+	SlowWarningSettings,
+} from "../../shared/types";
 import { bus } from "./eventBus";
 import { getChecklist } from "./event-state";
 import { db } from "../db/db";
@@ -132,6 +140,10 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 				nexusApiKey: event.nexusApiKey ?? undefined,
 				fmsEventPassword: event.fmsEventPassword ?? undefined,
 				autoEventSettings: (event.autoEventSettings ?? {}) as EventAutoEventSettings,
+				slowWarningSettings: {
+					...DEFAULT_SLOW_WARNING_SETTINGS,
+					...((event.slowWarningSettings ?? {}) as Partial<SlowWarningSettings>),
+				},
 				startDate: event.startDate ?? undefined,
 				endDate: event.endDate ?? undefined,
 				timezone: event.timezone ?? undefined,

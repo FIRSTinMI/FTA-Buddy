@@ -79,6 +79,25 @@ export function setCycleTracking(eventCode: string, tracking: EventCycleTracking
 		.catch((err) => console.error(`[EventState] setCycleTracking failed for ${eventCode}:`, err));
 }
 
+const SLOW_TEAMS_TTL = 86400 * 3; // 3 days
+
+/** Team numbers flagged SLOW for this event (computed in slow-teams.ts, refreshed per match). */
+export async function getSlowTeams(eventCode: string): Promise<Set<number>> {
+	const stored = await redis.get(`ftabuddy:event:${eventCode}:slow_teams`);
+	if (!stored) return new Set();
+	try {
+		return new Set(SuperJSON.parse<number[]>(stored));
+	} catch {
+		return new Set();
+	}
+}
+
+export function setSlowTeams(eventCode: string, teams: Set<number>): void {
+	redis
+		.set(`ftabuddy:event:${eventCode}:slow_teams`, SuperJSON.stringify([...teams]), "EX", SLOW_TEAMS_TTL)
+		.catch((err) => console.error(`[EventState] setSlowTeams failed for ${eventCode}:`, err));
+}
+
 /** Upsert a team into the global teams table. */
 export async function upsertTeam(number: string, name: string): Promise<void> {
 	await db

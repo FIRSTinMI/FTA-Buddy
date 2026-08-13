@@ -141,6 +141,13 @@
       "when": 1786649846926,
       "tag": "0019_medical_loners",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1786655410323,
+      "tag": "0020_skinny_korvac",
+      "breakpoints": true
     }
   ]
 }

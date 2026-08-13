@@ -16,7 +16,7 @@ import {
 	uuid,
 	varchar,
 } from "drizzle-orm/pg-core";
-import type { EventAutoEventSettings, FmsNoteMetadata } from "../../shared/types";
+import type { EventAutoEventSettings, FmsNoteMetadata, SlowWarningSettings } from "../../shared/types";
 export const roleEnum = pgEnum("role", ["FTA", "FTAA", "CSA", "RI", "System", "Scorekeeper"]);
 
 export const users = pgTable(
@@ -62,6 +62,7 @@ export const events = pgTable("events", {
 	timezone: varchar("timezone"),
 	fmsEventPassword: varchar("fmsEventPassword"),
 	autoEventSettings: jsonb("autoEventSettings").$type<EventAutoEventSettings>().notNull().default({}),
+	slowWarningSettings: jsonb("slowWarningSettings").$type<Partial<SlowWarningSettings>>().notNull().default({}),
 	notepadOnly: boolean("notepadOnly").notNull().default(false),
 	playoffMode: boolean("playoffMode").notNull().default(false),
 });
@@ -374,6 +375,12 @@ export const robotCycleLogs = pgTable(
 		first_code: timestamp("first_code"),
 		last_code: timestamp("last_code"),
 		time_code: integer("time_code"),
+		// Composite "fully connected" (DS green + radio + rIO + code). first_ready = first
+		// time ever ready; last_ready = start of the final ready streak before match start;
+		// time_ready = ms from prestart to last_ready (the SLOW warning's input).
+		first_ready: timestamp("first_ready"),
+		last_ready: timestamp("last_ready"),
+		time_ready: integer("time_ready"),
 	},
 	(t) => [index("robot_cycle_logs_event_idx").on(t.event)],
 );

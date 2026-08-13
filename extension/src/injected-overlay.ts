@@ -49,11 +49,19 @@ const eventCode = scriptEl?.dataset.event;
 const eventToken = scriptEl?.dataset.eventToken;
 const extensionId = scriptEl?.dataset.extensionId;
 const version = scriptEl?.dataset.version ?? "0.0.0";
+// "cheesy" when injected on a Cheesy Arena page (by cheesy-inject). There is no
+// FMS Angular DOM to scrape there, so the grid is driven by frames piped from the
+// background source instead.
+const sourceKind = scriptEl?.dataset.source ?? "fms";
+const IS_CHEESY = sourceKind === "cheesy";
 
 // localStorage is the reliable detection source - Angular strips unknown
-// query params during router init before the injected script runs.
+// query params during router init before the injected script runs. On Cheesy
+// Arena the reskin defaults on (no reason to view CA's native monitor through FTA
+// Buddy), so it is enabled unless explicitly turned off.
 const STORAGE_KEY = "ftabuddy";
-const FTA_MODE = localStorage.getItem(STORAGE_KEY) === "1";
+const storedMode = localStorage.getItem(STORAGE_KEY);
+const FTA_MODE = IS_CHEESY ? storedMode !== "0" : storedMode === "1";
 
 // ── Toggle button ──────────────────────────────────────────────────────────
 
@@ -64,8 +72,8 @@ function makeToggleBtn(): HTMLButtonElement {
 
 	if (FTA_MODE) {
 		btn.classList.add("fta-active");
-		btn.title = "Switch to FMS native view";
-		btn.textContent = "← FMS";
+		btn.title = IS_CHEESY ? "Switch to Cheesy Arena native view" : "Switch to FMS native view";
+		btn.textContent = IS_CHEESY ? "← Native" : "← FMS";
 	} else {
 		btn.title = "Switch to FTA Buddy view";
 		if (logoUrl) {
@@ -80,7 +88,10 @@ function makeToggleBtn(): HTMLButtonElement {
 
 	btn.addEventListener("click", () => {
 		if (FTA_MODE) {
-			localStorage.removeItem(STORAGE_KEY);
+			// Turn the reskin off. On Cheesy Arena it defaults on, so "off" must be
+			// stored explicitly; on FMS removing the key restores the default (off).
+			if (IS_CHEESY) localStorage.setItem(STORAGE_KEY, "0");
+			else localStorage.removeItem(STORAGE_KEY);
 		} else {
 			localStorage.setItem(STORAGE_KEY, "1");
 		}
@@ -389,6 +400,24 @@ function waitForApp(callback: () => void, attempts = 0): void {
 let serverFrame: MonitorFrame | null = null;
 let serverCycleData: ServerCycleData | null = null;
 
+// Cheesy Arena mode: the grid is driven by frames piped from the background
+// source (same mapped frame we field.post to the cloud), delivered near-instant
+// and working even with no internet. cheesy-inject relays them via postMessage.
+let pipedFrame: PartialMonitorFrame | null = null;
+// Set once the overlay UI is built so an incoming piped frame can re-render.
+let triggerRender: (() => void) | null = null;
+
+if (IS_CHEESY) {
+	window.addEventListener("message", (e) => {
+		if (e.source !== window) return;
+		const data = e.data as { __ftaBuddyCheesyFrame?: boolean; frame?: PartialMonitorFrame };
+		if (data && data.__ftaBuddyCheesyFrame && data.frame) {
+			pipedFrame = data.frame;
+			triggerRender?.();
+		}
+	});
+}
+
 async function pollServerFrame(): Promise<void> {
 	try {
 		const history = await trpc.field.history.query();
@@ -471,7 +500,7 @@ function boot(): void {
 		setInterval(pollCycleData, 5_000);
 	}
 
-	waitForApp(() => {
+	const startOverlay = () => {
 		console.log("[FTA Buddy Overlay] Building overlay...");
 
 		const els = buildRoot();
@@ -483,7 +512,9 @@ function boot(): void {
 		const cycleState = makeCycleTimeState();
 
 		function render(): void {
-			const frame = buildFrame();
+			// On Cheesy Arena the frame is piped from the background source; on FMS
+			// it is scraped live from the Angular field monitor DOM.
+			const frame = IS_CHEESY ? pipedFrame : buildFrame();
 			if (!frame) return;
 
 			// Check for match start transition before updateCycleTimeState updates state
@@ -515,25 +546,36 @@ function boot(): void {
 			updateFooter(footer, cycleState, serverCycleData, frame);
 		}
 
+		// Let the Cheesy Arena frame pipe drive re-renders as frames arrive.
+		triggerRender = render;
+
 		// Render immediately
 		render();
 
-		// MutationObserver with debounce for Angular change detection
-		let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-		const observer = new MutationObserver(() => {
-			if (debounceTimer !== null) clearTimeout(debounceTimer);
-			debounceTimer = setTimeout(() => {
-				debounceTimer = null;
-				render();
-			}, 0);
-		});
+		// Angular change detection only exists on the FMS page. On Cheesy Arena the
+		// frame pipe (window message listener above) plus the interval below drive
+		// renders, so there is no DOM to observe.
+		if (!IS_CHEESY) {
+			let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+			const observer = new MutationObserver(() => {
+				if (debounceTimer !== null) clearTimeout(debounceTimer);
+				debounceTimer = setTimeout(() => {
+					debounceTimer = null;
+					render();
+				}, 0);
+			});
 
-		const target = document.querySelector("field-monitor-simple") ?? document.body;
-		observer.observe(target, { subtree: true, childList: true, characterData: true, attributes: true });
+			const target = document.querySelector("field-monitor-simple") ?? document.body;
+			observer.observe(target, { subtree: true, childList: true, characterData: true, attributes: true });
+		}
 
 		// 1-second interval to keep T: timer + lastChange emojis current
 		setInterval(render, 1_000);
-	});
+	};
+
+	// FMS needs its Angular app to be ready before scraping; Cheesy Arena does not.
+	if (IS_CHEESY) startOverlay();
+	else waitForApp(startOverlay);
 }
 
 console.log("[FTA Buddy Overlay] Script loaded");

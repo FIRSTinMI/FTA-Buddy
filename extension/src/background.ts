@@ -296,7 +296,17 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 		if (sourceMode === "cheesy" && source instanceof CheesyArenaSource) {
 			if (msg.event === "open") source.setConnected(true);
 			else if (msg.event === "close") source.setConnected(false);
-			else if (msg.event === "message" && msg.data) source.ingest(msg.data);
+			else if (msg.event === "message" && msg.data) {
+				source.ingest(msg.data);
+				// Pipe the freshly mapped frame back to the Cheesy Arena page so the
+				// injected overlay can reskin from live data (there is no FMS Angular
+				// DOM to scrape there). Only frame-bearing messages change the frame.
+				const kind = msg.data.type;
+				const tabId = _sender.tab?.id;
+				if (tabId !== undefined && (kind === "arenaStatus" || kind === "matchLoad")) {
+					chrome.tabs.sendMessage(tabId, { type: "cheesyFrame", frame: source.frame }).catch(() => {});
+				}
+			}
 		}
 		return false;
 	}

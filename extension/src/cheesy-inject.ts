@@ -57,9 +57,21 @@ function injectOverlay(cfg: CheesyInjectConfig): void {
 	s.dataset.useDev = String(cfg.useDev);
 	s.dataset.eventToken = String(cfg.eventToken);
 	s.dataset.logoUrl = chrome.runtime.getURL("img/logo.png");
+	// Tell the shared overlay it is running on a Cheesy Arena page: it has no FMS
+	// Angular DOM to scrape, so it renders its grid from frames piped in below and
+	// defaults the reskin on.
+	s.dataset.source = "cheesy";
 	s.src = chrome.runtime.getURL("injected-overlay.js");
 	(document.body || document.documentElement).appendChild(s);
 }
+
+// Forward mapped frames from the background CheesyArenaSource to the page-world
+// overlay (which cannot receive chrome.runtime messages directly).
+chrome.runtime.onMessage.addListener((msg) => {
+	if (msg?.type === "cheesyFrame") {
+		window.postMessage({ __ftaBuddyCheesyFrame: true, frame: msg.frame }, "*");
+	}
+});
 
 function connect(cfg: CheesyInjectConfig): void {
 	if (!active) return;

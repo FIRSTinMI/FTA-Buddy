@@ -3,7 +3,6 @@
     "name": "FTA Buddy",
     "description": "Enable the field monitor and notes sync for FTA Buddy app",
     "version": "1.26.19",
-    "version_name": "1.26.19+cheesy-page-inject",
     "permissions": [
         "storage",
         "scripting",

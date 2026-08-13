@@ -22,7 +22,7 @@ jobs:
                     local uuid="$1" name="$2"
                     if [ -z "$uuid" ]; then echo "$name: no UUID configured, skipping"; return 0; fi
                     local dep
-                    dep=$(curl -s "$CO/deploy?uuid=$uuid&force=false" -H "$AUTH" | grep -o '"deployment_uuid":"[^"]*"' | head -1 | cut -d'"' -f4)
+                    dep=$(curl -s -X POST "$CO/deploy?uuid=$uuid&force=false" -H "$AUTH" | grep -o '"deployment_uuid":"[^"]*"' | head -1 | cut -d'"' -f4)
                     echo "$name -> deployment $dep"
                     for i in $(seq 1 90); do
                       s=$(curl -s "$CO/deployments/$dep" -H "$AUTH" | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)

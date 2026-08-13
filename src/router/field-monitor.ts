@@ -1,4 +1,3 @@
-import { and, eq, gt } from "drizzle-orm";
 import SuperJSON from "superjson";
 import { z } from "zod";
 import { eventLastSeen, events } from "../state";
@@ -8,9 +7,7 @@ import { formatTimeShortNoAgoSeconds } from "../../shared/formatTime";
 import { DSState, EnableState, FieldState } from "../../shared/types";
 import type { EventTiming, MonitorFrame, StateChange, TournamentLevel } from "../../shared/types";
 import { DEFAULT_MONITOR } from "../../shared/constants";
-import { db } from "../db/db";
-import { users } from "../db/schema";
-import { eventProcedure, publicProcedure, router } from "../trpc";
+import { eventProcedure, publicProcedure, resolveUserFromToken, router } from "../trpc";
 import {
 	detectStatusChange,
 	processFrameForTeamData,
@@ -322,19 +319,22 @@ export const fieldMonitorRouter = router({
 	management: publicProcedure
 		.input(
 			z.object({
-				token: z.string(),
+				// Accepted for backwards compatibility with older clients but ignored;
+				// auth uses the Firebase ID token from ctx (Authorization header or ?token=).
+				token: z.string().optional(),
 			}),
 		)
-		.subscription(async function* ({ input, signal }) {
-			const user = await db.query.users.findFirst({
-				where: and(eq(users.token, input.token), gt(users.id, -1), eq(users.admin, true)),
-			});
-			if (!user) throw new Error("Unauthorized");
+		.subscription(async function* ({ ctx, signal }) {
+			const user = await resolveUserFromToken(ctx.token);
+			if (!user || !user.admin) throw new Error("Unauthorized");
 
 			const { push, drain } = subscriptionQueue<EventState>(signal!);
 			const cleanups: Array<() => void> = [];
+			const added = new Set<string>();
 
 			const addNewEvent = async (eventCode: string) => {
+				if (added.has(eventCode)) return;
+				added.add(eventCode);
 				console.log("new event", eventCode);
 				let event = events[eventCode];
 				// If this instance hasn't loaded the event yet (e.g. it was created on another
@@ -343,6 +343,7 @@ export const fieldMonitorRouter = router({
 					try {
 						event = await getEvent("", eventCode);
 					} catch {
+						added.delete(eventCode);
 						return;
 					}
 				}
@@ -379,12 +380,28 @@ export const fieldMonitorRouter = router({
 				});
 			};
 
+			// Subscribe to future new_event announcements FIRST so we can't miss one that fires
+			// between the initial discovery and the subscribe call.
+			const unsubNew = bus.subscribe("global:new_event", (data) => addNewEvent(data as string));
+			cleanups.push(unsubNew);
+
+			// Seed with events currently live anywhere in the cluster. The `history` key has a
+			// 24h TTL and is refreshed on every frame, so its presence marks a recently-active
+			// event regardless of which instance received the frames.
 			for (const eventCode of Object.keys(events)) {
 				addNewEvent(eventCode);
 			}
-
-			const unsubNew = bus.subscribe("global:new_event", (data) => addNewEvent(data as string));
-			cleanups.push(unsubNew);
+			try {
+				const stream = redis.scanStream({ match: "ftabuddy:event:*:history", count: 100 });
+				for await (const keys of stream) {
+					for (const key of keys as string[]) {
+						const match = key.match(/^ftabuddy:event:(.+):history$/);
+						if (match) addNewEvent(match[1]);
+					}
+				}
+			} catch (err) {
+				console.error("[management] Failed to scan live events from Redis:", err);
+			}
 
 			try {
 				yield* drain();

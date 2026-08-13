@@ -306,7 +306,7 @@ export async function pingFMS() {
 		}
 		const controller = new AbortController();
 		setTimeout(() => controller.abort(), 500);
-		const res = await fetch(`http://${FMS}/FieldMonitor`, { signal: controller.signal });
+		const res = await fetch(`http://${FMS}/`, { signal: controller.signal });
 		fmsApi = !!res.ok;
 		return res.ok;
 	} catch {

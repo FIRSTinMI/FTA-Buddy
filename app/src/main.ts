@@ -1,5 +1,5 @@
 import { createTRPCClient, httpBatchLink, httpLink, httpSubscriptionLink, loggerLink, splitLink } from "@trpc/client";
-import { onIdTokenChanged } from "firebase/auth";
+import { onIdTokenChanged, signOut } from "firebase/auth";
 import SuperJSON from "superjson";
 import { mount } from "svelte";
 import { get } from "svelte/store";
@@ -90,9 +90,43 @@ userStore.subscribe((value) => {
 
 // Rebuild the client whenever Firebase signs in/out or refreshes the ID token
 // (~hourly). Keeps the SSE URL and the persisted "logged in" token current.
+//
+// On the FIRST fire only (boot), guard against an account mismatch: if Firebase's
+// persisted user isn't the one the app was last signed in as (email in userStore),
+// force sign-out. Silent switching would let the app rebuild the profile from
+// whichever user Firebase happens to have persisted, hiding accidental account
+// changes (cross-tab sign-in, stray Google popup, etc.). Subsequent fires are
+// left alone so intentional sign-ins during a session work normally.
+let firstAuthFire = true;
 onIdTokenChanged(auth, async (fbUser) => {
+	const isFirstFire = firstAuthFire;
+	firstAuthFire = false;
+
 	token = fbUser ? await fbUser.getIdToken() : "";
 	const cur = get(userStore);
+
+	if (isFirstFire && cur.email && (!fbUser || (fbUser.email && cur.email !== fbUser.email))) {
+		console.warn(
+			`[AUTH] Firebase session (${fbUser?.email ?? "signed out"}) does not match stored profile (${cur.email}). Signing out to force re-authentication.`,
+		);
+		try {
+			await signOut(auth);
+		} catch (e) {
+			console.error("[AUTH] signOut on mismatch failed", e);
+		}
+		userStore.set({
+			email: "",
+			username: "",
+			id: -1,
+			token: "",
+			eventToken: cur.eventToken,
+			role: "FTA",
+			admin: false,
+		});
+		window.location.reload();
+		return;
+	}
+
 	if (cur.token !== token) {
 		userStore.set({ ...cur, token });
 	} else {

@@ -5,31 +5,13 @@ on:
         branches: [main, dev]
     workflow_dispatch:
 
-# Build the image on the self-hosted NAS runner (off the cloud box), push it to the
-# Forgejo registry, then have Coolify pull + redeploy. Same Dockerfile for every
-# branch (tag = branch). main deploys both load-balanced instances A then B,
-# verifying each separately so the site never drops.
+# Coolify now builds the image on the NAS build server (nas-builder) and deploys it
+# natively, so this workflow only TRIGGERS Coolify and verifies the result. main
+# deploys both load-balanced instances A then B, verifying each separately so the
+# site never drops. Runs on a GitHub-hosted runner (no self-hosted runner needed).
 jobs:
-    build:
-        runs-on: [self-hosted, nas]
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
-
-            - name: Log in to the Forgejo registry
-              run: echo "${{ secrets.REGISTRY_TOKEN }}" | docker login git.filipkin.com -u "${{ secrets.REGISTRY_USER }}" --password-stdin
-
-            - name: Build and push image
-              run: |
-                  set -eux
-                  IMAGE=git.filipkin.com/filip/fta-buddy
-                  docker build -t "$IMAGE:${{ github.ref_name }}" -t "$IMAGE:${{ github.sha }}" .
-                  docker push "$IMAGE:${{ github.ref_name }}"
-                  docker push "$IMAGE:${{ github.sha }}"
-
     deploy:
-        needs: build
-        runs-on: [self-hosted, nas]
+        runs-on: ubuntu-latest
         steps:
             - name: Deploy + verify each instance
               run: |
@@ -40,10 +22,10 @@ jobs:
                     local uuid="$1" name="$2"
                     if [ -z "$uuid" ]; then echo "$name: no UUID configured, skipping"; return 0; fi
                     local dep
-                    dep=$(curl -s "$CO/deploy?uuid=$uuid&force=false" -H "$AUTH" | grep -o '"deployment_uuid":"[^"]*"' | head -1 | cut -d'"' -f4)
+                    dep=$(curl -s -X POST "$CO/deploy?uuid=$uuid&force=false" -H "$AUTH" | python3 -c 'import sys,json;print(json.load(sys.stdin)["deployments"][0]["deployment_uuid"])')
                     echo "$name -> deployment $dep"
                     for i in $(seq 1 90); do
-                      s=$(curl -s "$CO/deployments/$dep" -H "$AUTH" | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
+                      s=$(curl -s "$CO/deployments/$dep" -H "$AUTH" | python3 -c 'import sys,json;print(json.load(sys.stdin).get("status",""))')
                       echo "  $name attempt $i: $s"
                       [ "$s" = "finished" ] && return 0
                       { [ "$s" = "failed" ] || [ "$s" = "error" ]; } && { echo "$name failed"; return 1; }
@@ -62,7 +44,7 @@ jobs:
               if: success()
               run: |
                   curl -s -X POST ${{ secrets.DISCORD_WEBHOOK }} -H "Content-Type: application/json" \
-                    -d '{"embeds":[{"title":"✅ FTA Buddy Deployed","description":"Built on the NAS runner; Coolify pulled the image.","color":3066993}]}'
+                    -d '{"embeds":[{"title":"✅ FTA Buddy Deployed","description":"Coolify built the image on the NAS build server and deployed it.","color":3066993}]}'
 
             - name: Notify Discord (failure)
               if: failure()

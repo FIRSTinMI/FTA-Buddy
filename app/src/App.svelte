@@ -43,8 +43,10 @@
 	// On mount check if the user's permissions have changed
 	onMount(async () => {
 		try {
+			// Do NOT pass token here - the Authorization header uses the live Firebase
+			// ID token via currentIdToken(). The token in userStore can lag briefly on
+			// boot and cause the server to resolve the wrong user (or fail).
 			const checkAuth = await trpc.user.checkAuth.query({
-				token: $user.token,
 				eventToken: $user.eventToken,
 			});
 

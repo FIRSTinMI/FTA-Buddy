@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, Indicator, Toggle } from "flowbite-svelte";
+	import { Button, Indicator, Select, Toggle } from "flowbite-svelte";
 	import { onMount } from "svelte";
 	import { navigate } from "../../router";
 	import { hostWizardStore } from "../../stores/hostWizard";
@@ -15,9 +15,15 @@
 	let fieldMonitor = $state(!$hostWizardStore.notepadOnly);
 	let useSignalR = $state($hostWizardStore.useSignalR ?? false);
 	let fmsApiEnabled = $state($hostWizardStore.fmsApiEnabled ?? true);
+	let sourceMode = $state<"fms" | "cheesy">($hostWizardStore.sourceMode ?? "fms");
+	// Cheesy Arena's host is fixed; the extension is hard-coded to this address.
+	const CHEESY_HOST = "10.0.100.5:8080";
 
 	$effect(() => {
-		window.postMessage({ source: "page", type: "enable", fieldMonitor, useSignalR, fmsApiEnabled }, "*");
+		window.postMessage(
+			{ source: "page", type: "enable", fieldMonitor, useSignalR, fmsApiEnabled, sourceMode },
+			"*",
+		);
 	});
 
 	let canAdvance = $derived(
@@ -58,7 +64,7 @@
 	});
 
 	function advance() {
-		hostWizardStore.set({ notepadOnly: !fieldMonitor, useSignalR, fmsApiEnabled, teams });
+		hostWizardStore.set({ notepadOnly: !fieldMonitor, useSignalR, fmsApiEnabled, sourceMode, teams });
 		navigate("/manage/host/create");
 	}
 </script>
@@ -73,8 +79,14 @@
 	<h1 class="text-3xl font-bold mb-4">Extension Setup</h1>
 
 	<p class="text-lg mb-6">
-		FTA Buddy needs the Chrome extension installed and connected to FMS at
-		<code class="bg-neutral-200 dark:bg-neutral-900 px-2 py-0.5 rounded-lg">10.0.100.5</code>
+		FTA Buddy needs the Chrome extension installed and connected to your field system
+		{#if sourceMode === "cheesy"}
+			(Cheesy Arena at
+			<code class="bg-neutral-200 dark:bg-neutral-900 px-2 py-0.5 rounded-lg">{CHEESY_HOST}</code>)
+		{:else}
+			(FMS at
+			<code class="bg-neutral-200 dark:bg-neutral-900 px-2 py-0.5 rounded-lg">10.0.100.5</code>)
+		{/if}
 		to stream live field data. Make sure you have the FTA's permission to connect to run this software.
 	</p>
 
@@ -101,7 +113,14 @@
 						class="text-blue-400 hover:underline"
 						onclick={() =>
 							window.postMessage(
-								{ source: "page", type: "enable", fieldMonitor, useSignalR, fmsApiEnabled },
+								{
+									source: "page",
+									type: "enable",
+									fieldMonitor,
+									useSignalR,
+									fmsApiEnabled,
+									sourceMode,
+								},
 								"*",
 							)}>Enable</button
 					>
@@ -133,20 +152,37 @@
 	</div>
 
 	<div class="flex flex-col gap-4 mb-6">
+		<!-- Card 0: Field System -->
+		<div class="flex flex-col gap-3 border border-neutral-700 rounded-xl p-4">
+			<div class="flex items-center justify-between">
+				<div>
+					<p class="font-semibold">Field System</p>
+					<p class="text-sm text-gray-400">
+						The field management system at your event. Choose Cheesy Arena if you are not running official
+						FMS.
+					</p>
+				</div>
+				<Select bind:value={sourceMode} class="ml-4 w-44 shrink-0">
+					<option value="fms">FMS</option>
+					<option value="cheesy">Cheesy Arena</option>
+				</Select>
+			</div>
+		</div>
+
 		<!-- Card 1: Field Monitor -->
 		<div class="flex flex-col gap-3 border border-neutral-700 rounded-xl p-4">
 			<div class="flex items-center justify-between">
 				<div>
 					<p class="font-semibold">Field Monitor</p>
 					<p class="text-sm text-gray-400">
-						Streams real-time field data from FMS to your device, including robot connection status, battery
-						levels, and cycle timing.
+						Streams real-time field data to your device, including robot connection status, battery levels,
+						and cycle timing.
 					</p>
 				</div>
 				<Toggle bind:checked={fieldMonitor} class="ml-4 shrink-0" />
 			</div>
 
-			{#if fieldMonitor}
+			{#if fieldMonitor && sourceMode === "fms"}
 				<div class="flex items-center justify-between border-t border-neutral-700 pt-3">
 					<div>
 						<p class="font-semibold">Use SignalR</p>

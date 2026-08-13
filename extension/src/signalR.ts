@@ -16,6 +16,7 @@ import {
 	type SignalRMonitorFrame,
 } from "../../shared/types";
 import { uploadMatchLogs } from "./trpc";
+import { type SourceEventMap, TypedEventEmitter } from "./sources/emitter";
 
 export let signalRConnectionStatus: HubConnectionState = HubConnectionState.Disconnected;
 
@@ -46,37 +47,7 @@ function normalizeFmsNote(raw: any): FTANoteRecord {
 	};
 }
 
-type SignalREventMap = {
-	/** Emitted every time a field monitor frame is processed. */
-	frame: [frame: PartialMonitorFrame];
-	/** Emitted for match cycle time milestones. */
-	cycleTime: [type: "lastCycleTime" | "prestart" | "matchReady" | "start" | "end" | "refsDone" | "scoresPosted", time: string];
-	/** Emitted when the active tournament level changes and the schedule should be re-fetched. */
-	sendSchedule: [];
-	/** Emitted when a note is added/updated/resolved/etc on ftaAppHub. */
-	noteChanged: [action: "added" | "updated" | "reopened" | "resolved" | "deleted", note: FTANoteRecord];
-};
-
-class TypedEventEmitter<T extends Record<string, any[]>> {
-	private _listeners = new Map<keyof T, Set<(...args: any[]) => void>>();
-
-	on<K extends keyof T>(event: K, listener: (...args: T[K]) => void): this {
-		if (!this._listeners.has(event)) this._listeners.set(event, new Set());
-		this._listeners.get(event)!.add(listener as (...args: any[]) => void);
-		return this;
-	}
-
-	off<K extends keyof T>(event: K, listener: (...args: T[K]) => void): this {
-		this._listeners.get(event)?.delete(listener as (...args: any[]) => void);
-		return this;
-	}
-
-	protected emit<K extends keyof T>(event: K, ...args: T[K]): void {
-		this._listeners.get(event)?.forEach((l) => l(...args));
-	}
-}
-
-export class SignalR extends TypedEventEmitter<SignalREventMap> {
+export class SignalR extends TypedEventEmitter<SourceEventMap> {
 	public connection: HubConnection | null = null;
 	public infrastructureConnection: HubConnection | null = null;
 	public ftaAppHubConnection: HubConnection | null = null;

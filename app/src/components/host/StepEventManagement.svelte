@@ -16,33 +16,48 @@
 	import IntegrationWpaKiosk from "./integrations/IntegrationWpaKiosk.svelte";
 
 	let qrModalOpen = $state(false);
-	let extensionDetected = $state(false);
-	let extensionEnabled = $state(false);
-	let extensionFieldMonitor = $state(false);
-	let extensionUseSignalR = $state(true);
-	let extensionFmsApiEnabled = $state(true);
-	let extensionVersion = $state("");
-	let extensionOutdated = $state(false);
+
+	type ExtensionConfig = {
+		enabled?: boolean;
+		fieldMonitor?: boolean;
+		useSignalR?: boolean;
+		fmsApiEnabled?: boolean;
+		sourceMode?: "fms" | "cheesy";
+		cheesyPort?: number;
+	};
+	type ExtensionSummary = {
+		id: string;
+		version?: string;
+		config?: ExtensionConfig;
+		fmsApi?: boolean;
+		connected: Date;
+		lastFrame: Date;
+	};
+
+	// Connected extensions come from the SERVER (via the extension's live
+	// connection), so this page works from any device - it no longer depends on
+	// the extension being installed in the browser viewing this page.
+	let extensions = $state<ExtensionSummary[]>([]);
+	let activeExtension = $derived(
+		[...extensions].sort((a, b) => new Date(b.lastFrame).getTime() - new Date(a.lastFrame).getTime())[0],
+	);
+	let extensionDetected = $derived(!!activeExtension);
+	let extensionVersion = $derived(activeExtension?.version ?? "");
+	// Only extensions new enough to report their config can be configured remotely.
+	let remoteConfigSupported = $derived(!!activeExtension?.config);
+	let extensionEnabled = $derived(activeExtension?.config?.enabled ?? false);
+	let extensionFieldMonitor = $derived(activeExtension?.config?.fieldMonitor ?? false);
+	let extensionUseSignalR = $derived(activeExtension?.config?.useSignalR ?? true);
+	let extensionFmsApiEnabled = $derived(activeExtension?.config?.fmsApiEnabled ?? true);
+	let extensionOutdated = $derived(!!extensionVersion && extensionVersion < LATEST_EXTENSION_VERSION);
+	let fmsExtensionConnected = $derived(activeExtension?.fmsApi ?? false);
+
 	let extensionConfiguring = $state(false);
 	let extensionConfigured = $state(false);
-	let fmsExtensionConnected = $state(false);
 	let extensionConfigDialogOpen = $state(false);
 	let configFieldMonitor = $state(true);
 	let configUseSignalR = $state(true);
 	let configFmsApiEnabled = $state(true);
-
-	window.addEventListener("message", (event) => {
-		if (event.data?.type === "pong") {
-			extensionDetected = true;
-			extensionVersion = event.data.version ?? "";
-			extensionEnabled = event.data.enabled ?? false;
-			extensionFieldMonitor = event.data.fieldMonitor ?? false;
-			extensionUseSignalR = event.data.useSignalR ?? true;
-			extensionFmsApiEnabled = event.data.fmsApiEnabled ?? true;
-			extensionOutdated = extensionVersion < LATEST_EXTENSION_VERSION;
-			fmsExtensionConnected = event.data.fms ?? false;
-		}
-	});
 
 	async function configureExtension(fieldMonitor: boolean, useSignalR: boolean, fmsApiEnabled: boolean) {
 		extensionConfiguring = true;
@@ -51,23 +66,12 @@
 			const notepadOnly = !fieldMonitor;
 			await trpc.event.setNotepadOnly.mutate({ notepadOnly });
 			eventStore.update((e) => ({ ...e, notepadOnly }));
-			window.postMessage(
-				{
-					source: "page",
-					type: "eventCode",
-					code: $eventStore.code,
-					token: $userStore.eventToken,
-					fieldMonitor,
-					useSignalR,
-					fmsApiEnabled,
-				},
-				"*",
-			);
-			await new Promise((resolve) => setTimeout(resolve, 600));
-			extensionFieldMonitor = fieldMonitor;
-			extensionUseSignalR = useSignalR;
-			extensionFmsApiEnabled = fmsApiEnabled;
+			// Push config through the server to the connected extension(s); works
+			// from any device, unlike the old in-browser postMessage.
+			await trpc.extension.setConfig.mutate({ config: { fieldMonitor, useSignalR, fmsApiEnabled } });
 			extensionConfigured = true;
+		} catch (e) {
+			if (e instanceof Error) toast("Error", e.message);
 		} finally {
 			extensionConfiguring = false;
 		}
@@ -81,7 +85,13 @@
 	}
 
 	onMount(() => {
-		window.postMessage({ source: "page", type: "ping" }, "*");
+		const sub = trpc.extension.statusSubscription.subscribe(undefined, {
+			onData: (data) => {
+				extensions = data;
+			},
+			onError: (err) => console.warn("Extension status subscription error:", err),
+		});
+		return () => sub.unsubscribe();
 	});
 
 	let playoffModeBlocked = $state(false);
@@ -139,8 +149,8 @@
 	<div class="flex items-center gap-3 mb-4">
 		<div class="flex flex-col gap-0.5">
 			<span class="inline-flex gap-2 font-bold">
-				<Indicator color={fmsExtensionConnected ? "green" : "red"} class="my-auto" />
-				{#if fmsExtensionConnected}
+				<Indicator color={extensionDetected ? "green" : "red"} class="my-auto" />
+				{#if extensionDetected}
 					<span class="text-green-500">Extension Connected</span>
 				{:else}
 					<span class="text-red-400">No Extension Connected</span>
@@ -148,7 +158,9 @@
 			</span>
 			{#if extensionDetected}
 				<span class="text-xs text-gray-500">
-					{#if !extensionEnabled}
+					{#if !remoteConfigSupported}
+						Update the extension to configure it from here
+					{:else if !extensionEnabled}
 						Extension not enabled
 					{:else if !extensionFieldMonitor}
 						Field monitor off
@@ -156,6 +168,9 @@
 						SignalR mode
 					{:else}
 						Scraping mode
+					{/if}
+					{#if remoteConfigSupported && extensionFmsApiEnabled}
+						&middot; {fmsExtensionConnected ? "FMS connected" : "FMS not detected"}
 					{/if}
 				</span>
 			{:else}

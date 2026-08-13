@@ -492,6 +492,9 @@ export interface ServerEvent {
 			ip?: string;
 			userAgent?: string;
 			connected: Date;
+			version?: string;
+			config?: ExtensionConfig;
+			fmsApi?: boolean;
 		}[];
 		clients: {
 			id: string;
@@ -500,6 +503,20 @@ export interface ServerEvent {
 			connected: Date;
 		}[];
 	};
+}
+
+/**
+ * The extension settings that can be read and changed remotely (through the
+ * server) as well as locally. Mirrors the fields the extension stores in
+ * chrome.storage.local, so any device can reconfigure a connected extension.
+ */
+export interface ExtensionConfig {
+	enabled?: boolean;
+	fieldMonitor?: boolean;
+	useSignalR?: boolean;
+	fmsApiEnabled?: boolean;
+	sourceMode?: "fms" | "cheesy";
+	cheesyPort?: number;
 }
 
 export type NotificationEvents = {

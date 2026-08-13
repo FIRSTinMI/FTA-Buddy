@@ -5,7 +5,7 @@ import { bus } from "../util/eventBus";
 import { redis } from "../util/redis";
 import { formatTimeShortNoAgoSeconds } from "../../shared/formatTime";
 import { DSState, EnableState, FieldState } from "../../shared/types";
-import type { EventTiming, MonitorFrame, StateChange, TournamentLevel } from "../../shared/types";
+import type { EventTiming, ExtensionConfig, MonitorFrame, StateChange, TournamentLevel } from "../../shared/types";
 import { DEFAULT_MONITOR } from "../../shared/constants";
 import { eventProcedure, publicProcedure, resolveUserFromToken, router } from "../trpc";
 import {
@@ -435,5 +435,7 @@ export interface EventState {
 		lastFrame: Date;
 		frames: number;
 		checklistUpdates: number;
+		version?: string;
+		config?: ExtensionConfig;
 	}[];
 }

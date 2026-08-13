@@ -45,6 +45,7 @@ const NOTE_TYPE_TO_FMS_NUMERIC: Record<string, number> = {
 
 type OutboundSubscription = ReturnType<typeof trpc.notes.updateSubscription.subscribe> | undefined;
 let outboundNoteSubscription: OutboundSubscription;
+let extensionConfigSubscription: { unsubscribe: () => void } | undefined;
 
 const manifestData = chrome.runtime.getManifest();
 export const FMS = "10.0.100.5";
@@ -95,6 +96,8 @@ async function stop() {
 	stopSchedulePolling();
 	outboundNoteSubscription?.unsubscribe();
 	outboundNoteSubscription = undefined;
+	extensionConfigSubscription?.unsubscribe();
+	extensionConfigSubscription = undefined;
 	await source?.stop();
 }
 
@@ -189,6 +192,7 @@ async function start() {
 		console.log("Field monitor disabled, skipping realtime source");
 		if (!(eventCode || eventToken)) return;
 		await updateValues();
+		startExtensionConfigSync();
 		if (fmsApiEnabled) {
 			startSchedulePolling();
 			startTeamPolling();
@@ -212,6 +216,7 @@ async function start() {
 	if (!(eventCode || eventToken)) return;
 
 	await updateValues();
+	startExtensionConfigSync();
 	if (fmsApiEnabled) {
 		startSchedulePolling();
 		startTeamPolling();
@@ -238,6 +243,49 @@ function buildSource(): FieldDataSource {
 		return new CheesyArenaSource(cheesyHost(), manifestData.version, () => eventCode, id);
 	}
 	return new FmsSource(FMS, manifestData.version);
+}
+
+// #region Remote config sync
+
+/** The extension settings mirrored to the server for remote configuration. */
+function currentExtensionConfig() {
+	return { enabled, fieldMonitor, useSignalR, fmsApiEnabled, sourceMode, cheesyPort };
+}
+
+/** Report the current config + version to the server so any device can see it. */
+function reportExtensionState() {
+	if (!eventToken) return;
+	trpc.extension.reportState
+		.mutate({ extensionId: id, version: manifestData.version, fmsApi, config: currentExtensionConfig() })
+		.catch((err) => console.warn("Extension reportState failed:", err));
+}
+
+/**
+ * Report current config to the server and subscribe for remote config pushes so
+ * the extension can be reconfigured from any device. A pushed config is written
+ * to chrome.storage.local, whose change listener restarts the extension so the
+ * new settings take effect (and reportState then confirms the applied state).
+ */
+function startExtensionConfigSync() {
+	extensionConfigSubscription?.unsubscribe();
+	reportExtensionState();
+	extensionConfigSubscription = trpc.extension.configSubscription.subscribe(
+		{ extensionId: id },
+		{
+			onData: (config) => {
+				const updates: Record<string, any> = {};
+				if (config.enabled !== undefined) updates.enabled = config.enabled;
+				if (config.fieldMonitor !== undefined) updates.fieldMonitor = config.fieldMonitor;
+				if (config.useSignalR !== undefined) updates.useSignalR = config.useSignalR;
+				if (config.fmsApiEnabled !== undefined) updates.fmsApiEnabled = config.fmsApiEnabled;
+				if (config.sourceMode !== undefined)
+					updates.sourceMode = config.sourceMode === "cheesy" ? "cheesy" : "fms";
+				if (config.cheesyPort !== undefined) updates.cheesyPort = sanitizeCheesyPort(config.cheesyPort);
+				if (Object.keys(updates).length > 0) chrome.storage.local.set(updates);
+			},
+			onError: (err) => console.warn("Extension configSubscription error:", err),
+		},
+	);
 }
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {

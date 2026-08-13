@@ -28,6 +28,7 @@ import { fieldMonitorRouter } from "./router/field-monitor";
 import { matchRouter } from "./router/logs";
 import { aiReportRouter } from "./router/ai-report";
 import { matchEventsRouter } from "./router/match-events";
+import { extensionRouter } from "./router/extension";
 import {
 	addNoteMessageFromSlack,
 	createFromNexus,
@@ -86,6 +87,7 @@ const appRouter = router({
 	cycles: cycleRouter,
 	notes: notesRouter,
 	matchEvents: matchEventsRouter,
+	extension: extensionRouter,
 	aiReport: aiReportRouter,
 	app: router({
 		version: publicProcedure.query(() => {

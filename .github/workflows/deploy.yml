@@ -22,10 +22,10 @@ jobs:
                     local uuid="$1" name="$2"
                     if [ -z "$uuid" ]; then echo "$name: no UUID configured, skipping"; return 0; fi
                     local dep
-                    dep=$(curl -s -X POST "$CO/deploy?uuid=$uuid&force=false" -H "$AUTH" | grep -o '"deployment_uuid":"[^"]*"' | head -1 | cut -d'"' -f4)
+                    dep=$(curl -s -X POST "$CO/deploy?uuid=$uuid&force=false" -H "$AUTH" | python3 -c 'import sys,json;print(json.load(sys.stdin)["deployments"][0]["deployment_uuid"])')
                     echo "$name -> deployment $dep"
                     for i in $(seq 1 90); do
-                      s=$(curl -s "$CO/deployments/$dep" -H "$AUTH" | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
+                      s=$(curl -s "$CO/deployments/$dep" -H "$AUTH" | python3 -c 'import sys,json;print(json.load(sys.stdin).get("status",""))')
                       echo "  $name attempt $i: $s"
                       [ "$s" = "finished" ] && return 0
                       { [ "$s" = "failed" ] || [ "$s" = "error" ]; } && { echo "$name failed"; return 1; }

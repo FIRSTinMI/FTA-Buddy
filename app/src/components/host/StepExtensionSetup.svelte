@@ -13,7 +13,7 @@
 	let teams: number[] = [];
 	let waitingForFirstConnectionTest = $state(true);
 	let fieldMonitor = $state(!$hostWizardStore.notepadOnly);
-	let useSignalR = $state($hostWizardStore.useSignalR ?? false);
+	let useSignalR = $state($hostWizardStore.useSignalR ?? true);
 	let fmsApiEnabled = $state($hostWizardStore.fmsApiEnabled ?? true);
 	let sourceMode = $state<"fms" | "cheesy">($hostWizardStore.sourceMode ?? "fms");
 	// Cheesy Arena's IP is fixed by FRC convention (10.0.100.5); only the port is configurable.
@@ -24,6 +24,18 @@
 			{ source: "page", type: "enable", fieldMonitor, useSignalR, fmsApiEnabled, sourceMode, cheesyPort },
 			"*",
 		);
+	});
+
+	// Friendly name for the selected field system (the detection indicator uses it).
+	let fieldSystemName = $derived(sourceMode === "cheesy" ? "Cheesy Arena" : "FMS");
+
+	$effect(() => {
+		// Re-ping shortly after a field-system switch so the indicator updates
+		// promptly instead of sitting on "Not Detected" (the extension needs a
+		// moment to rebuild its data source for the new mode).
+		sourceMode;
+		const t = setTimeout(() => window.postMessage({ source: "page", type: "ping" }, "*"), 600);
+		return () => clearTimeout(t);
 	});
 
 	let canAdvance = $derived(
@@ -144,9 +156,9 @@
 			<div class="inline-flex gap-2 font-bold">
 				<Indicator color={fmsDetected ? "green" : "red"} class="my-auto" />
 				{#if fmsDetected}
-					<span class="text-green-500">FMS Detected</span>
+					<span class="text-green-500">{fieldSystemName} Detected</span>
 				{:else}
-					<span class="text-red-500">FMS Not Detected</span>
+					<span class="text-red-500">{fieldSystemName} Not Detected</span>
 				{/if}
 			</div>
 		{/if}
@@ -155,50 +167,52 @@
 	<div class="flex flex-col gap-4 mb-6">
 		<!-- Card 0: Field System -->
 		<div class="flex flex-col gap-3 border border-neutral-700 rounded-xl p-4">
-			<div class="flex items-center justify-between">
-				<div>
+			<div class="flex items-center justify-between gap-4">
+				<div class="text-left min-w-0">
 					<p class="font-semibold">Field System</p>
 					<p class="text-sm text-gray-400">
 						The field management system at your event. Choose Cheesy Arena if you are not running official
 						FMS.
 					</p>
 				</div>
-				<Select bind:value={sourceMode} class="ml-4 w-44 shrink-0">
+				<Select bind:value={sourceMode} class="w-44 shrink-0">
 					<option value="fms">FMS</option>
 					<option value="cheesy">Cheesy Arena</option>
 				</Select>
 			</div>
 
 			{#if sourceMode === "cheesy"}
-				<div class="flex items-center justify-between border-t border-neutral-700 pt-3">
-					<div>
+				<div class="flex items-center justify-between gap-4 border-t border-neutral-700 pt-3">
+					<div class="text-left min-w-0">
 						<p class="font-semibold">Cheesy Arena Port</p>
 						<p class="text-sm text-gray-400">
 							Port of the Cheesy Arena web server on <code>10.0.100.5</code>. Leave at the default
 							<code>8080</code> unless you changed it.
 						</p>
 					</div>
-					<Input type="number" min="1" max="65535" bind:value={cheesyPort} placeholder="8080" class="ml-4 w-44 shrink-0" />
+					<div class="w-28 shrink-0">
+						<Input type="number" min="1" max="65535" bind:value={cheesyPort} placeholder="8080" />
+					</div>
 				</div>
 			{/if}
 		</div>
 
 		<!-- Card 1: Field Monitor -->
 		<div class="flex flex-col gap-3 border border-neutral-700 rounded-xl p-4">
-			<div class="flex items-center justify-between">
-				<div>
+			<div class="flex items-center justify-between gap-4">
+				<div class="text-left min-w-0">
 					<p class="font-semibold">Field Monitor</p>
 					<p class="text-sm text-gray-400">
 						Streams real-time field data to your device, including robot connection status, battery levels,
 						and cycle timing.
 					</p>
 				</div>
-				<Toggle bind:checked={fieldMonitor} class="ml-4 shrink-0" />
+				<Toggle bind:checked={fieldMonitor} class="shrink-0" />
 			</div>
 
 			{#if fieldMonitor && sourceMode === "fms"}
-				<div class="flex items-center justify-between border-t border-neutral-700 pt-3">
-					<div>
+				<div class="flex items-center justify-between gap-4 border-t border-neutral-700 pt-3">
+					<div class="text-left min-w-0">
 						<p class="font-semibold">Use SignalR</p>
 						<p class="text-sm text-gray-400">
 							Connects to FMS via SignalR for a more integrated experience including live match state,
@@ -206,22 +220,22 @@
 							FieldMonitor page instead.
 						</p>
 					</div>
-					<Toggle bind:checked={useSignalR} class="ml-4 shrink-0" />
+					<Toggle bind:checked={useSignalR} class="shrink-0" />
 				</div>
 			{/if}
 		</div>
 
 		<!-- Card 2: FMS API Calls -->
 		<div class="flex flex-col gap-3 border border-neutral-700 rounded-xl p-4">
-			<div class="flex items-center justify-between">
-				<div>
+			<div class="flex items-center justify-between gap-4">
+				<div class="text-left min-w-0">
 					<p class="font-semibold">FMS API Calls</p>
 					<p class="text-sm text-gray-400">
 						Enables fetching match logs, team lists, and schedule details directly from FMS. When disabled,
 						schedule data falls back to The Blue Alliance and match logs will not be captured.
 					</p>
 				</div>
-				<Toggle bind:checked={fmsApiEnabled} class="ml-4 shrink-0" />
+				<Toggle bind:checked={fmsApiEnabled} class="shrink-0" />
 			</div>
 		</div>
 	</div>

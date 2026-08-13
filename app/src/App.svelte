@@ -595,7 +595,7 @@
 	{#snippet header()}
 		<h1 class="text-2xl font-bold">Changelog</h1>
 	{/snippet}
-	<div bind:innerHTML={changelog} contenteditable class="text-left text-black dark:text-white"></div>
+	<div class="text-left text-black dark:text-white">{@html changelog}</div>
 	{#snippet footer()}
 		<Button color="primary">Close</Button>
 	{/snippet}

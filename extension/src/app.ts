@@ -9,7 +9,6 @@ const appExtensionData = chrome.runtime.getManifest();
 		useSignalR: boolean,
 		fmsApiEnabled: boolean,
 		sourceMode: "fms" | "cheesy",
-		cheesyHost: string,
 		eventCode: string,
 		eventToken: string,
 		id: string;
@@ -26,7 +25,6 @@ const appExtensionData = chrome.runtime.getManifest();
 				"useSignalR",
 				"fmsApiEnabled",
 				"sourceMode",
-				"cheesyHost",
 				"eventToken",
 				"id",
 			],
@@ -41,7 +39,6 @@ const appExtensionData = chrome.runtime.getManifest();
 				useSignalR = item.useSignalR !== false; // default true
 				fmsApiEnabled = item.fmsApiEnabled !== false; // default true
 				sourceMode = item.sourceMode === "cheesy" ? "cheesy" : "fms"; // default fms
-				cheesyHost = item.cheesyHost ? String(item.cheesyHost) : "";
 				eventToken = String(item.eventToken);
 				id = String(item.id);
 				resolve(void 0);
@@ -61,7 +58,6 @@ const appExtensionData = chrome.runtime.getManifest();
 			useSignalR,
 			fmsApiEnabled,
 			sourceMode,
-			cheesyHost,
 			signalR: enabled,
 			fms: extra?.fms ?? false,
 			id,
@@ -74,10 +70,6 @@ const appExtensionData = chrome.runtime.getManifest();
 		if ("sourceMode" in data) {
 			sourceMode = data.sourceMode === "cheesy" ? "cheesy" : "fms";
 			updates.sourceMode = sourceMode;
-		}
-		if ("cheesyHost" in data) {
-			cheesyHost = String(data.cheesyHost);
-			updates.cheesyHost = cheesyHost;
 		}
 	}
 

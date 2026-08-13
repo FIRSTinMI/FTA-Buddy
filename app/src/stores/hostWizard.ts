@@ -5,6 +5,5 @@ export const hostWizardStore = writable({
 	useSignalR: false,
 	fmsApiEnabled: true,
 	sourceMode: "fms" as "fms" | "cheesy",
-	cheesyHost: "10.0.100.5:8080",
 	teams: [] as number[],
 });

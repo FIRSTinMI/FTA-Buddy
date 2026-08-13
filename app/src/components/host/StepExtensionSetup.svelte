@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, Indicator, Input, Select, Toggle } from "flowbite-svelte";
+	import { Button, Indicator, Select, Toggle } from "flowbite-svelte";
 	import { onMount } from "svelte";
 	import { navigate } from "../../router";
 	import { hostWizardStore } from "../../stores/hostWizard";
@@ -16,11 +16,12 @@
 	let useSignalR = $state($hostWizardStore.useSignalR ?? false);
 	let fmsApiEnabled = $state($hostWizardStore.fmsApiEnabled ?? true);
 	let sourceMode = $state<"fms" | "cheesy">($hostWizardStore.sourceMode ?? "fms");
-	let cheesyHost = $state($hostWizardStore.cheesyHost ?? "10.0.100.5:8080");
+	// Cheesy Arena's host is fixed; the extension is hard-coded to this address.
+	const CHEESY_HOST = "10.0.100.5:8080";
 
 	$effect(() => {
 		window.postMessage(
-			{ source: "page", type: "enable", fieldMonitor, useSignalR, fmsApiEnabled, sourceMode, cheesyHost },
+			{ source: "page", type: "enable", fieldMonitor, useSignalR, fmsApiEnabled, sourceMode },
 			"*",
 		);
 	});
@@ -63,7 +64,7 @@
 	});
 
 	function advance() {
-		hostWizardStore.set({ notepadOnly: !fieldMonitor, useSignalR, fmsApiEnabled, sourceMode, cheesyHost, teams });
+		hostWizardStore.set({ notepadOnly: !fieldMonitor, useSignalR, fmsApiEnabled, sourceMode, teams });
 		navigate("/manage/host/create");
 	}
 </script>
@@ -81,7 +82,7 @@
 		FTA Buddy needs the Chrome extension installed and connected to your field system
 		{#if sourceMode === "cheesy"}
 			(Cheesy Arena at
-			<code class="bg-neutral-200 dark:bg-neutral-900 px-2 py-0.5 rounded-lg">{cheesyHost}</code>)
+			<code class="bg-neutral-200 dark:bg-neutral-900 px-2 py-0.5 rounded-lg">{CHEESY_HOST}</code>)
 		{:else}
 			(FMS at
 			<code class="bg-neutral-200 dark:bg-neutral-900 px-2 py-0.5 rounded-lg">10.0.100.5</code>)
@@ -119,7 +120,6 @@
 									useSignalR,
 									fmsApiEnabled,
 									sourceMode,
-									cheesyHost,
 								},
 								"*",
 							)}>Enable</button
@@ -167,18 +167,6 @@
 					<option value="cheesy">Cheesy Arena</option>
 				</Select>
 			</div>
-
-			{#if sourceMode === "cheesy"}
-				<div class="flex items-center justify-between border-t border-neutral-700 pt-3">
-					<div>
-						<p class="font-semibold">Cheesy Arena Host</p>
-						<p class="text-sm text-gray-400">
-							Host and port of the Cheesy Arena web server (e.g. <code>10.0.100.5:8080</code>).
-						</p>
-					</div>
-					<Input bind:value={cheesyHost} placeholder="10.0.100.5:8080" class="ml-4 w-44 shrink-0" />
-				</div>
-			{/if}
 		</div>
 
 		<!-- Card 1: Field Monitor -->

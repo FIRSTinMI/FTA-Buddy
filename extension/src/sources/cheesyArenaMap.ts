@@ -87,10 +87,12 @@ function dsState(station: CheesyAllianceStation, fieldState: FieldState): DSStat
 	return DSState.RED;
 }
 
-function enableState(station: CheesyAllianceStation): EnableState {
+function enableState(station: CheesyAllianceStation, fieldState: FieldState): EnableState {
 	const dsConn = station.DsConn;
 	if (station.EStop || dsConn?.EStop) return EnableState.ESTOP;
-	if (station.AStop || dsConn?.AStop) return EnableState.ASTOP;
+	// A-stop only latches the robot for the autonomous period; gate on auto to
+	// stay consistent with dsState (an A-stop shown in teleop would contradict it).
+	if ((station.AStop || dsConn?.AStop) && fieldState === FieldState.MATCH_RUNNING_AUTO) return EnableState.ASTOP;
 	if (dsConn?.Enabled) return dsConn.Auto ? EnableState.GREEN_A : EnableState.GREEN_T;
 	return EnableState.RED;
 }
@@ -105,7 +107,7 @@ export function mapRobot(station: CheesyAllianceStation, fieldState: FieldState)
 		radio: dsConn?.RadioLinked ?? false,
 		rio: dsConn?.RioLinked ?? false,
 		code: dsConn?.RobotLinked ?? false,
-		enabled: enableState(station),
+		enabled: enableState(station, fieldState),
 		bwu: wifi?.MBits ?? 0,
 		battery: dsConn?.BatteryVoltage ?? 0,
 		ping: dsConn?.DsRobotTripTimeMs ?? 0,

@@ -2,8 +2,8 @@
 
 FTA Buddy can read a [Cheesy Arena](https://github.com/Team254/cheesy-arena) field instead of
 official FMS. Pick the field system in the host wizard's **Extension Setup** step (or set
-`sourceMode` / `cheesyHost` in extension storage). FMS remains the default; nothing changes for FMS
-events.
+`sourceMode` in extension storage). FMS remains the default; nothing changes for FMS
+events. Cheesy Arena is expected at the standard `10.0.100.5:8080`; the host is not configurable.
 
 ## How it works
 
@@ -35,12 +35,11 @@ Match logs are accumulated live from the 2 Hz `arenaStatus` stream (Cheesy Arena
 Cheesy Arena's websocket uses gorilla/websocket's default same-origin check, which rejects the
 extension's `Origin: chrome-extension://<id>` header. The extension uses a `declarativeNetRequest`
 session rule (`cheesyOriginRule.ts`) to strip the Origin header on the websocket upgrade to the
-configured Cheesy Arena host, so the check passes. No Cheesy Arena change is required. This needs the
+Cheesy Arena host, so the check passes. No Cheesy Arena change is required. This needs the
 `declarativeNetRequestWithHostAccess` permission and host access to the Cheesy Arena host.
 
-> The default `cheesyHost` is `10.0.100.5:8080`, covered by the existing `http://10.0.100.5/*` host
-> permission (match patterns ignore the port). If Cheesy Arena runs on a different host, add that host
-> to the extension's `host_permissions`.
+> The Cheesy Arena host is fixed at `10.0.100.5:8080` (`CHEESY_HOST` in `background.ts`), covered by
+> the existing `http://10.0.100.5/*` host permission (match patterns ignore the port).
 
 ## Known limitations
 

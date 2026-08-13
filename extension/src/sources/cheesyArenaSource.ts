@@ -31,6 +31,19 @@ const RECONNECT_DELAY_MS = 3000;
 const STATION_ENTRIES = Object.entries(CHEESY_STATION_TO_ROBOT) as [CheesyStation, ROBOT][];
 
 /**
+ * A finished match captured at match end. Snapshotting the log buffers and
+ * match context up front means a fast next-match load (which resets the live
+ * buffers) can't clear the logs out from under an in-flight upload.
+ */
+interface MatchSnapshot {
+	ref: MatchRef;
+	fmsMatchId: string;
+	actualStartTime: string;
+	teams: CheesyMatch | undefined;
+	logBuffers: Record<ROBOT, FMSLogFrame[]>;
+}
+
+/**
  * Field data source backed by a Cheesy Arena field (github.com/Team254/cheesy-arena).
  *
  * It subscribes to Cheesy Arena's `/api/arena/websocket` notifier stream and
@@ -61,6 +74,15 @@ export class CheesyArenaSource extends TypedEventEmitter<SourceEventMap> impleme
 	private actualStartTime: string | null = null;
 	private logBuffers: Record<ROBOT, FMSLogFrame[]> = this.emptyLogBuffers();
 	private uploadingIds = new Set<string>();
+	private uploadedIds = new Set<string>();
+	private pendingUpload: MatchSnapshot | null = null;
+
+	/**
+	 * Number of finalized plays seen for each `${level}-${matchNumber}` key.
+	 * Cheesy Arena's wire data has no replay index, so we derive a monotonically
+	 * increasing play number locally to keep each replay's fmsMatchId distinct.
+	 */
+	private playCounts = new Map<string, number>();
 
 	constructor(
 		private readonly host: string,
@@ -169,14 +191,19 @@ export class CheesyArenaSource extends TypedEventEmitter<SourceEventMap> impleme
 
 	private handleMatchLoad(data: CheesyMatchLoad): void {
 		this.matchLoad = data;
-		this.current = {
-			matchNumber: data.Match.TypeOrder,
-			playNumber: data.IsReplay ? 2 : 1,
-			level: mapLevel(data.Match.Type),
-		};
+		const level = mapLevel(data.Match.Type);
+		const matchNumber = data.Match.TypeOrder;
+		const key = this.matchKey(level, matchNumber);
+		let playNumber = (this.playCounts.get(key) ?? 0) + 1;
+		// If Cheesy Arena flags a replay but we have no local history for it (e.g.
+		// the service worker restarted mid-event), floor at 2 so the replay's
+		// fmsMatchId can't collide with the original play 1.
+		if (data.IsReplay && playNumber < 2) playNumber = 2;
+		this.current = { matchNumber, playNumber, level };
 		// A freshly loaded match is the Cheesy Arena analog of FMS prestart-complete.
 		this.scoresPosted = false;
 		this.actualStartTime = null;
+		this.pendingUpload = null;
 		this.logBuffers = this.emptyLogBuffers();
 		this.frame.field = FieldState.PRESTART_COMPLETED;
 		this.frame.match = this.current.matchNumber;
@@ -226,7 +253,7 @@ export class CheesyArenaSource extends TypedEventEmitter<SourceEventMap> impleme
 				break;
 			case FieldState.MATCH_OVER:
 				this.emit("cycleTime", "end", "");
-				setTimeout(() => this.uploadMatchLogs().catch((err) => console.error("CA log upload failed:", err)), 1500);
+				this.finalizeMatch();
 				break;
 		}
 	}
@@ -235,6 +262,8 @@ export class CheesyArenaSource extends TypedEventEmitter<SourceEventMap> impleme
 		this.scoresPosted = true;
 		this.frame.field = FieldState.READY_FOR_POST_RESULT;
 		this.emit("cycleTime", "scoresPosted", "");
+		// Fallback in case the match-over path was missed; uploadedIds dedups so
+		// this won't re-send what finalizeMatch already uploaded.
 		this.uploadMatchLogs().catch((err) => console.error("CA log upload failed:", err));
 	}
 
@@ -353,32 +382,67 @@ export class CheesyArenaSource extends TypedEventEmitter<SourceEventMap> impleme
 
 	// #region Match log upload
 
-	public async uploadMatchLogs(): Promise<void> {
+	/**
+	 * Snapshot the just-finished match and upload it. Marking the play finalized
+	 * here (rather than on the next load) means a replay of the same match gets
+	 * the next play number instead of colliding on the same fmsMatchId.
+	 */
+	private finalizeMatch(): void {
+		const snapshot = this.snapshotMatch();
+		if (!snapshot) return;
+		this.pendingUpload = snapshot;
+		this.playCounts.set(this.matchKey(snapshot.ref.level, snapshot.ref.matchNumber), snapshot.ref.playNumber);
+		this.uploadSnapshot(snapshot).catch((err) => console.error("CA log upload failed:", err));
+	}
+
+	/**
+	 * Capture the current match context and log buffers. Returns null when there
+	 * is nothing worth uploading (no event code, or no frames recorded).
+	 */
+	private snapshotMatch(): MatchSnapshot | null {
 		const eventCode = this.eventCodeProvider();
 		if (!eventCode) {
-			console.warn("CA uploadMatchLogs: no event code configured, skipping");
-			return;
+			console.warn("CA snapshotMatch: no event code configured, skipping");
+			return null;
 		}
-		const fmsMatchId = buildFmsMatchId(eventCode, this.current.level, this.current.matchNumber, this.current.playNumber);
-		if (this.uploadingIds.has(fmsMatchId)) return;
-
 		const hasFrames = Object.values(this.logBuffers).some((frames) => frames.length > 0);
 		if (!hasFrames) {
-			console.log(`CA uploadMatchLogs: no frames buffered for ${fmsMatchId}, skipping`);
-			return;
+			console.log("CA snapshotMatch: no frames buffered, skipping");
+			return null;
 		}
+		// handleMatchLoad reassigns this.logBuffers to a fresh object and stops
+		// accumulating once the match is over, so holding this reference is safe.
+		return {
+			ref: { ...this.current },
+			fmsMatchId: buildFmsMatchId(eventCode, this.current.level, this.current.matchNumber, this.current.playNumber),
+			actualStartTime: this.actualStartTime ?? new Date().toISOString(),
+			teams: this.matchLoad?.Match,
+			logBuffers: this.logBuffers,
+		};
+	}
 
-		const teams = this.matchLoad?.Match;
-		this.uploadingIds.add(fmsMatchId);
+	public async uploadMatchLogs(): Promise<void> {
+		const snapshot = this.pendingUpload ?? this.snapshotMatch();
+		if (!snapshot) return;
+		await this.uploadSnapshot(snapshot);
+	}
+
+	private async uploadSnapshot(snap: MatchSnapshot): Promise<void> {
+		if (this.uploadedIds.has(snap.fmsMatchId) || this.uploadingIds.has(snap.fmsMatchId)) return;
+		const eventCode = this.eventCodeProvider();
+		if (!eventCode) return;
+
+		const teams = snap.teams;
+		this.uploadingIds.add(snap.fmsMatchId);
 		try {
 			await trpc.match.putCompressedMatchLogs.mutate({
 				event: eventCode,
-				fmsMatchId,
+				fmsMatchId: snap.fmsMatchId,
 				fmsEventId: eventCode,
-				matchNumber: this.current.matchNumber,
-				playNumber: this.current.playNumber,
-				level: this.current.level,
-				actualStartTime: this.actualStartTime ?? new Date().toISOString(),
+				matchNumber: snap.ref.matchNumber,
+				playNumber: snap.ref.playNumber,
+				level: snap.ref.level,
+				actualStartTime: snap.actualStartTime,
 				teamNumberRed1: teams?.Red1,
 				teamNumberRed2: teams?.Red2,
 				teamNumberRed3: teams?.Red3,
@@ -386,17 +450,18 @@ export class CheesyArenaSource extends TypedEventEmitter<SourceEventMap> impleme
 				teamNumberBlue2: teams?.Blue2,
 				teamNumberBlue3: teams?.Blue3,
 				logs: {
-					red1: compressStationLog(this.logBuffers.red1),
-					red2: compressStationLog(this.logBuffers.red2),
-					red3: compressStationLog(this.logBuffers.red3),
-					blue1: compressStationLog(this.logBuffers.blue1),
-					blue2: compressStationLog(this.logBuffers.blue2),
-					blue3: compressStationLog(this.logBuffers.blue3),
+					red1: compressStationLog(snap.logBuffers.red1),
+					red2: compressStationLog(snap.logBuffers.red2),
+					red3: compressStationLog(snap.logBuffers.red3),
+					blue1: compressStationLog(snap.logBuffers.blue1),
+					blue2: compressStationLog(snap.logBuffers.blue2),
+					blue3: compressStationLog(snap.logBuffers.blue3),
 				},
 			});
-			console.log(`CA match logs uploaded for ${fmsMatchId}`);
+			this.uploadedIds.add(snap.fmsMatchId);
+			console.log(`CA match logs uploaded for ${snap.fmsMatchId}`);
 		} finally {
-			this.uploadingIds.delete(fmsMatchId);
+			this.uploadingIds.delete(snap.fmsMatchId);
 		}
 	}
 
@@ -410,6 +475,10 @@ export class CheesyArenaSource extends TypedEventEmitter<SourceEventMap> impleme
 	}
 
 	// #region Helpers
+
+	private matchKey(level: TournamentLevel, matchNumber: number): string {
+		return `${level}-${matchNumber}`;
+	}
 
 	private emptyLogBuffers(): Record<ROBOT, FMSLogFrame[]> {
 		return {

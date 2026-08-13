@@ -244,11 +244,6 @@
 		track("page_view", eventCode, { page });
 	});
 
-	let approvalWarningDismissed = $state(localStorage.getItem("approvalWarningDismissed") === "true");
-	function dismissApprovalWarning() {
-		approvalWarningDismissed = true;
-		localStorage.setItem("approvalWarningDismissed", "true");
-	}
 
 	// Settings modal
 
@@ -987,18 +982,6 @@
 			</div>
 		</div>
 	{/if}
-
-	<Modal open={!approvalWarningDismissed} dismissable={false}>
-		{#snippet header()}
-			<h2 class="text-xl font-bold">Unofficial Tool</h2>
-		{/snippet}
-		<p class="text-gray-700 dark:text-gray-300">
-			FTA Buddy is <strong>not approved for use at official FIRST events.</strong> Only use this tool at offseason events.
-		</p>
-		{#snippet footer()}
-			<Button onclick={dismissApprovalWarning}>I Understand</Button>
-		{/snippet}
-	</Modal>
 
 	<div class="flex-1 min-h-0 overflow-auto pb-safe">
 		<SvRouter />

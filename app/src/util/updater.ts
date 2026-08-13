@@ -3,7 +3,7 @@ import { eventStore } from "../stores/event";
 import { settingsStore } from "../stores/settings";
 import { userStore } from "../stores/user";
 
-export const LATEST_EXTENSION_VERSION = "1.26.14";
+export const LATEST_EXTENSION_VERSION = "1.26.18";
 
 interface Version {
 	changelog?: string;
@@ -11,6 +11,14 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.8.0": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.8.0</h1>
+        <ul>
+        <li>Cheesy Arena support: the browser extension can now read a Cheesy Arena field directly, so you can run FTA Buddy at offseason events that aren't using official FMS</li>
+        <li>Extension <strong>v1.26.18</strong></li>
+        </ul>`,
+	},
 	"2.7.7.2": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.7.2</h1>

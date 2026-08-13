@@ -53,6 +53,10 @@
 				<li>Reference materials and diagrams</li>
 			</ul>
 			<p class="py-1">You can access all features through the sidebar or bottom navigation.</p>
+			<p class="py-1">
+				Running an offseason event on <strong>Cheesy Arena</strong>? The FTA Buddy browser extension can now
+				connect straight to a Cheesy Arena field, so you get live monitoring and match logs without official FMS.
+			</p>
 			{#if $installPrompt}
 				<h2 class="font-bold py-1">Install this App</h2>
 				<p class="py-1">Recommended for the best experience.</p>

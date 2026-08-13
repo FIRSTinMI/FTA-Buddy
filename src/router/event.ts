@@ -496,7 +496,7 @@ export const eventRouter = router({
 							event_code: string;
 							id: number;
 							username: string;
-							role: "FTA" | "FTAA" | "CSA" | "RI" | "System";
+							role: "FTA" | "FTAA" | "CSA" | "RI" | "System" | "Scorekeeper";
 						}[],
 					),
 			eventCodesList.length > 0

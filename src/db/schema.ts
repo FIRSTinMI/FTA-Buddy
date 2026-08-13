@@ -12,11 +12,12 @@ import {
 	serial,
 	text,
 	timestamp,
+	unique,
 	uuid,
 	varchar,
 } from "drizzle-orm/pg-core";
 import type { EventAutoEventSettings, FmsNoteMetadata } from "../../shared/types";
-export const roleEnum = pgEnum("role", ["FTA", "FTAA", "CSA", "RI", "System"]);
+export const roleEnum = pgEnum("role", ["FTA", "FTAA", "CSA", "RI", "System", "Scorekeeper"]);
 
 export const users = pgTable(
 	"users",
@@ -503,10 +504,95 @@ export const debugLogs = pgTable(
 	],
 );
 
+// #region Scorekeeper view (playoff lineups)
+
+/** One row per playoff alliance per event. The roster a lineup draws from. */
+export const playoffAlliances = pgTable(
+	"playoff_alliances",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		event_code: varchar("event_code")
+			.references(() => events.code)
+			.notNull(),
+		// 1..8, by qualification rank (10.6.1 REBUILT).
+		number: integer("number").notNull(),
+		// ALLIANCE Lead / captain.
+		captain_team: integer("captain_team").notNull(),
+		// 1st selected pick.
+		pick1_team: integer("pick1_team").notNull(),
+		// 2nd selected pick (nullable only for degenerate 2-team alliances).
+		pick2_team: integer("pick2_team"),
+		// Set when a backup coupon is accepted (10.6.3). Makes the alliance 4 teams.
+		backup_team: integer("backup_team"),
+		created_at: timestamp("created_at").notNull().defaultNow(),
+		updated_at: timestamp("updated_at").notNull().defaultNow(),
+	},
+	(t) => [
+		unique("playoff_alliances_event_number_uq").on(t.event_code, t.number),
+		index("playoff_alliances_event_code_idx").on(t.event_code),
+	],
+);
+
+export type PlayoffAlliance = typeof playoffAlliances.$inferSelect;
+
+export const lineupStatusEnum = pgEnum("lineup_status", ["accepted", "superseded", "rejected"]);
+export const lineupSourceEnum = pgEnum("lineup_source", ["scorekeeper", "alliance"]);
+
+/**
+ * Versioned lineup cards. Each submission for a given (event, alliance, match)
+ * inserts a new row with an incremented version; the prior accepted row for that
+ * key is flipped to `superseded`. `rejected` records a denied late card (T613).
+ */
+export const lineupCards = pgTable(
+	"lineup_cards",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		event_code: varchar("event_code")
+			.references(() => events.code)
+			.notNull(),
+		// The alliance (1..8) this lineup is for.
+		alliance_number: integer("alliance_number").notNull(),
+		// The target playoff match this lineup applies to.
+		match_number: integer("match_number").notNull(),
+		play_number: integer("play_number").notNull().default(1),
+		// 1-based, per (event, alliance, match).
+		version: integer("version").notNull(),
+		// Team assigned to each DRIVER STATION. Null = station empty (robot cannot play).
+		station1_team: integer("station1_team"),
+		station2_team: integer("station2_team"),
+		station3_team: integer("station3_team"),
+		uses_backup: boolean("uses_backup").notNull().default(false),
+		status: lineupStatusEnum("status").notNull().default("accepted"),
+		source: lineupSourceEnum("source").notNull().default("scorekeeper"),
+		submitted_by_id: integer("submitted_by_id").references(() => users.id),
+		submitted_by_name: varchar("submitted_by_name"),
+		submitted_at: timestamp("submitted_at").notNull().defaultNow(),
+		// Computed T613 deadline at submit time (expected start - 2 min). Null when unknown.
+		deadline_at: timestamp("deadline_at"),
+		is_late: boolean("is_late").notNull().default(false),
+		accepted_anyway: boolean("accepted_anyway").notNull().default(false),
+		accepted_anyway_by_id: integer("accepted_anyway_by_id").references(() => users.id),
+		accepted_anyway_at: timestamp("accepted_anyway_at"),
+		note: varchar("note"),
+		created_at: timestamp("created_at").notNull().defaultNow(),
+	},
+	(t) => [
+		index("lineup_cards_event_code_idx").on(t.event_code),
+		index("lineup_cards_event_alliance_idx").on(t.event_code, t.alliance_number),
+		index("lineup_cards_event_match_idx").on(t.event_code, t.match_number),
+	],
+);
+
+export type LineupCard = typeof lineupCards.$inferSelect;
+
+// #endregion
+
 export default {
 	events,
 	users,
 	eventUsers,
+	playoffAlliances,
+	lineupCards,
 	messages,
 	noteFollowers,
 	matchLogs,

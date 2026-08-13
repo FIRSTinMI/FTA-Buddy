@@ -134,6 +134,13 @@
       "when": 1781700000000,
       "tag": "0018_debug_logs",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1786649846926,
+      "tag": "0019_medical_loners",
+      "breakpoints": true
     }
   ]
 }

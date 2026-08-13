@@ -569,7 +569,7 @@ export interface CycleData {
 export interface Profile {
 	id: number;
 	username: string;
-	role: "FTAA" | "FTA" | "CSA" | "RI" | "System";
+	role: "FTAA" | "FTA" | "CSA" | "RI" | "System" | "Scorekeeper";
 	admin: boolean;
 }
 
@@ -719,6 +719,30 @@ export interface DisconnectionEvent {
 	startIndex: number;
 	endIndex: number;
 }
+
+// #region Scorekeeper view (playoff lineups)
+
+export type AllianceColor = "red" | "blue";
+
+/** Team assigned to each of the three DRIVER STATIONS. null = station empty. */
+export interface LineupStations {
+	station1: number | null;
+	station2: number | null;
+	station3: number | null;
+}
+
+/** How a resolved lineup was arrived at (see resolveLineup, REBUILT T613). */
+export type LineupResolution = "submitted" | "carried-forward" | "default";
+
+export interface ResolvedLineup {
+	stations: LineupStations;
+	resolution: LineupResolution;
+	usesBackup: boolean;
+	/** The card this came from, when resolution is "submitted" or "carried-forward". */
+	cardId: string | null;
+}
+
+// #endregion
 
 /**
  * Issue types that can be auto-detected from match logs.

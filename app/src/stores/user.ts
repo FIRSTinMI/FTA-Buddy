@@ -6,7 +6,7 @@ export interface User {
 	id: number;
 	token: string;
 	eventToken: string;
-	role: "FTA" | "FTAA" | "CSA" | "RI";
+	role: "FTA" | "FTAA" | "CSA" | "RI" | "System" | "Scorekeeper";
 	admin: boolean;
 	meshedEventToken?: string;
 	slack_user_id?: string | null;

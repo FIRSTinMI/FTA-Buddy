@@ -16,7 +16,7 @@ export const VERSIONS: { [key: string]: Version } = {
         <h1 class="text-lg font-bold">v2.7.8.0</h1>
         <ul>
         <li>Cheesy Arena support: the browser extension can now read a Cheesy Arena field directly, so you can run FTA Buddy at offseason events that aren't using official FMS</li>
-        <li>Extension <strong>v1.26.18</strong></li>
+        <li>Extension <strong>v1.26.18</strong>, with a configurable Cheesy Arena port</li>
         </ul>`,
 	},
 	"2.7.7.2": {

@@ -48,8 +48,24 @@ let outboundNoteSubscription: OutboundSubscription;
 
 const manifestData = chrome.runtime.getManifest();
 export const FMS = "10.0.100.5";
-/** Cheesy Arena's standard host:port. Not user-configurable. */
-export const CHEESY_HOST = "10.0.100.5:8080";
+/**
+ * Cheesy Arena runs on the arena server at the FRC-standard 10.0.100.5 (the IP is
+ * fixed by convention and covered by host_permissions regardless of port). Only
+ * the port is configurable, defaulting to Cheesy Arena's own default of 8080.
+ */
+export const CHEESY_IP = "10.0.100.5";
+export const DEFAULT_CHEESY_PORT = 8080;
+
+/** Clamp an arbitrary stored value to a valid port, falling back to the default. */
+export function sanitizeCheesyPort(value: unknown): number {
+	const n = Number(value);
+	return Number.isInteger(n) && n >= 1 && n <= 65535 ? n : DEFAULT_CHEESY_PORT;
+}
+
+/** The Cheesy Arena host:port for the configured port. */
+function cheesyHost(): string {
+	return `${CHEESY_IP}:${cheesyPort}`;
+}
 
 /**
  * The active field data source. Rebuilt in {@link start} from the current
@@ -65,6 +81,7 @@ export let enabled: boolean;
 export let fieldMonitor: boolean = false;
 export let useSignalR: boolean = true;
 export let sourceMode: "fms" | "cheesy" = "fms";
+export let cheesyPort: number = DEFAULT_CHEESY_PORT;
 export let cloud: boolean;
 export let useDev: boolean;
 export let changed: number;
@@ -96,6 +113,7 @@ async function start() {
 				"fieldMonitor",
 				"useSignalR",
 				"sourceMode",
+				"cheesyPort",
 				"id",
 				"eventToken",
 				"fmsApiEnabled",
@@ -137,6 +155,7 @@ async function start() {
 				useSignalR = item.useSignalR !== false; // default true
 				fmsApiEnabled = item.fmsApiEnabled !== false; // default true
 				sourceMode = item.sourceMode === "cheesy" ? "cheesy" : "fms"; // default fms
+				cheesyPort = sanitizeCheesyPort(item.cheesyPort);
 				eventToken = String(item.eventToken);
 				id = String(item.id) || crypto.randomUUID();
 				if (id !== item.id) chrome.storage.local.set({ id });
@@ -161,7 +180,7 @@ async function start() {
 
 	// Cheesy Arena's websocket enforces a same-origin check; strip the extension
 	// Origin header on requests to it so the connection is accepted.
-	if (sourceMode === "cheesy") await setCheesyOriginRule(CHEESY_HOST);
+	if (sourceMode === "cheesy") await setCheesyOriginRule(cheesyHost());
 	else await clearCheesyOriginRule();
 
 	await pingFMS();
@@ -216,7 +235,7 @@ async function start() {
 
 function buildSource(): FieldDataSource {
 	if (sourceMode === "cheesy") {
-		return new CheesyArenaSource(CHEESY_HOST, manifestData.version, () => eventCode, id);
+		return new CheesyArenaSource(cheesyHost(), manifestData.version, () => eventCode, id);
 	}
 	return new FmsSource(FMS, manifestData.version);
 }
@@ -267,6 +286,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 			fieldMonitor,
 			useSignalR,
 			sourceMode,
+			cheesyPort,
 			fmsApiEnabled,
 			id,
 			fmsApi,

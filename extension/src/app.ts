@@ -9,6 +9,7 @@ const appExtensionData = chrome.runtime.getManifest();
 		useSignalR: boolean,
 		fmsApiEnabled: boolean,
 		sourceMode: "fms" | "cheesy",
+		cheesyPort: number,
 		eventCode: string,
 		eventToken: string,
 		id: string;
@@ -25,6 +26,7 @@ const appExtensionData = chrome.runtime.getManifest();
 				"useSignalR",
 				"fmsApiEnabled",
 				"sourceMode",
+				"cheesyPort",
 				"eventToken",
 				"id",
 			],
@@ -39,6 +41,7 @@ const appExtensionData = chrome.runtime.getManifest();
 				useSignalR = item.useSignalR !== false; // default true
 				fmsApiEnabled = item.fmsApiEnabled !== false; // default true
 				sourceMode = item.sourceMode === "cheesy" ? "cheesy" : "fms"; // default fms
+				cheesyPort = Number(item.cheesyPort) || 8080;
 				eventToken = String(item.eventToken);
 				id = String(item.id);
 				resolve(void 0);
@@ -58,6 +61,7 @@ const appExtensionData = chrome.runtime.getManifest();
 			useSignalR,
 			fmsApiEnabled,
 			sourceMode,
+			cheesyPort,
 			signalR: enabled,
 			fms: extra?.fms ?? false,
 			id,
@@ -70,6 +74,11 @@ const appExtensionData = chrome.runtime.getManifest();
 		if ("sourceMode" in data) {
 			sourceMode = data.sourceMode === "cheesy" ? "cheesy" : "fms";
 			updates.sourceMode = sourceMode;
+		}
+		if ("cheesyPort" in data) {
+			const port = Number(data.cheesyPort);
+			cheesyPort = Number.isInteger(port) && port >= 1 && port <= 65535 ? port : 8080;
+			updates.cheesyPort = cheesyPort;
 		}
 	}
 

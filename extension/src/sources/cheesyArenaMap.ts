@@ -176,3 +176,21 @@ export function buildFmsMatchId(
 ): string {
 	return `cheesy-${eventCode}-${level}-${matchNumber}-${playNumber}`;
 }
+
+/**
+ * Map Cheesy Arena's verbose EarlyLateMessage to FMS-style wording. FMS shows
+ * "On Time" when on schedule; Cheesy Arena says "Event is running on schedule".
+ * Match FMS so the field monitor reads the same regardless of field source. The
+ * late/early variants are shortened to the concise ahead/behind form too. Returns
+ * "" for an empty message (test/complete matches) so the caller's "unk" fallback
+ * applies, matching prior behavior.
+ */
+export function mapEarlyLateMessage(msg: string | undefined): string {
+	if (!msg) return "";
+	if (msg === "Event is running on schedule") return "On Time";
+	const late = msg.match(/running (\d+) minutes? late/);
+	if (late) return `${late[1]} min behind`;
+	const early = msg.match(/running (\d+) minutes? early/);
+	if (early) return `${early[1]} min ahead`;
+	return msg;
+}

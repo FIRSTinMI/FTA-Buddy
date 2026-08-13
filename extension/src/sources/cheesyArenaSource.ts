@@ -20,7 +20,7 @@ import {
 	type CheesyMessage,
 	type CheesyStation,
 } from "./cheesyArenaTypes";
-import { buildFmsMatchId, mapFieldState, mapLevel, mapLogFrame, mapRobot } from "./cheesyArenaMap";
+import { buildFmsMatchId, mapEarlyLateMessage, mapFieldState, mapLevel, mapLogFrame, mapRobot } from "./cheesyArenaMap";
 import { compressStationLog, trpc } from "../trpc";
 import type { FieldDataSource, MatchRef, ScheduleResult } from "./types";
 import type { SourceEventMap } from "./emitter";
@@ -188,7 +188,7 @@ export class CheesyArenaSource extends TypedEventEmitter<SourceEventMap> impleme
 		this.frame.match = this.current.matchNumber;
 		this.frame.play = this.current.playNumber;
 		this.frame.level = this.current.level;
-		this.frame.time = this.eventStatus?.EarlyLateMessage || "unk";
+		this.frame.time = mapEarlyLateMessage(this.eventStatus?.EarlyLateMessage) || "unk";
 		this.frame.lastCycleTime = this.eventStatus?.CycleTime || "unk";
 
 		for (const [station, robot] of STATION_ENTRIES) {

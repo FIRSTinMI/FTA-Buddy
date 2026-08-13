@@ -46,11 +46,13 @@ interface MatchSnapshot {
 /**
  * Field data source backed by a Cheesy Arena field (github.com/Team254/cheesy-arena).
  *
- * It subscribes to Cheesy Arena's `/api/arena/websocket` notifier stream and
- * maps it onto the same `frame` / `cycleTime` events the FMS source emits, so
- * `background.ts` treats both identically. REST lookups hit Cheesy Arena's
- * `/api/...` endpoints. Match logs are accumulated live from the arenaStatus
- * stream (Cheesy Arena has no FMS-style GetLog) and uploaded at match end.
+ * It subscribes to Cheesy Arena's `/displays/field_monitor/websocket` notifier
+ * stream (the same feed its own field monitor display uses) and maps it onto the
+ * same `frame` / `cycleTime` events the FMS source emits, so `background.ts`
+ * treats both identically. That endpoint is a Cheesy Arena "display", so it
+ * requires a `displayId` query param. REST lookups hit Cheesy Arena's `/api/...`
+ * endpoints. Match logs are accumulated live from the arenaStatus stream (Cheesy
+ * Arena has no FMS-style GetLog) and uploaded at match end.
  *
  * Note sync is FMS-only and unsupported here.
  */
@@ -88,6 +90,7 @@ export class CheesyArenaSource extends TypedEventEmitter<SourceEventMap> impleme
 		private readonly host: string,
 		version: string,
 		private readonly eventCodeProvider: () => string,
+		private readonly displayId: string,
 	) {
 		super();
 		this.frame.version = version;
@@ -119,7 +122,9 @@ export class CheesyArenaSource extends TypedEventEmitter<SourceEventMap> impleme
 
 	private connect(): void {
 		if (this.stopped) return;
-		const url = `ws://${this.host}/api/arena/websocket`;
+		// The field monitor feed is a Cheesy Arena "display" and needs a displayId.
+		const displayId = encodeURIComponent(this.displayId || "fta-buddy");
+		const url = `ws://${this.host}/displays/field_monitor/websocket?displayId=${displayId}`;
 		console.log(`Connecting to Cheesy Arena (${url})`);
 		let ws: WebSocket;
 		try {

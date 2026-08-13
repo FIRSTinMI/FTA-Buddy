@@ -1,5 +1,5 @@
 /**
- * Wire types for Cheesy Arena's `/api/arena/websocket` notifier stream.
+ * Wire types for Cheesy Arena's `/displays/field_monitor/websocket` notifier stream.
  *
  * Cheesy Arena (github.com/Team254/cheesy-arena) marshals its Go structs with
  * no json tags, so every key is the exact PascalCase Go field name. These types

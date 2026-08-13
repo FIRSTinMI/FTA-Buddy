@@ -216,7 +216,7 @@ async function start() {
 
 function buildSource(): FieldDataSource {
 	if (sourceMode === "cheesy") {
-		return new CheesyArenaSource(CHEESY_HOST, manifestData.version, () => eventCode);
+		return new CheesyArenaSource(CHEESY_HOST, manifestData.version, () => eventCode, id);
 	}
 	return new FmsSource(FMS, manifestData.version);
 }

@@ -1,7 +1,7 @@
 /**
- * Cheesy Arena's `/api/arena/websocket` uses gorilla/websocket's default
- * same-origin check, which rejects the extension's cross-origin upgrade (the
- * service worker sends `Origin: chrome-extension://<id>`). We use a
+ * Cheesy Arena's `/displays/field_monitor/websocket` uses gorilla/websocket's
+ * default same-origin check, which rejects the extension's cross-origin upgrade
+ * (the service worker sends `Origin: chrome-extension://<id>`). We use a
  * declarativeNetRequest session rule to strip the Origin header on the websocket
  * upgrade request to the configured Cheesy Arena host, so the check passes
  * (an absent Origin is treated as same-origin). No Cheesy Arena change needed.
@@ -34,7 +34,7 @@ export async function setCheesyOriginRule(host: string): Promise<void> {
 						],
 					},
 					condition: {
-						urlFilter: `${host}/api/arena/websocket`,
+						urlFilter: `${host}/displays/field_monitor/websocket`,
 						resourceTypes: [chrome.declarativeNetRequest.ResourceType.WEBSOCKET],
 					},
 				},

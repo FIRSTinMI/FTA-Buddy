@@ -12,7 +12,8 @@ same `frame` / `cycleTime` / `sendSchedule` events and expose the same REST look
 `background.ts` treats them identically and the server, app, and database are untouched.
 
 - `FmsSource` — official FMS over SignalR (`signalR.ts`) plus the FMS REST API (`fmsapi.ts`).
-- `CheesyArenaSource` — subscribes to Cheesy Arena's `/api/arena/websocket` notifier stream and maps
+- `CheesyArenaSource` — subscribes to Cheesy Arena's `/displays/field_monitor/websocket` notifier
+  stream (the same feed the field monitor display uses; it needs a `displayId` query param) and maps
   it onto the same model. REST lookups hit Cheesy Arena's `/api/matches/...` endpoints.
 
 ### Data mapping (`cheesyArenaMap.ts`)

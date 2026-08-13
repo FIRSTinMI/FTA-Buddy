@@ -88,16 +88,33 @@ export async function getMatch(matchNumber: number, playNumber: number, level: T
 }
 
 export async function getScheduleBreakdown() {
-	const schedule = (
-		await fetch(`http://${FMS}/api/v1.0/match/get/GetCurrentSchedule`).then((res) => res.json())
-	).filter((match: any) => match.tournamentLevel === "Qualification");
+	const raw = (await fetch(`http://${FMS}/api/v1.0/match/get/GetCurrentSchedule`).then((res) =>
+		res.json(),
+	)) as any[];
+
+	// Every match (any tournament level) goes into `matches` so downstream consumers -
+	// notably the scorekeeper's T613 playoff lineup deadline - can read playoff start
+	// times, not just qualification ones. FMS's GetCurrentSchedule only returns the
+	// active tournament level, so in practice this is quals during qualifications and
+	// playoff matches once playoffs begin.
+	const matches = raw.map((match: any) => ({
+		scheduledStartTime: new Date(match.startTime),
+		match: match.matchNumber,
+		level: match.tournamentLevel,
+		// Playoff matches carry the alliance (1-8) on each side; lets the scorekeeper
+		// view resolve red/blue without waiting for a played match log.
+		redAllianceNumber: match.redAllianceNumber ?? null,
+		blueAllianceNumber: match.blueAllianceNumber ?? null,
+	}));
+
+	// The day / cycle-time breakdown below (lunch detection, day boundaries) is
+	// qualification-specific, so build it from the qualification matches only.
+	const schedule = raw.filter((match: any) => match.tournamentLevel === "Qualification");
 
 	const days: ScheduleBreakdown = [];
 
 	let lastPlayed = 0;
 	let day = -1;
-
-	const matches = [];
 
 	for (let i = 0; i < schedule.length; i++) {
 		const match = schedule[i];
@@ -107,12 +124,6 @@ export async function getScheduleBreakdown() {
 		let today = day in days && days[day];
 		let previousDay = day - 1 in days && days[day - 1];
 		let todayIsNew = !today || today.date.getDate() !== startTime.getDate();
-
-		matches.push({
-			scheduledStartTime: startTime,
-			match: match.matchNumber,
-			level: match.tournamentLevel,
-		});
 
 		const cycleTime = Math.abs(
 			Math.round(
@@ -190,6 +201,32 @@ export async function getScheduleBreakdown() {
 	}
 
 	return { days, lastPlayed, matches };
+}
+
+/**
+ * Playoff alliance rosters from FMS (audience/get/GetAlliances). Returns one row
+ * per alliance with captain / round-1 / round-2 / backup team numbers. Empty when
+ * alliances have not been selected yet. `alternateTeamNumber` is the accepted
+ * backup coupon team (null until one is used).
+ */
+export async function getAlliances(): Promise<
+	{ number: number; captainTeam: number; pick1Team: number; pick2Team: number | null; backupTeam: number | null }[]
+> {
+	const res = await fetch(`http://${FMS}/api/v1.0/audience/get/GetAlliances`);
+	if (!res.ok) return [];
+	const raw = (await res.json()) as any[];
+	if (!Array.isArray(raw)) return [];
+	const num = (v: any): number | null => (typeof v === "number" && v > 0 ? v : null);
+	return raw
+		.map((a) => ({
+			number: a.allianceNumber as number,
+			captainTeam: num(a.captainTeamNumber) ?? 0,
+			pick1Team: num(a.firstRoundTeamNumber) ?? 0,
+			pick2Team: num(a.secondRoundTeamNumber),
+			backupTeam: num(a.alternateTeamNumber),
+		}))
+		// Only alliances that actually have a captain + first pick (i.e. selection done).
+		.filter((a) => a.number >= 1 && a.captainTeam > 0 && a.pick1Team > 0);
 }
 
 // ---------------------------------------------------------------------------

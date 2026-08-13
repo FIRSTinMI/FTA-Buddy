@@ -564,10 +564,16 @@ export const lineupCards = pgTable(
 		play_number: integer("play_number").notNull().default(1),
 		// 1-based, per (event, alliance, match).
 		version: integer("version").notNull(),
-		// Team assigned to each DRIVER STATION. Null = station empty (robot cannot play).
-		station1_team: integer("station1_team"),
-		station2_team: integer("station2_team"),
-		station3_team: integer("station3_team"),
+		// A card holds the alliance's driver-station assignment for BOTH sides: the
+		// trio to run when they are the blue alliance and the trio when they are red
+		// (station strategy can differ by side). Null = station empty / robot can't play.
+		// The match's actual side (from FMS) selects which trio applies.
+		blue_station1_team: integer("blue_station1_team"),
+		blue_station2_team: integer("blue_station2_team"),
+		blue_station3_team: integer("blue_station3_team"),
+		red_station1_team: integer("red_station1_team"),
+		red_station2_team: integer("red_station2_team"),
+		red_station3_team: integer("red_station3_team"),
 		uses_backup: boolean("uses_backup").notNull().default(false),
 		status: lineupStatusEnum("status").notNull().default("accepted"),
 		source: lineupSourceEnum("source").notNull().default("scorekeeper"),

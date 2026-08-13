@@ -1,4 +1,5 @@
 import {
+	getAlliances,
 	getCurrentMatch,
 	getEventCode,
 	getScheduleBreakdown,
@@ -7,7 +8,7 @@ import {
 } from "../fmsapi";
 import { SignalR } from "../signalR";
 import { uploadAllUnimportedMatchLogs, uploadMatchLogs } from "../trpc";
-import type { FieldDataSource, MatchRef, ScheduleResult } from "./types";
+import type { FieldDataSource, MatchRef, PlayoffAllianceRoster, ScheduleResult } from "./types";
 
 /**
  * The official FMS source: SignalR realtime stream plus the FMS REST lookups.
@@ -50,6 +51,10 @@ export class FmsSource extends SignalR implements FieldDataSource {
 
 	public getScheduleBreakdown(): Promise<ScheduleResult> {
 		return getScheduleBreakdown();
+	}
+
+	public getAlliances(): Promise<PlayoffAllianceRoster[]> {
+		return getAlliances();
 	}
 
 	public getTeamNumbers(): Promise<number[]> {

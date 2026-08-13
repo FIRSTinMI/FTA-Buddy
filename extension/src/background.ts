@@ -616,8 +616,27 @@ async function sendCycletime(
 async function sendScheduleDetails() {
 	if (!source) return;
 	const schedule = await source.getScheduleBreakdown();
-	if (schedule.days.length === 0) return;
+	// During playoffs the qual-only `days` breakdown is empty, but `matches` still
+	// carries the playoff schedule (needed for the scorekeeper T613 deadline), so post
+	// whenever there is anything to send.
+	if (schedule.days.length === 0 && schedule.matches.length === 0) return;
 	await trpc.cycles.postScheduleDetails.mutate({ eventToken, ...schedule, extensionId: id });
+	// Alliances change on the same cadence as the playoff schedule (selection done,
+	// backup coupons), so sync them here too - the scorekeeper alliance table comes
+	// straight from FMS, no manual entry.
+	await sendAlliances();
+}
+
+/** Push the current FMS playoff alliance rosters to the scorekeeper view. No-op outside playoffs. */
+async function sendAlliances() {
+	if (!source || !eventToken) return;
+	try {
+		const alliances = await source.getAlliances();
+		if (alliances.length === 0) return;
+		await trpc.scorekeeper.alliances.syncFromFMS.mutate({ alliances });
+	} catch (err) {
+		console.warn("[scorekeeper] alliance sync failed:", err);
+	}
 }
 
 function isMatchRunning(): boolean {

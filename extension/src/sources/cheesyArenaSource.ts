@@ -22,7 +22,7 @@ import {
 } from "./cheesyArenaTypes";
 import { buildFmsMatchId, mapEarlyLateMessage, mapFieldState, mapLevel, mapLogFrame, mapRobot } from "./cheesyArenaMap";
 import { compressStationLog, trpc } from "../trpc";
-import type { FieldDataSource, MatchRef, ScheduleResult } from "./types";
+import type { FieldDataSource, MatchRef, PlayoffAllianceRoster, ScheduleResult } from "./types";
 import type { SourceEventMap } from "./emitter";
 
 /** Cheesy Arena station id -> FTA-Buddy robot key, with literal types preserved. */
@@ -273,6 +273,12 @@ export class CheesyArenaSource extends TypedEventEmitter<SourceEventMap> impleme
 		// Cheesy Arena has no FMS-style event code endpoint; FTA-Buddy already
 		// owns the configured event code, so surface that.
 		return this.eventCodeProvider();
+	}
+
+	public async getAlliances(): Promise<PlayoffAllianceRoster[]> {
+		// Cheesy Arena playoff-alliance sync is not wired up yet; scorekeeper
+		// alliances stay empty for this source until it is.
+		return [];
 	}
 
 	public async getScheduleBreakdown(): Promise<ScheduleResult> {

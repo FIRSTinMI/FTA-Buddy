@@ -61,12 +61,19 @@
 							{#if card.uses_backup}<Badge color="purple">backup</Badge>{/if}
 						</div>
 					</div>
-					<div class="mt-1 grid grid-cols-3 gap-2">
-						{#each [card.station1_team, card.station2_team, card.station3_team] as team, i (i)}
-							<div class="rounded bg-gray-50 dark:bg-neutral-800 p-1 text-center">
-								<span class="text-[10px] text-gray-500">DS{i + 1}</span>
-								<div class="font-bold">{team ?? "-"}</div>
-								<div class="text-[10px] text-gray-500 truncate">{teamName(team)}</div>
+					<div class="mt-1 grid grid-cols-2 gap-2">
+						{#each [{ side: "blue", teams: [card.blue_station1_team, card.blue_station2_team, card.blue_station3_team] }, { side: "red", teams: [card.red_station1_team, card.red_station2_team, card.red_station3_team] }] as { side, teams } (side)}
+							<div class="rounded border p-1 {side === 'blue' ? 'border-blue-400' : 'border-red-400'}">
+								<div class="text-[10px] font-bold uppercase text-center {side === 'blue' ? 'text-blue-600' : 'text-red-600'}">{side} side</div>
+								<div class="grid grid-cols-3 gap-1">
+									{#each teams as team, i (i)}
+										<div class="rounded bg-gray-50 dark:bg-neutral-800 p-1 text-center">
+											<span class="text-[10px] text-gray-500">DS{i + 1}</span>
+											<div class="font-bold">{team ?? "-"}</div>
+											<div class="text-[10px] text-gray-500 truncate">{teamName(team)}</div>
+										</div>
+									{/each}
+								</div>
 							</div>
 						{/each}
 					</div>

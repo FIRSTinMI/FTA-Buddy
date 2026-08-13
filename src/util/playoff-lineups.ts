@@ -1,5 +1,5 @@
 import type { LineupCard, PlayoffAlliance } from "../db/schema";
-import type { LineupStations, ResolvedLineup, ScheduleDetails } from "../../shared/types";
+import type { AllianceColor, LineupStations, ResolvedLineup, ScheduleDetails } from "../../shared/types";
 
 /** REBUILT T613: lineups are due 2 minutes before the expected match start. */
 export const LINEUP_DEADLINE_MS = 2 * 60 * 1000;
@@ -16,13 +16,27 @@ export function defaultLineupStations(alliance: Pick<PlayoffAlliance, "captain_t
 	};
 }
 
+/** Pull the trio for one side (blue/red) out of a card. */
+export function cardStationsForSide(card: LineupCard, side: AllianceColor): LineupStations {
+	return side === "blue"
+		? { station1: card.blue_station1_team, station2: card.blue_station2_team, station3: card.blue_station3_team }
+		: { station1: card.red_station1_team, station2: card.red_station2_team, station3: card.red_station3_team };
+}
+
+/** True when a side's trio is entirely empty (the card did not specify that side). */
+function sideIsBlank(stations: LineupStations): boolean {
+	return stations.station1 == null && stations.station2 == null && stations.station3 == null;
+}
+
 /**
- * Resolve the lineup that applies to `matchNumber` for one alliance, given that
- * alliance's accepted cards (any match) and its roster.
+ * Resolve the lineup that applies to `matchNumber` for one alliance on `side`,
+ * given that alliance's accepted cards (any match) and its roster.
  *
- * 1. Newest accepted card targeting this match -> "submitted".
- * 2. else newest accepted card for an earlier match -> "carried-forward"
- *    (REBUILT T613: "the ALLIANCE'S most recent LINEUP is applied").
+ * A card carries BOTH side configs; we take the trio for the side FMS put the
+ * alliance on this match. Resolution order:
+ * 1. Newest accepted card targeting this match with a non-blank `side` -> "submitted".
+ * 2. else newest accepted card from an earlier match with a non-blank `side`
+ *    -> "carried-forward" (REBUILT T613: "the ALLIANCE'S most recent LINEUP is applied").
  * 3. else the default lineup from the roster -> "default".
  *
  * `acceptedCards` must contain only status = "accepted" rows for this alliance.
@@ -31,25 +45,29 @@ export function resolveLineup(
 	acceptedCards: LineupCard[],
 	alliance: Pick<PlayoffAlliance, "captain_team" | "pick1_team" | "pick2_team">,
 	matchNumber: number,
+	side: AllianceColor,
 ): ResolvedLineup {
-	const toStations = (c: LineupCard): ResolvedLineup => ({
-		stations: { station1: c.station1_team, station2: c.station2_team, station3: c.station3_team },
+	const toResolved = (c: LineupCard): ResolvedLineup => ({
+		stations: cardStationsForSide(c, side),
 		resolution: c.match_number === matchNumber ? "submitted" : "carried-forward",
 		usesBackup: c.uses_backup,
 		cardId: c.id,
 	});
 
-	// Highest-version accepted card that targets exactly this match.
-	const forThisMatch = acceptedCards
+	// Only cards that actually specify this side count for that side.
+	const withSide = acceptedCards.filter((c) => !sideIsBlank(cardStationsForSide(c, side)));
+
+	// Highest-version card that targets exactly this match.
+	const forThisMatch = withSide
 		.filter((c) => c.match_number === matchNumber)
 		.sort((a, b) => b.version - a.version)[0];
-	if (forThisMatch) return toStations(forThisMatch);
+	if (forThisMatch) return toResolved(forThisMatch);
 
-	// Otherwise the most recent accepted card from an earlier match.
-	const earlier = acceptedCards
+	// Otherwise the most recent card from an earlier match.
+	const earlier = withSide
 		.filter((c) => c.match_number < matchNumber)
 		.sort((a, b) => b.match_number - a.match_number || b.version - a.version)[0];
-	if (earlier) return toStations(earlier);
+	if (earlier) return toResolved(earlier);
 
 	return {
 		stations: defaultLineupStations(alliance),

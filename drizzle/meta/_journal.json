@@ -148,6 +148,20 @@
       "when": 1786655410323,
       "tag": "0020_skinny_korvac",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1786659002597,
+      "tag": "0021_clever_sue_storm",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1786659011414,
+      "tag": "0022_bright_marvel_boy",
+      "breakpoints": true
     }
   ]
 }

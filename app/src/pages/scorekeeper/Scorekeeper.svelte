@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { Button, Select } from "flowbite-svelte";
+	import Icon from "@iconify/svelte";
+	import { Button } from "flowbite-svelte";
 	import { onDestroy, onMount } from "svelte";
 	import Spinner from "../../components/Spinner.svelte";
 	import AllianceLineupCard from "../../components/scorekeeper/AllianceLineupCard.svelte";
-	import AllianceSetup from "../../components/scorekeeper/AllianceSetup.svelte";
-	import LineupEditor from "../../components/scorekeeper/LineupEditor.svelte";
+	import LineupCardDialog from "../../components/scorekeeper/LineupCardDialog.svelte";
 	import LineupHistory from "../../components/scorekeeper/LineupHistory.svelte";
-	import type { LineupStations } from "../../../../shared/types";
+	import { frameHandler, subscribeToFieldMonitor } from "../../field-monitor";
 	import { trpc } from "../../main";
 	import { eventStore } from "../../stores/event";
 	import { userStore } from "../../stores/user";
@@ -14,13 +14,10 @@
 
 	// FTA/FTAA/Scorekeeper/admin may edit; everyone with the view may read.
 	const canEdit = $derived(
-		$userStore.admin ||
-			["Scorekeeper", "FTA", "FTAA", "System"].includes($userStore.role),
+		$userStore.admin || ["Scorekeeper", "FTA", "FTAA", "System"].includes($userStore.role),
 	);
 
-	let tab = $state<"lineups" | "alliances" | "quals">("lineups");
-
-	// Team number -> short name, from the event store roster.
+	// Team number -> short name.
 	let teamNames = $derived.by(() => {
 		const map: Record<string, string> = {};
 		for (const t of $eventStore.teams ?? []) map[String(t.number)] = t.name ?? "";
@@ -29,43 +26,134 @@
 	function teamName(team: number | null): string {
 		if (team == null) return "";
 		const n = teamNames[String(team)] ?? "";
-		return n.length > 22 ? n.slice(0, 22) + "..." : n;
+		return n.length > 20 ? n.slice(0, 20) + "..." : n;
 	}
 
-	let alliances = $state<Alliance[]>([]);
-	async function loadAlliances() {
-		try {
-			alliances = await trpc.scorekeeper.alliances.list.query();
-		} catch (err) {
-			console.error("[scorekeeper] alliance list failed:", err);
+	// ---- Live field monitor (drives the "current match") -------------------
+	let monitorFrame = $state(frameHandler.getFrame());
+	function onFrame(evt: Event) {
+		monitorFrame = (evt as CustomEvent).detail.frame;
+		if (following) syncToLive();
+	}
+	function onPrestart() {
+		if (following) syncToLive();
+	}
+
+	// ---- Cycle data (ahead/behind, cycle times, schedule) ------------------
+	let cycleData = $state<Awaited<ReturnType<typeof trpc.cycles.getCycleData.query>> | null>(null);
+	const scheduleMatches = $derived(cycleData?.scheduleDetails?.matches ?? []);
+
+	// ---- Match list (played + scheduled, qual + playoff) -------------------
+	let scheduledMatches = $state<Awaited<ReturnType<typeof trpc.match.getScheduledMatches.query>>>([]);
+
+	interface MatchRow {
+		level: string;
+		match: number;
+		play: number;
+		red: (number | null)[];
+		blue: (number | null)[];
+		redAllianceNumber: number | null;
+		blueAllianceNumber: number | null;
+		isPlayed: boolean;
+		scheduledStartTime: Date | null;
+		cycleTime: string | null;
+	}
+
+	const LEVEL_ORDER: Record<string, number> = { Practice: 0, Qualification: 1, Playoff: 2, None: 3 };
+
+	// Merge getScheduledMatches (teams/scores/cycle) with scheduleDetails.matches
+	// (scheduled times + FMS alliance numbers, which don't need TBA).
+	const allMatches = $derived.by<MatchRow[]>(() => {
+		const byKey = new Map<string, MatchRow>();
+		const key = (level: string, match: number, play: number) => `${level}:${match}:${play}`;
+		for (const m of scheduledMatches) {
+			byKey.set(key(m.level, m.match_number, m.play_number), {
+				level: m.level,
+				match: m.match_number,
+				play: m.play_number,
+				red: [m.red1, m.red2, m.red3],
+				blue: [m.blue1, m.blue2, m.blue3],
+				redAllianceNumber: null,
+				blueAllianceNumber: null,
+				isPlayed: m.isPlayed,
+				scheduledStartTime: m.scheduledStartTime,
+				cycleTime: m.cycleTime,
+			});
+		}
+		for (const s of scheduleMatches) {
+			const k = key(s.level, s.match, 1);
+			const existing = byKey.get(k);
+			if (existing) {
+				existing.scheduledStartTime = existing.scheduledStartTime ?? new Date(s.scheduledStartTime);
+				existing.redAllianceNumber = s.redAllianceNumber ?? existing.redAllianceNumber;
+				existing.blueAllianceNumber = s.blueAllianceNumber ?? existing.blueAllianceNumber;
+			} else {
+				byKey.set(k, {
+					level: s.level,
+					match: s.match,
+					play: 1,
+					red: [null, null, null],
+					blue: [null, null, null],
+					redAllianceNumber: s.redAllianceNumber ?? null,
+					blueAllianceNumber: s.blueAllianceNumber ?? null,
+					isPlayed: false,
+					scheduledStartTime: new Date(s.scheduledStartTime),
+					cycleTime: null,
+				});
+			}
+		}
+		return [...byKey.values()].sort(
+			(a, b) => (LEVEL_ORDER[a.level] ?? 9) - (LEVEL_ORDER[b.level] ?? 9) || a.match - b.match || a.play - b.play,
+		);
+	});
+
+	// ---- Selection / follow-live -------------------------------------------
+	let following = $state(true);
+	let selLevel = $state<string>("Playoff");
+	let selMatch = $state(1);
+	let selPlay = $state(1);
+
+	function syncToLive() {
+		const f = monitorFrame;
+		if (f?.match && f.level && f.level !== "None") {
+			selLevel = f.level;
+			selMatch = f.match;
+			selPlay = f.play ?? 1;
 		}
 	}
 
-	// Current match + red/blue selection.
-	let matchNumber = $state(1);
-	let playNumber = $state(1);
-	let redAlliance = $state<number | null>(null);
-	let blueAlliance = $state<number | null>(null);
+	const selIndex = $derived(
+		allMatches.findIndex((m) => m.level === selLevel && m.match === selMatch && m.play === selPlay),
+	);
+	const selectedRow = $derived(selIndex >= 0 ? allMatches[selIndex] : null);
+
+	function step(delta: number) {
+		following = false;
+		if (selIndex < 0) return;
+		const next = allMatches[selIndex + delta];
+		if (!next) return;
+		selLevel = next.level;
+		selMatch = next.match;
+		selPlay = next.play;
+	}
+	function goLive() {
+		following = true;
+		syncToLive();
+	}
+
+	// ---- Playoff lineup payload for the selected match ----------------------
 	let forMatch = $state<ForMatch | null>(null);
 	let loadingMatch = $state(false);
-
-	const allianceOptions = $derived([
-		{ value: 0, name: "Auto / none" },
-		...Array.from({ length: 8 }, (_, i) => ({ value: i + 1, name: `Alliance ${i + 1}` })),
-	]);
+	let alliances = $state<Alliance[]>([]);
 
 	async function loadForMatch() {
+		if (selLevel !== "Playoff") {
+			forMatch = null;
+			return;
+		}
 		loadingMatch = true;
 		try {
-			forMatch = await trpc.scorekeeper.lineups.forMatch.query({
-				matchNumber,
-				playNumber,
-				redAlliance,
-				blueAlliance,
-			});
-			// Reflect the resolved alliances back into the selectors.
-			redAlliance = forMatch.red.allianceNumber;
-			blueAlliance = forMatch.blue.allianceNumber;
+			forMatch = await trpc.scorekeeper.lineups.forMatch.query({ matchNumber: selMatch, playNumber: selPlay });
 		} catch (err) {
 			console.error("[scorekeeper] forMatch failed:", err);
 			forMatch = null;
@@ -74,29 +162,61 @@
 		}
 	}
 
-	async function changeMatch(n: number) {
-		if (n < 1) return;
-		matchNumber = n;
-		// Reset selection so the server can auto-detect for the new match.
-		redAlliance = null;
-		blueAlliance = null;
-		await loadForMatch();
+	async function loadAlliances() {
+		try {
+			alliances = await trpc.scorekeeper.alliances.list.query();
+		} catch (err) {
+			console.error("[scorekeeper] alliance list failed:", err);
+		}
 	}
 
-	// Editor / history modal state.
-	let editorOpen = $state(false);
-	let editorAlliance = $state<Alliance | null>(null);
-	let editorInitial = $state<LineupStations | null>(null);
+	async function loadCycle() {
+		if (!$eventStore.code) return;
+		try {
+			cycleData = await trpc.cycles.getCycleData.query({ eventCode: $eventStore.code });
+		} catch (err) {
+			console.error("[scorekeeper] cycle load failed:", err);
+		}
+	}
+
+	async function loadScheduledMatches() {
+		try {
+			scheduledMatches = await trpc.match.getScheduledMatches.query();
+		} catch (err) {
+			console.error("[scorekeeper] scheduled matches failed:", err);
+		}
+	}
+
+	// Reload the lineup payload whenever the selected match changes.
+	$effect(() => {
+		selLevel;
+		selMatch;
+		selPlay;
+		loadForMatch();
+	});
+
+	// ---- Live countdown to the T613 deadline -------------------------------
+	let now = $state(Date.now());
+	let clock: ReturnType<typeof setInterval>;
+	const deadlineMs = $derived(forMatch?.deadlineAt ? new Date(forMatch.deadlineAt).getTime() : null);
+	const countdown = $derived.by(() => {
+		if (deadlineMs == null) return null;
+		const diff = Math.round((deadlineMs - now) / 1000);
+		const past = diff < 0;
+		const s = Math.abs(diff);
+		const label = s < 3600 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : `${Math.floor(s / 3600)}h`;
+		return { past, label };
+	});
+
+	// ---- Dialog / history state --------------------------------------------
+	let dialogOpen = $state(false);
+	let dialogAlliance = $state<number | null>(null);
 	let historyOpen = $state(false);
 	let historyAllianceNumber = $state(1);
 
-	function openEditor(side: LineupSide) {
-		if (!side.allianceNumber) return;
-		const alliance = alliances.find((a) => a.number === side.allianceNumber);
-		if (!alliance) return;
-		editorAlliance = alliance;
-		editorInitial = side.lineup?.stations ?? null;
-		editorOpen = true;
+	function openDialog(alliance: number | null = null) {
+		dialogAlliance = alliance;
+		dialogOpen = true;
 	}
 	function openHistory(side: LineupSide) {
 		if (!side.allianceNumber) return;
@@ -104,189 +224,188 @@
 		historyOpen = true;
 	}
 
-	// Qualification panel (reuses existing cycle data).
-	let cycleData = $state<Awaited<ReturnType<typeof trpc.cycles.getCycleData.query>> | null>(null);
-	let eventCycles = $state<Awaited<ReturnType<typeof trpc.cycles.getEventCycles.query>>>([]);
-	async function loadQuals() {
-		const code = $eventStore.code;
-		if (!code) return;
-		try {
-			[cycleData, eventCycles] = await Promise.all([
-				trpc.cycles.getCycleData.query({ eventCode: code }),
-				trpc.cycles.getEventCycles.query({ eventCode: code }),
-			]);
-		} catch (err) {
-			console.error("[scorekeeper] quals load failed:", err);
-		}
+	function fmtTime(d: Date | string | null): string {
+		if (!d) return "-";
+		return new Date(d).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 	}
-	const completedCycles = $derived(
-		[...eventCycles]
-			.filter((c) => c.calculated_cycle_time)
-			.sort((a, b) => b.match_number - a.match_number),
-	);
 
-	let sub: { unsubscribe: () => void } | undefined;
+	let cycleSub: { unsubscribe: () => void } | undefined;
+	let lineupSub: { unsubscribe: () => void } | undefined;
+
 	onMount(async () => {
-		await loadAlliances();
-		// Default to the live match when it is a playoff match.
-		try {
-			const live = await trpc.cycles.getCycleData.query({ eventCode: $eventStore.code });
-			if (live?.level === "Playoff" && live.match) matchNumber = live.match;
-		} catch {
-			// non-fatal; scorekeeper can pick the match manually
-		}
-		await loadForMatch();
-		await loadQuals();
+		clock = setInterval(() => (now = Date.now()), 1000);
 
-		// Live refresh when any device changes alliances or lineups.
-		sub = trpc.scorekeeper.lineups.subscribe.subscribe(undefined, {
+		if (!frameHandler.getFrame()) subscribeToFieldMonitor();
+		frameHandler.addEventListener("frame", onFrame);
+		frameHandler.addEventListener("prestart", onPrestart);
+
+		await Promise.all([loadAlliances(), loadCycle(), loadScheduledMatches()]);
+		syncToLive();
+		await loadForMatch();
+
+		// Live cycle/schedule updates (fixes the "needs a manual refresh" problem).
+		cycleSub = trpc.cycles.subscription.subscribe(
+			{ eventCode: $eventStore.code },
+			{
+				// The subscription is a change trigger; re-fetch the full cycle snapshot
+				// (with scheduleDetails.matches) so ahead/behind, the deadline and the
+				// schedule table all update live without a manual refresh.
+				onData: () => {
+					loadCycle();
+					loadScheduledMatches();
+				},
+				onError: (err) => console.warn("[scorekeeper] cycle sub error:", err),
+			},
+		);
+		// Live alliance/lineup updates.
+		lineupSub = trpc.scorekeeper.lineups.subscribe.subscribe(undefined, {
 			onData: () => {
 				loadAlliances();
 				loadForMatch();
 			},
-			onError: (err) => console.warn("[scorekeeper] subscription error:", err),
+			onError: (err) => console.warn("[scorekeeper] lineup sub error:", err),
 		});
 	});
-	onDestroy(() => sub?.unsubscribe());
 
-	function onLineupSubmitted() {
-		editorOpen = false;
-		loadForMatch();
-	}
+	onDestroy(() => {
+		clearInterval(clock);
+		frameHandler.removeEventListener("frame", onFrame);
+		frameHandler.removeEventListener("prestart", onPrestart);
+		cycleSub?.unsubscribe();
+		lineupSub?.unsubscribe();
+	});
+
+	const stats = $derived([
+		["Ahead/behind", cycleData?.exactAheadBehind ?? cycleData?.aheadBehind ?? "-"],
+		["Last cycle", cycleData?.lastCycleTime ?? "-"],
+		["Avg cycle", cycleData?.averageCycleTime ? `${Math.round(cycleData.averageCycleTime / 1000)}s` : "-"],
+		["Best cycle", cycleData?.bestCycleTime ?? "-"],
+	] as const);
 </script>
 
 <div class="flex flex-col gap-3 p-3 max-w-3xl mx-auto w-full">
-	<h1 class="text-2xl font-bold text-gray-900 dark:text-white">Scorekeeper</h1>
-
-	<div class="flex gap-1 border-b border-gray-200 dark:border-neutral-700">
-		{#each [["lineups", "Lineups"], ["alliances", "Alliances"], ["quals", "Qualification"]] as [id, label] (id)}
-			<button
-				class="px-3 py-2 text-sm font-medium -mb-px border-b-2 {tab === id
-					? 'border-primary-600 text-primary-700 dark:text-primary-400'
-					: 'border-transparent text-gray-500'}"
-				onclick={() => (tab = id as typeof tab)}
-			>
-				{label}
-			</button>
-		{/each}
+	<div class="flex items-center justify-between">
+		<h1 class="text-2xl font-bold text-gray-900 dark:text-white">Scorekeeper</h1>
+		{#if canEdit}
+			<Button color="primary" size="sm" onclick={() => openDialog()}>
+				<Icon icon="mdi:clipboard-plus-outline" class="size-4 mr-1" /> File lineup card
+			</Button>
+		{/if}
 	</div>
 
-	{#if tab === "lineups"}
-		<div class="flex flex-wrap items-end gap-2">
-			<div class="flex items-center gap-1">
-				<Button size="sm" color="alternative" onclick={() => changeMatch(matchNumber - 1)}>-</Button>
-				<div class="text-center">
-					<div class="text-xs text-gray-500 uppercase">Playoff match</div>
-					<div class="text-xl font-bold text-gray-900 dark:text-white">{matchNumber}</div>
-				</div>
-				<Button size="sm" color="alternative" onclick={() => changeMatch(matchNumber + 1)}>+</Button>
-			</div>
-			<label class="flex flex-col gap-1 text-xs text-gray-500">
-				Red alliance
-				<Select
-					class="w-36"
-					items={allianceOptions}
-					value={redAlliance ?? 0}
-					onchange={(e) => {
-						redAlliance = parseInt((e.target as HTMLSelectElement).value) || null;
-						loadForMatch();
-					}}
-				/>
-			</label>
-			<label class="flex flex-col gap-1 text-xs text-gray-500">
-				Blue alliance
-				<Select
-					class="w-36"
-					items={allianceOptions}
-					value={blueAlliance ?? 0}
-					onchange={(e) => {
-						blueAlliance = parseInt((e.target as HTMLSelectElement).value) || null;
-						loadForMatch();
-					}}
-				/>
-			</label>
+	<!-- Match selector: follows live, browsable -->
+	<div class="flex items-center justify-between rounded-lg border border-gray-200 dark:border-neutral-700 p-2">
+		<Button size="sm" color="alternative" onclick={() => step(-1)} disabled={selIndex <= 0}>
+			<Icon icon="mdi:chevron-left" class="size-5" />
+		</Button>
+		<div class="text-center">
+			<div class="text-xs text-gray-500 uppercase">{selLevel}{selPlay > 1 ? ` (play ${selPlay})` : ""}</div>
+			<div class="text-xl font-bold text-gray-900 dark:text-white">Match {selMatch}</div>
+			<button
+				class="text-xs {following ? 'text-green-600' : 'text-primary-600 underline'}"
+				onclick={goLive}
+			>
+				{following ? "● Following live" : "Jump to live"}
+			</button>
 		</div>
+		<Button size="sm" color="alternative" onclick={() => step(1)} disabled={selIndex < 0 || selIndex >= allMatches.length - 1}>
+			<Icon icon="mdi:chevron-right" class="size-5" />
+		</Button>
+	</div>
 
-		{#if forMatch?.deadlineAt}
-			<div class="text-xs text-gray-500">
-				T613 lineup deadline: <span class="font-semibold"
-					>{new Date(forMatch.deadlineAt).toLocaleTimeString()}</span
-				>
-				(2 min before expected start)
-			</div>
-		{:else}
-			<div class="text-xs text-amber-600">
-				No scheduled start for this match, so the T613 deadline cannot be enforced automatically.
-			</div>
-		{/if}
+	<!-- Playoff lineup view for the selected match -->
+	{#if selLevel === "Playoff"}
+		<div class="flex items-center justify-between">
+			{#if countdown}
+				<div class="text-sm {countdown.past ? 'text-red-600 font-semibold' : 'text-gray-700 dark:text-gray-200'}">
+					T613 deadline {fmtTime(forMatch?.deadlineAt ?? null)} ·
+					<span class="font-mono font-bold">{countdown.past ? `+${countdown.label} late` : `${countdown.label} left`}</span>
+				</div>
+			{:else}
+				<div class="text-xs text-amber-600">No scheduled start yet — deadline not enforced.</div>
+			{/if}
+		</div>
 
 		{#if loadingMatch && !forMatch}
 			<Spinner />
 		{:else if forMatch}
 			<div class="grid gap-3 md:grid-cols-2">
-				<AllianceLineupCard
-					side={forMatch.red}
-					{teamName}
-					{canEdit}
-					onEdit={() => openEditor(forMatch!.red)}
-					onHistory={() => openHistory(forMatch!.red)}
-				/>
-				<AllianceLineupCard
-					side={forMatch.blue}
-					{teamName}
-					{canEdit}
-					onEdit={() => openEditor(forMatch!.blue)}
-					onHistory={() => openHistory(forMatch!.blue)}
-				/>
+				<AllianceLineupCard side={forMatch.blue} {teamName} {canEdit} onEdit={() => openDialog(forMatch!.blue.allianceNumber)} onHistory={() => openHistory(forMatch!.blue)} />
+				<AllianceLineupCard side={forMatch.red} {teamName} {canEdit} onEdit={() => openDialog(forMatch!.red.allianceNumber)} onHistory={() => openHistory(forMatch!.red)} />
 			</div>
 		{/if}
-	{:else if tab === "alliances"}
-		<AllianceSetup {alliances} {canEdit} onChanged={loadAlliances} />
-	{:else if tab === "quals"}
-		<div class="flex flex-col gap-3">
-			<div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-				{#each [["Ahead/behind", cycleData?.exactAheadBehind ?? cycleData?.aheadBehind ?? "-"], ["Last cycle", cycleData?.lastCycleTime ?? "-"], ["Avg cycle", cycleData?.averageCycleTime ? `${Math.round(cycleData.averageCycleTime / 1000)}s` : "-"], ["Best cycle", cycleData?.bestCycleTime ?? "-"]] as [label, value] (label)}
-					<div class="rounded-md border border-gray-200 dark:border-neutral-700 p-2 text-center">
-						<div class="text-xs text-gray-500 uppercase">{label}</div>
-						<div class="text-lg font-bold text-gray-900 dark:text-white">{value}</div>
-					</div>
-				{/each}
-			</div>
-			<h2 class="text-lg font-bold text-gray-900 dark:text-white">Completed matches</h2>
-			{#if completedCycles.length === 0}
-				<div class="text-gray-500 text-sm">No completed cycle times recorded yet.</div>
-			{:else}
-				<div class="flex flex-col gap-1">
-					{#each completedCycles as c (c.id)}
-						<div class="flex justify-between rounded border border-gray-200 dark:border-neutral-700 px-2 py-1 text-sm">
-							<span>{c.level} {c.match_number}{c.play_number > 1 ? `-${c.play_number}` : ""}</span>
-							<span class="font-mono">{c.calculated_cycle_time}</span>
-						</div>
-					{/each}
-				</div>
-			{/if}
+	{:else}
+		<div class="rounded-lg border border-gray-200 dark:border-neutral-700 p-3 text-sm text-gray-500">
+			Lineups apply to playoff matches. {selLevel} {selMatch} is shown for schedule reference below.
 		</div>
 	{/if}
+
+	<!-- Cycle stats -->
+	<div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+		{#each stats as [label, value] (label)}
+			<div class="rounded-md border border-gray-200 dark:border-neutral-700 p-2 text-center">
+				<div class="text-xs text-gray-500 uppercase">{label}</div>
+				<div class="text-lg font-bold text-gray-900 dark:text-white">{value}</div>
+			</div>
+		{/each}
+	</div>
+
+	<!-- Match schedule table -->
+	<h2 class="text-lg font-bold text-gray-900 dark:text-white mt-2">Match schedule</h2>
+	<div class="overflow-x-auto">
+		<table class="w-full text-sm">
+			<thead>
+				<tr class="text-left text-xs uppercase text-gray-500 border-b border-gray-200 dark:border-neutral-700">
+					<th class="py-1 pr-2">Match</th>
+					<th class="py-1 pr-2">Scheduled</th>
+					<th class="py-1 pr-2">Status</th>
+					<th class="py-1 pr-2">Cycle</th>
+				</tr>
+			</thead>
+			<tbody>
+				{#each allMatches as m (m.level + m.match + m.play)}
+					<tr
+						class="border-b border-gray-100 dark:border-neutral-800 cursor-pointer {m.level === selLevel && m.match === selMatch && m.play === selPlay ? 'bg-primary-50 dark:bg-primary-950/40' : ''}"
+						onclick={() => {
+							following = false;
+							selLevel = m.level;
+							selMatch = m.match;
+							selPlay = m.play;
+						}}
+					>
+						<td class="py-1 pr-2 whitespace-nowrap">
+							<span class="text-gray-400 text-xs">{m.level.slice(0, 4)}</span>
+							<span class="font-semibold">{m.match}{m.play > 1 ? `-${m.play}` : ""}</span>
+						</td>
+						<td class="py-1 pr-2 whitespace-nowrap font-mono">{fmtTime(m.scheduledStartTime)}</td>
+						<td class="py-1 pr-2">
+							{#if m.isPlayed}<span class="text-green-600">Played</span>{:else}<span class="text-gray-400">Pending</span>{/if}
+						</td>
+						<td class="py-1 pr-2 font-mono text-gray-500">{m.cycleTime ?? "-"}</td>
+					</tr>
+				{/each}
+				{#if allMatches.length === 0}
+					<tr><td colspan="4" class="py-2 text-gray-500">No schedule loaded yet.</td></tr>
+				{/if}
+			</tbody>
+		</table>
+	</div>
 </div>
 
-{#if editorOpen && editorAlliance}
-	{#key `${editorAlliance.number}-${matchNumber}`}
-		<LineupEditor
-			bind:open={editorOpen}
-			alliance={editorAlliance}
-			{matchNumber}
-			{playNumber}
-			initial={editorInitial}
-			{teamName}
-			onClose={() => (editorOpen = false)}
-			onSubmitted={onLineupSubmitted}
-		/>
-	{/key}
+{#if dialogOpen}
+	<LineupCardDialog
+		bind:open={dialogOpen}
+		{alliances}
+		scheduleMatches={scheduleMatches.map((m) => ({ match: m.match, level: m.level, redAllianceNumber: m.redAllianceNumber, blueAllianceNumber: m.blueAllianceNumber }))}
+		liveMatchNumber={selMatch}
+		initialAlliance={dialogAlliance}
+		{teamName}
+		onClose={() => (dialogOpen = false)}
+		onSubmitted={() => {
+			loadForMatch();
+			loadAlliances();
+		}}
+	/>
 {/if}
 
-<LineupHistory
-	bind:open={historyOpen}
-	allianceNumber={historyAllianceNumber}
-	{teamName}
-	onClose={() => (historyOpen = false)}
-/>
+<LineupHistory bind:open={historyOpen} allianceNumber={historyAllianceNumber} {teamName} onClose={() => (historyOpen = false)} />

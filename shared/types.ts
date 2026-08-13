@@ -717,6 +717,12 @@ export interface ScheduleDetails {
 		match: number;
 		level: TournamentLevel;
 		scheduledStartTime: Date;
+		/**
+		 * Playoff only: which alliance (1-8) is on each side for this match, from
+		 * FMS. Lets the scorekeeper view resolve red/blue without a played match log.
+		 */
+		redAllianceNumber?: number | null;
+		blueAllianceNumber?: number | null;
 	}[];
 }
 

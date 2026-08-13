@@ -152,6 +152,56 @@ export const scorekeeperRouter = router({
 			bus.publish(`event:${ctx.event.code}:lineups`, { type: "alliances" });
 			return { imported };
 		}),
+
+		/**
+		 * Sync alliances straight from FMS (posted by the extension). Authoritative:
+		 * this is the normal path once playoffs start, so no user role is required -
+		 * the event token is the auth, same as posting the schedule. Upserts every
+		 * alliance in the payload (including the backup/alternate team) so a backup
+		 * coupon accepted mid-playoffs flows through automatically.
+		 */
+		syncFromFMS: eventProcedure
+			.input(
+				z.object({
+					alliances: z.array(
+						z.object({
+							number: z.number().int().min(1).max(8),
+							captainTeam: z.number().int(),
+							pick1Team: z.number().int(),
+							pick2Team: z.number().int().nullable().optional(),
+							backupTeam: z.number().int().nullable().optional(),
+						}),
+					),
+				}),
+			)
+			.mutation(async ({ ctx, input }) => {
+				let synced = 0;
+				for (const a of input.alliances) {
+					await db
+						.insert(playoffAlliances)
+						.values({
+							event_code: ctx.event.code,
+							number: a.number,
+							captain_team: a.captainTeam,
+							pick1_team: a.pick1Team,
+							pick2_team: a.pick2Team ?? null,
+							backup_team: a.backupTeam ?? null,
+						})
+						.onConflictDoUpdate({
+							target: [playoffAlliances.event_code, playoffAlliances.number],
+							set: {
+								captain_team: a.captainTeam,
+								pick1_team: a.pick1Team,
+								pick2_team: a.pick2Team ?? null,
+								backup_team: a.backupTeam ?? null,
+								updated_at: new Date(),
+							},
+						});
+					synced++;
+				}
+				if (synced > 0) bus.publish(`event:${ctx.event.code}:lineups`, { type: "alliances" });
+				return { synced };
+			}),
 	}),
 
 	lineups: router({
@@ -177,11 +227,24 @@ export const scorekeeperRouter = router({
 					.where(eq(playoffAlliances.event_code, ctx.event.code))
 					.orderBy(playoffAlliances.number);
 
-				// Resolve which alliance is red/blue: explicit input wins, else detect
-				// from the match's team assignments in match_logs.
+				// Resolve which alliance is red/blue, in priority order:
+				//   1. explicit input from the client,
+				//   2. the FMS schedule's per-match alliance numbers (available before the
+				//      match is played - the authoritative source once playoffs start),
+				//   3. detection from the match's team assignments in a played match_log.
 				let redAlliance = input.redAlliance ?? null;
 				let blueAlliance = input.blueAlliance ?? null;
-				let detectedFrom: "input" | "match" | "none" = redAlliance || blueAlliance ? "input" : "none";
+				let detectedFrom: "input" | "schedule" | "match" | "none" = redAlliance || blueAlliance ? "input" : "none";
+				if (!redAlliance && !blueAlliance) {
+					const scheduled = ctx.event.scheduleDetails?.matches?.find(
+						(m) => m.match === input.matchNumber && m.level === "Playoff",
+					);
+					if (scheduled?.redAllianceNumber || scheduled?.blueAllianceNumber) {
+						redAlliance = scheduled.redAllianceNumber ?? null;
+						blueAlliance = scheduled.blueAllianceNumber ?? null;
+						detectedFrom = "schedule";
+					}
+				}
 				if (!redAlliance && !blueAlliance && alliances.length) {
 					const [log] = await db
 						.select()
@@ -230,7 +293,7 @@ export const scorekeeperRouter = router({
 						color,
 						allianceNumber,
 						alliance,
-						lineup: resolveLineup(accepted, alliance, input.matchNumber),
+						lineup: resolveLineup(accepted, alliance, input.matchNumber, color),
 					};
 				};
 
@@ -258,7 +321,8 @@ export const scorekeeperRouter = router({
 					allianceNumber: z.number().int().min(1).max(8),
 					matchNumber: z.number().int(),
 					playNumber: z.number().int().default(1),
-					stations: stationsSchema,
+					blue: stationsSchema,
+					red: stationsSchema,
 					submittedByName: z.string().max(120).optional(),
 					note: z.string().max(300).optional(),
 					acceptAnyway: z.boolean().optional(),
@@ -294,7 +358,14 @@ export const scorekeeperRouter = router({
 					};
 				}
 
-				const stationTeams = [input.stations.station1, input.stations.station2, input.stations.station3];
+				const stationTeams = [
+					input.blue.station1,
+					input.blue.station2,
+					input.blue.station3,
+					input.red.station1,
+					input.red.station2,
+					input.red.station3,
+				];
 				const usesBackup = alliance.backup_team != null && stationTeams.includes(alliance.backup_team);
 				const denied = late && input.deny === true;
 
@@ -337,9 +408,12 @@ export const scorekeeperRouter = router({
 						match_number: input.matchNumber,
 						play_number: input.playNumber,
 						version,
-						station1_team: input.stations.station1,
-						station2_team: input.stations.station2,
-						station3_team: input.stations.station3,
+						blue_station1_team: input.blue.station1,
+						blue_station2_team: input.blue.station2,
+						blue_station3_team: input.blue.station3,
+						red_station1_team: input.red.station1,
+						red_station2_team: input.red.station2,
+						red_station3_team: input.red.station3,
 						uses_backup: usesBackup,
 						status: denied ? "rejected" : "accepted",
 						source: "scorekeeper",

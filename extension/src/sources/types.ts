@@ -7,10 +7,25 @@ export interface MatchRef {
 	level: TournamentLevel;
 }
 
+/** One playoff alliance roster (captain + picks + accepted backup), from FMS. */
+export interface PlayoffAllianceRoster {
+	number: number;
+	captainTeam: number;
+	pick1Team: number;
+	pick2Team: number | null;
+	backupTeam: number | null;
+}
+
 export interface ScheduleResult {
 	days: ScheduleBreakdown;
 	lastPlayed: number;
-	matches: { match: number; level: TournamentLevel; scheduledStartTime: Date }[];
+	matches: {
+		match: number;
+		level: TournamentLevel;
+		scheduledStartTime: Date;
+		redAllianceNumber?: number | null;
+		blueAllianceNumber?: number | null;
+	}[];
 }
 
 /**
@@ -37,6 +52,8 @@ export interface FieldDataSource extends TypedEventEmitter<SourceEventMap> {
 
 	getCurrentMatch(): Promise<MatchRef>;
 	getScheduleBreakdown(): Promise<ScheduleResult>;
+	/** Playoff alliance rosters, or [] when the source has none / not in playoffs. */
+	getAlliances(): Promise<PlayoffAllianceRoster[]>;
 	getTeamNumbers(): Promise<number[]>;
 	getEventCode(): Promise<string>;
 

@@ -24,6 +24,15 @@
 
 	const stations = $derived(side.lineup?.stations ?? null);
 	const resolution = $derived(side.lineup?.resolution ?? null);
+
+	// Lay the stations out like the lineup card / input: blue side is Blue 1/2/3
+	// top-to-bottom, red side is Red 3/2/1 top-to-bottom.
+	const rows = $derived.by<[string, number | null][]>(() => {
+		if (!stations) return [];
+		return side.color === "blue"
+			? [["Blue 1", stations.station1], ["Blue 2", stations.station2], ["Blue 3", stations.station3]]
+			: [["Red 3", stations.station3], ["Red 2", stations.station2], ["Red 1", stations.station1]];
+	});
 </script>
 
 <div class="rounded-lg border-2 p-3 flex flex-col gap-2 {colorClasses}">
@@ -42,13 +51,12 @@
 	</div>
 
 	{#if side.allianceNumber && stations}
-		<div class="grid grid-cols-3 gap-2">
-			{#each [1, 2, 3] as ds (ds)}
-				{@const team = ds === 1 ? stations.station1 : ds === 2 ? stations.station2 : stations.station3}
-				<div class="rounded-md bg-white dark:bg-neutral-800 p-2 text-center">
-					<div class="text-xs text-gray-500 uppercase">DS{ds}</div>
-					<div class="text-xl font-bold text-gray-900 dark:text-white">{team ?? "-"}</div>
-					<div class="text-[10px] text-gray-500 truncate" title={teamName(team)}>{teamName(team)}</div>
+		<div class="flex flex-col gap-2">
+			{#each rows as [label, team] (label)}
+				<div class="flex items-center gap-3 rounded-md bg-white dark:bg-neutral-800 px-3 py-2">
+					<span class="w-12 shrink-0 text-xs font-semibold uppercase text-gray-500">{label}</span>
+					<span class="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">{team ?? "-"}</span>
+					<span class="truncate text-xs text-gray-500" title={teamName(team)}>{teamName(team)}</span>
 				</div>
 			{/each}
 		</div>

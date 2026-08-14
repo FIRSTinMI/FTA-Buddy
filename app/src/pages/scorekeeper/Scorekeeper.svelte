@@ -118,19 +118,37 @@
 		if (f?.match && f.level && f.level !== "None") {
 			selLevel = f.level;
 			selMatch = f.match;
-			selPlay = f.play ?? 1;
+			selPlay = f.play || 1;
 		}
 	}
 
-	const selIndex = $derived(
-		allMatches.findIndex((m) => m.level === selLevel && m.match === selMatch && m.play === selPlay),
-	);
-	const selectedRow = $derived(selIndex >= 0 ? allMatches[selIndex] : null);
+	// Current position in the browsable list: exact match first, then by level+match
+	// (play numbers can differ from the schedule), else -1 (not in the list yet).
+	const navIndex = $derived.by(() => {
+		let i = allMatches.findIndex((m) => m.level === selLevel && m.match === selMatch && m.play === selPlay);
+		if (i < 0) i = allMatches.findIndex((m) => m.level === selLevel && m.match === selMatch);
+		return i;
+	});
+	const selectedRow = $derived(navIndex >= 0 ? allMatches[navIndex] : null);
+	const atFirst = $derived(allMatches.length === 0 || navIndex === 0);
+	const atLast = $derived(allMatches.length === 0 || (navIndex >= 0 && navIndex === allMatches.length - 1));
 
 	function step(delta: number) {
 		following = false;
-		if (selIndex < 0) return;
-		const next = allMatches[selIndex + delta];
+		if (allMatches.length === 0) return;
+		let i = navIndex;
+		if (i < 0) {
+			// Current selection isn't in the list - snap in by the nearest match at this
+			// level so a play/level quirk never freezes navigation.
+			const sameLevel = allMatches.filter((m) => m.level === selLevel);
+			if (sameLevel.length) {
+				const target = sameLevel.find((m) => m.match >= selMatch) ?? sameLevel[sameLevel.length - 1];
+				i = allMatches.indexOf(target);
+			} else {
+				i = delta > 0 ? -1 : allMatches.length;
+			}
+		}
+		const next = allMatches[i + delta];
 		if (!next) return;
 		selLevel = next.level;
 		selMatch = next.match;
@@ -295,7 +313,7 @@
 
 	<!-- Match selector: follows live, browsable -->
 	<div class="flex items-center justify-between rounded-lg border border-gray-200 dark:border-neutral-700 p-2">
-		<Button size="sm" color="alternative" onclick={() => step(-1)} disabled={selIndex <= 0}>
+		<Button size="sm" color="alternative" onclick={() => step(-1)} disabled={atFirst}>
 			<Icon icon="mdi:chevron-left" class="size-5" />
 		</Button>
 		<div class="text-center">
@@ -308,9 +326,19 @@
 				{following ? "● Following live" : "Jump to live"}
 			</button>
 		</div>
-		<Button size="sm" color="alternative" onclick={() => step(1)} disabled={selIndex < 0 || selIndex >= allMatches.length - 1}>
+		<Button size="sm" color="alternative" onclick={() => step(1)} disabled={atLast}>
 			<Icon icon="mdi:chevron-right" class="size-5" />
 		</Button>
+	</div>
+
+	<!-- Cycle stats (ahead/behind + cycle times) - directly under the match number -->
+	<div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+		{#each stats as [label, value] (label)}
+			<div class="rounded-md border border-gray-200 dark:border-neutral-700 p-2 text-center">
+				<div class="text-xs text-gray-500 uppercase">{label}</div>
+				<div class="text-lg font-bold text-gray-900 dark:text-white">{value}</div>
+			</div>
+		{/each}
 	</div>
 
 	<!-- Playoff lineup view for the selected match -->
@@ -339,16 +367,6 @@
 			Lineups apply to playoff matches. {selLevel} {selMatch} is shown for schedule reference below.
 		</div>
 	{/if}
-
-	<!-- Cycle stats -->
-	<div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-		{#each stats as [label, value] (label)}
-			<div class="rounded-md border border-gray-200 dark:border-neutral-700 p-2 text-center">
-				<div class="text-xs text-gray-500 uppercase">{label}</div>
-				<div class="text-lg font-bold text-gray-900 dark:text-white">{value}</div>
-			</div>
-		{/each}
-	</div>
 
 	<!-- Match schedule table -->
 	<h2 class="text-lg font-bold text-gray-900 dark:text-white mt-2">Match schedule</h2>

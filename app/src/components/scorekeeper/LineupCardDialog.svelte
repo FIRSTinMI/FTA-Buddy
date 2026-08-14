@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Alert, Button, Modal, Select } from "flowbite-svelte";
+	import { Alert, Button, Modal } from "flowbite-svelte";
 	import { onMount, tick } from "svelte";
 	import { trpc } from "../../main";
 	import type { Alliance } from "../../util/scorekeeperTypes";
@@ -37,12 +37,12 @@
 	let allianceNumber = $state<number>(initialAlliance ?? alliances[0]?.number ?? 1);
 	let matchNumber = $state(1);
 
-	const allianceOptions = $derived(
-		(alliances.length ? alliances : Array.from({ length: 8 }, (_, i) => ({ number: i + 1 }) as Alliance)).map(
-			(a) => ({ value: a.number, name: `Alliance ${a.number}${a.captain_team ? ` (${a.captain_team})` : ""}` }),
-		),
+	const allianceButtons = $derived(
+		Array.from({ length: 8 }, (_, i) => ({
+			number: i + 1,
+			captain: alliances.find((a) => a.number === i + 1)?.captain_team ?? null,
+		})),
 	);
-
 	const roster = $derived(alliances.find((a) => a.number === allianceNumber) ?? null);
 	const rosterTeams = $derived(
 		roster ? [roster.captain_team, roster.pick1_team, roster.pick2_team, roster.backup_team].filter((t): t is number => t != null) : [],
@@ -201,14 +201,23 @@
 <Modal bind:open title={stage === 1 ? "File a lineup card" : `Lineup card: Alliance ${allianceNumber}, Match ${matchNumber}`} onclose={onClose} size="md">
 	{#if stage === 1}
 		<div class="flex flex-col gap-4">
-			<label class="flex flex-col gap-1 text-sm text-gray-600 dark:text-gray-300">
+			<div class="flex flex-col gap-1 text-sm text-gray-600 dark:text-gray-300">
 				Alliance
-				<Select
-					items={allianceOptions}
-					value={allianceNumber}
-					onchange={(e) => selectAlliance(parseInt((e.target as HTMLSelectElement).value))}
-				/>
-			</label>
+				<div class="grid grid-cols-4 gap-2">
+					{#each allianceButtons as a (a.number)}
+						<button
+							type="button"
+							onclick={() => selectAlliance(a.number)}
+							class="rounded-md border py-2 text-center font-semibold transition {allianceNumber === a.number
+								? 'border-primary-600 bg-primary-600 text-white'
+								: 'border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-200 hover:border-primary-400'}"
+						>
+							<span class="text-lg leading-none">{a.number}</span>
+							{#if a.captain}<span class="block text-[10px] font-normal opacity-70">{a.captain}</span>{/if}
+						</button>
+					{/each}
+				</div>
+			</div>
 			<label class="flex flex-col gap-1 text-sm text-gray-600 dark:text-gray-300">
 				Match number
 				<input

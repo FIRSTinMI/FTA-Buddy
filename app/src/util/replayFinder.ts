@@ -12,6 +12,8 @@ export interface ReplayScheduleMatch {
 export interface ReplayCandidate {
 	/** Insertion index: the replay goes between schedule[index-1] and schedule[index]. */
 	index: number;
+	/** True when this is the soonest slot - the replay runs as the very next match. */
+	immediate: boolean;
 	/** Match the replay would follow (null = before the first remaining match). */
 	afterMatch: number | null;
 	/** Match the replay would precede (null = after the last match). */
@@ -20,12 +22,14 @@ export interface ReplayCandidate {
 	atTime: Date | null;
 	/** True when this slot sits right after a schedule break (>= breakMinutes gap). */
 	afterBreak: boolean;
-	/** Smallest match-spacing any replay team gets here (Infinity = fully unconstrained). */
+	/** Smallest matches-of-rest any replay team gets here (0 = tightest, Infinity = unconstrained). */
 	minGap: number;
-	/** The replay teams that hit that smallest spacing (the tightest ones). */
+	/** The replay teams that hit that smallest rest (the tightest ones). */
 	tightTeams: number[];
 	/** Every replay team with the matches of rest it gets here, tightest first. */
 	teamGaps: { team: number; gap: number }[];
+	/** Total finite rest across all teams - used to break ties toward more overall rest. */
+	sumRest: number;
 }
 
 export interface ReplayOptions {
@@ -63,9 +67,9 @@ export function findReplaySlots(
 
 	const out: ReplayCandidate[] = [];
 	for (let i = minIndex; i <= schedule.length; i++) {
-		let minGap = Infinity;
+		let minRest = Infinity;
 		let valid = true;
-		const gaps: { team: number; gap: number }[] = [];
+		let sumRest = 0;
 		const teamGaps: { team: number; gap: number }[] = [];
 		for (const t of teams) {
 			let prevIdx = -1;
@@ -80,30 +84,38 @@ export function findReplaySlots(
 					nextIdx = j;
 					break;
 				}
-			const beforeGap = prevIdx < 0 ? Infinity : i - prevIdx - 1;
-			const afterGap = nextIdx < 0 ? Infinity : nextIdx - i;
-			const g = Math.min(beforeGap, afterGap);
-			if (g <= 0) valid = false;
-			if (g < minGap) minGap = g;
-			teamGaps.push({ team: t, gap: g });
-			if (Number.isFinite(g)) gaps.push({ team: t, gap: g });
+			// Matches sitting between this team's nearest match and the replay slot.
+			const beforeMatches = prevIdx < 0 ? Infinity : i - prevIdx - 1;
+			const afterMatches = nextIdx < 0 ? Infinity : nextIdx - i;
+			const between = Math.min(beforeMatches, afterMatches);
+			// between === 0 means the team plays the match right beside the replay -> back-to-back.
+			if (between <= 0) valid = false;
+			// Matches of rest a team actually gets: the tightest playable slot (one match on
+			// either side) is 0 rest; Infinity when the team has no other match this level.
+			const rest = Number.isFinite(between) ? between - 1 : Infinity;
+			if (rest < minRest) minRest = rest;
+			if (Number.isFinite(rest)) sumRest += rest;
+			teamGaps.push({ team: t, gap: rest });
 		}
 		if (!valid) continue;
-		const tightest = gaps.length ? Math.min(...gaps.map((x) => x.gap)) : Infinity;
 		teamGaps.sort((a, b) => a.gap - b.gap);
+		const finite = teamGaps.filter((x) => Number.isFinite(x.gap));
+		const tightest = finite.length ? finite[0].gap : Infinity;
 		out.push({
 			index: i,
+			immediate: i === minIndex,
 			afterMatch: i > 0 ? schedule[i - 1].matchNumber : null,
 			beforeMatch: i < schedule.length ? schedule[i].matchNumber : null,
 			atTime: (i < schedule.length ? schedule[i].timestamp : schedule[i - 1]?.timestamp) ?? null,
 			afterBreak: afterBreak(i),
-			minGap,
-			tightTeams: gaps.filter((x) => x.gap === tightest).map((x) => x.team),
+			minGap: minRest,
+			tightTeams: finite.filter((x) => x.gap === tightest).map((x) => x.team),
 			teamGaps,
+			sumRest,
 		});
 	}
 
-	// Rank: most spacing first, then earliest slot (breaks surface as a badge).
-	out.sort((a, b) => b.minGap - a.minGap || a.index - b.index);
+	// Rank: highest minimum rest first, then the most total rest across teams, then soonest.
+	out.sort((a, b) => b.minGap - a.minGap || b.sumRest - a.sumRest || a.index - b.index);
 	return out.slice(0, topN);
 }

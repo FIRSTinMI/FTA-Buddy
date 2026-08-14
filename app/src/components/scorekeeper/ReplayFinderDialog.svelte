@@ -113,7 +113,7 @@
 					<div class="rounded-lg border p-3 {i === 0 ? 'border-primary-500' : 'border-gray-200 dark:border-neutral-700'}">
 						<div class="flex items-center justify-between gap-2">
 							<span class="font-semibold text-gray-900 dark:text-white">
-								{#if c.afterMatch != null}After Match {c.afterMatch}{:else}Before Match {c.beforeMatch}{/if}
+								{#if c.immediate}Immediately{:else if c.afterMatch != null}After Match {c.afterMatch}{:else}Before Match {c.beforeMatch}{/if}
 								{#if fmtTime(c.atTime)}<span class="ml-1 text-xs font-normal text-gray-500">(~{fmtTime(c.atTime)})</span>{/if}
 							</span>
 							<div class="flex shrink-0 gap-1">
@@ -127,10 +127,6 @@
 						</div>
 					</div>
 				{/each}
-			</div>
-			<div class="text-[11px] text-gray-400">
-				Ranked by the least rest any of the replay's teams gets. A valid slot never puts one of those teams in
-				back-to-back matches, and only not-yet-played slots are shown. "free" = the team has no other match this level.
 			</div>
 		{/if}
 	</div>

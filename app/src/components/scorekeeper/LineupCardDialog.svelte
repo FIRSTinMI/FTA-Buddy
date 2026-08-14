@@ -101,10 +101,29 @@
 			? []
 			: [...new Set(enteredTeams.filter((t): t is number => t != null && !rosterSet.has(t)))],
 	);
-	function isOff(v: string): boolean {
-		const t = toTeam(v);
-		return t != null && rosterSet.size > 0 && !rosterSet.has(t);
+	// Teams duplicated within one side (a team can't fill two stations on the same
+	// side). The same team appearing once on blue and once on red is expected.
+	function dupSet(vals: (number | null)[]): Set<number> {
+		const counts = new Map<number, number>();
+		for (const v of vals) if (v != null) counts.set(v, (counts.get(v) ?? 0) + 1);
+		return new Set([...counts.entries()].filter(([, c]) => c > 1).map(([t]) => t));
 	}
+	const blueDups = $derived(dupSet([b1, b2, b3].map(toTeam)));
+	const redDups = $derived(dupSet([r1, r2, r3].map(toTeam)));
+	const hasDup = $derived(blueDups.size > 0 || redDups.size > 0);
+
+	/** A box is invalid (amber) if its team is off-roster or duplicated on its own side. */
+	function boxInvalid(side: "blue" | "red", v: string): boolean {
+		const t = toTeam(v);
+		if (t == null) return false;
+		if (rosterSet.size > 0 && !rosterSet.has(t)) return true;
+		return (side === "blue" ? blueDups : redDups).has(t);
+	}
+
+	// Clear the off-roster warning as soon as the teams are corrected.
+	$effect(() => {
+		if (offRoster.length === 0) validationWarn = false;
+	});
 
 	async function goToStage2() {
 		error = "";
@@ -113,25 +132,19 @@
 		try {
 			const history = await trpc.scorekeeper.lineups.history.query({ allianceNumber });
 			const latest = history.find((c) => c.status === "accepted") ?? history[0];
+			// Inputs start blank so the operator transcribes the card without erasing;
+			// the current in-effect lineup (latest card, else the default) is shown as a
+			// read-only reference flanking the inputs.
+			b1 = b2 = b3 = r1 = r2 = r3 = "";
 			if (latest) {
 				currentIsDefault = false;
-				b1 = String(latest.blue_station1_team ?? "");
-				b2 = String(latest.blue_station2_team ?? "");
-				b3 = String(latest.blue_station3_team ?? "");
-				r1 = String(latest.red_station1_team ?? "");
-				r2 = String(latest.red_station2_team ?? "");
-				r3 = String(latest.red_station3_team ?? "");
 				onFile = {
 					blue: [latest.blue_station1_team, latest.blue_station2_team, latest.blue_station3_team],
 					red: [latest.red_station1_team, latest.red_station2_team, latest.red_station3_team],
 				};
 			} else {
-				// No card yet: the default lineup is in effect (same both sides).
 				currentIsDefault = true;
 				const d = defaultTrio();
-				b1 = r1 = String(d?.[0] ?? "");
-				b2 = r2 = String(d?.[1] ?? "");
-				b3 = r3 = String(d?.[2] ?? "");
 				onFile = d ? { blue: d, red: d } : null;
 			}
 		} catch {
@@ -145,6 +158,8 @@
 	}
 
 	async function doSubmit(opts: { acceptAnyway?: boolean; deny?: boolean; overrideValidation?: boolean } = {}) {
+		// A team duplicated on one side is a hard error - never submittable.
+		if (hasDup) return;
 		// Client-side roster validation gate (overridable - e.g. a backup the
 		// extension didn't pick up from FMS). Skipped once overridden or on the
 		// late-accept / deny paths.
@@ -190,7 +205,7 @@
 
 	/** Border/ring for an input: amber when off-roster, else its side colour. */
 	function inpCls(side: "blue" | "red", v: string): string {
-		if (isOff(v)) return "border-amber-500 ring-1 ring-amber-500 focus:ring-amber-500";
+		if (boxInvalid(side, v)) return "border-amber-500 ring-1 ring-amber-500 focus:ring-amber-500";
 		return side === "blue"
 			? "border-blue-300 dark:border-blue-700 focus:border-blue-500 focus:ring-blue-500"
 			: "border-red-300 dark:border-red-700 focus:border-red-500 focus:ring-red-500";
@@ -198,7 +213,7 @@
 	const curCls = "text-center text-2xl font-bold tabular-nums";
 </script>
 
-<Modal bind:open title={stage === 1 ? "File a lineup card" : `Lineup card: Alliance ${allianceNumber}, Match ${matchNumber}`} onclose={onClose} size="md">
+<Modal bind:open title={stage === 1 ? "File a lineup card" : `Lineup card: Alliance ${allianceNumber}, Match ${matchNumber}`} onclose={onClose} size="md" outsideclose={false}>
 	{#if stage === 1}
 		<div class="flex flex-col gap-4">
 			<div class="flex flex-col gap-1 text-sm text-gray-600 dark:text-gray-300">
@@ -229,7 +244,7 @@
 			</label>
 			{#if roster}
 				<div class="text-xs text-gray-500">
-					Roster: {rosterTeams.join(", ")}
+					Roster: <span class="font-bold">{roster.captain_team}</span>{#if roster.pick1_team}, {roster.pick1_team}{/if}{#if roster.pick2_team}, {roster.pick2_team}{/if}{#if roster.backup_team}, {roster.backup_team}{/if}
 				</div>
 			{/if}
 		</div>
@@ -238,7 +253,7 @@
 			{#if roster}
 				<div class="rounded-md bg-gray-50 dark:bg-neutral-800/60 p-2 text-xs text-gray-600 dark:text-gray-300">
 					<span class="font-semibold">Alliance {allianceNumber}:</span>
-					{roster.captain_team} (C){#if roster.pick1_team}, {roster.pick1_team}{/if}{#if roster.pick2_team}, {roster.pick2_team}{/if}{#if roster.backup_team}, {roster.backup_team} (backup){/if}
+					<span class="font-bold">{roster.captain_team}</span>{#if roster.pick1_team}, {roster.pick1_team}{/if}{#if roster.pick2_team}, {roster.pick2_team}{/if}{#if roster.backup_team}, {roster.backup_team} (backup){/if}
 				</div>
 			{/if}
 			<!-- Current lineup flanks the inputs; labels only at the top. -->
@@ -272,7 +287,13 @@
 				class="rounded-md border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
 			/>
 
-			{#if validationWarn}
+			{#if hasDup}
+				<Alert color="yellow">
+					<span class="font-semibold">Duplicate team.</span>
+					A team can't fill two stations on the same side - fix the highlighted boxes.
+				</Alert>
+			{/if}
+			{#if validationWarn && !hasDup}
 				<Alert color="yellow">
 					<span class="font-semibold">Off-roster team{offRoster.length > 1 ? "s" : ""}:</span>
 					{offRoster.join(", ")} not on Alliance {allianceNumber}'s FMS roster. If this is a backup FMS missed,
@@ -309,10 +330,10 @@
 					{#if warning}
 						<Button color="red" onclick={() => doSubmit({ deny: true })} disabled={submitting}>Deny (T613)</Button>
 						<Button color="yellow" onclick={() => doSubmit({ acceptAnyway: true })} disabled={submitting}>Accept anyway</Button>
-					{:else if validationWarn}
+					{:else if validationWarn && !hasDup}
 						<Button color="yellow" onclick={() => doSubmit({ overrideValidation: true })} disabled={submitting}>File anyway</Button>
 					{:else}
-						<Button color="primary" onclick={() => doSubmit()} disabled={submitting}>
+						<Button color="primary" onclick={() => doSubmit()} disabled={submitting || hasDup}>
 							{submitting ? "Filing..." : "Submit card"}
 						</Button>
 					{/if}

@@ -73,8 +73,16 @@
 	let r3 = $state("");
 	let submittedByName = $state("");
 
-	// The alliance's most recent on-file lineup, shown as a reference.
+	// The alliance's most recent on-file lineup, shown as a reference. Falls back to
+	// the default lineup (REBUILT 10.6.4.2) when the alliance has never submitted one.
 	let onFile = $state<{ blue: (number | null)[]; red: (number | null)[] } | null>(null);
+	let currentIsDefault = $state(false);
+
+	/** Default lineup from the roster: pick1 -> DS1, captain -> DS2, pick2 -> DS3. */
+	function defaultTrio(): (number | null)[] | null {
+		if (!roster) return null;
+		return [roster.pick1_team ?? null, roster.captain_team ?? null, roster.pick2_team ?? null];
+	}
 
 	let submitting = $state(false);
 	let error = $state("");
@@ -105,21 +113,31 @@
 		try {
 			const history = await trpc.scorekeeper.lineups.history.query({ allianceNumber });
 			const latest = history.find((c) => c.status === "accepted") ?? history[0];
-			b1 = String(latest?.blue_station1_team ?? "");
-			b2 = String(latest?.blue_station2_team ?? "");
-			b3 = String(latest?.blue_station3_team ?? "");
-			r1 = String(latest?.red_station1_team ?? "");
-			r2 = String(latest?.red_station2_team ?? "");
-			r3 = String(latest?.red_station3_team ?? "");
-			onFile = latest
-				? {
-						blue: [latest.blue_station1_team, latest.blue_station2_team, latest.blue_station3_team],
-						red: [latest.red_station1_team, latest.red_station2_team, latest.red_station3_team],
-					}
-				: null;
+			if (latest) {
+				currentIsDefault = false;
+				b1 = String(latest.blue_station1_team ?? "");
+				b2 = String(latest.blue_station2_team ?? "");
+				b3 = String(latest.blue_station3_team ?? "");
+				r1 = String(latest.red_station1_team ?? "");
+				r2 = String(latest.red_station2_team ?? "");
+				r3 = String(latest.red_station3_team ?? "");
+				onFile = {
+					blue: [latest.blue_station1_team, latest.blue_station2_team, latest.blue_station3_team],
+					red: [latest.red_station1_team, latest.red_station2_team, latest.red_station3_team],
+				};
+			} else {
+				// No card yet: the default lineup is in effect (same both sides).
+				currentIsDefault = true;
+				const d = defaultTrio();
+				b1 = r1 = String(d?.[0] ?? "");
+				b2 = r2 = String(d?.[1] ?? "");
+				b3 = r3 = String(d?.[2] ?? "");
+				onFile = d ? { blue: d, red: d } : null;
+			}
 		} catch {
 			b1 = b2 = b3 = r1 = r2 = r3 = "";
 			onFile = null;
+			currentIsDefault = false;
 		}
 		stage = 2;
 		await tick();
@@ -216,10 +234,10 @@
 			{/if}
 			<!-- Current lineup flanks the inputs; labels only at the top. -->
 			<div class="grid grid-cols-4 gap-x-2 gap-y-2 items-center max-w-md mx-auto w-full">
-				<div class="col-start-1 row-start-1 text-center text-[10px] uppercase text-gray-400">Current</div>
+				<div class="col-start-1 row-start-1 text-center text-[10px] uppercase text-gray-400">Current{currentIsDefault ? " (def)" : ""}</div>
 				<div class="col-start-2 row-start-1 text-center text-xs font-bold uppercase text-blue-600 dark:text-blue-400">Blue</div>
 				<div class="col-start-3 row-start-1 text-center text-xs font-bold uppercase text-red-600 dark:text-red-400">Red</div>
-				<div class="col-start-4 row-start-1 text-center text-[10px] uppercase text-gray-400">Current</div>
+				<div class="col-start-4 row-start-1 text-center text-[10px] uppercase text-gray-400">Current{currentIsDefault ? " (def)" : ""}</div>
 
 				<!-- current blue trio (left) -->
 				<div class="col-start-1 row-start-2 {curCls} text-blue-500/70">{onFile?.blue[0] ?? "\u2014"}</div>

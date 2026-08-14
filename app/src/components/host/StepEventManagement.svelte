@@ -10,6 +10,7 @@
 	import { navigate } from "../../router";
 	import QrCode from "svelte-qrcode";
 	import IntegrationAutoEvents from "./integrations/IntegrationAutoEvents.svelte";
+	import IntegrationSlowWarning from "./integrations/IntegrationSlowWarning.svelte";
 	import IntegrationFmsFtaApp from "./integrations/IntegrationFmsFtaApp.svelte";
 	import IntegrationNexus from "./integrations/IntegrationNexus.svelte";
 	import IntegrationSlack from "./integrations/IntegrationSlack.svelte";
@@ -306,6 +307,7 @@
 	<IntegrationWpaKiosk />
 	<IntegrationSlack />
 	<IntegrationAutoEvents />
+	<IntegrationSlowWarning />
 </div>
 
 {#if $userStore.eventToken}

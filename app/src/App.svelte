@@ -1,5 +1,12 @@
 <script lang="ts">
-	import Icon from "@iconify/svelte";
+	import Icon, { loadIcons } from "@iconify/svelte";
+	// Preload the sidebar/nav icons so they don't pop in on first open.
+	loadIcons([
+		"mdi:television", "mdi:television-guide", "mdi:clipboard-outline", "mdi:clipboard-list-outline",
+		"mdi:clipboard-edit-outline", "mdi:file-document", "mdi:message-alert", "mdi:account-switch",
+		"mdi:package", "mdi:database-export-outline", "mdi:shield-crown-outline", "mdi:information",
+		"mdi:cog", "mdi:cog-outline", "mdi:menu",
+	]);
 	import {
 		Button,
 		CloseButton,
@@ -175,7 +182,12 @@
 		"/join",
 	];
 
-	const eventTokenPaths = ["/monitor", "/checklist", "/logs", "/notepad"];
+	const eventTokenPaths = ["/monitor", "/checklist", "/logs", "/notepad", "/scorekeeper", "/field-lineup"];
+
+	// Roles that can see the Scorekeeper view (playoff lineups).
+	let canScorekeep = $derived(
+		$user.admin || ["Scorekeeper", "FTA", "FTAA", "System"].includes($user.role),
+	);
 
 	function redirectForAuth() {
 		const currentPath = route.pathname;
@@ -483,6 +495,8 @@
 				}
 			} else if ($user.role === "CSA" || $user.role === "RI") {
 				navigate("/notepad");
+			} else if ($user.role === "Scorekeeper") {
+				navigate("/scorekeeper");
 			}
 		}
 	});
@@ -666,7 +680,7 @@
 	<Sidebar alwaysOpen={true} position="static" class="w-full" classes={{ div: "overflow-y-auto" }}>
 		<SidebarWrapper class="rounded-sm py-4 dark:bg-gray-800">
 			{#if $user.token && $user.eventToken}
-				<SidebarGroup>
+				<SidebarGroup class="space-y-1">
 					<SidebarItem
 						label="Monitor"
 						onclick={() => {
@@ -722,6 +736,30 @@
 							<Icon icon="mdi:clipboard-outline" class="size-8" />
 						{/snippet}
 					</SidebarItem>
+					{#if canScorekeep}
+						<SidebarItem
+							label="Scorekeeper"
+							onclick={() => {
+								drawerOpen = false;
+								navigate("/scorekeeper");
+							}}
+						>
+							{#snippet icon()}
+								<Icon icon="mdi:clipboard-list-outline" class="size-8" />
+							{/snippet}
+						</SidebarItem>
+						<SidebarItem
+							label="Lineup Entry"
+							onclick={() => {
+								drawerOpen = false;
+								navigate("/field-lineup");
+							}}
+						>
+							{#snippet icon()}
+								<Icon icon="mdi:clipboard-edit-outline" class="size-8" />
+							{/snippet}
+						</SidebarItem>
+					{/if}
 					<SidebarItem
 						label="Event Reports"
 						onclick={() => {
@@ -765,7 +803,7 @@
 					</SidebarItem>
 				</SidebarGroup>
 			{:else if $user.eventToken}
-				<SidebarGroup>
+				<SidebarGroup class="space-y-1">
 					<SidebarItem
 						label="Monitor"
 						onclick={() => {

@@ -37,6 +37,7 @@ import {
 	updateNoteAssignmentFromSlack,
 	updateNoteStatusFromSlack,
 } from "./router/notes";
+import { scorekeeperRouter } from "./router/scorekeeper";
 import { telemetryRouter } from "./router/telemetry";
 import { userRouter, generateToken } from "./router/user";
 import { adminProcedure, createContext, publicProcedure, router } from "./trpc";
@@ -89,6 +90,7 @@ const appRouter = router({
 	matchEvents: matchEventsRouter,
 	extension: extensionRouter,
 	aiReport: aiReportRouter,
+	scorekeeper: scorekeeperRouter,
 	app: router({
 		version: publicProcedure.query(() => {
 			return pjson.version ?? "dev";

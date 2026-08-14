@@ -9,11 +9,19 @@ import {
 	RobotWarnings,
 	StateChangeType,
 } from "../../shared/types";
-import type { MonitorFrame, PartialMonitorFrame, RobotInfo, ScheduleDetails, StateChange } from "../../shared/types";
+import type {
+	EventCycleTracking,
+	MonitorFrame,
+	PartialMonitorFrame,
+	RobotInfo,
+	ScheduleDetails,
+	StateChange,
+} from "../../shared/types";
 import { db } from "../db/db";
 import schema, { matchEvents, notes, robotCycleLogs } from "../db/schema";
 import { debugLog } from "./debug-log";
-import { getCycleTracking, getChecklist, setCycleTracking, setChecklist } from "./event-state";
+import { getCycleTracking, getChecklist, getSlowTeams, setCycleTracking, setChecklist } from "./event-state";
+import { refreshSlowTeams } from "./slow-teams";
 
 export function detectRadioNoDs(currentFrame: PartialMonitorFrame, pastFrames: MonitorFrame[]) {
 	// Only in prestart
@@ -159,6 +167,12 @@ export async function processFrameForTeamData(eventCode: string, frame: MonitorF
 export async function processTeamWarnings(eventCode: string, frame: MonitorFrame, previousFrame: MonitorFrame) {
 	const checklist = await getChecklist(eventCode);
 
+	// The SLOW set is a per-event cache (see slow-teams.ts). Only read it on the one frame
+	// where prestart completes; other frames copy the warning forward from the previous frame.
+	const isPrestartComplete =
+		frame.field === FieldState.PRESTART_COMPLETED && previousFrame.field === FieldState.PRESTART_INITIATED;
+	const slowTeams = isPrestartComplete ? await getSlowTeams(eventCode) : null;
+
 	for (let station in ROBOT) {
 		let robot = frame[station as keyof MonitorFrame] as RobotInfo;
 		const teamChecklist = checklist[robot.number];
@@ -171,7 +185,12 @@ export async function processTeamWarnings(eventCode: string, frame: MonitorFrame
 		}
 
 		// The note warning is expensive on database transactions so only run it one time when prestart completes
-		if (frame.field === FieldState.PRESTART_COMPLETED && previousFrame.field === FieldState.PRESTART_INITIATED) {
+		if (isPrestartComplete) {
+			// 🐌 Consistently slow to connect at this event (see slow-teams.ts).
+			if (slowTeams?.has(robot.number)) {
+				robot.warnings.push(RobotWarnings.SLOW);
+			}
+
 			const teamNotes = await db
 				.select()
 				.from(notes)
@@ -230,6 +249,7 @@ export async function processTeamWarnings(eventCode: string, frame: MonitorFrame
 		} else if (!(frame.field === FieldState.MATCH_OVER || frame.field === FieldState.MATCH_ABORTED)) {
 			const previousFrameWarnings = previousFrame[station as keyof MonitorFrame] as RobotInfo;
 
+			if (previousFrameWarnings.warnings.includes(RobotWarnings.SLOW)) robot.warnings.push(RobotWarnings.SLOW);
 			if (previousFrameWarnings.warnings.includes(RobotWarnings.OPEN_NOTE))
 				robot.warnings.push(RobotWarnings.OPEN_NOTE);
 			if (previousFrameWarnings.warnings.includes(RobotWarnings.RECENT_NOTE))
@@ -257,6 +277,9 @@ export async function processTeamCycles(
 
 	// If the match is running and there is data, commit it and reset the tracking object
 	if (MatchStateMap[frame.field] === MatchState.RUNNING && tracking.prestart) {
+		// Catch anything that connected in the final prestart->running frame before committing.
+		stampFrame(tracking, frame);
+
 		const insert = [];
 
 		for (let robot in ROBOT) {
@@ -282,6 +305,9 @@ export async function processTeamCycles(
 				first_code: robotCycle.firstCode,
 				last_code: robotCycle.lastCode,
 				time_code: robotCycle.timeCode,
+				first_ready: robotCycle.firstReady,
+				last_ready: robotCycle.lastReady,
+				time_ready: robotCycle.timeReady,
 			});
 		}
 
@@ -295,6 +321,11 @@ export async function processTeamCycles(
 
 		if (insert.length > 0) await db.insert(robotCycleLogs).values(insert);
 		setCycleTracking(eventCode, {});
+		// A new match's timings just landed — recompute the cached SLOW-team set for this
+		// event so the next prestart's warnings reflect it. Best-effort; never block commit.
+		refreshSlowTeams(eventCode).catch((err) =>
+			console.error(`[Cycle] refreshSlowTeams failed for ${eventCode}:`, err),
+		);
 		return;
 	}
 
@@ -306,7 +337,10 @@ export async function processTeamCycles(
 				category: "cycle",
 				level: "debug",
 				message: "PRESTART_INITIATED — wiping cycle tracking",
-				data: { hadPrestart: !!tracking.prestart, stations: Object.keys(tracking).filter((k) => k !== "prestart") },
+				data: {
+					hadPrestart: !!tracking.prestart,
+					stations: Object.keys(tracking).filter((k) => k !== "prestart"),
+				},
 			});
 		}
 		setCycleTracking(eventCode, {});
@@ -316,85 +350,99 @@ export async function processTeamCycles(
 	// Only process in prestart
 	if (MatchStateMap[frame.field] !== MatchState.PRESTART) return;
 
-	let changed = false;
-
 	// If new match, set the prestart time
 	if (!tracking.prestart) {
 		tracking.prestart = lastPrestartDone || new Date();
-		changed = true;
 		debugLog({
 			eventCode,
 			category: "cycle",
 			level: "info",
 			message: `prestart anchor set for match ${frame.match}-${frame.play}`,
-			data: { prestart: tracking.prestart, lastPrestartDone, match: frame.match, play: frame.play, level: frame.level },
-		});
-	}
-
-	for (let change of changes) {
-		// Skip falling edges and any change for a robot whose DS isn't green —
-		// but keep processing the rest of the frame's changes; one bad apple
-		// shouldn't drop sibling robots' rising edges.
-		if (change.type !== StateChangeType.RisingEdge || change.robot.ds !== DSState.GREEN) {
-			debugLog({
-				eventCode,
-				category: "cycle",
-				level: "debug",
-				message: `skip change station=${change.station} key=${change.key}`,
-				data: {
-					reason: change.type !== StateChangeType.RisingEdge ? "not-rising" : "ds-not-green",
-					type: change.type,
-					ds: change.robot.ds,
-					team: change.robot.number,
-				},
-			});
-			continue;
-		}
-
-		if (!tracking[change.station]) {
-			tracking[change.station] = { team: change.robot.number };
-		}
-		const cycle = tracking[change.station]!;
-
-		debugLog({
-			eventCode,
-			category: "cycle",
-			level: "debug",
-			message: `apply ${change.key} for ${change.station} team ${change.robot.number}`,
 			data: {
-				station: change.station,
-				team: change.robot.number,
-				key: change.key,
-				lastChange: change.robot.lastChange,
-				before: { ...cycle },
+				prestart: tracking.prestart,
+				lastPrestartDone,
+				match: frame.match,
+				play: frame.play,
+				level: frame.level,
 			},
 		});
-
-		switch (change.key) {
-			case "code":
-				if (!cycle.firstCode) cycle.firstCode = change.robot.lastChange || new Date();
-				cycle.lastCode = change.robot.lastChange || new Date();
-				cycle.timeCode = cycle.lastCode.getTime() - tracking.prestart!.getTime();
-			// falls through
-			case "rio":
-				if (!cycle.firstRio) cycle.firstRio = change.robot.lastChange || new Date();
-				cycle.lastRio = change.robot.lastChange || new Date();
-				cycle.timeRio = cycle.lastRio.getTime() - tracking.prestart!.getTime();
-			// falls through
-			case "radio":
-				if (!cycle.firstRadio) cycle.firstRadio = change.robot.lastChange || new Date();
-				cycle.lastRadio = change.robot.lastChange || new Date();
-				cycle.timeRadio = cycle.lastRadio.getTime() - tracking.prestart!.getTime();
-				break;
-			case "ds":
-				if (!cycle.firstDS) cycle.firstDS = change.robot.lastChange || new Date();
-				cycle.lastDS = change.robot.lastChange || new Date();
-				cycle.timeDS = cycle.lastDS.getTime() - tracking.prestart!.getTime();
-		}
-		changed = true;
 	}
 
-	if (changed) setCycleTracking(eventCode, tracking);
+	// Level-triggered capture. Every prestart frame we look at each robot's CURRENT
+	// connection state and stamp anything that's connected-but-not-yet-recorded, instead
+	// of consuming a single rising-edge event per frame. This fixes the old under-fill:
+	// when radio/rIO/code came up in the same ~600ms sample (or were already up when
+	// prestart completed) the edge-based tracker dropped all but the highest-priority one.
+	stampFrame(tracking, frame);
+
+	setCycleTracking(eventCode, tracking);
+}
+
+/**
+ * Fold one prestart frame into the cycle-tracking object using level (current-state)
+ * detection. Records, per robot: the first frame each stage (DS-green / radio / rIO / code)
+ * is seen connected (`first*`, and `time*` = first-connect ms from prestart), the last frame
+ * it's seen connected (`last*`), and the composite "fully ready" milestone — the START of the
+ * LAST ready streak before match start (`lastReady`/`timeReady`), which is what the SLOW
+ * warning is scored on. Bypassed/e-stopped robots never reach `ready` (DS isn't GREEN), so
+ * they naturally get a null `time_ready` and drop out of the SLOW comparison.
+ */
+function stampFrame(tracking: EventCycleTracking, frame: MonitorFrame) {
+	const now = new Date();
+	const prestartMs = tracking.prestart!.getTime();
+
+	for (let _station in ROBOT) {
+		const station = _station as ROBOT;
+		const robot = frame[station as keyof MonitorFrame] as RobotInfo;
+		// Empty alliance slots report no real team number — nothing to track.
+		if (!robot || !robot.number) continue;
+
+		if (!tracking[station]) tracking[station] = { team: robot.number };
+		const cycle = tracking[station]!;
+		cycle.team = robot.number;
+
+		const dsGreen = robot.ds === DSState.GREEN;
+
+		if (dsGreen) {
+			if (!cycle.firstDS) {
+				cycle.firstDS = now;
+				cycle.timeDS = now.getTime() - prestartMs;
+			}
+			cycle.lastDS = now;
+		}
+		if (robot.radio) {
+			if (!cycle.firstRadio) {
+				cycle.firstRadio = now;
+				cycle.timeRadio = now.getTime() - prestartMs;
+			}
+			cycle.lastRadio = now;
+		}
+		if (robot.rio) {
+			if (!cycle.firstRio) {
+				cycle.firstRio = now;
+				cycle.timeRio = now.getTime() - prestartMs;
+			}
+			cycle.lastRio = now;
+		}
+		if (robot.code) {
+			if (!cycle.firstCode) {
+				cycle.firstCode = now;
+				cycle.timeCode = now.getTime() - prestartMs;
+			}
+			cycle.lastCode = now;
+		}
+
+		// Composite readiness: all four connected. Record the LAST rising transition into
+		// ready (start of the final ready streak) so a robot that connects, drops, and
+		// reconnects is scored on when it FINALLY settled — that's what gates the match.
+		const ready = dsGreen && robot.radio && robot.rio && robot.code;
+		if (ready && !cycle.prevReady) {
+			if (!cycle.firstReady) cycle.firstReady = now;
+			cycle.lastReady = now;
+			cycle.timeReady = now.getTime() - prestartMs;
+		}
+		cycle.prevReady = ready;
+	}
 }
 
 /**

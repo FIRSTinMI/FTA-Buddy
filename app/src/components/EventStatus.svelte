@@ -30,7 +30,8 @@
 	let matchStartTime = $state(new Date());
 	let bestCycleTimeMS = $state(0);
 	let currentCycleIsBest = $state(false);
-	let averageCycleTimeMS = $state(8 * 60 * 1000); // Default to 7 minutes
+	let averageCycleTimeMS = $state(8 * 60 * 1000); // fallback for schedule/redness calc only
+	let realAvgCycleMS = $state<number | null>(null); // null until there's a real average, for display
 	let currentCycleTimeRedness = $state(0);
 	let currentCycleTime = $state("");
 	let calculatedCycleTime: number | undefined | null = $state(0);
@@ -102,6 +103,7 @@
 			}
 
 			averageCycleTimeMS = cycleData.averageCycleTime ?? 8 * 60 * 1000;
+			realAvgCycleMS = cycleData.averageCycleTime;
 			scheduleDetails = cycleData.scheduleDetails;
 			match = cycleData.match;
 			level = cycleData.level;
@@ -118,6 +120,7 @@
 			{
 				onData: (data) => {
 					averageCycleTimeMS = data.averageCycleTime ?? 8 * 60 * 1000;
+					realAvgCycleMS = data.averageCycleTime;
 					calculatedCycleTime = data.lastCycleTime ? cycleTimeToMS(data.lastCycleTime) : 0;
 					matchStartTime = data.startTime ? new Date(data.startTime) : new Date();
 
@@ -132,6 +135,7 @@
 					}
 
 					averageCycleTimeMS = data.averageCycleTime ?? 8 * 60 * 1000;
+					realAvgCycleMS = data.averageCycleTime;
 					scheduleDetails = data.scheduleDetails;
 					match = data.matchNumber;
 					level = data.level;
@@ -262,7 +266,7 @@
 				<p class="text-sm lg:py-1 text-right">Best</p>
 				<p class="lg:text-lg text-left font-bold">{formatTimeShortNoAgoSeconds(bestCycleTimeMS)}</p>
 				<p class="text-sm lg:py-1 text-right">Average</p>
-				<p class="lg:text-lg text-left font-bold">{formatTimeShortNoAgoSeconds(averageCycleTimeMS)}</p>
+				<p class="lg:text-lg text-left font-bold">{realAvgCycleMS != null ? formatTimeShortNoAgoSeconds(realAvgCycleMS) : "-"}</p>
 			</div>
 
 			<p class="lg:text-lg mt-1 lg:mt-2">{scheduleText}</p>

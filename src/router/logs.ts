@@ -417,6 +417,7 @@ export const matchRouter = router({
 					red3: z.number().nullable(),
 					isPlayed: z.boolean(),
 					scheduledStartTime: z.date().nullable(),
+					actualStartTime: z.date().nullable(),
 					cycleTime: z.string().nullable(),
 				}),
 			),
@@ -444,6 +445,7 @@ export const matchRouter = router({
 					red1: matchLogs.red1,
 					red2: matchLogs.red2,
 					red3: matchLogs.red3,
+					start_time: matchLogs.start_time,
 					calculated_cycle_time: cycleLogs.calculated_cycle_time,
 				})
 				.from(matchLogs)
@@ -472,6 +474,7 @@ export const matchRouter = router({
 				red3: number | null;
 				isPlayed: boolean;
 				scheduledStartTime: Date | null;
+				actualStartTime: Date | null;
 				cycleTime: string | null;
 			};
 
@@ -479,6 +482,7 @@ export const matchRouter = router({
 				...m,
 				isPlayed: true,
 				scheduledStartTime: startTimeMap.get(`${m.level}:${m.match_number}`) ?? null,
+				actualStartTime: m.start_time ?? null,
 				cycleTime: m.calculated_cycle_time ?? null,
 			}));
 
@@ -535,6 +539,7 @@ export const matchRouter = router({
 						red3: tbaTeamNum(red[2] ?? ""),
 						isPlayed: false,
 						scheduledStartTime: startTimeMap.get(`Qualification:${m.match_number}`) ?? null,
+						actualStartTime: null,
 						cycleTime: null,
 					});
 				}
@@ -565,6 +570,7 @@ export const matchRouter = router({
 						red3: tbaTeamNum(red[2] ?? ""),
 						isPlayed: false,
 						scheduledStartTime: startTimeMap.get(`Playoff:${fmsMatchNum}`) ?? null,
+						actualStartTime: null,
 						cycleTime: null,
 					});
 				}
@@ -642,6 +648,7 @@ export const matchRouter = router({
 						red3: parseTeam(red[2]),
 						isPlayed: false,
 						scheduledStartTime: m.times.estimatedStartTime ? new Date(m.times.estimatedStartTime) : null,
+						actualStartTime: null,
 						cycleTime: null,
 					});
 					resultKeys.add(key);

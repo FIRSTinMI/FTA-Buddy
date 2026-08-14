@@ -478,6 +478,13 @@ export const cycleRouter = router({
 							match: z.number(),
 							level: z.enum(["None", "Practice", "Qualification", "Playoff"]),
 							scheduledStartTime: z.date(),
+							redAllianceNumber: z.number().nullable().optional(),
+							blueAllianceNumber: z.number().nullable().optional(),
+							red: z.array(z.number().nullable()).optional(),
+							blue: z.array(z.number().nullable()).optional(),
+							finalScoreRed: z.number().nullable().optional(),
+							finalScoreBlue: z.number().nullable().optional(),
+							status: z.string().nullable().optional(),
 						}),
 					)
 					.optional(),
@@ -487,13 +494,26 @@ export const cycleRouter = router({
 		.mutation(async ({ input }) => {
 			const event = await getEvent(input.eventToken);
 
+			// Merge matches by (level, match) rather than replacing. FMS's
+			// GetCurrentSchedule only returns the active tournament level, so a naive
+			// replace would wipe the qualification schedule once playoffs begin. Merging
+			// keeps every level's scheduled start times available together (the
+			// scorekeeper schedule table and the T613 deadline both rely on this).
+			let mergedMatches = input.matches;
+			if (input.matches) {
+				const byKey = new Map<string, (typeof input.matches)[number]>();
+				for (const m of event.scheduleDetails?.matches ?? []) byKey.set(`${m.level}:${m.match}`, m as any);
+				for (const m of input.matches) byKey.set(`${m.level}:${m.match}`, m);
+				mergedMatches = [...byKey.values()];
+			}
+
 			await db
 				.update(events)
-				.set({ scheduleDetails: { days: input.days, lastPlayed: input.lastPlayed, matches: input.matches } })
+				.set({ scheduleDetails: { days: input.days, lastPlayed: input.lastPlayed, matches: mergedMatches } })
 				.where(eq(events.code, event.code))
 				.execute();
 
-			event.scheduleDetails = { days: input.days, lastPlayed: input.lastPlayed, matches: input.matches };
+			event.scheduleDetails = { days: input.days, lastPlayed: input.lastPlayed, matches: mergedMatches };
 
 			// If the current match started without schedule data, compute exactAheadBehind now
 			// and patch it into the Redis frame so the next cycle subscriber sees it.
@@ -544,7 +564,7 @@ export const cycleRouter = router({
 			{
 				title: `Cycle Time Report for ${ctx.event.code}`,
 				description:
-					`Average Cycle Time: ${formatTimeShortNoAgoSeconds(averageCycleTime)}` +
+					`Average Cycle Time: ${averageCycleTime != null ? formatTimeShortNoAgoSeconds(averageCycleTime) : "-"}` +
 					(averageTimeToStart !== null
 						? `    Average Time to Start: ${formatTimeShortNoAgoSeconds(averageTimeToStart)}`
 						: ""),
@@ -591,8 +611,9 @@ async function getAverageCycleTime(eventCode: string, rollingAverage: number = 1
 		.filter((cycle) => cycle.calculated_cycle_time !== null)
 		.map((cycle) => cycleTimeToMS(cycle.calculated_cycle_time ?? "0:00"));
 
+	// Not enough data for a meaningful average - report nothing rather than a fake 8m.
 	if (cycleTimes.length < 3) {
-		return 8 * 60 * 1000;
+		return null;
 	}
 
 	if (rollingAverage > 0) {

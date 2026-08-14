@@ -2,17 +2,24 @@ import { TRPCError } from "@trpc/server";
 import { createHash, randomUUID } from "crypto";
 import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
-import { AUTO_EVENT_ISSUE_TYPES, DEFAULT_AUTO_EVENT_SETTINGS } from "../../shared/types";
+import {
+	AUTO_EVENT_ISSUE_TYPES,
+	DEFAULT_AUTO_EVENT_SETTINGS,
+	DEFAULT_SLOW_WARNING_SETTINGS,
+	SLOW_WARNING_MODES,
+} from "../../shared/types";
 import type {
 	AutoEventIssueType,
 	EventAutoEventSettings,
 	EventChecklist,
 	Profile,
 	ServerEvent,
+	SlowWarningSettings,
 	TeamList,
 	TournamentLevel,
 } from "../../shared/types";
 import { autoEventSettingsCache } from "../util/log-analysis";
+import { refreshSlowTeams } from "../util/slow-teams";
 import { db } from "../db/db";
 import schema, { eventUsers, events, notes, users } from "../db/schema";
 import { adminProcedure, eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
@@ -406,6 +413,7 @@ export const eventRouter = router({
 					endDate: eventData.end_date ?? null,
 					timezone: eventData.timezone_id ?? null,
 					autoEventSettings: DEFAULT_AUTO_EVENT_SETTINGS,
+					slowWarningSettings: DEFAULT_SLOW_WARNING_SETTINGS,
 					notepadOnly: input.notepadOnly ?? false,
 				})
 				.returning();
@@ -496,7 +504,7 @@ export const eventRouter = router({
 							event_code: string;
 							id: number;
 							username: string;
-							role: "FTA" | "FTAA" | "CSA" | "RI" | "System";
+							role: "FTA" | "FTAA" | "CSA" | "RI" | "System" | "Scorekeeper";
 						}[],
 					),
 			eventCodesList.length > 0
@@ -803,6 +811,7 @@ export const eventRouter = router({
 					token,
 					meshedEvent: subEvents,
 					autoEventSettings: DEFAULT_AUTO_EVENT_SETTINGS,
+					slowWarningSettings: DEFAULT_SLOW_WARNING_SETTINGS,
 				})
 				.returning();
 
@@ -1236,6 +1245,34 @@ export const eventRouter = router({
 			// Keep the global cache in sync so log analysis picks up the change
 			// even for events that run across multiple analysis cycles
 			autoEventSettingsCache.set(event.code, newSettings);
+			return { success: true };
+		}),
+
+	/** Get the SLOW-warning (🐌) settings for this event, filled in with defaults. */
+	getSlowWarningSettings: eventProcedure.query(async ({ ctx }) => {
+		return { ...DEFAULT_SLOW_WARNING_SETTINGS, ...(ctx.event.slowWarningSettings ?? {}) } as SlowWarningSettings;
+	}),
+
+	/** Update the SLOW-warning settings for this event and recompute the cached SLOW set. */
+	setSlowWarningSettings: eventProcedure
+		.input(
+			z.object({
+				enabled: z.boolean(),
+				mode: z.enum(SLOW_WARNING_MODES),
+				percentile: z.number().min(50).max(100),
+				floorMs: z.number().min(0).max(600000),
+				minMatches: z.number().int().min(1).max(20),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const event = ctx.event;
+			const settings: SlowWarningSettings = input;
+			await db.update(events).set({ slowWarningSettings: settings }).where(eq(events.code, event.code));
+			event.slowWarningSettings = settings;
+			// Recompute immediately so enabling/disabling or a mode change takes effect now.
+			await refreshSlowTeams(event.code).catch((err) =>
+				console.error(`[Event] refreshSlowTeams failed for ${event.code}:`, err),
+			);
 			return { success: true };
 		}),
 

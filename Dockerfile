@@ -1,4 +1,11 @@
 FROM oven/bun:1 AS builder
+# Point installs at a registry supplied at build time; defaults to public npmjs so
+# this is a no-op anywhere else. On the NAS build server, Coolify sets NPM_REGISTRY
+# to the local Verdaccio cache (http://192.168.1.2:4873/) so bun installs are cached
+# and survive transient npmjs tarball failures.
+ARG NPM_REGISTRY=https://registry.npmjs.org/
+ENV BUN_CONFIG_REGISTRY=${NPM_REGISTRY}
+ENV NPM_CONFIG_REGISTRY=${NPM_REGISTRY}
 WORKDIR /app
 
 COPY package.json bun.lock* ./

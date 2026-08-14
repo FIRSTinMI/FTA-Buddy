@@ -12,11 +12,12 @@ import {
 	serial,
 	text,
 	timestamp,
+	unique,
 	uuid,
 	varchar,
 } from "drizzle-orm/pg-core";
-import type { EventAutoEventSettings, FmsNoteMetadata } from "../../shared/types";
-export const roleEnum = pgEnum("role", ["FTA", "FTAA", "CSA", "RI", "System"]);
+import type { EventAutoEventSettings, FmsNoteMetadata, SlowWarningSettings } from "../../shared/types";
+export const roleEnum = pgEnum("role", ["FTA", "FTAA", "CSA", "RI", "System", "Scorekeeper"]);
 
 export const users = pgTable(
 	"users",
@@ -61,6 +62,7 @@ export const events = pgTable("events", {
 	timezone: varchar("timezone"),
 	fmsEventPassword: varchar("fmsEventPassword"),
 	autoEventSettings: jsonb("autoEventSettings").$type<EventAutoEventSettings>().notNull().default({}),
+	slowWarningSettings: jsonb("slowWarningSettings").$type<Partial<SlowWarningSettings>>().notNull().default({}),
 	notepadOnly: boolean("notepadOnly").notNull().default(false),
 	playoffMode: boolean("playoffMode").notNull().default(false),
 });
@@ -373,6 +375,12 @@ export const robotCycleLogs = pgTable(
 		first_code: timestamp("first_code"),
 		last_code: timestamp("last_code"),
 		time_code: integer("time_code"),
+		// Composite "fully connected" (DS green + radio + rIO + code). first_ready = first
+		// time ever ready; last_ready = start of the final ready streak before match start;
+		// time_ready = ms from prestart to last_ready (the SLOW warning's input).
+		first_ready: timestamp("first_ready"),
+		last_ready: timestamp("last_ready"),
+		time_ready: integer("time_ready"),
 	},
 	(t) => [index("robot_cycle_logs_event_idx").on(t.event)],
 );
@@ -503,10 +511,138 @@ export const debugLogs = pgTable(
 	],
 );
 
+// #region Scorekeeper view (playoff lineups)
+
+/** One row per playoff alliance per event. The roster a lineup draws from. */
+export const playoffAlliances = pgTable(
+	"playoff_alliances",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		event_code: varchar("event_code")
+			.references(() => events.code)
+			.notNull(),
+		// 1..8, by qualification rank (10.6.1 REBUILT).
+		number: integer("number").notNull(),
+		// ALLIANCE Lead / captain.
+		captain_team: integer("captain_team").notNull(),
+		// 1st selected pick.
+		pick1_team: integer("pick1_team").notNull(),
+		// 2nd selected pick (nullable only for degenerate 2-team alliances).
+		pick2_team: integer("pick2_team"),
+		// Set when a backup coupon is accepted (10.6.3). Makes the alliance 4 teams.
+		backup_team: integer("backup_team"),
+		created_at: timestamp("created_at").notNull().defaultNow(),
+		updated_at: timestamp("updated_at").notNull().defaultNow(),
+	},
+	(t) => [
+		unique("playoff_alliances_event_number_uq").on(t.event_code, t.number),
+		index("playoff_alliances_event_code_idx").on(t.event_code),
+	],
+);
+
+export type PlayoffAlliance = typeof playoffAlliances.$inferSelect;
+
+export const lineupStatusEnum = pgEnum("lineup_status", ["accepted", "superseded", "rejected"]);
+export const lineupSourceEnum = pgEnum("lineup_source", ["scorekeeper", "alliance"]);
+
+/**
+ * Versioned lineup cards. Each submission for a given (event, alliance, match)
+ * inserts a new row with an incremented version; the prior accepted row for that
+ * key is flipped to `superseded`. `rejected` records a denied late card (T613).
+ */
+export const lineupCards = pgTable(
+	"lineup_cards",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		event_code: varchar("event_code")
+			.references(() => events.code)
+			.notNull(),
+		// The alliance (1..8) this lineup is for.
+		alliance_number: integer("alliance_number").notNull(),
+		// The target playoff match this lineup applies to.
+		match_number: integer("match_number").notNull(),
+		play_number: integer("play_number").notNull().default(1),
+		// 1-based, per (event, alliance, match).
+		version: integer("version").notNull(),
+		// A card holds the alliance's driver-station assignment for BOTH sides: the
+		// trio to run when they are the blue alliance and the trio when they are red
+		// (station strategy can differ by side). Null = station empty / robot can't play.
+		// The match's actual side (from FMS) selects which trio applies.
+		blue_station1_team: integer("blue_station1_team"),
+		blue_station2_team: integer("blue_station2_team"),
+		blue_station3_team: integer("blue_station3_team"),
+		red_station1_team: integer("red_station1_team"),
+		red_station2_team: integer("red_station2_team"),
+		red_station3_team: integer("red_station3_team"),
+		uses_backup: boolean("uses_backup").notNull().default(false),
+		status: lineupStatusEnum("status").notNull().default("accepted"),
+		source: lineupSourceEnum("source").notNull().default("scorekeeper"),
+		submitted_by_id: integer("submitted_by_id").references(() => users.id),
+		submitted_by_name: varchar("submitted_by_name"),
+		submitted_at: timestamp("submitted_at").notNull().defaultNow(),
+		// Computed T613 deadline at submit time (expected start - 2 min). Null when unknown.
+		deadline_at: timestamp("deadline_at"),
+		is_late: boolean("is_late").notNull().default(false),
+		accepted_anyway: boolean("accepted_anyway").notNull().default(false),
+		accepted_anyway_by_id: integer("accepted_anyway_by_id").references(() => users.id),
+		accepted_anyway_at: timestamp("accepted_anyway_at"),
+		note: varchar("note"),
+		created_at: timestamp("created_at").notNull().defaultNow(),
+	},
+	(t) => [
+		index("lineup_cards_event_code_idx").on(t.event_code),
+		index("lineup_cards_event_alliance_idx").on(t.event_code, t.alliance_number),
+		index("lineup_cards_event_match_idx").on(t.event_code, t.match_number),
+	],
+);
+
+export type LineupCard = typeof lineupCards.$inferSelect;
+
+/**
+ * Per-match "field lineup" for PRACTICE and TEST matches: which team is physically
+ * in each driver station for the current/next match. Entered by a roaming volunteer
+ * (any signed-in event user, walking the field) and synced live to the scorekeeper,
+ * who often can't see who is going where. A null station means no robot is in that
+ * station, so the scorekeeper can bypass it. Test matches are match_number 999. One
+ * row per (event, level, match, play), upserted in place.
+ */
+export const fieldLineups = pgTable(
+	"field_lineups",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		event_code: varchar("event_code")
+			.references(() => events.code)
+			.notNull(),
+		level: levelEnum("level").notNull(),
+		match_number: integer("match_number").notNull(),
+		play_number: integer("play_number").notNull().default(1),
+		red1_team: integer("red1_team"),
+		red2_team: integer("red2_team"),
+		red3_team: integer("red3_team"),
+		blue1_team: integer("blue1_team"),
+		blue2_team: integer("blue2_team"),
+		blue3_team: integer("blue3_team"),
+		updated_by_id: integer("updated_by_id").references(() => users.id),
+		updated_by_name: varchar("updated_by_name"),
+		updated_at: timestamp("updated_at").notNull().defaultNow(),
+	},
+	(t) => [
+		unique("field_lineups_event_match_uq").on(t.event_code, t.level, t.match_number, t.play_number),
+		index("field_lineups_event_code_idx").on(t.event_code),
+	],
+);
+
+export type FieldLineup = typeof fieldLineups.$inferSelect;
+
+// #endregion
+
 export default {
 	events,
 	users,
 	eventUsers,
+	playoffAlliances,
+	lineupCards,
+	fieldLineups,
 	messages,
 	noteFollowers,
 	matchLogs,

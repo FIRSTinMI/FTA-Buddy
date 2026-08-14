@@ -3,7 +3,7 @@ import { eventStore } from "../stores/event";
 import { settingsStore } from "../stores/settings";
 import { userStore } from "../stores/user";
 
-export const LATEST_EXTENSION_VERSION = "1.26.19";
+export const LATEST_EXTENSION_VERSION = "1.26.20";
 
 interface Version {
 	changelog?: string;
@@ -11,6 +11,24 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.9.0": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.9.0</h1>
+        <p class="my-1 font-bold">New Scorekeeper view</p>
+        <ul>
+        <li>One live, auto-updating view of the whole event - browse any match, past or upcoming, like the notepad</li>
+        <li>Alliances import automatically from FMS after selection, including backup robots - no manual entry</li>
+        <li>File playoff lineup cards for T613: one card per alliance holds both its red-side and blue-side lineup, and the latest card carries forward to every match</li>
+        <li>Rich match table: scheduled time, actual start, schedule delta, cycle time, and final scores, with team numbers and a search box</li>
+        <li>Replay finder: find the best slot to re-run a match so no team ends up back-to-back</li>
+        <li>New "Lineup Entry" page for roaming volunteers to set practice/test field lineups from a phone, synced live to the scorekeeper</li>
+        </ul>
+        <h2 class="font-bold mt-2">Extension v1.26.20</h2>
+        <ul>
+        <li>Schedule sync now includes team numbers, final scores, and match status, and imports alliances directly from FMS</li>
+        </ul>
+        `,
+	},
 	"2.7.8.1": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.8.1</h1>

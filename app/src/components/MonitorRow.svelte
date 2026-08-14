@@ -124,7 +124,7 @@
 				<span>🛜</span>
 			{/if}
 			{#if robot.warnings.includes(RobotWarnings.SLOW)}
-				<span>🕑</span>
+				<span title="Consistently slow to connect at this event">🐌</span>
 			{/if}
 			{#if robot.warnings.includes(RobotWarnings.OPEN_NOTE)}
 				<span>📝</span>

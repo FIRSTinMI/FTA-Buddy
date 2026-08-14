@@ -31,6 +31,8 @@ export const { p, navigate, isActive, preload, route } = createRouter({
 	"/flashcards": () => import("./pages/Flashcards.svelte"),
 	"/checklist": () => import("./pages/Checklist.svelte"),
 	"/notifications": () => import("./pages/tickets-notes/NotificationList.svelte"),
+	"/scorekeeper": () => import("./pages/scorekeeper/Scorekeeper.svelte"),
+	"/field-lineup": () => import("./pages/scorekeeper/FieldLineupEntry.svelte"),
 	"/ftc": () => import("./pages/ftc/FTCStatus.svelte"),
 
 	"/manage": () => import("./pages/management/Management.svelte"),

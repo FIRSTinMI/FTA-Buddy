@@ -477,6 +477,7 @@ export interface ServerEvent {
 	nexusApiKey?: string;
 	fmsEventPassword?: string;
 	autoEventSettings: EventAutoEventSettings;
+	slowWarningSettings: SlowWarningSettings;
 	startDate?: string;
 	endDate?: string;
 	timezone?: string;
@@ -547,6 +548,14 @@ export interface RobotCycleTracking {
 	firstCode?: Date;
 	lastCode?: Date;
 	timeCode?: number;
+	/** First frame the robot was fully connected (DS green + radio + rIO + code). */
+	firstReady?: Date;
+	/** Start of the LAST fully-connected streak before match start (settled-ready time). */
+	lastReady?: Date;
+	/** ms from prestart to lastReady — the value the SLOW warning is scored on. */
+	timeReady?: number;
+	/** Transient: whether the robot was fully connected on the previous frame (edge detect). */
+	prevReady?: boolean;
 }
 
 export interface CycleData {
@@ -569,7 +578,7 @@ export interface CycleData {
 export interface Profile {
 	id: number;
 	username: string;
-	role: "FTAA" | "FTA" | "CSA" | "RI" | "System";
+	role: "FTAA" | "FTA" | "CSA" | "RI" | "System" | "Scorekeeper";
 	admin: boolean;
 }
 
@@ -708,6 +717,19 @@ export interface ScheduleDetails {
 		match: number;
 		level: TournamentLevel;
 		scheduledStartTime: Date;
+		/**
+		 * Playoff only: which alliance (1-8) is on each side for this match, from
+		 * FMS. Lets the scorekeeper view resolve red/blue without a played match log.
+		 */
+		redAllianceNumber?: number | null;
+		blueAllianceNumber?: number | null;
+		/** Teams on each side, from FMS (station 1-3). Present once the field is set. */
+		red?: (number | null)[];
+		blue?: (number | null)[];
+		/** Final scores + FMS match status, captured once the match is posted. */
+		finalScoreRed?: number | null;
+		finalScoreBlue?: number | null;
+		status?: string | null;
 	}[];
 }
 
@@ -719,6 +741,30 @@ export interface DisconnectionEvent {
 	startIndex: number;
 	endIndex: number;
 }
+
+// #region Scorekeeper view (playoff lineups)
+
+export type AllianceColor = "red" | "blue";
+
+/** Team assigned to each of the three DRIVER STATIONS. null = station empty. */
+export interface LineupStations {
+	station1: number | null;
+	station2: number | null;
+	station3: number | null;
+}
+
+/** How a resolved lineup was arrived at (see resolveLineup, REBUILT T613). */
+export type LineupResolution = "submitted" | "carried-forward" | "default";
+
+export interface ResolvedLineup {
+	stations: LineupStations;
+	resolution: LineupResolution;
+	usesBackup: boolean;
+	/** The card this came from, when resolution is "submitted" or "carried-forward". */
+	cardId: string | null;
+}
+
+// #endregion
 
 /**
  * Issue types that can be auto-detected from match logs.
@@ -756,6 +802,36 @@ export const DEFAULT_AUTO_EVENT_SETTINGS: EventAutoEventSettings = {
 	"Sustained high ping": false,
 	"Low signal": false,
 	"High BWU": false,
+};
+
+/** How the SLOW warning decides which teams are outliers. Selectable per event. */
+export const SLOW_WARNING_MODES = ["percentile_floor", "percentile", "iqr"] as const;
+export type SlowWarningMode = (typeof SLOW_WARNING_MODES)[number];
+
+/**
+ * Per-event config for the 🐌 SLOW warning. Teams are ranked on the MEDIAN of their
+ * `time_ready` (ms from prestart-complete to fully connected) across this event only.
+ * - percentile_floor: slowest `percentile`% AND median >= `floorMs` AND >= `minMatches` matches
+ * - percentile:       slowest `percentile`% AND >= `minMatches` matches (no absolute floor)
+ * - iqr:              median above Q3 + 1.5*IQR of the event's team medians (count varies)
+ */
+export interface SlowWarningSettings {
+	enabled: boolean;
+	mode: SlowWarningMode;
+	/** Percentile cutoff for the percentile modes (e.g. 90 = slowest 10%). */
+	percentile: number;
+	/** Absolute floor in ms for percentile_floor mode. */
+	floorMs: number;
+	/** Minimum measured matches before a team can be flagged. */
+	minMatches: number;
+}
+
+export const DEFAULT_SLOW_WARNING_SETTINGS: SlowWarningSettings = {
+	enabled: false,
+	mode: "percentile_floor",
+	percentile: 90,
+	floorMs: 30000,
+	minMatches: 3,
 };
 
 export type MatchEventStatus = "active" | "dismissed" | "converted";

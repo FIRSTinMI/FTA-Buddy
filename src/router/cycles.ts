@@ -564,7 +564,7 @@ export const cycleRouter = router({
 			{
 				title: `Cycle Time Report for ${ctx.event.code}`,
 				description:
-					`Average Cycle Time: ${formatTimeShortNoAgoSeconds(averageCycleTime)}` +
+					`Average Cycle Time: ${averageCycleTime != null ? formatTimeShortNoAgoSeconds(averageCycleTime) : "-"}` +
 					(averageTimeToStart !== null
 						? `    Average Time to Start: ${formatTimeShortNoAgoSeconds(averageTimeToStart)}`
 						: ""),
@@ -611,8 +611,9 @@ async function getAverageCycleTime(eventCode: string, rollingAverage: number = 1
 		.filter((cycle) => cycle.calculated_cycle_time !== null)
 		.map((cycle) => cycleTimeToMS(cycle.calculated_cycle_time ?? "0:00"));
 
+	// Not enough data for a meaningful average - report nothing rather than a fake 8m.
 	if (cycleTimes.length < 3) {
-		return 8 * 60 * 1000;
+		return null;
 	}
 
 	if (rollingAverage > 0) {

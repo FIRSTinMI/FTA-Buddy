@@ -318,6 +318,10 @@
 		if (!d) return "-";
 		return new Date(d).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 	}
+	function fmtMs(ms: number): string {
+		const s = Math.round(ms / 1000);
+		return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+	}
 
 	let cycleSub: { unsubscribe: () => void } | undefined;
 	let lineupSub: { unsubscribe: () => void } | undefined;
@@ -375,7 +379,7 @@
 	const stats = $derived([
 		["Ahead/behind", cycleData?.exactAheadBehind ?? cycleData?.aheadBehind ?? "-"],
 		["Last cycle", cycleData?.lastCycleTime ?? "-"],
-		["Avg cycle", cycleData?.averageCycleTime ? `${Math.round(cycleData.averageCycleTime / 1000)}s` : "-"],
+		["Avg cycle", cycleData?.averageCycleTime != null ? fmtMs(cycleData.averageCycleTime) : "-"],
 		["Best cycle", cycleData?.bestCycleTime ?? "-"],
 	] as const);
 </script>

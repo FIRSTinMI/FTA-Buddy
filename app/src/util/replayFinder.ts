@@ -24,6 +24,8 @@ export interface ReplayCandidate {
 	minGap: number;
 	/** The replay teams that hit that smallest spacing (the tightest ones). */
 	tightTeams: number[];
+	/** Every replay team with the matches of rest it gets here, tightest first. */
+	teamGaps: { team: number; gap: number }[];
 }
 
 export interface ReplayOptions {
@@ -64,6 +66,7 @@ export function findReplaySlots(
 		let minGap = Infinity;
 		let valid = true;
 		const gaps: { team: number; gap: number }[] = [];
+		const teamGaps: { team: number; gap: number }[] = [];
 		for (const t of teams) {
 			let prevIdx = -1;
 			for (let j = i - 1; j >= 0; j--)
@@ -82,10 +85,12 @@ export function findReplaySlots(
 			const g = Math.min(beforeGap, afterGap);
 			if (g <= 0) valid = false;
 			if (g < minGap) minGap = g;
+			teamGaps.push({ team: t, gap: g });
 			if (Number.isFinite(g)) gaps.push({ team: t, gap: g });
 		}
 		if (!valid) continue;
 		const tightest = gaps.length ? Math.min(...gaps.map((x) => x.gap)) : Infinity;
+		teamGaps.sort((a, b) => a.gap - b.gap);
 		out.push({
 			index: i,
 			afterMatch: i > 0 ? schedule[i - 1].matchNumber : null,
@@ -94,6 +99,7 @@ export function findReplaySlots(
 			afterBreak: afterBreak(i),
 			minGap,
 			tightTeams: gaps.filter((x) => x.gap === tightest).map((x) => x.team),
+			teamGaps,
 		});
 	}
 

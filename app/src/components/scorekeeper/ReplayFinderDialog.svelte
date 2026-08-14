@@ -62,9 +62,14 @@
 	function fmtTime(d: Date | null): string {
 		return d ? new Date(d).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "";
 	}
-	// matches of rest a team gets: 0 = back-to-back, Infinity = no other match this level.
-	function restLabel(gap: number): string {
-		return Number.isFinite(gap) ? String(gap) : "free";
+	// Group the replay's teams by how many matches of rest they get at this slot,
+	// most rest first. "free" = no other match this level.
+	function restGroups(teamGaps: { team: number; gap: number }[]) {
+		const byGap = new Map<number, number[]>();
+		for (const tg of teamGaps) byGap.set(tg.gap, [...(byGap.get(tg.gap) ?? []), tg.team]);
+		return [...byGap.entries()]
+			.sort((a, b) => b[0] - a[0])
+			.map(([gap, teams]) => ({ label: Number.isFinite(gap) ? String(gap) : "free", teams }));
 	}
 	const inputCls =
 		"rounded-md border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-2 py-1.5 text-sm";
@@ -117,11 +122,8 @@
 							</div>
 						</div>
 						<div class="mt-1 text-sm text-gray-700 dark:text-gray-200">
-							Matches of rest:
-							{#each [...c.teamGaps].sort((a, b) => b.gap - a.gap) as tg, j (tg.team)}{j > 0 ? ", " : " "}<span
-									class="tabular-nums {tg.gap === 0 ? 'font-semibold text-red-600 dark:text-red-400' : ''}"
-									>{tg.team}: {restLabel(tg.gap)}</span
-								>{/each}
+							Rest:
+							{#each restGroups(c.teamGaps) as g, gi (g.label)}{gi > 0 ? "; " : " "}<span class="font-bold tabular-nums">{g.label}</span>: {g.teams.join(", ")}{/each}
 						</div>
 					</div>
 				{/each}

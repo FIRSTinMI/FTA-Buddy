@@ -12,6 +12,7 @@
 	import { eventStore } from "../../stores/event";
 	import { userStore } from "../../stores/user";
 	import type { Alliance, ForMatch, LineupSide } from "../../util/scorekeeperTypes";
+	import { cycleTimeToMS } from "../../../../shared/cycleTimeToMS";
 
 	// FTA/FTAA/Scorekeeper/admin may edit; everyone with the view may read.
 	const canEdit = $derived(
@@ -322,6 +323,11 @@
 		const s = Math.round(ms / 1000);
 		return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 	}
+	// Cycle-time strings come as "H:MM:SS.fffffff"; show a clean m:ss.
+	function fmtCycleStr(str: string | null | undefined): string {
+		if (!str || !str.includes(":")) return "-";
+		return fmtMs(cycleTimeToMS(str));
+	}
 
 	let cycleSub: { unsubscribe: () => void } | undefined;
 	let lineupSub: { unsubscribe: () => void } | undefined;
@@ -378,9 +384,9 @@
 
 	const stats = $derived([
 		["Ahead/behind", cycleData?.exactAheadBehind ?? cycleData?.aheadBehind ?? "-"],
-		["Last cycle", cycleData?.lastCycleTime ?? "-"],
+		["Last cycle", fmtCycleStr(cycleData?.lastCycleTime)],
 		["Avg cycle", cycleData?.averageCycleTime != null ? fmtMs(cycleData.averageCycleTime) : "-"],
-		["Best cycle", cycleData?.bestCycleTime ?? "-"],
+		["Best cycle", fmtCycleStr(cycleData?.bestCycleTime)],
 	] as const);
 </script>
 
@@ -502,7 +508,7 @@
 						</td>
 						<td class="py-1 pr-2 whitespace-nowrap text-xs font-mono hidden lg:table-cell">
 							{#each m.red as t, i (i)}<span class="inline-block w-12 text-right tabular-nums text-red-600">{t ?? ""}</span>{/each}
-							<span class="mx-1 text-gray-300">/</span>
+							<span class="inline-block w-3"></span>
 							{#each m.blue as t, i (i)}<span class="inline-block w-12 text-right tabular-nums text-blue-600">{t ?? ""}</span>{/each}
 						</td>
 						<td class="py-1 pr-2 whitespace-nowrap font-mono">{fmtTime(m.scheduledStartTime)}</td>

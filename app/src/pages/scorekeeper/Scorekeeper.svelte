@@ -368,7 +368,7 @@
 	] as const);
 </script>
 
-<div class="flex flex-col gap-3 p-3 max-w-3xl mx-auto w-full">
+<div class="flex flex-col gap-3 p-3 max-w-3xl lg:max-w-5xl mx-auto w-full">
 	<div class="flex items-center justify-between">
 		<h1 class="text-2xl font-bold text-gray-900 dark:text-white">Scorekeeper</h1>
 		{#if canEdit}
@@ -431,10 +431,6 @@
 		{/if}
 	{:else if selLevel === "Practice"}
 		<div class="flex flex-col gap-2 rounded-lg border-2 p-3 {isTestMatch ? 'border-purple-400' : 'border-gray-200 dark:border-neutral-700'}">
-			<div class="flex items-center justify-between">
-				<span class="text-sm font-bold uppercase text-gray-600 dark:text-gray-300">{isTestMatch ? "Test match lineup" : "Practice lineup"}</span>
-				<a href="/field-lineup" class="inline-flex items-center gap-1 text-xs text-primary-600 underline"><Icon icon="mdi:cellphone" class="size-4" /> Field entry</a>
-			</div>
 			{#if fieldLineup}
 				<div class="grid grid-cols-2 gap-2">
 					{#each [{ side: "blue", border: "border-blue-400", text: "text-blue-600", rows: [{ label: "Blue 1", team: fieldLineup.blue1_team }, { label: "Blue 2", team: fieldLineup.blue2_team }, { label: "Blue 3", team: fieldLineup.blue3_team }] }, { side: "red", border: "border-red-400", text: "text-red-600", rows: [{ label: "Red 3", team: fieldLineup.red3_team }, { label: "Red 2", team: fieldLineup.red2_team }, { label: "Red 1", team: fieldLineup.red1_team }] }] as col (col.side)}
@@ -446,7 +442,7 @@
 										<span class="text-xl font-bold tabular-nums">{row.team}</span>
 										<span class="truncate text-[10px] text-gray-500">{teamName(row.team)}</span>
 									{:else}
-										<span class="text-xs italic text-gray-400">empty \u2014 bypass</span>
+										<span class="text-xs italic text-gray-400">empty — bypass</span>
 									{/if}
 								</div>
 							{/each}
@@ -454,10 +450,10 @@
 					{/each}
 				</div>
 				<div class="text-[11px] text-gray-400">
-					{#if fieldLineup.updated_by_name}Entered by {fieldLineup.updated_by_name} \u00b7 {/if}{fmtTime(fieldLineup.updated_at)}
+					{#if fieldLineup.updated_by_name}Entered by {fieldLineup.updated_by_name} · {/if}{fmtTime(fieldLineup.updated_at)}
 				</div>
 			{:else}
-				<div class="text-sm text-gray-500">No field lineup entered yet \u2014 open <a href="/field-lineup" class="text-primary-600 underline">field entry</a> or hand it to a roaming volunteer.</div>
+				<div class="text-sm text-gray-500">No field lineup yet — have a volunteer sign in and use the Lineup Entry page to send you the lineup.</div>
 			{/if}
 		</div>
 	{/if}
@@ -476,7 +472,7 @@
 			<thead>
 				<tr class="text-left text-xs uppercase text-gray-500 border-b border-gray-200 dark:border-neutral-700">
 					<th class="py-1 pr-2">Match</th>
-					<th class="py-1 pr-2">Teams</th>
+					<th class="py-1 pr-2 hidden lg:table-cell">Teams</th>
 					<th class="py-1 pr-2">Sched</th>
 					<th class="py-1 pr-2">Actual</th>
 					<th class="py-1 pr-2">Delta</th>
@@ -500,7 +496,7 @@
 							<span class="text-gray-400 text-xs">{m.level.slice(0, 4)}</span>
 							<span class="font-semibold">{m.match}{m.play > 1 ? `-${m.play}` : ""}</span>
 						</td>
-						<td class="py-1 pr-2 whitespace-nowrap text-xs">
+						<td class="py-1 pr-2 whitespace-nowrap text-xs hidden lg:table-cell">
 							<span class="text-red-600">{m.red.filter((t) => t != null).join(" ") || "-"}</span>
 							<span class="text-gray-300">/</span>
 							<span class="text-blue-600">{m.blue.filter((t) => t != null).join(" ") || "-"}</span>

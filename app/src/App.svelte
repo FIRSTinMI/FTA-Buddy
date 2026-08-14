@@ -741,6 +741,17 @@
 								<Icon icon="mdi:clipboard-list-outline" class="size-8" />
 							{/snippet}
 						</SidebarItem>
+						<SidebarItem
+							label="Lineup Entry"
+							onclick={() => {
+								drawerOpen = false;
+								navigate("/field-lineup");
+							}}
+						>
+							{#snippet icon()}
+								<Icon icon="mdi:clipboard-edit-outline" class="size-8" />
+							{/snippet}
+						</SidebarItem>
 					{/if}
 					<SidebarItem
 						label="Event Reports"

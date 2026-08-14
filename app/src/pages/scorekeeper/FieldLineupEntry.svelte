@@ -5,7 +5,6 @@
 	import { frameHandler, subscribeToFieldMonitor } from "../../field-monitor";
 	import { trpc } from "../../main";
 	import { eventStore } from "../../stores/event";
-	import { userStore } from "../../stores/user";
 
 	// Live match from the field monitor.
 	let monitorFrame = $state(frameHandler.getFrame());
@@ -111,7 +110,7 @@
 	}
 	async function save() {
 		const t = target;
-		if (!t || !$userStore.username) return;
+		if (!t) return;
 		try {
 			await trpc.scorekeeper.fieldLineup.set.mutate({
 				level: t.level,
@@ -142,7 +141,7 @@
 
 <div class="flex flex-col gap-4 p-4 max-w-md mx-auto w-full">
 	<div class="flex items-center justify-between">
-		<h1 class="text-xl font-bold text-gray-900 dark:text-white">Field lineup</h1>
+		<h1 class="text-xl font-bold text-gray-900 dark:text-white">Lineup Entry</h1>
 		{#if syncState === "saving"}
 			<span class="text-xs text-gray-400">Saving…</span>
 		{:else if syncState === "saved"}
@@ -152,19 +151,12 @@
 		{/if}
 	</div>
 
-	{#if !$userStore.username}
-		<div class="rounded-lg border border-amber-400 bg-amber-50 dark:bg-amber-950/30 p-3 text-sm text-amber-700">
-			Sign in to enter and sync field lineups.
-		</div>
-	{/if}
-
 	{#if target}
 		<div class="rounded-lg border border-gray-200 dark:border-neutral-700 p-2 text-center">
 			<div class="text-xs uppercase text-gray-500">{isTest ? "Test match" : "Practice match"}</div>
 			<div class="text-2xl font-bold text-gray-900 dark:text-white">
 				{isTest ? "Test" : `Practice ${target.match}`}
 			</div>
-			<div class="text-xs text-gray-400">Enter who's in each station. Leave a box blank if no robot is there.</div>
 		</div>
 
 		<div class="flex gap-3">

@@ -296,8 +296,8 @@
 			{#if validationWarn && !hasDup}
 				<Alert color="yellow">
 					<span class="font-semibold">Off-roster team{offRoster.length > 1 ? "s" : ""}:</span>
-					{offRoster.join(", ")} not on Alliance {allianceNumber}'s FMS roster. If this is a backup FMS missed,
-					file anyway.
+					{offRoster.join(", ")} not on Alliance {allianceNumber}'s roster yet. If it's a backup robot that
+					hasn't been entered yet, file anyway.
 				</Alert>
 			{/if}
 			{#if warning}

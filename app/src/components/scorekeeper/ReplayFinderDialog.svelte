@@ -49,7 +49,7 @@
 	});
 
 	function fmtTime(d: Date | null): string {
-		return d ? new Date(d).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "—";
+		return d ? new Date(d).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "-";
 	}
 	function gapText(g: number): string {
 		if (!Number.isFinite(g)) return "no conflict";
@@ -91,7 +91,7 @@
 
 		{#if !replayTeams.length}
 			<div class="text-sm text-amber-600">
-				No teams known for {level} match {replayMatch} — pick a match that's in the schedule.
+				No teams known for {level} match {replayMatch}. Pick one that's in the schedule.
 			</div>
 		{:else if candidates.length === 0}
 			<div class="text-sm text-gray-500">No valid slot found in the remaining schedule (every option puts a team back-to-back).</div>

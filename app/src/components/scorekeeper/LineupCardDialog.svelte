@@ -264,13 +264,13 @@
 				<div class="col-start-4 row-start-1 text-center text-[10px] uppercase text-gray-400">Current{currentIsDefault ? " (def)" : ""}</div>
 
 				<!-- current blue trio (left) -->
-				<div class="col-start-1 row-start-2 {curCls} text-blue-500/70">{onFile?.blue[0] ?? "\u2014"}</div>
-				<div class="col-start-1 row-start-3 {curCls} text-blue-500/70">{onFile?.blue[1] ?? "\u2014"}</div>
-				<div class="col-start-1 row-start-4 {curCls} text-blue-500/70">{onFile?.blue[2] ?? "\u2014"}</div>
+				<div class="col-start-1 row-start-2 {curCls} text-blue-500/70">{onFile?.blue[0] ?? "-"}</div>
+				<div class="col-start-1 row-start-3 {curCls} text-blue-500/70">{onFile?.blue[1] ?? "-"}</div>
+				<div class="col-start-1 row-start-4 {curCls} text-blue-500/70">{onFile?.blue[2] ?? "-"}</div>
 				<!-- current red trio (right; rows are r3, r2, r1) -->
-				<div class="col-start-4 row-start-2 {curCls} text-red-500/70">{onFile?.red[2] ?? "\u2014"}</div>
-				<div class="col-start-4 row-start-3 {curCls} text-red-500/70">{onFile?.red[1] ?? "\u2014"}</div>
-				<div class="col-start-4 row-start-4 {curCls} text-red-500/70">{onFile?.red[0] ?? "\u2014"}</div>
+				<div class="col-start-4 row-start-2 {curCls} text-red-500/70">{onFile?.red[2] ?? "-"}</div>
+				<div class="col-start-4 row-start-3 {curCls} text-red-500/70">{onFile?.red[1] ?? "-"}</div>
+				<div class="col-start-4 row-start-4 {curCls} text-red-500/70">{onFile?.red[0] ?? "-"}</div>
 
 				<!-- inputs in DOM order b1,b2,b3,r3,r2,r1 so Tab flows blue then red -->
 				<input id="lc-b1" type="number" inputmode="numeric" value={b1} oninput={(e) => (b1 = (e.target as HTMLInputElement).value)} class="{boxClass} {inpCls('blue', b1)} col-start-2 row-start-2" />

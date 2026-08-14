@@ -377,7 +377,7 @@
 			<Button color="alternative" size="sm" onclick={() => (replayOpen = true)}>
 				<Icon icon="mdi:reload" class="size-4 mr-1" /> Replay finder
 			</Button>
-			{#if canEdit}
+			{#if canEdit && alliances.length > 0}
 				<Button color="primary" size="sm" onclick={() => openDialog()}>
 					<Icon icon="mdi:clipboard-plus-outline" class="size-4 mr-1" /> File lineup card
 				</Button>
@@ -424,7 +424,7 @@
 					<span class="font-mono font-bold">{countdown.past ? `+${countdown.label} late` : `${countdown.label} left`}</span>
 				</div>
 			{:else}
-				<div class="text-xs text-amber-600">No scheduled start yet — deadline not enforced.</div>
+				<div class="text-xs text-amber-600">No scheduled start yet, deadline not enforced.</div>
 			{/if}
 		</div>
 
@@ -449,7 +449,7 @@
 										<span class="text-xl font-bold tabular-nums">{row.team}</span>
 										<span class="truncate text-[10px] text-gray-500">{teamName(row.team)}</span>
 									{:else}
-										<span class="text-xs italic text-gray-400">empty — bypass</span>
+										<span class="text-xs italic text-gray-400">empty (bypass)</span>
 									{/if}
 								</div>
 							{/each}
@@ -460,7 +460,7 @@
 					{#if fieldLineup.updated_by_name}Entered by {fieldLineup.updated_by_name} · {/if}{fmtTime(fieldLineup.updated_at)}
 				</div>
 			{:else}
-				<div class="text-sm text-gray-500">No field lineup yet — have a volunteer sign in and use the Lineup Entry page to send you the lineup.</div>
+				<div class="text-sm text-gray-500">No field lineup yet. Have a volunteer sign in and use the Lineup Entry page to send you the lineup.</div>
 			{/if}
 		</div>
 	{/if}

@@ -598,6 +598,42 @@ export const lineupCards = pgTable(
 
 export type LineupCard = typeof lineupCards.$inferSelect;
 
+/**
+ * Per-match "field lineup" for PRACTICE and TEST matches: which team is physically
+ * in each driver station for the current/next match. Entered by a roaming volunteer
+ * (any signed-in event user, walking the field) and synced live to the scorekeeper,
+ * who often can't see who is going where. A null station means no robot is in that
+ * station, so the scorekeeper can bypass it. Test matches are match_number 999. One
+ * row per (event, level, match, play), upserted in place.
+ */
+export const fieldLineups = pgTable(
+	"field_lineups",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		event_code: varchar("event_code")
+			.references(() => events.code)
+			.notNull(),
+		level: levelEnum("level").notNull(),
+		match_number: integer("match_number").notNull(),
+		play_number: integer("play_number").notNull().default(1),
+		red1_team: integer("red1_team"),
+		red2_team: integer("red2_team"),
+		red3_team: integer("red3_team"),
+		blue1_team: integer("blue1_team"),
+		blue2_team: integer("blue2_team"),
+		blue3_team: integer("blue3_team"),
+		updated_by_id: integer("updated_by_id").references(() => users.id),
+		updated_by_name: varchar("updated_by_name"),
+		updated_at: timestamp("updated_at").notNull().defaultNow(),
+	},
+	(t) => [
+		unique("field_lineups_event_match_uq").on(t.event_code, t.level, t.match_number, t.play_number),
+		index("field_lineups_event_code_idx").on(t.event_code),
+	],
+);
+
+export type FieldLineup = typeof fieldLineups.$inferSelect;
+
 // #endregion
 
 export default {
@@ -606,6 +642,7 @@ export default {
 	eventUsers,
 	playoffAlliances,
 	lineupCards,
+	fieldLineups,
 	messages,
 	noteFollowers,
 	matchLogs,

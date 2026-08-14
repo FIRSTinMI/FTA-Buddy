@@ -162,6 +162,13 @@
       "when": 1786659011414,
       "tag": "0022_bright_marvel_boy",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1786676630728,
+      "tag": "0023_awesome_darkstar",
+      "breakpoints": true
     }
   ]
 }

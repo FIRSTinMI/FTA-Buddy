@@ -227,6 +227,26 @@
 		}
 	}
 
+	// Field lineup for a practice/test match (entered by a roaming volunteer).
+	let fieldLineup = $state<Awaited<ReturnType<typeof trpc.scorekeeper.fieldLineup.forMatch.query>> | null>(null);
+	async function loadFieldLineup() {
+		if (selLevel !== "Practice") {
+			fieldLineup = null;
+			return;
+		}
+		try {
+			fieldLineup = await trpc.scorekeeper.fieldLineup.forMatch.query({
+				level: "Practice",
+				matchNumber: selMatch,
+				playNumber: selPlay,
+			});
+		} catch (err) {
+			console.error("[scorekeeper] field lineup load failed:", err);
+			fieldLineup = null;
+		}
+	}
+	const isTestMatch = $derived(selLevel === "Practice" && selMatch === 999);
+
 	async function loadCycle() {
 		if (!$eventStore.code) return;
 		try {
@@ -250,6 +270,7 @@
 		selMatch;
 		selPlay;
 		loadForMatch();
+		loadFieldLineup();
 	});
 
 	// ---- Live countdown to the T613 deadline -------------------------------
@@ -288,6 +309,7 @@
 
 	let cycleSub: { unsubscribe: () => void } | undefined;
 	let lineupSub: { unsubscribe: () => void } | undefined;
+	let fieldSub: { unsubscribe: () => void } | undefined;
 
 	onMount(async () => {
 		clock = setInterval(() => (now = Date.now()), 1000);
@@ -322,6 +344,11 @@
 			},
 			onError: (err) => console.warn("[scorekeeper] lineup sub error:", err),
 		});
+		// Live field-lineup updates (roaming volunteer's practice/test entries).
+		fieldSub = trpc.scorekeeper.fieldLineup.subscribe.subscribe(undefined, {
+			onData: () => loadFieldLineup(),
+			onError: (err) => console.warn("[scorekeeper] field lineup sub error:", err),
+		});
 	});
 
 	onDestroy(() => {
@@ -330,6 +357,7 @@
 		frameHandler.removeEventListener("prestart", onPrestart);
 		cycleSub?.unsubscribe();
 		lineupSub?.unsubscribe();
+		fieldSub?.unsubscribe();
 	});
 
 	const stats = $derived([
@@ -401,6 +429,37 @@
 				<AllianceLineupCard side={forMatch.red} {teamName} {canEdit} onEdit={() => openDialog(forMatch!.red.allianceNumber)} onHistory={() => openHistory(forMatch!.red)} />
 			</div>
 		{/if}
+	{:else if selLevel === "Practice"}
+		<div class="flex flex-col gap-2 rounded-lg border-2 p-3 {isTestMatch ? 'border-purple-400' : 'border-gray-200 dark:border-neutral-700'}">
+			<div class="flex items-center justify-between">
+				<span class="text-sm font-bold uppercase text-gray-600 dark:text-gray-300">{isTestMatch ? "Test match lineup" : "Practice lineup"}</span>
+				<a href="/field-lineup" class="inline-flex items-center gap-1 text-xs text-primary-600 underline"><Icon icon="mdi:cellphone" class="size-4" /> Field entry</a>
+			</div>
+			{#if fieldLineup}
+				<div class="grid grid-cols-2 gap-2">
+					{#each [{ side: "blue", border: "border-blue-400", text: "text-blue-600", rows: [{ label: "Blue 1", team: fieldLineup.blue1_team }, { label: "Blue 2", team: fieldLineup.blue2_team }, { label: "Blue 3", team: fieldLineup.blue3_team }] }, { side: "red", border: "border-red-400", text: "text-red-600", rows: [{ label: "Red 3", team: fieldLineup.red3_team }, { label: "Red 2", team: fieldLineup.red2_team }, { label: "Red 1", team: fieldLineup.red1_team }] }] as col (col.side)}
+						<div class="rounded border p-1 {col.border}">
+							{#each col.rows as row (row.label)}
+								<div class="flex items-center gap-2 px-1 py-1">
+									<span class="w-12 shrink-0 text-[10px] font-semibold uppercase {col.text}">{row.label}</span>
+									{#if row.team != null}
+										<span class="text-xl font-bold tabular-nums">{row.team}</span>
+										<span class="truncate text-[10px] text-gray-500">{teamName(row.team)}</span>
+									{:else}
+										<span class="text-xs italic text-gray-400">empty \u2014 bypass</span>
+									{/if}
+								</div>
+							{/each}
+						</div>
+					{/each}
+				</div>
+				<div class="text-[11px] text-gray-400">
+					{#if fieldLineup.updated_by_name}Entered by {fieldLineup.updated_by_name} \u00b7 {/if}{fmtTime(fieldLineup.updated_at)}
+				</div>
+			{:else}
+				<div class="text-sm text-gray-500">No field lineup entered yet \u2014 open <a href="/field-lineup" class="text-primary-600 underline">field entry</a> or hand it to a roaming volunteer.</div>
+			{/if}
+		</div>
 	{/if}
 
 	<!-- Match schedule table -->

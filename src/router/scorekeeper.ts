@@ -3,7 +3,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import type { AllianceColor } from "../../shared/types";
 import { db } from "../db/db";
-import { lineupCards, matchLogs, playoffAlliances, type User } from "../db/schema";
+import { fieldLineups, lineupCards, matchLogs, playoffAlliances, type User } from "../db/schema";
 import { eventProcedure, router } from "../trpc";
 import { bus } from "../util/eventBus";
 import { subscriptionQueue } from "../util/subscription";
@@ -454,6 +454,110 @@ export const scorekeeperRouter = router({
 			const { push, drain } = subscriptionQueue<{ type: string; allianceNumber?: number }>(signal!);
 			const unsub = bus.subscribe(`event:${ctx.event.code}:lineups`, (data) =>
 				push(data as { type: string; allianceNumber?: number }),
+			);
+			try {
+				yield* drain();
+			} finally {
+				unsub();
+			}
+		}),
+	}),
+
+	/**
+	 * Field lineups for PRACTICE and TEST matches: a roaming volunteer walks the
+	 * field and enters which team is in each station for the current/next match; it
+	 * syncs live to the scorekeeper. Distinct from playoff lineup cards.
+	 */
+	fieldLineup: router({
+		/** The stored field lineup for a match, or null if none entered. */
+		forMatch: eventProcedure
+			.input(
+				z.object({
+					level: z.enum(["None", "Practice", "Qualification", "Playoff"]),
+					matchNumber: z.number().int(),
+					playNumber: z.number().int().default(1),
+				}),
+			)
+			.query(async ({ ctx, input }) => {
+				const [row] = await db
+					.select()
+					.from(fieldLineups)
+					.where(
+						and(
+							eq(fieldLineups.event_code, ctx.event.code),
+							eq(fieldLineups.level, input.level),
+							eq(fieldLineups.match_number, input.matchNumber),
+							eq(fieldLineups.play_number, input.playNumber),
+						),
+					)
+					.limit(1);
+				return row ?? null;
+			}),
+
+		/**
+		 * Upsert the field lineup for a match. Any signed-in event user may enter it
+		 * (the roaming volunteer). A null station means no robot is there (bypass it).
+		 */
+		set: eventProcedure
+			.input(
+				z.object({
+					level: z.enum(["None", "Practice", "Qualification", "Playoff"]),
+					matchNumber: z.number().int(),
+					playNumber: z.number().int().default(1),
+					red: stationsSchema,
+					blue: stationsSchema,
+					updatedByName: z.string().max(120).optional(),
+				}),
+			)
+			.mutation(async ({ ctx, input }) => {
+				if (!ctx.user) {
+					throw new TRPCError({ code: "UNAUTHORIZED", message: "Sign in to enter a field lineup" });
+				}
+				const values = {
+					red1_team: input.red.station1,
+					red2_team: input.red.station2,
+					red3_team: input.red.station3,
+					blue1_team: input.blue.station1,
+					blue2_team: input.blue.station2,
+					blue3_team: input.blue.station3,
+					updated_by_id: ctx.user.id,
+					updated_by_name: input.updatedByName ?? ctx.user.username ?? null,
+					updated_at: new Date(),
+				};
+				const [row] = await db
+					.insert(fieldLineups)
+					.values({
+						event_code: ctx.event.code,
+						level: input.level,
+						match_number: input.matchNumber,
+						play_number: input.playNumber,
+						...values,
+					})
+					.onConflictDoUpdate({
+						target: [
+							fieldLineups.event_code,
+							fieldLineups.level,
+							fieldLineups.match_number,
+							fieldLineups.play_number,
+						],
+						set: values,
+					})
+					.returning();
+				bus.publish(`event:${ctx.event.code}:fieldLineup`, {
+					level: input.level,
+					matchNumber: input.matchNumber,
+					playNumber: input.playNumber,
+				});
+				return row;
+			}),
+
+		/** Live push whenever a field lineup changes, for the scorekeeper + a 2nd device. */
+		subscribe: eventProcedure.subscription(async function* ({ ctx, signal }) {
+			const { push, drain } = subscriptionQueue<{ level: string; matchNumber: number; playNumber: number }>(
+				signal!,
+			);
+			const unsub = bus.subscribe(`event:${ctx.event.code}:fieldLineup`, (data) =>
+				push(data as { level: string; matchNumber: number; playNumber: number }),
 			);
 			try {
 				yield* drain();

@@ -514,7 +514,7 @@
 						<td class="py-1 pr-2 whitespace-nowrap font-mono">{fmtTime(m.scheduledStartTime)}</td>
 						<td class="py-1 pr-2 whitespace-nowrap font-mono text-gray-500">{fmtTime(m.actualStartTime)}</td>
 						<td class="py-1 pr-2 whitespace-nowrap text-xs {delta ? (delta.late ? 'text-red-600' : 'text-green-600') : 'text-gray-400'}">{delta?.text ?? "-"}</td>
-						<td class="py-1 pr-2 font-mono text-gray-500">{m.cycleTime ?? "-"}</td>
+						<td class="py-1 pr-2 font-mono text-gray-500">{fmtCycleStr(m.cycleTime)}</td>
 						<td class="py-1 pr-2 whitespace-nowrap">
 							{#if m.finalScoreRed != null && m.finalScoreBlue != null}
 								<span class="text-red-600 {m.finalScoreRed > m.finalScoreBlue ? 'font-bold' : ''}">{m.finalScoreRed}</span>-<span class="text-blue-600 {m.finalScoreBlue > m.finalScoreRed ? 'font-bold' : ''}">{m.finalScoreBlue}</span>

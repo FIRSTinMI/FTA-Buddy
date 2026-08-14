@@ -80,7 +80,7 @@
 		<div class="flex flex-wrap items-end gap-3">
 			<label class="flex flex-col gap-1 text-xs font-medium uppercase text-gray-500">
 				Level
-				<select bind:value={level} class={inputCls}>
+				<select bind:value={level} class="{inputCls} min-w-[9rem]">
 					{#each levels as lv (lv)}
 						<option value={lv}>{lv}</option>
 					{/each}

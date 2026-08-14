@@ -169,6 +169,8 @@ export class SignalR extends TypedEventEmitter<SourceEventMap> {
 					this.frame.field = FieldState.READY_FOR_POST_RESULT;
 					this.emit("cycleTime", "scoresPosted", "");
 					await uploadMatchLogs();
+					// Re-post the schedule so the just-posted final scores are captured.
+					this.emit("sendSchedule");
 					break;
 				case "TournamentLevelComplete":
 					this.frame.field = FieldState.UNKNOWN;

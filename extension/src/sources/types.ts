@@ -25,6 +25,11 @@ export interface ScheduleResult {
 		scheduledStartTime: Date;
 		redAllianceNumber?: number | null;
 		blueAllianceNumber?: number | null;
+		red?: (number | null)[];
+		blue?: (number | null)[];
+		finalScoreRed?: number | null;
+		finalScoreBlue?: number | null;
+		status?: string | null;
 	}[];
 }
 

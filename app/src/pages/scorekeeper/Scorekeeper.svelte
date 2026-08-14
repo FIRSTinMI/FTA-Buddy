@@ -56,13 +56,18 @@
 		blueAllianceNumber: number | null;
 		isPlayed: boolean;
 		scheduledStartTime: Date | null;
+		actualStartTime: Date | null;
 		cycleTime: string | null;
+		finalScoreRed: number | null;
+		finalScoreBlue: number | null;
+		status: string | null;
 	}
 
 	const LEVEL_ORDER: Record<string, number> = { Practice: 0, Qualification: 1, Playoff: 2, None: 3 };
+	const allNull = (a: (number | null)[]) => a.every((x) => x == null);
 
-	// Merge getScheduledMatches (teams/scores/cycle) with scheduleDetails.matches
-	// (scheduled times + FMS alliance numbers, which don't need TBA).
+	// Merge getScheduledMatches (actual start, teams, cycle) with scheduleDetails.matches
+	// (scheduled times, alliance numbers, teams + final scores from FMS - no TBA needed).
 	const allMatches = $derived.by<MatchRow[]>(() => {
 		const byKey = new Map<string, MatchRow>();
 		const key = (level: string, match: number, play: number) => `${level}:${match}:${play}`;
@@ -77,7 +82,11 @@
 				blueAllianceNumber: null,
 				isPlayed: m.isPlayed,
 				scheduledStartTime: m.scheduledStartTime,
+				actualStartTime: m.actualStartTime,
 				cycleTime: m.cycleTime,
+				finalScoreRed: null,
+				finalScoreBlue: null,
+				status: null,
 			});
 		}
 		for (const s of scheduleMatches) {
@@ -87,18 +96,27 @@
 				existing.scheduledStartTime = existing.scheduledStartTime ?? new Date(s.scheduledStartTime);
 				existing.redAllianceNumber = s.redAllianceNumber ?? existing.redAllianceNumber;
 				existing.blueAllianceNumber = s.blueAllianceNumber ?? existing.blueAllianceNumber;
+				if (s.red && allNull(existing.red)) existing.red = s.red;
+				if (s.blue && allNull(existing.blue)) existing.blue = s.blue;
+				existing.finalScoreRed = s.finalScoreRed ?? existing.finalScoreRed;
+				existing.finalScoreBlue = s.finalScoreBlue ?? existing.finalScoreBlue;
+				existing.status = s.status ?? existing.status;
 			} else {
 				byKey.set(k, {
 					level: s.level,
 					match: s.match,
 					play: 1,
-					red: [null, null, null],
-					blue: [null, null, null],
+					red: s.red ?? [null, null, null],
+					blue: s.blue ?? [null, null, null],
 					redAllianceNumber: s.redAllianceNumber ?? null,
 					blueAllianceNumber: s.blueAllianceNumber ?? null,
-					isPlayed: false,
+					isPlayed: s.finalScoreRed != null || s.status === "Played" || s.status === "Complete",
 					scheduledStartTime: new Date(s.scheduledStartTime),
+					actualStartTime: null,
 					cycleTime: null,
+					finalScoreRed: s.finalScoreRed ?? null,
+					finalScoreBlue: s.finalScoreBlue ?? null,
+					status: s.status ?? null,
 				});
 			}
 		}
@@ -106,6 +124,27 @@
 			(a, b) => (LEVEL_ORDER[a.level] ?? 9) - (LEVEL_ORDER[b.level] ?? 9) || a.match - b.match || a.play - b.play,
 		);
 	});
+
+	// Search filter: match number, level, or any team number.
+	let search = $state("");
+	const filteredMatches = $derived.by(() => {
+		const q = search.trim().toLowerCase();
+		if (!q) return allMatches;
+		return allMatches.filter((m) => {
+			if (String(m.match).includes(q)) return true;
+			if (m.level.toLowerCase().includes(q)) return true;
+			return [...m.red, ...m.blue].some((t) => t != null && String(t).includes(q));
+		});
+	});
+
+	function fmtDelta(sched: Date | null, actual: Date | null): { text: string; late: boolean } | null {
+		if (!sched || !actual) return null;
+		const diff = actual.getTime() - sched.getTime(); // positive = started late/behind
+		const secs = Math.round(Math.abs(diff) / 1000);
+		const m = Math.floor(secs / 60);
+		const mag = m > 0 ? `${m}m` : `${secs}s`;
+		return { text: `${mag} ${diff > 0 ? "late" : "early"}`, late: diff > 0 };
+	}
 
 	// ---- Selection / follow-live -------------------------------------------
 	let following = $state(true);
@@ -362,26 +401,33 @@
 				<AllianceLineupCard side={forMatch.red} {teamName} {canEdit} onEdit={() => openDialog(forMatch!.red.allianceNumber)} onHistory={() => openHistory(forMatch!.red)} />
 			</div>
 		{/if}
-	{:else}
-		<div class="rounded-lg border border-gray-200 dark:border-neutral-700 p-3 text-sm text-gray-500">
-			Lineups apply to playoff matches. {selLevel} {selMatch} is shown for schedule reference below.
-		</div>
 	{/if}
 
 	<!-- Match schedule table -->
-	<h2 class="text-lg font-bold text-gray-900 dark:text-white mt-2">Match schedule</h2>
+	<div class="mt-2 flex items-center justify-between gap-2">
+		<h2 class="text-lg font-bold text-gray-900 dark:text-white">Match schedule</h2>
+		<input
+			bind:value={search}
+			placeholder="Search match or team #"
+			class="w-44 rounded-md border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-2 py-1 text-sm"
+		/>
+	</div>
 	<div class="overflow-x-auto">
 		<table class="w-full text-sm">
 			<thead>
 				<tr class="text-left text-xs uppercase text-gray-500 border-b border-gray-200 dark:border-neutral-700">
 					<th class="py-1 pr-2">Match</th>
-					<th class="py-1 pr-2">Scheduled</th>
-					<th class="py-1 pr-2">Status</th>
+					<th class="py-1 pr-2">Teams</th>
+					<th class="py-1 pr-2">Sched</th>
+					<th class="py-1 pr-2">Actual</th>
+					<th class="py-1 pr-2">Delta</th>
 					<th class="py-1 pr-2">Cycle</th>
+					<th class="py-1 pr-2">Result</th>
 				</tr>
 			</thead>
 			<tbody>
-				{#each allMatches as m (m.level + m.match + m.play)}
+				{#each filteredMatches as m (m.level + m.match + m.play)}
+					{@const delta = fmtDelta(m.scheduledStartTime, m.actualStartTime)}
 					<tr
 						class="border-b border-gray-100 dark:border-neutral-800 cursor-pointer {m.level === selLevel && m.match === selMatch && m.play === selPlay ? 'bg-primary-50 dark:bg-primary-950/40' : ''}"
 						onclick={() => {
@@ -395,15 +441,28 @@
 							<span class="text-gray-400 text-xs">{m.level.slice(0, 4)}</span>
 							<span class="font-semibold">{m.match}{m.play > 1 ? `-${m.play}` : ""}</span>
 						</td>
-						<td class="py-1 pr-2 whitespace-nowrap font-mono">{fmtTime(m.scheduledStartTime)}</td>
-						<td class="py-1 pr-2">
-							{#if m.isPlayed}<span class="text-green-600">Played</span>{:else}<span class="text-gray-400">Pending</span>{/if}
+						<td class="py-1 pr-2 whitespace-nowrap text-xs">
+							<span class="text-red-600">{m.red.filter((t) => t != null).join(" ") || "-"}</span>
+							<span class="text-gray-300">/</span>
+							<span class="text-blue-600">{m.blue.filter((t) => t != null).join(" ") || "-"}</span>
 						</td>
+						<td class="py-1 pr-2 whitespace-nowrap font-mono">{fmtTime(m.scheduledStartTime)}</td>
+						<td class="py-1 pr-2 whitespace-nowrap font-mono text-gray-500">{fmtTime(m.actualStartTime)}</td>
+						<td class="py-1 pr-2 whitespace-nowrap text-xs {delta ? (delta.late ? 'text-red-600' : 'text-green-600') : 'text-gray-400'}">{delta?.text ?? "-"}</td>
 						<td class="py-1 pr-2 font-mono text-gray-500">{m.cycleTime ?? "-"}</td>
+						<td class="py-1 pr-2 whitespace-nowrap">
+							{#if m.finalScoreRed != null && m.finalScoreBlue != null}
+								<span class="text-red-600 {m.finalScoreRed > m.finalScoreBlue ? 'font-bold' : ''}">{m.finalScoreRed}</span>-<span class="text-blue-600 {m.finalScoreBlue > m.finalScoreRed ? 'font-bold' : ''}">{m.finalScoreBlue}</span>
+							{:else if m.isPlayed}
+								<span class="text-green-600">Played</span>
+							{:else}
+								<span class="text-gray-400">Pending</span>
+							{/if}
+						</td>
 					</tr>
 				{/each}
-				{#if allMatches.length === 0}
-					<tr><td colspan="4" class="py-2 text-gray-500">No schedule loaded yet.</td></tr>
+				{#if filteredMatches.length === 0}
+					<tr><td colspan="7" class="py-2 text-gray-500">{search ? "No matches match your search." : "No schedule loaded yet."}</td></tr>
 				{/if}
 			</tbody>
 		</table>

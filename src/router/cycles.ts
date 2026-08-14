@@ -480,6 +480,11 @@ export const cycleRouter = router({
 							scheduledStartTime: z.date(),
 							redAllianceNumber: z.number().nullable().optional(),
 							blueAllianceNumber: z.number().nullable().optional(),
+							red: z.array(z.number().nullable()).optional(),
+							blue: z.array(z.number().nullable()).optional(),
+							finalScoreRed: z.number().nullable().optional(),
+							finalScoreBlue: z.number().nullable().optional(),
+							status: z.string().nullable().optional(),
 						}),
 					)
 					.optional(),

@@ -723,6 +723,13 @@ export interface ScheduleDetails {
 		 */
 		redAllianceNumber?: number | null;
 		blueAllianceNumber?: number | null;
+		/** Teams on each side, from FMS (station 1-3). Present once the field is set. */
+		red?: (number | null)[];
+		blue?: (number | null)[];
+		/** Final scores + FMS match status, captured once the match is posted. */
+		finalScoreRed?: number | null;
+		finalScoreBlue?: number | null;
+		status?: string | null;
 	}[];
 }
 

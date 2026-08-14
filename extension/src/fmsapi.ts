@@ -97,6 +97,7 @@ export async function getScheduleBreakdown() {
 	// times, not just qualification ones. FMS's GetCurrentSchedule only returns the
 	// active tournament level, so in practice this is quals during qualifications and
 	// playoff matches once playoffs begin.
+	const teamNum = (v: any): number | null => (typeof v === "number" && v > 0 ? v : null);
 	const matches = raw.map((match: any) => ({
 		scheduledStartTime: new Date(match.startTime),
 		match: match.matchNumber,
@@ -105,6 +106,13 @@ export async function getScheduleBreakdown() {
 		// view resolve red/blue without waiting for a played match log.
 		redAllianceNumber: match.redAllianceNumber ?? null,
 		blueAllianceNumber: match.blueAllianceNumber ?? null,
+		// Teams + final scores + status straight off the schedule, so the scorekeeper
+		// table can show them without TBA and grab scores as soon as a match is posted.
+		red: [teamNum(match.teamNumberRed1), teamNum(match.teamNumberRed2), teamNum(match.teamNumberRed3)],
+		blue: [teamNum(match.teamNumberBlue1), teamNum(match.teamNumberBlue2), teamNum(match.teamNumberBlue3)],
+		finalScoreRed: typeof match.finalScoreRed === "number" ? match.finalScoreRed : null,
+		finalScoreBlue: typeof match.finalScoreBlue === "number" ? match.finalScoreBlue : null,
+		status: match.matchStatus ?? null,
 	}));
 
 	// The day / cycle-time breakdown below (lunch detection, day boundaries) is

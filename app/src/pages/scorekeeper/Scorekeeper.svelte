@@ -496,10 +496,10 @@
 							<span class="text-gray-400 text-xs">{m.level.slice(0, 4)}</span>
 							<span class="font-semibold">{m.match}{m.play > 1 ? `-${m.play}` : ""}</span>
 						</td>
-						<td class="py-1 pr-2 whitespace-nowrap text-xs hidden lg:table-cell">
-							<span class="text-red-600">{m.red.filter((t) => t != null).join(" ") || "-"}</span>
-							<span class="text-gray-300">/</span>
-							<span class="text-blue-600">{m.blue.filter((t) => t != null).join(" ") || "-"}</span>
+						<td class="py-1 pr-2 whitespace-nowrap text-xs font-mono hidden lg:table-cell">
+							{#each m.red as t, i (i)}<span class="inline-block w-12 text-right tabular-nums text-red-600">{t ?? ""}</span>{/each}
+							<span class="mx-1 text-gray-300">/</span>
+							{#each m.blue as t, i (i)}<span class="inline-block w-12 text-right tabular-nums text-blue-600">{t ?? ""}</span>{/each}
 						</td>
 						<td class="py-1 pr-2 whitespace-nowrap font-mono">{fmtTime(m.scheduledStartTime)}</td>
 						<td class="py-1 pr-2 whitespace-nowrap font-mono text-gray-500">{fmtTime(m.actualStartTime)}</td>

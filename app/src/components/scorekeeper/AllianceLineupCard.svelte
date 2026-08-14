@@ -62,7 +62,7 @@
 	{#if stations && (side.allianceNumber || title != null)}
 		<div class="flex flex-col gap-2">
 			{#each rows as [label, team] (label)}
-				<div class="flex items-center gap-3 rounded-md bg-white dark:bg-neutral-800 px-3 py-2">
+				<div class="flex items-center gap-3 rounded-md bg-white dark:bg-neutral-800 px-3 py-2 min-h-[3.25rem]">
 					<span class="w-12 shrink-0 text-xs font-semibold uppercase text-gray-500">{label}</span>
 					{#if team != null}
 						<span class="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">{team}</span>

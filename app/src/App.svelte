@@ -1,5 +1,12 @@
 <script lang="ts">
-	import Icon from "@iconify/svelte";
+	import Icon, { loadIcons } from "@iconify/svelte";
+	// Preload the sidebar/nav icons so they don't pop in on first open.
+	loadIcons([
+		"mdi:television", "mdi:television-guide", "mdi:clipboard-outline", "mdi:clipboard-list-outline",
+		"mdi:clipboard-edit-outline", "mdi:file-document", "mdi:message-alert", "mdi:account-switch",
+		"mdi:package", "mdi:database-export-outline", "mdi:shield-crown-outline", "mdi:information",
+		"mdi:cog", "mdi:cog-outline", "mdi:menu",
+	]);
 	import {
 		Button,
 		CloseButton,
@@ -673,7 +680,7 @@
 	<Sidebar alwaysOpen={true} position="static" class="w-full" classes={{ div: "overflow-y-auto" }}>
 		<SidebarWrapper class="rounded-sm py-4 dark:bg-gray-800">
 			{#if $user.token && $user.eventToken}
-				<SidebarGroup>
+				<SidebarGroup class="space-y-1">
 					<SidebarItem
 						label="Monitor"
 						onclick={() => {
@@ -796,7 +803,7 @@
 					</SidebarItem>
 				</SidebarGroup>
 			{:else if $user.eventToken}
-				<SidebarGroup>
+				<SidebarGroup class="space-y-1">
 					<SidebarItem
 						label="Monitor"
 						onclick={() => {

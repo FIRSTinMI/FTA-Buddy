@@ -430,7 +430,7 @@
 		<div class="flex items-center justify-between">
 			{#if countdown}
 				<div class="text-sm {countdown.past ? 'text-red-600 font-semibold' : 'text-gray-700 dark:text-gray-200'}">
-					T613 deadline {fmtTime(forMatch?.deadlineAt ?? null)} ·
+					T613 deadline {fmtTime(forMatch?.deadlineAt ?? null)} -
 					<span class="font-mono font-bold">{countdown.past ? `+${countdown.label} late` : `${countdown.label} left`}</span>
 				</div>
 			{:else}
@@ -452,7 +452,7 @@
 				<AllianceLineupCard side={fieldSide("blue", fieldLineup.blue1_team, fieldLineup.blue2_team, fieldLineup.blue3_team)} {teamName} canEdit={false} onEdit={() => {}} onHistory={() => {}} title="" hideActions emptyLabel="bypass" />
 				<AllianceLineupCard side={fieldSide("red", fieldLineup.red1_team, fieldLineup.red2_team, fieldLineup.red3_team)} {teamName} canEdit={false} onEdit={() => {}} onHistory={() => {}} title="" hideActions emptyLabel="bypass" />
 			</div>
-			<div class="text-[11px] text-gray-400">{#if fieldLineup.updated_by_name}Entered by {fieldLineup.updated_by_name} · {/if}{fmtTime(fieldLineup.updated_at)}</div>
+			<div class="text-[11px] text-gray-400">{#if fieldLineup.updated_by_name}Entered by {fieldLineup.updated_by_name} - {/if}{fmtTime(fieldLineup.updated_at)}</div>
 		{:else}
 			<div class="text-sm text-gray-500">No field lineup yet. Have a volunteer sign in and use the Lineup Entry page to send you the lineup.</div>
 		{/if}

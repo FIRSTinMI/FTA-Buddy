@@ -6,6 +6,7 @@
 	import AllianceLineupCard from "../../components/scorekeeper/AllianceLineupCard.svelte";
 	import LineupCardDialog from "../../components/scorekeeper/LineupCardDialog.svelte";
 	import LineupHistory from "../../components/scorekeeper/LineupHistory.svelte";
+	import ReplayFinderDialog from "../../components/scorekeeper/ReplayFinderDialog.svelte";
 	import { frameHandler, subscribeToFieldMonitor } from "../../field-monitor";
 	import { trpc } from "../../main";
 	import { eventStore } from "../../stores/event";
@@ -288,6 +289,7 @@
 
 	// ---- Dialog / history state --------------------------------------------
 	let dialogOpen = $state(false);
+	let replayOpen = $state(false);
 	let dialogAlliance = $state<number | null>(null);
 	let historyOpen = $state(false);
 	let historyAllianceNumber = $state(1);
@@ -371,11 +373,16 @@
 <div class="flex flex-col gap-3 p-3 max-w-3xl lg:max-w-5xl mx-auto w-full">
 	<div class="flex items-center justify-between">
 		<h1 class="text-2xl font-bold text-gray-900 dark:text-white">Scorekeeper</h1>
-		{#if canEdit}
-			<Button color="primary" size="sm" onclick={() => openDialog()}>
-				<Icon icon="mdi:clipboard-plus-outline" class="size-4 mr-1" /> File lineup card
+		<div class="flex gap-2">
+			<Button color="alternative" size="sm" onclick={() => (replayOpen = true)}>
+				<Icon icon="mdi:reload" class="size-4 mr-1" /> Replay finder
 			</Button>
-		{/if}
+			{#if canEdit}
+				<Button color="primary" size="sm" onclick={() => openDialog()}>
+					<Icon icon="mdi:clipboard-plus-outline" class="size-4 mr-1" /> File lineup card
+				</Button>
+			{/if}
+		</div>
 	</div>
 
 	<!-- Match selector: follows live, browsable -->
@@ -541,3 +548,14 @@
 {/if}
 
 <LineupHistory bind:open={historyOpen} allianceNumber={historyAllianceNumber} {teamName} onClose={() => (historyOpen = false)} />
+
+{#if replayOpen}
+	<ReplayFinderDialog
+		bind:open={replayOpen}
+		matches={allMatches}
+		initialLevel={selLevel}
+		initialMatch={selMatch}
+		{teamName}
+		onClose={() => (replayOpen = false)}
+	/>
+{/if}

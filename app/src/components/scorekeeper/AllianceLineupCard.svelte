@@ -9,9 +9,16 @@
 		canEdit: boolean;
 		onEdit: () => void;
 		onHistory: () => void;
+		/** Override the "Alliance N" header (e.g. for a practice/test field lineup). */
+		title?: string | null;
+		/** Hide the resolution badge + History/Enter buttons. */
+		hideActions?: boolean;
+		/** Text shown for an empty station (default "-"; e.g. "bypass" for field lineups). */
+		emptyLabel?: string;
 	}
 
-	let { side, teamName, canEdit, onEdit, onHistory }: Props = $props();
+	let { side, teamName, canEdit, onEdit, onHistory, title = null, hideActions = false, emptyLabel = "-" }: Props =
+		$props();
 
 	const colorClasses = $derived(
 		side.color === "red"
@@ -39,7 +46,9 @@
 	<div class="flex items-center justify-between">
 		<div class="flex items-center gap-2">
 			<span class="rounded-md px-2 py-1 text-sm font-bold uppercase {chipClasses}">{side.color}</span>
-			{#if side.allianceNumber}
+			{#if title != null}
+				{#if title}<span class="text-lg font-bold text-gray-900 dark:text-white">{title}</span>{/if}
+			{:else if side.allianceNumber}
 				<span class="text-lg font-bold text-gray-900 dark:text-white">Alliance {side.allianceNumber}</span>
 			{:else}
 				<span class="text-lg font-bold text-gray-500">No alliance</span>
@@ -50,34 +59,40 @@
 		{/if}
 	</div>
 
-	{#if side.allianceNumber && stations}
+	{#if stations && (side.allianceNumber || title != null)}
 		<div class="flex flex-col gap-2">
 			{#each rows as [label, team] (label)}
 				<div class="flex items-center gap-3 rounded-md bg-white dark:bg-neutral-800 px-3 py-2">
 					<span class="w-12 shrink-0 text-xs font-semibold uppercase text-gray-500">{label}</span>
-					<span class="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">{team ?? "-"}</span>
-					<span class="truncate text-xs text-gray-500" title={teamName(team)}>{teamName(team)}</span>
+					{#if team != null}
+						<span class="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">{team}</span>
+						<span class="truncate text-xs text-gray-500" title={teamName(team)}>{teamName(team)}</span>
+					{:else}
+						<span class="text-sm italic text-gray-400">{emptyLabel}</span>
+					{/if}
 				</div>
 			{/each}
 		</div>
 
-		<div class="flex items-center justify-between">
-			<div class="text-xs text-gray-500">
-				{#if resolution === "submitted"}
-					<span class="inline-flex items-center gap-1"><Icon icon="mdi:check-circle" class="size-4" /> Submitted lineup</span>
-				{:else if resolution === "carried-forward"}
-					<span class="inline-flex items-center gap-1"><Icon icon="mdi:arrow-right-bold" class="size-4" /> Carried forward (T613)</span>
-				{:else}
-					<span class="inline-flex items-center gap-1"><Icon icon="mdi:information-outline" class="size-4" /> Default lineup</span>
-				{/if}
+		{#if !hideActions}
+			<div class="flex items-center justify-between">
+				<div class="text-xs text-gray-500">
+					{#if resolution === "submitted"}
+						<span class="inline-flex items-center gap-1"><Icon icon="mdi:check-circle" class="size-4" /> Submitted lineup</span>
+					{:else if resolution === "carried-forward"}
+						<span class="inline-flex items-center gap-1"><Icon icon="mdi:arrow-right-bold" class="size-4" /> Carried forward (T613)</span>
+					{:else}
+						<span class="inline-flex items-center gap-1"><Icon icon="mdi:information-outline" class="size-4" /> Default lineup</span>
+					{/if}
+				</div>
+				<div class="flex gap-2">
+					<Button size="xs" color="alternative" onclick={onHistory}>History</Button>
+					{#if canEdit}
+						<Button size="xs" color="primary" onclick={onEdit}>Enter / change</Button>
+					{/if}
+				</div>
 			</div>
-			<div class="flex gap-2">
-				<Button size="xs" color="alternative" onclick={onHistory}>History</Button>
-				{#if canEdit}
-					<Button size="xs" color="primary" onclick={onEdit}>Enter / change</Button>
-				{/if}
-			</div>
-		</div>
+		{/if}
 	{:else if side.allianceNumber}
 		<div class="text-sm text-gray-500">Alliance {side.allianceNumber} is not set up yet.</div>
 	{:else}

@@ -248,6 +248,16 @@
 	}
 	const isTestMatch = $derived(selLevel === "Practice" && selMatch === 999);
 
+	// Wrap a field-lineup side as a LineupSide so it renders in the playoff card format.
+	function fieldSide(color: "blue" | "red", s1: number | null, s2: number | null, s3: number | null): LineupSide {
+		return {
+			color,
+			allianceNumber: null,
+			alliance: null,
+			lineup: { stations: { station1: s1, station2: s2, station3: s3 }, resolution: "submitted", usesBackup: false, cardId: null },
+		} as unknown as LineupSide;
+	}
+
 	async function loadCycle() {
 		if (!$eventStore.code) return;
 		try {
@@ -437,32 +447,15 @@
 			</div>
 		{/if}
 	{:else if selLevel === "Practice"}
-		<div class="flex flex-col gap-2 rounded-lg border-2 p-3 {isTestMatch ? 'border-purple-400' : 'border-gray-200 dark:border-neutral-700'}">
-			{#if fieldLineup}
-				<div class="grid grid-cols-2 gap-2">
-					{#each [{ side: "blue", border: "border-blue-400", text: "text-blue-600", rows: [{ label: "Blue 1", team: fieldLineup.blue1_team }, { label: "Blue 2", team: fieldLineup.blue2_team }, { label: "Blue 3", team: fieldLineup.blue3_team }] }, { side: "red", border: "border-red-400", text: "text-red-600", rows: [{ label: "Red 3", team: fieldLineup.red3_team }, { label: "Red 2", team: fieldLineup.red2_team }, { label: "Red 1", team: fieldLineup.red1_team }] }] as col (col.side)}
-						<div class="rounded border p-1 {col.border}">
-							{#each col.rows as row (row.label)}
-								<div class="flex items-center gap-2 px-1 py-1">
-									<span class="w-12 shrink-0 text-[10px] font-semibold uppercase {col.text}">{row.label}</span>
-									{#if row.team != null}
-										<span class="text-xl font-bold tabular-nums">{row.team}</span>
-										<span class="truncate text-[10px] text-gray-500">{teamName(row.team)}</span>
-									{:else}
-										<span class="text-xs italic text-gray-400">empty (bypass)</span>
-									{/if}
-								</div>
-							{/each}
-						</div>
-					{/each}
-				</div>
-				<div class="text-[11px] text-gray-400">
-					{#if fieldLineup.updated_by_name}Entered by {fieldLineup.updated_by_name} · {/if}{fmtTime(fieldLineup.updated_at)}
-				</div>
-			{:else}
-				<div class="text-sm text-gray-500">No field lineup yet. Have a volunteer sign in and use the Lineup Entry page to send you the lineup.</div>
-			{/if}
-		</div>
+		{#if fieldLineup}
+			<div class="grid gap-3 md:grid-cols-2">
+				<AllianceLineupCard side={fieldSide("blue", fieldLineup.blue1_team, fieldLineup.blue2_team, fieldLineup.blue3_team)} {teamName} canEdit={false} onEdit={() => {}} onHistory={() => {}} title="" hideActions emptyLabel="bypass" />
+				<AllianceLineupCard side={fieldSide("red", fieldLineup.red1_team, fieldLineup.red2_team, fieldLineup.red3_team)} {teamName} canEdit={false} onEdit={() => {}} onHistory={() => {}} title="" hideActions emptyLabel="bypass" />
+			</div>
+			<div class="text-[11px] text-gray-400">{#if fieldLineup.updated_by_name}Entered by {fieldLineup.updated_by_name} · {/if}{fmtTime(fieldLineup.updated_at)}</div>
+		{:else}
+			<div class="text-sm text-gray-500">No field lineup yet. Have a volunteer sign in and use the Lineup Entry page to send you the lineup.</div>
+		{/if}
 	{/if}
 
 	<!-- Match schedule table -->

@@ -168,7 +168,16 @@
 	}
 
 	const boxClass =
-		"w-full rounded-md border bg-white dark:bg-neutral-800 px-2 py-3 text-center text-2xl font-bold text-gray-900 dark:text-white focus:ring-1 focus:ring-primary-500 outline-none";
+		"w-full rounded-md border bg-white dark:bg-neutral-800 px-1 py-3 text-center text-2xl font-bold text-gray-900 dark:text-white focus:ring-1 outline-none";
+
+	/** Border/ring for an input: amber when off-roster, else its side colour. */
+	function inpCls(side: "blue" | "red", v: string): string {
+		if (isOff(v)) return "border-amber-500 ring-1 ring-amber-500 focus:ring-amber-500";
+		return side === "blue"
+			? "border-blue-300 dark:border-blue-700 focus:border-blue-500 focus:ring-blue-500"
+			: "border-red-300 dark:border-red-700 focus:border-red-500 focus:ring-red-500";
+	}
+	const curCls = "text-center text-2xl font-bold tabular-nums";
 </script>
 
 <Modal bind:open title={stage === 1 ? "File a lineup card" : `Lineup card: Alliance ${allianceNumber}, Match ${matchNumber}`} onclose={onClose} size="md">
@@ -205,49 +214,29 @@
 					{roster.captain_team} (C){#if roster.pick1_team}, {roster.pick1_team}{/if}{#if roster.pick2_team}, {roster.pick2_team}{/if}{#if roster.backup_team}, {roster.backup_team} (backup){/if}
 				</div>
 			{/if}
-			<div class="flex gap-4 justify-center">
-				<!-- Blue column: b1, b2, b3 -->
-				<div class="flex flex-col gap-2 flex-1 max-w-[11rem]">
-					<div class="text-center text-xs font-bold uppercase text-blue-600 dark:text-blue-400">Blue</div>
-					{#each [{ id: "lc-b1", label: "Blue 1", get: () => b1, set: (v: string) => (b1 = v), cur: onFile?.blue[0] }, { id: "lc-b2", label: "Blue 2", get: () => b2, set: (v: string) => (b2 = v), cur: onFile?.blue[1] }, { id: "lc-b3", label: "Blue 3", get: () => b3, set: (v: string) => (b3 = v), cur: onFile?.blue[2] }] as box (box.id)}
-						<div>
-							<div class="text-[10px] uppercase text-gray-400 text-center">{box.label}</div>
-							<input
-								id={box.id}
-								type="number"
-								inputmode="numeric"
-								value={box.get()}
-								oninput={(e) => box.set((e.target as HTMLInputElement).value)}
-								class="{boxClass} {isOff(box.get()) ? 'border-amber-500 ring-1 ring-amber-500' : 'border-gray-300 dark:border-neutral-600 focus:border-primary-500'}"
-							/>
-							<div class="text-[10px] text-center truncate h-3 {isOff(box.get()) ? 'text-amber-600' : 'text-gray-400'}">
-								{isOff(box.get()) ? "not on roster" : teamName(toTeam(box.get()))}
-							</div>
-							<div class="text-[10px] text-center text-gray-400 h-3">on file: {box.cur ?? "—"}</div>
-						</div>
-					{/each}
-				</div>
-				<!-- Red column: r3, r2, r1 -->
-				<div class="flex flex-col gap-2 flex-1 max-w-[11rem]">
-					<div class="text-center text-xs font-bold uppercase text-red-600 dark:text-red-400">Red</div>
-					{#each [{ id: "lc-r3", label: "Red 3", get: () => r3, set: (v: string) => (r3 = v), cur: onFile?.red[2] }, { id: "lc-r2", label: "Red 2", get: () => r2, set: (v: string) => (r2 = v), cur: onFile?.red[1] }, { id: "lc-r1", label: "Red 1", get: () => r1, set: (v: string) => (r1 = v), cur: onFile?.red[0] }] as box (box.id)}
-						<div>
-							<div class="text-[10px] uppercase text-gray-400 text-center">{box.label}</div>
-							<input
-								id={box.id}
-								type="number"
-								inputmode="numeric"
-								value={box.get()}
-								oninput={(e) => box.set((e.target as HTMLInputElement).value)}
-								class="{boxClass} {isOff(box.get()) ? 'border-amber-500 ring-1 ring-amber-500' : 'border-gray-300 dark:border-neutral-600 focus:border-primary-500'}"
-							/>
-							<div class="text-[10px] text-center truncate h-3 {isOff(box.get()) ? 'text-amber-600' : 'text-gray-400'}">
-								{isOff(box.get()) ? "not on roster" : teamName(toTeam(box.get()))}
-							</div>
-							<div class="text-[10px] text-center text-gray-400 h-3">on file: {box.cur ?? "—"}</div>
-						</div>
-					{/each}
-				</div>
+			<!-- Current lineup flanks the inputs; labels only at the top. -->
+			<div class="grid grid-cols-4 gap-x-2 gap-y-2 items-center max-w-md mx-auto w-full">
+				<div class="col-start-1 row-start-1 text-center text-[10px] uppercase text-gray-400">Current</div>
+				<div class="col-start-2 row-start-1 text-center text-xs font-bold uppercase text-blue-600 dark:text-blue-400">Blue</div>
+				<div class="col-start-3 row-start-1 text-center text-xs font-bold uppercase text-red-600 dark:text-red-400">Red</div>
+				<div class="col-start-4 row-start-1 text-center text-[10px] uppercase text-gray-400">Current</div>
+
+				<!-- current blue trio (left) -->
+				<div class="col-start-1 row-start-2 {curCls} text-blue-500/70">{onFile?.blue[0] ?? "\u2014"}</div>
+				<div class="col-start-1 row-start-3 {curCls} text-blue-500/70">{onFile?.blue[1] ?? "\u2014"}</div>
+				<div class="col-start-1 row-start-4 {curCls} text-blue-500/70">{onFile?.blue[2] ?? "\u2014"}</div>
+				<!-- current red trio (right; rows are r3, r2, r1) -->
+				<div class="col-start-4 row-start-2 {curCls} text-red-500/70">{onFile?.red[2] ?? "\u2014"}</div>
+				<div class="col-start-4 row-start-3 {curCls} text-red-500/70">{onFile?.red[1] ?? "\u2014"}</div>
+				<div class="col-start-4 row-start-4 {curCls} text-red-500/70">{onFile?.red[0] ?? "\u2014"}</div>
+
+				<!-- inputs in DOM order b1,b2,b3,r3,r2,r1 so Tab flows blue then red -->
+				<input id="lc-b1" type="number" inputmode="numeric" value={b1} oninput={(e) => (b1 = (e.target as HTMLInputElement).value)} class="{boxClass} {inpCls('blue', b1)} col-start-2 row-start-2" />
+				<input id="lc-b2" type="number" inputmode="numeric" value={b2} oninput={(e) => (b2 = (e.target as HTMLInputElement).value)} class="{boxClass} {inpCls('blue', b2)} col-start-2 row-start-3" />
+				<input id="lc-b3" type="number" inputmode="numeric" value={b3} oninput={(e) => (b3 = (e.target as HTMLInputElement).value)} class="{boxClass} {inpCls('blue', b3)} col-start-2 row-start-4" />
+				<input id="lc-r3" type="number" inputmode="numeric" value={r3} oninput={(e) => (r3 = (e.target as HTMLInputElement).value)} class="{boxClass} {inpCls('red', r3)} col-start-3 row-start-2" />
+				<input id="lc-r2" type="number" inputmode="numeric" value={r2} oninput={(e) => (r2 = (e.target as HTMLInputElement).value)} class="{boxClass} {inpCls('red', r2)} col-start-3 row-start-3" />
+				<input id="lc-r1" type="number" inputmode="numeric" value={r1} oninput={(e) => (r1 = (e.target as HTMLInputElement).value)} class="{boxClass} {inpCls('red', r1)} col-start-3 row-start-4" />
 			</div>
 
 			<input

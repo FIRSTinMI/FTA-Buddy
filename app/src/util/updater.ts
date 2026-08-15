@@ -11,6 +11,14 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.9.2": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.9.2</h1>
+        <ul>
+        <li>Scorekeeper lineups: much bigger team numbers so practice, test, and playoff lineups are easier to read at a glance</li>
+        </ul>
+        `,
+	},
 	"2.7.9.1": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.9.1</h1>

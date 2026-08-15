@@ -11,6 +11,14 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.9.1": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.9.1</h1>
+        <ul>
+        <li>Lineup Entry: each station now saves on its own, so a red-side and a blue-side volunteer can enter at the same time without overwriting each other, and each sees the other's cells fill in live</li>
+        </ul>
+        `,
+	},
 	"2.7.9.0": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.9.0</h1>

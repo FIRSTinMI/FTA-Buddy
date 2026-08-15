@@ -26,6 +26,17 @@ const stationsSchema = z.object({
 });
 
 /**
+ * Maps an alliance color + station (1-3) to the field-lineup column it writes.
+ * Used by fieldLineup.setStation so each cell is saved on its own column,
+ * letting a red-side and a blue-side volunteer enter at the same time without
+ * one clobbering the other.
+ */
+const STATION_COLUMNS = {
+	red: { 1: "red1_team", 2: "red2_team", 3: "red3_team" },
+	blue: { 1: "blue1_team", 2: "blue2_team", 3: "blue3_team" },
+} as const;
+
+/**
  * Given the six team numbers on a playoff match and the event's alliances,
  * work out which alliance number is red and which is blue by matching each
  * side's teams against the rosters. Returns nulls when it can't be resolved.
@@ -541,6 +552,64 @@ export const scorekeeperRouter = router({
 							fieldLineups.play_number,
 						],
 						set: values,
+					})
+					.returning();
+				bus.publish(`event:${ctx.event.code}:fieldLineup`, {
+					level: input.level,
+					matchNumber: input.matchNumber,
+					playNumber: input.playNumber,
+				});
+				return row;
+			}),
+
+		/**
+		 * Upsert a SINGLE station of the field lineup. Writes only that one column,
+		 * so two volunteers entering different stations at the same time (the normal
+		 * "one person on red, one on blue" case) never overwrite each other's cells.
+		 * A null team means no robot is in that station (bypass it).
+		 */
+		setStation: eventProcedure
+			.input(
+				z.object({
+					level: z.enum(["None", "Practice", "Qualification", "Playoff"]),
+					matchNumber: z.number().int(),
+					playNumber: z.number().int().default(1),
+					color: z.enum(["red", "blue"]),
+					station: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+					team: z.number().int().nullable(),
+					updatedByName: z.string().max(120).optional(),
+				}),
+			)
+			.mutation(async ({ ctx, input }) => {
+				if (!ctx.user) {
+					throw new TRPCError({ code: "UNAUTHORIZED", message: "Sign in to enter a field lineup" });
+				}
+				const column = STATION_COLUMNS[input.color][input.station];
+				const meta = {
+					updated_by_id: ctx.user.id,
+					updated_by_name: input.updatedByName ?? ctx.user.username ?? null,
+					updated_at: new Date(),
+				};
+				const [row] = await db
+					.insert(fieldLineups)
+					.values({
+						event_code: ctx.event.code,
+						level: input.level,
+						match_number: input.matchNumber,
+						play_number: input.playNumber,
+						[column]: input.team,
+						...meta,
+					})
+					.onConflictDoUpdate({
+						target: [
+							fieldLineups.event_code,
+							fieldLineups.level,
+							fieldLineups.match_number,
+							fieldLineups.play_number,
+						],
+						// Only this one column is set, so a concurrent write to a different
+						// station updates a different column and the two don't collide.
+						set: { [column]: input.team, ...meta },
 					})
 					.returning();
 				bus.publish(`event:${ctx.event.code}:fieldLineup`, {

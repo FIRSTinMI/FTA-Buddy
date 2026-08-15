@@ -101,38 +101,88 @@
 		loadTarget();
 	});
 
-	// Debounced save on any edit.
-	let saveTimer: ReturnType<typeof setTimeout> | undefined;
-	function edited() {
+	// Each station saves on its own column (fieldLineup.setStation) so a red-side
+	// and a blue-side volunteer can enter at the same time without clobbering each
+	// other. Debounce per station, and track which cells have an unsaved edit in
+	// flight so a live update from the other person can't stomp them.
+	const cellKey = (color: "red" | "blue", station: 1 | 2 | 3) => `${color}${station}`;
+	let saveTimers: Record<string, ReturnType<typeof setTimeout>> = {};
+	const pending = new Set<string>();
+	function editStation(color: "red" | "blue", station: 1 | 2 | 3, value: string) {
+		const key = cellKey(color, station);
+		pending.add(key);
 		syncState = "saving";
-		clearTimeout(saveTimer);
-		saveTimer = setTimeout(save, 500);
+		clearTimeout(saveTimers[key]);
+		saveTimers[key] = setTimeout(() => saveStation(color, station, value), 500);
 	}
-	async function save() {
+	async function saveStation(color: "red" | "blue", station: 1 | 2 | 3, value: string) {
 		const t = target;
 		if (!t) return;
+		const key = cellKey(color, station);
 		try {
-			await trpc.scorekeeper.fieldLineup.set.mutate({
+			await trpc.scorekeeper.fieldLineup.setStation.mutate({
 				level: t.level,
 				matchNumber: t.match,
 				playNumber: t.play,
-				blue: { station1: toTeam(b1), station2: toTeam(b2), station3: toTeam(b3) },
-				red: { station1: toTeam(r1), station2: toTeam(r2), station3: toTeam(r3) },
+				color,
+				station,
+				team: toTeam(value),
 			});
-			syncState = "saved";
+			pending.delete(key);
+			syncState = pending.size === 0 ? "saved" : "saving";
 		} catch (err) {
 			console.error("[field-lineup] save failed:", err);
 			syncState = "error";
 		}
 	}
 
+	// Live-merge the other volunteer's entries. Pull the stored row and update any
+	// cell the local user is not actively editing (not focused, no save in flight),
+	// so red sees blue fill in and vice versa.
+	function applyIfIdle(id: string, key: string, get: () => string, set: (v: string) => void, team: number | null) {
+		if (pending.has(key)) return;
+		if (document.activeElement === document.getElementById(id)) return;
+		const next = String(team ?? "");
+		if (get() !== next) set(next);
+	}
+	async function mergeRemote() {
+		const t = target;
+		if (!t) return;
+		try {
+			const stored = await trpc.scorekeeper.fieldLineup.forMatch.query({
+				level: t.level,
+				matchNumber: t.match,
+				playNumber: t.play,
+			});
+			if (!stored) return;
+			applyIfIdle("fl-b1", "blue1", () => b1, (v) => (b1 = v), stored.blue1_team);
+			applyIfIdle("fl-b2", "blue2", () => b2, (v) => (b2 = v), stored.blue2_team);
+			applyIfIdle("fl-b3", "blue3", () => b3, (v) => (b3 = v), stored.blue3_team);
+			applyIfIdle("fl-r1", "red1", () => r1, (v) => (r1 = v), stored.red1_team);
+			applyIfIdle("fl-r2", "red2", () => r2, (v) => (r2 = v), stored.red2_team);
+			applyIfIdle("fl-r3", "red3", () => r3, (v) => (r3 = v), stored.red3_team);
+		} catch (err) {
+			console.error("[field-lineup] merge failed:", err);
+		}
+	}
+
+	let fieldSub: { unsubscribe: () => void } | undefined;
 	onMount(() => {
 		if (!frameHandler.getFrame()) subscribeToFieldMonitor();
 		frameHandler.addEventListener("frame", onFrame);
+		fieldSub = trpc.scorekeeper.fieldLineup.subscribe.subscribe(undefined, {
+			onData: (u) => {
+				const t = target;
+				if (!t || u.level !== t.level || u.matchNumber !== t.match || u.playNumber !== t.play) return;
+				mergeRemote();
+			},
+			onError: (err) => console.warn("[field-lineup] sub error:", err),
+		});
 	});
 	onDestroy(() => {
 		frameHandler.removeEventListener("frame", onFrame);
-		clearTimeout(saveTimer);
+		for (const timer of Object.values(saveTimers)) clearTimeout(timer);
+		fieldSub?.unsubscribe();
 	});
 
 	const bigInput =
@@ -163,7 +213,7 @@
 			<!-- Blue column: b1, b2, b3 -->
 			<div class="flex flex-1 flex-col gap-3">
 				<div class="text-center text-sm font-bold uppercase text-blue-600 dark:text-blue-400">Blue</div>
-				{#each [{ id: "fl-b1", label: "Blue 1", get: () => b1, set: (v: string) => (b1 = v) }, { id: "fl-b2", label: "Blue 2", get: () => b2, set: (v: string) => (b2 = v) }, { id: "fl-b3", label: "Blue 3", get: () => b3, set: (v: string) => (b3 = v) }] as box (box.id)}
+				{#each [{ id: "fl-b1", label: "Blue 1", station: 1 as const, get: () => b1, set: (v: string) => (b1 = v) }, { id: "fl-b2", label: "Blue 2", station: 2 as const, get: () => b2, set: (v: string) => (b2 = v) }, { id: "fl-b3", label: "Blue 3", station: 3 as const, get: () => b3, set: (v: string) => (b3 = v) }] as box (box.id)}
 					<div>
 						<div class="text-xs uppercase text-gray-400 text-center">{box.label}</div>
 						<input
@@ -172,8 +222,9 @@
 							inputmode="numeric"
 							value={box.get()}
 							oninput={(e) => {
-								box.set((e.target as HTMLInputElement).value);
-								edited();
+								const v = (e.target as HTMLInputElement).value;
+								box.set(v);
+								editStation("blue", box.station, v);
 							}}
 							class="{bigInput} border-blue-300 dark:border-blue-700 focus:ring-blue-500"
 						/>
@@ -184,7 +235,7 @@
 			<!-- Red column: r3, r2, r1 -->
 			<div class="flex flex-1 flex-col gap-3">
 				<div class="text-center text-sm font-bold uppercase text-red-600 dark:text-red-400">Red</div>
-				{#each [{ id: "fl-r3", label: "Red 3", get: () => r3, set: (v: string) => (r3 = v) }, { id: "fl-r2", label: "Red 2", get: () => r2, set: (v: string) => (r2 = v) }, { id: "fl-r1", label: "Red 1", get: () => r1, set: (v: string) => (r1 = v) }] as box (box.id)}
+				{#each [{ id: "fl-r3", label: "Red 3", station: 3 as const, get: () => r3, set: (v: string) => (r3 = v) }, { id: "fl-r2", label: "Red 2", station: 2 as const, get: () => r2, set: (v: string) => (r2 = v) }, { id: "fl-r1", label: "Red 1", station: 1 as const, get: () => r1, set: (v: string) => (r1 = v) }] as box (box.id)}
 					<div>
 						<div class="text-xs uppercase text-gray-400 text-center">{box.label}</div>
 						<input
@@ -193,8 +244,9 @@
 							inputmode="numeric"
 							value={box.get()}
 							oninput={(e) => {
-								box.set((e.target as HTMLInputElement).value);
-								edited();
+								const v = (e.target as HTMLInputElement).value;
+								box.set(v);
+								editStation("red", box.station, v);
 							}}
 							class="{bigInput} border-red-300 dark:border-red-700 focus:ring-red-500"
 						/>

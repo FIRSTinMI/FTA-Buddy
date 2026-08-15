@@ -174,7 +174,18 @@
 	function scrollSelectedIntoView() {
 		const el = tableScroll;
 		if (!el) return;
-		tick().then(() => el.querySelector<HTMLElement>('[data-sel="1"]')?.scrollIntoView({ block: "nearest" }));
+		// Scroll ONLY the table container to the selected row - never the page.
+		// scrollIntoView() scrolls every ancestor (including the window), which made
+		// the whole page jump down on load. Instead compute the container-relative
+		// offset and set scrollTop so the row is centered within the container.
+		tick().then(() => {
+			const row = el.querySelector<HTMLElement>('[data-sel="1"]');
+			if (!row) return;
+			const cRect = el.getBoundingClientRect();
+			const rRect = row.getBoundingClientRect();
+			const delta = rRect.top - cRect.top - (el.clientHeight / 2 - rRect.height / 2);
+			el.scrollTop += delta;
+		});
 	}
 	// Bring the selection into view whenever it (or the shown tab) changes.
 	$effect(() => {
@@ -395,6 +406,11 @@
 		syncToLive();
 		await loadForMatch();
 
+		// Load with the page pinned to the top; only the schedule container scrolls
+		// to the live match (see scrollSelectedIntoView).
+		await tick();
+		window.scrollTo(0, 0);
+
 		// Live cycle/schedule updates (fixes the "needs a manual refresh" problem).
 		cycleSub = trpc.cycles.subscription.subscribe(
 			{ eventCode: $eventStore.code },
@@ -537,7 +553,7 @@
 						: 'bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-300'}"
 					onclick={() => (tableLevelManual = lvl)}
 				>
-					{lvl}{lvl === currentLevel ? " (current)" : ""}
+					{lvl}
 				</button>
 			{/each}
 		</div>

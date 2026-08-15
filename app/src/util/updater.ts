@@ -30,6 +30,14 @@ export function compareVersions(a: string, b: string): number {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.9.12": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.9.12</h1>
+        <ul>
+        <li>Scorekeeper view now uses the full laptop width, with larger match/cycle cards and a much larger, more readable match schedule table</li>
+        </ul>
+        `,
+	},
 	"2.7.9.11": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.9.11</h1>

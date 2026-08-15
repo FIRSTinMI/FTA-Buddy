@@ -441,9 +441,9 @@
 	] as const);
 </script>
 
-<div class="flex flex-col gap-3 p-3 max-w-3xl lg:max-w-5xl mx-auto w-full">
+<div class="flex flex-col gap-3 p-3 lg:px-5 w-full">
 	<div class="flex flex-wrap items-center justify-between gap-2">
-		<h1 class="text-2xl font-bold text-gray-900 dark:text-white">Scorekeeper</h1>
+		<h1 class="text-3xl font-bold text-gray-900 dark:text-white">Scorekeeper</h1>
 		<div class="flex gap-2">
 			<Button color="alternative" size="sm" onclick={() => (replayOpen = true)}>
 				<Icon icon="mdi:reload" class="size-4 mr-1" /> Replay finder
@@ -462,10 +462,10 @@
 			<Icon icon="mdi:chevron-left" class="size-5" />
 		</Button>
 		<div class="text-center">
-			<div class="text-xs text-gray-500 uppercase">{selLevel}{selPlay > 1 ? ` (play ${selPlay})` : ""}</div>
-			<div class="text-xl font-bold text-gray-900 dark:text-white">Match {selMatch}</div>
+			<div class="text-sm text-gray-500 uppercase">{selLevel}{selPlay > 1 ? ` (play ${selPlay})` : ""}</div>
+			<div class="text-3xl font-bold text-gray-900 dark:text-white">Match {selMatch}</div>
 			<button
-				class="text-xs {following ? 'text-green-600' : 'text-primary-600 underline'}"
+				class="text-sm {following ? 'text-green-600' : 'text-primary-600 underline'}"
 				onclick={goLive}
 			>
 				{following ? "● Following live" : "Jump to live"}
@@ -479,9 +479,9 @@
 	<!-- Cycle stats (ahead/behind + cycle times) - directly under the match number -->
 	<div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
 		{#each stats as [label, value] (label)}
-			<div class="rounded-md border border-gray-200 dark:border-neutral-700 p-2 text-center">
-				<div class="text-xs text-gray-500 uppercase">{label}</div>
-				<div class="text-lg font-bold text-gray-900 dark:text-white">{value}</div>
+			<div class="rounded-md border border-gray-200 dark:border-neutral-700 p-3 text-center">
+				<div class="text-sm text-gray-500 uppercase">{label}</div>
+				<div class="text-2xl font-bold text-gray-900 dark:text-white">{value}</div>
 			</div>
 		{/each}
 	</div>
@@ -521,18 +521,18 @@
 
 	<!-- Match schedule table -->
 	<div class="mt-2 flex items-center justify-between gap-2">
-		<h2 class="text-lg font-bold text-gray-900 dark:text-white">Match schedule</h2>
+		<h2 class="text-2xl font-bold text-gray-900 dark:text-white">Match schedule</h2>
 		<input
 			bind:value={search}
 			placeholder="Search match or team #"
-			class="w-44 rounded-md border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-2 py-1 text-sm"
+			class="w-56 rounded-md border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-1.5 text-base"
 		/>
 	</div>
 	{#if levelsPresent.length > 1}
 		<div class="flex gap-1">
 			{#each levelsPresent as lvl (lvl)}
 				<button
-					class="rounded-md px-3 py-1 text-sm font-semibold {lvl === tableLevel
+					class="rounded-md px-4 py-1.5 text-base font-semibold {lvl === tableLevel
 						? 'bg-primary-600 text-white'
 						: 'bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-300'}"
 					onclick={() => (tableLevelManual = lvl)}
@@ -542,17 +542,17 @@
 			{/each}
 		</div>
 	{/if}
-	<div bind:this={tableScroll} class="overflow-x-auto overflow-y-auto max-h-[26rem] rounded-md border border-gray-200 dark:border-neutral-700">
-		<table class="w-full text-sm">
+	<div bind:this={tableScroll} class="overflow-x-auto overflow-y-auto max-h-[38rem] rounded-md border border-gray-200 dark:border-neutral-700">
+		<table class="w-full text-base lg:text-lg">
 			<thead class="sticky top-0 z-10 bg-white dark:bg-neutral-900">
-				<tr class="text-left text-xs uppercase text-gray-500 border-b border-gray-200 dark:border-neutral-700">
-					<th class="py-1 pr-2">Match</th>
-					<th class="py-1 pr-2 hidden lg:table-cell">Teams</th>
-					<th class="py-1 pr-2">Sched</th>
-					<th class="py-1 pr-2">Actual</th>
-					<th class="py-1 pr-2">Delta</th>
-					<th class="py-1 pr-2">Cycle</th>
-					<th class="py-1 pr-2">Result</th>
+				<tr class="text-left text-sm uppercase text-gray-500 border-b border-gray-200 dark:border-neutral-700">
+					<th class="py-2 px-3">Match</th>
+					<th class="py-2 px-3 hidden lg:table-cell">Teams</th>
+					<th class="py-2 px-3">Sched</th>
+					<th class="py-2 px-3">Actual</th>
+					<th class="py-2 px-3">Delta</th>
+					<th class="py-2 px-3">Cycle</th>
+					<th class="py-2 px-3">Result</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -569,20 +569,20 @@
 							selPlay = m.play;
 						}}
 					>
-						<td class="py-1 pr-2 whitespace-nowrap">
-							<span class="text-gray-400 text-xs">{m.level.slice(0, 4)}</span>
+						<td class="py-2 px-3 whitespace-nowrap">
+							<span class="text-gray-400 text-sm">{m.level.slice(0, 4)}</span>
 							<span class="font-semibold">{m.match}{m.play > 1 ? `-${m.play}` : ""}</span>
 						</td>
-						<td class="py-1 pr-2 whitespace-nowrap text-xs font-mono hidden lg:table-cell">
-							{#each m.red as t, i (i)}<span class="inline-block w-12 text-right tabular-nums text-red-600">{t ?? ""}</span>{/each}
+						<td class="py-2 px-3 whitespace-nowrap text-sm font-mono hidden lg:table-cell">
+							{#each m.red as t, i (i)}<span class="inline-block w-14 text-right tabular-nums text-red-600">{t ?? ""}</span>{/each}
 							<span class="inline-block w-3"></span>
-							{#each m.blue as t, i (i)}<span class="inline-block w-12 text-right tabular-nums text-blue-600">{t ?? ""}</span>{/each}
+							{#each m.blue as t, i (i)}<span class="inline-block w-14 text-right tabular-nums text-blue-600">{t ?? ""}</span>{/each}
 						</td>
-						<td class="py-1 pr-2 whitespace-nowrap font-mono">{fmtTime(m.scheduledStartTime)}</td>
-						<td class="py-1 pr-2 whitespace-nowrap font-mono text-gray-500">{fmtTime(m.actualStartTime)}</td>
-						<td class="py-1 pr-2 whitespace-nowrap text-xs {delta ? (delta.late ? 'text-red-600' : 'text-green-600') : 'text-gray-400'}">{delta?.text ?? "-"}</td>
-						<td class="py-1 pr-2 font-mono text-gray-500">{fmtCycleStr(m.cycleTime)}</td>
-						<td class="py-1 pr-2 whitespace-nowrap">
+						<td class="py-2 px-3 whitespace-nowrap font-mono">{fmtTime(m.scheduledStartTime)}</td>
+						<td class="py-2 px-3 whitespace-nowrap font-mono text-gray-500">{fmtTime(m.actualStartTime)}</td>
+						<td class="py-2 px-3 whitespace-nowrap text-sm {delta ? (delta.late ? 'text-red-600' : 'text-green-600') : 'text-gray-400'}">{delta?.text ?? "-"}</td>
+						<td class="py-2 px-3 font-mono text-gray-500">{fmtCycleStr(m.cycleTime)}</td>
+						<td class="py-2 px-3 whitespace-nowrap">
 							{#if m.finalScoreRed != null && m.finalScoreBlue != null}
 								<span class="text-red-600 {m.finalScoreRed > m.finalScoreBlue ? 'font-bold' : ''}">{m.finalScoreRed}</span>-<span class="text-blue-600 {m.finalScoreBlue > m.finalScoreRed ? 'font-bold' : ''}">{m.finalScoreBlue}</span>
 							{:else if m.isPlayed}

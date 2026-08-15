@@ -749,7 +749,7 @@
 	<div class="flex-1 min-h-0 flex flex-col rounded-lg overflow-hidden shadow dark:bg-neutral-800 bg-white">
 		<div class="shrink-0 flex {alliance === 'blue' ? 'bg-blue-600' : 'bg-red-600'}">
 			<button
-				class="flex-1 px-2.5 sm:px-3 {isShortScreen
+				class="flex-1 min-w-0 px-2.5 sm:px-3 {isShortScreen
 					? 'py-0.5 sm:py-1'
 					: 'py-1 sm:py-1.5'} font-bold text-white text-left flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base {isShortScreen
 					? ''
@@ -778,7 +778,7 @@
 		</div>
 		{#if liveRobot && isLive && (teamsSource !== "nexus" || hasOpenNote || liveRobot.warnings.includes(RobotWarnings.NOT_INSPECTED) || liveRobot.warnings.includes(RobotWarnings.RADIO_NOT_FLASHED) || liveRobot.warnings.includes(RobotWarnings.PREVIOUS_MATCH_EVENT))}
 			<div
-				class="shrink-0 flex items-center gap-1 sm:gap-2 px-2 {isShortScreen
+				class="shrink-0 flex flex-wrap items-center gap-1 sm:gap-2 px-2 {isShortScreen
 					? 'py-0.5'
 					: 'py-1 sm:py-1.5'} border-b border-gray-200 dark:border-gray-700 text-[11px] sm:text-xs lg:text-sm"
 			>

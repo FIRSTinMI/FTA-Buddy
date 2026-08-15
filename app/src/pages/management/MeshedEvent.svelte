@@ -125,12 +125,14 @@
 						title="Sub-event color"
 					/>
 					<Input
+						class="min-w-0"
 						placeholder="2025micmp{i + 1}"
 						bind:value={subEvent.code}
 						onkeydown={checkIfAddSubEvent}
 						disabled={blocked || isEditMode}
 					/>
 					<Input
+						class="min-w-0"
 						placeholder={["DTE", "Consumers", "Hemlock", "Aptiv"][i]}
 						bind:value={subEvent.label}
 						disabled={blocked}

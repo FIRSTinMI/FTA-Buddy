@@ -16,6 +16,7 @@ export interface Settings {
 	notifications: boolean;
 	notificationsDoNotAsk: boolean;
 	darkMode: boolean;
+	themeMode: "system" | "light" | "dark";
 	inspectionAlerts: boolean;
 	roundGreen: boolean;
 	confetti: boolean;
@@ -48,6 +49,7 @@ const defaultSettings: Settings = {
 	notifications: false,
 	notificationsDoNotAsk: false,
 	darkMode: true,
+	themeMode: "dark",
 	inspectionAlerts: true,
 	roundGreen: true,
 	confetti: true,
@@ -70,6 +72,11 @@ if (!initialSettings) {
 	initialSettings = JSON.stringify(defaultSettings);
 } else {
 	let parsedSettings = JSON.parse(initialSettings);
+	// Migrate the legacy darkMode boolean to themeMode, preserving an explicit
+	// light-mode choice (everyone else keeps dark, which is still the default).
+	if (parsedSettings.themeMode === undefined) {
+		parsedSettings.themeMode = parsedSettings.darkMode === false ? "light" : "dark";
+	}
 	for (const key in defaultSettings) {
 		if (parsedSettings[key] === undefined) {
 			parsedSettings[key] = defaultSettings[key as keyof Settings];

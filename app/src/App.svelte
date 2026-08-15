@@ -238,16 +238,30 @@
 		settings = value;
 	});
 
-	function updateTheme(darkMode: boolean) {
-		if (darkMode) {
+	function applyDark(dark: boolean) {
+		if (dark) {
 			document.documentElement.classList.add("dark");
 		} else {
 			document.documentElement.classList.remove("dark");
 		}
+		// Keep the resolved boolean in the store so components that read darkMode
+		// directly (e.g. support feed text contrast) stay correct. Guard the write
+		// so this doesn't re-trigger the effect in a loop.
+		if (get(settingsStore).darkMode !== dark) {
+			settingsStore.update((s) => ({ ...s, darkMode: dark }));
+		}
 	}
 
 	$effect(() => {
-		updateTheme($settingsStore.darkMode);
+		const mode = $settingsStore.themeMode;
+		if (mode === "system") {
+			const mq = window.matchMedia("(prefers-color-scheme: dark)");
+			applyDark(mq.matches);
+			const onChange = (e: MediaQueryListEvent) => applyDark(e.matches);
+			mq.addEventListener("change", onChange);
+			return () => mq.removeEventListener("change", onChange);
+		}
+		applyDark(mode === "dark");
 	});
 
 	$effect(() => {
@@ -582,9 +596,9 @@
 </script>
 
 {#if showToast}
-	<div class="fixed bottom-0 left-0 p-4 z-100">
+	<div class="fixed bottom-0 left-0 p-4 z-100 max-w-[calc(100vw-2rem)]">
 		<Toast
-			class={`w-lg p-4 shadow-sm gap-3 ${toastColorClasses[toastColor] ?? "bg-white dark:bg-gray-800 text-black dark:text-gray-400"}`}
+			class={`w-full max-w-lg p-4 shadow-sm gap-3 ${toastColorClasses[toastColor] ?? "bg-white dark:bg-gray-800 text-black dark:text-gray-400"}`}
 		>
 			<h3 class="text-lg font-bold text-left">{toastTitle}</h3>
 			<p class="text-left">{toastText}</p>

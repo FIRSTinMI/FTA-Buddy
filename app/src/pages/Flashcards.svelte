@@ -44,7 +44,11 @@
 			role="presentation"
 			id="flashcard-overlay"
 		>
-			<h1 class="text-7xl font-bold mx-1 text-black dark:text-white">{currentFlashcard}</h1>
+			<h1
+				class="text-4xl sm:text-6xl lg:text-7xl font-bold mx-1 px-4 text-center break-words leading-tight text-black dark:text-white"
+			>
+				{currentFlashcard}
+			</h1>
 		</div>
 	{/if}
 {/key}

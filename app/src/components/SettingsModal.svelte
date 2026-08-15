@@ -204,7 +204,19 @@
 			</div>
 			<div class="grid grid-cols-subgrid gap-2 row-span-5">
 				<p class="text-gray-700 dark:text-gray-400">Appearance</p>
-				<Toggle class="toggle" bind:checked={$settingsStore.darkMode}>Dark Theme</Toggle>
+				<div class="flex items-center justify-between gap-2">
+					<span>Theme</span>
+					<Select
+						size="sm"
+						class="w-32"
+						bind:value={$settingsStore.themeMode}
+						items={[
+							{ value: "system", name: "System" },
+							{ value: "light", name: "Light" },
+							{ value: "dark", name: "Dark" },
+						]}
+					/>
+				</div>
 				<Toggle class="toggle" bind:checked={$settingsStore.roundGreen}>Round Green Indicators</Toggle>
 				<Toggle class="toggle" bind:checked={$settingsStore.inspectionAlerts}
 					>🔍 Missing inspection icon on field monitor</Toggle

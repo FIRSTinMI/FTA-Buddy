@@ -656,7 +656,7 @@
 						<!-- Note text -->
 						<div class="border-b border-gray-400 dark:border-gray-700 py-3">
 							<p
-								class="text-center sm:text-left text-black dark:text-white whitespace-pre-wrap leading-relaxed"
+								class="text-center sm:text-left text-black dark:text-white whitespace-pre-wrap break-words leading-relaxed"
 							>
 								{note.text}
 							</p>

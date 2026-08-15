@@ -312,7 +312,7 @@
 	});
 </script>
 
-<div class="h-full overflow-y-auto">
+<div class="h-full overflow-auto">
 	<div class="container w-full flex flex-col mx-auto gap-2">
 		{#await checklistPromise}
 			<Spinner />
@@ -435,7 +435,7 @@
 								{#each group.teams as [team, items] (team)}
 									<tr class="border-b border-gray-600">
 										<td
-											class="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 px-6 py-4"
+											class="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 px-2 md:px-6 py-4"
 											style={group.color ? `border-left: 4px solid ${group.color}` : undefined}
 										>
 											<button
@@ -485,7 +485,7 @@
 					{:else}
 						{#each sortedEntries as [team, items] (team)}
 							<tr class="border-b border-gray-600">
-								<td class="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 px-6 py-4">
+								<td class="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 px-2 md:px-6 py-4">
 									<button
 										class="font-medium hover:underline text-blue-600 dark:text-blue-400"
 										onclick={() => {

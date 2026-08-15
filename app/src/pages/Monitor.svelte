@@ -258,7 +258,10 @@
 	let modalStation: ROBOT = $state(ROBOT.blue1);
 
 	function detailView(evt: Event) {
-		let target = evt.target as HTMLElement;
+		// Use currentTarget (the button the handler is bound to), not target: a
+		// click often lands on a child node (graph div, voltage text, svg) that has
+		// no id, which made id.split("-")[0] empty and always fell back to blue1.
+		let target = evt.currentTarget as HTMLElement;
 		let station = target.id.split("-")[0] as ROBOT;
 		modalStation = (station as ROBOT) || ROBOT.blue1;
 		modalOpen = true;

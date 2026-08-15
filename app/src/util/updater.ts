@@ -11,6 +11,22 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.9.5": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.9.5</h1>
+        <p class="my-1 font-bold">Field monitor</p>
+        <ul>
+        <li>Tapping a robot's battery, net, or any status cell now opens that team's detail - it was always opening the first team</li>
+        <li>iPhone: the current and minimum battery voltages no longer overlap - the big current reading is centered with the gray match-minimum right below it</li>
+        <li>iPhone: the Net box no longer overflows its cell when a team is focused</li>
+        </ul>
+        <p class="my-1 font-bold">Display</p>
+        <ul>
+        <li>New Light / Dark / System theme option in Settings - pick System and the app follows your phone's light/dark setting live (default stays Dark)</li>
+        <li>Fixed text overlap and horizontal scrolling on iPhone across the scorekeeper, checklist, notes, match logs, flashcards, event settings, and toast messages</li>
+        </ul>
+        `,
+	},
 	"2.7.9.4": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.9.4</h1>

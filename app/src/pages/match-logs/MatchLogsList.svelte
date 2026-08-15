@@ -38,9 +38,9 @@
 	});
 
 	const tabClasses = {
-		active: "p-4 w-full flex-grow text-primary-500 border-b-2 border-primary-500",
+		active: "p-1 md:p-4 w-full flex-grow text-primary-500 border-b-2 border-primary-500",
 		inactive:
-			"p-4 w-full text-gray-500 dark:text-gray-400 hover:text-gray-700 focus:ring-4 focus:ring-primary-300 focus:outline-none dark:hover:text-white disabled:cursor-not-allowed disabled:opacity-50",
+			"p-1 md:p-4 w-full text-gray-500 dark:text-gray-400 hover:text-gray-700 focus:ring-4 focus:ring-primary-300 focus:outline-none dark:hover:text-white disabled:cursor-not-allowed disabled:opacity-50",
 		content: "mt-4",
 	};
 

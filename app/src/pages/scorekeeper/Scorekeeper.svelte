@@ -442,7 +442,7 @@
 </script>
 
 <div class="flex flex-col gap-3 p-3 max-w-3xl lg:max-w-5xl mx-auto w-full">
-	<div class="flex items-center justify-between">
+	<div class="flex flex-wrap items-center justify-between gap-2">
 		<h1 class="text-2xl font-bold text-gray-900 dark:text-white">Scorekeeper</h1>
 		<div class="flex gap-2">
 			<Button color="alternative" size="sm" onclick={() => (replayOpen = true)}>

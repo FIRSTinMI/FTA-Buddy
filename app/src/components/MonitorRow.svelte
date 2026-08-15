@@ -190,19 +190,22 @@
 		<div class="h-full text-center top-0 px-0.5 aspect-square">
 			<Graph data={parsedData} min={6} max={14} time={20} />
 		</div>
-		<div
-			class="absolute w-full bottom-1 xl:bottom-2 px-1 py-0 xl:py-0.5 monitor-battery text-sm sm:text-base lg:text-lg xl:text-xl 2xl:text-3xl tabular-nums"
-			class:lg:text-5xl={$fullscreen}
-		>
-			{robot.battery?.toFixed(1)}v
+		<div class="absolute inset-0 flex flex-col items-center justify-center leading-none pointer-events-none">
+			<div
+				class="monitor-battery px-1 text-sm sm:text-base lg:text-lg xl:text-xl 2xl:text-3xl tabular-nums"
+				class:lg:text-5xl={$fullscreen}
+			>
+				{robot.battery?.toFixed(1)}v
+			</div>
+			<div
+				class="text-xs xl:text-sm tabular-nums {percentileVoltage < 7.8 && percentileVoltage > 0
+					? 'text-red-600'
+					: 'text-gray-500'}"
+				title="Match minimum (2nd percentile)"
+			>
+				{percentileVoltage.toFixed(1)}v
+			</div>
 		</div>
-		<p
-			class="absolute bottom-0 px-2 py-0.5 text-xs xl:text-sm {percentileVoltage < 7.8 && percentileVoltage > 0
-				? 'text-red-600'
-				: 'text-gray-500'}"
-		>
-			{percentileVoltage.toFixed(1)}v
-		</p>
 	</button>
 	{#if !compact}
 		<button
@@ -231,7 +234,7 @@
 			</div>
 		</button>
 		<button
-			onclick={() => detailView}
+			onclick={detailView}
 			class="fieldmonitor-square-height hidden lg:flex items-end pb-1 xl:pb-2 justify-center text-sm sm:text-base lg:text-lg xl:text-xl 2xl:text-3xl tabular-nums"
 			class:lg:text-5xl={$fullscreen}
 			id="{station}-bwu"
@@ -240,7 +243,7 @@
 		</button>
 		<button
 			class="fieldmonitor-square-height hidden lg:flex md:aspect-square flex-col items-center justify-end overflow-hidden"
-			onclick={() => detailView}
+			onclick={detailView}
 			id="{station}-signal"
 		>
 			<span class="text-xs xl:text-sm 2xl:text-base">{robot.signal ?? ""}</span>
@@ -255,7 +258,7 @@
 			{/if}
 		</button>
 		<button
-			onclick={() => detailView}
+			onclick={detailView}
 			class="fieldmonitor-square-height hidden lg:flex items-end pb-1 xl:pb-2 justify-center text-sm sm:text-base lg:text-lg xl:text-xl 2xl:text-3xl tabular-nums"
 			class:lg:text-5xl={$fullscreen}
 			id="{station}-lastchange"
@@ -263,8 +266,8 @@
 			{robot.lastChange ? formatTimeShortNoAgoSecondsOnly(robot.lastChange) : ""}
 		</button>
 		<button
-			onclick={() => detailView}
-			class="fieldmonitor-square-height lg:hidden flex flex-col items-end justify-center tabular-nums"
+			onclick={detailView}
+			class="fieldmonitor-square-height lg:hidden flex flex-col items-end justify-center overflow-hidden px-1 text-xs sm:text-sm leading-tight tabular-nums"
 			id="{station}-net"
 		>
 			<div>{robot.ping} ms</div>
@@ -273,8 +276,8 @@
 		</button>
 	{:else}
 		<button
-			onclick={() => detailView}
-			class="fieldmonitor-square-height flex-col items-end justify-center tabular-nums"
+			onclick={detailView}
+			class="fieldmonitor-square-height flex flex-col items-end justify-center overflow-hidden px-1 text-xs sm:text-sm leading-tight tabular-nums"
 			id="{station}-net"
 		>
 			<div>{robot.ping} ms</div>

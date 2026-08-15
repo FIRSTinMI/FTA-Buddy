@@ -75,7 +75,7 @@
 		</div>
 
 		{#if !hideActions}
-			<div class="flex items-center justify-between">
+			<div class="flex flex-wrap items-center justify-between gap-2">
 				<div class="text-xs text-gray-500">
 					{#if resolution === "submitted"}
 						<span class="inline-flex items-center gap-1"><Icon icon="mdi:check-circle" class="size-4" /> Submitted lineup</span>

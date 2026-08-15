@@ -44,7 +44,7 @@
 	} from "./util/notifications";
 	import { registerToast } from "./util/toast";
 	import { track } from "./util/telemetry";
-	import { update, VERSIONS } from "./util/updater";
+	import { compareVersions, update, VERSIONS } from "./util/updater";
 	import { getPlayoffViewLabel } from "./util/playoffViewLabel";
 
 	// On mount check if the user's permissions have changed
@@ -280,7 +280,7 @@
 
 	// Version/changelog modal
 
-	const version = Object.keys(VERSIONS).sort().pop() || "0";
+	const version = Object.keys(VERSIONS).sort(compareVersions).pop() || "0";
 	let changelogOpen = $state(false);
 	let changelog = $state("");
 	function openChangelog(text: string) {

@@ -10,7 +10,34 @@ interface Version {
 	update?: () => void;
 }
 
+/**
+ * Compare two dotted version strings numerically (segment by segment). Needed
+ * because a plain string sort/compare orders "2.7.9.10" BEFORE "2.7.9.9"
+ * (lexicographically "1" < "9"), which broke update detection once the 4th
+ * segment reached double digits. Returns <0, 0, or >0 like a sort comparator.
+ * For any all-single-digit versions this matches the old string comparison,
+ * so existing behaviour is unchanged.
+ */
+export function compareVersions(a: string, b: string): number {
+	const pa = a.split(".").map((n) => parseInt(n, 10) || 0);
+	const pb = b.split(".").map((n) => parseInt(n, 10) || 0);
+	const len = Math.max(pa.length, pb.length);
+	for (let i = 0; i < len; i++) {
+		const d = (pa[i] ?? 0) - (pb[i] ?? 0);
+		if (d !== 0) return d;
+	}
+	return 0;
+}
+
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.9.10": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.9.10</h1>
+        <ul>
+        <li>Field monitor: fixed the desktop battery current voltage being clipped on the right (the trailing "v" is now always visible)</li>
+        </ul>
+        `,
+	},
 	"2.7.9.9": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.9.9</h1>
@@ -798,7 +825,7 @@ export function update(
 		let updatesToDo = [];
 
 		for (let v in VERSIONS) {
-			if (v > currentVersion) {
+			if (compareVersions(v, currentVersion) > 0) {
 				updatesToDo.push(v);
 				if (VERSIONS[v].changelog) {
 					changelog += VERSIONS[v].changelog;

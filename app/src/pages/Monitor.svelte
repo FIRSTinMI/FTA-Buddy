@@ -101,10 +101,15 @@
 			},
 			{
 				onData: (data) => {
-					averageCycleTimeMS = data.averageCycleTime ?? 7 * 60 * 1000;
-					const rawCt =
-						data.lastCycleTime && data.lastCycleTime !== "unk" ? cycleTimeToMS(data.lastCycleTime) : 0;
-					calculatedCycleTime = isNaN(rawCt) ? 0 : rawCt;
+					// Treat the payload as a partial update: some publishers (e.g. the
+					// schedule-details poke) omit these fields, so only overwrite when the
+					// field is actually present. Otherwise an empty payload during a match
+					// clobbers the average back to the 7m00s fallback.
+					if (data.averageCycleTime != null) averageCycleTimeMS = data.averageCycleTime;
+					if (data.lastCycleTime != null) {
+						const rawCt = data.lastCycleTime !== "unk" ? cycleTimeToMS(data.lastCycleTime) : 0;
+						calculatedCycleTime = isNaN(rawCt) ? 0 : rawCt;
+					}
 					if (data.scheduleDetails) {
 						scheduleDetails = data.scheduleDetails;
 						scheduleText = updateScheduleText(

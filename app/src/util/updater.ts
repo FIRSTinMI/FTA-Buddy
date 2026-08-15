@@ -30,6 +30,15 @@ export function compareVersions(a: string, b: string): number {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.9.15": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.9.15</h1>
+        <p class="my-1 font-bold">Field monitor</p>
+        <ul>
+        <li>Average cycle time no longer jumps to 7m00s during a match - a schedule update mid-match was resetting the displayed average to its fallback</li>
+        </ul>
+        `,
+	},
 	"2.7.9.14": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.9.14</h1>

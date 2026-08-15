@@ -3,6 +3,7 @@
 	import { Button, Label, Select, type SelectOptionType } from "flowbite-svelte";
 	import { trpc } from "../main";
 	import { userStore } from "../stores/user";
+	import { eventStore } from "../stores/event";
 	import { auth, currentIdToken } from "../util/firebase";
 	import { toast } from "../util/toast";
 
@@ -33,7 +34,9 @@
 				name: e.archived ? `${e.code} - ${e.name} (archived)` : `${e.code} - ${e.name}`,
 			}));
 			relay = status;
-			if (!selectedEvent) selectedEvent = status.eventCode ?? events[0]?.code ?? "";
+			// Default to the event you're actually viewing so the relay feeds this
+			// monitor, not some arbitrary prod event.
+			if (!selectedEvent) selectedEvent = status.eventCode ?? $eventStore.code ?? events[0]?.code ?? "";
 			loaded = true;
 		} catch (e: any) {
 			console.warn("[dev-tools] refresh failed:", e?.message);
@@ -132,6 +135,9 @@
 					</Button>
 				</div>
 				<p class="text-xs text-gray-500">Feeds live prod field data into dev using the selected event. Read-only from prod - it can't affect the production event.</p>
+				{#if $eventStore.code && selectedEvent && selectedEvent !== $eventStore.code}
+					<p class="text-xs text-yellow-400">⚠️ You're viewing <b>{$eventStore.code}</b> but the relay is set to <b>{selectedEvent}</b> - the monitor won't update unless these match.</p>
+				{/if}
 			</div>
 
 			<!-- Self admin -->

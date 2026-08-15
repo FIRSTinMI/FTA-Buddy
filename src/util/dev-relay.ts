@@ -64,6 +64,33 @@ export async function startRelay(eventCode: string): Promise<void> {
 	await sub.psubscribe(pattern);
 	current = { eventCode, sub };
 	devRedis.set(RELAY_KEY, eventCode).catch(() => {});
+
+	// Seed dev with prod's CURRENT state so the monitor shows immediately instead
+	// of waiting for the next frame (a subscribe connection can't issue GET, so use
+	// a short-lived command connection).
+	try {
+		const cmd = new Redis(url, { maxRetriesPerRequest: null });
+		const frame = await cmd.get(monitorKey);
+		if (frame) {
+			await devRedis.set(monitorKey, frame);
+			devRedis.publish(`ftabuddy:event:${eventCode}:frame`, frame).catch(() => {});
+		}
+		const hist = await cmd.lrange(historyKey, 0, 49);
+		if (hist.length) {
+			const m = devRedis.multi().del(historyKey);
+			for (const h of hist) m.rpush(historyKey, h);
+			m.expire(historyKey, 86400);
+			await m.exec();
+		}
+		const timing = await cmd.get(`ftabuddy:event:${eventCode}:timing`);
+		if (timing) await devRedis.set(`ftabuddy:event:${eventCode}:timing`, timing);
+		const checklist = await cmd.get(`ftabuddy:event:${eventCode}:checklist`);
+		if (checklist) await devRedis.set(`ftabuddy:event:${eventCode}:checklist`, checklist);
+		cmd.quit();
+	} catch (err) {
+		console.error("[dev-relay] initial seed failed:", err);
+	}
+
 	console.log(`[dev-relay] relaying prod event ${eventCode} -> dev`);
 }
 

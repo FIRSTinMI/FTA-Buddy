@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { onMount } from "svelte";
 	import { Button, Label, Select, type SelectOptionType } from "flowbite-svelte";
 	import { trpc } from "../main";
 	import { userStore } from "../stores/user";
+	import { auth, currentIdToken } from "../util/firebase";
 	import { toast } from "../util/toast";
 
 	// Only ever render on the dev instance. Mirrors the host check in util/firebase.ts.
@@ -16,7 +18,11 @@
 	let loaded = $state(false);
 
 	async function refresh() {
-		if (!signedIn) return;
+		// These calls are authed. On a fresh load the Firebase user (and thus the
+		// ID token) is restored async, so guard on a real token or the server
+		// rejects with "sign in first" and the picker silently stays empty.
+		const token = await currentIdToken();
+		if (!token) return;
 		try {
 			const [events, status] = await Promise.all([
 				trpc.dev.listProdEvents.query(),
@@ -34,9 +40,15 @@
 		}
 	}
 
-	// Load (and reload) whenever we become signed in.
+	// Wait for Firebase to restore the session, then load once.
+	onMount(async () => {
+		await auth.authStateReady();
+		await refresh();
+	});
+
+	// Also load when the user signs in on this page (token appears after mount).
 	$effect(() => {
-		if (signedIn && !loaded) refresh();
+		if ($userStore.token && !loaded) refresh();
 	});
 
 	async function copyEvent() {

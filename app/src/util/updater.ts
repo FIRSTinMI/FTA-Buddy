@@ -11,6 +11,14 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.9.3": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.9.3</h1>
+        <ul>
+        <li>Fixed QR/link event invites sometimes showing a "missing authorization header" error before the sign-in state finished loading</li>
+        </ul>
+        `,
+	},
 	"2.7.9.2": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.9.2</h1>

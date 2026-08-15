@@ -25,6 +25,9 @@ import { checklistRouter } from "./router/checklist";
 import { cycleRouter } from "./router/cycles";
 import { eventRouter } from "./router/event";
 import { fieldMonitorRouter } from "./router/field-monitor";
+import { devRouter } from "./router/dev";
+import { isDevMode } from "./util/prod-db";
+import { restoreRelay } from "./util/dev-relay";
 import { matchRouter } from "./router/logs";
 import { aiReportRouter } from "./router/ai-report";
 import { matchEventsRouter } from "./router/match-events";
@@ -133,7 +136,13 @@ const appRouter = router({
 	ftc: ftcRouter,
 	admin: adminRouter,
 	telemetry: telemetryRouter,
+	dev: devRouter,
 });
+
+// Dev instance only: re-arm the one-way prod -> dev relay if it was left on.
+if (isDevMode()) {
+	restoreRelay().catch((err) => console.error("[dev-relay] restore on boot failed:", err));
+}
 
 export type AppRouter = typeof appRouter;
 

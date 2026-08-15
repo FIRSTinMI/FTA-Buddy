@@ -241,6 +241,36 @@ export function analyzeLog(log: FMSLogFrame[]): DisconnectionEvent[] {
 		}
 	});
 
+	// Flush any windows still open at the end of the log. Every check above only
+	// records a problem when it *ends* (the rising edge back to healthy), so a robot
+	// that drops mid-match and never reconnects before the log ends would otherwise
+	// produce no event at all - no match event, no gear, no note. Close each open
+	// window against the last frame so a drop-and-stay-dead is still reported.
+	const lastIndex = log.length - 1;
+	if (lastIndex >= 0) {
+		const lastTime = log[lastIndex].matchTime;
+		const flush = (issue: string, startTime: number | null, startIndex: number | null) => {
+			if (startTime === null) return;
+			events.push({
+				issue,
+				startTime,
+				endTime: lastTime,
+				duration: startTime - lastTime, // Reversed, matching the closed-window branches
+				startIndex: startIndex!,
+				endIndex: lastIndex,
+			});
+		};
+		flush("Code disconnect", codeDisconnectStart, codeDisconnectStartIdx);
+		flush("RIO disconnect", rioDisconnectStart, rioDisconnectStartIdx);
+		flush("Radio disconnect", radioDisconnectStart, radioDisconnectStartIdx);
+		flush("DS disconnect", dsDisconnectStart, dsDisconnectStartIdx);
+		flush("Brownout", brownoutStart, brownoutStartIdx);
+		flush("Large spike in ping", highTripTimeStart, highTripTimeStartIdx);
+		flush("Sustained high ping", sustainedHighTripTimeStart, sustainedHighTripTimeStartIdx);
+		flush("Low signal", lowSignalStart, lowSignalStartIdx);
+		flush("High BWU", highDataRateStart, highDataRateStartIdx);
+	}
+
 	// Merging consecutive events of the same issue within 3 seconds
 	for (let i = 0; i < events.length - 1; i++) {
 		const currentEvent = events[i];

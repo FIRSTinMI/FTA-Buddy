@@ -11,6 +11,7 @@
 	import { tick } from "svelte";
 	import type { Profile, TeamList } from "../../../../shared/types";
 	import Spinner from "../../components/Spinner.svelte";
+	import DevToolsPanel from "../../components/DevToolsPanel.svelte";
 	import { trpc } from "../../main";
 	import { navigate } from "../../router";
 	import { eventStore } from "../../stores/event";
@@ -877,6 +878,7 @@
 				{/if}
 			{/if}
 		{/if}
+		<DevToolsPanel />
 		<p class="text-sm text-neutral-500">
 			<a href="/privacy.html" class="underline">Privacy Policy</a>
 			&middot;

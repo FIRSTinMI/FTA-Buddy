@@ -30,6 +30,15 @@ export function compareVersions(a: string, b: string): number {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.9.13": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.9.13</h1>
+        <ul>
+        <li>Scorekeeper: the page no longer starts scrolled down - only the match schedule scrolls to the live match, the page stays at the top</li>
+        <li>Removed the redundant "(current)" tag on the level tabs</li>
+        </ul>
+        `,
+	},
 	"2.7.9.12": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.9.12</h1>

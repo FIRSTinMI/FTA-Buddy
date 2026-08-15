@@ -198,9 +198,10 @@
 				{robot.battery?.toFixed(1)}v
 			</div>
 			<div
-				class="text-xs xl:text-sm tabular-nums {percentileVoltage < 7.8 && percentileVoltage > 0
-					? 'text-red-600'
-					: 'text-gray-500'}"
+				class="text-xs sm:text-sm lg:text-base xl:text-lg 2xl:text-2xl font-semibold leading-none tabular-nums {percentileVoltage < 7.8 && percentileVoltage > 0
+					? 'text-red-400'
+					: 'text-gray-400'}"
+				class:lg:text-3xl={$fullscreen}
 				title="Match minimum (2nd percentile)"
 			>
 				{percentileVoltage.toFixed(1)}v

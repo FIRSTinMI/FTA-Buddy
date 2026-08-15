@@ -210,7 +210,9 @@ html:not(.dark) .fieldmonitor-square-height.bg-green-500 {
 }
 
 html:not(.dark) .fieldmonitor-square-height.bg-red-600 {
-	background-color: rgb(250 52 52) !important;
+	/* Calmer, on-brand error red instead of the hot rgb(250 52 52); still vivid
+	   enough to read across a field, but far less glaring up close. */
+	background-color: rgb(239 68 68) !important;
 }
 
 html:not(.dark) .fieldmonitor-square-height.bg-blue-600 {
@@ -226,6 +228,12 @@ html:not(.dark) .fieldmonitor-square-height.bg-blue-600 {
 
 a[aria-current="page"] {
 	background: rgba(0, 0, 0, 0.2) !important;
+}
+
+/* In light mode a black overlay on the active nav item reads as a dark smudge;
+   use a soft brand-purple wash instead so the active state feels intentional. */
+html:not(.dark) a[aria-current="page"] {
+	background: rgba(124, 58, 237, 0.12) !important;
 }
 
 div[aria-modal="true"] {
@@ -255,3 +263,80 @@ div[aria-modal="true"] {
 .range:disabled::-webkit-slider-thumb {
 	background: #999999 !important;
 }
+
+/* #region Light-mode contrast tuning
+   The old light theme sat on a pure #ffffff canvas with pure #000000 primary
+   text and #bdbdbd / #9e9e9e muted text. On a bright phone or tablet in gym
+   light that white-on-black pairing glares (21:1 makes the glyph edges buzz),
+   and the light greys fail WCAG badly as text (#bdbdbd is ~1.9:1, #9e9e9e is
+   ~2.8:1, both well under the 4.5:1 floor), so labels and timestamps read as
+   unreadable. Everything below tunes LIGHT mode only; dark mode is untouched.
+
+   The grey ramp does double duty: some steps are text, some are borders, and
+   text wants darkening while borders want softening. So single-role tokens are
+   re-scoped as CSS variables (grey-500 is text-only, grey-50 is surface-only),
+   and mixed-role steps (grey-400 is both text and border, grey-600 is mostly
+   the status-table grid) are handled per utility. This mirrors how GitHub
+   Primer, Stripe, Radix and Tailwind build readable light palettes: a toned
+   off-white canvas with white cards raised on top, near-black text rather than
+   pure black, and two readable muted tiers with the faint greys demoted to
+   borders only. */
+html:not(.dark) {
+	/* Soft off-white page canvas so the white cards read as raised, not as one
+	   big sheet of glare. Drives every bg-gray-50 surface plus the app shell. */
+	--color-gray-50: #f4f5f7;
+	/* grey-500 is used only as text in this app, so lift the whole token to a
+	   readable secondary tone. ~6.0:1 on white, was #9e9e9e at ~2.8:1. */
+	--color-gray-500: #5b616b;
+}
+
+/* Primary text: soften pure black to the brand base so the glyph edges stop
+   vibrating. ~14.5:1 on the off-white canvas, down from 21:1. Only affects the
+   text- utility, so black text sitting on coloured status chips is unchanged. */
+html:not(.dark) .text-black {
+	color: #1e1e1e;
+}
+
+/* Muted text at grey-400 is unreadable on white; darken the text role to a
+   legible tertiary tone. The border role (border-gray-400) is softened
+   separately below, which is why this cannot be a token re-scope. */
+html:not(.dark) .text-gray-400 {
+	color: #6b7280; /* ~4.8:1 on white, was #bdbdbd at ~1.9:1 */
+}
+
+/* Borders: the Material greys draw heavy rules on white. Soften to hairlines.
+   grey-600 is almost entirely the field/status table grid (border-b-gray-600). */
+html:not(.dark) .border-gray-400 {
+	border-color: #e5e7eb;
+}
+html:not(.dark) .border-gray-600 {
+	border-color: #d0d5dd;
+}
+html:not(.dark) .border-b-gray-600 {
+	border-bottom-color: #d0d5dd;
+}
+
+/* Status text needs to clear AA on white; the Tailwind -500 shades do not
+   (red-500 is ~3.8:1, blue-500 ~3.7:1). Bump the text role to -600/-700. */
+html:not(.dark) .text-red-500 {
+	color: #dc2626;
+}
+html:not(.dark) .text-green-500 {
+	color: #059669;
+}
+html:not(.dark) .text-blue-500 {
+	color: #2563eb;
+}
+html:not(.dark) .text-orange-500 {
+	color: #ea580c;
+}
+
+/* Fill the ground behind any overscroll bounce or safe-area gap so no strip of
+   raw white or default black shows through at the screen edges. */
+html:not(.dark) body {
+	background-color: #f4f5f7;
+}
+.dark body {
+	background-color: #262626;
+}
+/* #endregion */

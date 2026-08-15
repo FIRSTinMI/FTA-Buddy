@@ -1018,7 +1018,7 @@
 </Drawer>
 
 <!-- App.svelte -->
-<main class="bg-white dark:bg-neutral-800 flex flex-col" style="height: 100dvh; max-height: 100dvh; overflow: hidden;">
+<main class="bg-gray-50 dark:bg-neutral-800 flex flex-col" style="height: 100dvh; max-height: 100dvh; overflow: hidden;">
 	{#if !$fullscreen}
 		<div
 			class="shrink-0 bg-primary-700 dark:bg-primary-500 flex w-full justify-between px-2"

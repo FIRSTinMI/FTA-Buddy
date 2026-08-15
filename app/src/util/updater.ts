@@ -11,6 +11,22 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.9.9": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.9.9</h1>
+        <ul>
+        <li>Field monitor: on desktop the battery match-minimum sits in the bottom-left and the current voltage in the bottom-right, both clear of the graph. Mobile is unchanged.</li>
+        </ul>
+        `,
+	},
+	"2.7.9.8": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.9.8</h1>
+        <ul>
+        <li>Field monitor: the battery match-minimum marker is now a 🦆</li>
+        </ul>
+        `,
+	},
 	"2.7.9.7": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.9.7</h1>

@@ -180,31 +180,43 @@
 		{/if}
 	</button>
 	<button
-		class="fieldmonitor-square-height p-0 relative overflow-hidden aspect-square"
+		class="fieldmonitor-square-height p-0 relative overflow-hidden aspect-square flex flex-col"
 		onclick={detailView}
 		style="background-color: rgba(255,0,0,{robot.battery < 11 && robot.battery > 0
 			? (-1.5 * robot.battery ** 2 - 6.6 * robot.battery + 255) / 255
 			: 0})"
 		id="{station}-battery"
 	>
-		<div class="h-full text-center top-0 px-0.5 aspect-square">
+		<div class="flex-1 min-h-0 text-center px-0.5">
 			<Graph data={parsedData} min={6} max={14} time={20} />
 		</div>
-		<div class="absolute inset-0 flex flex-col items-center justify-center leading-none pointer-events-none">
-			<div
-				class="monitor-battery px-1 text-sm sm:text-base lg:text-lg xl:text-xl 2xl:text-3xl tabular-nums"
-				class:lg:text-5xl={$fullscreen}
-			>
+		<!-- Mobile/tablet: current voltage over the match-minimum, centered on the graph -->
+		<div class="lg:hidden absolute inset-0 flex flex-col items-center justify-center leading-none pointer-events-none">
+			<div class="monitor-battery px-1 text-sm sm:text-base tabular-nums">
 				{robot.battery?.toFixed(1)}v
 			</div>
 			<div
-				class="text-xs sm:text-sm lg:text-base xl:text-lg 2xl:text-2xl font-semibold leading-none tabular-nums {percentileVoltage < 7.8 && percentileVoltage > 0
+				class="text-xs sm:text-sm font-semibold leading-none tabular-nums {percentileVoltage < 7.8 && percentileVoltage > 0
+					? 'text-red-400'
+					: 'text-gray-400'}"
+				title="Match minimum (2nd percentile)"
+			>
+				{percentileVoltage.toFixed(1)}v
+			</div>
+		</div>
+		<!-- Desktop: match-minimum bottom-left, current voltage bottom-right, kept below/clear of the graph -->
+		<div class="hidden lg:flex items-end justify-between gap-1 px-1 pb-0.5 leading-none pointer-events-none">
+			<div
+				class="font-semibold tabular-nums text-base xl:text-lg 2xl:text-2xl {percentileVoltage < 7.8 && percentileVoltage > 0
 					? 'text-red-400'
 					: 'text-gray-400'}"
 				class:lg:text-3xl={$fullscreen}
 				title="Match minimum (2nd percentile)"
 			>
-				🪫 {percentileVoltage.toFixed(1)}v
+				{percentileVoltage.toFixed(1)}v
+			</div>
+			<div class="monitor-battery tabular-nums text-lg xl:text-xl 2xl:text-3xl" class:lg:text-5xl={$fullscreen}>
+				{robot.battery?.toFixed(1)}v
 			</div>
 		</div>
 	</button>

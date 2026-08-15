@@ -204,7 +204,7 @@
 				class:lg:text-3xl={$fullscreen}
 				title="Match minimum (2nd percentile)"
 			>
-				{percentileVoltage.toFixed(1)}v
+				🪫 {percentileVoltage.toFixed(1)}v
 			</div>
 		</div>
 	</button>

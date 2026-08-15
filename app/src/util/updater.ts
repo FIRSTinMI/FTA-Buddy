@@ -11,6 +11,14 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.9.7": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.9.7</h1>
+        <ul>
+        <li>Field monitor: the battery match-minimum voltage now has a 🪫 marker so it stands apart from the current voltage at a glance</li>
+        </ul>
+        `,
+	},
 	"2.7.9.6": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.9.6</h1>

@@ -11,6 +11,15 @@ interface Version {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.9.4": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.9.4</h1>
+        <ul>
+        <li>Scorekeeper schedule now shows one level at a time - defaults to the current level (so practice hides once quals start) with tabs to flip back to earlier levels</li>
+        <li>The schedule is a scrollable box with a sticky header and auto-scrolls to keep the current match in view</li>
+        </ul>
+        `,
+	},
 	"2.7.9.3": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.9.3</h1>

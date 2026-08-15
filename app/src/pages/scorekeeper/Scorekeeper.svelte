@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Icon from "@iconify/svelte";
 	import { Button } from "flowbite-svelte";
-	import { onDestroy, onMount } from "svelte";
+	import { onDestroy, onMount, tick } from "svelte";
 	import Spinner from "../../components/Spinner.svelte";
 	import AllianceLineupCard from "../../components/scorekeeper/AllianceLineupCard.svelte";
 	import LineupCardDialog from "../../components/scorekeeper/LineupCardDialog.svelte";
@@ -127,16 +127,67 @@
 		);
 	});
 
-	// Search filter: match number, level, or any team number.
+	// ---- Level tabs: only show the current level's schedule by default --------
+	const REAL_LEVELS = ["Practice", "Qualification", "Playoff"] as const;
+
+	// The real levels that actually have matches, in play order (drives the tabs).
+	const levelsPresent = $derived.by(() => {
+		const present = new Set(allMatches.map((m) => m.level));
+		return REAL_LEVELS.filter((l) => present.has(l));
+	});
+
+	// "Current level" = the highest level that has a played match (monotonic, so it
+	// never flips back to None while the field is idle). Before anything is played,
+	// fall back to the lowest level that exists (Practice, else Qual).
+	const currentLevel = $derived.by(() => {
+		let played: string | null = null;
+		for (const m of allMatches) {
+			if (m.level === "None" || !m.isPlayed) continue;
+			if (played === null || LEVEL_ORDER[m.level] > LEVEL_ORDER[played]) played = m.level;
+		}
+		return played ?? levelsPresent[0] ?? "Qualification";
+	});
+
+	// The tab actually shown. Follows currentLevel automatically; a manual tab pick
+	// sticks only until the current level advances (then it snaps to the new level).
+	let tableLevelManual = $state<string | null>(null);
+	$effect(() => {
+		currentLevel; // advancing the current level clears a manual override
+		tableLevelManual = null;
+	});
+	const tableLevel = $derived(tableLevelManual ?? currentLevel);
+
+	// Search filter: match number or any team number, scoped to the shown level.
 	let search = $state("");
 	const filteredMatches = $derived.by(() => {
+		const base = allMatches.filter((m) => m.level === tableLevel);
 		const q = search.trim().toLowerCase();
-		if (!q) return allMatches;
-		return allMatches.filter((m) => {
+		if (!q) return base;
+		return base.filter((m) => {
 			if (String(m.match).includes(q)) return true;
-			if (m.level.toLowerCase().includes(q)) return true;
 			return [...m.red, ...m.blue].some((t) => t != null && String(t).includes(q));
 		});
+	});
+
+	// ---- Auto-scroll the schedule so the live/selected match stays visible -----
+	let tableScroll = $state<HTMLDivElement | null>(null);
+	function scrollSelectedIntoView() {
+		const el = tableScroll;
+		if (!el) return;
+		tick().then(() => el.querySelector<HTMLElement>('[data-sel="1"]')?.scrollIntoView({ block: "nearest" }));
+	}
+	// Bring the selection into view whenever it (or the shown tab) changes.
+	$effect(() => {
+		selLevel;
+		selMatch;
+		selPlay;
+		tableLevel;
+		scrollSelectedIntoView();
+	});
+	// While following live, keep the current match visible as new rows land.
+	$effect(() => {
+		filteredMatches.length;
+		if (following) scrollSelectedIntoView();
 	});
 
 	function fmtDelta(sched: Date | null, actual: Date | null): { text: string; late: boolean } | null {
@@ -477,9 +528,23 @@
 			class="w-44 rounded-md border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-2 py-1 text-sm"
 		/>
 	</div>
-	<div class="overflow-x-auto">
+	{#if levelsPresent.length > 1}
+		<div class="flex gap-1">
+			{#each levelsPresent as lvl (lvl)}
+				<button
+					class="rounded-md px-3 py-1 text-sm font-semibold {lvl === tableLevel
+						? 'bg-primary-600 text-white'
+						: 'bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-300'}"
+					onclick={() => (tableLevelManual = lvl)}
+				>
+					{lvl}{lvl === currentLevel ? " (current)" : ""}
+				</button>
+			{/each}
+		</div>
+	{/if}
+	<div bind:this={tableScroll} class="overflow-x-auto overflow-y-auto max-h-[26rem] rounded-md border border-gray-200 dark:border-neutral-700">
 		<table class="w-full text-sm">
-			<thead>
+			<thead class="sticky top-0 z-10 bg-white dark:bg-neutral-900">
 				<tr class="text-left text-xs uppercase text-gray-500 border-b border-gray-200 dark:border-neutral-700">
 					<th class="py-1 pr-2">Match</th>
 					<th class="py-1 pr-2 hidden lg:table-cell">Teams</th>
@@ -493,8 +558,10 @@
 			<tbody>
 				{#each filteredMatches as m (m.level + m.match + m.play)}
 					{@const delta = fmtDelta(m.scheduledStartTime, m.actualStartTime)}
+					{@const isSel = m.level === selLevel && m.match === selMatch && m.play === selPlay}
 					<tr
-						class="border-b border-gray-100 dark:border-neutral-800 cursor-pointer {m.level === selLevel && m.match === selMatch && m.play === selPlay ? 'bg-primary-50 dark:bg-primary-950/40' : ''}"
+						data-sel={isSel ? "1" : null}
+						class="border-b border-gray-100 dark:border-neutral-800 cursor-pointer {isSel ? 'bg-primary-50 dark:bg-primary-950/40' : ''}"
 						onclick={() => {
 							following = false;
 							selLevel = m.level;

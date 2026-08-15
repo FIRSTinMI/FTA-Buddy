@@ -30,6 +30,14 @@ export function compareVersions(a: string, b: string): number {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.9.11": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.9.11</h1>
+        <ul>
+        <li>Field monitor: on desktop the current battery voltage is now larger and the match-minimum smaller, for a clearer at-a-glance hierarchy</li>
+        </ul>
+        `,
+	},
 	"2.7.9.10": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.9.10</h1>

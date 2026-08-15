@@ -209,17 +209,17 @@
 		     its column it overflows leftward and the trailing "v" is never clipped. -->
 		<div class="hidden lg:grid grid-cols-2 items-end gap-1 px-1 pb-0.5 leading-none pointer-events-none">
 			<span
-				class="justify-self-start whitespace-nowrap font-semibold tabular-nums text-sm xl:text-base 2xl:text-lg {percentileVoltage < 7.8 && percentileVoltage > 0
+				class="justify-self-start whitespace-nowrap font-semibold tabular-nums text-xs xl:text-sm 2xl:text-sm {percentileVoltage < 7.8 && percentileVoltage > 0
 					? 'text-red-400'
 					: 'text-gray-400'}"
-				class:lg:text-2xl={$fullscreen}
+				class:lg:text-lg={$fullscreen}
 				title="Match minimum (2nd percentile)"
 			>
 				{percentileVoltage.toFixed(1)}v
 			</span>
 			<span
-				class="monitor-battery justify-self-end whitespace-nowrap tabular-nums text-sm xl:text-base 2xl:text-lg"
-				class:lg:text-2xl={$fullscreen}
+				class="monitor-battery justify-self-end whitespace-nowrap tabular-nums text-base xl:text-lg 2xl:text-2xl"
+				class:lg:text-3xl={$fullscreen}
 			>
 				{robot.battery?.toFixed(1)}v
 			</span>

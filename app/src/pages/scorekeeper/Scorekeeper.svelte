@@ -14,6 +14,7 @@
 	import type { Alliance, ForMatch, LineupSide } from "../../util/scorekeeperTypes";
 	import { cycleTimeToMS } from "../../../../shared/cycleTimeToMS";
 	import { formatTimeShortNoAgo } from "../../../../shared/formatTime";
+	import { FieldState, MatchState, MatchStateMap } from "../../../../shared/types";
 
 	// FTA/FTAA/Scorekeeper/admin may edit; everyone with the view may read.
 	const canEdit = $derived(
@@ -520,6 +521,33 @@
 		selSchedStart ? fmtTime(selSchedStart) : selProjectedStart ? `~${fmtTime(selProjectedStart)}` : "-",
 	);
 	const selStartSub = $derived(selSchedStart ? "scheduled" : selProjectedStart ? "projected" : "");
+
+	// ---- Live overlay for the in-progress match's schedule row -----------------
+	// The actual start, delta and cycle time for a match are all settled the moment
+	// it starts (start_time is stamped and the cycle that led into it is computed),
+	// but the DB-backed row only picks them up once the match is recorded/scored.
+	// Bridge that gap: for the row that matches the live match, fill actual/cycle
+	// from the live cycle data so they show while the match is still on the field.
+	// Gated on the match having actually STARTED - during prestart the live
+	// startTime/lastCycleTime still refer to the *previous* match.
+	const liveMatchStarted = $derived(
+		cycleData?.state != null && MatchStateMap[cycleData.state as FieldState] !== MatchState.PRESTART,
+	);
+	const liveKey = $derived(
+		monitorFrame?.match && monitorFrame.level && monitorFrame.level !== "None"
+			? `${monitorFrame.level}:${monitorFrame.match}:${monitorFrame.play || 1}`
+			: null,
+	);
+	function liveOverlay(m: MatchRow): { actual: Date | null; cycle: string | null } {
+		if (!liveMatchStarted || `${m.level}:${m.match}:${m.play}` !== liveKey) {
+			return { actual: m.actualStartTime, cycle: m.cycleTime };
+		}
+		const liveCycle = cycleData?.lastCycleTime && cycleData.lastCycleTime !== "unk" ? cycleData.lastCycleTime : null;
+		return {
+			actual: m.actualStartTime ?? (cycleData?.startTime ? new Date(cycleData.startTime) : null),
+			cycle: m.cycleTime ?? liveCycle,
+		};
+	}
 </script>
 
 <div class="flex flex-col gap-3 p-3 lg:px-5 w-full">
@@ -656,7 +684,8 @@
 			</thead>
 			<tbody>
 				{#each filteredMatches as m (m.level + m.match + m.play)}
-					{@const delta = fmtDelta(m.scheduledStartTime, m.actualStartTime)}
+					{@const ov = liveOverlay(m)}
+					{@const delta = fmtDelta(m.scheduledStartTime, ov.actual)}
 					{@const isSel = m.level === selLevel && m.match === selMatch && m.play === selPlay}
 					<tr
 						data-sel={isSel ? "1" : null}
@@ -678,9 +707,9 @@
 							{#each m.blue as t, i (i)}<span class="inline-block w-16 text-right tabular-nums text-blue-600">{t ?? ""}</span>{/each}
 						</td>
 						<td class="py-2 px-3 whitespace-nowrap font-mono">{fmtTime(m.scheduledStartTime)}</td>
-						<td class="py-2 px-3 whitespace-nowrap font-mono text-gray-500">{fmtTime(m.actualStartTime)}</td>
+						<td class="py-2 px-3 whitespace-nowrap font-mono text-gray-500">{fmtTime(ov.actual)}</td>
 						<td class="py-2 px-3 whitespace-nowrap text-base {delta ? (delta.late ? 'text-red-600' : 'text-green-600') : 'text-gray-400'}">{delta?.text ?? "-"}</td>
-						<td class="py-2 px-3 font-mono text-gray-500">{fmtCycleStr(m.cycleTime)}</td>
+						<td class="py-2 px-3 font-mono text-gray-500">{fmtCycleStr(ov.cycle)}</td>
 						<td class="py-2 px-3 whitespace-nowrap">
 							{#if m.finalScoreRed != null && m.finalScoreBlue != null}
 								<span class="text-red-600 {m.finalScoreRed > m.finalScoreBlue ? 'font-bold' : ''}">{m.finalScoreRed}</span>-<span class="text-blue-600 {m.finalScoreBlue > m.finalScoreRed ? 'font-bold' : ''}">{m.finalScoreBlue}</span>

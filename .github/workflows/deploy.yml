@@ -41,13 +41,13 @@ jobs:
                   fi
 
             - name: Notify Discord (success)
-              if: success()
+              if: success() && github.ref_name == 'main'
               run: |
                   curl -s -X POST ${{ secrets.DISCORD_WEBHOOK }} -H "Content-Type: application/json" \
                     -d '{"embeds":[{"title":"✅ FTA Buddy Deployed","description":"Coolify built the image on the NAS build server and deployed it.","color":3066993}]}'
 
             - name: Notify Discord (failure)
-              if: failure()
+              if: failure() && github.ref_name == 'main'
               run: |
                   curl -s -X POST ${{ secrets.DISCORD_WEBHOOK }} -H "Content-Type: application/json" \
                     -d '{"embeds":[{"title":"❌ FTA Buddy Deploy Failed","description":"Check [GitHub Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).","color":15158332}]}'

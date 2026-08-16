@@ -85,10 +85,15 @@
 		frameHandler.addEventListener("frame", onFrameEvent);
 		frameHandler.addEventListener("match-start", onMatchStart);
 		subscribeToFieldMonitor();
-		const lastPrestart = await trpc.cycles.getLastPrestart.query();
-		const lastMatchStart = await trpc.cycles.getLastMatchStart.query();
-		if (lastPrestart) matchStartTime = lastPrestart;
-		if (lastMatchStart) matchStartTime = lastMatchStart;
+		await syncCurrentCycleAnchor();
+
+		// Re-sync when the app returns to the foreground / regains connectivity.
+		// The subscription doesn't replay missed events, so a phone that was locked
+		// or an app that was backgrounded across a match start would otherwise keep
+		// counting from the old match until the next server event lands.
+		document.addEventListener("visibilitychange", onResume);
+		window.addEventListener("focus", onResume);
+		window.addEventListener("online", onResume);
 
 		monitorFrame = frameHandler.getFrame();
 
@@ -105,6 +110,14 @@
 					// schedule-details poke) omit these fields, so only overwrite when the
 					// field is actually present. Otherwise an empty payload during a match
 					// clobbers the average back to the 7m00s fallback.
+					// Authoritatively re-anchor the current-cycle (T:) timer to the server's
+					// last match start on every update, so a missed match-start event (phone
+					// locked / app backgrounded) can't leave it counting from the wrong match.
+					const anchor = data.startTime ?? data.prestartTime;
+					if (anchor) {
+						matchStartTime = new Date(anchor);
+						currentCycleTime = formatTimeShortNoAgo(matchStartTime);
+					}
 					if (data.averageCycleTime != null) averageCycleTimeMS = data.averageCycleTime;
 					if (data.lastCycleTime != null) {
 						const rawCt = data.lastCycleTime !== "unk" ? cycleTimeToMS(data.lastCycleTime) : 0;
@@ -173,28 +186,60 @@
 	onDestroy(() => {
 		frameHandler.removeEventListener("frame", onFrameEvent);
 		frameHandler.removeEventListener("match-start", onMatchStart);
+		document.removeEventListener("visibilitychange", onResume);
+		window.removeEventListener("focus", onResume);
+		window.removeEventListener("online", onResume);
 		unsubscribeUserStore();
 		if (cycleSubscription) cycleSubscription.unsubscribe();
 		clearInterval(interval);
 		clearInterval(lastCycleTimeInterval);
 	});
 
+	// Re-anchor the current-cycle (T:) timer to authoritative server state. The
+	// timer counts up from the last match start (falling back to the last prestart
+	// if nothing has run yet). We compute this from the server rather than trusting
+	// that we caught the live match-start event: on mobile a locked screen or a
+	// backgrounded app misses that event and leaves the timer on the wrong match.
+	async function syncCurrentCycleAnchor() {
+		try {
+			const [lastPrestart, lastMatchStart] = await Promise.all([
+				trpc.cycles.getLastPrestart.query(),
+				trpc.cycles.getLastMatchStart.query(),
+			]);
+			const anchor = lastMatchStart ?? lastPrestart;
+			if (anchor) {
+				matchStartTime = new Date(anchor);
+				currentCycleTime = formatTimeShortNoAgo(matchStartTime);
+			}
+		} catch (err) {
+			console.warn("[monitor] current-cycle anchor sync failed:", err);
+		}
+	}
+
+	function onResume() {
+		if (document.visibilityState === "visible") syncCurrentCycleAnchor();
+	}
+
 	async function onMatchStart(_evt: Event) {
 		console.log("match-start");
 		currentCycleIsBest = false;
+		// Capture the current-cycle anchor up-front: an await below (or a concurrent
+		// subscription re-anchor) can move matchStartTime to the new match before we
+		// finish computing the just-completed cycle from it.
+		const prevCycleAnchor = matchStartTime;
 		calculatedCycleTime = calculatedCycleTime || frameHandler.getLastCycleTime();
 
 		console.log({
 			calculatedCycleTime,
 			lastCycleTime: frameHandler.getLastCycleTime(),
-			ourCycleTime: new Date().getTime() - matchStartTime.getTime(),
+			ourCycleTime: new Date().getTime() - prevCycleAnchor.getTime(),
 			serverCycleTime: cycleTimeToMS((await trpc.cycles.getLastCycleTime.query()) ?? "-1"),
 		});
 
 		// Doesn't always update quick enough
 		if (!calculatedCycleTime || calculatedCycleTime === lastCycleTimeMS) {
-			lastCycleTime = formatTimeShortNoAgo(matchStartTime);
-			lastCycleTimeMS = new Date().getTime() - matchStartTime.getTime();
+			lastCycleTime = formatTimeShortNoAgo(prevCycleAnchor);
+			lastCycleTimeMS = new Date().getTime() - prevCycleAnchor.getTime();
 		} else {
 			lastCycleTimeMS = calculatedCycleTime;
 			lastCycleTime = formatTimeShortNoAgoSeconds(calculatedCycleTime);

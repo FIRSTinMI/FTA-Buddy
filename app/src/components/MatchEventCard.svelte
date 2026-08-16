@@ -6,7 +6,7 @@
 	import { trpc } from "../main";
 	import { navigate } from "../router";
 	import { toast } from "../util/toast";
-	import type { ComponentProps } from "svelte";
+	import { tick, type ComponentProps } from "svelte";
 	import { displayTeam } from "../util/team-name";
 	import { get } from "svelte/store";
 	import { eventStore } from "../stores/event";
@@ -90,6 +90,10 @@
 					}
 				}
 			}
+			// onConvert/onDismiss above mutate the parent feed, which unmounts this card.
+			// Let Svelte flush those changes before navigating, otherwise sv-router pushes
+			// the URL but the component tree never swaps (matches the create-note flow).
+			await tick();
 			navigate("/notepad/view/:id", { params: { id: res.noteId } });
 		} catch (err: any) {
 			toast("Error converting to note", err.message);

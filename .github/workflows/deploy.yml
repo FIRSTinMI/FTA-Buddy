@@ -13,6 +13,10 @@ jobs:
     deploy:
         runs-on: ubuntu-latest
         steps:
+            - uses: actions/checkout@v4
+            - name: Check app version is in sync (abort deploy on mismatch)
+              run: node .github/ci/check-version-sync.mjs
+
             - name: Deploy + verify each instance
               run: |
                   set -u

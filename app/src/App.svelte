@@ -25,7 +25,6 @@
 	import { formatTime } from "../../shared/formatTime";
 	import type { Profile, TeamList } from "../../shared/types";
 	import SettingsModal from "./components/SettingsModal.svelte";
-	import UpdateToast from "./components/UpdateToast.svelte";
 	import WelcomeModal from "./components/WelcomeModal.svelte";
 	import { trpc } from "./main";
 	import { navigate, route } from "./router";
@@ -382,14 +381,37 @@
 
 	// Auto update
 
-	let showUpdateToast = $state(false);
-	let updateNewVersion = $state("");
 	let versionPollInterval: ReturnType<typeof setInterval> | undefined;
+
+	// When the deployed server version differs from the version this bundle was
+	// built as, silently pull the new build instead of prompting: clear the caches,
+	// drop the service worker, and reload onto the fresh assets. No popup - the app
+	// updates itself the same way it would if it had been fully closed and reopened.
+	//
+	// NOTE: `app.version` is package.json's version; `settings.version` tracks the
+	// latest key in the VERSIONS map (updater.ts). Keep those two in sync on every
+	// release or the reload below can't reach a matching state. The sessionStorage
+	// guard makes that failure a single wasted reload per server version rather than
+	// an infinite loop.
+	async function reloadForUpdate(serverVersion: string) {
+		const guardKey = "reloaded-for-version";
+		if (sessionStorage.getItem(guardKey) === serverVersion) return; // already tried this version this session
+		sessionStorage.setItem(guardKey, serverVersion);
+		try {
+			const regs = await navigator.serviceWorker.getRegistrations();
+			await Promise.all(regs.map((r) => r.unregister()));
+			const keys = await caches.keys();
+			await Promise.all(keys.map((k) => caches.delete(k)));
+		} catch {
+			// non-fatal - still reload even if SW/cache cleanup fails
+		}
+		window.location.reload();
+	}
+
 	async function checkVersion() {
 		const data = await trpc.app.version.query();
 		if (data !== settings.version) {
-			updateNewVersion = data;
-			showUpdateToast = true;
+			reloadForUpdate(data);
 		}
 	}
 	onMount(() => {
@@ -605,8 +627,6 @@
 		</Toast>
 	</div>
 {/if}
-
-<UpdateToast show={showUpdateToast} newVersion={updateNewVersion} />
 
 <WelcomeModal
 	bind:welcomeOpen

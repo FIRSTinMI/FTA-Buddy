@@ -1,0 +1,20 @@
+name: Version check
+
+# Fails when package.json's version and the latest VERSIONS-map key disagree.
+# The web app self-updates by comparing the deployed server version against the
+# version the loaded bundle reports; if those can never match, clients keep trying
+# to update. Keeping the two numbers in lockstep is what makes the silent
+# auto-update converge. See .github/ci/check-version-sync.mjs.
+
+on:
+    pull_request:
+    push:
+        branches: [main, dev]
+
+jobs:
+    version-sync:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - name: package.json version must match the latest VERSIONS key
+              run: node .github/ci/check-version-sync.mjs

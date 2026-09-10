@@ -116,11 +116,42 @@
 
 	let helpTab = $state(0);
 
-	function openHelp(id: StatusLightHelpId) {
+	let helpRow = $state<HTMLElement | null>(null);
+
+	function openHelp(id: StatusLightHelpId, row: HTMLElement) {
 		help = statusLightHelp[id];
 		helpTab = help.defaultVariant ?? 0;
+		helpRow = row;
 		helpOpen = true;
 	}
+
+	// Live copy of the row's LED(s) for the dialog header. The originals keep animating through
+	// the toggle state, so clone them and mirror every class change instead of re-deriving the pattern.
+	const mirrorLeds: Action<HTMLElement, HTMLElement | null> = (container, row) => {
+		let observers: MutationObserver[] = [];
+		function attach(source: HTMLElement | null) {
+			observers.forEach((o) => o.disconnect());
+			observers = [];
+			container.replaceChildren();
+			if (!source) return;
+			const leds = source.querySelectorAll<HTMLElement>(".led");
+			for (const led of leds) {
+				const copy = document.createElement("span");
+				copy.className = led.className;
+				container.appendChild(copy);
+				const obs = new MutationObserver(() => (copy.className = led.className));
+				obs.observe(led, { attributes: true, attributeFilter: ["class"] });
+				observers.push(obs);
+			}
+		}
+		attach(row);
+		return {
+			update: attach,
+			destroy() {
+				observers.forEach((o) => o.disconnect());
+			},
+		};
+	};
 
 	// Makes a table row (or card) a large tappable target that opens the help dialog for `id`.
 	const tapHelp: Action<HTMLElement, StatusLightHelpId> = (node, id) => {
@@ -129,11 +160,11 @@
 		node.setAttribute("tabindex", "0");
 		node.setAttribute("aria-haspopup", "dialog");
 		node.setAttribute("aria-label", `${statusLightHelp[id].state}. Open help`);
-		const onClick = () => openHelp(id);
+		const onClick = () => openHelp(id, node);
 		const onKey = (e: KeyboardEvent) => {
 			if (e.key === "Enter" || e.key === " ") {
 				e.preventDefault();
-				openHelp(id);
+				openHelp(id, node);
 			}
 		};
 		node.addEventListener("click", onClick);
@@ -154,7 +185,18 @@
 	{/if}
 </Modal>
 
-<Modal bind:open={helpOpen} size="md" outsideclose title={help ? `${help.device}: ${help.led}, ${help.state}` : ""}>
+<Modal bind:open={helpOpen} fullscreen outsideclose>
+	{#snippet header()}
+		{#if help}
+			<div class="flex items-center gap-3 text-left text-black dark:text-white">
+				<div class="flex items-center gap-1 shrink-0" use:mirrorLeds={helpRow}></div>
+				<div>
+					<div class="text-sm text-gray-500 dark:text-gray-400">{help.device}: {help.led}</div>
+					<div class="text-lg font-bold leading-tight">{help.state}</div>
+				</div>
+			</div>
+		{/if}
+	{/snippet}
 	{#if help}
 		{@const shown = help.variants?.[helpTab] ?? help}
 		<div class="flex flex-col gap-3 text-left text-black dark:text-white">

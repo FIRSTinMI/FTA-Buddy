@@ -1,6 +1,7 @@
 import { desc, eq, sql } from "drizzle-orm";
 import { db } from "../../db/db";
 import { troubleshootChunks, type TroubleshootChunk, type TroubleshootChunkInsert } from "../../db/schema";
+import { STOPWORDS } from "./chat/keywords";
 import { redactTeamNumbers } from "./redact";
 
 // #region Write
@@ -69,15 +70,17 @@ function tokenize(text: string): string[] {
 		.toLowerCase()
 		.replace(/[^a-z0-9\s]/g, " ")
 		.split(/\s+/)
-		.filter((w) => w.length > 1);
+		.filter((w) => w.length > 1 && !STOPWORDS.has(w));
 }
+
+export type SearchMode = "and" | "or";
 
 /**
  * Build a to_tsquery string: every query word must match, but a word may match through any of its
  * synonyms. "radio poe" -> "(radio | vivid | (vh & 109)) & poe". Appending synonyms as plain words
  * would AND them in and make every expanded query fail.
  */
-export function expandQuery(query: string): string {
+export function expandQuery(query: string, mode: SearchMode = "and"): string {
 	const groups: string[] = [];
 	for (const word of tokenize(query)) {
 		const terms = [word, ...(SYNONYMS[word] ?? [])].map((t) => {
@@ -87,18 +90,22 @@ export function expandQuery(query: string): string {
 		if (terms.length === 0) continue;
 		groups.push(terms.length > 1 ? `(${terms.join(" | ")})` : terms[0]);
 	}
-	return groups.join(" & ");
+	return groups.join(mode === "and" ? " & " : " | ");
 }
 
 export type ChunkHit = Pick<TroubleshootChunk, "id" | "source" | "url" | "title" | "heading" | "body" | "source_date"> & {
 	rank: number;
 };
 
-/** Full-text search over the corpus. Returns the best `limit` chunks, highest rank first. */
-export async function searchChunks(query: string, limit = 6): Promise<ChunkHit[]> {
-	const q = expandQuery(query);
+/**
+ * Full-text search over the corpus. "and" needs every word (precise), "or" ranks by how many words match
+ * (the fallback for whole-sentence questions). Highest rank first.
+ */
+export async function searchChunks(query: string, limit = 6, mode: SearchMode = "and"): Promise<ChunkHit[]> {
+	const q = expandQuery(query, mode);
 	if (!q) return [];
-	const rank = sql<number>`ts_rank_cd(${troubleshootChunks.tsv}, to_tsquery('english', ${q}))`;
+	// Title hits count most, then heading, then body; normalisation 1 divides by 1 + log(length) so long pages do not win by bulk.
+	const rank = sql<number>`ts_rank_cd('{0.1, 0.2, 0.4, 1.0}', ${troubleshootChunks.tsv}, to_tsquery('english', ${q}), 1)`;
 	const rows = await db
 		.select({
 			id: troubleshootChunks.id,

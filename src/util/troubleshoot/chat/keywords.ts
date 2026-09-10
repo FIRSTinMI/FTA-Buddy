@@ -34,7 +34,7 @@ export function messageWords(message: string): string[] {
 		.filter((w) => w.length >= 3 && !STOPWORDS.has(w));
 }
 
-/** Build the broad "a or b or c" fallback query. Empty string when nothing is left. */
+/** Words for the broad (OR mode) fallback search, space separated. Empty string when nothing is left. */
 export function broadQuery(message: string, lastAssistant: string | undefined): string {
-	return [...new Set([...messageWords(message), ...assistantKeywords(lastAssistant)])].join(" or ");
+	return [...new Set([...messageWords(message), ...assistantKeywords(lastAssistant)])].join(" ");
 }

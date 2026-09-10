@@ -4,14 +4,18 @@
 // cache read 0.1x input, cache write 1.25x input (5 minute TTL).
 
 export const TROUBLESHOOT_MODEL = "claude-opus-4-8";
+/** Cheap model that turns the conversation into search queries before the main turn. */
+export const PLANNER_MODEL = "claude-haiku-4-5";
 
-/** USD per million tokens. */
-export const PRICE_PER_MTOK = {
-	input: 5,
-	output: 25,
-	cacheRead: 0.5,
-	cacheWrite: 6.25,
-} as const;
+export type TroubleshootModel = typeof TROUBLESHOOT_MODEL | typeof PLANNER_MODEL;
+
+/** USD per million tokens, by model (claude-api skill, cached 2026-06-24). */
+export const PRICES: Record<TroubleshootModel, { input: number; output: number; cacheRead: number; cacheWrite: number }> = {
+	"claude-opus-4-8": { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 },
+	"claude-haiku-4-5": { input: 1, output: 5, cacheRead: 0.1, cacheWrite: 1.25 },
+};
+
+export const PRICE_PER_MTOK = PRICES[TROUBLESHOOT_MODEL];
 
 export interface TokenUsage {
 	input_tokens: number;
@@ -24,11 +28,12 @@ export interface TokenUsage {
  * Cost of one API call in micro-USD (1e-6 USD), rounded to the nearest integer.
  * $/MTok equals micro-USD per token, so the multiply is direct.
  */
-export function costMicroUsd(usage: TokenUsage): number {
-	const input = usage.input_tokens * PRICE_PER_MTOK.input;
-	const output = usage.output_tokens * PRICE_PER_MTOK.output;
-	const cacheRead = (usage.cache_read_input_tokens ?? 0) * PRICE_PER_MTOK.cacheRead;
-	const cacheWrite = (usage.cache_creation_input_tokens ?? 0) * PRICE_PER_MTOK.cacheWrite;
+export function costMicroUsd(usage: TokenUsage, model: TroubleshootModel = TROUBLESHOOT_MODEL): number {
+	const price = PRICES[model];
+	const input = usage.input_tokens * price.input;
+	const output = usage.output_tokens * price.output;
+	const cacheRead = (usage.cache_read_input_tokens ?? 0) * price.cacheRead;
+	const cacheWrite = (usage.cache_creation_input_tokens ?? 0) * price.cacheWrite;
 	return Math.round(input + output + cacheRead + cacheWrite);
 }
 

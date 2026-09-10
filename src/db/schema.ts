@@ -481,7 +481,7 @@ export const troubleshootChunks = pgTable(
 		body: text("body").notNull(),
 		// Redacted text only. Never store team numbers, event codes or names in body.
 		tsv: tsvector("tsv").generatedAlwaysAs(
-			sql`to_tsvector('english', coalesce("title", '') || ' ' || coalesce("heading", '') || ' ' || coalesce("body", ''))`,
+			sql`setweight(to_tsvector('english', coalesce("title", '')), 'A') || setweight(to_tsvector('english', coalesce("heading", '')), 'B') || setweight(to_tsvector('english', coalesce("body", '')), 'C')`,
 		),
 		source_date: timestamp("source_date"),
 		fetched_at: timestamp("fetched_at").notNull().defaultNow(),

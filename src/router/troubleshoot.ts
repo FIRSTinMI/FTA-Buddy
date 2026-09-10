@@ -11,6 +11,7 @@ import { retrieveChunks } from "../util/troubleshoot/chat/retrieve";
 import { SOURCE_LABELS, type ChatCitation, type ChatEvent } from "../util/troubleshoot/chat/types";
 import { assertRateLimit } from "../util/troubleshoot/rate-limit";
 import { assertBudget, getSpendStatus, recordSpend, TROUBLESHOOT_MODEL } from "../util/troubleshoot/spend";
+import { PLANNER_MODEL } from "../util/troubleshoot/pricing";
 
 export type { ChatCitation, ChatEvent } from "../util/troubleshoot/chat/types";
 export { SOURCE_LABELS };
@@ -173,7 +174,13 @@ export const troubleshootRouter = router({
 			}
 
 			const lastAssistant = [...prior].reverse().find((m) => m.role === "assistant")?.text;
-			const chunks = await retrieveChunks(input.message, lastAssistant, RETRIEVE_LIMIT);
+			const retrieval = await retrieveChunks(input.message, lastAssistant, RETRIEVE_LIMIT);
+			const chunks = retrieval.chunks;
+			if (retrieval.plannerUsage) {
+				await recordSpend(conversationId, retrieval.plannerUsage, PLANNER_MODEL).catch((err) =>
+					console.error("[troubleshoot chat] planner recordSpend failed", err),
+				);
+			}
 
 			const userText =
 				input.from && prior.length === 0
@@ -202,7 +209,7 @@ export const troubleshootRouter = router({
 						? "The assistant is busy right now. Try again in a minute, or find a CSA."
 						: err instanceof Anthropic.APIError
 							? "The assistant could not answer right now. Find a CSA for help."
-							: "Something went wrong. Find a CSA for help.";
+							: "Something went wrong.";
 				yield { type: "error", message: msg };
 				return;
 			}

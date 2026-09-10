@@ -10,7 +10,7 @@ import { slackUserTokens } from "../db/schema";
 import { redis } from "./redis";
 
 // #region Config
-export const SLACK_USER_SCOPES = ["channels:history", "groups:history", "channels:read", "groups:read", "users:read"];
+export const SLACK_USER_SCOPES = ["channels:history", "groups:history", "channels:read", "groups:read", "team:read"];
 
 const STATE_PREFIX = "ftabuddy:slack-user-oauth:state:";
 const STATE_TTL_SECONDS = 10 * 60;

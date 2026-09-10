@@ -45,7 +45,7 @@
 								(solved
 									? "bg-green-100 dark:bg-green-950/60"
 									: goesOn
-										? "bg-gray-100 dark:bg-gray-700/60"
+										? "bg-red-100 dark:bg-red-950/60"
 										: "bg-sky-100 dark:bg-sky-950/60")}
 						>
 							<div class="font-bold">{col.label}:</div>
@@ -53,7 +53,7 @@
 							{#if goesOn && i < flow.length - 1}
 								<Icon
 									icon="heroicons:arrow-down-16-solid"
-									class="absolute -bottom-2 left-1/2 size-5 -translate-x-1/2 text-gray-500"
+									class="absolute -bottom-2 left-1/2 size-5 -translate-x-1/2 text-red-500"
 								/>
 							{/if}
 						</div>

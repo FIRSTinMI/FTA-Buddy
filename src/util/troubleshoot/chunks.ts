@@ -63,15 +63,31 @@ const SYNONYMS: Record<string, string[]> = {
 	breaker: ["main breaker", "current limit"],
 };
 
-export function expandQuery(query: string): string {
-	const words = query
+/** Split free text into lowercase alphanumeric tokens. Hyphens become separate tokens ("vh-109" -> "vh", "109"). */
+function tokenize(text: string): string[] {
+	return text
 		.toLowerCase()
-		.replace(/[^a-z0-9.\s-]/g, " ")
+		.replace(/[^a-z0-9\s]/g, " ")
 		.split(/\s+/)
-		.filter(Boolean);
-	const extra = new Set<string>();
-	for (const w of words) for (const syn of SYNONYMS[w] ?? []) extra.add(syn);
-	return [...words, ...extra].join(" ");
+		.filter((w) => w.length > 1);
+}
+
+/**
+ * Build a to_tsquery string: every query word must match, but a word may match through any of its
+ * synonyms. "radio poe" -> "(radio | vivid | (vh & 109)) & poe". Appending synonyms as plain words
+ * would AND them in and make every expanded query fail.
+ */
+export function expandQuery(query: string): string {
+	const groups: string[] = [];
+	for (const word of tokenize(query)) {
+		const terms = [word, ...(SYNONYMS[word] ?? [])].map((t) => {
+			const parts = tokenize(t);
+			return parts.length > 1 ? `(${parts.join(" & ")})` : (parts[0] ?? "");
+		}).filter(Boolean);
+		if (terms.length === 0) continue;
+		groups.push(terms.length > 1 ? `(${terms.join(" | ")})` : terms[0]);
+	}
+	return groups.join(" & ");
 }
 
 export type ChunkHit = Pick<TroubleshootChunk, "id" | "source" | "url" | "title" | "heading" | "body" | "source_date"> & {
@@ -82,7 +98,7 @@ export type ChunkHit = Pick<TroubleshootChunk, "id" | "source" | "url" | "title"
 export async function searchChunks(query: string, limit = 6): Promise<ChunkHit[]> {
 	const q = expandQuery(query);
 	if (!q) return [];
-	const rank = sql<number>`ts_rank_cd(${troubleshootChunks.tsv}, websearch_to_tsquery('english', ${q}))`;
+	const rank = sql<number>`ts_rank_cd(${troubleshootChunks.tsv}, to_tsquery('english', ${q}))`;
 	const rows = await db
 		.select({
 			id: troubleshootChunks.id,
@@ -95,7 +111,7 @@ export async function searchChunks(query: string, limit = 6): Promise<ChunkHit[]
 			rank,
 		})
 		.from(troubleshootChunks)
-		.where(sql`${troubleshootChunks.tsv} @@ websearch_to_tsquery('english', ${q})`)
+		.where(sql`${troubleshootChunks.tsv} @@ to_tsquery('english', ${q})`)
 		.orderBy(desc(rank))
 		.limit(limit);
 	return rows;

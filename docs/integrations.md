@@ -42,6 +42,26 @@ To receive direct Slack mentions and notifications:
 
 Once linked, you'll receive Slack DMs for notes assigned to you or that mention you.
 
+### Connect a Slack Account (history import)
+
+The Troubleshooting assistant learns from past CSA threads. Workspaces on Slack's free plan hide messages older than 90 days, and some workspaces do not allow bots. To keep those threads, a CSA can connect their own Slack account and FTA Buddy copies the channels they can read into the corpus every few hours.
+
+1. Open Settings and find **Connect Slack Account**.
+2. Tap **Connect Slack Account**, pick the workspace, and approve the read-only scopes.
+3. Back in Settings, choose which channels to copy. Leaving every box unticked copies all channels you can read.
+4. **Disconnect** removes the token. Threads already copied stay in the corpus.
+
+Team numbers, event codes and mentions are removed before anything is stored.
+
+#### Slack app config (one-time, app owner)
+
+Two changes in the FTA Buddy Slack app at api.slack.com:
+
+- **OAuth & Permissions > User Token Scopes**: add `channels:history`, `groups:history`, `channels:read`, `groups:read`, `users:read`.
+- **OAuth & Permissions > Redirect URLs**: add `https://ftabuddy.com/slack/user-oauth/callback` (and the dev host if used). Must match `SLACK_USER_REDIRECT_URI` exactly.
+
+The poller runs on one server instance (lock `troubleshoot-slack-poller`) every 3 hours plus or minus 30 minutes. Set `TROUBLESHOOT_SLACK_POLL_ENABLED=false` to stop it.
+
 ---
 
 ## Nexus

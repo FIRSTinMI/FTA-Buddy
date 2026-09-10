@@ -7,10 +7,11 @@
 
 import { eq } from "drizzle-orm";
 import { db } from "../../db/db";
-import { slackServers, slackUserTokens, type TroubleshootChunkInsert } from "../../db/schema";
+import { slackServers, slackSessionTokens, slackUserTokens, type TroubleshootChunkInsert } from "../../db/schema";
 import { acquireOrRenewLock } from "../leaderLock";
 import { redis } from "../redis";
 import { fetchTeamDomain, isAuthError, listConversations, slackApi, SlackApiError } from "../slack-user-oauth";
+import { listSessionConversations, slackWebApi, type SlackSession } from "../slack-session";
 import { upsertChunks } from "./chunks";
 import { buildThreadChunk, isThreadParent, type SlackChannelContext, type SlackMessage } from "./slack-chunks";
 
@@ -39,6 +40,12 @@ function requestGapMs(): number {
 	return Number.isFinite(n) && n >= 0 ? n : 1300;
 }
 
+/** A single paced gap with +/- 60% random jitter, so calls do not land on a fixed clock. */
+function jitteredGapMs(): number {
+	const base = requestGapMs();
+	return Math.round(base * (0.6 + Math.random() * 0.8));
+}
+
 /** Page size for history/replies. Slack caps non-Marketplace apps lower; set 15 if calls return errors. */
 function pageSize(): number {
 	const n = parseInt(process.env.TROUBLESHOOT_SLACK_PAGE_SIZE ?? "200", 10);
@@ -48,11 +55,13 @@ function pageSize(): number {
 
 // #region Types
 interface PollSource {
-	kind: "user" | "bot";
+	kind: "user" | "bot" | "session";
 	id: number;
 	teamId: string;
 	teamName: string;
 	token: string;
+	/** Present only for kind "session": browser xoxc token + `d` cookie + workspace domain. */
+	session?: SlackSession;
 	/** Explicit channel ids to poll; empty = every readable channel. */
 	channels: string[];
 	lastPolledAt: Date | null;
@@ -77,27 +86,29 @@ type HistoryPage = { messages: SlackMessage[]; has_more?: boolean; response_meta
 class Pacer {
 	requests = 0;
 	private last = 0;
-	constructor(private readonly renew: () => Promise<void>) {}
+	constructor(
+		private readonly source: PollSource,
+		private readonly renew: () => Promise<void>,
+	) {}
 
-	async call<T extends Record<string, unknown>>(
-		token: string,
-		method: string,
-		params: Record<string, string | number | undefined>,
-	) {
-		const wait = this.last + requestGapMs() - Date.now();
+	async call<T extends Record<string, unknown>>(method: string, params: Record<string, string | number | undefined>) {
+		const wait = this.last + jitteredGapMs() - Date.now();
 		if (wait > 0) await sleep(wait);
+		// Occasionally take a longer human-like break so the traffic is not a metronome.
+		if (Math.random() < 0.04) await sleep(2000 + Math.random() * 6000);
 		this.last = Date.now();
 		this.requests++;
 		if (this.requests % 20 === 0) await this.renew();
-		return slackApi<T>(token, method, params);
+		if (this.source.kind === "session" && this.source.session) return slackWebApi<T>(this.source.session, method, params);
+		return slackApi<T>(this.source.token, method, params);
 	}
 }
 
-async function fetchReplies(pacer: Pacer, token: string, channelId: string, threadTs: string): Promise<SlackMessage[]> {
+async function fetchReplies(pacer: Pacer, channelId: string, threadTs: string): Promise<SlackMessage[]> {
 	const out: SlackMessage[] = [];
 	let cursor: string | undefined;
 	do {
-		const page = await pacer.call<HistoryPage>(token, "conversations.replies", {
+		const page = await pacer.call<HistoryPage>("conversations.replies", {
 			channel: channelId,
 			ts: threadTs,
 			limit: pageSize(),
@@ -110,11 +121,11 @@ async function fetchReplies(pacer: Pacer, token: string, channelId: string, thre
 	return out.filter((m) => m.ts !== threadTs).sort((a, b) => parseFloat(a.ts) - parseFloat(b.ts));
 }
 
-async function resolveChannelNames(pacer: Pacer, token: string, channelIds: string[]): Promise<Map<string, string>> {
+async function resolveChannelNames(pacer: Pacer, channelIds: string[]): Promise<Map<string, string>> {
 	const names = new Map<string, string>();
 	for (const id of channelIds) {
 		try {
-			const info = await pacer.call<{ channel: { id: string; name: string } }>(token, "conversations.info", {
+			const info = await pacer.call<{ channel: { id: string; name: string } }>("conversations.info", {
 				channel: id,
 			});
 			names.set(id, info.channel.name);
@@ -148,7 +159,7 @@ async function pollChannel(
 	let chunks = 0;
 
 	do {
-		const page = await pacer.call<HistoryPage>(source.token, "conversations.history", {
+		const page = await pacer.call<HistoryPage>("conversations.history", {
 			channel: ctx.channelId,
 			oldest,
 			limit: pageSize(),
@@ -160,7 +171,7 @@ async function pollChannel(
 			newestSeenMs = Math.max(newestSeenMs, parseFloat(parent.ts) * 1000);
 			if (!isThreadParent(parent)) continue;
 			const replies =
-				(parent.reply_count ?? 0) > 0 ? await fetchReplies(pacer, source.token, ctx.channelId, parent.ts) : [];
+				(parent.reply_count ?? 0) > 0 ? await fetchReplies(pacer, ctx.channelId, parent.ts) : [];
 			threads++;
 			const chunk = buildThreadChunk(ctx, { parent, replies });
 			if (chunk) rows.push(chunk);
@@ -183,23 +194,34 @@ async function pollChannel(
 const teamDomains = new Map<string, string | null>();
 
 async function pollSource(source: PollSource, stats: PollStats, renew: () => Promise<void>): Promise<void> {
-	const pacer = new Pacer(renew);
+	const pacer = new Pacer(source, renew);
 	try {
-		if (!teamDomains.has(source.teamId)) teamDomains.set(source.teamId, await fetchTeamDomain(source.token));
+		if (source.kind === "session" && source.session) {
+			teamDomains.set(source.teamId, source.session.teamDomain);
+		} else if (!teamDomains.has(source.teamId)) {
+			teamDomains.set(source.teamId, await fetchTeamDomain(source.token));
+		}
 		const teamDomain = teamDomains.get(source.teamId) ?? null;
 
 		let targets: { id: string; name: string }[];
 		if (source.channels.length) {
-			const names = await resolveChannelNames(pacer, source.token, source.channels);
+			const names = await resolveChannelNames(pacer, source.channels);
 			targets = source.channels.map((id) => ({ id, name: names.get(id) ?? id }));
 		} else {
 			pacer.requests++;
-			// Bot tokens keep reading the private FiM CSA channels the bot was invited to; user tokens are public only.
-			targets = (await listConversations(source.token, source.kind === "bot" ? "public_channel,private_channel" : "public_channel"))
-				.filter((c) => c.is_member !== false)
-				.map((c) => ({ id: c.id, name: c.name }));
+			const conversations =
+				source.kind === "session" && source.session
+					? await listSessionConversations(source.session)
+					: // Bot tokens keep reading the private FiM CSA channels the bot was invited to; user tokens are public only.
+						await listConversations(source.token, source.kind === "bot" ? "public_channel,private_channel" : "public_channel");
+			targets = conversations.filter((c) => c.is_member !== false).map((c) => ({ id: c.id, name: c.name }));
 		}
 
+		// Random channel order so the read pattern is not identical every pass.
+		for (let i = targets.length - 1; i > 0; i--) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[targets[i], targets[j]] = [targets[j], targets[i]];
+		}
 		for (const ch of targets) {
 			try {
 				await pollChannel(
@@ -221,6 +243,11 @@ async function pollSource(source: PollSource, stats: PollStats, renew: () => Pro
 				.update(slackUserTokens)
 				.set({ last_polled_at: now, updated_at: now })
 				.where(eq(slackUserTokens.id, source.id));
+		} else if (source.kind === "session") {
+			await db
+				.update(slackSessionTokens)
+				.set({ last_polled_at: now, updated_at: now })
+				.where(eq(slackSessionTokens.id, source.id));
 		} else {
 			await redis.set(botPolledKey(source.teamId), String(now.getTime()));
 		}
@@ -273,6 +300,19 @@ async function loadSources(): Promise<PollSource[]> {
 			token: b.access_token,
 			channels: [],
 			lastPolledAt: polled ? new Date(parseInt(polled, 10)) : null,
+		});
+	}
+	const sessions = await db.select().from(slackSessionTokens);
+	for (const ss of sessions) {
+		out.push({
+			kind: "session",
+			id: ss.id,
+			teamId: ss.team_id,
+			teamName: ss.team_name,
+			token: ss.token,
+			session: { teamDomain: ss.team_domain, token: ss.token, cookieD: ss.cookie_d },
+			channels: ss.channels ?? [],
+			lastPolledAt: ss.last_polled_at,
 		});
 	}
 	return out;

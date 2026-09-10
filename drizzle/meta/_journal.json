@@ -183,6 +183,13 @@
       "when": 1789076848943,
       "tag": "0025_rainy_star_brand",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1789080194860,
+      "tag": "0026_wakeful_carmella_unuscione",
+      "breakpoints": true
     }
   ]
 }

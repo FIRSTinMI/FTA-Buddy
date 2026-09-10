@@ -551,6 +551,24 @@ export const slackUserTokens = pgTable("slack_user_tokens", {
 	created_at: timestamp("created_at").notNull().defaultNow(),
 	updated_at: timestamp("updated_at").notNull().defaultNow(),
 });
+
+// Session (browser) tokens for a workspace where we cannot install the app: a throwaway account's
+// xoxc token plus its `d` cookie. Read-only, polled with jitter. Kept out of git; set via admin only.
+export const slackSessionTokens = pgTable("slack_session_tokens", {
+	id: serial("id").primaryKey(),
+	team_id: varchar("team_id").notNull(),
+	team_name: varchar("team_name").notNull(),
+	// Workspace subdomain, e.g. "myworkspace" for myworkspace.slack.com. Required for the web API URL.
+	team_domain: varchar("team_domain").notNull(),
+	// xoxc-... web client token.
+	token: varchar("token").notNull(),
+	// Value of the `d` cookie exactly as stored in the browser (xoxd-..., URL-encoded). Sent verbatim.
+	cookie_d: varchar("cookie_d").notNull(),
+	channels: jsonb("channels").$type<string[]>().notNull().default([]),
+	last_polled_at: timestamp("last_polled_at"),
+	created_at: timestamp("created_at").notNull().defaultNow(),
+	updated_at: timestamp("updated_at").notNull().defaultNow(),
+});
 // #endregion
 
 export const slackServers = pgTable("slack_servers", {

@@ -41,6 +41,7 @@ import {
 	updateNoteStatusFromSlack,
 } from "./router/notes";
 import { scorekeeperRouter } from "./router/scorekeeper";
+import { slackSessionRouter } from "./router/slack-session";
 import { slackUserRouter } from "./router/slack-user";
 import { telemetryRouter } from "./router/telemetry";
 import { troubleshootRouter } from "./router/troubleshoot";
@@ -106,6 +107,7 @@ const appRouter = router({
 	scorekeeper: scorekeeperRouter,
 	troubleshoot: troubleshootRouter,
 	slackUser: slackUserRouter,
+	slackSession: slackSessionRouter,
 	app: router({
 		version: publicProcedure.query(() => {
 			return pjson.version ?? "dev";

@@ -32,11 +32,16 @@
 			"id": "all-missing",
 			"title": "Whole CAN bus is down",
 			"steps": [
-				"Check the yellow and green wires at the roboRIO CAN port. Tug test each one. Yellow is CAN High, green is CAN Low.",
-				"Power off. Measure resistance between CAN High and CAN Low at the RIO. It should read about 60 ohms. 120 ohms means one terminator is missing. Open means the bus is broken at the RIO.",
-				"Check the PDH or PDP is powered and its CAN termination jumper is ON if it is at the end of the chain.",
-				"Look at the first device after the RIO. If its lights show no CAN (Talon FX alternating red, Spark MAX flashing), the break is between it and the RIO.",
-				"Still nothing: swap the RIO CAN connector wires."
+				"Tug test the yellow and green CAN wires at the roboRIO CAN port. Yellow is CAN High, green is CAN Low.",
+				"Power off. Measure resistance across CAN High and CAN Low at the RIO. About 60 ohms is good. 120 ohms means a terminator is missing. Open means a break at the RIO.",
+				"Check the PDH or PDP is powered and its CAN termination jumper is ON if it sits at the end of the chain.",
+				"Look at the first device after the RIO. Talon FX alternating red or Spark MAX flashing means the break is between it and the RIO.",
+				{
+					"kind": "check",
+					"text": "Are devices still missing from the bus?",
+					"yes": "Swap the RIO CAN connector wires.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -62,8 +67,14 @@
 				"Find the last device that still shows up and the first that does not. The break is between them.",
 				"Tug test every crimp and connector between those two. Pull each wire, not the housing.",
 				"Confirm yellow goes to yellow and green to green at every joint. One swapped pair kills everything after it.",
-				"Re-crimp or replace the bad joint. Ferrules or a proper crimper, not twisted wire.",
-				"Measure 60 ohms across the bus again. If the far terminator is now missing, the end of the chain is still open."
+				"Re-crimp the bad joint with ferrules or a proper crimper, not twisted wire.",
+				"Measure about 60 ohms across the bus. Open at the far end means the last terminator is missing. Replace it.",
+				{
+					"kind": "check",
+					"text": "Are devices still missing?",
+					"yes": "Replace the run between the two devices.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -77,11 +88,16 @@
 			"id": "one-missing",
 			"title": "One device is missing",
 			"steps": [
-				"Check the device has power. Look at its lights. No lights means its breaker, fuse, or power wires.",
-				"Tug test its CAN pigtail on both sides. A device in the middle of the chain with one bad pigtail may still pass the bus through.",
+				"Check the device has power. No lights means its breaker, fuse, or power wires.",
+				"Tug test its CAN pigtail on both sides. A device mid-chain with one bad pigtail can still pass the bus through.",
 				"Check its ID in Tuner X or the Hardware Client. A new device ships as ID 0 or 1 and may not match the code.",
-				"Check the firmware year on the device. A device on old firmware is ignored by the new library.",
-				"Swap the device for a spare and set its ID with the team."
+				"Check the firmware year on the device. Old firmware is ignored by the new library. Update it.",
+				{
+					"kind": "check",
+					"text": "Is the device still missing from the bus?",
+					"yes": "Swap the device and set its ID with the team.",
+					"no": "Problem solved."
+				}
 			],
 			"statusLights": [
 				{ "device": "ctretalonfx", "label": "Talon FX lights" },
@@ -93,11 +109,16 @@
 			"id": "duplicate-ids",
 			"title": "Duplicate CAN IDs",
 			"steps": [
-				"Open Phoenix Tuner X. A red device card says two devices of the same model share an ID. The REV Hardware Client shows a warning too.",
-				"Two same-model devices on one ID both answer. The result is jittering, one motor moving when another should, or both missing.",
-				"Fix it one device at a time. Pull the breakers for every device except one, or unplug the bus after it, then set the ID.",
-				"Write the ID on tape on each device.",
-				"Redeploy code after changing IDs. Use your laptop with Tuner X if the team has none."
+				"Open Phoenix Tuner X. A red device card means two devices of the same model share an ID. The Hardware Client warns too.",
+				"Isolate one device at a time. Pull the breakers for the others, or unplug the bus after it.",
+				"Set a unique ID on each device. Write it on tape.",
+				"Redeploy code after changing IDs. Use your laptop with Tuner X if the team has none.",
+				{
+					"kind": "check",
+					"text": "Do devices still share an ID in Tuner X?",
+					"yes": "Isolate and re-ID the last device.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -123,9 +144,15 @@
 			"steps": [
 				"Wait for the RIO to finish booting. The CANivore enumerates over USB after boot.",
 				"Reseat the USB cable at both ends. Try the other RIO USB port.",
-				"Replace the USB cable. Long or unshielded cables fail. Keep it short and away from motor leads.",
+				"Replace the USB cable. Long or unshielded cables fail. Keep it short, away from motor leads.",
 				"Check the CANivore has power on its own lead.",
-				"If the RIO USB ports are dead (static from an unshielded extension has done this), swap the RIO."
+				"Static from an unshielded USB extension can kill both RIO USB ports. Check both ports on the RIO.",
+				{
+					"kind": "check",
+					"text": "Is the CANivore still dark or red on USB?",
+					"yes": "Swap the roboRIO.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -141,11 +168,16 @@
 			"id": "canivore-no-code",
 			"title": "CANivore sees USB, no robot program",
 			"steps": [
-				"Orange means USB is up but robot code is not running or is not using this bus.",
-				"Start the robot code. Check the DS shows Robot Code green.",
-				"Check the code uses the CANivore name (for example \"canivore\" or \"*\") in every device constructor on that bus. Devices built with no bus name go to the RIO bus.",
-				"Check Tuner X sees the CANivore with the same name the code uses.",
-				"Look at the constructor bus names with the team."
+				"Orange means USB is up but the robot code is not running or not using this bus.",
+				"Start the robot code. Confirm the DS shows Robot Code green.",
+				"Check the code uses the CANivore name in every device constructor on that bus. A blank bus name goes to the RIO bus.",
+				"Confirm Tuner X sees the CANivore with the same name the code uses.",
+				{
+					"kind": "check",
+					"text": "Are the CANivore devices still missing?",
+					"yes": "Review the constructor bus names with the team.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -160,11 +192,16 @@
 			"id": "canivore-bus",
 			"title": "CANivore is up, its bus is not",
 			"steps": [
-				"The CANivore has one built-in terminator. The far end of its bus needs a 120 ohm resistor. Measure about 60 ohms across CANH and CANL with power off.",
+				"The CANivore has one built-in terminator. The far end needs a 120 ohm resistor. Measure about 60 ohms across CANH and CANL with power off.",
 				"Tug test the CAN wires at the CANivore and along the chain.",
-				"Check the devices are on the CANivore chain, not the RIO chain. Mixed chains miss devices.",
-				"If a Talon FX shows alternating red, the bus is not reaching it.",
-				"Fix the wiring or the terminator, then check Tuner X again."
+				"Confirm the devices are on the CANivore chain, not the RIO chain. Mixed chains miss devices.",
+				"A Talon FX showing alternating red is not seeing the bus. Trace the wiring to it.",
+				{
+					"kind": "check",
+					"text": "Are devices still missing on the CANivore?",
+					"yes": "Fix the terminator or the bad joint.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -180,10 +217,16 @@
 			"title": "CAN drops when the robot moves",
 			"steps": [
 				"Tug test every CAN connector with the robot on the cart. Pull each wire, not the plug body. The one that moves is the fault.",
-				"Look for CAN wires routed across a moving joint, near a chain, or pinched under a bumper mount.",
-				"Check for a connector that is only pushed halfway in. Latching connectors should click.",
-				"Add strain relief. Tie-wrap the pigtail near each device so the crimp does not carry the load.",
-				"Measure 60 ohms across the bus. Re-crimp any joint that reads open when you wiggle it."
+				"Look for CAN wires across a moving joint, near a chain, or pinched under a bumper mount.",
+				"Push every connector fully in. Latching connectors should click.",
+				"Tie-wrap the pigtail near each device so the crimp does not carry the load.",
+				"Measure about 60 ohms across the bus. Wiggle each joint and watch for an open.",
+				{
+					"kind": "check",
+					"text": "Does the bus still drop under movement?",
+					"yes": "Re-crimp the joint that reads open.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -197,11 +240,16 @@
 			"id": "utilization",
 			"title": "CAN errors or high bus utilization",
 			"steps": [
-				"Open the DS Diagnostics tab. Utilization above about 80 percent drops frames. Errors climbing during a match means a wiring fault or an overloaded bus.",
-				"Errors that climb only when the robot moves are a loose connector. Follow the intermittent branch of this guide.",
-				"Too many devices on one bus: move the drivetrain to a CANivore, or lower status frame rates on devices the code does not read.",
-				"Check for a device on old firmware sending frames the library does not expect.",
-				"Help the team set status frame periods."
+				"Open the DS Diagnostics tab. Utilization above about 80 percent drops frames. Errors climbing during a match mean a wiring fault or an overloaded bus.",
+				"Errors that climb only when the robot moves are a loose connector. Use the intermittent branch of this guide.",
+				"Move the drivetrain to a CANivore, or lower status frame rates on devices the code does not read.",
+				"Check for a device on old firmware sending frames the library does not expect. Update it.",
+				{
+					"kind": "check",
+					"text": "Are CAN errors or utilization still high?",
+					"yes": "Set status frame periods with the team.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{

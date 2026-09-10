@@ -56,17 +56,20 @@ export const CTRE_PDP = "https://ctre.download/files/user-manual/PDP%20User's%20
 export const CTRE_PCM = "https://ctre.download/files/user-manual/PCM%20User's%20Guide.pdf";
 
 // Shared step lists for patterns that repeat across devices.
-export const CAN_WIRING_STEPS = [
+export const CAN_WIRING_STEPS: (string | FlowStep)[] = [
 	"Check the CAN wires (yellow CANH, green CANL) at this device and at its neighbours. Wiggle the connectors.",
 	"Check the bus is terminated at both ends with 120 ohm: the roboRIO or CANivore at one end, the PDP or PDH terminator at the other.",
 	"Confirm the roboRIO is powered and booted.",
-	"If only this device shows the fault while its neighbours are fine, its CAN pigtail or connector is bad. Swap the device.",
+	{ kind: "check", text: "Is only this device faulted, with its neighbours fine?", yes: "Swap the device.", no: "Continue." },
 ];
 
-export const PHOENIX_NOT_RUNNING_STEPS = [
-	"Look at the roboRIO Comm LED. Solid red means no robot code is running. Wait for boot, then have the team redeploy.",
-	"Check the code uses Phoenix and that the CAN ID and bus name match this device (Phoenix Tuner X shows what is on the bus).",
-	"If the device is on a CANivore, confirm the CANivore STAT LED is green.",
+export const PHOENIX_NOT_RUNNING_STEPS: (string | FlowStep)[] = [
+	"Look at the roboRIO Comm LED. Solid red means no robot code is running.",
+	"Have the team redeploy code once the roboRIO has booted.",
+	{ kind: "check", text: "Is the device still missing from code?", yes: "Continue.", no: "Problem solved." },
+	"Check the code uses Phoenix and that the CAN ID and bus name match this device. Phoenix Tuner X shows what is on the bus.",
+	{ kind: "check", text: "Is the device on a CANivore?", yes: "Continue.", no: "Problem solved." },
+	"Confirm the CANivore STAT LED is green.",
 ];
 
 export const CTRE_DAMAGED_STEPS = [
@@ -75,10 +78,11 @@ export const CTRE_DAMAGED_STEPS = [
 	"Swap the device and check the wiring polarity before powering the replacement.",
 ];
 
-export const CTRE_BOOTLOADER_STEPS = [
-	"The device is waiting for firmware. Field-upgrade it in Phoenix Tuner X.",
-	"If the upgrade fails, power cycle and try again over USB from the roboRIO.",
-	"If it will not take firmware, swap the device.",
+export const CTRE_BOOTLOADER_STEPS: (string | FlowStep)[] = [
+	"Field-upgrade the firmware in Phoenix Tuner X.",
+	{ kind: "check", text: "Did the upgrade fail?", yes: "Continue.", no: "Problem solved." },
+	"Power cycle and try again over USB from the roboRIO.",
+	{ kind: "check", text: "Still stuck without firmware?", yes: "Swap the device.", no: "Problem solved." },
 ];
 
 export const RIO_REIMAGE_STEPS = [

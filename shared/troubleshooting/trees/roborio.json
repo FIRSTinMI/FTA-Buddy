@@ -24,10 +24,15 @@
 			"title": "roboRIO has no power",
 			"steps": [
 				"Confirm the robot main breaker is on and the PDH or PDP shows a status light.",
-				"Tug the RIO power Weidmuller plug. Pull the wires out, strip fresh copper, and push them back in until they lock.",
-				"Check the RIO channel on the PDH or PDP. Reseat the fuse or breaker. A red channel LED on the PDH means no output.",
-				"Measure 12 V at the RIO plug with a meter. If there is 12 V and no lights, the RIO is dead.",
-				"Swap the roboRIO, image it, and set the team number."
+				"Tug the RIO power Weidmuller plug. Pull the wires, strip fresh copper, push them back in until they lock.",
+				"Check the RIO channel on the PDH or PDP. Reseat the fuse or breaker. A red channel LED means no output.",
+				"Measure 12 V at the RIO plug. 12 V with no lights means the RIO is dead.",
+				{
+					"kind": "check",
+					"text": "Is the RIO still dark with 12 V at the plug?",
+					"yes": "Swap the roboRIO, image it, set the team number.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -53,10 +58,15 @@
 			"title": "Amber Power light: brownout protection tripped",
 			"steps": [
 				"Read the battery voltage in the DS. Under 12.3 V at rest means a weak battery. Swap it for a fully charged one.",
-				"Check the DS log for voltage dips below 6.8 V when motors start. That is a brownout. Lower motor supply current limits, drive first.",
-				"Wiggle the battery connector and the main breaker lugs. Try to rotate each lug by hand. If it turns, tighten the nut.",
-				"Check the RIO power wires are on their own PDH or PDP channel, not shared with the radio or a motor.",
-				"Use the Power guide in this app for limits and breaker checks, and look at the DS log with the team."
+				"Check the DS log for dips below 6.8 V when motors start. That is a brownout. Lower motor supply current limits, drive first.",
+				"Wiggle the battery connector and main breaker lugs. Try to rotate each lug. Tighten any that turns.",
+				"Put the RIO power wires on their own PDH or PDP channel, not shared with the radio or a motor.",
+				{
+					"kind": "check",
+					"text": "Does the Power light still show amber?",
+					"yes": "Look at the DS log with the team for the limits.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -72,10 +82,15 @@
 			"title": "Red Power light: short on a user rail",
 			"steps": [
 				"Power off. Unplug everything from the RIO DIO, PWM, analog, and the 5 V and 6 V rails.",
-				"Power on with nothing connected. If the light is green now, plug devices back one at a time to find the short.",
+				"Power on with nothing connected. Green now means plug devices back one at a time to find the short.",
 				"Look for a stray wire strand or a metal chip touching the RIO pins. Clean it out.",
 				"Check any sensor cable with a crushed or pinched jacket.",
-				"If the light is red with nothing plugged in, the RIO is damaged. Swap it."
+				{
+					"kind": "check",
+					"text": "Is the Power light still red with nothing plugged in?",
+					"yes": "Swap the roboRIO.",
+					"no": "Problem solved."
+				}
 			],
 			"statusLights": [{ "device": "roborio", "label": "roboRIO status lights" }],
 			"escalate": true
@@ -116,10 +131,21 @@
 			"title": "roboRIO 2 unrecoverable error: continuous flashing",
 			"steps": [
 				"On a roboRIO 2 a Status light that flashes without pausing means it cannot boot from the microSD card.",
-				"Power off. Pull the microSD card. Look in the slot with a light for metal chips or debris. Blow it out with air. Reseat the card until it clicks.",
-				"Power on and wait 60 seconds. If it still flashes, reimage the card on a laptop with the roboRIO 2 image (balenaEtcher or Raspberry Pi Imager), then set the team number with the Imaging Tool.",
-				"If reimaging does not fix it, try a different microSD card. Cards fail.",
-				"Still flashing with a fresh card: swap the roboRIO. Repeated unrecoverable errors on the same unit have been debris in the slot."
+				"Power off. Pull the microSD card. Look in the slot for metal chips or debris. Blow it out. Reseat the card until it clicks.",
+				"Power on and wait 60 seconds.",
+				{
+					"kind": "check",
+					"text": "Is the Status light still flashing?",
+					"yes": "Continue.",
+					"no": "Problem solved."
+				},
+				"Reimage the card on a laptop with balenaEtcher or Raspberry Pi Imager, then set the team number with the Imaging Tool.",
+				{
+					"kind": "check",
+					"text": "Is it still flashing after a reimage?",
+					"yes": "Try a fresh microSD card, or swap the roboRIO.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -141,9 +167,20 @@
 			"steps": [
 				"On a roboRIO 1, 4 flashes then a pause means the software crashed twice without a reboot.",
 				"Press the reset button once. Wait 60 seconds.",
-				"If it repeats, hold reset for at least 5 seconds to boot into Safe Mode. Connect by USB and reimage with the roboRIO Imaging Tool (Format Target).",
-				"Check the RIO power wiring. Repeated crashes at power on can be a loose Weidmuller on the RIO plug.",
-				"If it will not image or keeps crashing, swap the roboRIO."
+				{
+					"kind": "check",
+					"text": "Is it still 4 flashes then a pause?",
+					"yes": "Continue.",
+					"no": "Problem solved."
+				},
+				"Hold reset at least 5 seconds to boot into Safe Mode. Connect by USB and reimage with the Imaging Tool, Format Target.",
+				"Check the RIO power wiring. A loose Weidmuller on the RIO plug can crash it at power on.",
+				{
+					"kind": "check",
+					"text": "Does it still crash or refuse to image?",
+					"yes": "Swap the roboRIO.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -160,10 +197,15 @@
 			"title": "Status blink codes: 2, 3, or 4 flashes",
 			"steps": [
 				"2 flashes: software error. Reimage the roboRIO.",
-				"3 flashes: Safe Mode. Press reset once. If it comes back in Safe Mode, reimage.",
+				"3 flashes: Safe Mode. Press reset once. Reimage if it comes back in Safe Mode.",
 				"4 flashes on a roboRIO 2: software crashed twice. Reboot. Reimage if it repeats.",
 				"Before reimaging a roboRIO 2, reseat the microSD card and check the slot for debris.",
-				"After reimaging, set the team number and redeploy code. Walk the team through it if they have never imaged a RIO."
+				{
+					"kind": "check",
+					"text": "Does the Status light still blink a code?",
+					"yes": "Reimage, set the team number, and redeploy.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -189,11 +231,16 @@
 			"id": "reach-network",
 			"title": "Check the network path to the RIO",
 			"steps": [
-				"From the DS laptop open a command prompt. Run ping 10.TE.AM.2 (team 1234 is 10.12.34.2). A reply means the network is fine and the DS setup is the problem.",
+				"From the DS laptop run ping 10.TE.AM.2 (team 1234 is 10.12.34.2). A reply means the network is fine and the DS setup is the problem.",
 				"No reply: check the RIO Ethernet cable is in the radio RIO port and both ends show link lights.",
 				"Turn off Wi-Fi and disable every adapter except the one connected to the radio. Set that adapter to DHCP.",
-				"Turn off the Windows firewall. Open the DS Diagnostics tab and check the Robot Radio and Robot ping lights.",
-				"If the radio pings (10.TE.AM.1) but the RIO does not, plug into the RIO by USB and go back to this question."
+				"Turn off the Windows firewall. Check the Robot Radio and Robot ping lights in the DS Diagnostics tab.",
+				{
+					"kind": "check",
+					"text": "Does the radio ping but the RIO does not?",
+					"yes": "Plug into the RIO by USB and test again.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -207,11 +254,16 @@
 			"id": "ethernet-dead",
 			"title": "RIO works over USB but not Ethernet",
 			"steps": [
-				"On the RIO web page over USB, check the Ethernet interface has an address. 10.TE.AM.2 through the radio, 169.254.x.x on a direct cable, or blank means no link.",
-				"Swap the Ethernet cable. Try the other radio port for a moment to prove the cable and radio are fine, then move it back to the RIO port.",
+				"On the RIO web page over USB, check the Ethernet interface has an address. Blank means no link.",
+				"Swap the Ethernet cable. Prove the cable and radio on another port, then move it back to the RIO port.",
 				"Look at the RIO port for bent pins or a broken latch tab on the plug.",
-				"If the port is dead, plug a USB Ethernet adapter into the RIO USB A port and run the radio cable to it. The RIO picks it up as a second network interface. This has got a robot through an event with a dead port.",
-				"Swap the roboRIO when there is a spare. Tell the team to contact NI for a repair."
+				"Plug a USB Ethernet adapter into the RIO USB A port and run the radio cable to it. The RIO picks it up as a second interface. This has got a robot through an event with a dead port.",
+				{
+					"kind": "check",
+					"text": "Is the RIO Ethernet port still dead?",
+					"yes": "Swap the roboRIO and contact NI for a repair.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -230,11 +282,16 @@
 			"id": "usb-dead",
 			"title": "RIO does not answer over USB or Ethernet",
 			"steps": [
-				"Try a different USB cable and a different laptop USB port. Make sure NI FRC Game Tools is installed so the USB driver exists.",
-				"Hold the reset button for at least 5 seconds to enter Safe Mode, then try the Imaging Tool over USB.",
-				"Ask if anything USB was unplugged or plugged on the robot. Unshielded USB extension cables have carried static that killed both RIO USB ports. Remove extensions and try the built-in ports again.",
-				"Check the Status light. If it flashes without pause, follow the unrecoverable error branch of this guide.",
-				"If Safe Mode does not respond either, the RIO needs replacing. Swap it."
+				"Try a different USB cable and a different laptop USB port. Make sure NI FRC Game Tools is installed so the driver exists.",
+				"Hold the reset button at least 5 seconds to enter Safe Mode, then try the Imaging Tool over USB.",
+				"Unshielded USB extensions have carried static that killed both RIO USB ports. Remove extensions and try the built-in ports.",
+				"Check the Status light. Flashing without pause means the unrecoverable branch of this guide.",
+				{
+					"kind": "check",
+					"text": "Does the RIO still not answer, even in Safe Mode?",
+					"yes": "Swap the roboRIO.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -262,8 +319,13 @@
 				"In the DS click Restart Robot Code and wait 15 seconds.",
 				"Read the DS Console. A stack trace at start means the code crashed. Fix that first.",
 				"Check the WPILib year of the code matches the RIO image year. A mismatch never runs.",
-				"Reboot the RIO. If code still does not start, redeploy from the team laptop.",
-				"Use the Code and deploy guide in this app if the team cannot find the crash."
+				"Reboot the RIO. Redeploy from the team laptop if code still does not start.",
+				{
+					"kind": "check",
+					"text": "Is the Comm light still solid red?",
+					"yes": "Find the crash in the DS Console with the team.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -281,7 +343,12 @@
 				"An E-stop stays latched until the roboRIO reboots.",
 				"On the field, the head referee or FTA clears it. Do not touch the field E-stop button.",
 				"In the pit, check nobody pressed Space in the DS. Reboot the RIO to clear it.",
-				"If it E-stops again with nobody touching the DS, look for a stuck key or a joystick mapped to the E-stop."
+				{
+					"kind": "check",
+					"text": "Does it E-stop again with nobody touching the DS?",
+					"yes": "Find a stuck key or a joystick mapped to E-stop.",
+					"no": "Problem solved."
+				}
 			],
 			"statusLights": [{ "device": "roborio", "label": "roboRIO status lights" }]
 		},
@@ -290,11 +357,16 @@
 			"id": "wont-move",
 			"title": "Comm green, code running, robot will not move",
 			"steps": [
-				"Check the Mode light. Off means disabled or brownout. Enable from the DS and watch it turn green (teleop) or orange (auto).",
-				"Check the RSL is on. A blinking RSL means enabled. No RSL means the robot is disabled or the RSL has no power.",
-				"Check the DS Joysticks light is green. Press F1 to rescan. Confirm the controller is in the USB slot the code expects.",
+				"Check the Mode light. Off means disabled or brownout. Enable from the DS and watch it go green for teleop or orange for auto.",
+				"Check the RSL is on. A blinking RSL means enabled. No RSL means disabled or the RSL has no power.",
+				"Check the DS Joysticks light is green. Press F1 to rescan. Confirm the controller is in the slot the code expects.",
 				"Watch the battery voltage when enabling. A drop under 6.8 V disables outputs. Swap the battery.",
-				"If motors still do nothing, check the CAN bus. Use the CAN guide in this app."
+				{
+					"kind": "check",
+					"text": "Are the motors still dead?",
+					"yes": "Check the CAN bus with the CAN guide.",
+					"no": "Problem solved."
+				}
 			],
 			"statusLights": [{ "device": "roborio", "label": "roboRIO status lights" }]
 		}

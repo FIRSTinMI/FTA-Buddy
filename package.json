@@ -14,6 +14,10 @@
 		"build": "cd app && bun run build",
 		"generate-migration": "drizzle-kit generate",
 		"migrate": "bun run src/db/migrate",
+		"corpus:refresh": "bun run scripts/corpus/refresh.ts",
+		"corpus:tickets": "bun run scripts/corpus/load-tickets.ts",
+		"corpus:notes": "bun run scripts/corpus/load-notes.ts",
+		"corpus:search": "bun run scripts/corpus/search.ts",
 		"format": "prettier --write ."
 	},
 	"engines": {

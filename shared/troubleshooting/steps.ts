@@ -13,13 +13,22 @@ export interface CheckStep {
 	readonly text: string;
 	/** What a "yes" means or what to do then. Defaults to "Fixed." when omitted. */
 	readonly yes?: string;
-	/** What a "no" means. Defaults to "Continue." when omitted. */
+	/** What a "no" means. Defaults to "Continue." when omitted; the parser sets "Fixed. Stop here." for still/never/not questions. */
 	readonly no?: string;
 }
 
 export type FlowStep = DoStep | CheckStep;
 
 const FIXED = "Fixed.";
+const STOP = "Fixed. Stop here.";
+
+// "If it still flashes, reimage" is a test for the fault being present: a No means the last step
+// worked. "If a NEO is attached, the type is wrong" is a plain condition: a No means keep going.
+const FAULT_PRESENT = /\b(still|never|stays|stay|not|no|cannot|can't|won't|does not|doesn't|dead|fails?|failing)\b/i;
+
+function noOutcome(condition: string): string | undefined {
+	return FAULT_PRESENT.test(condition) ? STOP : undefined;
+}
 
 function question(condition: string): string {
 	const c = condition.trim().replace(/[.:]$/, "");
@@ -41,11 +50,16 @@ function outcome(text: string): string {
 export function parseStep(sentence: string): FlowStep[] {
 	const s = sentence.trim();
 	const still = /^Still ([^:]+):\s*(.+)$/s.exec(s);
-	if (still) return [{ kind: "check", text: question(`Still ${still[1]}`), yes: outcome(still[2]) }];
+	if (still) return [{ kind: "check", text: question(`Still ${still[1]}`), yes: outcome(still[2]), no: STOP }];
 	const leadingIf = /^If ([^,:]+?)[,:]\s*(.+)$/s.exec(s);
-	if (leadingIf) return [{ kind: "check", text: question(leadingIf[1]), yes: outcome(leadingIf[2]) }];
+	if (leadingIf) return [{ kind: "check", text: question(leadingIf[1]), yes: outcome(leadingIf[2]), no: noOutcome(leadingIf[1]) }];
 	const midIf = /^(.+?\.)\s+If ([^,:]+?)[,:]\s*(.+)$/s.exec(s);
-	if (midIf) return [{ kind: "do", text: midIf[1] }, { kind: "check", text: question(midIf[2]), yes: outcome(midIf[3]) }];
+	if (midIf) {
+		return [
+			{ kind: "do", text: midIf[1] },
+			{ kind: "check", text: question(midIf[2]), yes: outcome(midIf[3]), no: noOutcome(midIf[2]) },
+		];
+	}
 	return [{ kind: "do", text: s }];
 }
 

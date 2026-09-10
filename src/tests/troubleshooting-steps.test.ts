@@ -7,18 +7,23 @@ describe("parseStep", () => {
 	});
 	test("leading If becomes a check with a yes outcome", () => {
 		expect(parseStep("If PWR stays off with known good 12 V at the radio, swap the radio.")).toEqual([
-			{ kind: "check", text: "PWR stays off with known good 12 V at the radio?", yes: "Swap the radio." },
+			{ kind: "check", text: "PWR stays off with known good 12 V at the radio?", yes: "Swap the radio.", no: "Fixed. Stop here." },
 		]);
 	});
 	test("Still X: Y becomes a check", () => {
 		expect(parseStep("Still dark: swap the radio, program it at the kiosk.")).toEqual([
-			{ kind: "check", text: "Still dark?", yes: "Swap the radio, program it at the kiosk." },
+			{ kind: "check", text: "Still dark?", yes: "Swap the radio, program it at the kiosk.", no: "Fixed. Stop here." },
 		]);
 	});
 	test("action then If splits into do + check", () => {
 		expect(parseStep("Power on. If it still flashes, reimage the card on a laptop.")).toEqual([
 			{ kind: "do", text: "Power on." },
-			{ kind: "check", text: "It still flashes?", yes: "Reimage the card on a laptop." },
+			{ kind: "check", text: "It still flashes?", yes: "Reimage the card on a laptop.", no: "Fixed. Stop here." },
+		]);
+	});
+	test("a plain condition keeps No as continue", () => {
+		expect(parseStep("If a NEO is attached, the motor type is wrong.")).toEqual([
+			{ kind: "check", text: "A NEO is attached?", yes: "The motor type is wrong.", no: undefined },
 		]);
 	});
 	test("objects pass through parseSteps", () => {

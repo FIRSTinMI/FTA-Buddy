@@ -2,6 +2,7 @@
 // No I/O here so the poller and the unit test share the same code.
 
 import type { TroubleshootChunkInsert } from "../../db/schema";
+import { staffLabel } from "./slack-staff";
 
 // #region Types
 /** Subset of a Slack message object that the builder needs. */
@@ -111,7 +112,15 @@ export function buildThreadChunk(ctx: SlackChannelContext, thread: SlackThread):
 
 	const firstLine = parentText.replace(/\s+/g, " ").trim();
 	const title = `#${ctx.channelName}: ${firstLine.slice(0, TITLE_LENGTH)}`;
-	const body = [parentText || "(no text)", ...replies.map((r) => `Reply: ${clean(r.text)}`)].join("\n");
+	// Named vendor/FIRST staff keep their attribution; everyone else is anonymous.
+	const attribute = (m: SlackMessage, text: string): string => {
+		const label = staffLabel(m.user);
+		return label ? `${label}: ${text}` : text;
+	};
+	const body = [
+		attribute(parent, parentText || "(no text)"),
+		...replies.map((r) => `Reply: ${attribute(r, clean(r.text))}`),
+	].join("\n");
 
 	return {
 		source: "slack",

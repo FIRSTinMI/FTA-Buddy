@@ -55,7 +55,7 @@
 			"id": "pit-wifi",
 			"title": "Wi-Fi in the pit",
 			"steps": [
-				"Ask the FTA whether 2.4 GHz pit Wi-Fi is on at this event. Many events turn it off.",
+				"Check whether 2.4 GHz pit Wi-Fi is on at this event. Many events turn it off.",
 				"The network name is the team number plus the suffix set at the kiosk. The password is the team's 2.4 GHz key.",
 				"Unplug Ethernet while on Wi-Fi. Two adapters on the robot network break mDNS.",
 				"Check the team number in the DS Setup tab and turn off the firewall.",
@@ -86,7 +86,7 @@
 				{
 					"kind": "check",
 					"text": "Is the DS still red on the field?",
-					"yes": "Use a loaner laptop and escalate to the FTA.",
+					"yes": "Use a loaner laptop.",
 					"no": "Problem solved."
 				}
 			],
@@ -111,7 +111,7 @@
 				{
 					"kind": "check",
 					"text": "Do comms still flicker or trip time stay high?",
-					"yes": "Report trip time and packet loss to the FTA.",
+					"yes": "Note the trip time and packet loss. The field or FMS side is suspect.",
 					"no": "Problem solved."
 				}
 			],

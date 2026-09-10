@@ -144,7 +144,7 @@
 				{
 					"kind": "check",
 					"text": "Is SYS still off?",
-					"yes": "Swap the radio and tell the FTA.",
+					"yes": "Swap the radio.",
 					"no": "Problem solved."
 				}
 			],
@@ -181,7 +181,7 @@
 				{
 					"kind": "check",
 					"text": "Is SYS still blinking once a second?",
-					"yes": "Swap the radio and escalate to the FTA to check the AP.",
+					"yes": "Swap the radio.",
 					"no": "Problem solved."
 				}
 			],
@@ -303,7 +303,7 @@
 				{
 					"kind": "check",
 					"text": "Does the kiosk still fail on this radio?",
-					"yes": "Swap the radio and tell the FTA.",
+					"yes": "Swap the radio.",
 					"no": "Problem solved."
 				}
 			],
@@ -327,7 +327,7 @@
 				{
 					"kind": "check",
 					"text": "Does everything ping but the DS stays red?",
-					"yes": "Escalate to the FTA.",
+					"yes": "The problem is on the field or FMS side, not the robot.",
 					"no": "Problem solved."
 				}
 			],
@@ -347,7 +347,7 @@
 				{
 					"kind": "check",
 					"text": "Does the radio still reboot or drop in matches?",
-					"yes": "Swap the radio and ask the FTA to watch the AP.",
+					"yes": "Swap the radio.",
 					"no": "Problem solved."
 				}
 			],
@@ -375,7 +375,7 @@
 				{
 					"kind": "check",
 					"text": "Is the network still missing?",
-					"yes": "Ask the FTA whether 2.4 GHz is enabled.",
+					"yes": "Check whether 2.4 GHz pit Wi-Fi is on at this event.",
 					"no": "Problem solved."
 				}
 			],

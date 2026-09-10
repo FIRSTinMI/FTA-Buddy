@@ -89,22 +89,32 @@
 	</div>
 
 	{#if crumbs.length > 0}
-		<ol class="flex flex-col gap-1">
+		<ol class="flex flex-col gap-1.5">
 			{#each crumbs as crumb, i (crumb.nodeId)}
 				<li>
 					<button
 						onclick={() => backTo(i)}
-						class="flex min-h-12 w-full items-center justify-between gap-2 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-left text-sm text-black hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
+						aria-label={`Change your answer to: ${crumb.question}`}
+						class="flex w-full items-start justify-between gap-3 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-left text-black hover:border-blue-400 hover:bg-blue-50 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:border-blue-500 dark:hover:bg-gray-700"
 					>
-						<span class="min-w-0">
-							<span class="block truncate text-xs text-gray-500 dark:text-gray-400">{crumb.question}</span
-							>
-							<span class="block font-medium">{crumb.answer}</span>
+						<span class="min-w-0 grow">
+							<span class="block text-xs text-gray-500 dark:text-gray-400">{crumb.question}</span>
+							<span class="block font-semibold leading-snug">{crumb.answer}</span>
 						</span>
-						<Icon icon="heroicons:arrow-uturn-left-16-solid" class="size-4 shrink-0 text-gray-500" />
+						<span class="flex shrink-0 items-center gap-1 pt-0.5 text-xs text-blue-600 dark:text-blue-400">
+							<Icon icon="heroicons:pencil-square-16-solid" class="size-4" /> Change
+						</span>
 					</button>
 				</li>
 			{/each}
+			{#if node?.kind === "question"}
+				<li
+					class="flex items-center gap-2 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500 dark:border-gray-600 dark:text-gray-400"
+				>
+					<Icon icon="heroicons:arrow-down-16-solid" class="size-4 shrink-0" />
+					<span class="leading-snug">{node.question}</span>
+				</li>
+			{/if}
 		</ol>
 	{/if}
 	<!-- #endregion -->

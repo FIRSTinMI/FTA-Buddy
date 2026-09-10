@@ -35,7 +35,7 @@
 				"Unplug the field cable from the laptop and plug it back in until it clicks. Check the other end at the player station.",
 				"Reseat the USB Ethernet adapter if the laptop uses one. Try a different USB port.",
 				"Run ncpa.cpl. Make sure the Ethernet adapter is enabled, not greyed out.",
-				"Try the spare field cable or a different player station port. Ask the FTA for one.",
+				"Try the spare field cable or a different player station port.",
 				{
 					"kind": "check",
 					"text": "Does the port still show no link?",
@@ -159,7 +159,7 @@
 				{
 					"kind": "check",
 					"text": "Is SYS still blinking after a reprogram?",
-					"yes": "Swap the radio and escalate to the FTA.",
+					"yes": "Swap the radio.",
 					"no": "Problem solved."
 				}
 			],
@@ -183,7 +183,7 @@
 				{
 					"kind": "check",
 					"text": "Do all lights still blink fast after a reprogram?",
-					"yes": "Swap the radio and tell the FTA.",
+					"yes": "Swap the radio.",
 					"no": "Problem solved."
 				}
 			],
@@ -206,7 +206,7 @@
 				{
 					"kind": "check",
 					"text": "Is the radio still red with the DS green?",
-					"yes": "Swap the radio and escalate to the FTA.",
+					"yes": "Swap the radio.",
 					"no": "Problem solved."
 				}
 			],
@@ -339,7 +339,7 @@
 				{
 					"kind": "check",
 					"text": "Does the robot still drop or lag in matches?",
-					"yes": "Report trip time and packet loss to the FTA.",
+					"yes": "Note the trip time and packet loss. The field or FMS side is suspect.",
 					"no": "Problem solved."
 				}
 			],

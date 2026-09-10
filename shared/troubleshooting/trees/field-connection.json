@@ -416,7 +416,7 @@
 			"title": "Robot loses connection during matches",
 			"steps": [
 				"Check for loose power or Ethernet wires at the radio. Reseat them. A loose connection drops the link under vibration.",
-				"Check the DS log battery voltage. The radio runs down to about 4.5 V, so a brownout rarely resets it. The roboRIO browns out first, near 6.7 V, and the threshold differs between roboRIO 1 and 2 (roboRIO 2 can be set to a custom voltage).",
+				"Check the DS log battery voltage. The radio runs down to about 4.5 V, so a brownout rarely resets it. The roboRIO browns out and disables outputs first: 6.3 V on the roboRIO 1, 6.75 V by default on the roboRIO 2 (roboRIO 2 is configurable).",
 				"Remove one power source if the radio has both PoE and the DC input. Dual power causes reboots.",
 				{
 					"kind": "check",

@@ -194,7 +194,8 @@ async function pollSource(source: PollSource, stats: PollStats, renew: () => Pro
 			targets = source.channels.map((id) => ({ id, name: names.get(id) ?? id }));
 		} else {
 			pacer.requests++;
-			targets = (await listConversations(source.token))
+			// Bot tokens keep reading the private FiM CSA channels the bot was invited to; user tokens are public only.
+			targets = (await listConversations(source.token, source.kind === "bot" ? "public_channel,private_channel" : "public_channel"))
 				.filter((c) => c.is_member !== false)
 				.map((c) => ({ id: c.id, name: c.name }));
 		}

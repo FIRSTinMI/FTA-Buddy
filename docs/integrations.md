@@ -57,7 +57,7 @@ Team numbers, event codes and mentions are removed before anything is stored.
 
 Two changes in the FTA Buddy Slack app at api.slack.com:
 
-- **OAuth & Permissions > User Token Scopes**: add `channels:history`, `groups:history`, `channels:read`, `groups:read`, `team:read`.
+- **OAuth & Permissions > User Token Scopes**: add `channels:history`, `channels:read`, `team:read`. No `groups:*` scopes: user tokens read public channels only.
 - **OAuth & Permissions > Redirect URLs**: add `https://ftabuddy.com/slack/user-oauth/callback` (and the dev host if used). Must match `SLACK_USER_REDIRECT_URI` exactly.
 
 The poller runs on one server instance (lock `troubleshoot-slack-poller`) every 3 hours plus or minus 30 minutes. Set `TROUBLESHOOT_SLACK_POLL_ENABLED=false` to stop it.

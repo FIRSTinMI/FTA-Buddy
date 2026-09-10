@@ -10,7 +10,8 @@ import { slackUserTokens } from "../db/schema";
 import { redis } from "./redis";
 
 // #region Config
-export const SLACK_USER_SCOPES = ["channels:history", "groups:history", "channels:read", "groups:read", "team:read"];
+// Public channels only. User tokens never get groups:* so a connected account cannot expose private channels.
+export const SLACK_USER_SCOPES = ["channels:history", "channels:read", "team:read"];
 
 const STATE_PREFIX = "ftabuddy:slack-user-oauth:state:";
 const STATE_TTL_SECONDS = 10 * 60;
@@ -97,7 +98,11 @@ export interface SlackConversation {
 }
 
 /** All public + private channels the token can read, following pagination. */
-export async function listConversations(token: string, excludeArchived = true): Promise<SlackConversation[]> {
+export async function listConversations(
+	token: string,
+	types: "public_channel" | "public_channel,private_channel" = "public_channel",
+	excludeArchived = true,
+): Promise<SlackConversation[]> {
 	const out: SlackConversation[] = [];
 	let cursor: string | undefined;
 	do {
@@ -105,7 +110,7 @@ export async function listConversations(token: string, excludeArchived = true): 
 			token,
 			"users.conversations",
 			{
-				types: "public_channel,private_channel",
+				types,
 				exclude_archived: excludeArchived ? "true" : "false",
 				limit: 200,
 				cursor,

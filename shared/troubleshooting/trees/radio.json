@@ -408,35 +408,19 @@
 			"escalate": true
 		},
 		"radio-ok": {
-			"kind": "leaf",
+			"kind": "question",
 			"id": "radio-ok",
-			"title": "Radio looks healthy. The problem is downstream.",
-			"steps": [
-				"SYS solid and RIO lit means the radio has the field and the RIO. Look elsewhere.",
-				"Check the DS: Enet Link, team number, FMS light. Use the Driver station guide in this app.",
-				"Check the roboRIO Comm light. Off means the RIO is not talking to the DS. Use the roboRIO guide.",
-				"Ping 10.TE.AM.2 from the DS laptop to test the RIO through the radio.",
+			"question": "The radio looks healthy, so the problem is downstream at the DS or FMS. Does the DS show FMS Connected?",
+			"options": [
 				{
-					"kind": "check",
-					"text": "Does everything ping but the DS stays red?",
-					"yes": "Continue.",
-					"no": "Problem solved."
+					"label": "No, the DS does not show FMS Connected",
+					"next": "radio-ds-fault"
 				},
-				"The robot is reachable but not getting FMS comms. Confirm the match is prestarted and watch the DS FMS light.",
 				{
-					"kind": "check",
-					"text": "Are other robots in the match also stuck red?",
-					"yes": "It is a field or FMS issue, not this robot.",
-					"no": "Have this station re-prestarted, then recheck."
+					"label": "Yes, FMS Connected but no robot communication",
+					"next": "radio-reset-net"
 				}
-			],
-			"statusLights": [
-				{
-					"device": "roborio",
-					"label": "roboRIO status lights"
-				}
-			],
-			"escalate": true
+			]
 		},
 		"reboots": {
 			"kind": "leaf",
@@ -487,6 +471,37 @@
 				{
 					"label": "Programming your radio",
 					"url": "https://docs.wpilib.org/en/stable/docs/zero-to-robot/step-3/radio-programming.html"
+				}
+			]
+		},
+		"radio-ds-fault": {
+			"kind": "leaf",
+			"id": "radio-ds-fault",
+			"title": "DS is not reaching FMS",
+			"steps": [
+				"The DS is not connected to FMS. This is a DS problem, not the radio.",
+				"Use the Driver station guide in this app and work it fully before touching FMS."
+			]
+		},
+		"radio-reset-net": {
+			"kind": "leaf",
+			"id": "radio-reset-net",
+			"title": "FMS Connected but no robot comms",
+			"steps": [
+				"Ping 10.TE.AM.2 from the DS to confirm the roboRIO is reachable through the radio.",
+				"Check the roboRIO Comm light. Off means the RIO is not talking to the DS.",
+				{
+					"kind": "check",
+					"text": "Is the RIO unreachable or the Comm light off?",
+					"yes": "Work the roboRIO side. Use the roboRIO guide.",
+					"no": "Continue."
+				},
+				"In FMS, open the prestart dropdown and choose Reset Networking.",
+				{
+					"kind": "check",
+					"text": "Did it recover?",
+					"yes": "Problem solved.",
+					"no": "View the match logs and check whether other robots are affected too."
 				}
 			]
 		}

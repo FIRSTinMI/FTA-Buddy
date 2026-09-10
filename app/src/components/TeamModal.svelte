@@ -8,7 +8,7 @@
 	import type { MonitorFrameHandler } from "../util/monitorFrameHandler";
 	import FormattedTime from "./FormattedTime.svelte";
 	import MonitorRow from "./MonitorRow.svelte";
-	import StepFlowStepper from "./troubleshoot/StepFlowStepper.svelte";
+	import StepFlowTree from "./troubleshoot/StepFlowTree.svelte";
 
 	interface Props {
 		modalOpen: boolean;
@@ -27,7 +27,7 @@
 	});
 </script>
 
-<Modal bind:open={modalOpen} size="xl" outsideclose id="team-modal" dismissable={false}>
+<Modal bind:open={modalOpen} fullscreen outsideclose id="team-modal" dismissable={false}>
 	{#snippet header()}
 		<div class="md:w-full -m-2">
 			<div class="grid grid-cols-teammodal gap-0.5 md:gap-1 lg:gap-2 mx-auto justify-center">
@@ -48,7 +48,7 @@
 				<div>
 					<p class="font-bold">Ethernet not plugged in</p>
 					<p>Unplugged <FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} /></p>
-					<StepFlowStepper steps={monitorSteps["ds-red"].steps} />
+					<StepFlowTree steps={monitorSteps["ds-red"].steps} />
 				</div>
 			{:else if modalRobot.ds === DSState.GREEN_X}
 				<div>
@@ -57,7 +57,7 @@
 						{modalRobot.improved ? "Plugged in" : "Lost FMS"}
 						<FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} />
 					</p>
-					<StepFlowStepper steps={monitorSteps["ds-green-x"].steps} />
+					<StepFlowTree steps={monitorSteps["ds-green-x"].steps} />
 				</div>
 			{:else if modalRobot.ds === DSState.MOVE_STATION}
 				<div>
@@ -68,7 +68,7 @@
 							formatter={formatTimeShort}
 						/>
 					</p>
-					<StepFlowStepper steps={monitorSteps["move-station"].steps} />
+					<StepFlowTree steps={monitorSteps["move-station"].steps} />
 				</div>
 			{:else if modalRobot.ds === DSState.WAITING}
 				<div>
@@ -79,7 +79,7 @@
 							formatter={formatTimeShort}
 						/>
 					</p>
-					<StepFlowStepper steps={monitorSteps[waitingKey(MatchStateMap[monitorFrame.field])].steps} />
+					<StepFlowTree steps={monitorSteps[waitingKey(MatchStateMap[monitorFrame.field])].steps} />
 				</div>
 			{:else if modalRobot.ds === DSState.BYPASS}
 				<div>
@@ -90,13 +90,13 @@
 				<div>
 					<p class="font-bold">Team is E-stopped</p>
 					<p><FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} /></p>
-					<StepFlowStepper steps={monitorSteps["estop"].steps} />
+					<StepFlowTree steps={monitorSteps["estop"].steps} />
 				</div>
 			{:else if modalRobot.ds === DSState.ASTOP}
 				<div>
 					<p class="font-bold">Team is A-stopped</p>
 					<p><FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} /></p>
-					<StepFlowStepper steps={monitorSteps["astop"].steps} />
+					<StepFlowTree steps={monitorSteps["astop"].steps} />
 				</div>
 			{:else if !modalRobot.radio}
 				<div>
@@ -105,7 +105,7 @@
 						{modalRobot.improved ? "DS Connected" : "Lost Radio"}
 						<FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} />
 					</p>
-					<StepFlowStepper steps={monitorSteps["no-radio"].steps} />
+					<StepFlowTree steps={monitorSteps["no-radio"].steps} />
 				</div>
 			{:else if !modalRobot.rio}
 				<div>
@@ -114,7 +114,7 @@
 						{modalRobot.improved ? "Radio Connected" : "Lost RIO"}
 						<FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} />
 					</p>
-					<StepFlowStepper steps={monitorSteps["no-rio"].steps} />
+					<StepFlowTree steps={monitorSteps["no-rio"].steps} />
 				</div>
 			{:else if !modalRobot.code}
 				<div>
@@ -123,7 +123,7 @@
 						{modalRobot.improved ? "RIO Connected" : "Lost Code"}
 						<FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} />
 					</p>
-					<StepFlowStepper steps={monitorSteps["no-code"].steps} />
+					<StepFlowTree steps={monitorSteps["no-code"].steps} />
 				</div>
 			{:else}
 				<div>

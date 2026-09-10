@@ -1,13 +1,17 @@
 <script lang="ts">
 	// Variant A, "Tree": the whole flow visible at once, laid out like the W3C alt decision tree.
-	// A check step is a question band with a No column ("Continue" down the page) and a Yes column
-	// holding the outcome. Do steps are plain numbered rows between the questions.
+	// A check step is a question band with No and Yes columns holding only an outcome: "Continue."
+	// (arrow down to the next step), "Problem solved." (green), or a terminal action. Do steps are
+	// plain numbered rows between the questions.
 	import Icon from "@iconify/svelte";
 	import { parseSteps, type FlowStep } from "../../../../shared/troubleshooting/steps";
 
 	let { steps }: { steps: readonly (string | FlowStep)[] } = $props();
 
 	let flow = $derived(parseSteps(steps));
+
+	const CONTINUE = "Continue.";
+	const SOLVED = /^(problem solved|fixed)/i;
 
 	// Number only the do steps so the count matches what a person actually does.
 	let numbered = $derived.by(() => {
@@ -32,21 +36,28 @@
 					<Icon icon="heroicons:eye-16-solid" class="mt-0.5 size-5 shrink-0 text-gray-500" />
 					<span>{step.text}</span>
 				</div>
-				<div class="grid grid-cols-[minmax(6rem,1fr)_2fr]">
-					<div class="relative bg-rose-100 px-3 py-3 dark:bg-rose-950/60">
-						<div class="font-bold">No:</div>
-						<div class="text-sm">{step.no ?? "Continue."}</div>
-						{#if i < flow.length - 1}
-							<Icon
-								icon="heroicons:arrow-down-16-solid"
-								class="absolute -bottom-2 left-1/2 size-5 -translate-x-1/2 text-rose-400"
-							/>
-						{/if}
-					</div>
-					<div class="bg-sky-100 px-3 py-3 dark:bg-sky-950/60">
-						<div class="font-bold">Yes:</div>
-						<div class="text-sm">{step.yes ?? "Fixed."}</div>
-					</div>
+				<div class="grid grid-cols-2">
+					{#each [{ label: "No", text: step.no ?? CONTINUE }, { label: "Yes", text: step.yes ?? "Problem solved." }] as col (col.label)}
+						{@const solved = SOLVED.test(col.text)}
+						{@const goesOn = col.text === CONTINUE}
+						<div
+							class={"relative px-3 py-3 " +
+								(solved
+									? "bg-green-100 dark:bg-green-950/60"
+									: goesOn
+										? "bg-gray-100 dark:bg-gray-700/60"
+										: "bg-sky-100 dark:bg-sky-950/60")}
+						>
+							<div class="font-bold">{col.label}:</div>
+							<div class="text-sm">{col.text}</div>
+							{#if goesOn && i < flow.length - 1}
+								<Icon
+									icon="heroicons:arrow-down-16-solid"
+									class="absolute -bottom-2 left-1/2 size-5 -translate-x-1/2 text-gray-500"
+								/>
+							{/if}
+						</div>
+					{/each}
 				</div>
 			</div>
 		{/if}

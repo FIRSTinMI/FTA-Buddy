@@ -1,19 +1,14 @@
 <script lang="ts">
 	import { Button, Modal } from "flowbite-svelte";
 	import { formatTimeShort } from "../../../shared/formatTime";
-	import {
-		DSState,
-		MatchState,
-		MatchStateMap,
-		ROBOT,
-		type MonitorFrame,
-		type RobotInfo,
-	} from "../../../shared/types";
+	import { DSState, MatchStateMap, ROBOT, type MonitorFrame, type RobotInfo } from "../../../shared/types";
 	import { trpc } from "../main";
 	import { navigate } from "../router";
+	import { monitorSteps, waitingKey } from "../../../shared/troubleshooting/monitor-steps";
 	import type { MonitorFrameHandler } from "../util/monitorFrameHandler";
 	import FormattedTime from "./FormattedTime.svelte";
 	import MonitorRow from "./MonitorRow.svelte";
+	import StepFlowStepper from "./troubleshoot/StepFlowStepper.svelte";
 
 	interface Props {
 		modalOpen: boolean;
@@ -53,12 +48,7 @@
 				<div>
 					<p class="font-bold">Ethernet not plugged in</p>
 					<p>Unplugged <FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} /></p>
-					<ol class="text-left list-decimal space-y-2">
-						<li>Make sure the cable is plugged into the laptop</li>
-						<li>Check if there are link lights on the port</li>
-						<li>Try a dongle</li>
-						<li>Try replacing the ethernet cable</li>
-					</ol>
+					<StepFlowStepper steps={monitorSteps["ds-red"].steps} />
 				</div>
 			{:else if modalRobot.ds === DSState.GREEN_X}
 				<div>
@@ -67,24 +57,7 @@
 						{modalRobot.improved ? "Plugged in" : "Lost FMS"}
 						<FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} />
 					</p>
-					<ol class="text-left list-decimal space-y-2">
-						<li>Make sure DS is open, and only one instance is open.</li>
-						<li>Check if there are link lights on the port.</li>
-						<li>Make sure WIFI is off.</li>
-						<li>
-							Click on the diagnostics tabs of DS, make sure firewall is green. Turn off firewalls if it's
-							not (<code>Win + R</code>,
-							<code>wf.msc</code>).
-						</li>
-						<li>Try clicking the refresh button to release and renew DHCP address.</li>
-						<li>Try a dongle.</li>
-						<li>Try restarting DS software.</li>
-						<li>
-							Go to network adapters (<code>Win + R</code>, <code>ncpa.cpl</code>). Ensure ethernet
-							adapter is enabled and auto IP config is set.
-						</li>
-						<li>If all else fails, use spare DS laptop and recommend lunch-time diagnostics.</li>
-					</ol>
+					<StepFlowStepper steps={monitorSteps["ds-green-x"].steps} />
 				</div>
 			{:else if modalRobot.ds === DSState.MOVE_STATION}
 				<div>
@@ -95,8 +68,7 @@
 							formatter={formatTimeShort}
 						/>
 					</p>
-					<p>Their DS will tell them which station to move to.</p>
-					<p>If this is during playoffs, double check with HR and Scorekeeper first.</p>
+					<StepFlowStepper steps={monitorSteps["move-station"].steps} />
 				</div>
 			{:else if modalRobot.ds === DSState.WAITING}
 				<div>
@@ -107,18 +79,7 @@
 							formatter={formatTimeShort}
 						/>
 					</p>
-					<ol class="text-left list-decimal space-y-2">
-						{#if MatchStateMap[monitorFrame.field] === MatchState.OVER}
-							<li>DS is connected but the field hasn't been prestarted yet.</li>
-						{:else if MatchStateMap[monitorFrame.field] === MatchState.PRESTART}
-							<li>Double check the schedule</li>
-							<li>If they're on the schedule, verify the DS team number is correct.</li>
-						{/if}
-						<li>
-							Known FMS bug may show this state incorrectly. Match will run as normal or re-prestart if
-							needed.
-						</li>
-					</ol>
+					<StepFlowStepper steps={monitorSteps[waitingKey(MatchStateMap[monitorFrame.field])].steps} />
 				</div>
 			{:else if modalRobot.ds === DSState.BYPASS}
 				<div>
@@ -129,18 +90,13 @@
 				<div>
 					<p class="font-bold">Team is E-stopped</p>
 					<p><FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} /></p>
-					<ol class="text-left list-decimal space-y-2">
-						<li>RIO and DS must be restarted to clear E-stop.</li>
-						<li>If HR triggered it, explain to team why.</li>
-					</ol>
+					<StepFlowStepper steps={monitorSteps["estop"].steps} />
 				</div>
 			{:else if modalRobot.ds === DSState.ASTOP}
 				<div>
 					<p class="font-bold">Team is A-stopped</p>
 					<p><FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} /></p>
-					<ol class="text-left list-decimal space-y-2">
-						<li>Clears on teleop start. Reset the button after match.</li>
-					</ol>
+					<StepFlowStepper steps={monitorSteps["astop"].steps} />
 				</div>
 			{:else if !modalRobot.radio}
 				<div>
@@ -149,11 +105,7 @@
 						{modalRobot.improved ? "DS Connected" : "Lost Radio"}
 						<FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} />
 					</p>
-					<ol class="text-left list-decimal space-y-2">
-						<li>Make sure robot is on</li>
-						<li>Check radio power (at least one green LED)</li>
-						<li>6GHz light should be blue. off = reprogram</li>
-					</ol>
+					<StepFlowStepper steps={monitorSteps["no-radio"].steps} />
 				</div>
 			{:else if !modalRobot.rio}
 				<div>
@@ -162,17 +114,7 @@
 						{modalRobot.improved ? "Radio Connected" : "Lost RIO"}
 						<FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} />
 					</p>
-					<ol class="text-left list-decimal space-y-2">
-						<li>Check RIO lights: Power (green), Status (off), Link (flashing)</li>
-						<li>Reconnect ethernet; avoid switches for testing</li>
-						<li>Try RIO power cycle</li>
-						<li>Verify team number with team number setter</li>
-						<li>
-							<p>If status flashes (RIO 2): turn off, reseat SD, power on</p>
-							<p>If persists: reimage SD or replace card. May need to redeploy code.</p>
-							<p>If RIO 1: safe mode + imaging tool. Replace if still dead.</p>
-						</li>
-					</ol>
+					<StepFlowStepper steps={monitorSteps["no-rio"].steps} />
 				</div>
 			{:else if !modalRobot.code}
 				<div>
@@ -181,10 +123,7 @@
 						{modalRobot.improved ? "RIO Connected" : "Lost Code"}
 						<FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} />
 					</p>
-					<ol class="text-left list-decimal space-y-2">
-						<li>Restart RIO (can be done from DS if RIO 2)</li>
-						<li>Check DS logs. Ask if code was recently changed or deployed.</li>
-					</ol>
+					<StepFlowStepper steps={monitorSteps["no-code"].steps} />
 				</div>
 			{:else}
 				<div>

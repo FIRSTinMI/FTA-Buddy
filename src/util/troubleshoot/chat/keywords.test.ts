@@ -23,9 +23,9 @@ describe("assistantKeywords", () => {
 });
 
 describe("messageWords / broadQuery", () => {
-	test("keeps dotted model names and joins with or", () => {
+	test("keeps dotted model names and joins with spaces", () => {
 		expect(messageWords("The roboRIO 2.0 is not booting")).toEqual(["roborio", "2.0", "booting"]);
-		expect(broadQuery("radio red light", "Power cycle the radio.")).toBe("radio or red or light or cycle or power");
+		expect(broadQuery("radio red light", "Power cycle the radio.")).toBe("radio red light cycle power");
 	});
 
 	test("returns empty when everything is a stopword", () => {

@@ -39,6 +39,7 @@ import {
 } from "./router/notes";
 import { scorekeeperRouter } from "./router/scorekeeper";
 import { telemetryRouter } from "./router/telemetry";
+import { troubleshootRouter } from "./router/troubleshoot";
 import { userRouter, generateToken } from "./router/user";
 import { adminProcedure, createContext, publicProcedure, router } from "./trpc";
 
@@ -91,6 +92,7 @@ const appRouter = router({
 	extension: extensionRouter,
 	aiReport: aiReportRouter,
 	scorekeeper: scorekeeperRouter,
+	troubleshoot: troubleshootRouter,
 	app: router({
 		version: publicProcedure.query(() => {
 			return pjson.version ?? "dev";

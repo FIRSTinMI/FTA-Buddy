@@ -10,12 +10,30 @@
 			"question": "Look at the roboRIO lights. What do you see?",
 			"help": "Lights from left: Power, Status, Radio (unused), Comm, Mode, RSL.",
 			"options": [
-				{ "label": "No lights at all", "next": "no-power" },
-				{ "label": "Power light amber or red", "next": "power-color" },
-				{ "label": "Status light blinking", "next": "which-rio" },
-				{ "label": "Comm light off, DS cannot see the robot", "next": "reach" },
-				{ "label": "Comm light red", "next": "comm-red" },
-				{ "label": "Comm green but robot will not move", "next": "wont-move" }
+				{
+					"label": "No lights at all",
+					"next": "no-power"
+				},
+				{
+					"label": "Power light amber or red",
+					"next": "power-color"
+				},
+				{
+					"label": "Status light blinking",
+					"next": "which-rio"
+				},
+				{
+					"label": "Comm light off, DS cannot see the robot",
+					"next": "reach"
+				},
+				{
+					"label": "Comm light red",
+					"next": "comm-red"
+				},
+				{
+					"label": "Comm green but robot will not move",
+					"next": "wont-move"
+				}
 			]
 		},
 		"no-power": {
@@ -40,7 +58,12 @@
 					"url": "https://docs.wpilib.org/en/stable/docs/hardware/hardware-basics/preemptive-troubleshooting.html"
 				}
 			],
-			"statusLights": [{ "device": "roborio", "label": "roboRIO status lights" }],
+			"statusLights": [
+				{
+					"device": "roborio",
+					"label": "roboRIO status lights"
+				}
+			],
 			"escalate": true
 		},
 		"power-color": {
@@ -48,8 +71,14 @@
 			"id": "power-color",
 			"question": "Is the Power light amber or red?",
 			"options": [
-				{ "label": "Amber", "next": "brownout" },
-				{ "label": "Red", "next": "rail-short" }
+				{
+					"label": "Amber",
+					"next": "brownout"
+				},
+				{
+					"label": "Red",
+					"next": "rail-short"
+				}
 			]
 		},
 		"brownout": {
@@ -74,7 +103,12 @@
 					"url": "https://docs.wpilib.org/en/stable/docs/software/roborio-info/roborio-brownouts.html"
 				}
 			],
-			"statusLights": [{ "device": "roborio", "label": "roboRIO status lights" }]
+			"statusLights": [
+				{
+					"device": "roborio",
+					"label": "roboRIO status lights"
+				}
+			]
 		},
 		"rail-short": {
 			"kind": "leaf",
@@ -92,7 +126,12 @@
 					"no": "Problem solved."
 				}
 			],
-			"statusLights": [{ "device": "roborio", "label": "roboRIO status lights" }],
+			"statusLights": [
+				{
+					"device": "roborio",
+					"label": "roboRIO status lights"
+				}
+			],
 			"escalate": true
 		},
 		"which-rio": {
@@ -101,8 +140,14 @@
 			"question": "Which roboRIO is it?",
 			"help": "roboRIO 2 has a microSD card slot on the side and a 2.0 label. roboRIO 1 has no card slot.",
 			"options": [
-				{ "label": "roboRIO 2 (has a microSD slot)", "next": "rio2-status" },
-				{ "label": "roboRIO 1 (no card slot)", "next": "rio1-status" }
+				{
+					"label": "roboRIO 2 (has a microSD slot)",
+					"next": "rio2-status"
+				},
+				{
+					"label": "roboRIO 1 (no card slot)",
+					"next": "rio1-status"
+				}
 			]
 		},
 		"rio2-status": {
@@ -110,9 +155,18 @@
 			"id": "rio2-status",
 			"question": "How is the Status light blinking?",
 			"options": [
-				{ "label": "Flashing all the time, never pauses", "next": "rio2-unrecoverable" },
-				{ "label": "Groups of 2, 3, or 4 flashes, then a pause", "next": "blink-codes" },
-				{ "label": "Stays on solid after a minute", "next": "rio2-unrecoverable" }
+				{
+					"label": "Flashing all the time, never pauses",
+					"next": "rio2-unrecoverable"
+				},
+				{
+					"label": "Groups of 2, 3, or 4 flashes, then a pause",
+					"next": "blink-codes"
+				},
+				{
+					"label": "Stays on solid after a minute",
+					"next": "rio2-unrecoverable"
+				}
 			]
 		},
 		"rio1-status": {
@@ -120,9 +174,18 @@
 			"id": "rio1-status",
 			"question": "How is the Status light blinking?",
 			"options": [
-				{ "label": "4 flashes, then a pause", "next": "rio1-unrecoverable" },
-				{ "label": "2 or 3 flashes, then a pause", "next": "blink-codes" },
-				{ "label": "Stays on solid after a minute", "next": "rio1-unrecoverable" }
+				{
+					"label": "4 flashes, then a pause",
+					"next": "rio1-unrecoverable"
+				},
+				{
+					"label": "2 or 3 flashes, then a pause",
+					"next": "blink-codes"
+				},
+				{
+					"label": "Stays on solid after a minute",
+					"next": "rio1-unrecoverable"
+				}
 			]
 		},
 		"rio2-unrecoverable": {
@@ -157,7 +220,12 @@
 					"url": "https://forums.ni.com/t5/Troubleshooting-Hardware/RoboRIO-2-stuck-in-unrecoverable-error/td-p/4256181"
 				}
 			],
-			"statusLights": [{ "device": "roborio", "label": "roboRIO status lights" }],
+			"statusLights": [
+				{
+					"device": "roborio",
+					"label": "roboRIO status lights"
+				}
+			],
 			"escalate": true
 		},
 		"rio1-unrecoverable": {
@@ -188,7 +256,12 @@
 					"url": "https://docs.wpilib.org/en/stable/docs/zero-to-robot/step-3/imaging-your-roborio.html"
 				}
 			],
-			"statusLights": [{ "device": "roborio", "label": "roboRIO status lights" }],
+			"statusLights": [
+				{
+					"device": "roborio",
+					"label": "roboRIO status lights"
+				}
+			],
 			"escalate": true
 		},
 		"blink-codes": {
@@ -213,7 +286,12 @@
 					"url": "https://docs.wpilib.org/en/stable/docs/hardware/hardware-basics/status-lights-ref.html#roborio"
 				}
 			],
-			"statusLights": [{ "device": "roborio", "label": "roboRIO status lights" }]
+			"statusLights": [
+				{
+					"device": "roborio",
+					"label": "roboRIO status lights"
+				}
+			]
 		},
 		"reach": {
 			"kind": "question",
@@ -221,9 +299,18 @@
 			"question": "Can the laptop reach the RIO at all?",
 			"help": "Test over USB first. Plug a USB A to B cable into the RIO and open http://172.22.11.2/ in a browser.",
 			"options": [
-				{ "label": "Yes over USB, no over Ethernet", "next": "ethernet-dead" },
-				{ "label": "No over USB either", "next": "usb-dead" },
-				{ "label": "Not tested yet, only tried the network", "next": "reach-network" }
+				{
+					"label": "Yes over USB, no over Ethernet",
+					"next": "ethernet-dead"
+				},
+				{
+					"label": "No over USB either",
+					"next": "usb-dead"
+				},
+				{
+					"label": "Not tested yet, only tried the network",
+					"next": "reach-network"
+				}
 			]
 		},
 		"reach-network": {
@@ -299,7 +386,12 @@
 					"url": "https://docs.wpilib.org/en/stable/docs/zero-to-robot/step-3/imaging-your-roborio.html"
 				}
 			],
-			"statusLights": [{ "device": "roborio", "label": "roboRIO status lights" }],
+			"statusLights": [
+				{
+					"device": "roborio",
+					"label": "roboRIO status lights"
+				}
+			],
 			"escalate": true
 		},
 		"comm-red": {
@@ -307,8 +399,14 @@
 			"id": "comm-red",
 			"question": "Is the Comm light solid red or blinking red?",
 			"options": [
-				{ "label": "Solid red", "next": "no-code" },
-				{ "label": "Blinking red", "next": "estop" }
+				{
+					"label": "Solid red",
+					"next": "no-code"
+				},
+				{
+					"label": "Blinking red",
+					"next": "estop"
+				}
 			]
 		},
 		"no-code": {
@@ -333,24 +431,41 @@
 					"url": "https://docs.wpilib.org/en/stable/docs/software/driverstation/driver-station-errors-warnings.html"
 				}
 			],
-			"statusLights": [{ "device": "roborio", "label": "roboRIO status lights" }]
+			"statusLights": [
+				{
+					"device": "roborio",
+					"label": "roboRIO status lights"
+				}
+			]
 		},
 		"estop": {
 			"kind": "leaf",
 			"id": "estop",
 			"title": "Blinking red Comm: E-stop is active",
 			"steps": [
-				"An E-stop stays latched until the roboRIO reboots.",
-				"On the field, the head referee or FTA clears it. Do not touch the field E-stop button.",
-				"In the pit, check nobody pressed Space in the DS. Reboot the RIO to clear it.",
+				"An E-stop stays latched until it is cleared. The robot E-stop and the field E-stop are separate. This is almost always the robot's.",
+				"Off the field the robot E-stop is the DS space bar. On the field it is the team's own E-stop button on their driver station.",
 				{
 					"kind": "check",
-					"text": "Does it E-stop again with nobody touching the DS?",
-					"yes": "Find a stuck key or a joystick mapped to E-stop.",
+					"text": "Does the team have an E-stop button on their driver station?",
+					"yes": "Make sure it is released.",
+					"no": "Continue."
+				},
+				"Clear it: reboot the roboRIO and restart the Driver Station software. Both hold a sticky E-stop.",
+				"Do both. A rebooted roboRIO that reconnects to a still-E-stopped DS drops straight back into E-stop.",
+				{
+					"kind": "check",
+					"text": "Does it E-stop again after both restart?",
+					"yes": "Find a stuck space bar or a joystick mapped to E-stop.",
 					"no": "Problem solved."
 				}
 			],
-			"statusLights": [{ "device": "roborio", "label": "roboRIO status lights" }]
+			"statusLights": [
+				{
+					"device": "roborio",
+					"label": "roboRIO status lights"
+				}
+			]
 		},
 		"wont-move": {
 			"kind": "leaf",
@@ -368,7 +483,12 @@
 					"no": "Problem solved."
 				}
 			],
-			"statusLights": [{ "device": "roborio", "label": "roboRIO status lights" }]
+			"statusLights": [
+				{
+					"device": "roborio",
+					"label": "roboRIO status lights"
+				}
+			]
 		}
 	}
 }

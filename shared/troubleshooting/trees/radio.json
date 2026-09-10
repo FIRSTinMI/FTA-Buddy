@@ -10,15 +10,42 @@
 			"question": "Look at the five lights on the radio. What do you see?",
 			"help": "Left to right: PWR, SYS, 2.4G, 6G, RIO.",
 			"options": [
-				{ "label": "PWR off", "next": "power-source" },
-				{ "label": "PWR on, SYS off", "next": "booting" },
-				{ "label": "PWR on, SYS blinking once a second", "next": "where" },
-				{ "label": "PWR on, SYS blinking very fast", "next": "flashing" },
-				{ "label": "All lights blinking fast", "next": "ap-battery" },
-				{ "label": "SYS solid, RIO light off", "next": "rio-link" },
-				{ "label": "Lights look fine but robot has no comms", "next": "programmed" },
-				{ "label": "Radio reboots or drops during a match", "next": "reboots" },
-				{ "label": "Team wants DS on Wi-Fi in the pit", "next": "ds-wifi" }
+				{
+					"label": "PWR off",
+					"next": "power-source"
+				},
+				{
+					"label": "PWR on, SYS off",
+					"next": "booting"
+				},
+				{
+					"label": "PWR on, SYS blinking once a second",
+					"next": "where"
+				},
+				{
+					"label": "PWR on, SYS blinking very fast",
+					"next": "flashing"
+				},
+				{
+					"label": "All lights blinking fast",
+					"next": "ap-battery"
+				},
+				{
+					"label": "SYS solid, RIO light off",
+					"next": "rio-link"
+				},
+				{
+					"label": "Lights look fine but robot has no comms",
+					"next": "programmed"
+				},
+				{
+					"label": "Radio reboots or drops during a match",
+					"next": "reboots"
+				},
+				{
+					"label": "Team wants DS on Wi-Fi in the pit",
+					"next": "ds-wifi"
+				}
 			]
 		},
 		"power-source": {
@@ -26,10 +53,22 @@
 			"id": "power-source",
 			"question": "How is the radio powered?",
 			"options": [
-				{ "label": "DC input (Weidmuller or barrel) only", "next": "dc-only" },
-				{ "label": "PoE on the RIO port only", "next": "poe-only" },
-				{ "label": "Both DC and PoE at the same time", "next": "dual-power" },
-				{ "label": "REV Radio Power Module (RPM)", "next": "rpm" }
+				{
+					"label": "DC input (Weidmuller or barrel) only",
+					"next": "dc-only"
+				},
+				{
+					"label": "PoE on the RIO port only",
+					"next": "poe-only"
+				},
+				{
+					"label": "Both DC and PoE at the same time",
+					"next": "dual-power"
+				},
+				{
+					"label": "REV Radio Power Module (RPM)",
+					"next": "rpm"
+				}
 			]
 		},
 		"dc-only": {
@@ -54,7 +93,12 @@
 					"url": "https://frc-radio.vivid-hosting.net/overview/wiring-your-radio"
 				}
 			],
-			"statusLights": [{ "device": "radio", "label": "Radio status lights" }],
+			"statusLights": [
+				{
+					"device": "radio",
+					"label": "Radio status lights"
+				}
+			],
 			"escalate": true
 		},
 		"poe-only": {
@@ -79,7 +123,12 @@
 					"url": "https://frc-radio.vivid-hosting.net/overview/wiring-your-radio"
 				}
 			],
-			"statusLights": [{ "device": "radio", "label": "Radio status lights" }],
+			"statusLights": [
+				{
+					"device": "radio",
+					"label": "Radio status lights"
+				}
+			],
 			"escalate": true
 		},
 		"dual-power": {
@@ -149,13 +198,21 @@
 				}
 			],
 			"links": [
-				{ "label": "Known issues", "url": "https://frc-radio.vivid-hosting.net/overview/support/known-issues" },
+				{
+					"label": "Known issues",
+					"url": "https://frc-radio.vivid-hosting.net/overview/support/known-issues"
+				},
 				{
 					"label": "Radio LED status",
 					"url": "https://frc-radio.vivid-hosting.net/overview/led-status-indications"
 				}
 			],
-			"statusLights": [{ "device": "radio", "label": "Radio status lights" }],
+			"statusLights": [
+				{
+					"device": "radio",
+					"label": "Radio status lights"
+				}
+			],
 			"escalate": true
 		},
 		"where": {
@@ -164,8 +221,14 @@
 			"question": "Where is the robot right now?",
 			"help": "SYS blinking once a second means the radio cannot ping the field access point.",
 			"options": [
-				{ "label": "On the field", "next": "field-not-linked" },
-				{ "label": "In the pit or practice area", "next": "pit-not-linked" }
+				{
+					"label": "On the field",
+					"next": "field-not-linked"
+				},
+				{
+					"label": "In the pit or practice area",
+					"next": "pit-not-linked"
+				}
 			]
 		},
 		"field-not-linked": {
@@ -195,7 +258,12 @@
 					"url": "https://fms-manual.readthedocs.io/en/latest/field-monitor/field-connectivity/connectivity-guide.html"
 				}
 			],
-			"statusLights": [{ "device": "radio", "label": "Radio status lights" }],
+			"statusLights": [
+				{
+					"device": "radio",
+					"label": "Radio status lights"
+				}
+			],
 			"escalate": true
 		},
 		"pit-not-linked": {
@@ -236,7 +304,12 @@
 					"url": "https://frc-radio.vivid-hosting.net/overview/led-status-indications"
 				}
 			],
-			"statusLights": [{ "device": "radio", "label": "Radio status lights" }]
+			"statusLights": [
+				{
+					"device": "radio",
+					"label": "Radio status lights"
+				}
+			]
 		},
 		"ap-battery": {
 			"kind": "leaf",
@@ -259,7 +332,12 @@
 					"url": "https://frc-radio.vivid-hosting.net/overview/led-status-indications"
 				}
 			],
-			"statusLights": [{ "device": "radio", "label": "Radio status lights" }]
+			"statusLights": [
+				{
+					"device": "radio",
+					"label": "Radio status lights"
+				}
+			]
 		},
 		"rio-link": {
 			"kind": "leaf",
@@ -278,17 +356,31 @@
 				}
 			],
 			"links": [
-				{ "label": "Radio ports", "url": "https://frc-radio.vivid-hosting.net/overview/wiring-your-radio" }
+				{
+					"label": "Radio ports",
+					"url": "https://frc-radio.vivid-hosting.net/overview/wiring-your-radio"
+				}
 			],
-			"statusLights": [{ "device": "radio", "label": "Radio status lights" }]
+			"statusLights": [
+				{
+					"device": "radio",
+					"label": "Radio status lights"
+				}
+			]
 		},
 		"programmed": {
 			"kind": "question",
 			"id": "programmed",
 			"question": "Was this radio programmed at this event's kiosk?",
 			"options": [
-				{ "label": "No, or not sure", "next": "reprogram" },
-				{ "label": "Yes, today", "next": "radio-ok" }
+				{
+					"label": "No, or not sure",
+					"next": "reprogram"
+				},
+				{
+					"label": "Yes, today",
+					"next": "radio-ok"
+				}
 			]
 		},
 		"reprogram": {
@@ -327,11 +419,23 @@
 				{
 					"kind": "check",
 					"text": "Does everything ping but the DS stays red?",
-					"yes": "The problem is on the field or FMS side, not the robot.",
+					"yes": "Continue.",
 					"no": "Problem solved."
+				},
+				"The robot is reachable but not getting FMS comms. Confirm the match is prestarted and watch the DS FMS light.",
+				{
+					"kind": "check",
+					"text": "Are other robots in the match also stuck red?",
+					"yes": "It is a field or FMS issue, not this robot.",
+					"no": "Have this station re-prestarted, then recheck."
 				}
 			],
-			"statusLights": [{ "device": "roborio", "label": "roboRIO status lights" }],
+			"statusLights": [
+				{
+					"device": "roborio",
+					"label": "roboRIO status lights"
+				}
+			],
 			"escalate": true
 		},
 		"reboots": {

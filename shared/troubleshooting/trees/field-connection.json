@@ -10,11 +10,26 @@
 			"question": "Look at the field monitor, left to right. What is the first thing that is not green?",
 			"help": "The DS reports every status. The radio cannot show linked until the DS is linked, and the RIO cannot show linked until the radio is.",
 			"options": [
-				{ "label": "Driver station (DS)", "next": "ds-ethernet" },
-				{ "label": "Radio", "next": "radio-lights" },
-				{ "label": "roboRIO (RIO)", "next": "rio-lights" },
-				{ "label": "All green but No Code", "next": "no-code" },
-				{ "label": "All green but the robot drops or lags in matches", "next": "drops" }
+				{
+					"label": "Driver station (DS)",
+					"next": "ds-ethernet"
+				},
+				{
+					"label": "Radio",
+					"next": "radio-lights"
+				},
+				{
+					"label": "roboRIO (RIO)",
+					"next": "rio-lights"
+				},
+				{
+					"label": "All green but No Code",
+					"next": "no-code"
+				},
+				{
+					"label": "All green but the robot drops or lags in matches",
+					"next": "drops"
+				}
 			]
 		},
 		"ds-ethernet": {
@@ -23,8 +38,14 @@
 			"question": "On the DS laptop, open the Diagnostics tab. Is Enet Link lit?",
 			"help": "Enet Link means the laptop sees something on its Ethernet port. If it is off, nothing else matters yet.",
 			"options": [
-				{ "label": "No, Enet Link is off", "next": "ds-no-ethernet" },
-				{ "label": "Yes, but FMS is still red", "next": "ds-team-number" }
+				{
+					"label": "No, Enet Link is off",
+					"next": "ds-no-ethernet"
+				},
+				{
+					"label": "Yes, but FMS is still red",
+					"next": "ds-team-number"
+				}
 			]
 		},
 		"ds-no-ethernet": {
@@ -56,8 +77,14 @@
 			"id": "ds-team-number",
 			"question": "Open the DS Setup tab. Does the team number match the team in this match?",
 			"options": [
-				{ "label": "No, wrong team number", "next": "ds-wrong-team" },
-				{ "label": "Yes, it matches", "next": "ds-no-fms" }
+				{
+					"label": "No, wrong team number",
+					"next": "ds-wrong-team"
+				},
+				{
+					"label": "Yes, it matches",
+					"next": "ds-no-fms"
+				}
 			]
 		},
 		"ds-wrong-team": {
@@ -116,10 +143,22 @@
 			"question": "Look at the radio on the robot. What do the lights show?",
 			"help": "VH-109 lights, left to right: PWR, SYS, 2.4G, 6G, RIO.",
 			"options": [
-				{ "label": "No lights at all", "next": "radio-no-power" },
-				{ "label": "PWR on, SYS blinking about once a second", "next": "radio-not-linked" },
-				{ "label": "All lights blinking fast", "next": "radio-ap-mode" },
-				{ "label": "PWR on, SYS solid", "next": "radio-linked-monitor-red" }
+				{
+					"label": "No lights at all",
+					"next": "radio-no-power"
+				},
+				{
+					"label": "PWR on, SYS blinking about once a second",
+					"next": "radio-not-linked"
+				},
+				{
+					"label": "All lights blinking fast",
+					"next": "radio-ap-mode"
+				},
+				{
+					"label": "PWR on, SYS solid",
+					"next": "radio-linked-monitor-red"
+				}
 			]
 		},
 		"radio-no-power": {
@@ -144,7 +183,12 @@
 					"url": "https://frc-radio.vivid-hosting.net/overview/wiring-your-radio"
 				}
 			],
-			"statusLights": [{ "device": "radio", "label": "Radio status lights" }],
+			"statusLights": [
+				{
+					"device": "radio",
+					"label": "Radio status lights"
+				}
+			],
 			"escalate": true
 		},
 		"radio-not-linked": {
@@ -169,7 +213,12 @@
 					"url": "https://frc-radio.vivid-hosting.net/overview/led-status-indications"
 				}
 			],
-			"statusLights": [{ "device": "radio", "label": "Radio status lights" }],
+			"statusLights": [
+				{
+					"device": "radio",
+					"label": "Radio status lights"
+				}
+			],
 			"escalate": true
 		},
 		"radio-ap-mode": {
@@ -193,7 +242,12 @@
 					"url": "https://frc-radio.vivid-hosting.net/overview/led-status-indications"
 				}
 			],
-			"statusLights": [{ "device": "radio", "label": "Radio status lights" }]
+			"statusLights": [
+				{
+					"device": "radio",
+					"label": "Radio status lights"
+				}
+			]
 		},
 		"radio-linked-monitor-red": {
 			"kind": "leaf",
@@ -210,7 +264,12 @@
 					"no": "Problem solved."
 				}
 			],
-			"statusLights": [{ "device": "radio", "label": "Radio status lights" }],
+			"statusLights": [
+				{
+					"device": "radio",
+					"label": "Radio status lights"
+				}
+			],
 			"escalate": true
 		},
 		"rio-lights": {
@@ -218,9 +277,18 @@
 			"id": "rio-lights",
 			"question": "Look at the roboRIO. What are the Power and Status lights doing?",
 			"options": [
-				{ "label": "Power green, Status off", "next": "rio-no-link" },
-				{ "label": "Status light blinking", "next": "rio-status-blink" },
-				{ "label": "Power amber, red, or off", "next": "rio-power" }
+				{
+					"label": "Power green, Status off",
+					"next": "rio-no-link"
+				},
+				{
+					"label": "Status light blinking",
+					"next": "rio-status-blink"
+				},
+				{
+					"label": "Power amber, red, or off",
+					"next": "rio-power"
+				}
 			]
 		},
 		"rio-no-link": {
@@ -245,7 +313,12 @@
 					"url": "https://docs.wpilib.org/en/stable/docs/networking/networking-introduction/roborio-network-troubleshooting.html"
 				}
 			],
-			"statusLights": [{ "device": "roborio", "label": "roboRIO status lights" }],
+			"statusLights": [
+				{
+					"device": "roborio",
+					"label": "roboRIO status lights"
+				}
+			],
 			"escalate": true
 		},
 		"rio-status-blink": {
@@ -275,7 +348,12 @@
 					"url": "https://docs.wpilib.org/en/stable/docs/hardware/hardware-basics/status-lights-ref.html#roborio"
 				}
 			],
-			"statusLights": [{ "device": "roborio", "label": "roboRIO status lights" }],
+			"statusLights": [
+				{
+					"device": "roborio",
+					"label": "roboRIO status lights"
+				}
+			],
 			"escalate": true
 		},
 		"rio-power": {
@@ -300,7 +378,12 @@
 					"url": "https://docs.wpilib.org/en/stable/docs/software/roborio-info/roborio-brownouts.html"
 				}
 			],
-			"statusLights": [{ "device": "roborio", "label": "roboRIO status lights" }],
+			"statusLights": [
+				{
+					"device": "roborio",
+					"label": "roboRIO status lights"
+				}
+			],
 			"escalate": true
 		},
 		"no-code": {
@@ -339,8 +422,16 @@
 				{
 					"kind": "check",
 					"text": "Does the robot still drop or lag in matches?",
-					"yes": "Note the trip time and packet loss. The field or FMS side is suspect.",
+					"yes": "Continue.",
 					"no": "Problem solved."
+				},
+				"Pull the match logs. Check whether other robots in the same match also had high trip time or dropped packets.",
+				"If several robots dropped, work the field, not the robot. Scan the 6 GHz spectrum near the field for rogue access points crowding the channel.",
+				{
+					"kind": "check",
+					"text": "Do the drops track the whole field or an outside source?",
+					"yes": "It is the field or RF environment, not this robot.",
+					"no": "Keep working this robot's radio, power and CAN."
 				}
 			],
 			"links": [

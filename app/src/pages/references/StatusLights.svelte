@@ -3,7 +3,7 @@
 	import StepFlowTree from "../../components/troubleshoot/StepFlowTree.svelte";
 	import { onDestroy, onMount } from "svelte";
 	import type { Action } from "svelte/action";
-	import { statusLightHelp, type StatusLightHelp, type StatusLightHelpId } from "./status-light-help";
+	import { statusLightHelp, type StatusLightHelp, type StatusLightHelpId } from "./status-light-help/index";
 
 	let enlargedSrc = $state<string | null>(null);
 	let enlargedAlt = $state<string>("");

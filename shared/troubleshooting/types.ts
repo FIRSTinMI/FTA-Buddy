@@ -1,4 +1,16 @@
 import { z } from "zod";
+import type { FlowStep } from "./steps";
+
+// A leaf step is a sentence or an explicit do/check object (see steps.ts).
+const flowStepSchema: z.ZodType<FlowStep> = z.union([
+	z.object({ kind: z.literal("do"), text: z.string().min(1) }),
+	z.object({
+		kind: z.literal("check"),
+		text: z.string().min(1),
+		yes: z.string().min(1).optional(),
+		no: z.string().min(1).optional(),
+	}),
+]);
 
 // #region Status light devices
 // Keys match the accordion sections in app/src/pages/references/StatusLights.svelte.
@@ -58,7 +70,7 @@ export const leafNodeSchema = z.object({
 	kind: z.literal("leaf"),
 	id: nodeIdSchema,
 	title: z.string().min(1),
-	steps: z.array(z.string().min(1)).min(1),
+	steps: z.array(z.union([z.string().min(1), flowStepSchema])).min(1),
 	links: z.array(linkSchema).optional(),
 	statusLights: z.array(statusLightHintSchema).optional(),
 	escalate: z.boolean().optional(),

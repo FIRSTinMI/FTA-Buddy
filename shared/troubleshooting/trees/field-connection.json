@@ -1,0 +1,294 @@
+{
+	"id": "field-connection",
+	"title": "Robot not connecting on the field",
+	"summary": "Driver station to FMS, radio link, roboRIO link. Work left to right on the field monitor.",
+	"start": "start",
+	"nodes": {
+		"start": {
+			"kind": "question",
+			"id": "start",
+			"question": "Look at the field monitor, left to right. What is the first thing that is not green?",
+			"help": "The DS reports every status. The radio cannot show linked until the DS is linked, and the RIO cannot show linked until the radio is.",
+			"options": [
+				{ "label": "Driver station (DS)", "next": "ds-ethernet" },
+				{ "label": "Radio", "next": "radio-lights" },
+				{ "label": "roboRIO (RIO)", "next": "rio-lights" },
+				{ "label": "All green but No Code", "next": "no-code" },
+				{ "label": "All green but the robot drops or lags in matches", "next": "drops" }
+			]
+		},
+		"ds-ethernet": {
+			"kind": "question",
+			"id": "ds-ethernet",
+			"question": "On the DS laptop, open the Diagnostics tab. Is Enet Link lit?",
+			"help": "Enet Link means the laptop sees something on its Ethernet port. If it is off, nothing else matters yet.",
+			"options": [
+				{ "label": "No, Enet Link is off", "next": "ds-no-ethernet" },
+				{ "label": "Yes, but FMS is still red", "next": "ds-team-number" }
+			]
+		},
+		"ds-no-ethernet": {
+			"kind": "leaf",
+			"id": "ds-no-ethernet",
+			"title": "DS laptop has no Ethernet link",
+			"steps": [
+				"Unplug the field cable from the laptop and plug it back in until it clicks. Check the other end at the player station.",
+				"If the laptop uses a USB Ethernet adapter, unplug the adapter and plug it back in. Try a different USB port.",
+				"Run ncpa.cpl. Make sure the Ethernet adapter is enabled and not disabled or greyed out.",
+				"Try the spare field cable or a different player station port. Ask the FTA for one.",
+				"If the port still shows no link, use a USB Ethernet adapter from the team or a loaner laptop. Tell the FTA."
+			],
+			"links": [
+				{
+					"label": "Field connectivity guide",
+					"url": "https://fms-manual.readthedocs.io/en/latest/field-monitor/field-connectivity/connectivity-guide.html"
+				}
+			],
+			"escalate": true
+		},
+		"ds-team-number": {
+			"kind": "question",
+			"id": "ds-team-number",
+			"question": "Open the DS Setup tab. Does the team number match the team in this match?",
+			"options": [
+				{ "label": "No, wrong team number", "next": "ds-wrong-team" },
+				{ "label": "Yes, it matches", "next": "ds-no-fms" }
+			]
+		},
+		"ds-wrong-team": {
+			"kind": "leaf",
+			"id": "ds-wrong-team",
+			"title": "Fix the team number in the DS",
+			"steps": [
+				"Type the correct team number in the Setup tab and press Enter. Click outside the box so it takes effect.",
+				"Wait about 10 seconds. The FMS light on the field monitor should turn green.",
+				"If a shared laptop is used by two teams, check it every match."
+			],
+			"links": [
+				{
+					"label": "DS setup tab",
+					"url": "https://docs.wpilib.org/en/stable/docs/software/driverstation/driver-station.html"
+				}
+			]
+		},
+		"ds-no-fms": {
+			"kind": "leaf",
+			"id": "ds-no-fms",
+			"title": "DS has link but no FMS",
+			"steps": [
+				"Make sure the FRC Driver Station software is open and is not a second copy. Close and reopen it.",
+				"Turn the Wi-Fi off with the hardware switch or Quick Settings. Disable every other network adapter in ncpa.cpl so only the field Ethernet is left.",
+				"Set the Ethernet adapter to Automatic (DHCP). On the field, FMS hands out 10.TE.AM.x addresses.",
+				"Turn off all three Windows Defender Firewall profiles (Domain, Private, Public). Remove third-party antivirus firewalls.",
+				"In an admin command prompt run ipconfig /release then ipconfig /renew.",
+				"Still red: swap to the spare field cable, then to a loaner laptop. Escalate to the FTA."
+			],
+			"links": [
+				{
+					"label": "Field connectivity guide",
+					"url": "https://fms-manual.readthedocs.io/en/latest/field-monitor/field-connectivity/connectivity-guide.html"
+				},
+				{
+					"label": "DS best practices",
+					"url": "https://docs.wpilib.org/en/stable/docs/software/driverstation/driver-station-best-practices.html"
+				}
+			],
+			"escalate": true
+		},
+		"radio-lights": {
+			"kind": "question",
+			"id": "radio-lights",
+			"question": "Look at the radio on the robot. What do the lights show?",
+			"help": "VH-109 lights, left to right: PWR, SYS, 2.4G, 6G, RIO.",
+			"options": [
+				{ "label": "No lights at all", "next": "radio-no-power" },
+				{ "label": "PWR on, SYS blinking about once a second", "next": "radio-not-linked" },
+				{ "label": "All lights blinking fast", "next": "radio-ap-mode" },
+				{ "label": "PWR on, SYS solid", "next": "radio-linked-monitor-red" }
+			]
+		},
+		"radio-no-power": {
+			"kind": "leaf",
+			"id": "radio-no-power",
+			"title": "Radio has no power",
+			"steps": [
+				"Confirm the robot is on and the main breaker is in. Check the roboRIO Power light is green.",
+				"Tug the radio power connector. Reseat the Weidmuller plug or the PoE cable in the RIO port.",
+				"Find the PDH or PDP channel that feeds the radio. Check the fuse or breaker is seated and the channel LED is not red.",
+				"If PoE and the DC input are both wired, unplug one. Use one source only.",
+				"If the radio stays dark with known good power, swap in a spare radio. Tell the FTA so it can be programmed for this event."
+			],
+			"links": [
+				{
+					"label": "Wiring your radio",
+					"url": "https://frc-radio.vivid-hosting.net/overview/wiring-your-radio"
+				}
+			],
+			"statusLights": [{ "device": "radio", "label": "Radio status lights" }],
+			"escalate": true
+		},
+		"radio-not-linked": {
+			"kind": "leaf",
+			"id": "radio-not-linked",
+			"title": "Radio is up but cannot reach the field",
+			"steps": [
+				"Wait 60 seconds after power on. The radio takes that long to boot and join the field.",
+				"Ask if the radio was programmed at this event's kiosk. A radio from a previous event or home has the wrong key. Reprogram it at the kiosk.",
+				"Make sure only one radio on the robot is powered. A spare radio left on confuses the field.",
+				"Check the DS is fully connected first. The radio cannot link until the DS is.",
+				"Still blinking after a reprogram: swap the radio and escalate to the FTA to check the field AP."
+			],
+			"links": [
+				{
+					"label": "Radio LED status",
+					"url": "https://frc-radio.vivid-hosting.net/overview/led-status-indications"
+				}
+			],
+			"statusLights": [{ "device": "radio", "label": "Radio status lights" }],
+			"escalate": true
+		},
+		"radio-ap-mode": {
+			"kind": "leaf",
+			"id": "radio-ap-mode",
+			"title": "Radio is in access point mode on battery",
+			"steps": [
+				"All lights blinking fast means the radio is set to Access Point mode and sees battery power. Wireless is off in this state.",
+				"Take the radio to the kiosk and reprogram it in Robot Radio mode for this event.",
+				"If the team has two radios, check the other one is not the AP unit by mistake.",
+				"If the lights stay this way after a reprogram, swap the radio and tell the FTA."
+			],
+			"links": [
+				{
+					"label": "Radio LED status",
+					"url": "https://frc-radio.vivid-hosting.net/overview/led-status-indications"
+				}
+			],
+			"statusLights": [{ "device": "radio", "label": "Radio status lights" }]
+		},
+		"radio-linked-monitor-red": {
+			"kind": "leaf",
+			"id": "radio-linked-monitor-red",
+			"title": "Radio pings the field but the monitor shows it red",
+			"steps": [
+				"SYS solid means the radio can ping the field. The monitor turns green only after the DS is fully connected.",
+				"Go back to the DS. Confirm Enet Link, team number, and FMS green.",
+				"Wait 20 seconds after the DS turns green. The radio column follows.",
+				"If the DS is green and the radio stays red, swap the radio and escalate to the FTA."
+			],
+			"statusLights": [{ "device": "radio", "label": "Radio status lights" }],
+			"escalate": true
+		},
+		"rio-lights": {
+			"kind": "question",
+			"id": "rio-lights",
+			"question": "Look at the roboRIO. What are the Power and Status lights doing?",
+			"options": [
+				{ "label": "Power green, Status off", "next": "rio-no-link" },
+				{ "label": "Status light blinking", "next": "rio-status-blink" },
+				{ "label": "Power amber, red, or off", "next": "rio-power" }
+			]
+		},
+		"rio-no-link": {
+			"kind": "leaf",
+			"id": "rio-no-link",
+			"title": "roboRIO booted but has no link to the radio",
+			"steps": [
+				"Check the Ethernet cable from the RIO goes into the radio port labeled RIO, not AUX or DS.",
+				"Look for link lights at both Ethernet ends. Reseat both plugs. A cable with a broken latch clip must be replaced.",
+				"Swap the Ethernet cable for a known good one.",
+				"If the RIO Ethernet port shows no link with a good cable, plug a USB Ethernet adapter into the RIO USB port and connect the radio to it. This has got robots on the field with a dead port.",
+				"Press the reset button on the RIO. If nothing changes, swap the roboRIO and call the CSA."
+			],
+			"links": [
+				{
+					"label": "roboRIO network troubleshooting",
+					"url": "https://docs.wpilib.org/en/stable/docs/networking/networking-introduction/roborio-network-troubleshooting.html"
+				}
+			],
+			"statusLights": [{ "device": "roborio", "label": "roboRIO status lights" }],
+			"escalate": true
+		},
+		"rio-status-blink": {
+			"kind": "leaf",
+			"id": "rio-status-blink",
+			"title": "roboRIO Status light is blinking",
+			"steps": [
+				"A blinking Status light after boot means the RIO is not running normally. Count the blinks.",
+				"roboRIO 2: pull the microSD card, check the slot for debris, reseat it fully. Reboot.",
+				"Groups of 2 or 3 blinks: reboot. If it repeats, reimage the RIO.",
+				"Constant flashing (RIO 2) or 4 flashes then a pause (RIO 1): unrecoverable. Reimage the card or the RIO. If that fails, swap the roboRIO.",
+				"Use the roboRIO guide in this app for the full breakdown. Call the CSA if the team has no spare."
+			],
+			"links": [
+				{
+					"label": "roboRIO status lights",
+					"url": "https://docs.wpilib.org/en/stable/docs/hardware/hardware-basics/status-lights-ref.html#roborio"
+				}
+			],
+			"statusLights": [{ "device": "roborio", "label": "roboRIO status lights" }],
+			"escalate": true
+		},
+		"rio-power": {
+			"kind": "leaf",
+			"id": "rio-power",
+			"title": "roboRIO power problem",
+			"steps": [
+				"Off: check the RIO power Weidmuller plug and the PDH or PDP RIO channel fuse. Tug test the wires.",
+				"Amber: brownout. Check battery voltage in the DS. Swap to a fully charged battery.",
+				"Red: short on a user rail. Unplug everything from the RIO power rails and DIO, then power cycle.",
+				"Check the main breaker lug nuts and battery connector are tight. Loose main power causes both amber and off.",
+				"If the light stays red with nothing plugged in, swap the roboRIO and call the CSA."
+			],
+			"links": [
+				{
+					"label": "roboRIO brownouts",
+					"url": "https://docs.wpilib.org/en/stable/docs/software/roborio-info/roborio-brownouts.html"
+				}
+			],
+			"statusLights": [{ "device": "roborio", "label": "roboRIO status lights" }],
+			"escalate": true
+		},
+		"no-code": {
+			"kind": "leaf",
+			"id": "no-code",
+			"title": "Everything green but No Code",
+			"steps": [
+				"In the DS, click Restart Robot Code. Wait 15 seconds.",
+				"Ask if the code changed since it last worked. Check the DS Console for a stack trace or a crash message.",
+				"Reboot the roboRIO from the DS or with the reset button. Wait for the Status light to turn off.",
+				"If the code was deployed with a different WPILib year than the RIO image, it will not run. Redeploy.",
+				"Use the Code and deploy guide in this app. Hand off to the CSA if it still shows No Code."
+			],
+			"links": [
+				{
+					"label": "DS errors and warnings",
+					"url": "https://docs.wpilib.org/en/stable/docs/software/driverstation/driver-station-errors-warnings.html"
+				}
+			],
+			"escalate": true
+		},
+		"drops": {
+			"kind": "leaf",
+			"id": "drops",
+			"title": "Robot connects but drops or lags during matches",
+			"steps": [
+				"Check where the radio is mounted. It should be near the top of the robot, in the open, away from motors and not inside a metal box or a 3D printed enclosure.",
+				"Tug the radio power and Ethernet plugs. A loose Weidmuller or a cable without a latch drops the link under vibration. Tie-wrap the power cable.",
+				"If the radio is powered by both PoE and the DC input, remove one. Dual power from two sources causes reboots.",
+				"Check the DS log for battery voltage dips under 7 V. A brownout resets the radio if it is on a poor supply. Lower motor current limits.",
+				"Check the DS for high trip time or packet loss and let the FTA know so they can watch the AP side."
+			],
+			"links": [
+				{
+					"label": "Radio FAQ",
+					"url": "https://frc-radio.vivid-hosting.net/overview/support/frequently-asked-questions"
+				},
+				{
+					"label": "Preemptive troubleshooting",
+					"url": "https://docs.wpilib.org/en/stable/docs/hardware/hardware-basics/preemptive-troubleshooting.html"
+				}
+			],
+			"escalate": true
+		}
+	}
+}

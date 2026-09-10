@@ -193,6 +193,7 @@
 		const isPublicLog = currentPath.startsWith("/logs/") && currentPath.split("/")[3]?.length == 36;
 		const isPublicNoteCreate = currentPath.startsWith("/notepad/submit/");
 		const isJoinLink = currentPath.startsWith("/join/");
+		const isTroubleshoot = currentPath.startsWith("/troubleshoot");
 
 		// if user has event token and is trying to access a page that requires an event token
 		if (
@@ -206,7 +207,7 @@
 
 		if (!publicPaths.includes(currentPath)) {
 			//user trying to acces protected page
-			if (!isPublicLog && !isPublicNoteCreate && !isJoinLink) {
+			if (!isPublicLog && !isPublicNoteCreate && !isJoinLink && !isTroubleshoot) {
 				//page is not public log or public note creation page
 				if (!$user.token || !$user.eventToken) {
 					navigate("/manage/login"); //user is either not logged in or does not have event token

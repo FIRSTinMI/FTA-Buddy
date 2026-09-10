@@ -1,0 +1,227 @@
+{
+	"id": "power",
+	"title": "Power",
+	"summary": "Main breaker trips, brownouts, Kraken current limits, loose PDH and breaker terminals, battery.",
+	"start": "start",
+	"nodes": {
+		"start": {
+			"kind": "question",
+			"id": "start",
+			"question": "What happened?",
+			"options": [
+				{ "label": "Main breaker tripped in a match", "next": "drive-motors" },
+				{ "label": "Robot browned out or stuttered", "next": "battery-voltage" },
+				{ "label": "Robot is dead, no lights anywhere", "next": "dead" },
+				{ "label": "One device or channel has no power", "next": "channel" },
+				{ "label": "Radio or RIO reboots when the robot drives", "next": "reboot-under-load" },
+				{ "label": "PDH status light is not green", "next": "pdh-lights" }
+			]
+		},
+		"drive-motors": {
+			"kind": "question",
+			"id": "drive-motors",
+			"question": "Does the drivetrain use Kraken X60 or Falcon (Talon FX) motors?",
+			"options": [
+				{ "label": "Yes", "next": "kraken-limits" },
+				{ "label": "No, or not sure", "next": "main-breaker-other" }
+			]
+		},
+		"kraken-limits": {
+			"kind": "leaf",
+			"id": "kraken-limits",
+			"title": "Main breaker trip: Kraken supply current limits",
+			"steps": [
+				"Nearly every main breaker trip this season was Kraken or Falcon drive motors left on the default 70 A supply current limit. Eight swerve motors at 70 A is far more than the 120 A main breaker holds.",
+				"Ask the team to set SupplyCurrentLimit on the drive motors to 50 to 60 A with SupplyCurrentLimitEnable true. Steer motors 20 to 30 A. Check the limits in Phoenix Tuner X config after deploy.",
+				"A stator limit (default 120 A) does not protect the breaker on its own. The supply limit is the one that matters here.",
+				"Check the breaker lugs. Try to rotate each crimped lug. If it turns, tighten the nut. A hot loose lug trips early.",
+				"Redeploy, run the drivetrain against a wall for a few seconds, and watch total current in the DS log or PDH.",
+				"Still tripping after lower limits: check the breaker age and the battery leads, then call the CSA."
+			],
+			"links": [
+				{
+					"label": "CTRE current limits",
+					"url": "https://v6.docs.ctr-electronics.com/en/stable/docs/hardware-reference/talonfx/improving-performance-with-current-limits.html"
+				},
+				{
+					"label": "Preemptive troubleshooting",
+					"url": "https://docs.wpilib.org/en/stable/docs/hardware/hardware-basics/preemptive-troubleshooting.html"
+				}
+			],
+			"escalate": true
+		},
+		"main-breaker-other": {
+			"kind": "leaf",
+			"id": "main-breaker-other",
+			"title": "Main breaker trip: other causes",
+			"steps": [
+				"Try to rotate each lug on the main breaker by hand. If it turns, the nut is loose. Tighten it. Loose lugs heat the breaker and it trips below rating.",
+				"Check the battery connector and the battery leads. Wiggle them. Tie-wrap the connector halves together.",
+				"Ask what the robot was doing when it tripped. Stalled arm, pinned drivetrain, or a mechanism against a hard stop draws full stall current.",
+				"Set supply current limits on every drive and mechanism motor. Spark MAX: smart current limit 40 to 60 A on drive. Talon FX: supply limit 50 to 60 A.",
+				"Breakers age. One that has tripped many times trips easier. Swap it for a new 120 A breaker.",
+				"Call the CSA if the team cannot find where the current goes."
+			],
+			"links": [
+				{
+					"label": "Preemptive troubleshooting",
+					"url": "https://docs.wpilib.org/en/stable/docs/hardware/hardware-basics/preemptive-troubleshooting.html"
+				},
+				{
+					"label": "roboRIO brownouts",
+					"url": "https://docs.wpilib.org/en/stable/docs/software/roborio-info/roborio-brownouts.html"
+				}
+			],
+			"escalate": true
+		},
+		"battery-voltage": {
+			"kind": "question",
+			"id": "battery-voltage",
+			"question": "What does the DS show for battery voltage with the robot disabled and resting?",
+			"options": [
+				{ "label": "Below 12.3 V", "next": "weak-battery" },
+				{ "label": "12.3 V or higher", "next": "brownout-wiring" }
+			]
+		},
+		"weak-battery": {
+			"kind": "leaf",
+			"id": "weak-battery",
+			"title": "Weak battery",
+			"steps": [
+				"Swap to a fully charged battery. A good battery rests at 12.5 V or more.",
+				"Ask if the battery has been dropped or is more than 2 seasons old. Retire it.",
+				"Check the battery leads and connector. A loose crimp reads low under load even on a full battery.",
+				"Use a battery beak or load tester if the team has one. Under 12.0 V loaded means retire it.",
+				"Tell the team to charge every battery before each match."
+			],
+			"links": [
+				{
+					"label": "roboRIO brownouts",
+					"url": "https://docs.wpilib.org/en/stable/docs/software/roborio-info/roborio-brownouts.html"
+				}
+			]
+		},
+		"brownout-wiring": {
+			"kind": "leaf",
+			"id": "brownout-wiring",
+			"title": "Brownout with a good battery",
+			"steps": [
+				"Open the DS log. Find the voltage dip. Under 6.8 V the RIO starts cutting outputs. Under 6.3 V (RIO 1) or 6.75 V (RIO 2 default) everything disables.",
+				"Wiggle the battery connector and main breaker lugs. Try to rotate each lug. Loose main power is the most common cause after motors.",
+				"Squeeze the wires at the PDH or PDP main terminals. Confirm the bolts are tight with split washers.",
+				"Lower motor supply current limits. Drive first, then any mechanism that starts from stall.",
+				"Check the RIO is on its own channel. A shared channel with a motor pulls it down.",
+				"Escalate to the CSA if the dip happens with all motors idle."
+			],
+			"links": [
+				{
+					"label": "roboRIO brownouts",
+					"url": "https://docs.wpilib.org/en/stable/docs/software/roborio-info/roborio-brownouts.html"
+				},
+				{
+					"label": "Preemptive troubleshooting",
+					"url": "https://docs.wpilib.org/en/stable/docs/hardware/hardware-basics/preemptive-troubleshooting.html"
+				}
+			],
+			"statusLights": [{ "device": "roborio", "label": "roboRIO Power light" }],
+			"escalate": true
+		},
+		"dead": {
+			"kind": "question",
+			"id": "dead",
+			"question": "Is the main breaker pushed in and the battery connector fully mated?",
+			"options": [
+				{ "label": "Yes, both", "next": "dead-robot" },
+				{ "label": "No, one was out", "next": "dead-fixed" }
+			]
+		},
+		"dead-fixed": {
+			"kind": "leaf",
+			"id": "dead-fixed",
+			"title": "Breaker or battery was not connected",
+			"steps": [
+				"Push the main breaker in until it clicks. Mate the battery connector until it seats.",
+				"Tie-wrap the battery connector halves together so it cannot pull apart in a match.",
+				"Check the breaker lever does not sit half way. A tripped breaker sits between on and off."
+			]
+		},
+		"dead-robot": {
+			"kind": "leaf",
+			"id": "dead-robot",
+			"title": "Robot dead with breaker in and battery connected",
+			"steps": [
+				"Check the battery with a meter at the terminals. Under 10 V is a dead battery. Swap it.",
+				"Measure from the battery through the breaker to the PDH or PDP. No voltage after the breaker means a dead breaker or a broken lug crimp.",
+				"Look at the PDH or PDP status LED. Dark with 12 V on the main terminals means the board is dead or reverse polarity.",
+				"Check for a wire that pulled out of the main terminal or a broken battery lead crimp.",
+				"Swap the breaker. If the PDH stays dark, call the CSA."
+			],
+			"statusLights": [
+				{ "device": "revpowerdistributionhub", "label": "PDH lights" },
+				{ "device": "ctrepowerdistributionpanel", "label": "PDP lights" }
+			],
+			"escalate": true
+		},
+		"channel": {
+			"kind": "leaf",
+			"id": "channel",
+			"title": "One channel has no power",
+			"steps": [
+				"On the PDH, a red channel LED means no voltage and a fault. Check the breaker is pushed in all the way or the fuse is seated.",
+				"A blinking red channel LED is a sticky fault from an earlier trip. Push the breaker in and clear faults.",
+				"Tug the Weidmuller wires on that channel. Pull, strip, and reseat.",
+				"Swap the breaker or fuse with a known good one of the same rating.",
+				"On the PDH, the switchable channel is off until code turns it on. Check the team is not using it for something that must always be on."
+			],
+			"links": [
+				{ "label": "REV PDH status LEDs", "url": "https://docs.revrobotics.com/ion-control/pdh/status-led" },
+				{
+					"label": "REV PDH troubleshooting",
+					"url": "https://docs.revrobotics.com/ion-control/pdh/troubleshooting"
+				}
+			],
+			"statusLights": [{ "device": "revpowerdistributionhub", "label": "PDH lights" }]
+		},
+		"reboot-under-load": {
+			"kind": "leaf",
+			"id": "reboot-under-load",
+			"title": "Radio or RIO reboots under load",
+			"steps": [
+				"Squeeze and wiggle the wires at the PDH or PDP main terminals and the main breaker. A loose terminal drops voltage when motors pull current.",
+				"Tug the RIO and radio power plugs. Reseat with fresh stripped copper. Tie-wrap the cables.",
+				"If the radio has PoE and DC power at the same time, remove one.",
+				"Check the DS log for the voltage dip. Under 6.3 V the RIO can reset. Lower motor supply current limits.",
+				"Put the RIO and radio on their own channels. Not shared with a motor or compressor.",
+				"Still rebooting: swap the battery, then the breaker. Call the CSA."
+			],
+			"links": [
+				{
+					"label": "Preemptive troubleshooting",
+					"url": "https://docs.wpilib.org/en/stable/docs/hardware/hardware-basics/preemptive-troubleshooting.html"
+				},
+				{
+					"label": "Wiring your radio",
+					"url": "https://frc-radio.vivid-hosting.net/overview/wiring-your-radio"
+				}
+			],
+			"escalate": true
+		},
+		"pdh-lights": {
+			"kind": "leaf",
+			"id": "pdh-lights",
+			"title": "PDH status light",
+			"steps": [
+				"Blue solid: powered, no CAN comms. Check the CAN wires and that robot code is running.",
+				"Orange and yellow blinking: CAN fault. Check the bus and the PDH termination jumper.",
+				"Orange and blue blinking: low battery. Swap the battery.",
+				"Orange and magenta blinking: over current on the board. Find the stalled device.",
+				"Magenta blinking: keep alive timeout. Code stopped talking to it. Restart robot code.",
+				"Use the Status Lights reference for the full table. Call the CSA for a hardware fault (orange and cyan)."
+			],
+			"links": [
+				{ "label": "REV PDH status LEDs", "url": "https://docs.revrobotics.com/ion-control/pdh/status-led" }
+			],
+			"statusLights": [{ "device": "revpowerdistributionhub", "label": "PDH lights" }]
+		}
+	}
+}

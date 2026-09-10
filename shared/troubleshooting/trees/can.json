@@ -1,0 +1,214 @@
+{
+	"id": "can",
+	"title": "CAN bus",
+	"summary": "Bus breaks, duplicate ids, CANivore, termination, loose connectors.",
+	"start": "start",
+	"nodes": {
+		"start": {
+			"kind": "question",
+			"id": "start",
+			"question": "What is the symptom?",
+			"help": "Check in Phoenix Tuner X, the REV Hardware Client, or the DS Diagnostics tab.",
+			"options": [
+				{ "label": "Devices missing from the bus", "next": "how-many" },
+				{ "label": "Two devices move together or one flickers", "next": "duplicate-ids" },
+				{ "label": "Devices on a CANivore are missing", "next": "canivore-light" },
+				{ "label": "Works on the cart, drops when the robot moves", "next": "intermittent" },
+				{ "label": "DS shows CAN errors or bus utilization near 100 percent", "next": "utilization" }
+			]
+		},
+		"how-many": {
+			"kind": "question",
+			"id": "how-many",
+			"question": "How many devices are missing?",
+			"options": [
+				{ "label": "All of them", "next": "all-missing" },
+				{ "label": "Everything after one point in the chain", "next": "chain-break" },
+				{ "label": "Just one", "next": "one-missing" }
+			]
+		},
+		"all-missing": {
+			"kind": "leaf",
+			"id": "all-missing",
+			"title": "Whole CAN bus is down",
+			"steps": [
+				"Check the yellow and green wires at the roboRIO CAN port. Tug test each one. Yellow is CAN High, green is CAN Low.",
+				"Power off. Measure resistance between CAN High and CAN Low at the RIO. It should read about 60 ohms. 120 ohms means one terminator is missing. Open means the bus is broken at the RIO.",
+				"Check the PDH or PDP is powered and its CAN termination jumper is ON if it is at the end of the chain.",
+				"Look at the first device after the RIO. If its lights show no CAN (Talon FX alternating red, Spark MAX flashing), the break is between it and the RIO.",
+				"Still nothing: swap the RIO CAN connector wires and call the CSA."
+			],
+			"links": [
+				{
+					"label": "CAN wiring basics",
+					"url": "https://docs.wpilib.org/en/stable/docs/hardware/hardware-basics/can-wiring-basics.html"
+				},
+				{
+					"label": "CTRE CAN bus troubleshooting",
+					"url": "https://v6.docs.ctr-electronics.com/en/stable/docs/troubleshooting/canbus-troubleshooting.html"
+				}
+			],
+			"statusLights": [
+				{ "device": "ctretalonfx", "label": "Talon FX lights" },
+				{ "device": "revsparkmax", "label": "Spark MAX lights" }
+			],
+			"escalate": true
+		},
+		"chain-break": {
+			"kind": "leaf",
+			"id": "chain-break",
+			"title": "Chain is broken at one point",
+			"steps": [
+				"Find the last device that still shows up and the first that does not. The break is between them.",
+				"Tug test every crimp and connector between those two. Pull each wire, not the housing.",
+				"Confirm yellow goes to yellow and green to green at every joint. One swapped pair kills everything after it.",
+				"Re-crimp or replace the bad joint. Ferrules or a proper crimper, not twisted wire.",
+				"Measure 60 ohms across the bus again. If the far terminator is now missing, the end of the chain is still open."
+			],
+			"links": [
+				{
+					"label": "CTRE CAN bus troubleshooting",
+					"url": "https://v6.docs.ctr-electronics.com/en/stable/docs/troubleshooting/canbus-troubleshooting.html"
+				}
+			]
+		},
+		"one-missing": {
+			"kind": "leaf",
+			"id": "one-missing",
+			"title": "One device is missing",
+			"steps": [
+				"Check the device has power. Look at its lights. No lights means its breaker, fuse, or power wires.",
+				"Tug test its CAN pigtail on both sides. A device in the middle of the chain with one bad pigtail may still pass the bus through.",
+				"Check its ID in Tuner X or the Hardware Client. A new device ships as ID 0 or 1 and may not match the code.",
+				"Check the firmware year on the device. A device on old firmware is ignored by the new library.",
+				"Swap the device for a spare and set its ID. Call the CSA if the team cannot set IDs."
+			],
+			"statusLights": [
+				{ "device": "ctretalonfx", "label": "Talon FX lights" },
+				{ "device": "revsparkmax", "label": "Spark MAX lights" }
+			]
+		},
+		"duplicate-ids": {
+			"kind": "leaf",
+			"id": "duplicate-ids",
+			"title": "Duplicate CAN IDs",
+			"steps": [
+				"Open Phoenix Tuner X. A red device card says two devices of the same model share an ID. The REV Hardware Client shows a warning too.",
+				"Two same-model devices on one ID both answer. The result is jittering, one motor moving when another should, or both missing.",
+				"Fix it one device at a time. Pull the breakers for every device except one, or unplug the bus after it, then set the ID.",
+				"Write the ID on tape on each device.",
+				"Redeploy code after changing IDs. Ask the CSA if the team has no laptop with Tuner X."
+			],
+			"links": [
+				{
+					"label": "CTRE CAN bus troubleshooting",
+					"url": "https://v6.docs.ctr-electronics.com/en/stable/docs/troubleshooting/canbus-troubleshooting.html"
+				}
+			]
+		},
+		"canivore-light": {
+			"kind": "question",
+			"id": "canivore-light",
+			"question": "What is the CANivore STAT light doing?",
+			"options": [
+				{ "label": "Red or fast red strobe", "next": "canivore-usb" },
+				{ "label": "Orange", "next": "canivore-no-code" },
+				{ "label": "Green, devices still missing", "next": "canivore-bus" }
+			]
+		},
+		"canivore-usb": {
+			"kind": "leaf",
+			"id": "canivore-usb",
+			"title": "CANivore not talking to the roboRIO",
+			"steps": [
+				"Wait for the RIO to finish booting. The CANivore enumerates over USB after boot.",
+				"Reseat the USB cable at both ends. Try the other RIO USB port.",
+				"Replace the USB cable. Long or unshielded cables fail. Keep it short and away from motor leads.",
+				"Check the CANivore has power on its own lead.",
+				"If the RIO USB ports are dead (static from an unshielded extension has done this), swap the RIO. Call the CSA."
+			],
+			"links": [
+				{
+					"label": "CANivore intro",
+					"url": "https://v6.docs.ctr-electronics.com/en/stable/docs/canivore/canivore-intro.html"
+				}
+			],
+			"statusLights": [{ "device": "ctrecanivore", "label": "CANivore lights" }],
+			"escalate": true
+		},
+		"canivore-no-code": {
+			"kind": "leaf",
+			"id": "canivore-no-code",
+			"title": "CANivore sees USB, no robot program",
+			"steps": [
+				"Orange means USB is up but robot code is not running or is not using this bus.",
+				"Start the robot code. Check the DS shows Robot Code green.",
+				"Check the code uses the CANivore name (for example \"canivore\" or \"*\") in every device constructor on that bus. Devices built with no bus name go to the RIO bus.",
+				"Check Tuner X sees the CANivore with the same name the code uses.",
+				"Ask the CSA to look at the constructor bus names with the team."
+			],
+			"links": [
+				{
+					"label": "CANivore intro",
+					"url": "https://v6.docs.ctr-electronics.com/en/stable/docs/canivore/canivore-intro.html"
+				}
+			],
+			"statusLights": [{ "device": "ctrecanivore", "label": "CANivore lights" }]
+		},
+		"canivore-bus": {
+			"kind": "leaf",
+			"id": "canivore-bus",
+			"title": "CANivore is up, its bus is not",
+			"steps": [
+				"The CANivore has one built-in terminator. The far end of its bus needs a 120 ohm resistor. Measure about 60 ohms across CANH and CANL with power off.",
+				"Tug test the CAN wires at the CANivore and along the chain.",
+				"Check the devices are on the CANivore chain, not the RIO chain. Mixed chains miss devices.",
+				"If a Talon FX shows alternating red, the bus is not reaching it.",
+				"Fix the wiring or the terminator, then check Tuner X again."
+			],
+			"links": [
+				{
+					"label": "CANivore intro",
+					"url": "https://v6.docs.ctr-electronics.com/en/stable/docs/canivore/canivore-intro.html"
+				}
+			],
+			"statusLights": [{ "device": "ctrecanivore", "label": "CANivore lights" }]
+		},
+		"intermittent": {
+			"kind": "leaf",
+			"id": "intermittent",
+			"title": "CAN drops when the robot moves",
+			"steps": [
+				"Tug test every CAN connector with the robot on the cart. Pull each wire, not the plug body. The one that moves is the fault.",
+				"Look for CAN wires routed across a moving joint, near a chain, or pinched under a bumper mount.",
+				"Check for a connector that is only pushed halfway in. Latching connectors should click.",
+				"Add strain relief. Tie-wrap the pigtail near each device so the crimp does not carry the load.",
+				"Measure 60 ohms across the bus. Re-crimp any joint that reads open when you wiggle it."
+			],
+			"links": [
+				{
+					"label": "Preemptive troubleshooting",
+					"url": "https://docs.wpilib.org/en/stable/docs/hardware/hardware-basics/preemptive-troubleshooting.html"
+				}
+			]
+		},
+		"utilization": {
+			"kind": "leaf",
+			"id": "utilization",
+			"title": "CAN errors or high bus utilization",
+			"steps": [
+				"Open the DS Diagnostics tab. Utilization above about 80 percent drops frames. Errors climbing during a match means a wiring fault or an overloaded bus.",
+				"Errors that climb only when the robot moves are a loose connector. Follow the intermittent branch of this guide.",
+				"Too many devices on one bus: move the drivetrain to a CANivore, or lower status frame rates on devices the code does not read.",
+				"Check for a device on old firmware sending frames the library does not expect.",
+				"Ask the CSA to help the team set status frame periods."
+			],
+			"links": [
+				{
+					"label": "CTRE CAN bus troubleshooting",
+					"url": "https://v6.docs.ctr-electronics.com/en/stable/docs/troubleshooting/canbus-troubleshooting.html"
+				}
+			]
+		}
+	}
+}

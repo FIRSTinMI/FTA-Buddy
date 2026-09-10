@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Accordion, AccordionItem, Modal } from "flowbite-svelte";
-	import { onDestroy } from "svelte";
+	import { onDestroy, onMount } from "svelte";
 
 	let enlargedSrc = $state<string | null>(null);
 	let enlargedAlt = $state<string>("");
@@ -65,6 +65,12 @@
 		for (const key of componentKeys) {
 			if (openState[key]) loadedState[key] = true;
 		}
+	});
+
+	// Deep link: /references/statuslights#roborio opens that device's section.
+	onMount(() => {
+		const key = window.location.hash.slice(1);
+		if (componentKeys.includes(key)) openState[key] = true;
 	});
 
 	function toggleLED(freq: keyof typeof LEDToggleState) {

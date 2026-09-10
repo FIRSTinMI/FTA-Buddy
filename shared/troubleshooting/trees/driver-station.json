@@ -9,12 +9,30 @@
 			"id": "start",
 			"question": "What is wrong at the driver station?",
 			"options": [
-				{ "label": "DS will not connect to the robot in the pit", "next": "pit-link" },
-				{ "label": "DS is red on the field, no FMS", "next": "field-ds" },
-				{ "label": "Comms flicker or ping is high", "next": "latency" },
-				{ "label": "Joysticks not working", "next": "joysticks" },
-				{ "label": "Laptop is slow, sleeps, or updates", "next": "laptop" },
-				{ "label": "DS software will not open or shows a firewall warning", "next": "firewall" }
+				{
+					"label": "DS will not connect to the robot in the pit",
+					"next": "pit-link"
+				},
+				{
+					"label": "DS is red on the field, no FMS",
+					"next": "field-ds"
+				},
+				{
+					"label": "Comms flicker or ping is high",
+					"next": "latency"
+				},
+				{
+					"label": "Joysticks not working",
+					"next": "joysticks"
+				},
+				{
+					"label": "Laptop is slow, sleeps, or updates",
+					"next": "laptop"
+				},
+				{
+					"label": "DS software will not open or shows a firewall warning",
+					"next": "firewall"
+				}
 			]
 		},
 		"pit-link": {
@@ -22,8 +40,14 @@
 			"id": "pit-link",
 			"question": "How is the DS connected to the robot?",
 			"options": [
-				{ "label": "Ethernet cable", "next": "pit-ethernet" },
-				{ "label": "Wi-Fi", "next": "pit-wifi" }
+				{
+					"label": "Ethernet cable",
+					"next": "pit-ethernet"
+				},
+				{
+					"label": "Wi-Fi",
+					"next": "pit-wifi"
+				}
 			]
 		},
 		"pit-ethernet": {
@@ -111,8 +135,15 @@
 				{
 					"kind": "check",
 					"text": "Do comms still flicker or trip time stay high?",
-					"yes": "Note the trip time and packet loss. The field or FMS side is suspect.",
+					"yes": "Continue.",
 					"no": "Problem solved."
+				},
+				"Pull the match logs. Check whether other robots in the same match also had high trip time or dropped packets.",
+				{
+					"kind": "check",
+					"text": "Did the whole field see it, or an outside source?",
+					"yes": "It is the field or RF environment, not this laptop.",
+					"no": "Keep working this robot: CPU, bandwidth, radio placement."
 				}
 			],
 			"links": [

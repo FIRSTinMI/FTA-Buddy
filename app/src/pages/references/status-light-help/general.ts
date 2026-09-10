@@ -1,6 +1,17 @@
 // Status light help: roboRIO, SystemCore and Vivid radio. See shared.ts for the step rules.
 
-import { type StatusLightHelp, NI_FLASHING, NI_RED, SC_OS, SC_SPEC, VIVID, VIVID_BOOTLOOP, WPILIB, WPILIB_BROWNOUT, WPILIB_IMAGING } from "./shared";
+import {
+	type StatusLightHelp,
+	NI_FLASHING,
+	NI_RED,
+	SC_OS,
+	SC_SPEC,
+	VIVID,
+	VIVID_BOOTLOOP,
+	WPILIB,
+	WPILIB_BROWNOUT,
+	WPILIB_IMAGING,
+} from "./shared";
 
 // roboRIO reimaging differs by model, so each line is one action inline here.
 const REIMAGE_RIO = [
@@ -21,7 +32,12 @@ export const generalHelp = {
 			"Check the breaker or fuse on that channel.",
 			{ kind: "check", text: "PWR still off?", yes: "Continue.", no: "Problem solved." },
 			"Swap the power cable. Crimps on radio leads fail often.",
-			{ kind: "check", text: "PWR still off with known good 12 V at the radio?", yes: "Swap the radio.", no: "Problem solved." },
+			{
+				kind: "check",
+				text: "PWR still off with known good 12 V at the radio?",
+				yes: "Swap the radio.",
+				no: "Problem solved.",
+			},
 		],
 		source: VIVID,
 	},
@@ -34,7 +50,12 @@ export const generalHelp = {
 			"Wait for SYS to light. It stays off until boot completes.",
 			{ kind: "check", text: "SYS still off?", yes: "Continue.", no: "Problem solved." },
 			"Power cycle the radio once.",
-			{ kind: "check", text: "Does the radio reboot in a loop, or never boot?", yes: "Continue.", no: "Problem solved." },
+			{
+				kind: "check",
+				text: "Does the radio reboot in a loop, or never boot?",
+				yes: "Continue.",
+				no: "Problem solved.",
+			},
 			"Swap the radio. A bootloop means corrupt flash memory (Vivid known issue 1); recovery needs Vivid support through WCP.",
 		],
 		source: VIVID_BOOTLOOP,
@@ -69,9 +90,19 @@ export const generalHelp = {
 		steps: [
 			"Do not remove power. Wait for the flash to finish.",
 			"Watch for SYS to change to a 50 Hz blink, then a reboot. That means the flash worked.",
-			{ kind: "check", text: "SYS still blinking 20 Hz after several minutes?", yes: "Continue.", no: "Problem solved." },
+			{
+				kind: "check",
+				text: "SYS still blinking 20 Hz after several minutes?",
+				yes: "Continue.",
+				no: "Problem solved.",
+			},
 			"Power cycle the radio.",
-			{ kind: "check", text: "SYS still blinking 20 Hz?", yes: "Flash it again at the kiosk.", no: "Problem solved." },
+			{
+				kind: "check",
+				text: "SYS still blinking 20 Hz?",
+				yes: "Flash it again at the kiosk.",
+				no: "Problem solved.",
+			},
 		],
 		source: VIVID,
 	},
@@ -82,9 +113,19 @@ export const generalHelp = {
 		meaning: "The firmware flash succeeded and the radio is running its first-boot setup.",
 		steps: [
 			"Wait. Do not remove power until SYS is solid or blinking at 1 Hz.",
-			{ kind: "check", text: "SYS still not solid or blinking 1 Hz after a minute?", yes: "Continue.", no: "Problem solved." },
+			{
+				kind: "check",
+				text: "SYS still not solid or blinking 1 Hz after a minute?",
+				yes: "Continue.",
+				no: "Problem solved.",
+			},
 			"Power cycle once.",
-			{ kind: "check", text: "SYS still not solid or blinking 1 Hz?", yes: "Reflash at the kiosk.", no: "Problem solved." },
+			{
+				kind: "check",
+				text: "SYS still not solid or blinking 1 Hz?",
+				yes: "Reflash at the kiosk.",
+				no: "Problem solved.",
+			},
 		],
 		source: VIVID,
 	},
@@ -381,7 +422,8 @@ export const generalHelp = {
 		variants: [
 			{
 				label: "roboRIO 1",
-				meaning: "The image on the internal flash is corrupt, or a software update was interrupted. The controller cannot boot.",
+				meaning:
+					"The image on the internal flash is corrupt, or a software update was interrupted. The controller cannot boot.",
 				steps: [
 					"Power cycle once.",
 					{ kind: "check", text: "Status LED still flashing?", yes: "Continue.", no: "Problem solved." },
@@ -407,7 +449,8 @@ export const generalHelp = {
 			},
 			{
 				label: "roboRIO 2",
-				meaning: "The controller cannot read the microSD card. The card is missing, not clicked in, not imaged, or corrupt.",
+				meaning:
+					"The controller cannot read the microSD card. The card is missing, not clicked in, not imaged, or corrupt.",
 				steps: [
 					"Power off. Pull the microSD card and push it back in until it clicks and sits flush with the slot.",
 					"Power on.",
@@ -483,13 +526,20 @@ export const generalHelp = {
 		led: "Comm",
 		state: "Blinking red",
 		meaning:
-			"The Driver Station E-Stopped the robot (space bar, or the field E-Stop). Outputs stay disabled until the roboRIO reboots.",
+			"The robot is E-Stopped and its outputs stay disabled until it is cleared. The robot E-stop (the DS space bar off the field, or the team's own driver-station E-stop button on the field) is separate from the field E-stop.",
 		steps: [
-			"Confirm the field is safe and the FTA has cleared the stop.",
-			"Reboot the roboRIO. Press reset or power cycle the robot; an E-Stop does not clear by disabling.",
+			"The robot E-stop and the field E-stop are separate. This is almost always the robot's.",
 			{
 				kind: "check",
-				text: "Does it E-Stop again with nobody pressing anything?",
+				text: "Does the team have an E-stop button on their driver station?",
+				yes: "Make sure it is released.",
+				no: "Continue.",
+			},
+			"Clear it: reboot the roboRIO and restart the Driver Station software. Both hold a sticky E-stop.",
+			"Do both. A rebooted roboRIO that reconnects to a still-E-stopped DS drops straight back into E-stop.",
+			{
+				kind: "check",
+				text: "Does it E-Stop again after both restart?",
 				yes: "Check the DS laptop for a stuck space bar.",
 				no: "Problem solved.",
 			},
@@ -518,7 +568,12 @@ export const generalHelp = {
 		meaning: "Outputs are off. The robot is disabled, browned out, or E-Stopped.",
 		steps: [
 			"Expect Mode off between matches and before the match starts.",
-			{ kind: "check", text: "Does the DS say enabled while Mode stays off?", yes: "Continue.", no: "Problem solved." },
+			{
+				kind: "check",
+				text: "Does the DS say enabled while Mode stays off?",
+				yes: "Continue.",
+				no: "Problem solved.",
+			},
 			"Check the Power LED. Amber means brownout.",
 			"Check the Comm LED. Blinking red means E-Stop.",
 		],
@@ -697,7 +752,12 @@ export const generalHelp = {
 			"Open the web dashboard at robot.local over USB or Wi-Fi. The faults panel in the header shows the name and count.",
 			"For an overcurrent on a port, unplug that device, check its wiring for a short, and plug it back in.",
 			"Power cycle to clear.",
-			{ kind: "check", text: "Status LED still solid red with nothing plugged in?", yes: "Continue.", no: "Problem solved." },
+			{
+				kind: "check",
+				text: "Status LED still solid red with nothing plugged in?",
+				yes: "Continue.",
+				no: "Problem solved.",
+			},
 			"Swap the controller and report it in the SystemcoreTesting GitHub issues.",
 		],
 		source: SC_SPEC,
@@ -709,7 +769,12 @@ export const generalHelp = {
 		meaning: "Display hardware fault. The OLED screen is not responding.",
 		steps: [
 			"Power cycle.",
-			{ kind: "check", text: "Does the slow blink continue with the screen dark?", yes: "Continue.", no: "Problem solved." },
+			{
+				kind: "check",
+				text: "Does the slow blink continue with the screen dark?",
+				yes: "Continue.",
+				no: "Problem solved.",
+			},
 			"Swap the controller if you have a spare, and report it in the SystemcoreTesting GitHub issues.",
 		],
 		source: SC_OS,

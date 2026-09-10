@@ -4,7 +4,14 @@ import "dotenv/config";
 import { connect } from "../db/db";
 import { runSlackPollPass } from "../util/troubleshoot/slack-poller";
 
-await connect();
-const stats = await runSlackPollPass();
-console.log("STATS " + JSON.stringify(stats));
-process.exit(0);
+async function main() {
+	await connect();
+	const stats = await runSlackPollPass();
+	console.log("STATS " + JSON.stringify(stats));
+	process.exit(0);
+}
+
+main().catch((err) => {
+	console.error(err);
+	process.exit(1);
+});

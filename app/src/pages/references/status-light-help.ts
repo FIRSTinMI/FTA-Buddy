@@ -6,7 +6,19 @@ export interface StatusLightHelp {
 	readonly led: string;
 	readonly state: string;
 	readonly meaning: string;
-	readonly steps: readonly string[];
+	/** Omit when there is nothing to do. The dialog then shows no "What to do" section. */
+	readonly steps?: readonly string[];
+	readonly source?: string;
+	/** Tabs inside the dialog, for one pattern that means different things on different hardware revisions. */
+	readonly variants?: readonly StatusLightHelpVariant[];
+	/** Index into `variants` that opens first. */
+	readonly defaultVariant?: number;
+}
+
+export interface StatusLightHelpVariant {
+	readonly label: string;
+	readonly meaning: string;
+	readonly steps?: readonly string[];
 	readonly source?: string;
 }
 
@@ -153,7 +165,6 @@ export const statusLightHelp = {
 		state: "Solid",
 		meaning: "Normal. The radio is linked to the field and can reach the field access point.",
 		steps: [
-			"Nothing to do on the radio.",
 			"If the Driver Station still shows no robot, look at the RIO LED and the roboRIO Comm LED. The problem is on the robot side of the radio.",
 		],
 		source: VIVID,
@@ -179,7 +190,6 @@ export const statusLightHelp = {
 		meaning:
 			"The 2.4 GHz radio is active. The field uses 6 GHz for the robot link. 2.4 GHz is for a robot hosted practice network.",
 		steps: [
-			"Nothing to do if 6G shows a link and the Driver Station has comms.",
 			"If the Driver Station has no comms, check the 6G LED and the SYS LED first.",
 			"If 2.4G is on at an event and the team did not expect it, reprogram the radio at the kiosk.",
 		],
@@ -191,7 +201,6 @@ export const statusLightHelp = {
 		state: "Solid",
 		meaning: "The 6 GHz link to the field access point is up. This is the normal field link.",
 		steps: [
-			"Nothing to do on the radio.",
 			"If the Driver Station has no comms with 6G lit, check the RIO LED and the roboRIO Comm LED.",
 		],
 		source: WPILIB,
@@ -202,7 +211,6 @@ export const statusLightHelp = {
 		state: "Solid",
 		meaning: "Ethernet link on the RIO port. The cable to the roboRIO is connected and the roboRIO port is up.",
 		steps: [
-			"Nothing to do on the radio.",
 			"If the Driver Station still has no comms, look at the roboRIO Comm LED. Off means the roboRIO is not seeing the Driver Station; check team number on the roboRIO and the DS.",
 		],
 		source: VIVID,
@@ -215,7 +223,9 @@ export const statusLightHelp = {
 		led: "Power",
 		state: "Solid green",
 		meaning: "Input power is good and no rail fault is active.",
-		steps: ["Nothing to do.", "If the robot has no comms, move on to the Status and Comm LEDs."],
+		steps: [
+			"If the robot has no comms, move on to the Status and Comm LEDs.",
+		],
 		source: WPILIB,
 	},
 	"roborio.power.brownout": {
@@ -263,7 +273,9 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Off",
 		meaning: "Off is normal. The Status LED only lights during boot and for error codes.",
-		steps: ["Nothing to do.", "If the robot has no comms, look at the Comm LED and the radio."],
+		steps: [
+			"If the robot has no comms, look at the Comm LED and the radio.",
+		],
 		source: WPILIB,
 	},
 	"roborio.status.booting": {
@@ -322,47 +334,33 @@ export const statusLightHelp = {
 		device: "roboRIO",
 		led: "Status",
 		state: "Continuous flash, or solid after boot",
-		meaning:
-			"Unrecoverable error: the controller cannot boot its image. On roboRIO 2 this nearly always means it cannot read the microSD card. On roboRIO 1 the internal image is corrupt. This is not a 4-blink code; there is no pause.",
-		steps: [
-			"Identify the model. SD card slot and NI logo: roboRIO 2. No slot and 'Powered by LabVIEW': roboRIO 1.",
-			"roboRIO 2: power off, pull the microSD card, push it back in until it clicks and sits flush, power on.",
-			"roboRIO 2: if it still flashes, reimage the card on a laptop (balenaEtcher or Raspberry Pi Imager, a fresh card if you have one), then set the team number with the Imaging Tool over USB.",
-			"roboRIO 1: hold reset for 5 seconds to force safe mode (3 blinks). If it gets there, reimage over USB with the Imaging Tool. If it will not enter safe mode, use the NI recovery.cfg USB stick procedure.",
-			"Either model: open the case and blow out metal shavings, especially the SD slot on a roboRIO 2.",
-			"If a fresh image on a fresh card still fails, swap the roboRIO.",
+		meaning: "Unrecoverable error. The controller cannot boot its image. What that means depends on the model.",
+		variants: [
+			{
+				label: "roboRIO 1",
+				meaning: "The image on the internal flash is corrupt, or a software update was interrupted. The controller cannot boot.",
+				steps: [
+					"Power cycle once.",
+					"Hold reset for 5 seconds to force safe mode. Safe mode shows 3 blinks with a pause.",
+					"In safe mode, connect USB and reimage with the roboRIO Imaging Tool (Format Target).",
+					"If it will not enter safe mode: put NI's recovery.cfg alone on a FAT32 USB stick, plug it in, hold reset while powering on, release when Status is solid, wait about 60 seconds, then reimage.",
+					"If it still flashes after recovery and reimage, swap the roboRIO.",
+				],
+			},
+			{
+				label: "roboRIO 2",
+				meaning: "The controller cannot read the microSD card. The card is missing, not clicked in, not imaged, or corrupt. New cards ship blank.",
+				steps: [
+					"Power off. Pull the microSD card and push it back in until it clicks and sits flush with the slot.",
+					"Power on. If it still flashes, reimage the card on a laptop with balenaEtcher or Raspberry Pi Imager. Use a fresh card if you have one.",
+					"Put the card back, connect USB, and set the team number with the roboRIO Imaging Tool.",
+					"Open the case and blow out the SD slot with compressed air. Metal shavings in the slot cause this.",
+					"If a freshly imaged card still fails, the card reader is damaged. Swap the roboRIO.",
+				],
+			},
 		],
-		source: NI_FLASHING,
-	},
-	"roborio.status.continuous-rio1": {
-		device: "roboRIO 1",
-		led: "Status",
-		state: "Continuous flash, or solid after boot",
-		meaning:
-			"The image on the internal flash is corrupt, or a software update was interrupted. The controller cannot boot.",
-		steps: [
-			"Power cycle once.",
-			"Hold reset for 5 seconds to force safe mode. Safe mode shows 3 blinks with a pause.",
-			"In safe mode, connect USB and reimage with the roboRIO Imaging Tool (Format Target).",
-			"If it will not enter safe mode: put NI's recovery.cfg alone on a FAT32 USB stick, plug it in, hold reset while powering on, release when Status is solid, wait about 60 seconds, then reimage.",
-			"If it still flashes after recovery and reimage, swap the roboRIO.",
-		],
-		source: NI_FLASHING,
-	},
-	"roborio.status.continuous-rio2": {
-		device: "roboRIO 2",
-		led: "Status",
-		state: "Continuous flash, or solid after boot",
-		meaning:
-			"The controller cannot read the microSD card. The card is missing, not clicked in, not imaged, or corrupt. New cards ship blank.",
-		steps: [
-			"Power off. Pull the microSD card and push it back in until it clicks and sits flush with the slot.",
-			"Power on. If it still flashes, reimage the card on a laptop with balenaEtcher or Raspberry Pi Imager. Use a fresh card if you have one.",
-			"Put the card back, connect USB, and set the team number with the roboRIO Imaging Tool.",
-			"Open the case and blow out the SD slot with compressed air. Metal shavings in the slot cause this.",
-			"If a freshly imaged card still fails, the card reader is damaged. Swap the roboRIO.",
-		],
-		source: WPILIB_RIO2,
+		defaultVariant: 1,
+		source: WPILIB,
 	},
 	"roborio.radio.ignore": {
 		device: "roboRIO",
@@ -420,7 +418,9 @@ export const statusLightHelp = {
 		led: "Comm",
 		state: "Solid green",
 		meaning: "Good communication with the Driver Station and robot code is running.",
-		steps: ["Nothing to do.", "If the robot does not move when enabled, look at the Mode LED and the Power LED."],
+		steps: [
+			"If the robot does not move when enabled, look at the Mode LED and the Power LED.",
+		],
 		source: WPILIB,
 	},
 	"roborio.mode.disabled": {
@@ -440,7 +440,6 @@ export const statusLightHelp = {
 		state: "Solid orange",
 		meaning: "Autonomous enabled. Outputs are live.",
 		steps: [
-			"Nothing to do.",
 			"If the robot does not move, the problem is in code or on the CAN bus, not the roboRIO.",
 		],
 		source: WPILIB,
@@ -451,7 +450,6 @@ export const statusLightHelp = {
 		state: "Solid green",
 		meaning: "Teleop enabled. Outputs are live.",
 		steps: [
-			"Nothing to do.",
 			"If the robot does not respond, check the joysticks in the DS USB tab and the motor controller LEDs.",
 		],
 		source: WPILIB,
@@ -473,7 +471,6 @@ export const statusLightHelp = {
 		state: "Solid",
 		meaning: "Robot is on and disabled. The onboard LED mirrors the RSL output.",
 		steps: [
-			"Nothing to do.",
 			"If the external RSL is dark while this is lit, the RSL wiring or bulb is the problem.",
 		],
 		source: WPILIB,
@@ -484,7 +481,6 @@ export const statusLightHelp = {
 		state: "Blinking",
 		meaning: "Robot is enabled.",
 		steps: [
-			"Nothing to do.",
 			"Rapid or erratic blinking points at low or unstable power to the roboRIO. Check the battery.",
 		],
 		source: WPILIB,
@@ -509,7 +505,9 @@ export const statusLightHelp = {
 		led: "Power",
 		state: "Solid green",
 		meaning: "Input power is good.",
-		steps: ["Nothing to do.", "If the robot has no comms, read the OLED screen for IP addresses and faults."],
+		steps: [
+			"If the robot has no comms, read the OLED screen for IP addresses and faults.",
+		],
 		source: SC_SPEC,
 	},
 	"systemcore.power.off": {
@@ -542,7 +540,6 @@ export const statusLightHelp = {
 		led: "Mode",
 		state: "Blinking yellow",
 		meaning: "Robot is on and enabled.",
-		steps: ["Nothing to do."],
 		source: SC_SPEC,
 	},
 	"systemcore.mode.off": {
@@ -558,7 +555,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Off",
 		meaning: "No active faults.",
-		steps: ["Nothing to do."],
 		source: SC_SPEC,
 	},
 	"systemcore.status.solid": {
@@ -624,7 +620,6 @@ export const statusLightHelp = {
 		state: "Cyan solid",
 		meaning: "Brushless motor type, brake mode, valid signal. Normal when enabled with zero output.",
 		steps: [
-			"Nothing to do.",
 			"If the motor does not move when commanded, check the three phase wires and the encoder cable. A brushless motor will not run without its sensor.",
 		],
 		source: REV_MAX,
@@ -648,7 +643,6 @@ export const statusLightHelp = {
 		state: "Magenta solid",
 		meaning: "Brushless motor type, coast mode, valid signal. Normal when enabled with zero output.",
 		steps: [
-			"Nothing to do.",
 			"If the motor does not move when commanded, check the phase wires and the encoder cable.",
 		],
 		source: REV_MAX,
@@ -672,7 +666,6 @@ export const statusLightHelp = {
 		state: "Blue solid",
 		meaning: "Brushed motor type, brake mode, valid signal.",
 		steps: [
-			"Nothing to do if a brushed motor is attached.",
 			"If a brushless motor is attached, do not enable. Set the motor type to brushless first.",
 		],
 		source: REV_MAX,
@@ -696,7 +689,6 @@ export const statusLightHelp = {
 		state: "Yellow solid",
 		meaning: "Brushed motor type, coast mode, valid signal.",
 		steps: [
-			"Nothing to do if a brushed motor is attached.",
 			"If a brushless motor is attached, do not enable. Set the motor type to brushless first.",
 		],
 		source: REV_MAX,
@@ -766,7 +758,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "White and magenta fast blink",
 		meaning: "Someone pressed Identify in the REV Hardware Client. Cosmetic.",
-		steps: ["Nothing to do. It stops on its own."],
 		source: REV_MAX,
 	},
 	"revsparkmax.identification-updating-and-recovery.can-firmware-updating-v1-5-0": {
@@ -820,7 +811,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Green blink",
 		meaning: "Driving forward at partial output.",
-		steps: ["Nothing to do."],
 		source: REV_MAX,
 	},
 	"revsparkmax.movement.full-forward": {
@@ -828,7 +818,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Green solid",
 		meaning: "Driving forward at full output.",
-		steps: ["Nothing to do."],
 		source: REV_MAX,
 	},
 	"revsparkmax.movement.partial-reverse": {
@@ -836,7 +825,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Red blink",
 		meaning: "Driving reverse at partial output.",
-		steps: ["Nothing to do."],
 		source: REV_MAX,
 	},
 	"revsparkmax.movement.full-reverse": {
@@ -844,7 +832,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Red solid",
 		meaning: "Driving reverse at full output.",
-		steps: ["Nothing to do."],
 		source: REV_MAX,
 	},
 	"revsparkmax.movement.forward-limit": {
@@ -893,7 +880,6 @@ export const statusLightHelp = {
 		state: "Cyan solid",
 		meaning: "Brushless motor type, brake mode, valid signal. Normal when enabled with zero output.",
 		steps: [
-			"Nothing to do.",
 			"If the motor does not move when commanded, check the motor is seated on the Flex and the dock connector is clean.",
 		],
 		source: REV_FLEX,
@@ -916,7 +902,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Magenta solid",
 		meaning: "Brushless motor type, coast mode, valid signal. Normal when enabled with zero output.",
-		steps: ["Nothing to do."],
 		source: REV_FLEX,
 	},
 	"revsparkflex.brushed-mode.brake-no-signal": {
@@ -938,7 +923,6 @@ export const statusLightHelp = {
 		state: "Blue solid",
 		meaning: "Brushed motor type, brake mode, valid signal.",
 		steps: [
-			"Nothing to do if a brushed motor is attached.",
 			"If a brushless motor is attached, do not enable. Set the motor type to brushless first.",
 		],
 		source: REV_FLEX,
@@ -962,7 +946,6 @@ export const statusLightHelp = {
 		state: "Yellow solid",
 		meaning: "Brushed motor type, coast mode, valid signal.",
 		steps: [
-			"Nothing to do if a brushed motor is attached.",
 			"If a brushless motor is attached, do not enable. Set the motor type to brushless first.",
 		],
 		source: REV_FLEX,
@@ -1046,7 +1029,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "White and magenta fast blink",
 		meaning: "Someone pressed Identify in the REV Hardware Client. Cosmetic.",
-		steps: ["Nothing to do. It stops on its own."],
 		source: REV_FLEX,
 	},
 	"revsparkflex.identification-updating-and-recovery.can-firmware-updating": {
@@ -1089,7 +1071,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Green blink",
 		meaning: "Driving forward at partial output.",
-		steps: ["Nothing to do."],
 		source: REV_FLEX,
 	},
 	"revsparkflex.movement.full-forward": {
@@ -1097,7 +1078,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Green solid",
 		meaning: "Driving forward at full output.",
-		steps: ["Nothing to do."],
 		source: REV_FLEX,
 	},
 	"revsparkflex.movement.partial-reverse": {
@@ -1105,7 +1085,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Red blink",
 		meaning: "Driving reverse at partial output.",
-		steps: ["Nothing to do."],
 		source: REV_FLEX,
 	},
 	"revsparkflex.movement.full-reverse": {
@@ -1113,7 +1092,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Red solid",
 		meaning: "Driving reverse at full output.",
-		steps: ["Nothing to do."],
 		source: REV_FLEX,
 	},
 	"revsparkflex.movement.forward-limit": {
@@ -1160,7 +1138,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Green solid",
 		meaning: "Communicating with the roboRIO. Normal.",
-		steps: ["Nothing to do."],
 		source: REV_PDH,
 	},
 	"revpowerdistributionhub.general-status.connected-to-rev-hardware-client": {
@@ -1230,7 +1207,6 @@ export const statusLightHelp = {
 		led: "Channel",
 		state: "Off",
 		meaning: "The channel has voltage and no fault. Normal.",
-		steps: ["Nothing to do."],
 		source: REV_PDH,
 	},
 	"revpowerdistributionhub.channel-status.no-voltage-and-active-fault": {
@@ -1262,7 +1238,6 @@ export const statusLightHelp = {
 		led: "Switched channel",
 		state: "Off",
 		meaning: "The switched channel has voltage and no fault. Normal.",
-		steps: ["Nothing to do."],
 		source: REV_PDH,
 	},
 	"revpowerdistributionhub.switched-channel.no-voltage-and-active-fault": {
@@ -1305,7 +1280,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Green solid",
 		meaning: "Communicating with the roboRIO. Normal.",
-		steps: ["Nothing to do."],
 		source: REV_PH,
 	},
 	"revpneumaticshub.general-status.secondary-heartbeat": {
@@ -1390,7 +1364,6 @@ export const statusLightHelp = {
 		state: "Green solid",
 		meaning: "The compressor output is on.",
 		steps: [
-			"Nothing to do.",
 			"If the compressor is not running with this on, check the compressor wiring and the compressor itself.",
 		],
 		source: REV_PH,
@@ -1412,7 +1385,6 @@ export const statusLightHelp = {
 		state: "Green solid",
 		meaning: "That solenoid channel is energized.",
 		steps: [
-			"Nothing to do.",
 			"If the cylinder does not move: check air pressure, the solenoid wiring, and the solenoid voltage setting.",
 		],
 		source: REV_PH,
@@ -1437,7 +1409,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Both blink orange together",
 		meaning: "CAN is good, Phoenix is running, and the robot is disabled. Normal.",
-		steps: ["Nothing to do."],
 		source: CTRE_FX,
 	},
 	"ctretalonfx.disabled-codes.valid-can-pwm-phoenix-is-not-detected": {
@@ -1463,7 +1434,6 @@ export const statusLightHelp = {
 		state: "Both solid orange",
 		meaning: "Enabled with zero output. Normal.",
 		steps: [
-			"Nothing to do.",
 			"If it should be moving, the command is zero. Check the joystick in the DS and the code.",
 		],
 		source: CTRE_FX,
@@ -1473,7 +1443,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Both blink red together",
 		meaning: "Driving in reverse. Blink rate follows duty cycle.",
-		steps: ["Nothing to do."],
 		source: CTRE_FX,
 	},
 	"ctretalonfx.enabled-codes.driving-in-forward-rate-dutycycle": {
@@ -1481,7 +1450,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Both blink green together",
 		meaning: "Driving forward. Blink rate follows duty cycle.",
-		steps: ["Nothing to do."],
 		source: CTRE_FX,
 	},
 	"ctretalonfx.enabled-codes.talon-limited-offset-direction-forward-reverse": {
@@ -1554,7 +1522,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Both blink orange together",
 		meaning: "CAN is good, Phoenix is running, and the robot is disabled. Normal.",
-		steps: ["Nothing to do."],
 		source: CTRE_FXS,
 	},
 	"ctretalonfxs.disabled-codes.valid-can-pwm-phoenix-is-not-detected": {
@@ -1580,7 +1547,6 @@ export const statusLightHelp = {
 		state: "Both solid orange",
 		meaning: "Enabled with zero output. Normal.",
 		steps: [
-			"Nothing to do.",
 			"If it should be moving, the command is zero. Check the joystick in the DS and the code.",
 		],
 		source: CTRE_FXS,
@@ -1590,7 +1556,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Both blink red together",
 		meaning: "Driving in reverse. Blink rate follows duty cycle.",
-		steps: ["Nothing to do."],
 		source: CTRE_FXS,
 	},
 	"ctretalonfxs.enabled-codes.driving-in-forward-rate-dutycycle": {
@@ -1598,7 +1563,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Both blink green together",
 		meaning: "Driving forward. Blink rate follows duty cycle.",
-		steps: ["Nothing to do."],
 		source: CTRE_FXS,
 	},
 	"ctretalonfxs.enabled-codes.talon-limited-offset-direction-forward-reverse": {
@@ -1671,7 +1635,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Blinking green",
 		meaning: "PWM calibration succeeded.",
-		steps: ["Nothing to do."],
 		source: CTRE_SRX,
 	},
 	"ctretalonsrx.calibration-codes.failed-calibration": {
@@ -1698,7 +1661,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Both blink green",
 		meaning: "Driving forward. Blink rate follows duty cycle.",
-		steps: ["Nothing to do."],
 		source: CTRE_SRX,
 	},
 	"ctretalonsrx.normal-operation-codes.driving-in-reverse-rate-dutycycle": {
@@ -1706,7 +1668,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Both blink red",
 		meaning: "Driving in reverse. Blink rate follows duty cycle.",
-		steps: ["Nothing to do."],
 		source: CTRE_SRX,
 	},
 	"ctretalonsrx.normal-operation-codes.can-pwm-detected-robot-disabled": {
@@ -1714,7 +1675,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Alternating off and orange",
 		meaning: "CAN or PWM signal present, robot disabled. Normal.",
-		steps: ["Nothing to do."],
 		source: CTRE_SRX,
 	},
 	"ctretalonsrx.normal-operation-codes.can-pwm-not-detected": {
@@ -1770,7 +1730,9 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Both solid orange",
 		meaning: "Enabled with zero output, or the command is inside the deadband. Normal.",
-		steps: ["Nothing to do.", "If it should be moving, the command is zero. Check the joystick and the code."],
+		steps: [
+			"If it should be moving, the command is zero. Check the joystick and the code.",
+		],
 		source: CTRE_SRX,
 	},
 	"ctretalonsrx.b-c-cal-button-color-codes.brake-mode": {
@@ -1778,7 +1740,6 @@ export const statusLightHelp = {
 		led: "B/C CAL button",
 		state: "Solid red",
 		meaning: "Brake mode. The motor shorts its leads when the output is neutral.",
-		steps: ["Nothing to do. Press the button once to toggle to coast, or set it in code."],
 		source: CTRE_SRX,
 	},
 	"ctretalonsrx.b-c-cal-button-color-codes.coast-mode": {
@@ -1786,7 +1747,6 @@ export const statusLightHelp = {
 		led: "B/C CAL button",
 		state: "Off",
 		meaning: "Coast mode. The motor spins freely when the output is neutral.",
-		steps: ["Nothing to do. Press the button once to toggle to brake, or set it in code."],
 		source: CTRE_SRX,
 	},
 	// #endregion
@@ -1809,7 +1769,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Blinking green",
 		meaning: "PWM calibration succeeded.",
-		steps: ["Nothing to do."],
 		source: CTRE_VSPX,
 	},
 	"ctrevictorspx.calibration-codes.failed-calibration": {
@@ -1836,7 +1795,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Both blink green",
 		meaning: "Driving forward. Blink rate follows duty cycle.",
-		steps: ["Nothing to do."],
 		source: CTRE_VSPX,
 	},
 	"ctrevictorspx.normal-operation-codes.driving-in-reverse-rate-dutycycle": {
@@ -1844,7 +1802,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Both blink red",
 		meaning: "Driving in reverse. Blink rate follows duty cycle.",
-		steps: ["Nothing to do."],
 		source: CTRE_VSPX,
 	},
 	"ctrevictorspx.normal-operation-codes.can-pwm-detected-robot-disabled": {
@@ -1852,7 +1809,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Alternating off and orange",
 		meaning: "CAN or PWM signal present, robot disabled. Normal.",
-		steps: ["Nothing to do."],
 		source: CTRE_VSPX,
 	},
 	"ctrevictorspx.normal-operation-codes.can-pwm-not-detected": {
@@ -1921,7 +1877,9 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Both solid orange",
 		meaning: "Enabled with zero output, or the command is inside the deadband. Normal.",
-		steps: ["Nothing to do.", "If it should be moving, the command is zero. Check the joystick and the code."],
+		steps: [
+			"If it should be moving, the command is zero. Check the joystick and the code.",
+		],
 		source: CTRE_VSPX,
 	},
 	"ctrevictorspx.b-c-cal-button-color-codes.brake-mode": {
@@ -1929,7 +1887,6 @@ export const statusLightHelp = {
 		led: "B/C CAL button",
 		state: "Solid red",
 		meaning: "Brake mode. The motor shorts its leads when the output is neutral.",
-		steps: ["Nothing to do. Press the button once to toggle to coast, or set it in code."],
 		source: CTRE_VSPX,
 	},
 	"ctrevictorspx.b-c-cal-button-color-codes.coast-mode": {
@@ -1937,7 +1894,6 @@ export const statusLightHelp = {
 		led: "B/C CAL button",
 		state: "Off",
 		meaning: "Coast mode. The motor spins freely when the output is neutral.",
-		steps: ["Nothing to do. Press the button once to toggle to brake, or set it in code."],
 		source: CTRE_VSPX,
 	},
 	// #endregion
@@ -1995,7 +1951,6 @@ export const statusLightHelp = {
 		led: "STAT",
 		state: "Green fast strobe",
 		meaning: "USB is good, CAN streaming is enabled, and V+ and V- are powered. Normal.",
-		steps: ["Nothing to do."],
 		source: CTRE_CANIVORE,
 	},
 	"ctrecanivore.stat.bootloader": {
@@ -2029,7 +1984,6 @@ export const statusLightHelp = {
 		led: "Wi-Fi",
 		state: "Off",
 		meaning: "Wi-Fi is off. This is the state you want on the field.",
-		steps: ["Nothing to do."],
 		source: CTRE_CANIVORE,
 	},
 	"ctrecanivore.bluetooth.bluetooth-enabled": {
@@ -2047,7 +2001,6 @@ export const statusLightHelp = {
 		led: "Bluetooth",
 		state: "Off",
 		meaning: "Bluetooth is off. This is the state you want on the field.",
-		steps: ["Nothing to do."],
 		source: CTRE_CANIVORE,
 	},
 	"ctrecanivore.can.no-power": {
@@ -2118,7 +2071,6 @@ export const statusLightHelp = {
 		led: "CAN",
 		state: "Green fast strobe",
 		meaning: "CAN FD is active and the CANivore is terminating. Normal.",
-		steps: ["Nothing to do."],
 		source: CTRE_CANIVORE,
 	},
 	"ctrecanivore.can.can-fd-active-termination-disabled": {
@@ -2127,7 +2079,6 @@ export const statusLightHelp = {
 		state: "Green double blink",
 		meaning: "CAN FD is active. The CANivore's termination is off, so something else must terminate that end.",
 		steps: [
-			"Nothing to do if the bus works.",
 			"If devices drop out, check both ends of the bus have a 120 ohm terminator.",
 		],
 		source: CTRE_CANIVORE,
@@ -2164,7 +2115,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Both blink orange together",
 		meaning: "CAN and Phoenix detected, robot disabled. Normal.",
-		steps: ["Nothing to do."],
 		source: CTRE_PIGEON,
 	},
 	"ctrepigeon.valid-can-phoenix-detected-robot-enabled": {
@@ -2172,7 +2122,9 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Alternating green",
 		meaning: "CAN and Phoenix detected, robot enabled. Normal.",
-		steps: ["Nothing to do.", "If heading drifts, run mount calibration in Phoenix Tuner X with the robot still."],
+		steps: [
+			"If heading drifts, run mount calibration in Phoenix Tuner X with the robot still.",
+		],
 		source: CTRE_PIGEON,
 	},
 	"ctrepigeon.hardware-fault-detected-confirm-with-tunerx-self-test": {
@@ -2285,7 +2237,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Rapid bright green",
 		meaning: "CAN is good and the magnet is in range. Normal.",
-		steps: ["Nothing to do."],
 		source: CTRE_CANCODER,
 	},
 	// #endregion
@@ -2381,7 +2332,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Rapid bright green",
 		meaning: "CAN is good and the magnet is in range. Normal.",
-		steps: ["Nothing to do."],
 		source: CTRE_CANCODER,
 	},
 	// #endregion
@@ -2428,7 +2378,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Blinking green",
 		meaning: "CAN is good and something is inside the detection threshold. Faster blink means closer.",
-		steps: ["Nothing to do."],
 		source: CTRE_CANRANGE,
 	},
 	"ctrecanrange.damaged-hardware": {
@@ -2467,7 +2416,9 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Blinking green",
 		meaning: "CAN is good and the robot program is controlling it. Normal.",
-		steps: ["Nothing to do.", "If the strip is dark, check the strip wiring and the 5 V or 12 V output selection."],
+		steps: [
+			"If the strip is dark, check the strip wiring and the 5 V or 12 V output selection.",
+		],
 		source: CTRE_CANDLE,
 	},
 	"ctrecandle.bootloader": {
@@ -2549,7 +2500,6 @@ export const statusLightHelp = {
 		led: "STAT / COMM",
 		state: "Green fast blink",
 		meaning: "CAN is good, no fault, robot enabled. Normal.",
-		steps: ["Nothing to do."],
 		source: CTRE_PDP,
 	},
 	"ctrepowerdistributionpanel.robot-disabled": {
@@ -2557,7 +2507,6 @@ export const statusLightHelp = {
 		led: "STAT / COMM",
 		state: "Green slow blink",
 		meaning: "CAN is good, no fault, robot disabled. Normal.",
-		steps: ["Nothing to do."],
 		source: CTRE_PDP,
 	},
 	"ctrepowerdistributionpanel.disabled-sticky-fault-present": {
@@ -2623,7 +2572,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Green fast blink",
 		meaning: "CAN is good, no fault, robot enabled. Solenoids and compressor are live.",
-		steps: ["Nothing to do."],
 		source: CTRE_PCM,
 	},
 	"ctrepneumaticscontrolmodule.status.robot-disabled": {
@@ -2631,7 +2579,6 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Green slow blink",
 		meaning: "CAN is good, no fault, robot disabled. Normal.",
-		steps: ["Nothing to do."],
 		source: CTRE_PCM,
 	},
 	"ctrepneumaticscontrolmodule.status.disabled-sticky-fault-present": {
@@ -2707,7 +2654,6 @@ export const statusLightHelp = {
 		state: "Green solid",
 		meaning: "The compressor output is on.",
 		steps: [
-			"Nothing to do.",
 			"If the compressor is not running with this on, check the compressor wiring and the compressor itself.",
 		],
 		source: CTRE_PCM,
@@ -2729,7 +2675,6 @@ export const statusLightHelp = {
 		state: "Red solid",
 		meaning: "That solenoid channel is energized.",
 		steps: [
-			"Nothing to do.",
 			"If the cylinder does not move: check air pressure, the solenoid wiring, and the PCM voltage jumper (12 V or 24 V).",
 		],
 		source: CTRE_PCM,

@@ -16,7 +16,7 @@ export function redactTeamNumbers(input: string): string {
 	out = out.replace(TEAM_WORD, "$1 ####");
 	// Bare 3 to 5 digit numbers that are not followed by a unit are treated as team numbers.
 	// "70 A" and "6.2 V" survive; "3641 had a CAN break" becomes "#### had a CAN break".
-	out = out.replace(/(^|[^\d.\w-])(\d{3,5})(?=$|[^\d.])(\s*)([A-Za-z%°]+)?/g, (m, pre, num, ws, unit) => {
+	out = out.replace(/(^|[^\d.\w:-])(\d{3,5})(?=$|[^\d.:\/-])(\s*)([A-Za-z%°]+)?/g, (m, pre, num, ws, unit) => {
 		if (unit && UNITS.test(unit)) return m;
 		return `${pre}####${ws}${unit ?? ""}`;
 	});

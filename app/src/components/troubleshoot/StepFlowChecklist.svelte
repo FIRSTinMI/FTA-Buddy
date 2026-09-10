@@ -13,7 +13,12 @@
 
 	// First check answered "yes" ends the flow; everything after it is dimmed.
 	let fixedAt = $derived.by(() => {
-		for (let i = 0; i < flow.length; i++) if (flow[i].kind === "check" && answers[i] === "yes") return i;
+		for (let i = 0; i < flow.length; i++) {
+			const step = flow[i];
+			if (step.kind !== "check") continue;
+			if (answers[i] === "yes" && !step.yes) return i;
+			if (answers[i] === "no" && step.no) return i;
+		}
 		return -1;
 	});
 
@@ -55,7 +60,7 @@
 					<button
 						type="button"
 						class={"min-h-10 flex-1 rounded-md border px-3 font-semibold " +
-							(answers[i] === "yes" ? "border-green-600 bg-green-600 text-white" : "border-green-600 text-green-700 dark:text-green-400")}
+							(answers[i] === "yes" ? "border-gray-500 bg-gray-500 text-white" : "border-gray-400 text-gray-700 dark:text-gray-300")}
 						disabled={after}
 						onclick={() => (answers[i] = "yes")}>Yes</button
 					>
@@ -68,9 +73,13 @@
 					>
 				</div>
 				{#if answers[i] === "yes"}
-					<p class="mt-2 font-semibold text-green-700 dark:text-green-400">{step.yes ?? "Fixed."}</p>
+					<p class="mt-2 font-semibold" class:text-green-700={!step.yes} class:dark:text-green-400={!step.yes}>
+						{step.yes ?? "Fixed."}
+					</p>
 				{:else if answers[i] === "no"}
-					<p class="mt-2 text-sm">{step.no ?? "Continue."}</p>
+					<p class="mt-2 font-semibold" class:text-green-700={!!step.no} class:dark:text-green-400={!!step.no}>
+						{step.no ?? "Continue."}
+					</p>
 				{/if}
 			</div>
 		{/if}

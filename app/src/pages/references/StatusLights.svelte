@@ -778,7 +778,7 @@
 												<tr use:tapHelp={"roborio.status.continuous"}>
 													<td class="w-20 pl-8 pt-2"
 														><span
-															class={LEDToggleState["1Hz"] === true
+															class={LEDToggleState["3Hz"] === true
 																? "orange led"
 																: "black led"}
 														></span>

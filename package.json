@@ -22,6 +22,7 @@
 	"author": "Filip Kin",
 	"license": "ISC",
 	"dependencies": {
+		"@anthropic-ai/sdk": "^0.125.0",
 		"@google-cloud/local-auth": "^3.0.1",
 		"@google-cloud/storage": "^7.19.0",
 		"@the-orange-alliance/api": "^0.25.0",

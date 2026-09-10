@@ -20,8 +20,22 @@ export const LOCK_NAME = "troubleshoot-slack-poller";
 const LOCK_TTL_SECONDS = 180;
 const TICK_MS = 60_000;
 
-const INTERVAL_MS = 3 * 60 * 60 * 1000;
-const JITTER_MS = 30 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
+
+/**
+ * How often to poll, by FRC season. New CSA chatter is worth almost nothing in the offseason and a
+ * lot during competition, so the cadence tracks the calendar (local time):
+ *   Jan-Feb (build season): nightly.  Mar-Apr (competition): every 6 hours.  May-Dec: weekly.
+ * Override with TROUBLESHOOT_SLACK_INTERVAL_HOURS.
+ */
+function baseIntervalMs(now = new Date()): number {
+	const override = parseFloat(process.env.TROUBLESHOOT_SLACK_INTERVAL_HOURS ?? "");
+	if (Number.isFinite(override) && override > 0) return override * HOUR_MS;
+	const month = now.getMonth() + 1; // 1-12
+	if (month <= 2) return 24 * HOUR_MS; // Jan-Feb nightly
+	if (month <= 4) return 6 * HOUR_MS; // Mar-Apr every 6h
+	return 7 * 24 * HOUR_MS; // May-Dec weekly
+}
 const OVERLAP_MS = 2 * 24 * 60 * 60 * 1000;
 const BACKFILL_MS = 90 * 24 * 60 * 60 * 1000;
 
@@ -359,7 +373,9 @@ export function runSlackPollPass(): Promise<PollStats> {
 }
 
 function nextDelayMs(): number {
-	return INTERVAL_MS + Math.round((Math.random() * 2 - 1) * JITTER_MS);
+	// +/- 10% jitter so runs are not on a predictable clock.
+	const base = baseIntervalMs();
+	return Math.round(base * (0.9 + Math.random() * 0.2));
 }
 
 /**

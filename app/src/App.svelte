@@ -193,6 +193,8 @@
 		"/manage/event-settings",
 		"/manage/meshed-event",
 		"/ftc",
+		"/troubleshoot",
+		"/troubleshoot/chat",
 		"/references",
 		"/references/statuslights",
 		"/references/componentmanuals",
@@ -915,6 +917,17 @@
 				>
 					{#snippet icon()}
 						<Icon icon="mdi:account-switch" class="size-8" />
+					{/snippet}
+				</SidebarItem>
+				<SidebarItem
+					label="Troubleshooting"
+					onclick={() => {
+						drawerOpen = false;
+						navigate("/troubleshoot");
+					}}
+				>
+					{#snippet icon()}
+						<Icon icon="mdi:wrench" class="size-8" />
 					{/snippet}
 				</SidebarItem>
 				<SidebarItem

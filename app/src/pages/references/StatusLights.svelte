@@ -114,8 +114,11 @@
 	let helpOpen = $state(false);
 	let help = $state<StatusLightHelp | null>(null);
 
+	let helpTab = $state(0);
+
 	function openHelp(id: StatusLightHelpId) {
 		help = statusLightHelp[id];
+		helpTab = help.defaultVariant ?? 0;
 		helpOpen = true;
 	}
 
@@ -153,21 +156,40 @@
 
 <Modal bind:open={helpOpen} size="md" outsideclose title={help ? `${help.device}: ${help.led}, ${help.state}` : ""}>
 	{#if help}
-		<div class="flex flex-col gap-3 text-black dark:text-white">
+		{@const shown = help.variants?.[helpTab] ?? help}
+		<div class="flex flex-col gap-3 text-left text-black dark:text-white">
+			{#if help.variants}
+				<div class="flex gap-1 border-b border-gray-300 dark:border-gray-600" role="tablist">
+					{#each help.variants as variant, i (variant.label)}
+						<button
+							type="button"
+							role="tab"
+							aria-selected={helpTab === i}
+							class={"px-3 py-2 -mb-px border-b-2 " +
+								(helpTab === i
+									? "border-orange-500 font-bold"
+									: "border-transparent text-gray-500 dark:text-gray-400")}
+							onclick={() => (helpTab = i)}>{variant.label}</button
+						>
+					{/each}
+				</div>
+			{/if}
 			<div>
 				<div class="bold">What it means</div>
-				<p>{help.meaning}</p>
+				<p>{shown.meaning}</p>
 			</div>
-			<div>
-				<div class="bold">What to do</div>
-				<ol class="list-decimal pl-5 flex flex-col gap-1">
-					{#each help.steps as step, i (i)}
-						<li>{step}</li>
-					{/each}
-				</ol>
-			</div>
-			{#if help.source}
-				<a class="underline text-sm" href={help.source} target="_blank" rel="noreferrer">Source</a>
+			{#if shown.steps && shown.steps.length > 0}
+				<div>
+					<div class="bold">What to do</div>
+					<ol class="list-decimal pl-5 flex flex-col gap-1">
+						{#each shown.steps as step, i (i)}
+							<li>{step}</li>
+						{/each}
+					</ol>
+				</div>
+			{/if}
+			{#if shown.source ?? help.source}
+				<a class="underline text-sm" href={shown.source ?? help.source} target="_blank" rel="noreferrer">Source</a>
 			{/if}
 		</div>
 	{/if}
@@ -585,11 +607,6 @@
 
 				{#if openState.roborio === true || loadedState.roborio === true}
 					<div class="flex flex-col pl-1" style="max-width: 375px;">
-						<p class="text-sm px-2 pb-2">
-							Both models use the same LED codes. What differs is what a continuous Status flash means and
-							how you fix it. roboRIO 2 boots from a microSD card and has an NI logo. roboRIO 1 has no
-							card slot and its label reads "Powered by LabVIEW". Tap a row for what to do.
-						</p>
 						<table cellpadding="5" cellspacing="0" class="text-black dark:text-white">
 							<tbody>
 								<tr class="border-2 border-gray-400">
@@ -727,64 +744,10 @@
 																: "black led"}
 														></span>
 													</td>
-													<td
-														>Continuous flash with no pause, or solid after boot:
-														unrecoverable error. Not a 4-blink code. See below.</td
-													>
+													<td>Continuous flash, or solid after boot: unrecoverable error</td>
 												</tr>
 											</tbody>
 										</table>
-										<div class="mx-2 mt-3 mb-1 rounded border-2 border-orange-500 p-2">
-											<div class="bold text-sm">Continuous flash: roboRIO 1 vs roboRIO 2</div>
-											<div class="grid grid-cols-2 gap-2 mt-2">
-												<div
-													class="help-card rounded border border-gray-500 p-2"
-													use:tapHelp={"roborio.status.continuous-rio1"}
-												>
-													<div class="flex items-center gap-2">
-														<span
-															class={LEDToggleState["1Hz"] === true
-																? "orange led"
-																: "black led"}
-														></span>
-														<span class="bold">roboRIO 1</span>
-														<span class="ml-auto text-gray-400 text-xl leading-none"
-															>&rsaquo;</span
-														>
-													</div>
-													<p class="text-sm mt-1">
-														No card slot. The internal image is corrupt or an update was
-														interrupted. Safe mode and reimage over USB, or the NI recovery
-														USB stick.
-													</p>
-												</div>
-												<div
-													class="help-card rounded border border-gray-500 p-2"
-													use:tapHelp={"roborio.status.continuous-rio2"}
-												>
-													<div class="flex items-center gap-2">
-														<span
-															class={LEDToggleState["1Hz"] === true
-																? "orange led"
-																: "black led"}
-														></span>
-														<span class="bold">roboRIO 2</span>
-														<span class="ml-auto text-gray-400 text-xl leading-none"
-															>&rsaquo;</span
-														>
-													</div>
-													<p class="text-sm mt-1">
-														Cannot read the microSD card. Card missing, not clicked in, not
-														imaged, or corrupt. Reseat the card, then reimage it on a
-														laptop.
-													</p>
-												</div>
-											</div>
-											<p class="text-xs mt-2 italic">
-												Same pattern on both. NI does not publish the flash rate; about 1 Hz is
-												typical.
-											</p>
-										</div>
 									</td>
 								</tr>
 
@@ -950,19 +913,28 @@
 			<AccordionItem class="text-black dark:text-white" bind:open={openState.systemcore}>
 				{#snippet header()}
 					<div class="flex flex-row items-center">
-						<div class="ml-2" style="width: 72px"></div>
+						<button
+							onclick={(e) => {
+								e.stopPropagation();
+								enlarge("/references/components/images/systemcore-large.webp", "SystemCore");
+							}}
+							class="cursor-zoom-in rounded hover:ring-2 hover:ring-blue-400 transition"
+							title="Click to enlarge"
+						>
+							<img
+								src="/references/components/icons/systemcore.webp"
+								width="72px"
+								alt="SystemCore"
+								style="background-color: white;"
+								class="ml-2"
+							/>
+						</button>
 						<div class="ml-8">SystemCore (2027, beta)</div>
 					</div>
 				{/snippet}
 
 				{#if openState.systemcore === true || loadedState.systemcore === true}
 					<div class="flex flex-col pl-1" style="max-width: 375px;">
-						<p class="text-sm px-2 pb-2">
-							New robot controller for 2027, on beta hardware in 2026. Codes come from the Limelight
-							SystemCore spec sheet (June 2025) and the Systemcore OS release notes. WPILib has not
-							published a status light reference yet. Blink rates are approximate. The OLED screen names
-							the fault, read it first.
-						</p>
 						<table cellpadding="5" cellspacing="0" class="text-black dark:text-white">
 							<tbody>
 								<tr class="border-2 border-gray-400">

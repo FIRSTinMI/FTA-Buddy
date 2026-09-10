@@ -3,7 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { db } from "../../db/db";
 import { troubleshootConversations } from "../../db/schema";
 import { redis } from "../redis";
-import { costMicroUsd, totalInputTokens, type TokenUsage } from "./pricing";
+import { costMicroUsd, totalInputTokens, TROUBLESHOOT_MODEL, type TokenUsage, type TroubleshootModel } from "./pricing";
 
 export { costMicroUsd, TROUBLESHOOT_MODEL } from "./pricing";
 
@@ -40,7 +40,7 @@ export async function assertBudget(): Promise<void> {
 	if (overBudget) {
 		throw new TRPCError({
 			code: "PRECONDITION_FAILED",
-			message: "The troubleshooting assistant has used its budget for this month. Find a CSA for help.",
+			message: "The troubleshooting assistant has used its budget for this month.",
 		});
 	}
 }
@@ -49,8 +49,12 @@ export async function assertBudget(): Promise<void> {
  * Record one API call: add its cost to the monthly Redis counter and to the
  * conversation row. Returns the cost in micro-USD.
  */
-export async function recordSpend(conversationId: string, usage: TokenUsage): Promise<number> {
-	const cost = costMicroUsd(usage);
+export async function recordSpend(
+	conversationId: string,
+	usage: TokenUsage,
+	model: TroubleshootModel = TROUBLESHOOT_MODEL,
+): Promise<number> {
+	const cost = costMicroUsd(usage, model);
 	const key = monthKey();
 	const total = await redis.incrby(key, cost);
 	// First write this month creates the key; give it a TTL then.

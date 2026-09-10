@@ -33,7 +33,9 @@ async function main() {
 	let totalMicro = 0;
 	for (const [i, q] of QUESTIONS.entries()) {
 		console.log(`\n=== Q${i + 1}: ${q}`);
-		const chunks = await retrieveChunks(q, undefined, 6);
+		const retrieval = await retrieveChunks(q, undefined, 6);
+		const chunks = retrieval.chunks;
+		console.log(`queries: ${retrieval.queries.join(" | ")}`);
 		console.log(`retrieved ${chunks.length} chunk(s): ${chunks.map((c) => `${c.source}:${c.title}`).join(" | ")}`);
 		const gen = streamAnswer({ history: [], message: q, chunks });
 		const cited: string[] = [];

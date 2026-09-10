@@ -127,32 +127,17 @@
 			"id": "latency",
 			"title": "Comms flicker or high trip time",
 			"steps": [
-				"Check the RIO CPU in the Diagnostics tab. Near 100 percent starves the DS packets. Use the Code and deploy guide, CPU branch.",
-				"Check the DS log for bandwidth. Over 4 Mbps means a camera stream is too big. Lower the resolution or frame rate.",
+				"Trip time is measured to the radio, not the roboRIO, so roboRIO CPU does not cause it.",
+				"Check the DS log for bandwidth. Over 4 Mbps means a camera stream is saturating the link and raising trip time. Lower the resolution or frame rate.",
 				"Close any dashboard, browser, or camera viewer not needed in the match.",
-				"Check the laptop is on Best Performance and plugged in.",
-				"Move the radio to the top of the robot. Metal or motors near it hurt the link.",
 				{
 					"kind": "check",
-					"text": "Do comms still flicker or trip time stay high?",
-					"yes": "Continue.",
-					"no": "Problem solved."
+					"text": "Does trip time drop after cutting bandwidth?",
+					"yes": "Problem solved.",
+					"no": "Continue."
 				},
-				"Pull the match logs. Check whether other robots in the same match also had high trip time or dropped packets.",
-				{
-					"kind": "check",
-					"text": "Did the whole field see it, or an outside source?",
-					"yes": "It is the field or RF environment, not this laptop.",
-					"no": "Keep working this robot: CPU, bandwidth, radio placement."
-				}
-			],
-			"links": [
-				{
-					"label": "DS log viewer",
-					"url": "https://docs.wpilib.org/en/stable/docs/software/driverstation/driver-station-log-viewer.html"
-				}
-			],
-			"escalate": true
+				"The link itself is the issue. Use the Field connection guide in this app, the lag branch, to check signal strength and the RF environment."
+			]
 		},
 		"joysticks": {
 			"kind": "leaf",

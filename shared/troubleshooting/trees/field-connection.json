@@ -28,7 +28,7 @@
 				},
 				{
 					"label": "All green but the robot drops or lags in matches",
-					"next": "drops"
+					"next": "drop-or-lag"
 				}
 			]
 		},
@@ -413,38 +413,95 @@
 		"drops": {
 			"kind": "leaf",
 			"id": "drops",
-			"title": "Robot connects but drops or lags during matches",
+			"title": "Robot loses connection during matches",
 			"steps": [
-				"Check where the radio is mounted. It belongs near the top of the robot, in the open, away from motors, not in a metal box or printed enclosure.",
-				"Tug the radio power and Ethernet plugs. Tie-wrap the power cable. A loose plug drops the link under vibration.",
+				"Check for loose power or Ethernet wires at the radio. Reseat them. A loose connection drops the link under vibration.",
+				"Check the DS log battery voltage. The radio runs down to about 4.5 V, so a brownout rarely resets it. The roboRIO browns out first, near 6.7 V, and the threshold differs between roboRIO 1 and 2 (roboRIO 2 can be set to a custom voltage).",
 				"Remove one power source if the radio has both PoE and the DC input. Dual power causes reboots.",
-				"Check the DS log for battery dips under 7 V. A brownout resets the radio on a poor supply. Lower motor current limits.",
 				{
 					"kind": "check",
-					"text": "Does the robot still drop or lag in matches?",
+					"text": "Does the robot still drop in matches?",
 					"yes": "Continue.",
 					"no": "Problem solved."
 				},
-				"Pull the match logs. Check whether other robots in the same match also had high trip time or dropped packets.",
-				"If several robots dropped, work the field, not the robot. Scan the 6 GHz spectrum near the field for rogue access points crowding the channel.",
+				"Check the radio signal strength during the match: bars on the field monitor (FMS or FTA Buddy), or dB in the FMS station log.",
 				{
 					"kind": "check",
-					"text": "Do the drops track the whole field or an outside source?",
-					"yes": "It is the field or RF environment, not this robot.",
-					"no": "Keep working this robot's radio, power and CAN."
-				}
+					"text": "Was the signal strength low?",
+					"yes": "Continue.",
+					"no": "Keep working this robot's power and wiring."
+				},
+				"Low signal is the radio or the RF path. Use the lag branch of this guide for signal and the RF environment."
 			],
-			"links": [
+			"statusLights": [
 				{
-					"label": "Radio FAQ",
-					"url": "https://frc-radio.vivid-hosting.net/overview/support/frequently-asked-questions"
+					"device": "radio",
+					"label": "radio status lights"
+				}
+			]
+		},
+		"drop-or-lag": {
+			"kind": "question",
+			"id": "drop-or-lag",
+			"question": "What happens during the match?",
+			"options": [
+				{
+					"label": "Robot loses connection or cuts out",
+					"next": "drops"
 				},
 				{
-					"label": "Preemptive troubleshooting",
-					"url": "https://docs.wpilib.org/en/stable/docs/hardware/hardware-basics/preemptive-troubleshooting.html"
+					"label": "Robot stays connected but is laggy or slow to respond",
+					"next": "lag-check"
 				}
-			],
-			"escalate": true
+			]
+		},
+		"lag-check": {
+			"kind": "question",
+			"id": "lag-check",
+			"question": "Check the radio signal strength and trip time during the match (bars on the field monitor or FTA Buddy, dB in the FMS station log). What do you see?",
+			"options": [
+				{
+					"label": "Low signal or high trip time",
+					"next": "rf-environment"
+				},
+				{
+					"label": "Signal and trip time look normal",
+					"next": "code-lag"
+				}
+			]
+		},
+		"rf-environment": {
+			"kind": "leaf",
+			"id": "rf-environment",
+			"title": "Low signal or high trip time: the RF path",
+			"steps": [
+				"The link, not the robot, is the problem. Check the radio is at the top of the robot, in the open, away from motors and metal.",
+				"View the match logs in the FTA Buddy app if the extension is set up on the field. Check whether other robots in the match also had low signal or dropped packets.",
+				{
+					"kind": "check",
+					"text": "Did the whole field see it?",
+					"yes": "It is the field or RF environment, not this robot.",
+					"no": "Continue."
+				},
+				"Scan the 6 GHz spectrum near the field for rogue access points crowding the channel.",
+				"Rule out outside interference. A nearby airport's radar or an aircraft on approach has disrupted a field before. Watch whether the drops repeat with an outside event."
+			]
+		},
+		"code-lag": {
+			"kind": "leaf",
+			"id": "code-lag",
+			"title": "Link is fine but the robot lags",
+			"steps": [
+				"The radio link is fine, so the lag is in the robot or its code.",
+				"View the Driver Station log for roboRIO CPU usage and console messages about loop overruns.",
+				{
+					"kind": "check",
+					"text": "Is CPU high or are there loop overrun messages?",
+					"yes": "Fix the robot code. Use the Code and deploy guide, CPU branch.",
+					"no": "Continue."
+				},
+				"Look at the specific mechanism that lags: its sensors, its command, and any blocking calls in the code."
+			]
 		}
 	}
 }

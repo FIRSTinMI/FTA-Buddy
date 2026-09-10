@@ -31,11 +31,22 @@
 			"id": "deploy-usb",
 			"title": "Deploy over USB fails",
 			"steps": [
-				"Open http://172.22.11.2/ in a browser. If the RIO page loads, the link is fine and the problem is the project. Check the team number in WPILib Preferences matches the RIO.",
-				"If the page does not load, try a different USB cable and a different laptop port. Skip hubs and extensions.",
-				"Make sure NI FRC Game Tools is installed on this laptop. Without it there is no USB driver for the RIO.",
+				"Open http://172.22.11.2/ in a browser.",
+				{
+					"kind": "check",
+					"text": "Does the roboRIO web page load?",
+					"yes": "Check the team number in WPILib Preferences.",
+					"no": "Continue."
+				},
+				"Try a different USB cable and a different laptop port. Skip hubs and extensions.",
+				"Make sure NI FRC Game Tools is installed. Without it there is no USB driver for the RIO.",
 				"Check the RIO Status light is off. A blinking Status light means the RIO is not healthy. Use the roboRIO guide.",
-				"If two USB ports on the RIO are both dead, the RIO took static. Deploy over Ethernet and swap the RIO later."
+				{
+					"kind": "check",
+					"text": "Are both RIO USB ports dead from static?",
+					"yes": "Deploy over Ethernet and swap the RIO later.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -53,12 +64,17 @@
 			"id": "deploy-network",
 			"title": "Deploy over the network fails",
 			"steps": [
-				"Ping 10.TE.AM.2 from a command prompt. No reply means the network path, not the deploy. Check the RIO to radio cable and the laptop is in the radio DS port or on the team Wi-Fi.",
-				"Check the team number in WPILib Preferences. Deploy looks for roboRIO-TEAM-FRC.local and 10.TE.AM.2 using that number.",
+				"Ping 10.TE.AM.2 from a command prompt. No reply means the network path, not the deploy. Check the RIO to radio cable and that the laptop is on the radio DS port or team Wi-Fi.",
+				"Check the team number in WPILib Preferences. Deploy looks for roboRIO-TEAM-FRC.local and 10.TE.AM.2.",
 				"Turn off Wi-Fi if using Ethernet, or unplug Ethernet if using Wi-Fi. Disable other adapters in ncpa.cpl. Two adapters confuse mDNS.",
 				"Turn off the Windows firewall. It blocks the deploy ports and mDNS.",
 				"Set the adapter to DHCP. Do not use a static 10.TE.AM.5 unless on the field.",
-				"Still failing: deploy over USB. If mDNS is broken on the laptop, reinstall Game Tools."
+				{
+					"kind": "check",
+					"text": "Does the deploy still fail?",
+					"yes": "Deploy over USB. Reinstall Game Tools if mDNS is broken.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -82,10 +98,15 @@
 			"title": "Robot code crashes at startup",
 			"steps": [
 				"Read the first line of the stack trace that names a file in the team's package. That is where it died.",
-				"Common causes: a CAN ID that does not exist, two devices with the same port or ID, a missing config or JSON file, a null object used in robotInit.",
+				"Check the common causes: a CAN ID that does not exist, two devices on one port or ID, a missing config file, a null used in robotInit.",
 				"Check for a vendordep version that does not match the device firmware. Update the firmware or the vendordep.",
 				"Fix, redeploy, and watch the Console again. Restart Robot Code in the DS if the RIO did not restart it.",
-				"If the team is stuck, search the exact error text in the chat tab."
+				{
+					"kind": "check",
+					"text": "Does the code still crash at startup?",
+					"yes": "Search the exact error text with the team.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -103,9 +124,14 @@
 				"Click Restart Robot Code in the DS and wait 20 seconds.",
 				"Check the WPILib year of the project matches the RIO image year. A 2025 image will not run 2024 code.",
 				"Reboot the RIO. Watch the Status light turn off, then wait for Robot Code to go green.",
-				"Deploy again and read the deploy output for errors. A deploy that says success but built nothing new is a stale build. Do a clean build.",
+				"Do a clean build and redeploy. A deploy that says success but builds nothing new is stale. Read the output for errors.",
 				"Open the RIO web page and confirm the team number and image version.",
-				"If the DS still shows No Robot Code after a clean redeploy, open the DS Console and read the crash message."
+				{
+					"kind": "check",
+					"text": "Does the DS still show No Robot Code?",
+					"yes": "Open the DS Console and read the crash message.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -120,12 +146,17 @@
 			"id": "cpu",
 			"title": "RIO CPU at 100 percent, loop overruns, lag",
 			"steps": [
-				"Open the RIO web page or the DS Diagnostics tab and read CPU. Near 100 percent means the code is starving NetworkTables and the DS packets. Comms flicker and the robot lags.",
-				"The usual cause this season: logging every value separately each loop. Each SmartDashboard, NetworkTables, DataLog, or Epilogue call costs time. Hundreds per loop fills the CPU.",
-				"Fix: batch the values into fewer entries, log at a lower rate, or turn the loggers off for the match. Disable Epilogue or DataLogManager to prove it, then add back what is needed.",
-				"Reading CAN devices for logging is expensive. Read each device once per loop and cache it. Do not query inside the logger.",
-				"Check for a vision or path planning task running on the RIO that belongs on a coprocessor.",
-				"Review the periodic loop with the team if they cannot find the cost."
+				"Open the RIO web page or the DS Diagnostics tab and read CPU. Near 100 percent starves NetworkTables and the DS packets. Comms flicker and the robot lags.",
+				"The usual cause is logging every value separately each loop. Each SmartDashboard, NetworkTables, DataLog, or Epilogue call costs time.",
+				"Disable Epilogue or DataLogManager to prove it. Then batch values into fewer entries or log at a lower rate.",
+				"Cache each CAN device read once per loop. Do not query inside the logger.",
+				"Move any vision or path planning off the RIO to a coprocessor.",
+				{
+					"kind": "check",
+					"text": "Is the RIO CPU still near 100 percent?",
+					"yes": "Review the periodic loop with the team.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -144,12 +175,17 @@
 			"id": "joysticks",
 			"title": "Joystick unavailable",
 			"steps": [
-				"Press F1 in the DS to rescan. Look at the USB tab. Every controller should be green.",
-				"Check the controller is in the slot number the code reads. Drag it to the right slot in the USB tab. Slots reorder when a controller is unplugged.",
+				"Press F1 in the DS to rescan. Every controller in the USB tab should be green.",
+				"Drag each controller to the slot the code reads. Slots reorder when one is unplugged.",
 				"Unplug the controller and plug it back in. Try a different laptop USB port, not a hub.",
 				"Restart the DS software if a controller is listed but greyed out.",
-				"The warning also prints once at DS startup and when a controller drops while enabled. If everything is green and it works, it is noise.",
-				"Swap the controller. Xbox controllers with worn cables drop under vibration."
+				"The warning also prints once at startup and when a controller drops while enabled. All green and working means it is noise.",
+				{
+					"kind": "check",
+					"text": "Is a controller still greyed out or missing?",
+					"yes": "Swap the controller. Worn cables drop under vibration.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -167,12 +203,17 @@
 			"id": "no-motion",
 			"title": "Enabled but nothing moves",
 			"steps": [
-				"Check the RSL blinks and the RIO Mode light is green (teleop). If not, the robot is not enabled.",
+				"Check the RSL blinks and the RIO Mode light is green for teleop. A dark Mode light means the robot is not enabled.",
 				"Check the DS shows Joysticks green and the driver is on the right slot.",
 				"Watch battery voltage when enabling. A dip below 6.8 V disables outputs. Swap the battery.",
-				"Check motor controller lights. Blinking orange means valid CAN but disabled. Alternating red means no CAN. Use the CAN guide.",
-				"Check the DS Console for errors like unknown CAN ID or watchdog not fed.",
-				"If the lights all look right and nothing moves, check CAN IDs and motor constructors with the team."
+				"Check motor controller lights. Blinking orange is valid CAN but disabled. Alternating red is no CAN. Use the CAN guide.",
+				"Read the DS Console for errors like unknown CAN ID or watchdog not fed.",
+				{
+					"kind": "check",
+					"text": "Are the motors still dead?",
+					"yes": "Check CAN IDs and motor constructors with the team.",
+					"no": "Problem solved."
+				}
 			],
 			"statusLights": [
 				{ "device": "roborio", "label": "roboRIO Mode light" },
@@ -185,11 +226,17 @@
 			"id": "ds-usb",
 			"title": "DS laptop USB devices drop",
 			"steps": [
-				"Plug controllers straight into the laptop. If a hub is needed, use a powered hub. Bus powered hubs drop devices.",
+				"Plug controllers straight into the laptop. Use a powered hub if a hub is needed. Bus powered hubs drop devices.",
 				"Remove USB extension cables. Unshielded extensions carry static that has killed ports.",
 				"Turn off USB power saving in Windows power settings and in Device Manager for each USB root hub.",
 				"Set the laptop power plan to Best Performance and never sleep.",
-				"Try a different port on the laptop. If two ports are dead, use a loaner laptop for the match."
+				"Try a different port on the laptop.",
+				{
+					"kind": "check",
+					"text": "Do USB devices still drop?",
+					"yes": "Use a loaner laptop for the match.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{

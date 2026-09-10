@@ -277,16 +277,19 @@
 									<td>
 										<table>
 											<tbody>
-												<tr class="">
-													<td
-														colspan="2"
-														class="bold w-100 pt-2 pl-1 border-b-2 border-b-gray-600"
-														>No Power</td
-													>
+												<tr class="w-100 border-b-2 border-b-gray-600">
+													<td colspan="2" class="bold w-100 pt-2 pl-2">Power (PWR)</td>
+												</tr>
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"radio.power-on"}
+												>
+													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
+													<td>Solid: powered</td>
 												</tr>
 												<tr use:tapHelp={"radio.no-power"}>
-													<td class="w-20 pl-8 pt-2"><span class="black led"> </span></td>
-													<td>All LEDs</td>
+													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
+													<td>Off: no power</td>
 												</tr>
 											</tbody>
 										</table>
@@ -298,40 +301,19 @@
 										<table>
 											<tbody>
 												<tr class="w-100 border-b-2 border-b-gray-600">
-													<td colspan="2" class="bold w-100 pt-2 pl-2">Powered + Booting</td>
+													<td colspan="2" class="bold w-100 pt-2 pl-2">System Status (SYS)</td>
 												</tr>
 												<tr
-													class="border-b-2 border-b-gray-600"
+													class="w-100 border-b-2 border-b-gray-600"
 													use:tapHelp={"radio.powered-booting"}
 												>
-													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
-													<td>Power</td>
-												</tr>
-												<tr use:tapHelp={"radio.powered-booting"}>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
-													<td>System Status</td>
-												</tr>
-											</tbody>
-										</table>
-									</td>
-								</tr>
-								<tr class="border-2 border-gray-400">
-									<td>
-										<table>
-											<tbody>
-												<tr class="w-100 border-b-2 border-b-gray-600">
-													<td colspan="2" class="bold w-100 pt-2 pl-2"
-														>Powered + Unable to Ping Field</td
-													>
+													<td>Off: booting</td>
 												</tr>
 												<tr
 													class="w-100 border-b-2 border-b-gray-600"
 													use:tapHelp={"radio.powered-unable-to-ping-field"}
 												>
-													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
-													<td>Power</td>
-												</tr>
-												<tr use:tapHelp={"radio.powered-unable-to-ping-field"}>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["1Hz"] === true
@@ -339,115 +321,40 @@
 																: "green led"}
 														></span></td
 													>
-													<td>System Status</td>
+													<td>Blinking 1 Hz: cannot ping field</td>
 												</tr>
-											</tbody>
-										</table>
-									</td>
-								</tr>
-								<tr class="border-2 border-gray-400">
-									<td>
-										<table>
-											<tbody>
-												<tr class="w-100 border-b-2 border-b-gray-600">
-													<td colspan="2" class="bold w-100 pt-2 pl-2"
-														>Powered + Flashing Firmware</td
-													>
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"radio.powered-able-to-ping-field"}
+												>
+													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
+													<td>Solid: linked, can ping field</td>
 												</tr>
 												<tr
 													class="w-100 border-b-2 border-b-gray-600"
 													use:tapHelp={"radio.powered-flashing-firmware"}
 												>
-													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
-													<td>Power</td>
-												</tr>
-												<tr use:tapHelp={"radio.powered-flashing-firmware"}>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["20Hz"] === true
 																? "black led"
 																: "green led"}
-														></span>
-													</td>
-													<td>System Status</td>
-												</tr>
-											</tbody>
-										</table>
-									</td>
-								</tr>
-
-								<tr class="border-2 border-gray-400">
-									<td>
-										<table>
-											<tbody>
-												<tr class="w-100 border-b-2 border-b-gray-600">
-													<td colspan="2" class="bold w-100 pt-2 pl-2"
-														>Powered + Firmware Flashed + In First Boot</td
+														></span></td
 													>
+													<td>Blinking fast (20 Hz): flashing firmware</td>
 												</tr>
 												<tr
 													class="w-100 border-b-2 border-b-gray-600"
 													use:tapHelp={"radio.powered-firmware-flashed-in-first-boot"}
 												>
-													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
-													<td>Power</td>
-												</tr>
-												<tr use:tapHelp={"radio.powered-firmware-flashed-in-first-boot"}>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["50Hz"] === true
 																? "black led"
 																: "green led"}
-														></span>
-													</td>
-													<td>System Status</td>
-												</tr>
-											</tbody>
-										</table>
-									</td>
-								</tr>
-
-								<tr class="border-2 border-gray-400">
-									<td>
-										<table>
-											<tbody>
-												<tr class="w-100 border-b-2 border-b-gray-600">
-													<td colspan="2" class="bold w-100 pt-2 pl-2"
-														>Radio in AP Mode with Battery Detected</td
+														></span></td
 													>
-												</tr>
-												<tr
-													class="w-100 border-b-2 border-b-gray-600"
-													use:tapHelp={"radio.radio-in-ap-mode-with-battery-detected"}
-												>
-													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
-													<td>Power</td>
-												</tr>
-												<tr
-													class="w-100 border-b-2 border-b-gray-600"
-													use:tapHelp={"radio.radio-in-ap-mode-with-battery-detected"}
-												>
-													<td class="w-20 pl-8 pt-2"
-														><span
-															class={LEDToggleState["20Hz"] === true
-																? "black led"
-																: "green led"}
-														></span>
-													</td>
-													<td>System Status</td>
-												</tr>
-												<tr
-													class="w-100 border-b-2 border-b-gray-600"
-													use:tapHelp={"radio.radio-in-ap-mode-with-battery-detected"}
-												>
-													<td class="w-20 pl-8 pt-2"
-														><span
-															class={LEDToggleState["20Hz"] === true
-																? "black led"
-																: "green led"}
-														></span>
-													</td>
-													<td>2.4GHz</td>
+													<td>Blinking very fast (50 Hz): first boot after flash</td>
 												</tr>
 												<tr use:tapHelp={"radio.radio-in-ap-mode-with-battery-detected"}>
 													<td class="w-20 pl-8 pt-2"
@@ -455,9 +362,9 @@
 															class={LEDToggleState["20Hz"] === true
 																? "black led"
 																: "green led"}
-														></span>
-													</td>
-													<td>6GHz</td>
+														></span></td
+													>
+													<td>All lights blinking: AP mode on battery</td>
 												</tr>
 											</tbody>
 										</table>
@@ -469,82 +376,11 @@
 										<table>
 											<tbody>
 												<tr class="w-100 border-b-2 border-b-gray-600">
-													<td colspan="2" class="bold w-100 pt-2 pl-2"
-														>Powered + Able to Ping Field</td
-													>
-												</tr>
-												<tr
-													class="w-100 border-b-2 border-b-gray-600"
-													use:tapHelp={"radio.powered-able-to-ping-field"}
-												>
-													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
-													<td>Power</td>
-												</tr>
-												<tr use:tapHelp={"radio.powered-able-to-ping-field"}>
-													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
-													<td>System Status</td>
-												</tr>
-											</tbody>
-										</table>
-									</td>
-								</tr>
-
-								<tr class="border-2 border-gray-400">
-									<td>
-										<table>
-											<tbody>
-												<tr class="w-100 border-b-2 border-b-gray-600">
-													<td colspan="2" class="bold w-100 pt-2 pl-2">No Robot Radio Link</td
-													>
-												</tr>
-												<tr
-													class="w-100 border-b-2 border-b-gray-600"
-													use:tapHelp={"radio.no-robot-radio-link"}
-												>
-													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
-													<td>Power</td>
-												</tr>
-												<tr
-													class="w-100 border-b-2 border-b-gray-600"
-													use:tapHelp={"radio.no-robot-radio-link"}
-												>
-													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
-													<td>System Status</td>
-												</tr>
-												<tr
-													class="w-100 border-b-2 border-b-gray-600"
-													use:tapHelp={"radio.no-robot-radio-link"}
-												>
-													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
-													<td>2.4GHz</td>
-												</tr>
-												<tr
-													class="w-100 border-b-2 border-b-gray-600"
-													use:tapHelp={"radio.no-robot-radio-link"}
-												>
-													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
-													<td>6GHz</td>
-												</tr>
-												<tr use:tapHelp={"radio.no-robot-radio-link"}>
-													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
-													<td>RIO Link</td>
-												</tr>
-											</tbody>
-										</table>
-									</td>
-								</tr>
-								<tr class="border-2 border-gray-400">
-									<td>
-										<table>
-											<tbody>
-												<tr class="w-100 border-b-2 border-b-gray-600">
-													<td colspan="2" class="bold w-100 pt-2 pl-2"
-														>2.4GHz Connection Enabled</td
-													>
+													<td colspan="2" class="bold w-100 pt-2 pl-2">2.4 GHz (2.4G)</td>
 												</tr>
 												<tr use:tapHelp={"radio.2-4ghz-connection-enabled"}>
 													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
-													<td>2.4GHz</td>
+													<td>Solid: 2.4 GHz AP enabled</td>
 												</tr>
 											</tbody>
 										</table>
@@ -556,13 +392,11 @@
 										<table>
 											<tbody>
 												<tr class="w-100 border-b-2 border-b-gray-600">
-													<td colspan="2" class="bold w-100 pt-2 pl-2"
-														>6GHz Connection Enabled</td
-													>
+													<td colspan="2" class="bold w-100 pt-2 pl-2">6 GHz (6G)</td>
 												</tr>
 												<tr use:tapHelp={"radio.6ghz-connection-enabled"}>
 													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
-													<td>6GHz</td>
+													<td>Solid: connected to 6 GHz field AP</td>
 												</tr>
 											</tbody>
 										</table>
@@ -574,13 +408,18 @@
 										<table>
 											<tbody>
 												<tr class="w-100 border-b-2 border-b-gray-600">
-													<td colspan="2" class="bold w-100 pt-2 pl-2"
-														>Valid RIO Connection</td
-													>
+													<td colspan="2" class="bold w-100 pt-2 pl-2">roboRIO Link (RIO)</td>
 												</tr>
-												<tr use:tapHelp={"radio.valid-rio-connection"}>
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"radio.valid-rio-connection"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
-													<td>RIO Link</td>
+													<td>Solid: roboRIO Ethernet link up</td>
+												</tr>
+												<tr use:tapHelp={"radio.no-robot-radio-link"}>
+													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
+													<td>Off: no roboRIO link</td>
 												</tr>
 											</tbody>
 										</table>

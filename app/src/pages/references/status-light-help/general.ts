@@ -21,6 +21,21 @@ const REIMAGE_RIO = [
 ] as const;
 
 export const generalHelp = {
+	"radio.power-on": {
+		device: "VH-109 radio",
+		led: "PWR",
+		state: "Solid",
+		meaning: "The radio has power. PWR stays solid whenever 12 V is present, whatever SYS is doing.",
+		steps: [
+			{
+				kind: "check",
+				text: "Driver Station still shows no robot?",
+				yes: "Read the SYS LED: off means booting, blinking 1 Hz means it cannot reach the field.",
+				no: "Problem solved.",
+			},
+		],
+		source: VIVID,
+	},
 	"radio.no-power": {
 		device: "VH-109 radio",
 		led: "All LEDs",

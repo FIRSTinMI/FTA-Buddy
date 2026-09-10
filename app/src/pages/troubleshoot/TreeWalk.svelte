@@ -1,4 +1,5 @@
 <script lang="ts">
+	import StepFlowChecklist from "../../components/troubleshoot/StepFlowChecklist.svelte";
 	import Icon from "@iconify/svelte";
 	import { Button } from "flowbite-svelte";
 	import type { Tree } from "../../../../shared/troubleshooting";
@@ -134,11 +135,7 @@
 	{:else}
 		<!-- #region Leaf -->
 		<h2 class="text-xl font-bold text-black dark:text-white">{node.title}</h2>
-		<ol class="flex list-decimal flex-col gap-2 pl-6 text-black dark:text-white">
-			{#each node.steps as step, i (i)}
-				<li class="pl-1">{step}</li>
-			{/each}
-		</ol>
+		<StepFlowChecklist steps={node.steps} />
 
 		{#if node.statusLights?.length}
 			<div class="flex flex-wrap gap-2">

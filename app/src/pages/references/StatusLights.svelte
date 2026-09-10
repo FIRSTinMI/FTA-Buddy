@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Accordion, AccordionItem, Modal } from "flowbite-svelte";
+	import StepFlowTree from "../../components/troubleshoot/StepFlowTree.svelte";
 	import { onDestroy, onMount } from "svelte";
 	import type { Action } from "svelte/action";
 	import { statusLightHelp, type StatusLightHelp, type StatusLightHelpId } from "./status-light-help";
@@ -223,11 +224,7 @@
 			{#if shown.steps && shown.steps.length > 0}
 				<div>
 					<div class="bold">What to do</div>
-					<ol class="list-decimal pl-5 flex flex-col gap-1">
-						{#each shown.steps as step, i (i)}
-							<li>{step}</li>
-						{/each}
-					</ol>
+					<StepFlowTree steps={shown.steps} />
 				</div>
 			{/if}
 			{#if shown.source ?? help.source}

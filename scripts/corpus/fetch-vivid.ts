@@ -17,7 +17,11 @@ export async function crawl(opts: CrawlOptions = {}): Promise<TroubleshootChunkI
 	for (const url of pages) {
 		const html = await fetchText(url);
 		if (!html) continue;
-		const chunks = pageToChunks(html, { source: "vivid", url, sourceDate: gitbookUpdated(html) });
+		// The site never says "radio" in its page titles; searches for the radio LEDs need that word to rank the page.
+		const chunks = pageToChunks(html, { source: "vivid", url, sourceDate: gitbookUpdated(html) }).map((c) => ({
+			...c,
+			title: /radio/i.test(c.title) ? c.title : `Vivid radio: ${c.title}`,
+		}));
 		console.log(`[vivid] ${chunks.length} chunks  ${url.slice(BASE.length - 1)}`);
 		out.push(...chunks);
 	}

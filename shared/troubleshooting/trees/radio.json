@@ -38,10 +38,15 @@
 			"title": "No power on the DC input",
 			"steps": [
 				"Tug the Weidmuller plug at the radio. Pull the wires, strip fresh copper, push them back in until they lock.",
-				"Check polarity. Red to +, black to -. Reversed polarity does not light the radio.",
+				"Check polarity. Red to plus, black to minus. Reversed polarity does not light the radio.",
 				"Check the PDH or PDP channel that feeds the radio. Reseat the fuse or breaker. A red channel LED means no output.",
-				"Measure at the plug. The radio accepts battery voltage up to 19 V. No voltage means the wiring, not the radio.",
-				"12 V present and still dark: swap the radio and have it programmed at the kiosk. Tell the FTA."
+				"Measure at the plug. The radio takes battery voltage up to 19 V. No voltage means the wiring, not the radio.",
+				{
+					"kind": "check",
+					"text": "Is the radio still dark with 12 V at the plug?",
+					"yes": "Swap the radio and program it at the kiosk.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -60,8 +65,13 @@
 				"PoE comes in on the RIO port only. Move the cable if it is in AUX1, AUX2, or DS.",
 				"Check the injector or PoE cable is powered from a PDH or PDP channel with a good fuse.",
 				"Swap the Ethernet cable between injector and radio. A cable with a broken pair carries data but not power.",
-				"If the team has the DC plug wired too, use it instead and take the PoE power off.",
-				"Still dark: swap the radio, program it at the kiosk, tell the FTA."
+				"Use the DC plug instead and take the PoE power off if the team has it wired.",
+				{
+					"kind": "check",
+					"text": "Is the radio still dark?",
+					"yes": "Swap the radio and program it at the kiosk.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -77,11 +87,16 @@
 			"id": "dual-power",
 			"title": "PoE and DC input at the same time",
 			"steps": [
-				"Two power inputs from different sources or voltages makes the radio reboot or drop. This is a known bad setup.",
-				"Pick one. Remove the power from the PoE injector and keep the Ethernet cable for data, or remove the DC plug.",
+				"Two power inputs from different sources or voltages make the radio reboot or drop. This is a known bad setup.",
+				"Pick one. Remove the power from the PoE injector and keep the Ethernet for data, or remove the DC plug.",
 				"Vivid allows dual feed only from the same source at the same voltage. Most teams do not have that. Use one.",
 				"Power cycle the radio after the change and wait 60 seconds for SYS.",
-				"If it still will not power, follow the DC only or PoE only branch of this guide."
+				{
+					"kind": "check",
+					"text": "Does the radio still reboot or stay dark?",
+					"yes": "Follow the DC only or PoE only branch.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -98,8 +113,13 @@
 				"Do not power the radio from the RPM and the 12 V DC input at the same time. It can damage the radio.",
 				"Check the RPM input has 12 V from its PDH or PDP channel and its own LED is on.",
 				"Check the RPM output cable goes to the radio RIO port.",
-				"Vivid recommends fewer devices between the battery and the radio. Wire the radio straight to a PDH or PDP channel if the RPM is suspect.",
-				"Still dark: swap the radio and program it at the kiosk."
+				"Wire the radio straight to a PDH or PDP channel if the RPM is suspect. Vivid recommends fewer devices between the battery and the radio.",
+				{
+					"kind": "check",
+					"text": "Is the radio still dark?",
+					"yes": "Swap the radio and program it at the kiosk.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -118,10 +138,15 @@
 			"title": "PWR on, SYS off: still booting",
 			"steps": [
 				"Wait 60 seconds. SYS stays off during boot.",
-				"If SYS never comes on after 2 minutes, power cycle the radio once.",
-				"A radio that loops power on and never finishes boot may be on old firmware with the flash corruption bug. Fixed in 1.2.5. Take it to the kiosk to update.",
-				"Check the supply voltage is steady. A weak battery or a loose plug can hold the radio in boot.",
-				"Still no SYS: swap the radio and tell the FTA."
+				"Power cycle the radio once if SYS never comes on after 2 minutes.",
+				"A radio that loops power and never finishes boot may have the old flash corruption bug. Fixed in 1.2.5. Take it to the kiosk to update.",
+				"Check the supply voltage is steady. A weak battery or loose plug can hold the radio in boot.",
+				{
+					"kind": "check",
+					"text": "Is SYS still off?",
+					"yes": "Swap the radio and tell the FTA.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{ "label": "Known issues", "url": "https://frc-radio.vivid-hosting.net/overview/support/known-issues" },
@@ -149,11 +174,16 @@
 			"title": "On the field, radio cannot reach the AP",
 			"steps": [
 				"Wait 60 seconds after power on.",
-				"Ask if the radio was programmed at this event's kiosk. If it came from home or another event, take it to the kiosk now.",
+				"Reprogram the radio at this event's kiosk if it came from home or another event.",
 				"Make sure only one radio is powered on the robot.",
 				"Check the DS is fully connected. The radio joins only after the DS is linked.",
-				"Check the radio is mounted in the open, not inside a metal frame or a printed box. Move it if needed.",
-				"Still blinking: swap the radio. Escalate to the FTA to check the field AP for this station."
+				"Check the radio is mounted in the open, not inside a metal frame or printed box. Move it if needed.",
+				{
+					"kind": "check",
+					"text": "Is SYS still blinking once a second?",
+					"yes": "Swap the radio and escalate to the FTA to check the AP.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -174,9 +204,9 @@
 			"title": "In the pit, SYS blinking is normal",
 			"steps": [
 				"In the pit there is no field AP, so SYS blinks. That is expected.",
-				"Connect the DS with an Ethernet cable into the radio DS port for pit testing.",
-				"If the team uses their own practice AP, it must be set up as an access point with the same key. That is not allowed on the event floor.",
-				"Do not reprogram the radio at home settings. It must stay on this event's kiosk settings."
+				"A team's own practice AP must be set as an access point with the same key. That is not allowed on the event floor.",
+				"Do not reprogram the radio to home settings. It must stay on this event's kiosk settings.",
+				"Connect the DS with an Ethernet cable into the radio DS port for pit testing."
 			],
 			"links": [
 				{
@@ -190,10 +220,15 @@
 			"id": "flashing",
 			"title": "SYS blinking very fast: firmware update",
 			"steps": [
-				"20 Hz blink means firmware is being written. 50 Hz means the first boot after an update.",
+				"20 Hz blink means firmware is writing. 50 Hz means the first boot after an update.",
 				"Do not power off. Wait until SYS goes solid or slow blink. This can take 2 minutes.",
-				"If it has been more than 5 minutes, power cycle once and take it to the kiosk to check the firmware version.",
-				"Still stuck: swap the radio."
+				"Power cycle once if it has been more than 5 minutes. Take it to the kiosk to check the firmware version.",
+				{
+					"kind": "check",
+					"text": "Is SYS still blinking very fast?",
+					"yes": "Swap the radio.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -210,8 +245,13 @@
 			"steps": [
 				"The radio is configured as an Access Point and sees battery power. Wireless is off.",
 				"Take it to the kiosk and program it in Robot Radio mode for this event.",
-				"If the team has an AP radio for practice, check they did not put it on the robot by mistake.",
-				"Still blinking after a reprogram: swap the radio."
+				"Check the team did not put a practice AP radio on the robot by mistake.",
+				{
+					"kind": "check",
+					"text": "Do all lights still blink after a reprogram?",
+					"yes": "Swap the radio.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -230,7 +270,12 @@
 				"Check the RIO is powered and past boot. Its Status light should be off.",
 				"Reseat both ends of the Ethernet cable. Replace a cable with a broken latch.",
 				"Swap the cable for a known good one.",
-				"If the RIO Ethernet port is dead, a USB Ethernet adapter in the RIO USB port works as a stand-in. Use the roboRIO guide in this app."
+				{
+					"kind": "check",
+					"text": "Is the RIO light still off?",
+					"yes": "Use a USB Ethernet adapter in the RIO USB port.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{ "label": "Radio ports", "url": "https://frc-radio.vivid-hosting.net/overview/wiring-your-radio" }
@@ -253,9 +298,14 @@
 			"steps": [
 				"Take the radio, or the robot, to the radio kiosk. Enter the team number. The kiosk sets the event key and updates firmware if needed.",
 				"Do not use the radio's own web page at an event. Only the kiosk has the right key.",
-				"After programming, power the radio from the robot and wait 60 seconds. SYS goes solid on the field.",
-				"If the kiosk cannot see the radio, plug the laptop into the DS port on the radio and try again. Then swap the cable.",
-				"Kiosk keeps failing on this radio: swap the radio and tell the FTA."
+				"Power the radio from the robot after programming and wait 60 seconds. SYS goes solid on the field.",
+				"Plug the laptop into the radio DS port and try again if the kiosk cannot see the radio. Swap the cable.",
+				{
+					"kind": "check",
+					"text": "Does the kiosk still fail on this radio?",
+					"yes": "Swap the radio and tell the FTA.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -274,7 +324,12 @@
 				"Check the DS: Enet Link, team number, FMS light. Use the Driver station guide in this app.",
 				"Check the roboRIO Comm light. Off means the RIO is not talking to the DS. Use the roboRIO guide.",
 				"Ping 10.TE.AM.2 from the DS laptop to test the RIO through the radio.",
-				"If everything pings but the DS stays red, escalate to the FTA."
+				{
+					"kind": "check",
+					"text": "Does everything ping but the DS stays red?",
+					"yes": "Escalate to the FTA.",
+					"no": "Problem solved."
+				}
 			],
 			"statusLights": [{ "device": "roborio", "label": "roboRIO status lights" }],
 			"escalate": true
@@ -284,12 +339,17 @@
 			"id": "reboots",
 			"title": "Radio reboots or drops in matches",
 			"steps": [
-				"If PoE and the DC input are both connected, remove one. Dual power caused reboots in this season's tickets.",
-				"Tug the Weidmuller plug. Re-strip and reseat the wires. Tie-wrap the cable to the frame near the radio so vibration does not pull on it.",
+				"Remove one power source if PoE and the DC input are both connected. Dual power caused reboots this season.",
+				"Tug the Weidmuller plug. Re-strip and reseat the wires. Tie-wrap the cable to the frame near the radio.",
 				"Check the wire gauge and route. Thin wire on a long run drops voltage under load. Wire the radio to its own PDH or PDP channel.",
-				"Open the DS log. A battery dip below 7 V during a match resets the radio too. Lower motor current limits and use a good battery.",
+				"Open the DS log. A battery dip below 7 V in a match resets the radio. Lower motor current limits and use a good battery.",
 				"Check nothing else is on the radio's channel. A shared channel with a motor browns out the radio.",
-				"Still dropping: swap the radio and ask the FTA to watch the AP side."
+				{
+					"kind": "check",
+					"text": "Does the radio still reboot or drop in matches?",
+					"yes": "Swap the radio and ask the FTA to watch the AP.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -308,11 +368,16 @@
 			"id": "ds-wifi",
 			"title": "DS on Wi-Fi in the pit",
 			"steps": [
-				"At an event, the kiosk decides if the 2.4 GHz pit network is on. Many events turn it off. Use an Ethernet cable into the radio DS port instead.",
-				"If 2.4 GHz is allowed, the network name is the team number plus the suffix set at the kiosk. The password is the 2.4 GHz key the team chose.",
-				"DIP switch 3 on the radio forces standalone 2.4 GHz mode at home. Leave it off at events.",
-				"Before a match, turn the laptop Wi-Fi off. On the field only Ethernet works.",
-				"If the team cannot find the network, check with the FTA whether 2.4 GHz is enabled at this event."
+				"At an event the kiosk decides if the 2.4 GHz pit network is on. Many events turn it off. Use an Ethernet cable into the radio DS port instead.",
+				"The network name is the team number plus the kiosk suffix when 2.4 GHz is on. The password is the 2.4 GHz key.",
+				"DIP switch 3 forces standalone 2.4 GHz mode at home. Leave it off at events.",
+				"Turn the laptop Wi-Fi off before a match. On the field only Ethernet works.",
+				{
+					"kind": "check",
+					"text": "Is the network still missing?",
+					"yes": "Ask the FTA whether 2.4 GHz is enabled.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{

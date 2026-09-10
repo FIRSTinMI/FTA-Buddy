@@ -31,12 +31,17 @@
 			"id": "kraken-limits",
 			"title": "Main breaker trip: Kraken supply current limits",
 			"steps": [
-				"Nearly every main breaker trip this season was Kraken or Falcon drive motors left on the default 70 A supply current limit. Eight swerve motors at 70 A is far more than the 120 A main breaker holds.",
-				"Ask the team to set SupplyCurrentLimit on the drive motors to 50 to 60 A with SupplyCurrentLimitEnable true. Steer motors 20 to 30 A. Check the limits in Phoenix Tuner X config after deploy.",
-				"A stator limit (default 120 A) does not protect the breaker on its own. The supply limit is the one that matters here.",
-				"Check the breaker lugs. Try to rotate each crimped lug. If it turns, tighten the nut. A hot loose lug trips early.",
-				"Redeploy, run the drivetrain against a wall for a few seconds, and watch total current in the DS log or PDH.",
-				"Still tripping after lower limits: check the breaker age and the battery leads, then swap the breaker."
+				"Most main breaker trips this season were Kraken or Falcon drive motors left on the default 70 A supply current limit. Eight swerve motors at 70 A is far past the 120 A main breaker.",
+				"Set SupplyCurrentLimit on the drive motors to 50 to 60 A with SupplyCurrentLimitEnable true. Steer motors 20 to 30 A. Confirm in Phoenix Tuner X after deploy.",
+				"A stator limit alone does not protect the breaker. The supply limit is the one that matters here.",
+				"Try to rotate each crimped lug on the breaker. Tighten any that turns. A hot loose lug trips early.",
+				"Redeploy and run the drivetrain against a wall for a few seconds. Watch total current in the DS log or PDH.",
+				{
+					"kind": "check",
+					"text": "Does the main breaker still trip?",
+					"yes": "Swap the breaker and check the battery leads.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -55,12 +60,17 @@
 			"id": "main-breaker-other",
 			"title": "Main breaker trip: other causes",
 			"steps": [
-				"Try to rotate each lug on the main breaker by hand. If it turns, the nut is loose. Tighten it. Loose lugs heat the breaker and it trips below rating.",
-				"Check the battery connector and the battery leads. Wiggle them. Tie-wrap the connector halves together.",
-				"Ask what the robot was doing when it tripped. Stalled arm, pinned drivetrain, or a mechanism against a hard stop draws full stall current.",
-				"Set supply current limits on every drive and mechanism motor. Spark MAX: smart current limit 40 to 60 A on drive. Talon FX: supply limit 50 to 60 A.",
+				"Try to rotate each lug on the main breaker by hand. Tighten any that turns. Loose lugs heat the breaker and trip it below rating.",
+				"Check the battery connector and leads. Wiggle them. Tie-wrap the connector halves together.",
+				"Ask what the robot was doing when it tripped. A stalled arm, pinned drivetrain, or mechanism against a hard stop draws full stall current.",
+				"Set supply current limits on every drive and mechanism motor. Spark MAX 40 to 60 A on drive. Talon FX 50 to 60 A.",
 				"Breakers age. One that has tripped many times trips easier. Swap it for a new 120 A breaker.",
-				"If the team cannot find where the current goes, read per-channel current in the DS log viewer."
+				{
+					"kind": "check",
+					"text": "Does the breaker still trip?",
+					"yes": "Read per-channel current in the DS log viewer with the team.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -89,10 +99,15 @@
 			"title": "Weak battery",
 			"steps": [
 				"Swap to a fully charged battery. A good battery rests at 12.5 V or more.",
-				"Ask if the battery has been dropped or is more than 2 seasons old. Retire it.",
+				"Retire the battery if it has been dropped or is more than 2 seasons old.",
 				"Check the battery leads and connector. A loose crimp reads low under load even on a full battery.",
 				"Use a battery beak or load tester if the team has one. Under 12.0 V loaded means retire it.",
-				"Tell the team to charge every battery before each match."
+				{
+					"kind": "check",
+					"text": "Does the voltage still read low?",
+					"yes": "Charge every battery before each match.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -106,12 +121,17 @@
 			"id": "brownout-wiring",
 			"title": "Brownout with a good battery",
 			"steps": [
-				"Open the DS log. Find the voltage dip. Under 6.8 V the RIO starts cutting outputs. Under 6.3 V (RIO 1) or 6.75 V (RIO 2 default) everything disables.",
-				"Wiggle the battery connector and main breaker lugs. Try to rotate each lug. Loose main power is the most common cause after motors.",
+				"Open the DS log. Find the voltage dip. Under 6.8 V the RIO cuts outputs. Under 6.3 V (RIO 1) or 6.75 V (RIO 2) everything disables.",
+				"Wiggle the battery connector and main breaker lugs. Try to rotate each lug. Loose main power is the top cause after motors.",
 				"Squeeze the wires at the PDH or PDP main terminals. Confirm the bolts are tight with split washers.",
 				"Lower motor supply current limits. Drive first, then any mechanism that starts from stall.",
-				"Check the RIO is on its own channel. A shared channel with a motor pulls it down.",
-				"If the dip happens with all motors idle, the battery or the main power path is the problem, not code."
+				"Put the RIO on its own channel. A shared channel with a motor pulls it down.",
+				{
+					"kind": "check",
+					"text": "Does the robot still brown out with motors idle?",
+					"yes": "Swap the battery and check the main power path.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -142,7 +162,12 @@
 			"steps": [
 				"Push the main breaker in until it clicks. Mate the battery connector until it seats.",
 				"Tie-wrap the battery connector halves together so it cannot pull apart in a match.",
-				"Check the breaker lever does not sit half way. A tripped breaker sits between on and off."
+				{
+					"kind": "check",
+					"text": "Is the robot still dead?",
+					"yes": "Push the breaker fully off and back on.",
+					"no": "Problem solved."
+				}
 			]
 		},
 		"dead-robot": {
@@ -150,11 +175,17 @@
 			"id": "dead-robot",
 			"title": "Robot dead with breaker in and battery connected",
 			"steps": [
-				"Check the battery with a meter at the terminals. Under 10 V is a dead battery. Swap it.",
+				"Check the battery at the terminals with a meter. Under 10 V is a dead battery. Swap it.",
 				"Measure from the battery through the breaker to the PDH or PDP. No voltage after the breaker means a dead breaker or a broken lug crimp.",
 				"Look at the PDH or PDP status LED. Dark with 12 V on the main terminals means the board is dead or reverse polarity.",
-				"Check for a wire that pulled out of the main terminal or a broken battery lead crimp.",
-				"Swap the breaker. If the PDH stays dark, swap the PDH."
+				"Check for a wire pulled out of the main terminal or a broken battery lead crimp.",
+				"Swap the breaker for a known good one.",
+				{
+					"kind": "check",
+					"text": "Is the PDH still dark with 12 V on the main terminals?",
+					"yes": "Swap the PDH or PDP.",
+					"no": "Problem solved."
+				}
 			],
 			"statusLights": [
 				{ "device": "revpowerdistributionhub", "label": "PDH lights" },
@@ -167,11 +198,16 @@
 			"id": "channel",
 			"title": "One channel has no power",
 			"steps": [
-				"On the PDH, a red channel LED means no voltage and a fault. Check the breaker is pushed in all the way or the fuse is seated.",
+				"On the PDH, a red channel LED means no voltage and a fault. Check the breaker is pushed fully in or the fuse is seated.",
 				"A blinking red channel LED is a sticky fault from an earlier trip. Push the breaker in and clear faults.",
 				"Tug the Weidmuller wires on that channel. Pull, strip, and reseat.",
-				"Swap the breaker or fuse with a known good one of the same rating.",
-				"On the PDH, the switchable channel is off until code turns it on. Check the team is not using it for something that must always be on."
+				"Swap the breaker or fuse for a known good one of the same rating.",
+				{
+					"kind": "check",
+					"text": "Does the channel still have no power?",
+					"yes": "Check the switchable channel is not off waiting for code.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{ "label": "REV PDH status LEDs", "url": "https://docs.revrobotics.com/ion-control/pdh/status-led" },
@@ -187,12 +223,17 @@
 			"id": "reboot-under-load",
 			"title": "Radio or RIO reboots under load",
 			"steps": [
-				"Squeeze and wiggle the wires at the PDH or PDP main terminals and the main breaker. A loose terminal drops voltage when motors pull current.",
+				"Squeeze and wiggle the wires at the PDH or PDP main terminals and the main breaker. A loose terminal drops voltage under load.",
 				"Tug the RIO and radio power plugs. Reseat with fresh stripped copper. Tie-wrap the cables.",
-				"If the radio has PoE and DC power at the same time, remove one.",
+				"Remove one power source if the radio has both PoE and DC power.",
 				"Check the DS log for the voltage dip. Under 6.3 V the RIO can reset. Lower motor supply current limits.",
-				"Put the RIO and radio on their own channels. Not shared with a motor or compressor.",
-				"Still rebooting: swap the battery, then the breaker."
+				"Put the RIO and radio on their own channels, not shared with a motor or compressor.",
+				{
+					"kind": "check",
+					"text": "Does it still reboot under load?",
+					"yes": "Swap the battery and the breaker.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -216,7 +257,12 @@
 				"Orange and blue blinking: low battery. Swap the battery.",
 				"Orange and magenta blinking: over current on the board. Find the stalled device.",
 				"Magenta blinking: keep alive timeout. Code stopped talking to it. Restart robot code.",
-				"Use the Status Lights reference for the full table. A hardware fault (orange and cyan) means swap the PDH."
+				{
+					"kind": "check",
+					"text": "Is the light orange and cyan (a hardware fault)?",
+					"yes": "Swap the PDH.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{ "label": "REV PDH status LEDs", "url": "https://docs.revrobotics.com/ion-control/pdh/status-led" }

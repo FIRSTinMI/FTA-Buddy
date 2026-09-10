@@ -36,7 +36,12 @@
 				"Check the team number in the DS Setup tab.",
 				"Turn off the Windows firewall, all three profiles.",
 				"Ping 10.TE.AM.2. A reply with the DS still red means the DS software, not the network. Restart the DS.",
-				"Swap the cable. If the laptop port is dead, use a USB Ethernet adapter."
+				{
+					"kind": "check",
+					"text": "Is the DS still not connecting?",
+					"yes": "Swap the cable or use a USB Ethernet adapter.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -50,11 +55,16 @@
 			"id": "pit-wifi",
 			"title": "Wi-Fi in the pit",
 			"steps": [
-				"Ask the FTA whether 2.4 GHz pit Wi-Fi is enabled at this event. Many events turn it off. If off, use an Ethernet cable.",
+				"Ask the FTA whether 2.4 GHz pit Wi-Fi is on at this event. Many events turn it off.",
 				"The network name is the team number plus the suffix set at the kiosk. The password is the team's 2.4 GHz key.",
 				"Unplug Ethernet while on Wi-Fi. Two adapters on the robot network break mDNS.",
 				"Check the team number in the DS Setup tab and turn off the firewall.",
-				"Wi-Fi is slow and crowded on the pit floor. For anything more than a quick check, use the cable."
+				{
+					"kind": "check",
+					"text": "Is the DS still not connecting on Wi-Fi?",
+					"yes": "Use an Ethernet cable to the radio DS port.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -73,7 +83,12 @@
 				"Check the team number in the Setup tab matches this match.",
 				"Turn off the Windows firewall. Run ipconfig /release and ipconfig /renew.",
 				"Close and reopen the DS software. Only one copy.",
-				"Still red: loaner laptop. Escalate to the FTA. Use the Field connection guide in this app for the radio and RIO side."
+				{
+					"kind": "check",
+					"text": "Is the DS still red on the field?",
+					"yes": "Use a loaner laptop and escalate to the FTA.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -90,10 +105,15 @@
 			"steps": [
 				"Check the RIO CPU in the Diagnostics tab. Near 100 percent starves the DS packets. Use the Code and deploy guide, CPU branch.",
 				"Check the DS log for bandwidth. Over 4 Mbps means a camera stream is too big. Lower the resolution or frame rate.",
-				"Turn off any dashboard, browser, or camera viewer on the laptop that is not needed in the match.",
+				"Close any dashboard, browser, or camera viewer not needed in the match.",
 				"Check the laptop is on Best Performance and plugged in.",
-				"Check the radio mount. Metal or motors near the radio hurt the link. Move it to the top of the robot.",
-				"Report the trip time and packet loss to the FTA so they can watch the AP."
+				"Move the radio to the top of the robot. Metal or motors near it hurt the link.",
+				{
+					"kind": "check",
+					"text": "Do comms still flicker or trip time stay high?",
+					"yes": "Report trip time and packet loss to the FTA.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -108,11 +128,16 @@
 			"id": "joysticks",
 			"title": "Joysticks not working",
 			"steps": [
-				"Press F1 to rescan. Open the USB tab. Every controller should be green.",
-				"Drag each controller into the slot the code expects. Lock the order with the lock button so it survives a rescan.",
-				"Unplug and replug. Try a laptop port instead of a hub. Powered hub if a hub is needed.",
+				"Press F1 to rescan. Every controller in the USB tab should be green.",
+				"Drag each controller into the slot the code expects. Lock the order so it survives a rescan.",
+				"Unplug and replug. Try a laptop port instead of a hub. Use a powered hub if a hub is needed.",
 				"Move a stick and watch the axis bars in the USB tab. No movement means the controller, not the code.",
-				"Swap the controller. Worn cables drop under vibration."
+				{
+					"kind": "check",
+					"text": "Is the controller still not working?",
+					"yes": "Swap the controller. Worn cables drop under vibration.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -130,7 +155,12 @@
 				"Pause Windows Update for the event. Do not let it install during a match.",
 				"Close everything except the DS and the dashboard. Uninstall third-party antivirus.",
 				"Bring the charger to the field and plug in at the station.",
-				"If the laptop is too slow to run the DS, use a loaner. Ask the FTA."
+				{
+					"kind": "check",
+					"text": "Is the laptop still too slow to run the DS?",
+					"yes": "Use a loaner laptop.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{
@@ -145,10 +175,15 @@
 			"title": "Firewall or DS software problems",
 			"steps": [
 				"Open wf.msc and turn off the Domain, Private, and Public profiles.",
-				"If the school locks the firewall, add rules to allow the DS and mDNS. Otherwise use a loaner laptop.",
+				"Add rules to allow the DS and mDNS if the school locks the firewall. Otherwise use a loaner laptop.",
 				"Remove third-party antivirus that adds its own firewall.",
-				"If the DS will not open, reinstall NI FRC Game Tools for this season. Run as administrator once.",
-				"Use a loaner laptop if the team laptop is beyond repair."
+				"Reinstall NI FRC Game Tools for this season if the DS will not open. Run as administrator once.",
+				{
+					"kind": "check",
+					"text": "Does the DS still fail to open or connect?",
+					"yes": "Use a loaner laptop.",
+					"no": "Problem solved."
+				}
 			],
 			"links": [
 				{

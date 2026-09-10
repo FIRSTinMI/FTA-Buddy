@@ -188,7 +188,7 @@
 				onError: (err) => {
 					patch((m) => {
 						m.streaming = false;
-						m.error = err.message || "Something went wrong. Find a CSA for help.";
+						m.error = err.message || "Something went wrong.";
 					});
 					sending = false;
 					// The user turn was not accepted; give the text back.
@@ -236,11 +236,7 @@
 	<!-- Header: what this is and where answers come from -->
 	<div class="px-3 pt-2 pb-2 border-b border-gray-200 dark:border-gray-700">
 		<div class="flex items-start gap-2">
-			<p class="text-xs text-gray-600 dark:text-gray-300 grow">
-				Troubleshooting assistant. Answers come from WPILib and vendor docs and past CSA tickets. Not sure it is
-				right? <strong>Find a CSA.</strong>
-			</p>
-			<div class="flex gap-1 shrink-0">
+			<div class="flex gap-1 shrink-0 ml-auto">
 				<Button size="xs" color="light" onclick={() => (showRecent = !showRecent)} title="Recent conversations">
 					<Icon icon="heroicons:clock-16-solid" class="size-4" />
 				</Button>
@@ -248,7 +244,7 @@
 					<Icon icon="heroicons:plus-16-solid" class="size-4" /><span class="ml-1 hidden sm:inline">New</span>
 				</Button>
 				<Button size="xs" color="alternative" onclick={openTicket}>
-					<Icon icon="heroicons:ticket-16-solid" class="size-4" /><span class="ml-1">CSA ticket</span>
+					<Icon icon="heroicons:ticket-16-solid" class="size-4" /><span class="ml-1">Ticket</span>
 				</Button>
 			</div>
 		</div>
@@ -298,7 +294,7 @@
 			<div class="max-w-sm rounded-lg border border-gray-200 dark:border-gray-700 p-4 text-center">
 				<Icon icon="heroicons:pause-circle-16-solid" class="size-6 mx-auto mb-2 text-gray-500" />
 				<p class="text-sm">
-					The troubleshooting assistant is not available right now. Use the guided trees, or find a CSA.
+					The troubleshooting assistant is not available right now. Use the guided trees.
 				</p>
 			</div>
 		</div>
@@ -307,8 +303,7 @@
 			<div class="max-w-sm rounded-lg border border-gray-200 dark:border-gray-700 p-4 text-center">
 				<Icon icon="heroicons:banknotes-16-solid" class="size-6 mx-auto mb-2 text-gray-500" />
 				<p class="text-sm">
-					The assistant has used its budget for this month. It comes back on the 1st. Use the guided trees, or
-					find a CSA.
+					The assistant has used its budget for this month. It comes back on the 1st. Use the guided trees.
 				</p>
 			</div>
 		</div>

@@ -172,15 +172,9 @@
 			</ul>
 		{/if}
 
-		{#if node.escalate}
-			<p class="text-sm text-gray-600 dark:text-gray-300">
-				If none of this works, hand off. A CSA ticket puts it in front of the right person.
-			</p>
-		{/if}
-
 		<div class="mt-2 flex flex-col gap-2">
 			<Button outline class="min-h-12 w-full" onclick={noMatch}>None of these matched</Button>
-			<Button class="min-h-12 w-full" href={ticketHref}>Open a CSA ticket</Button>
+			<Button class="min-h-12 w-full" href={ticketHref}>Open a ticket</Button>
 			<Button color="alternative" class="min-h-12 w-full" onclick={restart}>Start over</Button>
 		</div>
 		<!-- #endregion -->

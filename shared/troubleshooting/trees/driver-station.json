@@ -148,7 +148,7 @@
 				"If the school locks the firewall, add rules to allow the DS and mDNS. Otherwise use a loaner laptop.",
 				"Remove third-party antivirus that adds its own firewall.",
 				"If the DS will not open, reinstall NI FRC Game Tools for this season. Run as administrator once.",
-				"Ask the CSA for a known good laptop image if the team laptop is beyond repair."
+				"Use a loaner laptop if the team laptop is beyond repair."
 			],
 			"links": [
 				{

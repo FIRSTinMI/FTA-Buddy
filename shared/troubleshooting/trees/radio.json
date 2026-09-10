@@ -77,7 +77,7 @@
 			"id": "dual-power",
 			"title": "PoE and DC input at the same time",
 			"steps": [
-				"Two power inputs from different sources or voltages makes the radio reboot or drop. This is a known bad setup seen in CSA tickets.",
+				"Two power inputs from different sources or voltages makes the radio reboot or drop. This is a known bad setup.",
 				"Pick one. Remove the power from the PoE injector and keep the Ethernet cable for data, or remove the DC plug.",
 				"Vivid allows dual feed only from the same source at the same voltage. Most teams do not have that. Use one.",
 				"Power cycle the radio after the change and wait 60 seconds for SYS.",

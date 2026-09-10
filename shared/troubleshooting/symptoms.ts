@@ -1,0 +1,19 @@
+// Landing list for /troubleshoot. Ordered by how a volunteer describes the problem, not by part.
+// Each entry opens a tree at its start node.
+
+export interface Symptom {
+	readonly label: string;
+	readonly detail: string;
+	readonly tree: string;
+}
+
+export const symptoms: readonly Symptom[] = [
+	{ label: "No comms on the field monitor", detail: "DS, radio or RIO not linking before or during a match.", tree: "field-connection" },
+	{ label: "Comms are up but no robot code, or it will not enable", detail: "DS shows No Robot Code, or enable does nothing.", tree: "code-deploy" },
+	{ label: "Robot dies, reboots or browns out during a match", detail: "Main breaker trips, RIO reboots, voltage dips.", tree: "power" },
+	{ label: "Motors or mechanisms do not respond", detail: "One device or a whole section is dead, CAN errors in the DS.", tree: "can" },
+	{ label: "Code will not deploy", detail: "Deploy fails from the team laptop in the pit.", tree: "code-deploy" },
+	{ label: "roboRIO lights look wrong", detail: "Status blinking, Power red or amber, Comm off.", tree: "roborio" },
+	{ label: "Radio lights look wrong, or no Wi-Fi in the pit", detail: "Power, PoE vs barrel, link lights, programming.", tree: "radio" },
+	{ label: "Joysticks or the DS laptop are the problem", detail: "Joystick unavailable, USB, firewall, Ethernet vs Wi-Fi.", tree: "driver-station" },
+];

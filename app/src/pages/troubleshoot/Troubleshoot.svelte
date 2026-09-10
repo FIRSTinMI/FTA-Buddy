@@ -2,6 +2,7 @@
 	import Icon from "@iconify/svelte";
 	import { onMount } from "svelte";
 	import { getTree, trees } from "../../../../shared/troubleshooting";
+	import { symptoms } from "../../../../shared/troubleshooting/symptoms";
 	import { navigate, route } from "../../router";
 	import Chat from "./Chat.svelte";
 	import TreeWalk from "./TreeWalk.svelte";
@@ -89,23 +90,32 @@
 				<a href="/troubleshoot" class="mt-2 block underline">Back to the list</a>
 			</div>
 		{:else}
-			<p class="text-sm text-gray-600 dark:text-gray-300">
-				Pick what is broken. Each guide asks a few questions and ends in a fix.
-			</p>
+			<p class="text-sm text-gray-600 dark:text-gray-300">What is happening?</p>
 			<div class="flex flex-col gap-2">
-				{#each trees as t (t.id)}
-					<a
-						href={`/troubleshoot/${t.id}`}
-						class="flex min-h-12 items-center justify-between gap-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-black hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
-					>
+				{#each symptoms as s (s.label)}
+					<a href={`/troubleshoot/${s.tree}`} class="flex min-h-12 items-center justify-between gap-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-left text-black hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700">
 						<span class="min-w-0">
-							<span class="block font-semibold">{t.title}</span>
-							<span class="block text-sm text-gray-600 dark:text-gray-300">{t.summary}</span>
+							<span class="block font-semibold">{s.label}</span>
+							<span class="block text-sm text-gray-600 dark:text-gray-300">{s.detail}</span>
 						</span>
 						<Icon icon="heroicons:chevron-right-16-solid" class="size-5 shrink-0 text-gray-500" />
 					</a>
 				{/each}
 			</div>
+			<details class="mt-2">
+				<summary class="cursor-pointer text-sm text-gray-600 dark:text-gray-300">Browse by part</summary>
+				<div class="mt-2 flex flex-col gap-2">
+					{#each trees as t (t.id)}
+						<a href={`/troubleshoot/${t.id}`} class="flex min-h-12 items-center justify-between gap-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-left text-black hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700">
+							<span class="min-w-0">
+								<span class="block font-semibold">{t.title}</span>
+								<span class="block text-sm text-gray-600 dark:text-gray-300">{t.summary}</span>
+							</span>
+							<Icon icon="heroicons:chevron-right-16-solid" class="size-5 shrink-0 text-gray-500" />
+						</a>
+					{/each}
+				</div>
+			</details>
 		{/if}
 	</div>
 </div>

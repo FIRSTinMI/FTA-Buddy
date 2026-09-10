@@ -354,7 +354,7 @@ export const statusLightHelp = {
 		led: "Status",
 		state: "Continuous flash, or solid after boot",
 		meaning:
-			"The controller cannot read the microSD card. The card is missing, not clicked in, not imaged, or corrupt. New cards ship blank.",
+			"The controller cannot read the microSD card. The card is missing, not clicked in, not imaged, or corrupt.",
 		steps: [
 			"Power off. Pull the microSD card and push it back in until it clicks and sits flush with the slot.",
 			"Power on. If it still flashes, reimage the card on a laptop with balenaEtcher or Raspberry Pi Imager. Use a fresh card if you have one.",

@@ -36,7 +36,7 @@
 				"Power off. Measure resistance between CAN High and CAN Low at the RIO. It should read about 60 ohms. 120 ohms means one terminator is missing. Open means the bus is broken at the RIO.",
 				"Check the PDH or PDP is powered and its CAN termination jumper is ON if it is at the end of the chain.",
 				"Look at the first device after the RIO. If its lights show no CAN (Talon FX alternating red, Spark MAX flashing), the break is between it and the RIO.",
-				"Still nothing: swap the RIO CAN connector wires and call the CSA."
+				"Still nothing: swap the RIO CAN connector wires."
 			],
 			"links": [
 				{
@@ -81,7 +81,7 @@
 				"Tug test its CAN pigtail on both sides. A device in the middle of the chain with one bad pigtail may still pass the bus through.",
 				"Check its ID in Tuner X or the Hardware Client. A new device ships as ID 0 or 1 and may not match the code.",
 				"Check the firmware year on the device. A device on old firmware is ignored by the new library.",
-				"Swap the device for a spare and set its ID. Call the CSA if the team cannot set IDs."
+				"Swap the device for a spare and set its ID with the team."
 			],
 			"statusLights": [
 				{ "device": "ctretalonfx", "label": "Talon FX lights" },
@@ -97,7 +97,7 @@
 				"Two same-model devices on one ID both answer. The result is jittering, one motor moving when another should, or both missing.",
 				"Fix it one device at a time. Pull the breakers for every device except one, or unplug the bus after it, then set the ID.",
 				"Write the ID on tape on each device.",
-				"Redeploy code after changing IDs. Ask the CSA if the team has no laptop with Tuner X."
+				"Redeploy code after changing IDs. Use your laptop with Tuner X if the team has none."
 			],
 			"links": [
 				{
@@ -125,7 +125,7 @@
 				"Reseat the USB cable at both ends. Try the other RIO USB port.",
 				"Replace the USB cable. Long or unshielded cables fail. Keep it short and away from motor leads.",
 				"Check the CANivore has power on its own lead.",
-				"If the RIO USB ports are dead (static from an unshielded extension has done this), swap the RIO. Call the CSA."
+				"If the RIO USB ports are dead (static from an unshielded extension has done this), swap the RIO."
 			],
 			"links": [
 				{
@@ -145,7 +145,7 @@
 				"Start the robot code. Check the DS shows Robot Code green.",
 				"Check the code uses the CANivore name (for example \"canivore\" or \"*\") in every device constructor on that bus. Devices built with no bus name go to the RIO bus.",
 				"Check Tuner X sees the CANivore with the same name the code uses.",
-				"Ask the CSA to look at the constructor bus names with the team."
+				"Look at the constructor bus names with the team."
 			],
 			"links": [
 				{
@@ -201,7 +201,7 @@
 				"Errors that climb only when the robot moves are a loose connector. Follow the intermittent branch of this guide.",
 				"Too many devices on one bus: move the drivetrain to a CANivore, or lower status frame rates on devices the code does not read.",
 				"Check for a device on old firmware sending frames the library does not expect.",
-				"Ask the CSA to help the team set status frame periods."
+				"Help the team set status frame periods."
 			],
 			"links": [
 				{

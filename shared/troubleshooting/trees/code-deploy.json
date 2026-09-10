@@ -35,7 +35,7 @@
 				"If the page does not load, try a different USB cable and a different laptop port. Skip hubs and extensions.",
 				"Make sure NI FRC Game Tools is installed on this laptop. Without it there is no USB driver for the RIO.",
 				"Check the RIO Status light is off. A blinking Status light means the RIO is not healthy. Use the roboRIO guide.",
-				"If two USB ports on the RIO are both dead, the RIO took static. Deploy over Ethernet and swap the RIO later. Tell the CSA."
+				"If two USB ports on the RIO are both dead, the RIO took static. Deploy over Ethernet and swap the RIO later."
 			],
 			"links": [
 				{
@@ -58,7 +58,7 @@
 				"Turn off Wi-Fi if using Ethernet, or unplug Ethernet if using Wi-Fi. Disable other adapters in ncpa.cpl. Two adapters confuse mDNS.",
 				"Turn off the Windows firewall. It blocks the deploy ports and mDNS.",
 				"Set the adapter to DHCP. Do not use a static 10.TE.AM.5 unless on the field.",
-				"Still failing: deploy over USB. Ask the CSA if mDNS is broken on the laptop (reinstall Game Tools)."
+				"Still failing: deploy over USB. If mDNS is broken on the laptop, reinstall Game Tools."
 			],
 			"links": [
 				{
@@ -85,7 +85,7 @@
 				"Common causes: a CAN ID that does not exist, two devices with the same port or ID, a missing config or JSON file, a null object used in robotInit.",
 				"Check for a vendordep version that does not match the device firmware. Update the firmware or the vendordep.",
 				"Fix, redeploy, and watch the Console again. Restart Robot Code in the DS if the RIO did not restart it.",
-				"Hand off to the CSA with the exact error text if the team is stuck."
+				"If the team is stuck, search the exact error text in the chat tab."
 			],
 			"links": [
 				{
@@ -105,7 +105,7 @@
 				"Reboot the RIO. Watch the Status light turn off, then wait for Robot Code to go green.",
 				"Deploy again and read the deploy output for errors. A deploy that says success but built nothing new is a stale build. Do a clean build.",
 				"Open the RIO web page and confirm the team number and image version.",
-				"Call the CSA if the DS still shows No Robot Code after a clean redeploy."
+				"If the DS still shows No Robot Code after a clean redeploy, open the DS Console and read the crash message."
 			],
 			"links": [
 				{
@@ -125,7 +125,7 @@
 				"Fix: batch the values into fewer entries, log at a lower rate, or turn the loggers off for the match. Disable Epilogue or DataLogManager to prove it, then add back what is needed.",
 				"Reading CAN devices for logging is expensive. Read each device once per loop and cache it. Do not query inside the logger.",
 				"Check for a vision or path planning task running on the RIO that belongs on a coprocessor.",
-				"Ask the CSA to review the periodic loop with the team if they cannot find the cost."
+				"Review the periodic loop with the team if they cannot find the cost."
 			],
 			"links": [
 				{
@@ -172,7 +172,7 @@
 				"Watch battery voltage when enabling. A dip below 6.8 V disables outputs. Swap the battery.",
 				"Check motor controller lights. Blinking orange means valid CAN but disabled. Alternating red means no CAN. Use the CAN guide.",
 				"Check the DS Console for errors like unknown CAN ID or watchdog not fed.",
-				"Call the CSA if the lights all look right and nothing moves."
+				"If the lights all look right and nothing moves, check CAN IDs and motor constructors with the team."
 			],
 			"statusLights": [
 				{ "device": "roborio", "label": "roboRIO Mode light" },
@@ -189,7 +189,7 @@
 				"Remove USB extension cables. Unshielded extensions carry static that has killed ports.",
 				"Turn off USB power saving in Windows power settings and in Device Manager for each USB root hub.",
 				"Set the laptop power plan to Best Performance and never sleep.",
-				"Try a different port on the laptop. If two ports are dead, use a loaner laptop for the match and tell the CSA."
+				"Try a different port on the laptop. If two ports are dead, use a loaner laptop for the match."
 			],
 			"links": [
 				{

@@ -197,7 +197,7 @@
 				"Look for link lights at both Ethernet ends. Reseat both plugs. A cable with a broken latch clip must be replaced.",
 				"Swap the Ethernet cable for a known good one.",
 				"If the RIO Ethernet port shows no link with a good cable, plug a USB Ethernet adapter into the RIO USB port and connect the radio to it. This has got robots on the field with a dead port.",
-				"Press the reset button on the RIO. If nothing changes, swap the roboRIO and call the CSA."
+				"Press the reset button on the RIO. If nothing changes, swap the roboRIO."
 			],
 			"links": [
 				{
@@ -217,7 +217,7 @@
 				"roboRIO 2: pull the microSD card, check the slot for debris, reseat it fully. Reboot.",
 				"Groups of 2 or 3 blinks: reboot. If it repeats, reimage the RIO.",
 				"Constant flashing (RIO 2) or 4 flashes then a pause (RIO 1): unrecoverable. Reimage the card or the RIO. If that fails, swap the roboRIO.",
-				"Use the roboRIO guide in this app for the full breakdown. Call the CSA if the team has no spare."
+				"Use the roboRIO guide in this app for the full breakdown. Use a loaner if the team has no spare."
 			],
 			"links": [
 				{
@@ -237,7 +237,7 @@
 				"Amber: brownout. Check battery voltage in the DS. Swap to a fully charged battery.",
 				"Red: short on a user rail. Unplug everything from the RIO power rails and DIO, then power cycle.",
 				"Check the main breaker lug nuts and battery connector are tight. Loose main power causes both amber and off.",
-				"If the light stays red with nothing plugged in, swap the roboRIO and call the CSA."
+				"If the light stays red with nothing plugged in, swap the roboRIO."
 			],
 			"links": [
 				{
@@ -257,7 +257,7 @@
 				"Ask if the code changed since it last worked. Check the DS Console for a stack trace or a crash message.",
 				"Reboot the roboRIO from the DS or with the reset button. Wait for the Status light to turn off.",
 				"If the code was deployed with a different WPILib year than the RIO image, it will not run. Redeploy.",
-				"Use the Code and deploy guide in this app. Hand off to the CSA if it still shows No Code."
+				"Use the Code and deploy guide in this app if it still shows No Code."
 			],
 			"links": [
 				{

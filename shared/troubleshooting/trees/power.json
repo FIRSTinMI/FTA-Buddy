@@ -36,7 +36,7 @@
 				"A stator limit (default 120 A) does not protect the breaker on its own. The supply limit is the one that matters here.",
 				"Check the breaker lugs. Try to rotate each crimped lug. If it turns, tighten the nut. A hot loose lug trips early.",
 				"Redeploy, run the drivetrain against a wall for a few seconds, and watch total current in the DS log or PDH.",
-				"Still tripping after lower limits: check the breaker age and the battery leads, then call the CSA."
+				"Still tripping after lower limits: check the breaker age and the battery leads, then swap the breaker."
 			],
 			"links": [
 				{
@@ -60,7 +60,7 @@
 				"Ask what the robot was doing when it tripped. Stalled arm, pinned drivetrain, or a mechanism against a hard stop draws full stall current.",
 				"Set supply current limits on every drive and mechanism motor. Spark MAX: smart current limit 40 to 60 A on drive. Talon FX: supply limit 50 to 60 A.",
 				"Breakers age. One that has tripped many times trips easier. Swap it for a new 120 A breaker.",
-				"Call the CSA if the team cannot find where the current goes."
+				"If the team cannot find where the current goes, read per-channel current in the DS log viewer."
 			],
 			"links": [
 				{
@@ -111,7 +111,7 @@
 				"Squeeze the wires at the PDH or PDP main terminals. Confirm the bolts are tight with split washers.",
 				"Lower motor supply current limits. Drive first, then any mechanism that starts from stall.",
 				"Check the RIO is on its own channel. A shared channel with a motor pulls it down.",
-				"Escalate to the CSA if the dip happens with all motors idle."
+				"If the dip happens with all motors idle, the battery or the main power path is the problem, not code."
 			],
 			"links": [
 				{
@@ -154,7 +154,7 @@
 				"Measure from the battery through the breaker to the PDH or PDP. No voltage after the breaker means a dead breaker or a broken lug crimp.",
 				"Look at the PDH or PDP status LED. Dark with 12 V on the main terminals means the board is dead or reverse polarity.",
 				"Check for a wire that pulled out of the main terminal or a broken battery lead crimp.",
-				"Swap the breaker. If the PDH stays dark, call the CSA."
+				"Swap the breaker. If the PDH stays dark, swap the PDH."
 			],
 			"statusLights": [
 				{ "device": "revpowerdistributionhub", "label": "PDH lights" },
@@ -192,7 +192,7 @@
 				"If the radio has PoE and DC power at the same time, remove one.",
 				"Check the DS log for the voltage dip. Under 6.3 V the RIO can reset. Lower motor supply current limits.",
 				"Put the RIO and radio on their own channels. Not shared with a motor or compressor.",
-				"Still rebooting: swap the battery, then the breaker. Call the CSA."
+				"Still rebooting: swap the battery, then the breaker."
 			],
 			"links": [
 				{
@@ -216,7 +216,7 @@
 				"Orange and blue blinking: low battery. Swap the battery.",
 				"Orange and magenta blinking: over current on the board. Find the stalled device.",
 				"Magenta blinking: keep alive timeout. Code stopped talking to it. Restart robot code.",
-				"Use the Status Lights reference for the full table. Call the CSA for a hardware fault (orange and cyan)."
+				"Use the Status Lights reference for the full table. A hardware fault (orange and cyan) means swap the PDH."
 			],
 			"links": [
 				{ "label": "REV PDH status LEDs", "url": "https://docs.revrobotics.com/ion-control/pdh/status-led" }

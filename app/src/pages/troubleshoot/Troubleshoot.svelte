@@ -21,6 +21,23 @@
 	let pathParam = $derived(typeof route.search.p === "string" ? route.search.p : undefined);
 	let chatTree = $derived(typeof route.search.tree === "string" ? route.search.tree : undefined);
 	let chatPath = $derived(typeof route.search.path === "string" ? route.search.path : undefined);
+	let chatFrom = $derived(chatTree ? (chatPath ? `${chatTree}/${chatPath}` : chatTree) : undefined);
+	let chatTreeTitle = $derived(chatTree ? getTree(chatTree)?.title : undefined);
+	// Turn the dotted node-id path into the option labels the person tapped.
+	let chatAnswers = $derived.by(() => {
+		if (!chatTree || !chatPath) return undefined;
+		const t = getTree(chatTree);
+		if (!t) return undefined;
+		const ids = chatPath.split(".");
+		const labels: string[] = [];
+		for (let i = 0; i + 1 < ids.length; i++) {
+			const node = t.nodes[ids[i]];
+			if (!node || node.kind !== "question") continue;
+			const picked = node.options.find((o) => o.next === ids[i + 1]);
+			if (picked) labels.push(picked.label);
+		}
+		return labels;
+	});
 
 	onMount(() => {
 		if (route.pathname === "/troubleshoot" && storedMode() === "chat") {
@@ -63,7 +80,7 @@
 		</div>
 
 		{#if isChat}
-			<Chat tree={chatTree} path={chatPath} />
+			<Chat from={chatFrom} treeTitle={chatTreeTitle} answers={chatAnswers} />
 		{:else if tree}
 			<TreeWalk {tree} {nodeId} {pathParam} />
 		{:else if treeId}

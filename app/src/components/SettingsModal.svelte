@@ -1,5 +1,15 @@
 <script lang="ts">
-	import { Button, Input, Label, Modal, Range, Select, Toggle, type SelectOptionType } from "flowbite-svelte";
+	import {
+		Button,
+		Checkbox,
+		Input,
+		Label,
+		Modal,
+		Range,
+		Select,
+		Toggle,
+		type SelectOptionType,
+	} from "flowbite-svelte";
 	import { audioQueuer } from "../field-monitor";
 	import { trpc } from "../main";
 	import { installPrompt } from "../stores/install-prompt";
@@ -106,6 +116,99 @@
 		} finally {
 			slackLinkLoading = false;
 		}
+	}
+
+	// Slack account connection (user-scope token) for the troubleshooting corpus poller
+	type SlackWorkspace = Awaited<ReturnType<typeof trpc.slackUser.list.query>>[number];
+	type SlackChannel = Awaited<ReturnType<typeof trpc.slackUser.listChannels.query>>[number];
+
+	let slackWorkspaces = $state<SlackWorkspace[]>([]);
+	let slackWorkspacesLoading = $state(false);
+	let slackConnectLoading = $state(false);
+	let slackChannelPicker = $state<{ tokenId: number; channels: SlackChannel[]; selected: Set<string> } | null>(null);
+	let slackChannelsLoading = $state(false);
+
+	async function loadSlackWorkspaces() {
+		if (!$userStore.token) return;
+		slackWorkspacesLoading = true;
+		try {
+			slackWorkspaces = await trpc.slackUser.list.query();
+		} catch (err: any) {
+			console.warn("[Slack] list failed", err?.message);
+		} finally {
+			slackWorkspacesLoading = false;
+		}
+	}
+
+	$effect(() => {
+		if (settingsOpen) loadSlackWorkspaces();
+	});
+
+	async function connectSlackWorkspace() {
+		slackConnectLoading = true;
+		try {
+			const { url } = await trpc.slackUser.getInstallUrl.mutate();
+			window.location.href = url;
+		} catch (err: any) {
+			toast("Error", err.message);
+			slackConnectLoading = false;
+		}
+	}
+
+	async function openSlackChannelPicker(tokenId: number, current: string[]) {
+		slackChannelsLoading = true;
+		try {
+			const channels = await trpc.slackUser.listChannels.query({ tokenId });
+			slackChannelPicker = { tokenId, channels, selected: new Set(current) };
+		} catch (err: any) {
+			toast("Error", err.message);
+		} finally {
+			slackChannelsLoading = false;
+		}
+	}
+
+	function toggleSlackChannel(id: string, checked: boolean) {
+		if (!slackChannelPicker) return;
+		const selected = new Set(slackChannelPicker.selected);
+		if (checked) selected.add(id);
+		else selected.delete(id);
+		slackChannelPicker = { ...slackChannelPicker, selected };
+	}
+
+	async function saveSlackChannels() {
+		if (!slackChannelPicker) return;
+		slackChannelsLoading = true;
+		try {
+			await trpc.slackUser.setChannels.mutate({
+				tokenId: slackChannelPicker.tokenId,
+				channelIds: [...slackChannelPicker.selected],
+			});
+			toast("Success", "Channels saved", "green-500");
+			slackChannelPicker = null;
+			await loadSlackWorkspaces();
+		} catch (err: any) {
+			toast("Error", err.message);
+		} finally {
+			slackChannelsLoading = false;
+		}
+	}
+
+	async function disconnectSlackWorkspace(tokenId: number) {
+		slackWorkspacesLoading = true;
+		try {
+			await trpc.slackUser.disconnect.mutate({ tokenId });
+			if (slackChannelPicker?.tokenId === tokenId) slackChannelPicker = null;
+			toast("Success", "Workspace disconnected", "green-500");
+			await loadSlackWorkspaces();
+		} catch (err: any) {
+			toast("Error", err.message);
+			slackWorkspacesLoading = false;
+		}
+	}
+
+	function formatPolled(d: Date | null) {
+		if (!d) return "not polled yet";
+		return "last poll " + new Date(d).toLocaleString();
 	}
 
 	async function unlinkSlack() {
@@ -273,6 +376,73 @@
 							disabled={slackLinkLoading || !slackUserIdInput.trim()}>Link Slack</Button
 						>
 					{/if}
+				{/if}
+			</div>
+			<div class="grid gap-2 md:col-span-2">
+				{#if $userStore.token}
+					<p class="text-gray-700 dark:text-gray-400">Connect Slack Account</p>
+					<p class="text-xs text-gray-500 dark:text-gray-400">
+						Copies CSA channel threads you can read into the troubleshooting corpus so they do not age out.
+						Team numbers and event codes are removed before storage.
+					</p>
+					{#each slackWorkspaces as ws (ws.id)}
+						<div class="flex flex-wrap items-center gap-2 text-sm">
+							<span class="font-semibold">{ws.team_name}</span>
+							{#if ws.revoked}
+								<span class="text-red-500">token revoked, reconnect</span>
+							{:else}
+								<span class="text-gray-500 dark:text-gray-400">{formatPolled(ws.last_polled_at)}</span>
+								<span class="text-gray-500 dark:text-gray-400"
+									>{ws.channels.length === 0
+										? "all channels"
+										: `${ws.channels.length} channel(s)`}</span
+								>
+								<Button
+									size="xs"
+									color="light"
+									disabled={slackChannelsLoading}
+									onclick={() => openSlackChannelPicker(ws.id, ws.channels)}>Choose Channels</Button
+								>
+							{/if}
+							<Button
+								size="xs"
+								color="red"
+								disabled={slackWorkspacesLoading}
+								onclick={() => disconnectSlackWorkspace(ws.id)}>Disconnect</Button
+							>
+						</div>
+						{#if slackChannelPicker?.tokenId === ws.id}
+							<div class="pl-4 grid gap-1 max-h-64 overflow-y-auto">
+								<p class="text-xs text-gray-500 dark:text-gray-400">
+									Untick everything to copy all channels you can read.
+								</p>
+								{#each slackChannelPicker.channels as ch (ch.id)}
+									<Checkbox
+										checked={slackChannelPicker.selected.has(ch.id)}
+										onchange={(e) =>
+											toggleSlackChannel(ch.id, (e.currentTarget as HTMLInputElement).checked)}
+										>{ch.is_private ? "🔒 " : "#"}{ch.name}</Checkbox
+									>
+								{/each}
+								<div class="flex gap-2 mt-1">
+									<Button
+										size="xs"
+										color="primary"
+										disabled={slackChannelsLoading}
+										onclick={saveSlackChannels}>Save Channels</Button
+									>
+									<Button size="xs" color="light" onclick={() => (slackChannelPicker = null)}
+										>Cancel</Button
+									>
+								</div>
+							</div>
+						{/if}
+					{/each}
+					<div>
+						<Button size="xs" color="primary" disabled={slackConnectLoading} onclick={connectSlackWorkspace}
+							>{slackWorkspaces.length ? "Connect Another Workspace" : "Connect Slack Account"}</Button
+						>
+					</div>
 				{/if}
 			</div>
 			<div class="grid gap-2 md:col-span-2">

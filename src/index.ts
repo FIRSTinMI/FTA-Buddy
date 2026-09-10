@@ -38,6 +38,7 @@ import {
 	updateNoteStatusFromSlack,
 } from "./router/notes";
 import { scorekeeperRouter } from "./router/scorekeeper";
+import { slackUserRouter } from "./router/slack-user";
 import { telemetryRouter } from "./router/telemetry";
 import { troubleshootRouter } from "./router/troubleshoot";
 import { userRouter, generateToken } from "./router/user";
@@ -50,6 +51,14 @@ import { ftcRouter } from "./router/ftc";
 import { getEvent } from "./util/get-event";
 import { decompressStationLog, logAnalysisLoop } from "./util/log-analysis";
 import { linkChannel, openTicketModal, sendEphemeralMessage, slackOAuth } from "./util/slack";
+import {
+	buildAuthorizeUrl,
+	completeUserInstall,
+	consumeInstallState,
+	peekInstallState,
+	userOAuthReturnUrl,
+} from "./util/slack-user-oauth";
+import { startSlackPoller } from "./util/troubleshoot/slack-poller";
 import { getTeamAverageCycle } from "./util/team-cycles";
 import { eventLastSeen, events, eventCodes } from "./state";
 import * as nexusEventPoller from "./util/nexusEventPoller";
@@ -93,6 +102,7 @@ const appRouter = router({
 	aiReport: aiReportRouter,
 	scorekeeper: scorekeeperRouter,
 	troubleshoot: troubleshootRouter,
+	slackUser: slackUserRouter,
 	app: router({
 		version: publicProcedure.query(() => {
 			return pjson.version ?? "dev";
@@ -204,6 +214,34 @@ app.get("/slack/oauth", async (req, res) => {
 		}
 	}
 });
+// User-scope Slack install (xoxp) for the troubleshooting corpus poller.
+// The state comes from slackUser.getInstallUrl (protected tRPC), which ties it to the app user in Redis.
+app.get("/slack/user-oauth/start", async (req, res) => {
+	const state = typeof req.query.state === "string" ? req.query.state : "";
+	if (!(await peekInstallState(state)))
+		return res.status(400).send("Invalid or expired state. Start again from Settings.");
+	res.redirect(buildAuthorizeUrl(state));
+});
+
+app.get("/slack/user-oauth/callback", async (req, res) => {
+	const code = typeof req.query.code === "string" ? req.query.code : "";
+	const state = typeof req.query.state === "string" ? req.query.state : "";
+	if (typeof req.query.error === "string") return res.redirect(userOAuthReturnUrl("error", req.query.error));
+	if (!code || !state) return res.redirect(userOAuthReturnUrl("error", "missing_code"));
+
+	const userId = await consumeInstallState(state);
+	if (!userId) return res.redirect(userOAuthReturnUrl("error", "bad_state"));
+
+	try {
+		const { teamName } = await completeUserInstall(code, userId);
+		console.log(`[SlackUser] user ${userId} connected workspace ${teamName}`);
+		res.redirect(userOAuthReturnUrl("connected"));
+	} catch (err) {
+		console.error("[SlackUser] install failed:", (err as Error).message);
+		res.redirect(userOAuthReturnUrl("error", (err as Error).message));
+	}
+});
+
 app.post("/slack/command", async (req, res) => {
 	const { command, text, response_url, trigger_id, user_id, user_name, team_id, channel_id, api_app_id } = req.body;
 
@@ -598,6 +636,9 @@ connect().then(async () => {
 			await new Promise((resolve) => setTimeout(resolve, 3e3));
 		}
 	})();
+
+	// Slack history poller for the troubleshooting corpus (leader-locked, 3 h cadence)
+	startSlackPoller();
 
 	// Start Nexus pollers for events with a key configured that are currently running
 	try {

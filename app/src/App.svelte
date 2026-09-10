@@ -2,10 +2,21 @@
 	import Icon, { loadIcons } from "@iconify/svelte";
 	// Preload the sidebar/nav icons so they don't pop in on first open.
 	loadIcons([
-		"mdi:television", "mdi:television-guide", "mdi:clipboard-outline", "mdi:clipboard-list-outline",
-		"mdi:clipboard-edit-outline", "mdi:file-document", "mdi:message-alert", "mdi:account-switch",
-		"mdi:package", "mdi:database-export-outline", "mdi:shield-crown-outline", "mdi:information",
-		"mdi:cog", "mdi:cog-outline", "mdi:menu",
+		"mdi:television",
+		"mdi:television-guide",
+		"mdi:clipboard-outline",
+		"mdi:clipboard-list-outline",
+		"mdi:clipboard-edit-outline",
+		"mdi:file-document",
+		"mdi:message-alert",
+		"mdi:account-switch",
+		"mdi:package",
+		"mdi:database-export-outline",
+		"mdi:shield-crown-outline",
+		"mdi:information",
+		"mdi:cog",
+		"mdi:cog-outline",
+		"mdi:menu",
 	]);
 	import {
 		Button,
@@ -99,6 +110,17 @@
 
 		// Auto-join event from magic link ?token= query param (used in Slack deep-links)
 		const urlParams = new URLSearchParams(window.location.search);
+		// Back from the Slack user-scope OAuth flow: reopen Settings and report the outcome
+		const slackResult = urlParams.get("slack");
+		if (slackResult) {
+			settingsOpen = true;
+			if (slackResult === "connected") toast("Slack", "Workspace connected", "green-500");
+			else toast("Slack", `Connection failed: ${urlParams.get("reason") ?? "unknown"}`);
+			urlParams.delete("slack");
+			urlParams.delete("reason");
+			const rest = urlParams.toString();
+			history.replaceState(null, "", window.location.pathname + (rest ? `?${rest}` : ""));
+		}
 		const magicToken = urlParams.get("token");
 		if (magicToken && $user.token && $user.eventToken !== magicToken) {
 			try {
@@ -184,9 +206,7 @@
 	const eventTokenPaths = ["/monitor", "/checklist", "/logs", "/notepad", "/scorekeeper", "/field-lineup"];
 
 	// Roles that can see the Scorekeeper view (playoff lineups).
-	let canScorekeep = $derived(
-		$user.admin || ["Scorekeeper", "FTA", "FTAA", "System"].includes($user.role),
-	);
+	let canScorekeep = $derived($user.admin || ["Scorekeeper", "FTA", "FTAA", "System"].includes($user.role));
 
 	function redirectForAuth() {
 		const currentPath = route.pathname;
@@ -269,7 +289,6 @@
 		const eventCode = $eventStore.code || undefined;
 		track("page_view", eventCode, { page });
 	});
-
 
 	// Settings modal
 
@@ -1039,7 +1058,10 @@
 </Drawer>
 
 <!-- App.svelte -->
-<main class="bg-gray-50 dark:bg-neutral-800 flex flex-col" style="height: 100dvh; max-height: 100dvh; overflow: hidden;">
+<main
+	class="bg-gray-50 dark:bg-neutral-800 flex flex-col"
+	style="height: 100dvh; max-height: 100dvh; overflow: hidden;"
+>
 	{#if !$fullscreen}
 		<div
 			class="shrink-0 bg-primary-700 dark:bg-primary-500 flex w-full justify-between px-2"

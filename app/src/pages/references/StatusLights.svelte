@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { Accordion, AccordionItem, Modal } from "flowbite-svelte";
-	import { onDestroy } from "svelte";
+	import { onDestroy, onMount } from "svelte";
+	import type { Action } from "svelte/action";
+	import { statusLightHelp, type StatusLightHelp, type StatusLightHelpId } from "./status-light-help";
 
 	let enlargedSrc = $state<string | null>(null);
 	let enlargedAlt = $state<string>("");
@@ -40,6 +42,7 @@
 	const componentKeys = [
 		"radio",
 		"roborio",
+		"systemcore",
 		"revsparkmax",
 		"revsparkflex",
 		"revpowerdistributionhub",
@@ -65,6 +68,12 @@
 		for (const key of componentKeys) {
 			if (openState[key]) loadedState[key] = true;
 		}
+	});
+
+	// Deep link: /references/statuslights#roborio opens that device's section.
+	onMount(() => {
+		const key = window.location.hash.slice(1);
+		if (componentKeys.includes(key)) openState[key] = true;
 	});
 
 	function toggleLED(freq: keyof typeof LEDToggleState) {
@@ -101,11 +110,66 @@
 		const index = LEDBlinkState[blinkKey];
 		return pattern[index] ?? "black led";
 	}
+	// #region Row help dialog
+	let helpOpen = $state(false);
+	let help = $state<StatusLightHelp | null>(null);
+
+	function openHelp(id: StatusLightHelpId) {
+		help = statusLightHelp[id];
+		helpOpen = true;
+	}
+
+	// Makes a table row (or card) a large tappable target that opens the help dialog for `id`.
+	const tapHelp: Action<HTMLElement, StatusLightHelpId> = (node, id) => {
+		node.classList.add("help-row");
+		node.setAttribute("role", "button");
+		node.setAttribute("tabindex", "0");
+		node.setAttribute("aria-haspopup", "dialog");
+		node.setAttribute("aria-label", `${statusLightHelp[id].state}. Open help`);
+		const onClick = () => openHelp(id);
+		const onKey = (e: KeyboardEvent) => {
+			if (e.key === "Enter" || e.key === " ") {
+				e.preventDefault();
+				openHelp(id);
+			}
+		};
+		node.addEventListener("click", onClick);
+		node.addEventListener("keydown", onKey);
+		return {
+			destroy() {
+				node.removeEventListener("click", onClick);
+				node.removeEventListener("keydown", onKey);
+			},
+		};
+	};
+	// #endregion
 </script>
 
 <Modal bind:open={modalOpen} size="xl" outsideclose onclose={onModalClose}>
 	{#if enlargedSrc}
 		<img src={enlargedSrc} alt={enlargedAlt} class="w-full h-auto rounded-lg" style="background-color: white;" />
+	{/if}
+</Modal>
+
+<Modal bind:open={helpOpen} size="md" outsideclose title={help ? `${help.device}: ${help.led}, ${help.state}` : ""}>
+	{#if help}
+		<div class="flex flex-col gap-3 text-black dark:text-white">
+			<div>
+				<div class="bold">What it means</div>
+				<p>{help.meaning}</p>
+			</div>
+			<div>
+				<div class="bold">What to do</div>
+				<ol class="list-decimal pl-5 flex flex-col gap-1">
+					{#each help.steps as step, i (i)}
+						<li>{step}</li>
+					{/each}
+				</ol>
+			</div>
+			{#if help.source}
+				<a class="underline text-sm" href={help.source} target="_blank" rel="noreferrer">Source</a>
+			{/if}
+		</div>
 	{/if}
 </Modal>
 
@@ -159,7 +223,7 @@
 														>No Power</td
 													>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"radio.no-power"}>
 													<td class="w-20 pl-8 pt-2"><span class="black led"> </span></td>
 													<td>All LEDs</td>
 												</tr>
@@ -175,11 +239,14 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="2" class="bold w-100 pt-2 pl-2">Powered + Booting</td>
 												</tr>
-												<tr class="border-b-2 border-b-gray-600">
+												<tr
+													class="border-b-2 border-b-gray-600"
+													use:tapHelp={"radio.powered-booting"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
 													<td>Power</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"radio.powered-booting"}>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
 													<td>System Status</td>
 												</tr>
@@ -196,11 +263,14 @@
 														>Powered + Unable to Ping Field</td
 													>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"radio.powered-unable-to-ping-field"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
 													<td>Power</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"radio.powered-unable-to-ping-field"}>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["1Hz"] === true
@@ -223,11 +293,14 @@
 														>Powered + Flashing Firmware</td
 													>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"radio.powered-flashing-firmware"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
 													<td>Power</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"radio.powered-flashing-firmware"}>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["20Hz"] === true
@@ -251,11 +324,14 @@
 														>Powered + Firmware Flashed + In First Boot</td
 													>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"radio.powered-firmware-flashed-in-first-boot"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
 													<td>Power</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"radio.powered-firmware-flashed-in-first-boot"}>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["50Hz"] === true
@@ -279,11 +355,17 @@
 														>Radio in AP Mode with Battery Detected</td
 													>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"radio.radio-in-ap-mode-with-battery-detected"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
 													<td>Power</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"radio.radio-in-ap-mode-with-battery-detected"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["20Hz"] === true
@@ -293,7 +375,10 @@
 													</td>
 													<td>System Status</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"radio.radio-in-ap-mode-with-battery-detected"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["20Hz"] === true
@@ -303,7 +388,7 @@
 													</td>
 													<td>2.4GHz</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"radio.radio-in-ap-mode-with-battery-detected"}>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["20Hz"] === true
@@ -327,11 +412,14 @@
 														>Powered + Able to Ping Field</td
 													>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"radio.powered-able-to-ping-field"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
 													<td>Power</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"radio.powered-able-to-ping-field"}>
 													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
 													<td>System Status</td>
 												</tr>
@@ -348,23 +436,35 @@
 													<td colspan="2" class="bold w-100 pt-2 pl-2">No Robot Radio Link</td
 													>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"radio.no-robot-radio-link"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
 													<td>Power</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"radio.no-robot-radio-link"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
 													<td>System Status</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"radio.no-robot-radio-link"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
 													<td>2.4GHz</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"radio.no-robot-radio-link"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
 													<td>6GHz</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"radio.no-robot-radio-link"}>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
 													<td>RIO Link</td>
 												</tr>
@@ -381,7 +481,7 @@
 														>2.4GHz Connection Enabled</td
 													>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"radio.2-4ghz-connection-enabled"}>
 													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
 													<td>2.4GHz</td>
 												</tr>
@@ -399,7 +499,7 @@
 														>6GHz Connection Enabled</td
 													>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"radio.6ghz-connection-enabled"}>
 													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
 													<td>6GHz</td>
 												</tr>
@@ -417,7 +517,7 @@
 														>Valid RIO Connection</td
 													>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"radio.valid-rio-connection"}>
 													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
 													<td>RIO Link</td>
 												</tr>
@@ -466,7 +566,7 @@
 						<button
 							onclick={(e) => {
 								e.stopPropagation();
-								enlarge("/references/components/images/roborio-large.webp", "RoboRIO 2.0");
+								enlarge("/references/components/images/roborio-large.webp", "roboRIO 2.0");
 							}}
 							class="cursor-zoom-in rounded hover:ring-2 hover:ring-blue-400 transition"
 							title="Click to enlarge"
@@ -474,17 +574,22 @@
 							<img
 								src="/references/components/icons/roborio.webp"
 								width="72px"
-								alt="RoboRIO 2.0"
+								alt="roboRIO 2.0"
 								style="background-color: white;"
 								class="ml-2"
 							/>
 						</button>
-						<div class="ml-8">RoboRIO 2.0</div>
+						<div class="ml-8">roboRIO 1 and roboRIO 2</div>
 					</div>
 				{/snippet}
 
 				{#if openState.roborio === true || loadedState.roborio === true}
 					<div class="flex flex-col pl-1" style="max-width: 375px;">
+						<p class="text-sm px-2 pb-2">
+							Both models use the same LED codes. What differs is what a continuous Status flash means and
+							how you fix it. roboRIO 2 boots from a microSD card and has an NI logo. roboRIO 1 has no
+							card slot and its label reads "Powered by LabVIEW". Tap a row for what to do.
+						</p>
 						<table cellpadding="5" cellspacing="0" class="text-black dark:text-white">
 							<tbody>
 								<tr class="border-2 border-gray-400">
@@ -494,17 +599,36 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="2" class="bold w-100 pt-2 pl-2">Power</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"roborio.power.ok"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
 													<td>OK</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"roborio.power.brownout"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="orange led"></span> </td>
-													<td>Brownout</td>
+													<td>Brownout, outputs disabled</td>
 												</tr>
-												<tr>
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"roborio.power.fault-short"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="red led"></span> </td>
-													<td>Fault, check for short</td>
+													<td>Fault, user rail short or overcurrent</td>
+												</tr>
+												<tr use:tapHelp={"roborio.power.input-too-high"}>
+													<td class="w-20 pl-8 pt-2"
+														><span
+															class={LEDToggleState["3Hz"] === true
+																? "red led"
+																: "black led"}
+														></span>
+													</td>
+													<td>Input over 16 V, all outputs off</td>
 												</tr>
 											</tbody>
 										</table>
@@ -518,11 +642,24 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="2" class="bold w-100 pt-2 pl-2">Status</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"roborio.status.ok"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
-													<td>OK</td>
+													<td>OK (off after boot)</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"roborio.status.booting"}
+												>
+													<td class="w-20 pl-8 pt-2"><span class="orange led"></span> </td>
+													<td>Solid while booting, then turns off</td>
+												</tr>
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"roborio.status.2-blinks"}
+												>
 													<td class="w-20 pl-8 pt-2">
 														<span
 															class="{blinkClass('2Blink', [
@@ -535,10 +672,12 @@
 														>
 														</span>
 													</td>
-													<td>(2 Blinks) Software error, reimage device</td>
+													<td>(2 blinks) Software error, reimage</td>
 												</tr>
-
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"roborio.status.3-blinks"}
+												>
 													<td class="w-20 pl-8 pt-2">
 														<span
 															class="{blinkClass('3Blink', [
@@ -553,10 +692,12 @@
 														>
 														</span>
 													</td>
-													<td>(3 Blinks) Safe Mode, restart, reimage if not resolved</td>
+													<td>(3 blinks) Safe mode. Reboot, reimage if it stays</td>
 												</tr>
-
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"roborio.status.4-blinks"}
+												>
 													<td class="w-20 pl-8 pt-2">
 														<span
 															class="{blinkClass('4Blink', [
@@ -574,16 +715,76 @@
 														</span>
 													</td>
 													<td
-														>(4 Blinks) Software crashed twice without rebooting: reboot,
-														reimage if not resolved</td
+														>(4 blinks) Code crashed twice without a reboot. Reboot, reimage
+														if it repeats</td
 													>
 												</tr>
-												<tr>
-													<td class="w-20 pl-8 pt-2"><span class="orange led"></span> </td>
-													<td>Unrecoverable error</td>
+												<tr use:tapHelp={"roborio.status.continuous"}>
+													<td class="w-20 pl-8 pt-2"
+														><span
+															class={LEDToggleState["1Hz"] === true
+																? "orange led"
+																: "black led"}
+														></span>
+													</td>
+													<td
+														>Continuous flash with no pause, or solid after boot:
+														unrecoverable error. Not a 4-blink code. See below.</td
+													>
 												</tr>
 											</tbody>
 										</table>
+										<div class="mx-2 mt-3 mb-1 rounded border-2 border-orange-500 p-2">
+											<div class="bold text-sm">Continuous flash: roboRIO 1 vs roboRIO 2</div>
+											<div class="grid grid-cols-2 gap-2 mt-2">
+												<div
+													class="help-card rounded border border-gray-500 p-2"
+													use:tapHelp={"roborio.status.continuous-rio1"}
+												>
+													<div class="flex items-center gap-2">
+														<span
+															class={LEDToggleState["1Hz"] === true
+																? "orange led"
+																: "black led"}
+														></span>
+														<span class="bold">roboRIO 1</span>
+														<span class="ml-auto text-gray-400 text-xl leading-none"
+															>&rsaquo;</span
+														>
+													</div>
+													<p class="text-sm mt-1">
+														No card slot. The internal image is corrupt or an update was
+														interrupted. Safe mode and reimage over USB, or the NI recovery
+														USB stick.
+													</p>
+												</div>
+												<div
+													class="help-card rounded border border-gray-500 p-2"
+													use:tapHelp={"roborio.status.continuous-rio2"}
+												>
+													<div class="flex items-center gap-2">
+														<span
+															class={LEDToggleState["1Hz"] === true
+																? "orange led"
+																: "black led"}
+														></span>
+														<span class="bold">roboRIO 2</span>
+														<span class="ml-auto text-gray-400 text-xl leading-none"
+															>&rsaquo;</span
+														>
+													</div>
+													<p class="text-sm mt-1">
+														Cannot read the microSD card. Card missing, not clicked in, not
+														imaged, or corrupt. Reseat the card, then reimage it on a
+														laptop.
+													</p>
+												</div>
+											</div>
+											<p class="text-xs mt-2 italic">
+												Same pattern on both. NI does not publish the flash rate; about 1 Hz is
+												typical.
+											</p>
+										</div>
 									</td>
 								</tr>
 
@@ -594,9 +795,9 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="2" class="bold w-100 pt-2 pl-2">Radio</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"roborio.radio.ignore"}>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
-													<td>Ignore</td>
+													<td>Ignore, not used by the FRC image</td>
 												</tr>
 											</tbody>
 										</table>
@@ -610,15 +811,24 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="2" class="bold w-100 pt-2 pl-2">Comm</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"roborio.comm.no-comms"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
-													<td>No Comms</td>
+													<td>No comms</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"roborio.comm.no-code"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="red led"></span> </td>
 													<td>Comms, no code</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"roborio.comm.e-stop"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -628,7 +838,7 @@
 													</td>
 													<td>E-Stop</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"roborio.comm.ok"}>
 													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
 													<td>OK</td>
 												</tr>
@@ -644,19 +854,28 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="2" class="bold w-100 pt-2 pl-2">Mode</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"roborio.mode.disabled"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
 													<td>Disabled</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"roborio.mode.auto"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="orange led"></span> </td>
 													<td>Auto</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"roborio.mode.teleop"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
 													<td>Teleop</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"roborio.mode.test"}>
 													<td class="w-20 pl-8 pt-2"><span class="red led"></span> </td>
 													<td>Test</td>
 												</tr>
@@ -674,11 +893,17 @@
 														>RSL (Reflects RSL State)</td
 													>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"roborio.rsl.disabled"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="red led"></span> </td>
 													<td>Disabled</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"roborio.rsl.enabled"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -688,7 +913,10 @@
 													</td>
 													<td>Enabled</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"roborio.rsl.off"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
 													<td>Robot Off, No roboRIO Power, or No RSL Power</td>
 												</tr>
@@ -702,11 +930,178 @@
 								</tr>
 							</tbody>
 						</table>
-						<a
-							class="underline text-sm px-2 place-self-end pt-2"
-							href="https://docs.wpilib.org/en/stable/docs/hardware/hardware-basics/status-lights-ref.html#roborio"
-							>Source Link</a
-						>
+						<div class="flex flex-col place-self-end pt-2 text-sm">
+							<a
+								class="underline px-2 place-self-end"
+								href="https://docs.wpilib.org/en/stable/docs/hardware/hardware-basics/status-lights-ref.html#roborio"
+								>Source: WPILib status lights</a
+							>
+							<a
+								class="underline px-2 place-self-end"
+								href="https://knowledge.ni.com/KnowledgeArticleDetails?id=kA03q000000kOHkCAM&l=en-US"
+								>Source: NI, Status LED constantly flashing (roboRIO 1 vs 2.0)</a
+							>
+						</div>
+					</div>
+				{/if}
+			</AccordionItem>
+
+			<!-- SystemCore -->
+			<AccordionItem class="text-black dark:text-white" bind:open={openState.systemcore}>
+				{#snippet header()}
+					<div class="flex flex-row items-center">
+						<div class="ml-2" style="width: 72px"></div>
+						<div class="ml-8">SystemCore (2027, beta)</div>
+					</div>
+				{/snippet}
+
+				{#if openState.systemcore === true || loadedState.systemcore === true}
+					<div class="flex flex-col pl-1" style="max-width: 375px;">
+						<p class="text-sm px-2 pb-2">
+							New robot controller for 2027, on beta hardware in 2026. Codes come from the Limelight
+							SystemCore spec sheet (June 2025) and the Systemcore OS release notes. WPILib has not
+							published a status light reference yet. Blink rates are approximate. The OLED screen names
+							the fault, read it first.
+						</p>
+						<table cellpadding="5" cellspacing="0" class="text-black dark:text-white">
+							<tbody>
+								<tr class="border-2 border-gray-400">
+									<td>
+										<table>
+											<tbody>
+												<tr class="w-100 border-b-2 border-b-gray-600">
+													<td colspan="2" class="bold w-100 pt-2 pl-2">Power</td>
+												</tr>
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"systemcore.power.ok"}
+												>
+													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
+													<td>Normal operation</td>
+												</tr>
+												<tr use:tapHelp={"systemcore.power.off"}>
+													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
+													<td>No power, or reverse polarity</td>
+												</tr>
+											</tbody>
+										</table>
+									</td>
+								</tr>
+
+								<tr class="border-2 border-gray-400">
+									<td>
+										<table>
+											<tbody>
+												<tr class="w-100 border-b-2 border-b-gray-600">
+													<td colspan="2" class="bold w-100 pt-2 pl-2">Mode</td>
+												</tr>
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"systemcore.mode.disabled"}
+												>
+													<td class="w-20 pl-8 pt-2"><span class="yellow led"></span> </td>
+													<td>Robot on and disabled</td>
+												</tr>
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"systemcore.mode.enabled"}
+												>
+													<td class="w-20 pl-8 pt-2"
+														><span
+															class={LEDToggleState["3Hz"] === true
+																? "yellow led"
+																: "black led"}
+														></span>
+													</td>
+													<td>Robot on and enabled</td>
+												</tr>
+												<tr use:tapHelp={"systemcore.mode.off"}>
+													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
+													<td>No power</td>
+												</tr>
+											</tbody>
+										</table>
+									</td>
+								</tr>
+
+								<tr class="border-2 border-gray-400">
+									<td>
+										<table>
+											<tbody>
+												<tr class="w-100 border-b-2 border-b-gray-600">
+													<td colspan="2" class="bold w-100 pt-2 pl-2">Status</td>
+												</tr>
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"systemcore.status.ok"}
+												>
+													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
+													<td>No faults</td>
+												</tr>
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"systemcore.status.solid"}
+												>
+													<td class="w-20 pl-8 pt-2"><span class="red led"></span> </td>
+													<td>Uncleared hardware fault, or display fault</td>
+												</tr>
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"systemcore.status.slow-blink"}
+												>
+													<td class="w-20 pl-8 pt-2"
+														><span
+															class={LEDToggleState["1Hz"] === true
+																? "red led"
+																: "black led"}
+														></span>
+													</td>
+													<td>Slow blink: display hardware fault</td>
+												</tr>
+												<tr use:tapHelp={"systemcore.status.fast-blink"}>
+													<td class="w-20 pl-8 pt-2"
+														><span
+															class={LEDToggleState["8Hz"] === true
+																? "red led"
+																: "black led"}
+														></span>
+													</td>
+													<td>Fast blink: CAN bus down or missing, or brownout</td>
+												</tr>
+											</tbody>
+										</table>
+									</td>
+								</tr>
+
+								<tr class="border-2 border-gray-400">
+									<td>
+										<div class="bold pt-2 pl-2">OLED screen</div>
+										<p class="text-sm px-2 pb-2">
+											Shows IP addresses, team number, software version, active hardware faults, a
+											health box per CAN bus, and three boot spinners (network, robot code, USB
+											host). It dims after 10 seconds with no motion. Tap the unit to wake it.
+										</p>
+									</td>
+								</tr>
+							</tbody>
+						</table>
+						<div class="flex flex-col place-self-end pt-2 text-sm">
+							<a
+								class="underline px-2 place-self-end"
+								href="https://downloads.limelightvision.io/documents/systemcore_specifications_june15_2025_alpha.pdf"
+								>Source: SystemCore spec sheet (LED Indicators)</a
+							>
+							<a
+								class="underline px-2 place-self-end"
+								href="https://github.com/LimelightVision/systemcore-os-public"
+								>Source: Systemcore OS release notes</a
+							>
+							<a
+								class="underline px-2 place-self-end"
+								href="https://docs.wpilib.org/en/latest/docs/software/systemcore-info/systemcore-introduction.html"
+								>Source: WPILib Systemcore introduction</a
+							>
+						</div>
 					</div>
 				{/if}
 			</AccordionItem>
@@ -750,7 +1145,10 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="2" class="bold w-100 pt-2 pl-2">Brushless Mode</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkmax.brushless-mode.brake-no-signal"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -760,11 +1158,17 @@
 													</td>
 													<td>Brake No Signal</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkmax.brushless-mode.brake-valid-signal"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="cyan led"></span> </td>
 													<td>Brake Valid Signal</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkmax.brushless-mode.coast-no-signal"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -774,7 +1178,7 @@
 													>
 													<td>Coast No Signal</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"revsparkmax.brushless-mode.coast-valid-signal"}>
 													<td class="w-20 pl-8 pt-2"><span class="magenta led"></span> </td>
 													<td>Coast Valid Signal</td>
 												</tr>
@@ -790,7 +1194,10 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="2" class="bold w-100 pt-2 pl-2">Brushed Mode</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkmax.brushed-mode.brake-no-signal"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -800,11 +1207,17 @@
 													</td>
 													<td>Brake No Signal</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkmax.brushed-mode.brake-valid-signal"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="blue led"></span> </td>
 													<td>Brake Valid Signal</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkmax.brushed-mode.coast-no-signal"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -814,7 +1227,7 @@
 													>
 													<td>Coast No Signal</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"revsparkmax.brushed-mode.coast-valid-signal"}>
 													<td class="w-20 pl-8 pt-2"><span class="yellow led"></span> </td>
 													<td>Coast Valid Signal</td>
 												</tr>
@@ -830,7 +1243,10 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="2" class="bold w-100 pt-2 pl-2">Fault Conditions</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkmax.fault-conditions.sensor-fault"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["1Hz"] === true
@@ -840,7 +1256,10 @@
 													>
 													<td>Sensor Fault</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkmax.fault-conditions.12v-missing"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["1Hz"] === true
@@ -850,7 +1269,10 @@
 													>
 													<td>12V Missing</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkmax.fault-conditions.gate-driver-fault"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["1Hz"] === true
@@ -860,7 +1282,10 @@
 													>
 													<td>Gate Driver Fault</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkmax.fault-conditions.can-fault"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["1Hz"] === true
@@ -870,7 +1295,7 @@
 													>
 													<td>CAN Fault</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"revsparkmax.fault-conditions.corrupt-firmware"}>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
 													<td>Corrupt Firmware</td>
 												</tr>
@@ -888,7 +1313,10 @@
 														>Identification, Updating, and Recovery</td
 													>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkmax.identification-updating-and-recovery.identify"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["20Hz"] === true
@@ -898,7 +1326,10 @@
 													>
 													<td>Identify</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkmax.identification-updating-and-recovery.can-firmware-updating-v1-5-0"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["1Hz"] === true
@@ -908,7 +1339,10 @@
 													>
 													<td>CAN Firmware Updating v1.5.0</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkmax.identification-updating-and-recovery.can-firmware-updating-v1-4-0"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["1Hz"] === true
@@ -918,7 +1352,10 @@
 													>
 													<td>CAN Firmware Updating v1.4.0</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkmax.identification-updating-and-recovery.can-firmware-retry"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["1Hz"] === true
@@ -928,11 +1365,16 @@
 													</td>
 													<td>CAN Firmware Retry</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkmax.identification-updating-and-recovery.usb-device-firmware-update"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
 													<td>USB Device Firmware Update</td>
 												</tr>
-												<tr>
+												<tr
+													use:tapHelp={"revsparkmax.identification-updating-and-recovery.recovery-mode"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
 													<td>Recovery Mode</td>
 												</tr>
@@ -948,7 +1390,10 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="2" class="bold w-100 pt-2 pl-2">Movement</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkmax.movement.partial-forward"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -958,11 +1403,17 @@
 													>
 													<td>Partial Forward</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkmax.movement.full-forward"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
 													<td>Full Forward</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkmax.movement.partial-reverse"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -972,11 +1423,17 @@
 													</td>
 													<td>Partial Reverse</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkmax.movement.full-reverse"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="red led"></span> </td>
 													<td>Full Reverse</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkmax.movement.forward-limit"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -986,7 +1443,7 @@
 													>
 													<td>Forward Limit</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"revsparkmax.movement.reverse-limit"}>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1050,7 +1507,10 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="3" class="bold w-100 pt-2 pl-2">Brushless Mode</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkflex.brushless-mode.brake-no-signal"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1060,11 +1520,17 @@
 													</td>
 													<td>Brake No Signal</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkflex.brushless-mode.brake-valid-signal"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="cyan led"></span> </td>
 													<td>Brake Valid Signal</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkflex.brushless-mode.coast-no-signal"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1074,7 +1540,7 @@
 													>
 													<td>Coast No Signal</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"revsparkflex.brushless-mode.coast-valid-signal"}>
 													<td class="w-20 pl-8 pt-2"><span class="magenta led"></span> </td>
 													<td>Coast Valid Signal</td>
 												</tr>
@@ -1090,7 +1556,10 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="3" class="bold w-100 pt-2 pl-2">Brushed Mode</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkflex.brushed-mode.brake-no-signal"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1100,11 +1569,17 @@
 													</td>
 													<td>Brake No Signal</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkflex.brushed-mode.brake-valid-signal"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="blue led"></span> </td>
 													<td>Brake Valid Signal</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkflex.brushed-mode.coast-no-signal"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1114,7 +1589,7 @@
 													>
 													<td>Coast No Signal</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"revsparkflex.brushed-mode.coast-valid-signal"}>
 													<td class="w-20 pl-8 pt-2"><span class="yellow led"></span> </td>
 													<td>Coast Valid Signal</td>
 												</tr>
@@ -1130,7 +1605,10 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="3" class="bold w-100 pt-2 pl-2">Fault Modes</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkflex.fault-modes.sensor-fault"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["1Hz"] === true
@@ -1140,7 +1618,10 @@
 													>
 													<td>Sensor Fault</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkflex.fault-modes.12v-missing"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["1Hz"] === true
@@ -1150,7 +1631,10 @@
 													>
 													<td>12V Missing</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkflex.fault-modes.gate-driver-fault"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["1Hz"] === true
@@ -1160,7 +1644,10 @@
 													>
 													<td>Gate Driver Fault</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkflex.fault-modes.can-fault"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["1Hz"] === true
@@ -1170,7 +1657,10 @@
 													>
 													<td>CAN Fault</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkflex.fault-modes.temperature-fault"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["1Hz"] === true
@@ -1180,7 +1670,7 @@
 													>
 													<td>Temperature Fault</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"revsparkflex.fault-modes.corrupt-firmware"}>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
 													<td>Corrupt Firmware</td>
 												</tr>
@@ -1198,7 +1688,10 @@
 														>Identification, Updating, and Recovery</td
 													>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkflex.identification-updating-and-recovery.identify"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["20Hz"] === true
@@ -1208,7 +1701,10 @@
 													>
 													<td>Identify</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkflex.identification-updating-and-recovery.can-firmware-updating"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1218,7 +1714,10 @@
 													>
 													<td>CAN Firmware Updating</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkflex.identification-updating-and-recovery.can-firmware-retry"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1228,11 +1727,16 @@
 													</td>
 													<td>CAN Firmware Retry</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkflex.identification-updating-and-recovery.usb-device-firmware-update"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
 													<td>USB Device Firmware Update</td>
 												</tr>
-												<tr>
+												<tr
+													use:tapHelp={"revsparkflex.identification-updating-and-recovery.recovery-mode"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
 													<td>Recovery Mode</td>
 												</tr>
@@ -1248,7 +1752,10 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="2" class="bold w-100 pt-2 pl-2">Movement</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkflex.movement.partial-forward"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1258,11 +1765,17 @@
 													>
 													<td>Partial Forward</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkflex.movement.full-forward"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
 													<td>Full Forward</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkflex.movement.partial-reverse"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1272,11 +1785,17 @@
 													</td>
 													<td>Partial Reverse</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkflex.movement.full-reverse"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="red led"></span> </td>
 													<td>Full Reverse</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revsparkflex.movement.forward-limit"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1286,7 +1805,7 @@
 													>
 													<td>Forward Limit</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"revsparkflex.movement.reverse-limit"}>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1348,19 +1867,31 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="2" class="bold w-100 pt-2 pl-2">General Status</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revpowerdistributionhub.general-status.no-communication-established"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="blue led"></span> </td>
 													<td>No communication established</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revpowerdistributionhub.general-status.roborio-communication-established"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
 													<td>RoboRIO communication established</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revpowerdistributionhub.general-status.connected-to-rev-hardware-client"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="cyan led"></span> </td>
 													<td>Connected to REV Hardware Client</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revpowerdistributionhub.general-status.keep-alive-timeout"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1370,7 +1901,10 @@
 													>
 													<td>Keep Alive Timeout</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revpowerdistributionhub.general-status.low-battery"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1380,7 +1914,10 @@
 													>
 													<td>Low Battery</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revpowerdistributionhub.general-status.can-fault"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1390,7 +1927,10 @@
 													>
 													<td>CAN Fault</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revpowerdistributionhub.general-status.hardware-fault"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1400,7 +1940,9 @@
 													>
 													<td>Hardware Fault</td>
 												</tr>
-												<tr>
+												<tr
+													use:tapHelp={"revpowerdistributionhub.general-status.device-over-current"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1422,15 +1964,21 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="2" class="bold w-100 pt-2 pl-2">Channel Status</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revpowerdistributionhub.channel-status.has-voltage-and-normal-operation"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
 													<td>Has voltage and normal operation</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revpowerdistributionhub.channel-status.no-voltage-and-active-fault"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="red led"></span> </td>
 													<td>No voltage and active fault</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"revpowerdistributionhub.channel-status.sticky-fault"}>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1452,15 +2000,23 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="2" class="bold w-100 pt-2 pl-2">Switched Channel</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revpowerdistributionhub.switched-channel.has-voltage-and-normal-operation"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
 													<td>Has voltage and normal operation</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revpowerdistributionhub.switched-channel.no-voltage-and-active-fault"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="red led"></span> </td>
 													<td>No voltage and active fault</td>
 												</tr>
-												<tr>
+												<tr
+													use:tapHelp={"revpowerdistributionhub.switched-channel.sticky-fault"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1522,19 +2078,31 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="2" class="bold w-100 pt-2 pl-2">General Status</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revpneumaticshub.general-status.no-communication-established"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="blue led"></span> </td>
 													<td>No communication established</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revpneumaticshub.general-status.roborio-communication-established"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
 													<td>RoboRIO communication established</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revpneumaticshub.general-status.secondary-heartbeat"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="cyan led"></span> </td>
 													<td>Secondary Heartbeat</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revpneumaticshub.general-status.keep-alive-timeout"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1544,7 +2112,10 @@
 													>
 													<td>Keep Alive Timeout</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revpneumaticshub.general-status.hardware-fault"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1554,7 +2125,10 @@
 													>
 													<td>Hardware Fault</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revpneumaticshub.general-status.can-fault"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1564,7 +2138,10 @@
 													>
 													<td>CAN Fault</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revpneumaticshub.general-status.compressor-over-current"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1574,7 +2151,7 @@
 													>
 													<td>Compressor Over Current</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"revpneumaticshub.general-status.device-over-current"}>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1596,11 +2173,14 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="2" class="bold w-100 pt-2 pl-2">Compressor Status</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revpneumaticshub.compressor-status.compressor-off"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
 													<td>Compressor OFF</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"revpneumaticshub.compressor-status.compressor-on"}>
 													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
 													<td>Compressor ON</td>
 												</tr></tbody
@@ -1616,11 +2196,14 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="2" class="bold w-100 pt-2 pl-2">Solenoid Status</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"revpneumaticshub.solenoid-status.solenoid-off"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
 													<td>Solenoid OFF</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"revpneumaticshub.solenoid-status.solenoid-on"}>
 													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
 													<td>Solenoid ON</td>
 												</tr>
@@ -1682,12 +2265,18 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="3" class="bold w-100 pt-2 pl-2">Disabled Codes</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonfx.disabled-codes.no-power"}
+												>
 													<td class="w-1/6 pl-8 pt-2"><span class="black led"></span> </td>
 													<td class="w-1/6 pl-2 pt-2"><span class="black led"></span> </td>
 													<td class="w-2/3">No Power</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonfx.disabled-codes.valid-can-pwm-signal-robot-is-disabled-phoenix-is-running"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1706,7 +2295,10 @@
 														>Valid CAN/PWM Signal, Robot is Disabled, Phoenix is Running
 													</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonfx.disabled-codes.valid-can-pwm-phoenix-is-not-detected"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1723,7 +2315,7 @@
 													>
 													<td class="w-2/3">Valid CAN/PWM, Phoenix is NOT Detected</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"ctretalonfx.disabled-codes.invalid-can-pwm-signal"}>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1752,12 +2344,18 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="3" class="bold w-100 pt-2 pl-2">Enabled Codes</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonfx.enabled-codes.enabled-with-neutral-output"}
+												>
 													<td class="w-1/6 pl-8 pt-2"><span class="orange led"></span> </td>
 													<td class="w-1/6 pl-8 pt-2"><span class="orange led"></span> </td>
 													<td class="w-2/3">Enabled with Neutral Output</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonfx.enabled-codes.driving-in-reverse-rate-dutycycle"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1774,7 +2372,10 @@
 													>
 													<td class="w-2/3">Driving in Reverse, Rate = DutyCycle</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonfx.enabled-codes.driving-in-forward-rate-dutycycle"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1791,7 +2392,9 @@
 													>
 													<td class="w-2/3">Driving in Forward, Rate = DutyCycle</td>
 												</tr>
-												<tr>
+												<tr
+													use:tapHelp={"ctretalonfx.enabled-codes.talon-limited-offset-direction-forward-reverse"}
+												>
 													<td class="w-1/6 pl-8 pt-2">
 														<span
 															class={LEDOffsetToggleState3Hz === 0
@@ -1830,7 +2433,10 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="3" class="bold w-100 pt-2 pl-2">Special Codes</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonfx.special-codes.thermal-cutoff-warning"}
+												>
 													<td class="w-1/6 pl-8 pt-2">
 														<span
 															class={LEDOffsetToggleState3Hz === 0
@@ -1855,7 +2461,10 @@
 													</td>
 													<td class="w-2/3">Thermal Cutoff Warning</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonfx.special-codes.using-pro-command-without-license"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1872,7 +2481,10 @@
 													</td>
 													<td class="w-2/3">Using Pro Command without License</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonfx.special-codes.damaged-hardware"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1889,7 +2501,9 @@
 													</td>
 													<td class="w-2/3">Damaged Hardware</td>
 												</tr>
-												<tr>
+												<tr
+													use:tapHelp={"ctretalonfx.special-codes.in-bootloader-field-upgrade-in-tuner-x"}
+												>
 													<td class="w-1/6 pl-8 pt-2"><span class="black led"></span> </td>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
@@ -1898,7 +2512,7 @@
 																: "orange led"}
 														></span>
 													</td>
-													<td class="w-2/3">Limit Switch/Soft Limit</td>
+													<td class="w-2/3">In Bootloader, field-upgrade in Tuner X</td>
 												</tr>
 											</tbody>
 										</table>
@@ -1950,12 +2564,18 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="3" class="bold w-100 pt-2 pl-2">Disabled Codes</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonfxs.disabled-codes.no-power"}
+												>
 													<td class="w-1/6 pl-8 pt-2"><span class="black led"></span> </td>
 													<td class="w-1/6 pl-8 pt-2"><span class="black led"></span> </td>
 													<td class="w-2/3">No Power</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonfxs.disabled-codes.valid-can-pwm-signal-robot-is-disabled-phoenix-is-running"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1974,7 +2594,10 @@
 														>Valid CAN/PWM Signal, Robot is Disabled, Phoenix is Running
 													</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonfxs.disabled-codes.valid-can-pwm-phoenix-is-not-detected"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -1991,7 +2614,7 @@
 													>
 													<td class="w-2/3">Valid CAN/PWM, Phoenix is NOT Detected</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"ctretalonfxs.disabled-codes.invalid-can-pwm-signal"}>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -2020,12 +2643,18 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="3" class="bold w-100 pt-2 pl-2">Enabled Codes</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonfxs.enabled-codes.enabled-with-neutral-output"}
+												>
 													<td class="w-1/6 pl-8 pt-2"><span class="orange led"></span> </td>
 													<td class="w-1/6 pl-8 pt-2"><span class="orange led"></span> </td>
 													<td class="w-2/3">Enabled with Neutral Output</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonfxs.enabled-codes.driving-in-reverse-rate-dutycycle"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -2042,7 +2671,10 @@
 													>
 													<td class="w-2/3">Driving in Reverse, Rate = DutyCycle</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonfxs.enabled-codes.driving-in-forward-rate-dutycycle"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -2059,7 +2691,9 @@
 													>
 													<td class="w-2/3">Driving in Forward, Rate = DutyCycle</td>
 												</tr>
-												<tr>
+												<tr
+													use:tapHelp={"ctretalonfxs.enabled-codes.talon-limited-offset-direction-forward-reverse"}
+												>
 													<td class="w-1/6 pl-8 pt-2">
 														<span
 															class={LEDOffsetToggleState3Hz === 0
@@ -2098,7 +2732,10 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="3" class="bold w-100 pt-2 pl-2">Special Codes</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonfxs.special-codes.thermal-cutoff-warning"}
+												>
 													<td class="w-1/6 pl-8 pt-2">
 														<span
 															class={LEDOffsetToggleState3Hz === 0
@@ -2123,7 +2760,10 @@
 													</td>
 													<td class="w-2/3">Thermal Cutoff Warning</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonfxs.special-codes.using-pro-command-without-license"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -2140,7 +2780,10 @@
 													</td>
 													<td class="w-2/3">Using Pro Command without License</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonfxs.special-codes.damaged-hardware"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -2157,7 +2800,9 @@
 													</td>
 													<td class="w-2/3">Damaged Hardware</td>
 												</tr>
-												<tr>
+												<tr
+													use:tapHelp={"ctretalonfxs.special-codes.in-bootloader-field-upgrade-in-tuner-x"}
+												>
 													<td class="w-1/6 pl-8 pt-2"><span class="black led"></span> </td>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
@@ -2166,7 +2811,7 @@
 																: "orange led"}
 														></span>
 													</td>
-													<td class="w-2/3">Limit Switch/Soft Limit</td>
+													<td class="w-2/3">In Bootloader, field-upgrade in Tuner X</td>
 												</tr>
 											</tbody>
 										</table>
@@ -2218,7 +2863,10 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="3" class="bold w-100 pt-2 pl-2">Calibration Codes</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonsrx.calibration-codes.calibration-in-progress"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -2235,7 +2883,10 @@
 													</td>
 													<td class="w-2/3">Calibration in Progress</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonsrx.calibration-codes.successful-calibration"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -2252,7 +2903,7 @@
 													>
 													<td class="w-2/3">Successful Calibration</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"ctretalonsrx.calibration-codes.failed-calibration"}>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -2283,12 +2934,18 @@
 														>Normal Operation Codes</td
 													>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonsrx.normal-operation-codes.no-power"}
+												>
 													<td class="w-1/6 pl-8 pt-2"><span class="black led"></span> </td>
 													<td class="w-1/6 pl-8 pt-2"><span class="black led"></span> </td>
 													<td class="w-2/3">No Power</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonsrx.normal-operation-codes.driving-in-forward-rate-dutycycle"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -2305,7 +2962,10 @@
 													>
 													<td class="w-2/3">Driving in Forward, Rate = DutyCycle</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonsrx.normal-operation-codes.driving-in-reverse-rate-dutycycle"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -2322,7 +2982,10 @@
 													</td>
 													<td class="w-2/3">Driving in Reverse, Rate = DutyCycle</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonsrx.normal-operation-codes.can-pwm-detected-robot-disabled"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -2339,7 +3002,10 @@
 													>
 													<td class="w-2/3">CAN/PWM Detected, Robot Disabled</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonsrx.normal-operation-codes.can-pwm-not-detected"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -2356,7 +3022,10 @@
 													</td>
 													<td class="w-2/3">CAN/PWM Not Detected</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonsrx.normal-operation-codes.damaged-hardware"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -2373,7 +3042,10 @@
 													>
 													<td class="w-2/3">Damaged Hardware</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonsrx.normal-operation-codes.forward-soft-hard-limit-triggered"}
+												>
 													<td class="w-1/6 pl-8 pt-2">
 														<span
 															class={LEDOffsetToggleState3Hz === 0
@@ -2398,7 +3070,10 @@
 													</td>
 													<td class="w-2/3">Forward Soft/Hard Limit Triggered</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonsrx.normal-operation-codes.reverse-soft-hard-limit-triggered"}
+												>
 													<td class="w-1/6 pl-8 pt-2">
 														<span
 															class={LEDOffsetToggleState3Hz === 0
@@ -2423,7 +3098,10 @@
 													</td>
 													<td class="w-2/3">Reverse Soft/Hard Limit Triggered</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonsrx.normal-operation-codes.in-boot-loader"}
+												>
 													<td class="w-1/6 pl-8 pt-2"><span class="black led"></span> </td>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
@@ -2434,7 +3112,9 @@
 													>
 													<td class="w-2/3">In Boot Loader</td>
 												</tr>
-												<tr>
+												<tr
+													use:tapHelp={"ctretalonsrx.normal-operation-codes.neutral-signal-applied-within-deadband"}
+												>
 													<td class="w-1/6 pl-8 pt-2"><span class="orange led"></span> </td>
 													<td class="w-1/6 pl-8 pt-2"><span class="orange led"></span> </td>
 													<td class="w-2/3">Neutral Signal Applied Within Deadband</td>
@@ -2453,12 +3133,15 @@
 														>B/C CAL Button Color Codes</td
 													>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretalonsrx.b-c-cal-button-color-codes.brake-mode"}
+												>
 													<td class="w-1/6 pl-8 pt-2"><span class="black led"></span> </td>
 													<td class="w-1/6 pl-8 pt-2"><span class="red led"></span> </td>
 													<td class="w-2/3">Brake Mode</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"ctretalonsrx.b-c-cal-button-color-codes.coast-mode"}>
 													<td class="w-1/6 pl-8 pt-2"><span class="black led"></span> </td>
 													<td class="w-1/6 pl-8 pt-2"><span class="black led"></span> </td>
 													<td class="w-2/3">Coast Mode</td>
@@ -2513,7 +3196,10 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="3" class="bold w-100 pt-2 pl-2">Calibration Codes</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrevictorspx.calibration-codes.calibration-in-progress"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -2530,7 +3216,10 @@
 													</td>
 													<td class="w-2/3">Calibration in Progress</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrevictorspx.calibration-codes.successful-calibration"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -2547,7 +3236,7 @@
 													>
 													<td class="w-2/3">Successful Calibration</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"ctrevictorspx.calibration-codes.failed-calibration"}>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -2578,12 +3267,18 @@
 														>Normal Operation Codes</td
 													>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrevictorspx.normal-operation-codes.no-power"}
+												>
 													<td class="w-1/6 pl-8 pt-2"><span class="black led"></span> </td>
 													<td class="w-1/6 pl-8 pt-2"><span class="black led"></span> </td>
 													<td class="w-2/3">No Power</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrevictorspx.normal-operation-codes.driving-in-forward-rate-dutycycle"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -2600,7 +3295,10 @@
 													>
 													<td class="w-2/3">Driving in Forward, Rate = DutyCycle</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrevictorspx.normal-operation-codes.driving-in-reverse-rate-dutycycle"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -2617,7 +3315,10 @@
 													>
 													<td class="w-2/3">Driving in Reverse, Rate = DutyCycle</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrevictorspx.normal-operation-codes.can-pwm-detected-robot-disabled"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -2634,7 +3335,10 @@
 													>
 													<td class="w-2/3">CAN/PWM Detected, Robot Disabled</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrevictorspx.normal-operation-codes.can-pwm-not-detected"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -2651,7 +3355,10 @@
 													>
 													<td class="w-2/3">CAN/PWM Not Detected</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrevictorspx.normal-operation-codes.fault-detected"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -2668,7 +3375,10 @@
 													>
 													<td class="w-2/3">Fault Detected</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrevictorspx.normal-operation-codes.damaged-hardware"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -2685,7 +3395,10 @@
 													>
 													<td class="w-2/3">Damaged Hardware</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrevictorspx.normal-operation-codes.forward-soft-hard-limit-triggered"}
+												>
 													<td class="w-1/6 pl-8 pt-2">
 														<span
 															class={LEDOffsetToggleState3Hz === 0
@@ -2710,7 +3423,10 @@
 													</td>
 													<td class="w-2/3">Forward Soft/Hard Limit Triggered</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrevictorspx.normal-operation-codes.reverse-soft-hard-limit-triggered"}
+												>
 													<td class="w-1/6 pl-8 pt-2">
 														<span
 															class={LEDOffsetToggleState3Hz === 0
@@ -2735,7 +3451,10 @@
 													</td>
 													<td class="w-2/3">Reverse Soft/Hard Limit Triggered</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrevictorspx.normal-operation-codes.in-boot-loader"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
 													<td class="w-20 pl-8 pt-2"
 														><span
@@ -2746,7 +3465,9 @@
 													>
 													<td class="w-2/3">In Boot Loader</td>
 												</tr>
-												<tr>
+												<tr
+													use:tapHelp={"ctrevictorspx.normal-operation-codes.neutral-signal-applied-within-deadband"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="orange led"></span> </td>
 													<td class="w-20 pl-8 pt-2"><span class="orange led"></span> </td>
 													<td class="w-2/3">Neutral Signal Applied Within Deadband</td>
@@ -2765,12 +3486,15 @@
 														>B/C CAL Button Color Codes</td
 													>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrevictorspx.b-c-cal-button-color-codes.brake-mode"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
 													<td class="w-20 pl-8 pt-2"><span class="red led"></span> </td>
 													<td class="w-2/3">Brake Mode</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"ctrevictorspx.b-c-cal-button-color-codes.coast-mode"}>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span> </td>
 													<td class="w-2/3">Coast Mode</td>
@@ -2825,7 +3549,10 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="2" class="bold w-100 pt-2 pl-2">STAT</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecanivore.stat.powered-but-usb-not-plugged-in"}
+												>
 													<td class="w-20 pl-8 pt-2">
 														<span
 															class="{blinkClass('2Blink', [
@@ -2839,7 +3566,10 @@
 													</td>
 													<td>Powered but USB not plugged in</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecanivore.stat.usb-plugged-in-but-no-comms"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["20Hz"] === true
@@ -2849,7 +3579,10 @@
 													</td>
 													<td>USB plugged in but no comms</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecanivore.stat.can-disabled-no-power"}
+												>
 													<td class="w-20 pl-8 pt-2">
 														<span
 															class="{blinkClass('2Blink', [
@@ -2863,7 +3596,10 @@
 													</td>
 													<td>CAN disabled, no power</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecanivore.stat.can-disabled"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -2873,7 +3609,10 @@
 													>
 													<td>CAN disabled</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecanivore.stat.can-enabled-no-power"}
+												>
 													<td class="w-20 pl-8 pt-2">
 														<span
 															class="{blinkClass('2Blink', [
@@ -2887,7 +3626,10 @@
 													</td>
 													<td>CAN enabled, no power</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecanivore.stat.can-enabled"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -2897,7 +3639,10 @@
 													>
 													<td>CAN enabled</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecanivore.stat.bootloader"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -2907,7 +3652,7 @@
 													>
 													<td>Bootloader</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"ctrecanivore.stat.hardware-damage"}>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -2929,7 +3674,10 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="2" class="bold w-100 pt-2 pl-2">Wi-Fi</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecanivore.wi-fi.wi-fi-enabled"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -2939,7 +3687,7 @@
 													>
 													<td>Wi-Fi Enabled</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"ctrecanivore.wi-fi.wi-fi-disabled"}>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span></td>
 													<td>Wi-Fi Disabled</td>
 												</tr>
@@ -2955,7 +3703,10 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="2" class="bold w-100 pt-2 pl-2">BlueTooth</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecanivore.bluetooth.bluetooth-enabled"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -2965,7 +3716,7 @@
 													>
 													<td>Bluetooth Enabled</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"ctrecanivore.bluetooth.bluetooth-disabled"}>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span></td>
 													<td>Bluetooth Disabled</td>
 												</tr>
@@ -2981,15 +3732,24 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="2" class="bold w-100 pt-2 pl-2">CAN</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecanivore.can.no-power"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span></td>
 													<td>No Power</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecanivore.can.voltage-too-low-for-can-bus"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="red led"></span></td>
 													<td>Voltage too low for CAN bus</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecanivore.can.no-can-comms-termination-enabled"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["20Hz"] === true
@@ -2999,7 +3759,10 @@
 													</td>
 													<td>No CAN comms, Termination Enabled</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecanivore.can.no-can-comms-termination-disabled"}
+												>
 													<td class="w-20 pl-8 pt-2">
 														<span
 															class="{blinkClass('2Blink', [
@@ -3013,7 +3776,10 @@
 													</td>
 													<td>No CAN comms, Termination Disabled</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecanivore.can.can-2-0b-legacy-mode-termination-enabled"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["20Hz"] === true
@@ -3023,7 +3789,10 @@
 													>
 													<td>CAN 2.0b Legacy Mode, Termination Enabled</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecanivore.can.can-2-0b-legacy-mode-termination-disabled"}
+												>
 													<td class="w-20 pl-8 pt-2">
 														<span
 															class="{blinkClass('2Blink', [
@@ -3037,7 +3806,10 @@
 													</td>
 													<td>CAN 2.0b Legacy Mode, Termination Disabled</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecanivore.can.can-fd-active-termination-enabled"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["20Hz"] === true
@@ -3047,7 +3819,7 @@
 													>
 													<td>CAN FD Active, Termination Enabled</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"ctrecanivore.can.can-fd-active-termination-disabled"}>
 													<td class="w-20 pl-8 pt-2">
 														<span
 															class="{blinkClass('2Blink', [
@@ -3108,12 +3880,18 @@
 									<td>
 										<table>
 											<tbody>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrepigeon.no-power"}
+												>
 													<td class="w-1/6 pl-8 pt-2"><span class="black led"></span></td>
 													<td class="w-1/6 pl-8 pt-2"><span class="black led"></span></td>
 													<td class="w-2/3">No Power</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrepigeon.invalid-can-signal"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3130,7 +3908,10 @@
 													>
 													<td class="w-2/3">Invalid CAN Signal</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrepigeon.valid-can-phoenix-is-not-detected"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3147,7 +3928,10 @@
 													>
 													<td class="w-2/3">Valid CAN, Phoenix is NOT Detected</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrepigeon.valid-can-phoenix-detected-robot-disabled"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3164,7 +3948,10 @@
 													>
 													<td class="w-2/3">Valid CAN + Phoenix Detected + Robot Disabled</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrepigeon.valid-can-phoenix-detected-robot-enabled"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3181,7 +3968,10 @@
 													>
 													<td class="w-2/3">Valid CAN + Phoenix Detected + Robot Enabled</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrepigeon.hardware-fault-detected-confirm-with-tunerx-self-test"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3200,7 +3990,9 @@
 														>Hardware Fault Detected; Confirm with TunerX Self Test</td
 													>
 												</tr>
-												<tr>
+												<tr
+													use:tapHelp={"ctrepigeon.device-in-bootloader-field-upgrade-device-in-tunerx"}
+												>
 													<td class="w-1/6 pl-8 pt-2"><span class="black led"></span></td>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
@@ -3260,11 +4052,17 @@
 									<td>
 										<table>
 											<tbody>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecancoder.no-power"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span></td>
 													<td>No Power</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecancoder.bootloader"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3274,7 +4072,10 @@
 													>
 													<td>Bootloader</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecancoder.unlicensed-phoenix-pro"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3284,7 +4085,10 @@
 													</td>
 													<td>Unlicensed Phoenix Pro</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecancoder.can-bus-has-been-lost"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["1Hz"] === true
@@ -3294,7 +4098,10 @@
 													</td>
 													<td>CAN bus has been lost</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecancoder.dim-no-can-and-magnet-out-of-range"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3304,7 +4111,10 @@
 													>
 													<td>(dim) No CAN and magnet out of range</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecancoder.dim-no-can-and-reduced-magnet-accuracy"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3314,7 +4124,10 @@
 													>
 													<td>(dim) No CAN and reduced magnet accuracy</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecancoder.dim-no-can-and-magnet-present"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3324,7 +4137,10 @@
 													>
 													<td>(dim) No CAN and magnet present</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecancoder.bright-can-and-magnet-out-of-range"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3334,7 +4150,10 @@
 													>
 													<td>(bright) CAN and magnet out of range</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecancoder.bright-can-and-reduced-magnet-accuracy"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3344,7 +4163,7 @@
 													>
 													<td>(bright) CAN and reduced magnet accuracy</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"ctrecancoder.bright-can-and-magnet-present"}>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3404,11 +4223,17 @@
 									<td>
 										<table>
 											<tbody>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretbcancoder.no-power"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span></td>
 													<td>No Power</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretbcancoder.bootloader"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3418,7 +4243,10 @@
 													>
 													<td>Bootloader</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretbcancoder.unlicensed-phoenix-pro"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3428,7 +4256,10 @@
 													</td>
 													<td>Unlicensed Phoenix Pro</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretbcancoder.can-bus-has-been-lost"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["1Hz"] === true
@@ -3438,7 +4269,10 @@
 													</td>
 													<td>CAN bus has been lost</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretbcancoder.dim-no-can-and-magnet-out-of-range"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3448,7 +4282,10 @@
 													>
 													<td>(dim) No CAN and magnet out of range</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretbcancoder.dim-no-can-and-reduced-magnet-accuracy"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3458,7 +4295,10 @@
 													>
 													<td>(dim) No CAN and reduced magnet accuracy</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretbcancoder.dim-no-can-and-magnet-present"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3468,7 +4308,10 @@
 													>
 													<td>(dim) No CAN and magnet present</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretbcancoder.bright-can-and-magnet-out-of-range"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3478,7 +4321,10 @@
 													>
 													<td>(bright) CAN and magnet out of range</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctretbcancoder.bright-can-and-reduced-magnet-accuracy"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3488,7 +4334,7 @@
 													>
 													<td>(bright) CAN and reduced magnet accuracy</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"ctretbcancoder.bright-can-and-magnet-present"}>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3545,12 +4391,18 @@
 									<td>
 										<table>
 											<tbody>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecanrange.no-power"}
+												>
 													<td class="w-1/6 pl-8 pt-2"><span class="black led"></span></td>
 													<td class="w-1/6 pl-8 pt-2"><span class="black led"></span></td>
 													<td class="w-2/3">No Power</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecanrange.bootloader"}
+												>
 													<td class="w-1/6 pl-8 pt-2"><span class="black led"></span></td>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
@@ -3561,7 +4413,10 @@
 													</td>
 													<td class="w-2/3">Bootloader</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecanrange.can-bus-has-been-lost"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["2Hz"] === true
@@ -3578,7 +4433,10 @@
 													</td>
 													<td class="w-2/3">CAN bus has been lost</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecanrange.can-present-distance-not-detected"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["2Hz"] === true
@@ -3595,7 +4453,10 @@
 													</td>
 													<td class="w-2/3">CAN present. Distance not detected.</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecanrange.can-present-distance-detected-any-speed"}
+												>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["2Hz"] === true
@@ -3612,7 +4473,7 @@
 													</td>
 													<td class="w-2/3">CAN present. Distance detected. (ANY SPEED)</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"ctrecanrange.damaged-hardware"}>
 													<td class="w-1/6 pl-8 pt-2"
 														><span
 															class={LEDToggleState["2Hz"] === true
@@ -3676,11 +4537,17 @@
 									<td>
 										<table>
 											<tbody>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecandle.no-power-or-statusledwhenactive-config-is-set-to-disabled"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span></td>
 													<td>No Power or StatusLedWhenActive config is set to Disabled</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecandle.bootloader"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["2Hz"] === true
@@ -3690,7 +4557,10 @@
 													</td>
 													<td>Bootloader</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecandle.no-can-detected"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["2Hz"] === true
@@ -3700,7 +4570,10 @@
 													</td>
 													<td>No CAN detected</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecandle.can-present-not-being-controlled"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["2Hz"] === true
@@ -3710,7 +4583,10 @@
 													</td>
 													<td>CAN present. Not being controlled.</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecandle.can-present-actively-being-controlled"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["2Hz"] === true
@@ -3720,7 +4596,10 @@
 													</td>
 													<td>CAN present. Actively being controlled.</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecandle.5v-too-high-fault"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["6Hz"] === true
@@ -3730,7 +4609,10 @@
 													</td>
 													<td>5V too high fault</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecandle.short-circuit-or-software-fuse-fault"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["8Hz"] === true
@@ -3740,7 +4622,10 @@
 													</td>
 													<td>Short circuit or software fuse fault</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrecandle.thermal-fault"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["8Hz"] === true
@@ -3750,7 +4635,7 @@
 													</td>
 													<td>Thermal fault</td>
 												</tr>
-												<tr>
+												<tr use:tapHelp={"ctrecandle.damaged-hardware"}>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["2Hz"] === false
@@ -3814,11 +4699,17 @@
 									<td>
 										<table>
 											<tbody>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrepowerdistributionpanel.no-power"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span></td>
 													<td>No Power</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrepowerdistributionpanel.robot-enabled"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["20Hz"] === true
@@ -3828,7 +4719,10 @@
 													>
 													<td>Robot Enabled</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrepowerdistributionpanel.robot-disabled"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3838,7 +4732,10 @@
 													>
 													<td>Robot Disabled</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrepowerdistributionpanel.disabled-sticky-fault-present"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3848,7 +4745,10 @@
 													>
 													<td>Disabled; Sticky Fault Present</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrepowerdistributionpanel.no-can"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3858,7 +4758,10 @@
 													</td>
 													<td>No CAN</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrepowerdistributionpanel.comm-only-in-boot-loader-field-upgrade-necessary"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3868,7 +4771,9 @@
 													>
 													<td>COMM ONLY; In Boot-Loader, Field-Upgrade necessary</td>
 												</tr>
-												<tr>
+												<tr
+													use:tapHelp={"ctrepowerdistributionpanel.hardware-damaged-do-not-attempt-to-use"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3931,11 +4836,17 @@
 												<tr class="w-100 border-b-2 border-b-gray-600">
 													<td colspan="2" class="bold w-100 pt-2 pl-2">Status</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrepneumaticscontrolmodule.status.no-power"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span></td>
 													<td>No Power</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrepneumaticscontrolmodule.status.robot-enabled"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["20Hz"] === true
@@ -3945,7 +4856,10 @@
 													>
 													<td>Robot Enabled</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrepneumaticscontrolmodule.status.robot-disabled"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3955,7 +4869,10 @@
 													>
 													<td>Robot Disabled</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrepneumaticscontrolmodule.status.disabled-sticky-fault-present"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3965,7 +4882,10 @@
 													>
 													<td>Disabled; Sticky Fault Present</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrepneumaticscontrolmodule.status.no-can-or-solenoid-fault-will-blink-of-faulted-solenoid-followed-by-pause"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -3978,7 +4898,10 @@
 														followed by pause)
 													</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrepneumaticscontrolmodule.status.compressor-fault"}
+												>
 													<td class="w-20 pl-8 pt-2">
 														<span
 															class={blinkClass("2Blink", [
@@ -3992,7 +4915,10 @@
 													</td>
 													<td>Compressor Fault</td>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrepneumaticscontrolmodule.status.in-boot-loader-field-upgrade-necessary"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -4002,7 +4928,9 @@
 													>
 													<td>In Boot-Loader, Field-Upgrade necessary</td>
 												</tr>
-												<tr>
+												<tr
+													use:tapHelp={"ctrepneumaticscontrolmodule.status.hardware-damaged-do-not-attempt-to-use"}
+												>
 													<td class="w-20 pl-8 pt-2"
 														><span
 															class={LEDToggleState["3Hz"] === true
@@ -4026,11 +4954,16 @@
 														>Compressor LED (COMP)</td
 													>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrepneumaticscontrolmodule.compressor-led-comp.compressor-off"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span></td>
 													<td>Compressor OFF</td>
 												</tr>
-												<tr>
+												<tr
+													use:tapHelp={"ctrepneumaticscontrolmodule.compressor-led-comp.compressor-on"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="green led"></span></td>
 													<td>Compressor ON</td>
 												</tr>
@@ -4047,11 +4980,16 @@
 													<td colspan="2" class="bold w-100 pt-2 pl-2">Solenoid Status LED</td
 													>
 												</tr>
-												<tr class="w-100 border-b-2 border-b-gray-600">
+												<tr
+													class="w-100 border-b-2 border-b-gray-600"
+													use:tapHelp={"ctrepneumaticscontrolmodule.solenoid-status-led.solenoid-off"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="black led"></span></td>
 													<td>Solenoid OFF</td>
 												</tr>
-												<tr>
+												<tr
+													use:tapHelp={"ctrepneumaticscontrolmodule.solenoid-status-led.solenoid-on"}
+												>
 													<td class="w-20 pl-8 pt-2"><span class="green led"></span></td>
 													<td>Solenoid ON</td>
 												</tr>
@@ -4132,5 +5070,35 @@
 		height: 25px;
 		border: 1px black solid !important;
 		border-radius: 50% !important;
+	}
+	/* Tappable help rows (class is added by the tapHelp action, so the selectors are global) */
+	:global(.help-row) {
+		cursor: pointer;
+	}
+	:global(.help-row:hover),
+	:global(.help-row:focus-visible) {
+		background-color: rgba(59, 130, 246, 0.15);
+		outline: none;
+	}
+	:global(.help-row:focus-visible) {
+		box-shadow: inset 0 0 0 2px #3b82f6;
+	}
+	:global(tr.help-row > td) {
+		padding-top: 0.6rem;
+		padding-bottom: 0.6rem;
+	}
+	:global(tr.help-row > td:last-child) {
+		position: relative;
+		padding-right: 1.5rem;
+	}
+	:global(tr.help-row > td:last-child::after) {
+		content: "\203A";
+		position: absolute;
+		right: 0.5rem;
+		top: 50%;
+		transform: translateY(-50%);
+		font-size: 1.5rem;
+		line-height: 1;
+		color: #9ca3af;
 	}
 </style>

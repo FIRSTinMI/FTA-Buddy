@@ -2,10 +2,21 @@
 	import Icon, { loadIcons } from "@iconify/svelte";
 	// Preload the sidebar/nav icons so they don't pop in on first open.
 	loadIcons([
-		"mdi:television", "mdi:television-guide", "mdi:clipboard-outline", "mdi:clipboard-list-outline",
-		"mdi:clipboard-edit-outline", "mdi:file-document", "mdi:message-alert", "mdi:account-switch",
-		"mdi:package", "mdi:database-export-outline", "mdi:shield-crown-outline", "mdi:information",
-		"mdi:cog", "mdi:cog-outline", "mdi:menu",
+		"mdi:television",
+		"mdi:television-guide",
+		"mdi:clipboard-outline",
+		"mdi:clipboard-list-outline",
+		"mdi:clipboard-edit-outline",
+		"mdi:file-document",
+		"mdi:message-alert",
+		"mdi:account-switch",
+		"mdi:package",
+		"mdi:database-export-outline",
+		"mdi:shield-crown-outline",
+		"mdi:information",
+		"mdi:cog",
+		"mdi:cog-outline",
+		"mdi:menu",
 	]);
 	import {
 		Button,
@@ -25,7 +36,6 @@
 	import { formatTime } from "../../shared/formatTime";
 	import type { Profile, TeamList } from "../../shared/types";
 	import SettingsModal from "./components/SettingsModal.svelte";
-	import UpdateToast from "./components/UpdateToast.svelte";
 	import WelcomeModal from "./components/WelcomeModal.svelte";
 	import { trpc } from "./main";
 	import { navigate, route } from "./router";
@@ -100,6 +110,17 @@
 
 		// Auto-join event from magic link ?token= query param (used in Slack deep-links)
 		const urlParams = new URLSearchParams(window.location.search);
+		// Back from the Slack user-scope OAuth flow: reopen Settings and report the outcome
+		const slackResult = urlParams.get("slack");
+		if (slackResult) {
+			settingsOpen = true;
+			if (slackResult === "connected") toast("Slack", "Workspace connected", "green-500");
+			else toast("Slack", `Connection failed: ${urlParams.get("reason") ?? "unknown"}`);
+			urlParams.delete("slack");
+			urlParams.delete("reason");
+			const rest = urlParams.toString();
+			history.replaceState(null, "", window.location.pathname + (rest ? `?${rest}` : ""));
+		}
 		const magicToken = urlParams.get("token");
 		if (magicToken && $user.token && $user.eventToken !== magicToken) {
 			try {
@@ -185,15 +206,14 @@
 	const eventTokenPaths = ["/monitor", "/checklist", "/logs", "/notepad", "/scorekeeper", "/field-lineup"];
 
 	// Roles that can see the Scorekeeper view (playoff lineups).
-	let canScorekeep = $derived(
-		$user.admin || ["Scorekeeper", "FTA", "FTAA", "System"].includes($user.role),
-	);
+	let canScorekeep = $derived($user.admin || ["Scorekeeper", "FTA", "FTAA", "System"].includes($user.role));
 
 	function redirectForAuth() {
 		const currentPath = route.pathname;
 		const isPublicLog = currentPath.startsWith("/logs/") && currentPath.split("/")[3]?.length == 36;
 		const isPublicNoteCreate = currentPath.startsWith("/notepad/submit/");
 		const isJoinLink = currentPath.startsWith("/join/");
+		const isTroubleshoot = currentPath.startsWith("/troubleshoot");
 
 		// if user has event token and is trying to access a page that requires an event token
 		if (
@@ -207,7 +227,7 @@
 
 		if (!publicPaths.includes(currentPath)) {
 			//user trying to acces protected page
-			if (!isPublicLog && !isPublicNoteCreate && !isJoinLink) {
+			if (!isPublicLog && !isPublicNoteCreate && !isJoinLink && !isTroubleshoot) {
 				//page is not public log or public note creation page
 				if (!$user.token || !$user.eventToken) {
 					navigate("/manage/login"); //user is either not logged in or does not have event token
@@ -269,7 +289,6 @@
 		const eventCode = $eventStore.code || undefined;
 		track("page_view", eventCode, { page });
 	});
-
 
 	// Settings modal
 
@@ -382,14 +401,37 @@
 
 	// Auto update
 
-	let showUpdateToast = $state(false);
-	let updateNewVersion = $state("");
 	let versionPollInterval: ReturnType<typeof setInterval> | undefined;
+
+	// When the deployed server version differs from the version this bundle was
+	// built as, silently pull the new build instead of prompting: clear the caches,
+	// drop the service worker, and reload onto the fresh assets. No popup - the app
+	// updates itself the same way it would if it had been fully closed and reopened.
+	//
+	// NOTE: `app.version` is package.json's version; `settings.version` tracks the
+	// latest key in the VERSIONS map (updater.ts). Keep those two in sync on every
+	// release or the reload below can't reach a matching state. The sessionStorage
+	// guard makes that failure a single wasted reload per server version rather than
+	// an infinite loop.
+	async function reloadForUpdate(serverVersion: string) {
+		const guardKey = "reloaded-for-version";
+		if (sessionStorage.getItem(guardKey) === serverVersion) return; // already tried this version this session
+		sessionStorage.setItem(guardKey, serverVersion);
+		try {
+			const regs = await navigator.serviceWorker.getRegistrations();
+			await Promise.all(regs.map((r) => r.unregister()));
+			const keys = await caches.keys();
+			await Promise.all(keys.map((k) => caches.delete(k)));
+		} catch {
+			// non-fatal - still reload even if SW/cache cleanup fails
+		}
+		window.location.reload();
+	}
+
 	async function checkVersion() {
 		const data = await trpc.app.version.query();
 		if (data !== settings.version) {
-			updateNewVersion = data;
-			showUpdateToast = true;
+			reloadForUpdate(data);
 		}
 	}
 	onMount(() => {
@@ -605,8 +647,6 @@
 		</Toast>
 	</div>
 {/if}
-
-<UpdateToast show={showUpdateToast} newVersion={updateNewVersion} />
 
 <WelcomeModal
 	bind:welcomeOpen
@@ -1018,7 +1058,10 @@
 </Drawer>
 
 <!-- App.svelte -->
-<main class="bg-gray-50 dark:bg-neutral-800 flex flex-col" style="height: 100dvh; max-height: 100dvh; overflow: hidden;">
+<main
+	class="bg-gray-50 dark:bg-neutral-800 flex flex-col"
+	style="height: 100dvh; max-height: 100dvh; overflow: hidden;"
+>
 	{#if !$fullscreen}
 		<div
 			class="shrink-0 bg-primary-700 dark:bg-primary-500 flex w-full justify-between px-2"

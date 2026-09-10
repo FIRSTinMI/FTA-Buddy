@@ -11,7 +11,8 @@ oauth2.keys.json
 serviceAccount*.json
 app/public/music/*
 app/public/audio/*
-scripts/
+scripts/*
+!scripts/corpus/
 .claude/*
 userscript/dist
 scratchpad-*

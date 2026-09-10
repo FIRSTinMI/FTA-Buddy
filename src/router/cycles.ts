@@ -538,7 +538,26 @@ export const cycleRouter = router({
 				}
 			}
 
-			bus.publish(`event:${event.code}:cycle`, {});
+			// Poke subscribers with a full payload. Publishing {} here would reach the
+			// field monitor as a CycleData with every field undefined, resetting the
+			// displayed average cycle time to its 7m00s fallback mid-match.
+			const [pokeTiming, pokeFrame] = await Promise.all([getTiming(event.code), getMonitorFrame(event.code)]);
+			bus.publish(`event:${event.code}:cycle`, {
+				eventCode: event.code,
+				startTime: pokeTiming.lastMatchStart,
+				refEndTime: pokeTiming.lastMatchRefDone,
+				scoresPostedTime: pokeTiming.lastMatchScoresPosted,
+				prestartTime: pokeTiming.lastPrestartDone,
+				endTime: pokeTiming.lastMatchEnd,
+				matchNumber: pokeFrame.match,
+				lastCycleTime: pokeFrame.lastCycleTime,
+				averageCycleTime: await getAverageCycleTime(event.code),
+				level: pokeFrame.level,
+				aheadBehind: pokeFrame.time,
+				state: pokeFrame.field,
+				scheduleDetails: event.scheduleDetails,
+				exactAheadBehind: pokeFrame.exactAheadBehind || pokeFrame.time,
+			} satisfies CycleData);
 		}),
 
 	getScheduleDetails: eventProcedure.query(async ({ ctx }) => {

@@ -1,0 +1,51 @@
+import { checkTreeIntegrity, treeSchema, type LeafNode, type QuestionNode, type Tree, type TreeNode } from "./types";
+import canJson from "./trees/can.json";
+import codeDeployJson from "./trees/code-deploy.json";
+import driverStationJson from "./trees/driver-station.json";
+import fieldConnectionJson from "./trees/field-connection.json";
+import powerJson from "./trees/power.json";
+import radioJson from "./trees/radio.json";
+import roborioJson from "./trees/roborio.json";
+
+export * from "./types";
+
+// Order here is the order shown in the UI. Most common on-field problem first.
+const rawTrees: unknown[] = [
+	fieldConnectionJson,
+	roborioJson,
+	radioJson,
+	canJson,
+	powerJson,
+	codeDeployJson,
+	driverStationJson,
+];
+
+function loadTree(raw: unknown): Tree {
+	const tree = treeSchema.parse(raw);
+	const problems = checkTreeIntegrity(tree);
+	if (problems.length > 0) {
+		throw new Error(`troubleshooting tree "${tree.id}" is broken:\n  ${problems.join("\n  ")}`);
+	}
+	return tree;
+}
+
+/** Every tree, validated once at import time. */
+export const trees: readonly Tree[] = rawTrees.map(loadTree);
+
+const treesById: ReadonlyMap<string, Tree> = new Map(trees.map((t) => [t.id, t]));
+
+export function getTree(id: string): Tree | undefined {
+	return treesById.get(id);
+}
+
+export function getNode(treeId: string, nodeId: string): TreeNode | undefined {
+	return treesById.get(treeId)?.nodes[nodeId];
+}
+
+export function isQuestion(node: TreeNode): node is QuestionNode {
+	return node.kind === "question";
+}
+
+export function isLeaf(node: TreeNode): node is LeafNode {
+	return node.kind === "leaf";
+}

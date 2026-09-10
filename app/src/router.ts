@@ -65,4 +65,9 @@ export const { p, navigate, isActive, preload, route } = createRouter({
 	"/references/wiringdiagrams": () => import("./pages/references/WiringDiagrams.svelte"),
 	"/references/componentmanuals": () => import("./pages/references/ComponentManuals.svelte"),
 	"/references/fieldmanuals": () => import("./pages/references/FieldManuals.svelte"),
+
+	"/troubleshoot": () => import("./pages/troubleshoot/Troubleshoot.svelte"),
+	"/troubleshoot/chat": () => import("./pages/troubleshoot/Troubleshoot.svelte"),
+	"/troubleshoot/:tree": () => import("./pages/troubleshoot/Troubleshoot.svelte"),
+	"/troubleshoot/:tree/:node": () => import("./pages/troubleshoot/Troubleshoot.svelte"),
 });

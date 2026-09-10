@@ -1,0 +1,102 @@
+{
+	"checked": "2026-09-10",
+	"user_agent": "FTA-Buddy corpus (https://ftabuddy.com)",
+	"sources": {
+		"wpilib": {
+			"name": "WPILib documentation (frc-docs)",
+			"base_url": "https://docs.wpilib.org/en/stable/",
+			"index": "objects.inv (Sphinx inventory; the sitemap.xml only lists version roots)",
+			"robots": "https://docs.wpilib.org/robots.txt: User-agent: * Disallow: (empty) = allow everything. Sitemap lists only /en/stable/ and /en/latest/ roots.",
+			"license": "CC BY 4.0. Footer on every page: 'Copyright 2026, FIRST and other WPILib Contributors. This work is licensed under a Creative Commons Attribution 4.0 International License.' Repo license: https://github.com/wpilibsuite/wpilib-docs/blob/main/license.txt",
+			"license_url": "https://creativecommons.org/licenses/by/4.0/",
+			"scope": [
+				"docs/hardware/",
+				"docs/networking/",
+				"docs/zero-to-robot/",
+				"docs/controls-overviews/",
+				"docs/yearly-overview/",
+				"docs/software/driverstation/",
+				"docs/software/roborio-info/",
+				"docs/software/can-devices/",
+				"docs/software/networktables/",
+				"docs/software/vscode-overview/",
+				"docs/software/basic-programming/",
+				"docs/software/hardware-apis/",
+				"docs/software/support/",
+				"docs/software/wpilib-tools/roborio-team-number-setter/",
+				"docs/software/frc-glossary.html"
+			],
+			"expected_pages": "about 130 of 425 in the inventory"
+		},
+		"vivid": {
+			"name": "Vivid-Hosting VH-109 FRC radio docs",
+			"base_url": "https://frc-radio.vivid-hosting.net/",
+			"index": "https://frc-radio.vivid-hosting.net/sitemap-pages.xml (35 pages). The /tuerkce/ sitemap is the Turkish mirror and is skipped.",
+			"robots": "Allow: / for all agents. Content-Signal: ai-train=yes, search=yes, ai-input=yes.",
+			"license": "No license or copyright statement found on the site (GitBook). Compliance page at /miscellaneous/compliance is regulatory (FCC/IC/CE), not a content license.",
+			"license_url": null,
+			"scope": ["whole site, English pages only"]
+		},
+		"rev": {
+			"name": "REV Robotics documentation",
+			"base_url": "https://docs.revrobotics.com/",
+			"index": "https://docs.revrobotics.com/sitemap.xml is a sitemap index; one sitemap-pages.xml per GitBook space.",
+			"robots": "Allow: / for all agents. Content-Signal: ai-train=yes, search=yes, ai-input=yes.",
+			"license": "No license statement on docs.revrobotics.com. Site footer only says 'REV Robotics'. https://www.revrobotics.com/terms-conditions/ are sales terms with no clause about documentation or automated access.",
+			"license_url": "https://www.revrobotics.com/terms-conditions/",
+			"scope": [
+				"brushless/spark-max/",
+				"brushless/spark-flex/",
+				"brushless/home/",
+				"brushless/tips/",
+				"brushless/legacy/spark-max-client/",
+				"ion-control/pdh/",
+				"ion-control/ph/",
+				"ion-control/mpm/",
+				"ion-control/rpm/",
+				"ion-control/sw/",
+				"ion-control/accessories/can-terminator-pack",
+				"rev-hardware-client/",
+				"rev-hardware-client-2/"
+			],
+			"expected_pages": "about 90"
+		},
+		"ctre": {
+			"name": "CTR Electronics Phoenix 6 documentation",
+			"base_url": "https://v6.docs.ctr-electronics.com/en/stable/",
+			"aliases": "pro.docs.ctr-electronics.com serves the same Sphinx project (its sitemap points at v6.docs URLs), so it is not crawled separately.",
+			"index": "objects.inv (Sphinx inventory, 113 docs); sitemap.xml only lists version roots.",
+			"robots": "Disallow: /en/2024/, /en/2023-v6/, /en/2023-pro/; Allow: /en/stable/, /en/latest/. Only /en/stable/ is crawled.",
+			"license": "Footer: 'Copyright 2026, CTR Electronics'. No license file in https://github.com/CrossTheRoadElec/Phoenix6-Documentation and no license statement on the site.",
+			"license_url": null,
+			"scope": [
+				"docs/hardware-reference/",
+				"docs/canivore/",
+				"docs/troubleshooting/",
+				"docs/tuner/",
+				"docs/application-notes/",
+				"docs/installation/",
+				"docs/support.html",
+				"docs/yearly-changes/",
+				"docs/migration/canbus-utilization.html",
+				"docs/api-reference/api-usage/faults.html",
+				"docs/api-reference/api-usage/actuator-limits.html",
+				"docs/api-reference/api-usage/enabling-actuators.html",
+				"docs/api-reference/api-usage/status-signals.html"
+			],
+			"expected_pages": "about 65"
+		},
+		"ni": {
+			"name": "NI Knowledge Base (roboRIO articles)",
+			"base_url": "https://knowledge.ni.com/KnowledgeArticleDetails?id=",
+			"index": "No crawlable index of roboRIO articles. Fixed list of verified article IDs in fetch-ni.ts plus one hop of linked articles whose title mentions roboRIO or FRC.",
+			"robots": "https://knowledge.ni.com/robots.txt: Allow: / for all agents (only /secur/forgotpassword.jsp disallowed).",
+			"tls": "The server omits the DigiCert Global G2 TLS RSA SHA256 2020 CA1 intermediate, so fetch.ts passes that public intermediate (lib/certs/) as an extra CA for this host.",
+			"license": "Terms of use restrict content: 'NI authorizes you to view and download the materials at this Web site only for your personal, non-commercial use ... (b) you may not modify the materials ... or reproduce or publicly display, perform, or distribute or otherwise use them for any public or commercial purpose; and (c) you may not use any of these materials on any other Web site or networked computer environment for any purpose.'",
+			"license_url": "https://www.ni.com/en/about-ni/legal/terms-of-use.html",
+			"enabled_by_default": false,
+			"why_disabled": "Clause (c) forbids storing NI KB text in another networked environment. robots.txt allows crawling, the terms do not allow reuse. The fetcher exists and works; run it only with an explicit `--only ni` after deciding the terms question.",
+			"scope": ["fixed list of roboRIO / FRC article IDs, verified live at run time"]
+		}
+	}
+}

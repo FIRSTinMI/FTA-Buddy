@@ -13,6 +13,8 @@
 	import { userStore } from "../../stores/user";
 	import type { Alliance, ForMatch, LineupSide } from "../../util/scorekeeperTypes";
 	import { cycleTimeToMS } from "../../../../shared/cycleTimeToMS";
+	import { formatTimeShortNoAgo } from "../../../../shared/formatTime";
+	import { FieldState, MatchState, MatchStateMap } from "../../../../shared/types";
 
 	// FTA/FTAA/Scorekeeper/admin may edit; everyone with the view may read.
 	const canEdit = $derived(
@@ -455,6 +457,97 @@
 		["Avg cycle", cycleData?.averageCycleTime != null ? fmtMs(cycleData.averageCycleTime) : "-"],
 		["Best cycle", fmtCycleStr(cycleData?.bestCycleTime)],
 	] as const);
+
+	// ---- Live "current cycle" timer - mirrors the field monitor's T: value ----
+	// Counts up from the last match's start (falling back to the last prestart),
+	// and reddens once it passes the average cycle time, exactly like the monitor.
+	// This is always the live cycle, independent of which match is being browsed.
+	const currentCycleStart = $derived.by(() => {
+		const t = cycleData?.startTime ?? cycleData?.prestartTime ?? null;
+		return t ? new Date(t) : null;
+	});
+	const currentCycleMs = $derived(currentCycleStart ? now - currentCycleStart.getTime() : null);
+	const currentCycleLabel = $derived(currentCycleStart ? formatTimeShortNoAgo(currentCycleStart, new Date(now)) : "-");
+	const currentCycleRedness = $derived.by(() => {
+		if (currentCycleMs == null) return 0;
+		const avg = cycleData?.averageCycleTime ?? 8 * 60 * 1000;
+		if (currentCycleMs < avg) return 0;
+		return Math.min(1, (currentCycleMs - avg) / 1000 / 120);
+	});
+	// Same colour ramp the monitor uses: neutral grey -> red as the cycle drags on.
+	// Only applied once it's actually running late so the card keeps normal contrast
+	// (in both light and dark) while the cycle is on time.
+	const currentCycleColor = $derived(
+		currentCycleRedness > 0
+			? `rgb(${Math.round(75 * currentCycleRedness + 180)}, ${Math.round(180 * (1 - currentCycleRedness))}, ${Math.round(180 * (1 - currentCycleRedness))})`
+			: null,
+	);
+
+	// ---- Scheduled / projected start of the selected match ---------------------
+	// Scheduled cycle length (minutes) for a given match number, from the posted
+	// schedule - mirrors the monitor's getScheduledCycleTimeMS. Used only to
+	// project a start time when FMS hasn't given us a scheduled one.
+	function scheduledCycleMs(matchNumber: number): number | null {
+		const sd = cycleData?.scheduleDetails;
+		if (!sd?.days?.length) return null;
+		let day = 0;
+		for (let i = 0; i < sd.days.length; i++) {
+			if (new Date(sd.days[i].date).getTime() <= now) day = i;
+		}
+		const cts = sd.days[day]?.cycleTimes;
+		if (!cts || cts.length === 0) return null;
+		let minutes = cts[0].minutes;
+		for (const ct of cts) if (ct.match <= matchNumber) minutes = ct.minutes;
+		return minutes * 60 * 1000;
+	}
+	// The selected match's scheduled start straight from FMS, when we have it.
+	const selSchedStart = $derived(selectedRow?.scheduledStartTime ?? null);
+	// Fallback projection: end of the last match + one cycle per match remaining
+	// (scheduled cycle length, else the running average). Only for upcoming matches
+	// ahead of the live one on the same level, and only when there's no FMS time.
+	const selProjectedStart = $derived.by<Date | null>(() => {
+		if (!selectedRow || selSchedStart || selectedRow.isPlayed) return null;
+		const liveMatch = cycleData?.matchNumber ?? null;
+		if (liveMatch == null) return null;
+		if ((cycleData?.level ?? selLevel) !== selLevel) return null;
+		const matchesAhead = selectedRow.match - liveMatch;
+		if (matchesAhead <= 0) return null;
+		const anchor = cycleData?.scoresPostedTime ?? cycleData?.endTime ?? cycleData?.startTime ?? null;
+		if (!anchor) return null;
+		const cycleMs = scheduledCycleMs(selectedRow.match) ?? cycleData?.averageCycleTime ?? 8 * 60 * 1000;
+		return new Date(new Date(anchor).getTime() + matchesAhead * cycleMs);
+	});
+	const selStartLabel = $derived(
+		selSchedStart ? fmtTime(selSchedStart) : selProjectedStart ? `~${fmtTime(selProjectedStart)}` : "-",
+	);
+	const selStartSub = $derived(selSchedStart ? "scheduled" : selProjectedStart ? "projected" : "");
+
+	// ---- Live overlay for the in-progress match's schedule row -----------------
+	// The actual start, delta and cycle time for a match are all settled the moment
+	// it starts (start_time is stamped and the cycle that led into it is computed),
+	// but the DB-backed row only picks them up once the match is recorded/scored.
+	// Bridge that gap: for the row that matches the live match, fill actual/cycle
+	// from the live cycle data so they show while the match is still on the field.
+	// Gated on the match having actually STARTED - during prestart the live
+	// startTime/lastCycleTime still refer to the *previous* match.
+	const liveMatchStarted = $derived(
+		cycleData?.state != null && MatchStateMap[cycleData.state as FieldState] !== MatchState.PRESTART,
+	);
+	const liveKey = $derived(
+		monitorFrame?.match && monitorFrame.level && monitorFrame.level !== "None"
+			? `${monitorFrame.level}:${monitorFrame.match}:${monitorFrame.play || 1}`
+			: null,
+	);
+	function liveOverlay(m: MatchRow): { actual: Date | null; cycle: string | null } {
+		if (!liveMatchStarted || `${m.level}:${m.match}:${m.play}` !== liveKey) {
+			return { actual: m.actualStartTime, cycle: m.cycleTime };
+		}
+		const liveCycle = cycleData?.lastCycleTime && cycleData.lastCycleTime !== "unk" ? cycleData.lastCycleTime : null;
+		return {
+			actual: m.actualStartTime ?? (cycleData?.startTime ? new Date(cycleData.startTime) : null),
+			cycle: m.cycleTime ?? liveCycle,
+		};
+	}
 </script>
 
 <div class="flex flex-col gap-3 p-3 lg:px-5 w-full">
@@ -478,10 +571,10 @@
 			<Icon icon="mdi:chevron-left" class="size-5" />
 		</Button>
 		<div class="text-center">
-			<div class="text-sm text-gray-500 uppercase">{selLevel}{selPlay > 1 ? ` (play ${selPlay})` : ""}</div>
-			<div class="text-3xl font-bold text-gray-900 dark:text-white">Match {selMatch}</div>
+			<div class="text-base text-gray-500 uppercase">{selLevel}{selPlay > 1 ? ` (play ${selPlay})` : ""}</div>
+			<div class="text-5xl font-bold text-gray-900 dark:text-white">Match {selMatch}</div>
 			<button
-				class="text-sm {following ? 'text-green-600' : 'text-primary-600 underline'}"
+				class="text-base {following ? 'text-green-600' : 'text-primary-600 underline'}"
 				onclick={goLive}
 			>
 				{following ? "● Following live" : "Jump to live"}
@@ -492,12 +585,30 @@
 		</Button>
 	</div>
 
-	<!-- Cycle stats (ahead/behind + cycle times) - directly under the match number -->
-	<div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+	<!-- Cycle stats (current cycle + scheduled start + ahead/behind + cycle times) -->
+	<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+		<!-- Live current-cycle timer, same as the field monitor's T: value -->
+		<div class="rounded-md border border-gray-200 dark:border-neutral-700 p-3 text-center">
+			<div class="text-base text-gray-500 uppercase">Current cycle</div>
+			<div
+				class="text-3xl font-bold tabular-nums {currentCycleColor ? '' : 'text-gray-900 dark:text-white'}"
+				style={currentCycleColor ? `color: ${currentCycleColor}` : ""}
+			>
+				{currentCycleLabel}
+			</div>
+		</div>
+		<!-- Scheduled start of the selected match (FMS time, else a projection) -->
+		<div class="rounded-md border border-gray-200 dark:border-neutral-700 p-3 text-center">
+			<div class="text-base text-gray-500 uppercase">Sched start</div>
+			<div class="text-3xl font-bold text-gray-900 dark:text-white tabular-nums">{selStartLabel}</div>
+			{#if selStartSub}
+				<div class="text-xs uppercase text-gray-400">{selStartSub}</div>
+			{/if}
+		</div>
 		{#each stats as [label, value] (label)}
 			<div class="rounded-md border border-gray-200 dark:border-neutral-700 p-3 text-center">
-				<div class="text-sm text-gray-500 uppercase">{label}</div>
-				<div class="text-2xl font-bold text-gray-900 dark:text-white">{value}</div>
+				<div class="text-base text-gray-500 uppercase">{label}</div>
+				<div class="text-3xl font-bold text-gray-900 dark:text-white">{value}</div>
 			</div>
 		{/each}
 	</div>
@@ -548,7 +659,7 @@
 		<div class="flex gap-1">
 			{#each levelsPresent as lvl (lvl)}
 				<button
-					class="rounded-md px-4 py-1.5 text-base font-semibold {lvl === tableLevel
+					class="rounded-md px-4 py-1.5 text-lg font-semibold {lvl === tableLevel
 						? 'bg-primary-600 text-white'
 						: 'bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-300'}"
 					onclick={() => (tableLevelManual = lvl)}
@@ -559,9 +670,9 @@
 		</div>
 	{/if}
 	<div bind:this={tableScroll} class="overflow-x-auto overflow-y-auto max-h-[38rem] rounded-md border border-gray-200 dark:border-neutral-700">
-		<table class="w-full text-base lg:text-lg">
+		<table class="w-full text-lg lg:text-xl">
 			<thead class="sticky top-0 z-10 bg-white dark:bg-neutral-900">
-				<tr class="text-left text-sm uppercase text-gray-500 border-b border-gray-200 dark:border-neutral-700">
+				<tr class="text-left text-base uppercase text-gray-500 border-b border-gray-200 dark:border-neutral-700">
 					<th class="py-2 px-3">Match</th>
 					<th class="py-2 px-3 hidden lg:table-cell">Teams</th>
 					<th class="py-2 px-3">Sched</th>
@@ -573,7 +684,8 @@
 			</thead>
 			<tbody>
 				{#each filteredMatches as m (m.level + m.match + m.play)}
-					{@const delta = fmtDelta(m.scheduledStartTime, m.actualStartTime)}
+					{@const ov = liveOverlay(m)}
+					{@const delta = fmtDelta(m.scheduledStartTime, ov.actual)}
 					{@const isSel = m.level === selLevel && m.match === selMatch && m.play === selPlay}
 					<tr
 						data-sel={isSel ? "1" : null}
@@ -586,18 +698,18 @@
 						}}
 					>
 						<td class="py-2 px-3 whitespace-nowrap">
-							<span class="text-gray-400 text-sm">{m.level.slice(0, 4)}</span>
+							<span class="text-gray-400 text-base">{m.level.slice(0, 4)}</span>
 							<span class="font-semibold">{m.match}{m.play > 1 ? `-${m.play}` : ""}</span>
 						</td>
-						<td class="py-2 px-3 whitespace-nowrap text-sm font-mono hidden lg:table-cell">
-							{#each m.red as t, i (i)}<span class="inline-block w-14 text-right tabular-nums text-red-600">{t ?? ""}</span>{/each}
+						<td class="py-2 px-3 whitespace-nowrap text-base lg:text-lg font-mono hidden lg:table-cell">
+							{#each m.red as t, i (i)}<span class="inline-block w-16 text-right tabular-nums text-red-600">{t ?? ""}</span>{/each}
 							<span class="inline-block w-3"></span>
-							{#each m.blue as t, i (i)}<span class="inline-block w-14 text-right tabular-nums text-blue-600">{t ?? ""}</span>{/each}
+							{#each m.blue as t, i (i)}<span class="inline-block w-16 text-right tabular-nums text-blue-600">{t ?? ""}</span>{/each}
 						</td>
 						<td class="py-2 px-3 whitespace-nowrap font-mono">{fmtTime(m.scheduledStartTime)}</td>
-						<td class="py-2 px-3 whitespace-nowrap font-mono text-gray-500">{fmtTime(m.actualStartTime)}</td>
-						<td class="py-2 px-3 whitespace-nowrap text-sm {delta ? (delta.late ? 'text-red-600' : 'text-green-600') : 'text-gray-400'}">{delta?.text ?? "-"}</td>
-						<td class="py-2 px-3 font-mono text-gray-500">{fmtCycleStr(m.cycleTime)}</td>
+						<td class="py-2 px-3 whitespace-nowrap font-mono text-gray-500">{fmtTime(ov.actual)}</td>
+						<td class="py-2 px-3 whitespace-nowrap text-base {delta ? (delta.late ? 'text-red-600' : 'text-green-600') : 'text-gray-400'}">{delta?.text ?? "-"}</td>
+						<td class="py-2 px-3 font-mono text-gray-500">{fmtCycleStr(ov.cycle)}</td>
 						<td class="py-2 px-3 whitespace-nowrap">
 							{#if m.finalScoreRed != null && m.finalScoreBlue != null}
 								<span class="text-red-600 {m.finalScoreRed > m.finalScoreBlue ? 'font-bold' : ''}">{m.finalScoreRed}</span>-<span class="text-blue-600 {m.finalScoreBlue > m.finalScoreRed ? 'font-bold' : ''}">{m.finalScoreBlue}</span>

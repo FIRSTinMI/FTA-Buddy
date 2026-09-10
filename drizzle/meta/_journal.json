@@ -169,6 +169,13 @@
       "when": 1786676630728,
       "tag": "0023_awesome_darkstar",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1789071144291,
+      "tag": "0024_greedy_logan",
+      "breakpoints": true
     }
   ]
 }

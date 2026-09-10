@@ -1,0 +1,202 @@
+{
+	"id": "code-deploy",
+	"title": "Code and deploy",
+	"summary": "Deploy fails, No Robot Code, RIO CPU at 100 percent, joystick unavailable, DS laptop USB.",
+	"start": "start",
+	"nodes": {
+		"start": {
+			"kind": "question",
+			"id": "start",
+			"question": "What is the symptom?",
+			"options": [
+				{ "label": "Deploy fails, cannot find the roboRIO", "next": "deploy-link" },
+				{ "label": "Deploy works but DS says No Robot Code", "next": "crash-log" },
+				{ "label": "Code runs but lags, loop overruns, RIO CPU near 100 percent", "next": "cpu" },
+				{ "label": "DS says Joystick unavailable", "next": "joysticks" },
+				{ "label": "Robot enables but nothing moves", "next": "no-motion" },
+				{ "label": "DS laptop USB devices keep dropping", "next": "ds-usb" }
+			]
+		},
+		"deploy-link": {
+			"kind": "question",
+			"id": "deploy-link",
+			"question": "How is the laptop connected to the roboRIO?",
+			"options": [
+				{ "label": "USB cable", "next": "deploy-usb" },
+				{ "label": "Ethernet or Wi-Fi through the radio", "next": "deploy-network" }
+			]
+		},
+		"deploy-usb": {
+			"kind": "leaf",
+			"id": "deploy-usb",
+			"title": "Deploy over USB fails",
+			"steps": [
+				"Open http://172.22.11.2/ in a browser. If the RIO page loads, the link is fine and the problem is the project. Check the team number in WPILib Preferences matches the RIO.",
+				"If the page does not load, try a different USB cable and a different laptop port. Skip hubs and extensions.",
+				"Make sure NI FRC Game Tools is installed on this laptop. Without it there is no USB driver for the RIO.",
+				"Check the RIO Status light is off. A blinking Status light means the RIO is not healthy. Use the roboRIO guide.",
+				"If two USB ports on the RIO are both dead, the RIO took static. Deploy over Ethernet and swap the RIO later. Tell the CSA."
+			],
+			"links": [
+				{
+					"label": "roboRIO network troubleshooting",
+					"url": "https://docs.wpilib.org/en/stable/docs/networking/networking-introduction/roborio-network-troubleshooting.html"
+				},
+				{
+					"label": "Deploying robot code",
+					"url": "https://docs.wpilib.org/en/stable/docs/software/vscode-overview/deploying-robot-code.html"
+				}
+			]
+		},
+		"deploy-network": {
+			"kind": "leaf",
+			"id": "deploy-network",
+			"title": "Deploy over the network fails",
+			"steps": [
+				"Ping 10.TE.AM.2 from a command prompt. No reply means the network path, not the deploy. Check the RIO to radio cable and the laptop is in the radio DS port or on the team Wi-Fi.",
+				"Check the team number in WPILib Preferences. Deploy looks for roboRIO-TEAM-FRC.local and 10.TE.AM.2 using that number.",
+				"Turn off Wi-Fi if using Ethernet, or unplug Ethernet if using Wi-Fi. Disable other adapters in ncpa.cpl. Two adapters confuse mDNS.",
+				"Turn off the Windows firewall. It blocks the deploy ports and mDNS.",
+				"Set the adapter to DHCP. Do not use a static 10.TE.AM.5 unless on the field.",
+				"Still failing: deploy over USB. Ask the CSA if mDNS is broken on the laptop (reinstall Game Tools)."
+			],
+			"links": [
+				{
+					"label": "roboRIO network troubleshooting",
+					"url": "https://docs.wpilib.org/en/stable/docs/networking/networking-introduction/roborio-network-troubleshooting.html"
+				}
+			]
+		},
+		"crash-log": {
+			"kind": "question",
+			"id": "crash-log",
+			"question": "Open the DS Console (the gear on the right). Is there a stack trace or crash message?",
+			"options": [
+				{ "label": "Yes, there is an error", "next": "crash" },
+				{ "label": "No, nothing useful", "next": "no-code-other" }
+			]
+		},
+		"crash": {
+			"kind": "leaf",
+			"id": "crash",
+			"title": "Robot code crashes at startup",
+			"steps": [
+				"Read the first line of the stack trace that names a file in the team's package. That is where it died.",
+				"Common causes: a CAN ID that does not exist, two devices with the same port or ID, a missing config or JSON file, a null object used in robotInit.",
+				"Check for a vendordep version that does not match the device firmware. Update the firmware or the vendordep.",
+				"Fix, redeploy, and watch the Console again. Restart Robot Code in the DS if the RIO did not restart it.",
+				"Hand off to the CSA with the exact error text if the team is stuck."
+			],
+			"links": [
+				{
+					"label": "Reading stack traces",
+					"url": "https://docs.wpilib.org/en/stable/docs/software/basic-programming/reading-stacktraces.html"
+				}
+			],
+			"escalate": true
+		},
+		"no-code-other": {
+			"kind": "leaf",
+			"id": "no-code-other",
+			"title": "No Robot Code with no crash shown",
+			"steps": [
+				"Click Restart Robot Code in the DS and wait 20 seconds.",
+				"Check the WPILib year of the project matches the RIO image year. A 2025 image will not run 2024 code.",
+				"Reboot the RIO. Watch the Status light turn off, then wait for Robot Code to go green.",
+				"Deploy again and read the deploy output for errors. A deploy that says success but built nothing new is a stale build. Do a clean build.",
+				"Open the RIO web page and confirm the team number and image version.",
+				"Call the CSA if the DS still shows No Robot Code after a clean redeploy."
+			],
+			"links": [
+				{
+					"label": "DS errors and warnings",
+					"url": "https://docs.wpilib.org/en/stable/docs/software/driverstation/driver-station-errors-warnings.html"
+				}
+			],
+			"escalate": true
+		},
+		"cpu": {
+			"kind": "leaf",
+			"id": "cpu",
+			"title": "RIO CPU at 100 percent, loop overruns, lag",
+			"steps": [
+				"Open the RIO web page or the DS Diagnostics tab and read CPU. Near 100 percent means the code is starving NetworkTables and the DS packets. Comms flicker and the robot lags.",
+				"The usual cause this season: logging every value separately each loop. Each SmartDashboard, NetworkTables, DataLog, or Epilogue call costs time. Hundreds per loop fills the CPU.",
+				"Fix: batch the values into fewer entries, log at a lower rate, or turn the loggers off for the match. Disable Epilogue or DataLogManager to prove it, then add back what is needed.",
+				"Reading CAN devices for logging is expensive. Read each device once per loop and cache it. Do not query inside the logger.",
+				"Check for a vision or path planning task running on the RIO that belongs on a coprocessor.",
+				"Ask the CSA to review the periodic loop with the team if they cannot find the cost."
+			],
+			"links": [
+				{
+					"label": "Telemetry with annotations (Epilogue) performance",
+					"url": "https://docs.wpilib.org/en/stable/docs/software/telemetry/robot-telemetry-with-annotations.html"
+				},
+				{
+					"label": "On-robot data logs",
+					"url": "https://docs.wpilib.org/en/stable/docs/software/telemetry/datalog.html"
+				}
+			],
+			"escalate": true
+		},
+		"joysticks": {
+			"kind": "leaf",
+			"id": "joysticks",
+			"title": "Joystick unavailable",
+			"steps": [
+				"Press F1 in the DS to rescan. Look at the USB tab. Every controller should be green.",
+				"Check the controller is in the slot number the code reads. Drag it to the right slot in the USB tab. Slots reorder when a controller is unplugged.",
+				"Unplug the controller and plug it back in. Try a different laptop USB port, not a hub.",
+				"Restart the DS software if a controller is listed but greyed out.",
+				"The warning also prints once at DS startup and when a controller drops while enabled. If everything is green and it works, it is noise.",
+				"Swap the controller. Xbox controllers with worn cables drop under vibration."
+			],
+			"links": [
+				{
+					"label": "DS USB tab",
+					"url": "https://docs.wpilib.org/en/stable/docs/software/driverstation/driver-station.html"
+				},
+				{
+					"label": "DS errors and warnings",
+					"url": "https://docs.wpilib.org/en/stable/docs/software/driverstation/driver-station-errors-warnings.html"
+				}
+			]
+		},
+		"no-motion": {
+			"kind": "leaf",
+			"id": "no-motion",
+			"title": "Enabled but nothing moves",
+			"steps": [
+				"Check the RSL blinks and the RIO Mode light is green (teleop). If not, the robot is not enabled.",
+				"Check the DS shows Joysticks green and the driver is on the right slot.",
+				"Watch battery voltage when enabling. A dip below 6.8 V disables outputs. Swap the battery.",
+				"Check motor controller lights. Blinking orange means valid CAN but disabled. Alternating red means no CAN. Use the CAN guide.",
+				"Check the DS Console for errors like unknown CAN ID or watchdog not fed.",
+				"Call the CSA if the lights all look right and nothing moves."
+			],
+			"statusLights": [
+				{ "device": "roborio", "label": "roboRIO Mode light" },
+				{ "device": "ctretalonfx", "label": "Talon FX lights" },
+				{ "device": "revsparkmax", "label": "Spark MAX lights" }
+			]
+		},
+		"ds-usb": {
+			"kind": "leaf",
+			"id": "ds-usb",
+			"title": "DS laptop USB devices drop",
+			"steps": [
+				"Plug controllers straight into the laptop. If a hub is needed, use a powered hub. Bus powered hubs drop devices.",
+				"Remove USB extension cables. Unshielded extensions carry static that has killed ports.",
+				"Turn off USB power saving in Windows power settings and in Device Manager for each USB root hub.",
+				"Set the laptop power plan to Best Performance and never sleep.",
+				"Try a different port on the laptop. If two ports are dead, use a loaner laptop for the match and tell the CSA."
+			],
+			"links": [
+				{
+					"label": "DS best practices",
+					"url": "https://docs.wpilib.org/en/stable/docs/software/driverstation/driver-station-best-practices.html"
+				}
+			]
+		}
+	}
+}

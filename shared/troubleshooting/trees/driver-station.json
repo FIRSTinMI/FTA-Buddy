@@ -1,0 +1,162 @@
+{
+	"id": "driver-station",
+	"title": "Driver station",
+	"summary": "DS laptop, Ethernet vs Wi-Fi, firewall, joysticks.",
+	"start": "start",
+	"nodes": {
+		"start": {
+			"kind": "question",
+			"id": "start",
+			"question": "What is wrong at the driver station?",
+			"options": [
+				{ "label": "DS will not connect to the robot in the pit", "next": "pit-link" },
+				{ "label": "DS is red on the field, no FMS", "next": "field-ds" },
+				{ "label": "Comms flicker or ping is high", "next": "latency" },
+				{ "label": "Joysticks not working", "next": "joysticks" },
+				{ "label": "Laptop is slow, sleeps, or updates", "next": "laptop" },
+				{ "label": "DS software will not open or shows a firewall warning", "next": "firewall" }
+			]
+		},
+		"pit-link": {
+			"kind": "question",
+			"id": "pit-link",
+			"question": "How is the DS connected to the robot?",
+			"options": [
+				{ "label": "Ethernet cable", "next": "pit-ethernet" },
+				{ "label": "Wi-Fi", "next": "pit-wifi" }
+			]
+		},
+		"pit-ethernet": {
+			"kind": "leaf",
+			"id": "pit-ethernet",
+			"title": "Ethernet in the pit",
+			"steps": [
+				"Plug the cable into the radio DS port. Check link lights on the laptop and the radio.",
+				"Turn the laptop Wi-Fi off. Disable every other adapter in ncpa.cpl. Set the Ethernet adapter to DHCP.",
+				"Check the team number in the DS Setup tab.",
+				"Turn off the Windows firewall, all three profiles.",
+				"Ping 10.TE.AM.2. A reply with the DS still red means the DS software, not the network. Restart the DS.",
+				"Swap the cable. If the laptop port is dead, use a USB Ethernet adapter."
+			],
+			"links": [
+				{
+					"label": "roboRIO network troubleshooting",
+					"url": "https://docs.wpilib.org/en/stable/docs/networking/networking-introduction/roborio-network-troubleshooting.html"
+				}
+			]
+		},
+		"pit-wifi": {
+			"kind": "leaf",
+			"id": "pit-wifi",
+			"title": "Wi-Fi in the pit",
+			"steps": [
+				"Ask the FTA whether 2.4 GHz pit Wi-Fi is enabled at this event. Many events turn it off. If off, use an Ethernet cable.",
+				"The network name is the team number plus the suffix set at the kiosk. The password is the team's 2.4 GHz key.",
+				"Unplug Ethernet while on Wi-Fi. Two adapters on the robot network break mDNS.",
+				"Check the team number in the DS Setup tab and turn off the firewall.",
+				"Wi-Fi is slow and crowded on the pit floor. For anything more than a quick check, use the cable."
+			],
+			"links": [
+				{
+					"label": "Programming your radio",
+					"url": "https://docs.wpilib.org/en/stable/docs/zero-to-robot/step-3/radio-programming.html"
+				}
+			]
+		},
+		"field-ds": {
+			"kind": "leaf",
+			"id": "field-ds",
+			"title": "DS red on the field",
+			"steps": [
+				"Check Enet Link in the Diagnostics tab. Off means the field cable or the laptop port. Reseat both ends. Try the spare cable.",
+				"Turn Wi-Fi off with the hardware switch. Disable other adapters. Set Ethernet to DHCP.",
+				"Check the team number in the Setup tab matches this match.",
+				"Turn off the Windows firewall. Run ipconfig /release and ipconfig /renew.",
+				"Close and reopen the DS software. Only one copy.",
+				"Still red: loaner laptop. Escalate to the FTA. Use the Field connection guide in this app for the radio and RIO side."
+			],
+			"links": [
+				{
+					"label": "Field connectivity guide",
+					"url": "https://fms-manual.readthedocs.io/en/latest/field-monitor/field-connectivity/connectivity-guide.html"
+				}
+			],
+			"escalate": true
+		},
+		"latency": {
+			"kind": "leaf",
+			"id": "latency",
+			"title": "Comms flicker or high trip time",
+			"steps": [
+				"Check the RIO CPU in the Diagnostics tab. Near 100 percent starves the DS packets. Use the Code and deploy guide, CPU branch.",
+				"Check the DS log for bandwidth. Over 4 Mbps means a camera stream is too big. Lower the resolution or frame rate.",
+				"Turn off any dashboard, browser, or camera viewer on the laptop that is not needed in the match.",
+				"Check the laptop is on Best Performance and plugged in.",
+				"Check the radio mount. Metal or motors near the radio hurt the link. Move it to the top of the robot.",
+				"Report the trip time and packet loss to the FTA so they can watch the AP."
+			],
+			"links": [
+				{
+					"label": "DS log viewer",
+					"url": "https://docs.wpilib.org/en/stable/docs/software/driverstation/driver-station-log-viewer.html"
+				}
+			],
+			"escalate": true
+		},
+		"joysticks": {
+			"kind": "leaf",
+			"id": "joysticks",
+			"title": "Joysticks not working",
+			"steps": [
+				"Press F1 to rescan. Open the USB tab. Every controller should be green.",
+				"Drag each controller into the slot the code expects. Lock the order with the lock button so it survives a rescan.",
+				"Unplug and replug. Try a laptop port instead of a hub. Powered hub if a hub is needed.",
+				"Move a stick and watch the axis bars in the USB tab. No movement means the controller, not the code.",
+				"Swap the controller. Worn cables drop under vibration."
+			],
+			"links": [
+				{
+					"label": "DS USB tab",
+					"url": "https://docs.wpilib.org/en/stable/docs/software/driverstation/driver-station.html"
+				}
+			]
+		},
+		"laptop": {
+			"kind": "leaf",
+			"id": "laptop",
+			"title": "Laptop settings for competition",
+			"steps": [
+				"Set sleep to Never for plugged in and on battery. Set the power mode to Best Performance.",
+				"Pause Windows Update for the event. Do not let it install during a match.",
+				"Close everything except the DS and the dashboard. Uninstall third-party antivirus.",
+				"Bring the charger to the field and plug in at the station.",
+				"If the laptop is too slow to run the DS, use a loaner. Ask the FTA."
+			],
+			"links": [
+				{
+					"label": "DS best practices",
+					"url": "https://docs.wpilib.org/en/stable/docs/software/driverstation/driver-station-best-practices.html"
+				}
+			]
+		},
+		"firewall": {
+			"kind": "leaf",
+			"id": "firewall",
+			"title": "Firewall or DS software problems",
+			"steps": [
+				"Open wf.msc and turn off the Domain, Private, and Public profiles.",
+				"If the school locks the firewall, add rules to allow the DS and mDNS. Otherwise use a loaner laptop.",
+				"Remove third-party antivirus that adds its own firewall.",
+				"If the DS will not open, reinstall NI FRC Game Tools for this season. Run as administrator once.",
+				"Ask the CSA for a known good laptop image if the team laptop is beyond repair."
+			],
+			"links": [
+				{
+					"label": "DS best practices",
+					"url": "https://docs.wpilib.org/en/stable/docs/software/driverstation/driver-station-best-practices.html"
+				}
+			],
+			"escalate": true
+		}
+	}
+}

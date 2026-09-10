@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
 	bigint,
 	boolean,
@@ -448,6 +448,110 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
 	expirationTime: timestamp("expirationTime"),
 	keys: jsonb("keys").notNull(),
 });
+
+// #region Troubleshooting (decision trees + chat assistant + knowledge corpus)
+export const troubleshootSourceEnum = pgEnum("troubleshoot_source", [
+	"wpilib",
+	"rev",
+	"ctre",
+	"ni",
+	"vivid",
+	"ticket",
+	"slack",
+	"note",
+]);
+
+const tsvector = customType<{ data: string; notNull: false; default: false }>({
+	dataType() {
+		return "tsvector";
+	},
+});
+
+// One searchable chunk of the knowledge corpus. source_key is the dedupe key:
+// "<url>#<heading>" for docs, "ticket:<note id>" for tickets, "slack:<team>:<channel>:<thread ts>" for Slack.
+export const troubleshootChunks = pgTable(
+	"troubleshoot_chunks",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		source: troubleshootSourceEnum("source").notNull(),
+		source_key: varchar("source_key").notNull().unique(),
+		url: varchar("url"),
+		title: varchar("title").notNull(),
+		heading: varchar("heading"),
+		body: text("body").notNull(),
+		// Redacted text only. Never store team numbers, event codes or names in body.
+		tsv: tsvector("tsv").generatedAlwaysAs(
+			sql`to_tsvector('english', coalesce("title", '') || ' ' || coalesce("heading", '') || ' ' || coalesce("body", ''))`,
+		),
+		source_date: timestamp("source_date"),
+		fetched_at: timestamp("fetched_at").notNull().defaultNow(),
+		created_at: timestamp("created_at").notNull().defaultNow(),
+	},
+	(t) => [
+		index("troubleshoot_chunks_tsv_idx").using("gin", t.tsv),
+		index("troubleshoot_chunks_source_idx").on(t.source),
+	],
+);
+
+export type TroubleshootChunk = typeof troubleshootChunks.$inferSelect;
+export type TroubleshootChunkInsert = typeof troubleshootChunks.$inferInsert;
+
+export const troubleshootRoleEnum = pgEnum("troubleshoot_role", ["user", "assistant"]);
+
+// Chat conversations are kept forever for corpus improvement.
+export const troubleshootConversations = pgTable(
+	"troubleshoot_conversations",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		user_id: integer("user_id")
+			.references(() => users.id)
+			.notNull(),
+		ip: varchar("ip"),
+		model: varchar("model").notNull(),
+		input_tokens: integer("input_tokens").notNull().default(0),
+		output_tokens: integer("output_tokens").notNull().default(0),
+		cost_usd_micro: bigint("cost_usd_micro", { mode: "number" }).notNull().default(0),
+		created_at: timestamp("created_at").notNull().defaultNow(),
+		updated_at: timestamp("updated_at").notNull().defaultNow(),
+	},
+	(t) => [index("troubleshoot_conversations_user_idx").on(t.user_id)],
+);
+
+export const troubleshootMessages = pgTable(
+	"troubleshoot_messages",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		conversation_id: uuid("conversation_id")
+			.references(() => troubleshootConversations.id)
+			.notNull(),
+		role: troubleshootRoleEnum("role").notNull(),
+		text: text("text").notNull(),
+		// Chunk ids cited by an assistant message.
+		cited_chunk_ids: jsonb("cited_chunk_ids").$type<string[]>().notNull().default([]),
+		created_at: timestamp("created_at").notNull().defaultNow(),
+	},
+	(t) => [index("troubleshoot_messages_conversation_idx").on(t.conversation_id)],
+);
+
+// Slack USER tokens (xoxp) from the user-scope OAuth flow. Lets the corpus poller read
+// channels the signed-in person can see, in workspaces where we cannot add a bot.
+export const slackUserTokens = pgTable("slack_user_tokens", {
+	id: serial("id").primaryKey(),
+	user_id: integer("user_id")
+		.references(() => users.id)
+		.notNull(),
+	team_id: varchar("team_id").notNull(),
+	team_name: varchar("team_name").notNull(),
+	slack_user_id: varchar("slack_user_id").notNull(),
+	access_token: varchar("access_token").notNull(),
+	scopes: varchar("scopes").notNull().default(""),
+	// Channel ids to poll. Empty = every channel the token can read.
+	channels: jsonb("channels").$type<string[]>().notNull().default([]),
+	last_polled_at: timestamp("last_polled_at"),
+	created_at: timestamp("created_at").notNull().defaultNow(),
+	updated_at: timestamp("updated_at").notNull().defaultNow(),
+});
+// #endregion
 
 export const slackServers = pgTable("slack_servers", {
 	id: serial("id").primaryKey(),

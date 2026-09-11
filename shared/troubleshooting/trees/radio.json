@@ -428,6 +428,12 @@
 			"title": "Radio reboots or drops in matches",
 			"steps": [
 				"Remove one power source if PoE and the DC input are both connected. Dual power caused reboots this season.",
+				{
+					"kind": "check",
+					"text": "Is the radio powered from the switchable channel on the PDH?",
+					"yes": "Move it to a constant channel.",
+					"no": "Continue."
+				},
 				"Tug the Weidmuller plug. Re-strip and reseat the wires. Tie-wrap the cable to the frame near the radio.",
 				"Check the wire gauge and route. Thin wire on a long run drops voltage under load. Wire the radio to its own PDH or PDP channel.",
 				"Open the DS log. A battery dip below 7 V in a match resets the radio. Lower motor current limits and use a good battery.",

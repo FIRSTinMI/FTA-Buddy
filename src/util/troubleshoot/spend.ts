@@ -82,3 +82,21 @@ export async function recordSpend(
 		.where(eq(troubleshootConversations.id, conversationId));
 	return cost;
 }
+
+const REPO_READS_PREFIX = "ftabuddy:troubleshoot:reporeads:";
+// A conversation is closed after 8 turns; a day is plenty of room for one.
+const REPO_READS_TTL_SECONDS = 24 * 3600;
+
+/** How many repo files this conversation has already read (cap is per conversation). */
+export async function getRepoReads(conversationId: string): Promise<number> {
+	const v = await redis.get(`${REPO_READS_PREFIX}${conversationId}`);
+	return v ? Number(v) : 0;
+}
+
+/** Add this turn's repo reads to the conversation counter. */
+export async function addRepoReads(conversationId: string, reads: number): Promise<void> {
+	if (reads <= 0) return;
+	const key = `${REPO_READS_PREFIX}${conversationId}`;
+	await redis.incrby(key, reads);
+	await redis.expire(key, REPO_READS_TTL_SECONDS);
+}

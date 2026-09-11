@@ -420,6 +420,12 @@
 				"Remove one power source if the radio has both PoE and the DC input. Dual power causes reboots.",
 				{
 					"kind": "check",
+					"text": "Is the radio powered from the switchable channel on the PDH?",
+					"yes": "Move it to a constant channel.",
+					"no": "Continue."
+				},
+				{
+					"kind": "check",
 					"text": "Does the robot still drop in matches?",
 					"yes": "Continue.",
 					"no": "Problem solved."

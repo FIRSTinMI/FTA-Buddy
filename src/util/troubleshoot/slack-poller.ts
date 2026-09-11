@@ -13,6 +13,7 @@ import { redis } from "../redis";
 import { fetchTeamDomain, isAuthError, listConversations, slackApi, SlackApiError } from "../slack-user-oauth";
 import { listSessionConversations, slackWebApi, type SlackSession } from "../slack-session";
 import { upsertChunks } from "./chunks";
+import { DIRTY_SET_KEY, runDistillation } from "./distill";
 import { buildThreadChunk, isThreadParent, type SlackChannelContext, type SlackMessage } from "./slack-chunks";
 
 // #region Config
@@ -197,6 +198,9 @@ async function pollChannel(
 
 	// Only advance the cursor after the whole channel succeeded so a crash mid-way re-reads it.
 	await redis.set(key, String(Math.round(Math.max(newestSeenMs, Date.now() - OVERLAP_MS))));
+	// New or updated content for this category. Mark it dirty so the pass-end distillation rebuilds
+	// only the channels that actually changed. The category is the channel name.
+	if (chunks >= 1) await redis.sadd(DIRTY_SET_KEY, ctx.channelName);
 	stats.channels++;
 	stats.threads += threads;
 	stats.chunks += chunks;
@@ -357,6 +361,14 @@ export function runSlackPollPass(): Promise<PollStats> {
 			const sources = await loadSources();
 			console.log(`[SlackPoller] pass start: ${sources.length} source(s)`);
 			for (const source of sources) await pollSource(source, stats, renew);
+			// Rebuild the distilled docs for any categories this pass touched. No-op (zero LLM calls)
+			// when nothing was marked dirty.
+			try {
+				const distilled = await runDistillation();
+				if (distilled > 0) console.log(`[SlackPoller] distilled ${distilled} categor${distilled === 1 ? "y" : "ies"}`);
+			} catch (err) {
+				console.error("[SlackPoller] distillation failed:", (err as Error).message);
+			}
 		} catch (err) {
 			stats.errors++;
 			console.error("[SlackPoller] pass failed:", (err as Error).message);

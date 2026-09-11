@@ -3,8 +3,9 @@ import Anthropic from "@anthropic-ai/sdk";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db/db";
-import { troubleshootChunks, troubleshootConversations, troubleshootMessages } from "../db/schema";
-import { adminProcedure, protectedProcedure, router } from "../trpc";
+import { troubleshootChunks, troubleshootConversations, troubleshootDocs, troubleshootMessages } from "../db/schema";
+import { adminProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
+import { runDistillation } from "../util/troubleshoot/distill";
 import { streamAnswer } from "../util/troubleshoot/chat/answer";
 import { assertChatEnabled, isChatEnabled, setChatEnabled } from "../util/troubleshoot/chat/enabled";
 import { retrieveChunks } from "../util/troubleshoot/chat/retrieve";
@@ -56,6 +57,35 @@ async function ownedConversation(conversationId: string, userId: number) {
 }
 
 export const troubleshootRouter = router({
+	/** The distilled knowledge base: one doc per Slack category. Public, no chat spend. */
+	kb: publicProcedure.query(async () => {
+		return db
+			.select({
+				category: troubleshootDocs.category,
+				title: troubleshootDocs.title,
+				thread_count: troubleshootDocs.thread_count,
+				updated_at: troubleshootDocs.updated_at,
+			})
+			.from(troubleshootDocs)
+			.orderBy(asc(troubleshootDocs.category));
+	}),
+
+	/** One distilled doc's markdown body and its source thread links. */
+	kbDoc: publicProcedure.input(z.object({ category: z.string().min(1).max(80) })).query(async ({ input }) => {
+		const doc = await db.query.troubleshootDocs.findFirst({
+			where: eq(troubleshootDocs.category, input.category),
+			columns: { category: true, title: true, body: true, source_urls: true, updated_at: true },
+		});
+		if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "No notes for that topic." });
+		return doc;
+	}),
+
+	/** Run distillation on demand (testing). Returns how many categories were regenerated. */
+	distillNow: adminProcedure.mutation(async () => {
+		const processed = await runDistillation();
+		return { processed };
+	}),
+
 	/** Enabled flag plus month-to-date spend so the UI can show an unavailable card. */
 	status: protectedProcedure.query(async () => {
 		const [enabled, spend] = await Promise.all([isChatEnabled(), getSpendStatus()]);

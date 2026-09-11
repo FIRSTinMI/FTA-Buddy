@@ -68,6 +68,7 @@ export const { p, navigate, isActive, preload, route } = createRouter({
 
 	"/troubleshoot": () => import("./pages/troubleshoot/Troubleshoot.svelte"),
 	"/troubleshoot/chat": () => import("./pages/troubleshoot/Troubleshoot.svelte"),
+	"/troubleshoot/kb": () => import("./pages/troubleshoot/KnowledgeBase.svelte"),
 	"/troubleshoot/:tree": () => import("./pages/troubleshoot/Troubleshoot.svelte"),
 	"/troubleshoot/:tree/:node": () => import("./pages/troubleshoot/Troubleshoot.svelte"),
 });

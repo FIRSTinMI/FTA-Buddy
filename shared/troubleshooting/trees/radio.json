@@ -77,8 +77,9 @@
 							"blink": "20Hz"
 						},
 						{
-							"color": "green",
-							"blink": "20Hz"
+							"color": "blue",
+							"blink": "20Hz",
+							"label": "6G"
 						}
 					]
 				},

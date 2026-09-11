@@ -416,8 +416,8 @@
 													<td colspan="2" class="bold w-100 pt-2 pl-2">6 GHz (6G)</td>
 												</tr>
 												<tr use:tapHelp={"radio.6ghz-connection-enabled"}>
-													<td class="w-20 pl-8 pt-2"><span class="green led"></span> </td>
-													<td>Solid: connected to 6 GHz field AP</td>
+													<td class="w-20 pl-8 pt-2"><span class="blue led"></span> </td>
+													<td>Solid blue: connected to 6 GHz field AP</td>
 												</tr>
 											</tbody>
 										</table>

@@ -318,7 +318,7 @@ export const generalHelp = {
 		device: "VH-109 radio",
 		led: "6G",
 		state: "Solid",
-		meaning: "The 6 GHz link to the field access point is up. This is the normal field link.",
+		meaning: "The 6 GHz link to the field access point is up. This light is blue, the radio's other lights are green. This is the normal field link.",
 		steps: [
 			{
 				kind: "check",

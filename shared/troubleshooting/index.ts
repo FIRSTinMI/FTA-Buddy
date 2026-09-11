@@ -3,6 +3,7 @@ import canJson from "./trees/can.json";
 import codeDeployJson from "./trees/code-deploy.json";
 import driverStationJson from "./trees/driver-station.json";
 import fieldConnectionJson from "./trees/field-connection.json";
+import matchDropsJson from "./trees/match-drops.json";
 import powerJson from "./trees/power.json";
 import radioJson from "./trees/radio.json";
 import roborioJson from "./trees/roborio.json";
@@ -16,6 +17,7 @@ const rawTrees: unknown[] = [
 	radioJson,
 	canJson,
 	powerJson,
+	matchDropsJson,
 	codeDeployJson,
 	driverStationJson,
 ];

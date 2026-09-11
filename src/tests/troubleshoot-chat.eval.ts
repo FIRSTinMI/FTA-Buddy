@@ -37,7 +37,7 @@ async function main() {
 		const chunks = retrieval.chunks;
 		console.log(`queries: ${retrieval.queries.join(" | ")}`);
 		console.log(`retrieved ${chunks.length} chunk(s): ${chunks.map((c) => `${c.source}:${c.title}`).join(" | ")}`);
-		const gen = streamAnswer({ history: [], message: q, chunks });
+		const gen = streamAnswer({ history: [], message: q, docs: chunks });
 		const cited: string[] = [];
 		let next = await gen.next();
 		process.stdout.write("--- answer ---\n");

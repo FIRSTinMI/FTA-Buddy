@@ -46,11 +46,10 @@ export async function assertBudget(): Promise<void> {
 }
 
 /**
- * Record one API call: add its cost to the monthly Redis counter and to the
- * conversation row. Returns the cost in micro-USD.
+ * Add one API call's cost to the monthly Redis counter (the number the cap is checked against).
+ * Returns the cost in micro-USD. Used on its own by jobs with no conversation row (distillation).
  */
-export async function recordSpend(
-	conversationId: string,
+export async function recordMonthlySpend(
 	usage: TokenUsage,
 	model: TroubleshootModel = TROUBLESHOOT_MODEL,
 ): Promise<number> {
@@ -59,6 +58,19 @@ export async function recordSpend(
 	const total = await redis.incrby(key, cost);
 	// First write this month creates the key; give it a TTL then.
 	if (total === cost) await redis.expire(key, SPEND_TTL_SECONDS);
+	return cost;
+}
+
+/**
+ * Record one API call: add its cost to the monthly Redis counter and to the
+ * conversation row. Returns the cost in micro-USD.
+ */
+export async function recordSpend(
+	conversationId: string,
+	usage: TokenUsage,
+	model: TroubleshootModel = TROUBLESHOOT_MODEL,
+): Promise<number> {
+	const cost = await recordMonthlySpend(usage, model);
 	await db
 		.update(troubleshootConversations)
 		.set({

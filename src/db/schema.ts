@@ -533,6 +533,21 @@ export const troubleshootMessages = pgTable(
 	(t) => [index("troubleshoot_messages_conversation_idx").on(t.conversation_id)],
 );
 
+// One distilled troubleshooting document per Slack category (channel name). Regenerated from the
+// slack chunks of that category whenever that category got new content in a poll pass.
+export const troubleshootDocs = pgTable("troubleshoot_docs", {
+	id: uuid("id").primaryKey().defaultRandom(),
+	category: varchar("category").notNull().unique(),
+	title: varchar("title").notNull(),
+	body: text("body").notNull(),
+	// Slack permalinks of the threads used, when the chunks carried a url.
+	source_urls: jsonb("source_urls").$type<string[]>().notNull().default([]),
+	thread_count: integer("thread_count").notNull().default(0),
+	updated_at: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export type TroubleshootDoc = typeof troubleshootDocs.$inferSelect;
+
 // Slack USER tokens (xoxp) from the user-scope OAuth flow. Lets the corpus poller read
 // channels the signed-in person can see, in workspaces where we cannot add a bot.
 export const slackUserTokens = pgTable("slack_user_tokens", {

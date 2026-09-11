@@ -195,6 +195,7 @@
 		"/ftc",
 		"/troubleshoot",
 		"/troubleshoot/chat",
+		"/troubleshoot/kb",
 		"/references",
 		"/references/statuslights",
 		"/references/componentmanuals",

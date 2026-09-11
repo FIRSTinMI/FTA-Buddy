@@ -116,6 +116,13 @@
 					{/each}
 				</div>
 			</details>
+			<a href="/troubleshoot/kb" class="mt-2 flex min-h-12 items-center justify-between gap-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-left text-black hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700">
+				<span class="min-w-0">
+					<span class="block font-semibold">Troubleshooting notes</span>
+					<span class="block text-sm text-gray-600 dark:text-gray-300">Common problems and fixes, grouped by topic from CSA discussion.</span>
+				</span>
+				<Icon icon="heroicons:chevron-right-16-solid" class="size-5 shrink-0 text-gray-500" />
+			</a>
 		{/if}
 	</div>
 </div>

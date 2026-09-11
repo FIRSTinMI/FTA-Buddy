@@ -302,40 +302,20 @@
 					}
 				},
 				{
-					"label": "Power amber, red, or off",
-					"next": "rio-power"
+					"label": "Power light off, no lights",
+					"to": {
+						"tree": "roborio",
+						"node": "no-power"
+					}
+				},
+				{
+					"label": "Power light amber or red",
+					"to": {
+						"tree": "roborio",
+						"node": "power-color"
+					}
 				}
 			]
-		},
-		"rio-power": {
-			"kind": "leaf",
-			"id": "rio-power",
-			"title": "roboRIO power problem",
-			"steps": [
-				"Off: check the RIO power Weidmuller plug and the PDH or PDP RIO channel fuse. Tug test the wires.",
-				"Amber: brownout. Check battery voltage in the DS. Swap to a fully charged battery.",
-				"Red: short on a user rail. Unplug everything from the RIO power rails and DIO, then power cycle.",
-				"Check the main breaker lug nuts and battery connector are tight. Loose main power causes both amber and off.",
-				{
-					"kind": "check",
-					"text": "Is the Power light still red with nothing plugged in?",
-					"yes": "Swap the roboRIO.",
-					"no": "Problem solved."
-				}
-			],
-			"links": [
-				{
-					"label": "roboRIO brownouts",
-					"url": "https://docs.wpilib.org/en/stable/docs/software/roborio-info/roborio-brownouts.html"
-				}
-			],
-			"statusLights": [
-				{
-					"device": "roborio",
-					"label": "roboRIO status lights"
-				}
-			],
-			"escalate": true
 		},
 		"no-code": {
 			"kind": "leaf",

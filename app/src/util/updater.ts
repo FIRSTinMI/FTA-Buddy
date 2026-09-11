@@ -33,26 +33,15 @@ export const VERSIONS: { [key: string]: Version } = {
 	"2.7.10.0": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.10.0</h1>
-        <p class="my-1 font-bold">Troubleshooting (new)</p>
         <ul>
-        <li>New Troubleshooting section, open it from the sidebar. Start from what you are seeing and it walks you through the fix</li>
-        <li>Guides are step by step: each step is either something to do or something to check, so you know when to stop and look before moving on</li>
-        <li>Separate guides for on the field and in the pit, since the first things you check are different</li>
-        <li>Chat assistant that answers from WPILib, REV, CTRE and Vivid documentation, past CSA tickets and the CSA Slack, with a source link on every answer</li>
-        <li>Paste a team's public GitHub repo in the chat and it will read their code to help find the bug</li>
-        <li>At an event, the chat can pull in tickets from that event</li>
-        <li>Troubleshooting notes: a knowledge base written from resolved CSA tickets and CSA Slack discussion, grouped by topic</li>
-        </ul>
-        <p class="my-1 font-bold">Status lights</p>
-        <ul>
-        <li>Tap any row to get what it means and what to do about it</li>
-        <li>roboRIO 1 and roboRIO 2 are covered separately where they behave differently</li>
-        <li>SystemCore added</li>
-        <li>Radio is now organised by LED (PWR, SYS, 2.4G, 6G, RIO) so you can go from the lights you see to the meaning, like every other device</li>
-        </ul>
-        <p class="my-1 font-bold">Field monitor</p>
-        <ul>
-        <li>The team dialog is full screen and uses the new step by step troubleshooting format</li>
+        <li>New Troubleshooting section in the sidebar - pick what you are seeing and it walks you through the fix, step by step</li>
+        <li>Separate guides for on the field and in the pit, since what you check first is different</li>
+        <li>Chat that answers from WPILib, REV, CTRE and Vivid docs, past CSA tickets and the CSA Slack, with a source on every answer</li>
+        <li>Paste a team's public GitHub repo in the chat and it will read their code</li>
+        <li>Troubleshooting notes: a knowledge base written from resolved CSA tickets and Slack, grouped by topic</li>
+        <li>Status lights: tap any row for what it means and what to do</li>
+        <li>Status lights: roboRIO 1 and 2 split where they differ, SystemCore added, radio now listed by LED like every other device</li>
+        <li>Field monitor: the team dialog is full screen and uses the new step by step format</li>
         </ul>
         `,
 	},

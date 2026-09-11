@@ -344,15 +344,28 @@
 			"id": "rio-link",
 			"title": "RIO light off: no link to the roboRIO",
 			"steps": [
-				"The roboRIO must plug into the port labeled RIO. Move the cable if it is in AUX1, AUX2, or DS.",
-				"Check the RIO is powered and past boot. Its Status light should be off.",
-				"Reseat both ends of the Ethernet cable. Replace a cable with a broken latch.",
-				"Swap the cable for a known good one.",
+				"Confirm the roboRIO is powered and booted. Its Status light goes off when boot completes.",
+				"Check the cable is in the radio port labeled RIO, not AUX1, AUX2, or DS.",
+				"Reseat both ends, try a known good cable, and power cycle the radio.",
 				{
 					"kind": "check",
 					"text": "Is the RIO light still off?",
-					"yes": "Use a USB Ethernet adapter in the RIO USB port.",
+					"yes": "Continue.",
 					"no": "Problem solved."
+				},
+				"Connect the roboRIO to a laptop by Ethernet directly, bypassing the radio.",
+				{
+					"kind": "check",
+					"text": "Does the laptop connect to the roboRIO?",
+					"yes": "Swap the radio.",
+					"no": "Continue."
+				},
+				"Plug a USB Ethernet dongle into the roboRIO USB port and connect the laptop through it.",
+				{
+					"kind": "check",
+					"text": "Does the dongle connect?",
+					"yes": "Check the roboRIO web UI for a bad NIC config.",
+					"no": "The roboRIO Ethernet is dead. Swap the roboRIO."
 				}
 			],
 			"links": [

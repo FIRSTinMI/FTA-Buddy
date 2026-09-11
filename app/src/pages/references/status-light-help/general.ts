@@ -203,7 +203,7 @@ export const generalHelp = {
 				kind: "check",
 				text: "Does the laptop connect through the USB dongle?",
 				yes: "Continue.",
-				no: "The built-in NIC may be dead. Use the dongle and replace the roboRIO.",
+				no: "Replace the roboRIO.",
 			},
 			{
 				kind: "check",
@@ -211,9 +211,6 @@ export const generalHelp = {
 				yes: "Fix the configuration.",
 				no: "The built-in NIC is likely bad. Use the dongle and replace the roboRIO.",
 			},
-		],
-		source: VIVID,
-	},
 		],
 		source: VIVID,
 	},

@@ -61,7 +61,7 @@
 </script>
 
 <div class="h-full overflow-y-auto">
-	<div class="container mx-auto flex w-full flex-col gap-3 p-2 pr-3">
+	<div class="container mx-auto flex w-full flex-col gap-3 p-2 pr-3 text-left">
 		{#if open || loadingDoc || docError}
 			<button
 				onclick={back}

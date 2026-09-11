@@ -296,80 +296,16 @@
 				},
 				{
 					"label": "Status light blinking",
-					"next": "rio-status-blink"
+					"to": {
+						"tree": "roborio",
+						"node": "which-rio"
+					}
 				},
 				{
 					"label": "Power amber, red, or off",
 					"next": "rio-power"
 				}
 			]
-		},
-		"rio-no-link": {
-			"kind": "leaf",
-			"id": "rio-no-link",
-			"title": "roboRIO Ethernet has no link lights",
-			"steps": [
-				"Confirm the roboRIO is powered and booted. Its Status light goes off when boot completes.",
-				"Reseat the Ethernet cable at both ends.",
-				"Try a known good cable.",
-				"Power cycle the radio.",
-				{
-					"kind": "check",
-					"text": "Is there still no link?",
-					"yes": "Continue.",
-					"no": "Problem solved."
-				},
-				"Connect the roboRIO to a laptop by Ethernet directly, bypassing the radio.",
-				{
-					"kind": "check",
-					"text": "Does the laptop connect to the roboRIO?",
-					"yes": "Swap the radio.",
-					"no": "Continue."
-				},
-				"Plug a USB Ethernet dongle into the roboRIO USB port and connect the laptop through it.",
-				{
-					"kind": "check",
-					"text": "Does the dongle connect?",
-					"yes": "Check the roboRIO web UI for a bad NIC config.",
-					"no": "The roboRIO Ethernet is dead. Swap the roboRIO."
-				}
-			],
-			"links": [
-				{
-					"label": "roboRIO network troubleshooting",
-					"url": "https://docs.wpilib.org/en/stable/docs/networking/networking-introduction/roborio-network-troubleshooting.html"
-				}
-			],
-			"statusLights": [
-				{
-					"device": "roborio",
-					"label": "roboRIO status lights"
-				}
-			],
-			"escalate": true
-		},
-		"rio-status-blink": {
-			"kind": "leaf",
-			"id": "rio-status-blink",
-			"title": "roboRIO Status light is blinking",
-			"steps": [
-				"A blinking Status light is a roboRIO boot problem, not a field or radio problem.",
-				"roboRIO 1 and roboRIO 2 differ here. Use the roboRIO guide in this app. It branches on the model and covers each blink code: 2, 3, 4, or a continuous flash.",
-				"The common one is a continuous flash that never pauses, which is unrecoverable. On a roboRIO 2 reseat or reimage the microSD card; on a roboRIO 1 reimage over USB. The roboRIO guide has the full steps."
-			],
-			"links": [
-				{
-					"label": "roboRIO status lights",
-					"url": "https://docs.wpilib.org/en/stable/docs/hardware/hardware-basics/status-lights-ref.html#roborio"
-				}
-			],
-			"statusLights": [
-				{
-					"device": "roborio",
-					"label": "roboRIO status lights"
-				}
-			],
-			"escalate": true
 		},
 		"rio-power": {
 			"kind": "leaf",
@@ -525,7 +461,10 @@
 			"options": [
 				{
 					"label": "No link lights",
-					"next": "rio-no-link"
+					"to": {
+						"tree": "radio",
+						"node": "rio-link"
+					}
 				},
 				{
 					"label": "Yes, they are flashing",

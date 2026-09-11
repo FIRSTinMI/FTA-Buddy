@@ -15,8 +15,12 @@
 					"next": "no-power"
 				},
 				{
-					"label": "Power light amber or red",
-					"next": "power-color"
+					"label": "Power light amber",
+					"next": "brownout"
+				},
+				{
+					"label": "Power light red",
+					"next": "rail-short"
 				},
 				{
 					"label": "Status light blinking",
@@ -65,21 +69,6 @@
 				}
 			],
 			"escalate": true
-		},
-		"power-color": {
-			"kind": "question",
-			"id": "power-color",
-			"question": "Is the Power light amber or red?",
-			"options": [
-				{
-					"label": "Amber",
-					"next": "brownout"
-				},
-				{
-					"label": "Red",
-					"next": "rail-short"
-				}
-			]
 		},
 		"brownout": {
 			"kind": "leaf",
@@ -175,11 +164,11 @@
 			"question": "How is the Status light blinking?",
 			"options": [
 				{
-					"label": "4 flashes, then a pause",
+					"label": "Flashing all the time, never pauses",
 					"next": "rio1-unrecoverable"
 				},
 				{
-					"label": "2 or 3 flashes, then a pause",
+					"label": "Groups of 2, 3, or 4 flashes, then a pause",
 					"next": "blink-codes"
 				},
 				{
@@ -191,7 +180,7 @@
 		"rio2-unrecoverable": {
 			"kind": "leaf",
 			"id": "rio2-unrecoverable",
-			"title": "roboRIO 2 unrecoverable error: continuous flashing",
+			"title": "roboRIO 2 unrecoverable error",
 			"steps": [
 				"On a roboRIO 2 a Status light that flashes without pausing means it cannot boot from the microSD card.",
 				"Power off. Pull the microSD card. Look in the slot for metal chips or debris. Blow it out. Reseat the card until it clicks.",
@@ -231,7 +220,7 @@
 		"rio1-unrecoverable": {
 			"kind": "leaf",
 			"id": "rio1-unrecoverable",
-			"title": "roboRIO 1 unrecoverable error: 4 flashes then a pause",
+			"title": "roboRIO 1 unrecoverable error",
 			"steps": [
 				"On a roboRIO 1, 4 flashes then a pause means the software crashed twice without a reboot.",
 				"Press the reset button once. Wait 60 seconds.",

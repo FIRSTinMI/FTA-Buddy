@@ -1,12 +1,13 @@
 <script lang="ts">
 	import Icon from "@iconify/svelte";
-	import { Button } from "flowbite-svelte";
+	import { Button, Modal } from "flowbite-svelte";
 	import { onDestroy, onMount, tick } from "svelte";
 	import type { ChatCitation, ChatEvent } from "../../../../src/router/troubleshoot";
 	import ChatMessage from "../../components/troubleshoot/ChatMessage.svelte";
 	import { trpc } from "../../main";
 	import { navigate } from "../../router";
 	import { userStore } from "../../stores/user";
+	import { eventStore } from "../../stores/event";
 
 	/**
 	 * `from` is "<treeId>/<nodeId>" when the user arrived from a guided tree.
@@ -39,6 +40,24 @@
 	let closed = $state(false);
 	let recent = $state<RecentConversation[]>([]);
 	let showRecent = $state(false);
+	let recentQuery = $state("");
+	let recentLoading = $state(false);
+	/** Only show the ticket button when an event is actually selected. */
+	let hasEvent = $derived(Boolean($eventStore.code));
+
+	async function searchRecent() {
+		recentLoading = true;
+		try {
+			recent = await trpc.troubleshoot.list.query({ limit: 50, q: recentQuery.trim() || undefined });
+		} finally {
+			recentLoading = false;
+		}
+	}
+
+	function openRecent() {
+		showRecent = true;
+		void searchRecent();
+	}
 	let sub: ChatSub | undefined;
 	let listEl: HTMLDivElement | undefined = $state();
 	let inputEl: HTMLTextAreaElement | undefined = $state();
@@ -237,38 +256,20 @@
 	<div class="px-3 pt-2 pb-2 border-b border-gray-200 dark:border-gray-700">
 		<div class="flex items-start gap-2">
 			<div class="flex gap-1 shrink-0 ml-auto">
-				<Button size="xs" color="light" onclick={() => (showRecent = !showRecent)} title="Recent conversations">
+				<Button size="xs" color="light" onclick={openRecent} title="Conversation history">
 					<Icon icon="heroicons:clock-16-solid" class="size-4" />
 				</Button>
 				<Button size="xs" color="light" onclick={newConversation} title="New conversation">
 					<Icon icon="heroicons:plus-16-solid" class="size-4" /><span class="ml-1 hidden sm:inline">New</span>
 				</Button>
-				<Button size="xs" color="alternative" onclick={openTicket}>
-					<Icon icon="heroicons:ticket-16-solid" class="size-4" /><span class="ml-1">Ticket</span>
-				</Button>
+				{#if hasEvent}
+					<Button size="xs" color="alternative" onclick={openTicket}>
+						<Icon icon="heroicons:ticket-16-solid" class="size-4" /><span class="ml-1">Ticket</span>
+					</Button>
+				{/if}
 			</div>
 		</div>
-		{#if showRecent}
-			<div
-				class="mt-2 rounded border border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700 max-h-40 overflow-y-auto"
-			>
-				{#if recent.length === 0}
-					<div class="px-2 py-1.5 text-xs text-gray-500">No conversations yet.</div>
-				{/if}
-				{#each recent as r (r.id)}
-					<button
-						class="w-full text-left px-2 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-800 {r.id ===
-						conversationId
-							? 'bg-gray-100 dark:bg-gray-800'
-							: ''}"
-						onclick={() => openConversation(r.id)}
-					>
-						<span class="block truncate">{r.preview || "(empty)"}</span>
-						<span class="text-gray-500">{new Date(r.updated_at).toLocaleString()}</span>
-					</button>
-				{/each}
-			</div>
-		{/if}
+
 	</div>
 
 	<!-- Body -->
@@ -309,12 +310,6 @@
 		</div>
 	{:else}
 		<div bind:this={listEl} class="grow overflow-y-auto px-3 py-3 flex flex-col gap-2">
-			{#if messages.length === 0}
-				<div class="text-sm text-gray-500 dark:text-gray-400 text-center my-auto px-4">
-					Describe what the robot is doing, what the lights show, and what has already been tried.
-					<br />One problem at a time works best.
-				</div>
-			{/if}
 			{#each messages as m (m.id)}
 				<ChatMessage
 					role={m.role}
@@ -342,7 +337,9 @@
 					rows={2}
 					maxlength={MAX_CHARS}
 					disabled={sending || closed}
-					placeholder={closed ? "Start a new conversation to continue" : "What is the robot doing?"}
+					placeholder={closed
+						? "Start a new conversation to continue"
+						: "Describe the problem you're having, optionally supply a GitHub repository"}
 					class="grow resize-none rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-60"
 				></textarea>
 				<Button size="sm" class="shrink-0 h-10" disabled={!canSend} onclick={send} title="Send">
@@ -360,3 +357,38 @@
 		</div>
 	{/if}
 </div>
+
+<Modal bind:open={showRecent} size="md" outsideclose title="Conversation history">
+	<div class="flex flex-col gap-2 text-left">
+		<div class="flex gap-2">
+			<input
+				bind:value={recentQuery}
+				oninput={() => searchRecent()}
+				placeholder="Search your conversations"
+				class="grow rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+			/>
+		</div>
+		{#if recentLoading}
+			<p class="text-sm text-gray-500">Searching...</p>
+		{:else if recent.length === 0}
+			<p class="text-sm text-gray-500">{recentQuery ? "Nothing matched." : "No conversations yet."}</p>
+		{:else}
+			<div class="flex flex-col divide-y divide-gray-200 dark:divide-gray-700 max-h-96 overflow-y-auto">
+				{#each recent as r (r.id)}
+					<button
+						class="w-full text-left px-2 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 {r.id === conversationId
+							? 'bg-gray-100 dark:bg-gray-800'
+							: ''}"
+						onclick={() => {
+							openConversation(r.id);
+							showRecent = false;
+						}}
+					>
+						<span class="block truncate text-black dark:text-white">{r.preview || "(empty)"}</span>
+						<span class="text-xs text-gray-500">{new Date(r.updated_at).toLocaleString()}</span>
+					</button>
+				{/each}
+			</div>
+		{/if}
+	</div>
+</Modal>

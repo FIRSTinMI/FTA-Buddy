@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db/db";
 import { troubleshootChunks, troubleshootConversations, troubleshootDocs, troubleshootMessages } from "../db/schema";
@@ -100,8 +100,18 @@ export const troubleshootRouter = router({
 
 	/** The user's recent conversations, newest first, with the opening message as preview. */
 	list: protectedProcedure
-		.input(z.object({ limit: z.number().int().min(1).max(50).default(20) }).optional())
+		.input(z.object({ limit: z.number().int().min(1).max(50).default(20), q: z.string().trim().max(120).optional() }).optional())
 		.query(async ({ ctx, input }) => {
+			// When searching, narrow to conversations whose messages contain the text.
+			let matchIds: string[] | null = null;
+			if (input?.q) {
+				const hits = await db
+					.selectDistinct({ id: troubleshootMessages.conversation_id })
+					.from(troubleshootMessages)
+					.where(ilike(troubleshootMessages.text, `%${input.q}%`));
+				matchIds = hits.map((h) => h.id);
+				if (matchIds.length === 0) return [];
+			}
 			const convs = await db
 				.select({
 					id: troubleshootConversations.id,
@@ -109,7 +119,11 @@ export const troubleshootRouter = router({
 					updated_at: troubleshootConversations.updated_at,
 				})
 				.from(troubleshootConversations)
-				.where(eq(troubleshootConversations.user_id, ctx.user.id))
+				.where(
+					matchIds
+						? and(eq(troubleshootConversations.user_id, ctx.user.id), inArray(troubleshootConversations.id, matchIds))
+						: eq(troubleshootConversations.user_id, ctx.user.id),
+				)
 				.orderBy(desc(troubleshootConversations.updated_at))
 				.limit(input?.limit ?? 20);
 			if (convs.length === 0) return [];

@@ -180,7 +180,7 @@
 			"id": "cpu",
 			"title": "RIO CPU at 100 percent, loop overruns, lag",
 			"steps": [
-				"Open the RIO web page or the DS Diagnostics tab and read CPU. Near 100 percent starves NetworkTables and the DS packets. Comms flicker and the robot lags.",
+				"Open the RIO web page or the DS Charts tab and read CPU. Near 100 percent starves NetworkTables and the DS packets. Comms flicker and the robot lags.",
 				"The usual cause is logging every value separately each loop. Each SmartDashboard, NetworkTables, DataLog, or Epilogue call costs time.",
 				"Disable Epilogue or DataLogManager to prove it. Then batch values into fewer entries or log at a lower rate.",
 				"Cache each CAN device read once per loop. Do not query inside the logger.",
@@ -211,7 +211,7 @@
 			"steps": [
 				"Check the RSL blinks and the RIO Mode light is green for teleop. A dark Mode light means the robot is not enabled.",
 				"Check the DS shows Joysticks green and the driver is on the right slot.",
-				"Watch battery voltage when enabling. A dip below 6.8 V disables outputs. Swap the battery.",
+				"Watch battery voltage when enabling. Brownout disables the motor outputs at 6.3 V on a roboRIO 1 and 6.75 V by default on a roboRIO 2. It does not reboot the robot, it just cuts the actuators. Swap the battery.",
 				"Check motor controller lights. Blinking orange is valid CAN but disabled. Alternating red is no CAN. Use the CAN guide.",
 				"Read the DS Console for errors like unknown CAN ID or watchdog not fed.",
 				{

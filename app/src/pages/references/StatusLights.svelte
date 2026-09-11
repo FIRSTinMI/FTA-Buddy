@@ -828,12 +828,16 @@
 								class="ml-2"
 							/>
 						</button>
-						<div class="ml-8">SystemCore (2027, beta)</div>
+						<div class="ml-8">SystemCore (2027, alpha)</div>
 					</div>
 				{/snippet}
 
 				{#if openState.systemcore === true || loadedState.systemcore === true}
 					<div class="flex flex-col pl-1" style="max-width: 375px;">
+						<p class="mb-2 rounded border border-amber-400 bg-amber-50 p-2 text-sm dark:bg-amber-950">
+							SystemCore is pre-release hardware. These codes come from the June 2025 alpha
+							documentation and will change before it ships.
+						</p>
 						<table cellpadding="5" cellspacing="0" class="text-black dark:text-white">
 							<tbody>
 								<tr class="border-2 border-gray-400">

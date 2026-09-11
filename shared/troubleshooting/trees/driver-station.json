@@ -252,7 +252,7 @@
 					"yes": "Update or reinstall the driver, then replug it.",
 					"no": "Continue."
 				},
-				"Restart the Driver Station software. It only scans for new devices while disabled, never while enabled.",
+				"Restart the Driver Station software. F1 rescans at any time, enabled or disabled.",
 				{
 					"kind": "check",
 					"text": "Is it still missing from the DS?",

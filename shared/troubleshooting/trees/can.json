@@ -8,7 +8,7 @@
 			"kind": "question",
 			"id": "start",
 			"question": "What is the symptom?",
-			"help": "Check in Phoenix Tuner X, the REV Hardware Client, or the DS Diagnostics tab.",
+			"help": "Check in Phoenix Tuner X, the REV Hardware Client, or the DS Robot Power tab.",
 			"options": [
 				{ "label": "Devices missing from the bus", "next": "how-many" },
 				{ "label": "Two devices move together or one flickers", "next": "duplicate-ids" },
@@ -150,7 +150,7 @@
 				{
 					"kind": "check",
 					"text": "Is the CANivore still dark or red on USB?",
-					"yes": "Swap the roboRIO.",
+					"yes": "Swap the CANivore.",
 					"no": "Problem solved."
 				}
 			],

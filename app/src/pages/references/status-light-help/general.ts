@@ -379,26 +379,7 @@ export const generalHelp = {
 		ref: { tree: "roborio", node: "rail-short" },
 		source: NI_RED,
 	},
-	"roborio.power.input-too-high": {
-		device: "roboRIO",
-		led: "Power",
-		state: "Flashing red",
-		meaning: "Input voltage is above 16 V. All outputs are disabled, including the RSL.",
-		steps: [
-			"Check what powers the roboRIO. It must be the dedicated roboRIO output of the PDP or PDH, from a 12 V FRC battery.",
-			"Measure the battery. An overcharged or wrong battery reads high.",
-			"Fix the supply.",
-			"Power cycle the roboRIO.",
-			{
-				kind: "check",
-				text: "Power LED still flashing red on a good 12 V supply?",
-				yes: "Swap the roboRIO.",
-				no: "Problem solved.",
-			},
-		],
-		source: NI_RED,
-	},
-	"roborio.status.ok": {
+		"roborio.status.ok": {
 		device: "roboRIO",
 		led: "Status",
 		state: "Off",

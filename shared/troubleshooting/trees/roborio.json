@@ -112,7 +112,7 @@
 			"title": "Amber Power light: brownout protection tripped",
 			"steps": [
 				"Read the battery voltage in the DS. Under 12.3 V at rest means a weak battery. Swap it for a fully charged one.",
-				"Check the DS log for dips below 6.8 V when motors start. That is a brownout. Lower motor supply current limits, drive first.",
+				"Check the DS log for the dip when motors start. Brownout disables the motor outputs at 6.3 V on a roboRIO 1 and 6.75 V by default on a roboRIO 2. It does not reboot the robot, it just cuts the actuators. Set a stator current limit on the drive motors first.",
 				"Wiggle the battery connector and main breaker lugs. Try to rotate each lug. Tighten any that turns.",
 				"Put the RIO power wires on their own PDH or PDP channel, not shared with the radio or a motor.",
 				{
@@ -196,7 +196,15 @@
 					"leds": [
 						{
 							"color": "orange",
-							"pattern": ["orange", "black", "orange", "black", "orange", "black", "black"]
+							"pattern": [
+								"orange",
+								"black",
+								"orange",
+								"black",
+								"orange",
+								"black",
+								"black"
+							]
 						}
 					]
 				},
@@ -232,7 +240,15 @@
 					"leds": [
 						{
 							"color": "orange",
-							"pattern": ["orange", "black", "orange", "black", "orange", "black", "black"]
+							"pattern": [
+								"orange",
+								"black",
+								"orange",
+								"black",
+								"orange",
+								"black",
+								"black"
+							]
 						}
 					]
 				},
@@ -292,7 +308,7 @@
 			"id": "rio1-unrecoverable",
 			"title": "roboRIO 1 unrecoverable error",
 			"steps": [
-				"On a roboRIO 1, 4 flashes then a pause means the software crashed twice without a reboot.",
+				"A Status light that flashes without pausing on a roboRIO 1 means the controller hit an unrecoverable error and cannot start normally.",
 				"Press the reset button once. Wait 60 seconds.",
 				{
 					"kind": "check",
@@ -404,7 +420,7 @@
 				"On the RIO web page over USB, check the Ethernet interface has an address. Blank means no link.",
 				"Swap the Ethernet cable. Prove the cable and radio on another port, then move it back to the RIO port.",
 				"Look at the RIO port for bent pins or a broken latch tab on the plug.",
-				"Plug a USB Ethernet adapter into the RIO USB A port and run the radio cable to it. The RIO picks it up as a second interface. This has got a robot through an event with a dead port.",
+				"Plug a USB Ethernet adapter into the RIO USB A port and run the radio cable to it. The RIO picks it up as a second interface. Treat this as a way to get through the match in front of you, not a fix. It is unlikely to pass inspection, so the roboRIO should be replaced straight after that match.",
 				{
 					"kind": "check",
 					"text": "Is the RIO Ethernet port still dead?",
@@ -475,22 +491,22 @@
 		"estop": {
 			"kind": "leaf",
 			"id": "estop",
-			"title": "Blinking red Comm: E-stop is active",
+			"title": "Blinking red Comm: the robot is stopped",
 			"steps": [
-				"An E-stop stays latched until it is cleared. The robot E-stop and the field E-stop are separate. This is almost always the robot's.",
-				"Off the field the robot E-stop is the DS space bar. On the field it is the team's own E-stop button on their driver station.",
+				"There are three different stops and they behave differently. The field E-Stop ends that robot's match, it does not come back. A-Stop disables the robot for the autonomous period only, then it can be enabled again for teleop. The Driver Station space bar is a software E-Stop that stays latched until it is cleared.",
+				"Ask which one happened. If the field E-Stop was pulled, nothing on the robot will fix it and the team is done for that match.",
 				{
 					"kind": "check",
-					"text": "Does the team have an E-stop button on their driver station?",
-					"yes": "Make sure it is released.",
-					"no": "Continue."
+					"text": "Is the team in the pit, or between matches?",
+					"yes": "Continue.",
+					"no": "On the field, tell the team and the head referee which stop is active, then wait for the match to end."
 				},
-				"Clear it: reboot the roboRIO and restart the Driver Station software. Both hold a sticky E-stop.",
-				"Do both. A rebooted roboRIO that reconnects to a still-E-stopped DS drops straight back into E-stop.",
+				"Clear a latched software E-Stop: reboot the roboRIO and restart the Driver Station software. Both hold it independently.",
+				"Do both. A rebooted roboRIO that reconnects to a still-stopped Driver Station drops straight back into E-Stop.",
 				{
 					"kind": "check",
-					"text": "Does it E-stop again after both restart?",
-					"yes": "Find a stuck space bar or a joystick mapped to E-stop.",
+					"text": "Does it stop again after both restart?",
+					"yes": "Find a stuck space bar or a joystick button mapped to E-Stop.",
 					"no": "Problem solved."
 				}
 			],
@@ -509,7 +525,7 @@
 				"Check the Mode light. Off means disabled or brownout. Enable from the DS and watch it go green for teleop or orange for auto.",
 				"Check the RSL is on. A blinking RSL means enabled. No RSL means disabled or the RSL has no power.",
 				"Check the DS Joysticks light is green. Press F1 to rescan. Confirm the controller is in the slot the code expects.",
-				"Watch the battery voltage when enabling. A drop under 6.8 V disables outputs. Swap the battery.",
+				"Watch the battery voltage when enabling. Brownout disables the motor outputs at 6.3 V on a roboRIO 1 and 6.75 V by default on a roboRIO 2. It does not reboot the robot, it just cuts the actuators. Swap the battery.",
 				{
 					"kind": "check",
 					"text": "Are the motors still dead?",

@@ -9,12 +9,30 @@
 			"id": "start",
 			"question": "What happened?",
 			"options": [
-				{ "label": "Main breaker tripped in a match", "next": "drive-motors" },
-				{ "label": "Robot browned out or stuttered", "next": "battery-voltage" },
-				{ "label": "Robot is dead, no lights anywhere", "next": "dead" },
-				{ "label": "One device or channel has no power", "next": "channel" },
-				{ "label": "Radio or RIO reboots when the robot drives", "next": "reboot-under-load" },
-				{ "label": "PDH status light is not green", "next": "pdh-lights" }
+				{
+					"label": "Main breaker tripped in a match",
+					"next": "drive-motors"
+				},
+				{
+					"label": "Robot browned out or stuttered",
+					"next": "battery-voltage"
+				},
+				{
+					"label": "Robot is dead, no lights anywhere",
+					"next": "dead"
+				},
+				{
+					"label": "One device or channel has no power",
+					"next": "channel"
+				},
+				{
+					"label": "Radio or RIO reboots when the robot drives",
+					"next": "reboot-under-load"
+				},
+				{
+					"label": "PDH status light is not green",
+					"next": "pdh-lights"
+				}
 			]
 		},
 		"drive-motors": {
@@ -22,20 +40,28 @@
 			"id": "drive-motors",
 			"question": "Does the drivetrain use Kraken X60 or Falcon (Talon FX) motors?",
 			"options": [
-				{ "label": "Yes", "next": "kraken-limits" },
-				{ "label": "No, or not sure", "next": "main-breaker-other" }
+				{
+					"label": "Yes",
+					"next": "kraken-limits"
+				},
+				{
+					"label": "No, or not sure",
+					"next": "main-breaker-other"
+				}
 			]
 		},
 		"kraken-limits": {
 			"kind": "leaf",
 			"id": "kraken-limits",
-			"title": "Main breaker trip: Kraken supply current limits",
+			"title": "Main breaker trip: Kraken and Falcon current limits",
 			"steps": [
-				"Most main breaker trips this season were Kraken or Falcon drive motors left on the default 70 A supply current limit. Eight swerve motors at 70 A is far past the 120 A main breaker.",
-				"Set SupplyCurrentLimit on the drive motors to 50 to 60 A with SupplyCurrentLimitEnable true. Steer motors 20 to 30 A. Confirm in Phoenix Tuner X after deploy.",
-				"A stator limit alone does not protect the breaker. The supply limit is the one that matters here.",
+				"Most main breaker trips come from Kraken or Falcon drive motors running on the Phoenix 6 defaults. Four swerve drive motors in a pushing match hold enough current long enough to open the 120 A main breaker.",
+				"Set a stator current limit on the drive motors first. Stator limits also cap supply current, so they usually fix this on their own. Find the number by driving against a wall and raising output until the wheels slip, then set the limit just below the stator current you saw.",
+				"Only add a supply current limit if it still trips after that. CTRE's worked example for swerve is 120 A stator with a 70 A supply limit on drive, and 60 A stator on steer with no supply limit.",
+				"Breakers trip on heat, not on the printed rating. A robot can pull well over the rating in short bursts and be fine, then trip the first time it pushes and holds.",
+				"Spin each swerve module by hand. A binding module makes this far easier to trigger and no current limit hides it.",
 				"Try to rotate each crimped lug on the breaker. Tighten any that turns. A hot loose lug trips early.",
-				"Redeploy and run the drivetrain against a wall for a few seconds. Watch total current in the DS log or PDH.",
+				"Redeploy, confirm the limits in Phoenix Tuner X, then drive against a wall for a few seconds and watch total current in the DS log or on the PDH.",
 				{
 					"kind": "check",
 					"text": "Does the main breaker still trip?",
@@ -63,7 +89,7 @@
 				"Try to rotate each lug on the main breaker by hand. Tighten any that turns. Loose lugs heat the breaker and trip it below rating.",
 				"Check the battery connector and leads. Wiggle them. Tie-wrap the connector halves together.",
 				"Ask what the robot was doing when it tripped. A stalled arm, pinned drivetrain, or mechanism against a hard stop draws full stall current.",
-				"Set supply current limits on every drive and mechanism motor. Spark MAX 40 to 60 A on drive. Talon FX 50 to 60 A.",
+				"Check the current limits on every drive and mechanism motor. A stator limit sized from a wheel-slip test is the first thing to set; add a supply limit only if it still trips.",
 				"Breakers age. One that has tripped many times trips easier. Swap it for a new 120 A breaker.",
 				{
 					"kind": "check",
@@ -89,8 +115,14 @@
 			"id": "battery-voltage",
 			"question": "What does the DS show for battery voltage with the robot disabled and resting?",
 			"options": [
-				{ "label": "Below 12.3 V", "next": "weak-battery" },
-				{ "label": "12.3 V or higher", "next": "brownout-wiring" }
+				{
+					"label": "Below 12.3 V",
+					"next": "weak-battery"
+				},
+				{
+					"label": "12.3 V or higher",
+					"next": "brownout-wiring"
+				}
 			]
 		},
 		"weak-battery": {
@@ -121,7 +153,7 @@
 			"id": "brownout-wiring",
 			"title": "Brownout with a good battery",
 			"steps": [
-				"Open the DS log. Find the voltage dip. Under 6.8 V the RIO cuts outputs. Under 6.3 V (RIO 1) or 6.75 V (RIO 2) everything disables.",
+				"Open the DS log and find the voltage dip. Brownout disables the motor outputs at 6.3 V on a roboRIO 1 and 6.75 V by default on a roboRIO 2. It does not reboot the robot, it just cuts the actuators.",
 				"Wiggle the battery connector and main breaker lugs. Try to rotate each lug. Loose main power is the top cause after motors.",
 				"Squeeze the wires at the PDH or PDP main terminals. Confirm the bolts are tight with split washers.",
 				"Lower motor supply current limits. Drive first, then any mechanism that starts from stall.",
@@ -143,7 +175,12 @@
 					"url": "https://docs.wpilib.org/en/stable/docs/hardware/hardware-basics/preemptive-troubleshooting.html"
 				}
 			],
-			"statusLights": [{ "device": "roborio", "label": "roboRIO Power light" }],
+			"statusLights": [
+				{
+					"device": "roborio",
+					"label": "roboRIO Power light"
+				}
+			],
 			"escalate": true
 		},
 		"dead": {
@@ -151,8 +188,14 @@
 			"id": "dead",
 			"question": "Is the main breaker pushed in and the battery connector fully mated?",
 			"options": [
-				{ "label": "Yes, both", "next": "dead-robot" },
-				{ "label": "No, one was out", "next": "dead-fixed" }
+				{
+					"label": "Yes, both",
+					"next": "dead-robot"
+				},
+				{
+					"label": "No, one was out",
+					"next": "dead-fixed"
+				}
 			]
 		},
 		"dead-fixed": {
@@ -188,8 +231,14 @@
 				}
 			],
 			"statusLights": [
-				{ "device": "revpowerdistributionhub", "label": "PDH lights" },
-				{ "device": "ctrepowerdistributionpanel", "label": "PDP lights" }
+				{
+					"device": "revpowerdistributionhub",
+					"label": "PDH lights"
+				},
+				{
+					"device": "ctrepowerdistributionpanel",
+					"label": "PDP lights"
+				}
 			],
 			"escalate": true
 		},
@@ -210,13 +259,21 @@
 				}
 			],
 			"links": [
-				{ "label": "REV PDH status LEDs", "url": "https://docs.revrobotics.com/ion-control/pdh/status-led" },
+				{
+					"label": "REV PDH status LEDs",
+					"url": "https://docs.revrobotics.com/ion-control/pdh/status-led"
+				},
 				{
 					"label": "REV PDH troubleshooting",
 					"url": "https://docs.revrobotics.com/ion-control/pdh/troubleshooting"
 				}
 			],
-			"statusLights": [{ "device": "revpowerdistributionhub", "label": "PDH lights" }]
+			"statusLights": [
+				{
+					"device": "revpowerdistributionhub",
+					"label": "PDH lights"
+				}
+			]
 		},
 		"reboot-under-load": {
 			"kind": "leaf",
@@ -226,7 +283,7 @@
 				"Squeeze and wiggle the wires at the PDH or PDP main terminals and the main breaker. A loose terminal drops voltage under load.",
 				"Tug the RIO and radio power plugs. Reseat with fresh stripped copper. Tie-wrap the cables.",
 				"Remove one power source if the radio has both PoE and DC power.",
-				"Check the DS log for the voltage dip. Under 6.3 V the RIO can reset. Lower motor supply current limits.",
+				"Check the DS log for the voltage dip. Brownout disables the motor outputs at 6.3 V on a roboRIO 1 and 6.75 V by default on a roboRIO 2. It does not reboot the robot, it just cuts the actuators. A full reset means the voltage collapsed much further than that, so look at the battery and the main breaker, not the current limits.",
 				"Put the RIO and radio on their own channels, not shared with a motor or compressor.",
 				{
 					"kind": "check",
@@ -261,13 +318,21 @@
 					"kind": "check",
 					"text": "Is the light orange and cyan (a hardware fault)?",
 					"yes": "Swap the PDH.",
-					"no": "Problem solved."
+					"no": "Go back to the colour above that matches, and work that fix."
 				}
 			],
 			"links": [
-				{ "label": "REV PDH status LEDs", "url": "https://docs.revrobotics.com/ion-control/pdh/status-led" }
+				{
+					"label": "REV PDH status LEDs",
+					"url": "https://docs.revrobotics.com/ion-control/pdh/status-led"
+				}
 			],
-			"statusLights": [{ "device": "revpowerdistributionhub", "label": "PDH lights" }]
+			"statusLights": [
+				{
+					"device": "revpowerdistributionhub",
+					"label": "PDH lights"
+				}
+			]
 		}
 	}
 }

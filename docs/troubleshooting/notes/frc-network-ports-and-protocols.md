@@ -9,7 +9,7 @@ The FMS Whitepaper allocates these ports for communication between the Driver St
 - UDP 1130: Dashboard to robot control data, one direction.
 - UDP 1140: Robot to dashboard status data, one direction.
 - UDP and TCP 1180 to 1190: Camera data from the roboRIO to dashboard software over USB.
-- TCP 1735: SmartDashboard.
+- TCP 1735: SmartDashboard, and NetworkTables 3. NetworkTables 4, which is what current WPILib uses, runs on TCP 5810 and 5811 instead.
 - HTTP 80 and 443: Camera web interface.
 - UDP and TCP 554: RTSP for h.264 camera streaming.
 - UDP and TCP 1250: CTRE Diagnostics Server.

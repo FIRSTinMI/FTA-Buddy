@@ -204,9 +204,9 @@
 			"id": "dual-power",
 			"title": "PoE and DC input at the same time",
 			"steps": [
-				"Two power inputs from different sources or voltages make the radio reboot or drop. This is a known bad setup.",
-				"Pick one. Remove the power from the PoE injector and keep the Ethernet for data, or remove the DC plug.",
-				"Vivid allows dual feed only from the same source at the same voltage. Most teams do not have that. Use one.",
+				"Two power inputs is normally fine and gives you redundancy. It only causes trouble when the two sources sit at different voltages, which is what makes the radio reboot or drop.",
+				"As a test, drop to one source. Remove the power from the PoE injector and keep the Ethernet for data, or remove the DC plug.",
+				"Vivid supports a dual feed only when both sides come from the same source at the same voltage. A separate regulated supply on one side and the PDH on the other does not qualify.",
 				"Power cycle the radio after the change and wait 60 seconds for SYS.",
 				{
 					"kind": "check",
@@ -256,7 +256,7 @@
 			"steps": [
 				"Wait 60 seconds. SYS stays off during boot.",
 				"Power cycle the radio once if SYS never comes on after 2 minutes.",
-				"A radio that loops power and never finishes boot may have the old flash corruption bug. Fixed in 1.2.5. Take it to the kiosk to update.",
+				"A radio stuck in a boot loop cannot be recovered on site. Swap it and send the bad one to Vivid support. If instead the kiosk refuses to detect or program a radio that otherwise looks healthy, try reuploading firmware through the radio's own web page first.",
 				"Check the supply voltage is steady. A weak battery or loose plug can hold the radio in boot.",
 				{
 					"kind": "check",
@@ -518,7 +518,7 @@
 				},
 				"Tug the Weidmuller plug. Re-strip and reseat the wires. Tie-wrap the cable to the frame near the radio.",
 				"Check the wire gauge and route. Thin wire on a long run drops voltage under load. Wire the radio to its own PDH or PDP channel.",
-				"Open the DS log. A battery dip below 7 V in a match resets the radio. Lower motor current limits and use a good battery.",
+				"Open the DS log. The radio holds down to about 4.5 V, so a normal brownout does not reset it. A dip that low means the battery or the main breaker, not the current limits.",
 				"Check nothing else is on the radio's channel. A shared channel with a motor browns out the radio.",
 				{
 					"kind": "check",
@@ -545,8 +545,8 @@
 			"title": "DS on Wi-Fi in the pit",
 			"steps": [
 				"At an event the kiosk decides if the 2.4 GHz pit network is on. Many events turn it off. Use an Ethernet cable into the radio DS port instead.",
-				"The network name is the team number plus the kiosk suffix when 2.4 GHz is on. The password is the 2.4 GHz key.",
-				"DIP switch 3 forces standalone 2.4 GHz mode at home. Leave it off at events.",
+				"When 2.4 GHz is on, the network name is FRC-XXYY, where XXYY is the team number. The password is the 2.4 GHz key.",
+				"DIP switch 3 used to force standalone 2.4 GHz mode at home. As of radio firmware 2.0 the switch no longer does anything, so there is nothing to check here.",
 				"Turn the laptop Wi-Fi off before a match. On the field only Ethernet works.",
 				{
 					"kind": "check",

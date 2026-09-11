@@ -84,9 +84,14 @@ export const generalHelp = {
 			"The radio booted but cannot reach the field access point (10.TE.AM.4). The robot is not on the field network, or the radio is not programmed for this event.",
 		steps: [
 			"Confirm the radio was programmed at this event's kiosk with the correct team number.",
-			"Confirm the team is in the current match. The field access point only accepts the six scheduled teams.",
-			"Look at the 6G LED. No 6 GHz link means the wireless association failed.",
-			"Power cycle the radio.",
+			"Confirm the team is in the current match and the match has been prestarted. The field access point needs to be configured for the teams in the match.",
+			"Look at the 6 GHz LED. No link means the radio did not associate with the field.",
+			{
+				kind: "check",
+				text: "Does the 6 GHz LED show a link?",
+				yes: "Continue.",
+				no: "Power cycle the radio if it is the only robot affected.",
+			},
 			{ kind: "check", text: "SYS still blinking 1 Hz?", yes: "Continue.", no: "Problem solved." },
 			"Reprogram the radio at the kiosk.",
 			{

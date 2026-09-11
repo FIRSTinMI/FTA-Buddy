@@ -12,27 +12,89 @@
 			"options": [
 				{
 					"label": "PWR off",
-					"next": "power-source"
+					"next": "power-source",
+					"leds": [
+						{
+							"color": "black",
+							"label": "PWR"
+						}
+					]
 				},
 				{
 					"label": "PWR on, SYS off",
-					"next": "booting"
+					"next": "booting",
+					"leds": [
+						{
+							"color": "green",
+							"label": "PWR"
+						},
+						{
+							"color": "black",
+							"label": "SYS"
+						}
+					]
 				},
 				{
 					"label": "PWR on, SYS blinking once a second",
-					"next": "where"
+					"next": "where",
+					"leds": [
+						{
+							"color": "green",
+							"label": "PWR"
+						},
+						{
+							"color": "green",
+							"blink": "1Hz",
+							"label": "SYS"
+						}
+					]
 				},
 				{
 					"label": "PWR on, SYS blinking very fast",
-					"next": "flashing"
+					"next": "flashing",
+					"leds": [
+						{
+							"color": "green",
+							"label": "PWR"
+						},
+						{
+							"color": "green",
+							"blink": "20Hz",
+							"label": "SYS"
+						}
+					]
 				},
 				{
 					"label": "All lights blinking fast",
-					"next": "ap-battery"
+					"next": "ap-battery",
+					"leds": [
+						{
+							"color": "green",
+							"blink": "20Hz"
+						},
+						{
+							"color": "green",
+							"blink": "20Hz"
+						},
+						{
+							"color": "green",
+							"blink": "20Hz"
+						}
+					]
 				},
 				{
 					"label": "SYS solid, RIO light off",
-					"next": "rio-link"
+					"next": "rio-link",
+					"leds": [
+						{
+							"color": "green",
+							"label": "SYS"
+						},
+						{
+							"color": "black",
+							"label": "RIO"
+						}
+					]
 				},
 				{
 					"label": "Lights look fine but robot has no comms",
@@ -538,11 +600,23 @@
 			"options": [
 				{
 					"label": "Power light is off",
-					"next": "om5p-no-power"
+					"next": "om5p-no-power",
+					"leds": [
+						{
+							"color": "black",
+							"label": "Power"
+						}
+					]
 				},
 				{
 					"label": "WiFi light is off or red on the field",
-					"next": "om5p-not-linked"
+					"next": "om5p-not-linked",
+					"leds": [
+						{
+							"color": "red",
+							"label": "WiFi"
+						}
+					]
 				},
 				{
 					"label": "It will not take a program",

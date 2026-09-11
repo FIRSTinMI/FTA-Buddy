@@ -12,31 +12,67 @@
 			"options": [
 				{
 					"label": "No lights at all",
-					"next": "no-power"
+					"next": "no-power",
+					"leds": [
+						{
+							"color": "black"
+						}
+					]
 				},
 				{
 					"label": "Power light amber",
-					"next": "brownout"
+					"next": "brownout",
+					"leds": [
+						{
+							"color": "orange"
+						}
+					]
 				},
 				{
 					"label": "Power light red",
-					"next": "rail-short"
+					"next": "rail-short",
+					"leds": [
+						{
+							"color": "red"
+						}
+					]
 				},
 				{
 					"label": "Status light blinking",
-					"next": "which-rio"
+					"next": "which-rio",
+					"leds": [
+						{
+							"color": "orange",
+							"blink": "3Hz"
+						}
+					]
 				},
 				{
 					"label": "Comm light off, DS cannot see the robot",
-					"next": "reach"
+					"next": "reach",
+					"leds": [
+						{
+							"color": "black"
+						}
+					]
 				},
 				{
 					"label": "Comm light red",
-					"next": "comm-red"
+					"next": "comm-red",
+					"leds": [
+						{
+							"color": "red"
+						}
+					]
 				},
 				{
 					"label": "Comm green but robot will not move",
-					"next": "wont-move"
+					"next": "wont-move",
+					"leds": [
+						{
+							"color": "green"
+						}
+					]
 				}
 			]
 		},
@@ -146,15 +182,32 @@
 			"options": [
 				{
 					"label": "Flashing all the time, never pauses",
-					"next": "rio2-unrecoverable"
+					"next": "rio2-unrecoverable",
+					"leds": [
+						{
+							"color": "orange",
+							"blink": "3Hz"
+						}
+					]
 				},
 				{
 					"label": "Groups of 2, 3, or 4 flashes, then a pause",
-					"next": "blink-codes"
+					"next": "blink-codes",
+					"leds": [
+						{
+							"color": "orange",
+							"pattern": ["orange", "black", "orange", "black", "orange", "black", "black"]
+						}
+					]
 				},
 				{
 					"label": "Stays on solid after a minute",
-					"next": "rio2-unrecoverable"
+					"next": "rio2-unrecoverable",
+					"leds": [
+						{
+							"color": "orange"
+						}
+					]
 				}
 			]
 		},
@@ -165,15 +218,32 @@
 			"options": [
 				{
 					"label": "Flashing all the time, never pauses",
-					"next": "rio1-unrecoverable"
+					"next": "rio1-unrecoverable",
+					"leds": [
+						{
+							"color": "orange",
+							"blink": "3Hz"
+						}
+					]
 				},
 				{
 					"label": "Groups of 2, 3, or 4 flashes, then a pause",
-					"next": "blink-codes"
+					"next": "blink-codes",
+					"leds": [
+						{
+							"color": "orange",
+							"pattern": ["orange", "black", "orange", "black", "orange", "black", "black"]
+						}
+					]
 				},
 				{
 					"label": "Stays on solid after a minute",
-					"next": "rio1-unrecoverable"
+					"next": "rio1-unrecoverable",
+					"leds": [
+						{
+							"color": "orange"
+						}
+					]
 				}
 			]
 		},

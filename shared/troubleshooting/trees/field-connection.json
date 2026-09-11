@@ -154,19 +154,59 @@
 			"options": [
 				{
 					"label": "No lights at all",
-					"next": "radio-no-power"
+					"next": "radio-no-power",
+					"leds": [
+						{
+							"color": "black"
+						}
+					]
 				},
 				{
 					"label": "PWR on, SYS blinking about once a second",
-					"next": "radio-not-linked"
+					"next": "radio-not-linked",
+					"leds": [
+						{
+							"color": "green",
+							"label": "PWR"
+						},
+						{
+							"color": "green",
+							"blink": "1Hz",
+							"label": "SYS"
+						}
+					]
 				},
 				{
 					"label": "All lights blinking fast",
-					"next": "radio-ap-mode"
+					"next": "radio-ap-mode",
+					"leds": [
+						{
+							"color": "green",
+							"blink": "20Hz"
+						},
+						{
+							"color": "green",
+							"blink": "20Hz"
+						},
+						{
+							"color": "green",
+							"blink": "20Hz"
+						}
+					]
 				},
 				{
 					"label": "PWR on, SYS solid",
-					"next": "radio-linked-monitor-red"
+					"next": "radio-linked-monitor-red",
+					"leds": [
+						{
+							"color": "green",
+							"label": "PWR"
+						},
+						{
+							"color": "green",
+							"label": "SYS"
+						}
+					]
 				}
 			]
 		},
@@ -291,35 +331,70 @@
 			"options": [
 				{
 					"label": "Power green, Status off",
-					"next": "rio-eth-link"
+					"next": "rio-eth-link",
+					"leds": [
+						{
+							"color": "green",
+							"label": "Power"
+						},
+						{
+							"color": "black",
+							"label": "Status"
+						}
+					]
 				},
 				{
 					"label": "Status light blinking",
 					"to": {
 						"tree": "roborio",
 						"node": "which-rio"
-					}
+					},
+					"leds": [
+						{
+							"color": "orange",
+							"blink": "3Hz",
+							"label": "Status"
+						}
+					]
 				},
 				{
 					"label": "Power light off, no lights",
 					"to": {
 						"tree": "roborio",
 						"node": "no-power"
-					}
+					},
+					"leds": [
+						{
+							"color": "black",
+							"label": "Power"
+						}
+					]
 				},
 				{
 					"label": "Power light amber",
 					"to": {
 						"tree": "roborio",
 						"node": "brownout"
-					}
+					},
+					"leds": [
+						{
+							"color": "orange",
+							"label": "Power"
+						}
+					]
 				},
 				{
 					"label": "Power light red",
 					"to": {
 						"tree": "roborio",
 						"node": "rail-short"
-					}
+					},
+					"leds": [
+						{
+							"color": "red",
+							"label": "Power"
+						}
+					]
 				}
 			]
 		},
@@ -333,11 +408,22 @@
 					"to": {
 						"tree": "radio",
 						"node": "rio-link"
-					}
+					},
+					"leds": [
+						{
+							"color": "black"
+						}
+					]
 				},
 				{
 					"label": "Yes, they are flashing",
-					"next": "rio-eth-good"
+					"next": "rio-eth-good",
+					"leds": [
+						{
+							"color": "green",
+							"blink": "10Hz"
+						}
+					]
 				}
 			]
 		},

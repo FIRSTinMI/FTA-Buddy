@@ -55,12 +55,40 @@ export const statusLightHintSchema = z.object({
 	label: z.string().min(1),
 });
 
+export const LED_COLORS = [
+	"blue",
+	"red",
+	"orange",
+	"yellow",
+	"green",
+	"cyan",
+	"magenta",
+	"black",
+	"white",
+	"dim-red",
+	"dim-green",
+	"dim-yellow",
+] as const;
+
+/** One indicator shown on an answer, drawn like the Status Lights reference draws it. */
+export const ledSchema = z.object({
+	color: z.enum(LED_COLORS),
+	/** Toggles against off at this rate. */
+	blink: z.enum(["1Hz", "2Hz", "3Hz", "6Hz", "8Hz", "10Hz", "20Hz", "50Hz"]).optional(),
+	/** Cycles these colours every 300ms, for the blink codes (2, 3 or 4 flashes then a pause). */
+	pattern: z.array(z.enum(LED_COLORS)).optional(),
+	/** Which light it is, when an answer shows more than one. */
+	label: z.string().optional(),
+});
+
 export const optionSchema = z
 	.object({
 		label: z.string().min(1),
 		// Same-tree target node id, OR a cross-tree link. Exactly one.
 		next: nodeIdSchema.optional(),
 		to: z.object({ tree: nodeIdSchema, node: nodeIdSchema }).optional(),
+		/** Indicators to show beside the label, so the answer looks like what is on the robot. */
+		leds: z.array(ledSchema).optional(),
 	})
 	.refine((o) => (o.next === undefined) !== (o.to === undefined), {
 		message: "an option needs exactly one of next or to",
@@ -100,6 +128,7 @@ export type StatusLightDevice = (typeof STATUS_LIGHT_DEVICES)[number];
 export type Link = z.infer<typeof linkSchema>;
 export type StatusLightHint = z.infer<typeof statusLightHintSchema>;
 export type Option = z.infer<typeof optionSchema>;
+export type Led = z.infer<typeof ledSchema>;
 export type QuestionNode = z.infer<typeof questionNodeSchema>;
 export type LeafNode = z.infer<typeof leafNodeSchema>;
 export type TreeNode = z.infer<typeof nodeSchema>;

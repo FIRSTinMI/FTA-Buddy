@@ -1,5 +1,6 @@
 <script lang="ts">
 	import StepFlowTree from "../../components/troubleshoot/StepFlowTree.svelte";
+	import StatusLed from "../../components/StatusLed.svelte";
 	import Icon from "@iconify/svelte";
 	import { Button } from "flowbite-svelte";
 	import { getNode, type QuestionNode, type Tree } from "../../../../shared/troubleshooting";
@@ -160,10 +161,17 @@
 			{#each node.options as option (option.label)}
 				<Button
 					outline
-					class="min-h-12 w-full justify-start px-4 py-3 text-left text-base"
+					class="min-h-12 w-full justify-start gap-3 px-4 py-3 text-left text-base"
 					onclick={() => choose(option)}
 				>
-					{option.label}
+					{#if option.leds?.length}
+						<span class="flex shrink-0 items-center gap-1">
+							{#each option.leds as led, i (i)}
+								<StatusLed color={led.color} blink={led.blink} pattern={led.pattern} />
+							{/each}
+						</span>
+					{/if}
+					<span class="min-w-0">{option.label}</span>
 				</Button>
 			{/each}
 		</div>

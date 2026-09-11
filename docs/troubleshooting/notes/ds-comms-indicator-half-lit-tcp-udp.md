@@ -1,7 +1,7 @@
 ---
-title: Driver Station Communications indicator only half lit is usually a firewall
+title: Driver Station Communications indicator half lit means one of TCP or UDP is blocked
 date: 2026-09-10
-url: https://docs.wpilib.org/en/stable/docs/software/driverstation/driver-station.html
+url: https://fms-manual.readthedocs.io/en/latest/fms-whitepaper/fms-whitepaper.html
 ---
 
-The Driver Station Communications indicator is split into two halves, one for TCP and one for UDP. The left half is TCP and the right half is UDP. When one half is green and the other is red, one protocol is reaching the roboRIO and the other is blocked. If the Robot Code indicator is green, the joysticks work, and the roboRIO has the right IP (10.TE.AM.2 over a VH-109 radio), a half lit Communications indicator is almost always a firewall on the Driver Station laptop blocking one protocol. Open the DS Diagnostics tab and look at Firewall: Dom, Pub, or Prv shown in orange means that firewall is on. Turn off the enabled firewalls and the blocked half turns green. Reseat the Ethernet cable at both ends and restart the robot code only after ruling out the firewall.
+The Driver Station Communications indicator is split into two halves, one for TCP and one for UDP. Half green and half red means one protocol is reaching the roboRIO and the other is blocked or dropping. Usually the UDP control packets pass, so the robot still responds, while the TCP user and dashboard traffic is blocked. The common causes are a firewall on the Driver Station laptop (Windows Defender in particular) blocking one protocol, or bandwidth limits dropping packets. If the Robot Code indicator is green, joysticks work, and the roboRIO has the right IP (10.TE.AM.2 over a VH-109 radio), check the DS Diagnostics tab for enabled firewalls (Dom, Pub, Prv shown in orange) and turn them off before touching the cable or the code. A fully red Communications indicator, no communication at all, is also often a firewall or a wrong team number on the Driver Station.

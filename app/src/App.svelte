@@ -921,17 +921,6 @@
 					{/snippet}
 				</SidebarItem>
 				<SidebarItem
-					label="Troubleshooting"
-					onclick={() => {
-						drawerOpen = false;
-						navigate("/troubleshoot");
-					}}
-				>
-					{#snippet icon()}
-						<Icon icon="mdi:wrench" class="size-8" />
-					{/snippet}
-				</SidebarItem>
-				<SidebarItem
 					label="References"
 					onclick={() => {
 						drawerOpen = false;
@@ -940,6 +929,18 @@
 				>
 					{#snippet icon()}
 						<Icon icon="mdi:file-document" class="size-8" />
+					{/snippet}
+				</SidebarItem>
+				<SidebarItem
+					label="Troubleshooting"
+					onclick={() => {
+						drawerOpen = false;
+						navigate("/troubleshoot");
+					}}
+					class="text-xs ml-8 pt-1 pb-1"
+				>
+					{#snippet icon()}
+						<Icon icon="mdi:stethoscope" class="size-6" />
 					{/snippet}
 				</SidebarItem>
 				<SidebarItem

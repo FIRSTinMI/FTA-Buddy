@@ -10,24 +10,24 @@
 		<h1 class="text-3xl" style="font-weight: bold">References</h1>
 
 		<div class="grid grid-cols-3 gap-2 mt-2">
+			<Button href="/troubleshoot" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
+				><Icon icon="mdi:stethoscope" class="size-6 md:size-8" /> Troubleshooting</Button
+			>
 			<Button href="/references/statuslights" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
 				><Icon icon="heroicons:sun-16-solid" class="size-6 md:size-8" /> Status Lights</Button
 			>
 			<Button href="/references/softwaredocs" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
 				><Icon icon="ion:library" class="size-6 md:size-8" /> Software Docs</Button
 			>
-			<Button href="/references/wiringdiagrams" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
-				><Icon icon="fa6-solid:chart-diagram" class="size-6 md:size-8" /> Wiring Diagrams</Button
-			>
 			<div class="grid grid-cols-3 gap-2 col-span-3">
+				<Button href="/references/wiringdiagrams" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
+					><Icon icon="fa6-solid:chart-diagram" class="size-6 md:size-8" /> Wiring Diagrams</Button
+				>
 				<Button href="/references/componentmanuals" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
 					><Icon icon="streamline:manual-book-solid" class="size-6 md:size-8" /> Component Manuals</Button
 				>
 				<Button href="/references/fieldmanuals" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
 					><Icon icon="mdi:package" class="size-6 md:size-8" /> Field Manuals</Button
-				>
-				<Button href="/troubleshoot" class="flex-col p-2 md:p-4 text-xs md:text-sm" outline
-					><Icon icon="mdi:stethoscope" class="size-6 md:size-8" /> Troubleshooting</Button
 				>
 			</div>
 		</div>

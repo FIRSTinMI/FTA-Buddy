@@ -18,6 +18,7 @@ const REIMAGE_RIO = [
 	"On a roboRIO 1, reimage over USB with the roboRIO Imaging Tool (Format Target).",
 	"On a roboRIO 2, reimage the microSD card on a laptop with balenaEtcher or Raspberry Pi Imager.",
 	"On a roboRIO 2, put the card back and set the team number over USB with the Imaging Tool.",
+	"After imaging, redeploy the robot code. A fresh image has no code.",
 ] as const;
 
 export const generalHelp = {
@@ -83,9 +84,14 @@ export const generalHelp = {
 			"The radio booted but cannot reach the field access point (10.TE.AM.4). The robot is not on the field network, or the radio is not programmed for this event.",
 		steps: [
 			"Confirm the radio was programmed at this event's kiosk with the correct team number.",
-			"Confirm the team is in the current match. The field access point only accepts the six scheduled teams.",
-			"Look at the 6G LED. No 6 GHz link means the wireless association failed.",
-			"Power cycle the radio.",
+			"Confirm the team is in the current match and the match has been prestarted. The field access point needs to be configured for the teams in the match.",
+			"Look at the 6 GHz LED. No link means the radio did not associate with the field.",
+			{
+				kind: "check",
+				text: "Does the 6 GHz LED show a link?",
+				yes: "Continue.",
+				no: "Power cycle the radio if it is the only robot affected.",
+			},
 			{ kind: "check", text: "SYS still blinking 1 Hz?", yes: "Continue.", no: "Problem solved." },
 			"Reprogram the radio at the kiosk.",
 			{
@@ -180,23 +186,30 @@ export const generalHelp = {
 	},
 	"radio.no-robot-radio-link": {
 		device: "VH-109 radio",
-		led: "2.4G / 6G / RIO",
+		led: "RIO",
 		state: "Off",
 		meaning:
-			"Neither wireless band shows a link and the RIO port has no Ethernet link. The radio is up but nothing is connected through it.",
+			"The RIO port shows no Ethernet link. The radio is up but is not connected to the roboRIO over Ethernet.",
 		steps: [
-			"Reseat both ends of the Ethernet cable from the roboRIO to the radio's RIO port.",
-			{ kind: "check", text: "RIO LED still off?", yes: "Continue.", no: "Problem solved." },
-			"Swap the Ethernet cable.",
-			{ kind: "check", text: "RIO LED still off?", yes: "Continue.", no: "Problem solved." },
 			"Confirm the roboRIO is powered and booted. Its Status LED goes off when boot completes.",
-			"Reprogram the radio at the kiosk. No 6 GHz link means it is not associating.",
+			"Check the cable is in the radio port labeled RIO, not AUX1, AUX2, or DS.",
+			"Reseat both ends of the Ethernet cable, then try a known good cable.",
 			"Power cycle the radio.",
+			{ kind: "check", text: "Is the RIO LED still off?", yes: "Continue.", no: "Problem solved." },
+			"Connect the roboRIO to a laptop by Ethernet directly, bypassing the radio.",
+			{ kind: "check", text: "Does the laptop connect to the roboRIO?", yes: "Swap the radio.", no: "Continue." },
+			"The roboRIO Ethernet is the problem. Plug a USB Ethernet dongle into the roboRIO USB port and connect the laptop through it.",
 			{
 				kind: "check",
-				text: "RIO LED still off with a known good cable and roboRIO?",
-				yes: "Swap the radio.",
-				no: "Problem solved.",
+				text: "Does the laptop connect through the USB dongle?",
+				yes: "Continue.",
+				no: "Replace the roboRIO.",
+			},
+			{
+				kind: "check",
+				text: "Does the roboRIO web UI show a bad Ethernet config, like a wrong static IP?",
+				yes: "Fix the configuration.",
+				no: "The built-in NIC is likely bad. Use the dongle and replace the roboRIO.",
 			},
 		],
 		source: VIVID,
@@ -454,6 +467,7 @@ export const generalHelp = {
 					"Hold reset while powering on, and release when the Status LED is solid.",
 					"Wait about 60 seconds.",
 					"Reimage with the roboRIO Imaging Tool (Format Target).",
+					"Set the team number and redeploy the robot code.",
 					{
 						kind: "check",
 						text: "Status LED still flashing after recovery and reimage?",
@@ -472,6 +486,7 @@ export const generalHelp = {
 					{ kind: "check", text: "Still flashing?", yes: "Continue.", no: "Problem solved." },
 					"Reimage the card on a laptop with balenaEtcher or Raspberry Pi Imager. Use a fresh card if you have one.",
 					"Put the card back, connect USB, and set the team number with the roboRIO Imaging Tool.",
+					"Redeploy the robot code. A fresh image has no code.",
 					{ kind: "check", text: "Still flashing?", yes: "Continue.", no: "Problem solved." },
 					"Open the case and blow out the SD slot with compressed air. Metal shavings in the slot cause this.",
 					{

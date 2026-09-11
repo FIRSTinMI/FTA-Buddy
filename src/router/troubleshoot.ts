@@ -8,6 +8,7 @@ import { adminProcedure, protectedProcedure, router } from "../trpc";
 import { streamAnswer } from "../util/troubleshoot/chat/answer";
 import { assertChatEnabled, isChatEnabled, setChatEnabled } from "../util/troubleshoot/chat/enabled";
 import { retrieveChunks } from "../util/troubleshoot/chat/retrieve";
+import { searchEventTickets } from "../util/troubleshoot/chat/event-tickets";
 import { SOURCE_LABELS, type ChatCitation, type ChatEvent } from "../util/troubleshoot/chat/types";
 import { assertRateLimit } from "../util/troubleshoot/rate-limit";
 import { assertBudget, getSpendStatus, recordSpend, TROUBLESHOOT_MODEL } from "../util/troubleshoot/spend";
@@ -175,7 +176,10 @@ export const troubleshootRouter = router({
 
 			const lastAssistant = [...prior].reverse().find((m) => m.role === "assistant")?.text;
 			const retrieval = await retrieveChunks(input.message, lastAssistant, RETRIEVE_LIMIT);
-			const chunks = retrieval.chunks;
+			// Live tickets from the user's current event go first so the model prefers what is happening now.
+			const eventCode = ctx.user.active_event_code;
+			const eventTickets = eventCode ? await searchEventTickets(eventCode, input.message, 3).catch(() => []) : [];
+			const docs = [...eventTickets, ...retrieval.chunks];
 			if (retrieval.plannerUsage) {
 				await recordSpend(conversationId, retrieval.plannerUsage, PLANNER_MODEL).catch((err) =>
 					console.error("[troubleshoot chat] planner recordSpend failed", err),
@@ -193,7 +197,7 @@ export const troubleshootRouter = router({
 				cited_chunk_ids: [],
 			});
 
-			const gen = streamAnswer({ history: prior, message: userText, chunks, signal });
+			const gen = streamAnswer({ history: prior, message: userText, docs, signal });
 			let result: Awaited<ReturnType<typeof gen.return>>["value"] | undefined;
 			try {
 				let next = await gen.next();

@@ -344,15 +344,28 @@
 			"id": "rio-link",
 			"title": "RIO light off: no link to the roboRIO",
 			"steps": [
-				"The roboRIO must plug into the port labeled RIO. Move the cable if it is in AUX1, AUX2, or DS.",
-				"Check the RIO is powered and past boot. Its Status light should be off.",
-				"Reseat both ends of the Ethernet cable. Replace a cable with a broken latch.",
-				"Swap the cable for a known good one.",
+				"Confirm the roboRIO is powered and booted. Its Status light goes off when boot completes.",
+				"Check the cable is in the radio port labeled RIO, not AUX1, AUX2, or DS.",
+				"Reseat both ends, try a known good cable, and power cycle the radio.",
 				{
 					"kind": "check",
 					"text": "Is the RIO light still off?",
-					"yes": "Use a USB Ethernet adapter in the RIO USB port.",
+					"yes": "Continue.",
 					"no": "Problem solved."
+				},
+				"Connect the roboRIO to a laptop by Ethernet directly, bypassing the radio.",
+				{
+					"kind": "check",
+					"text": "Does the laptop connect to the roboRIO?",
+					"yes": "Swap the radio.",
+					"no": "Continue."
+				},
+				"Plug a USB Ethernet dongle into the roboRIO USB port and connect the laptop through it.",
+				{
+					"kind": "check",
+					"text": "Does the dongle connect?",
+					"yes": "Check the roboRIO web UI for a bad NIC config.",
+					"no": "The roboRIO Ethernet is dead. Swap the roboRIO."
 				}
 			],
 			"links": [
@@ -428,6 +441,12 @@
 			"title": "Radio reboots or drops in matches",
 			"steps": [
 				"Remove one power source if PoE and the DC input are both connected. Dual power caused reboots this season.",
+				{
+					"kind": "check",
+					"text": "Is the radio powered from the switchable channel on the PDH?",
+					"yes": "Move it to a constant channel.",
+					"no": "Continue."
+				},
 				"Tug the Weidmuller plug. Re-strip and reseat the wires. Tie-wrap the cable to the frame near the radio.",
 				"Check the wire gauge and route. Thin wire on a long run drops voltage under load. Wire the radio to its own PDH or PDP channel.",
 				"Open the DS log. A battery dip below 7 V in a match resets the radio. Lower motor current limits and use a good battery.",

@@ -113,6 +113,19 @@
 	}
 	// #region Row help dialog
 	let helpOpen = $state(false);
+	let helpBody = $state<HTMLElement | null>(null);
+	// The fullscreen dialog otherwise opens scrolled to the bottom; force it back to the top on open.
+	$effect(() => {
+		if (helpOpen && helpBody) {
+			requestAnimationFrame(() => {
+				let el: HTMLElement | null = helpBody;
+				while (el) {
+					if (el.scrollHeight > el.clientHeight) el.scrollTop = 0;
+					el = el.parentElement;
+				}
+			});
+		}
+	});
 	let help = $state<StatusLightHelp | null>(null);
 
 	let helpTab = $state(0);
@@ -200,7 +213,7 @@
 	{/snippet}
 	{#if help}
 		{@const shown = help.variants?.[helpTab] ?? help}
-		<div class="flex flex-col gap-3 text-left text-black dark:text-white">
+		<div bind:this={helpBody} class="flex flex-col gap-3 text-left text-black dark:text-white">
 			{#if help.variants}
 				<div class="flex gap-1 border-b border-gray-300 dark:border-gray-600" role="tablist">
 					{#each help.variants as variant, i (variant.label)}

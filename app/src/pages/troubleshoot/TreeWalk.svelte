@@ -2,7 +2,7 @@
 	import StepFlowTree from "../../components/troubleshoot/StepFlowTree.svelte";
 	import Icon from "@iconify/svelte";
 	import { Button } from "flowbite-svelte";
-	import type { Tree } from "../../../../shared/troubleshooting";
+	import { getNode, type QuestionNode, type Tree } from "../../../../shared/troubleshooting";
 	import { navigate } from "../../router";
 	import { eventStore } from "../../stores/event";
 
@@ -16,56 +16,77 @@
 
 	let { tree, nodeId, pathParam }: Props = $props();
 
+	// A step is a global reference: which tree the node lives in, and the node id. Cross-tree links keep
+	// one continuous walk, so a ref carries its tree. In the URL they are joined "tree~node".
+	interface Ref {
+		tree: string;
+		node: string;
+	}
+	function parseRef(raw: string): Ref {
+		const i = raw.indexOf("~");
+		return i === -1 ? { tree: tree.id, node: raw } : { tree: raw.slice(0, i), node: raw.slice(i + 1) };
+	}
+	const refStr = (r: Ref) => `${r.tree}~${r.node}`;
+
+	function optionTarget(o: QuestionNode["options"][number], fromTree: string): Ref {
+		return o.to ? { tree: o.to.tree, node: o.to.node } : { tree: fromTree, node: o.next ?? "" };
+	}
+
+	// The full trail, including the current node as the last entry. Rebuilt and validated from the URL.
+	let trail = $derived.by((): Ref[] => {
+		const raw = (pathParam ?? "").split(".").filter((s) => s.length > 0);
+		if (raw.length === 0) return [{ tree: tree.id, node: nodeId ?? tree.start }];
+		const refs = raw.map(parseRef);
+		for (let i = 0; i < refs.length - 1; i++) {
+			const q = getNode(refs[i].tree, refs[i].node);
+			if (!q || q.kind !== "question") return [{ tree: tree.id, node: tree.start }];
+			const nextRef = refs[i + 1];
+			const ok = q.options.some((o) => {
+				const t = optionTarget(o, refs[i].tree);
+				return t.tree === nextRef.tree && t.node === nextRef.node;
+			});
+			if (!ok) return [{ tree: tree.id, node: tree.start }];
+		}
+		return refs;
+	});
+	let currentRef = $derived(trail[trail.length - 1]);
+	let node = $derived(getNode(currentRef.tree, currentRef.node));
+
 	interface Crumb {
-		nodeId: string;
+		ref: string;
 		question: string;
 		answer: string;
 	}
-
-	let currentId = $derived(nodeId ?? tree.start);
-	let node = $derived(tree.nodes[currentId]);
-
-	// The path is only trusted if every hop is a real question whose chosen option leads to the next hop.
-	let path = $derived.by((): string[] => {
-		const ids = (pathParam ?? "").split(".").filter((s) => s.length > 0);
-		for (let i = 0; i < ids.length; i++) {
-			const q = tree.nodes[ids[i]];
-			if (!q || q.kind !== "question") return [];
-			const nextId = ids[i + 1] ?? currentId;
-			if (!q.options.some((o) => o.next === nextId)) return [];
-		}
-		return ids;
-	});
-
 	let crumbs = $derived.by((): Crumb[] =>
-		path.map((id, i) => {
-			const q = tree.nodes[id];
-			const nextId = path[i + 1] ?? currentId;
-			const answer = q?.kind === "question" ? (q.options.find((o) => o.next === nextId)?.label ?? "") : "";
-			return { nodeId: id, question: q?.kind === "question" ? q.question : id, answer };
+		trail.slice(0, -1).map((r, i): Crumb => {
+			const q = getNode(r.tree, r.node);
+			const nextRef = trail[i + 1];
+			let answer = "";
+			if (q?.kind === "question") {
+				const opt = q.options.find((o) => {
+					const t = optionTarget(o, r.tree);
+					return t.tree === nextRef.tree && t.node === nextRef.node;
+				});
+				answer = opt?.label ?? "";
+			}
+			return { ref: refStr(r), question: q?.kind === "question" ? q.question : r.node, answer };
 		}),
 	);
 
-	function go(id: string, newPath: string[]) {
-		const params = { tree: tree.id, node: id };
-		if (newPath.length > 0) {
-			navigate("/troubleshoot/:tree/:node", { params, search: { p: newPath.join(".") } });
-		} else {
-			navigate("/troubleshoot/:tree/:node", { params });
-		}
+	function go(newTrail: Ref[]) {
+		const cur = newTrail[newTrail.length - 1];
+		navigate("/troubleshoot/:tree/:node", {
+			params: { tree: tree.id, node: cur.node },
+			search: { p: newTrail.map(refStr).join(".") },
+		});
 	}
 
-	function choose(option: (typeof node & { kind: "question" })["options"][number]) {
-		if (option.to) {
-			// Cross-tree link: jump into another guide at that node, fresh path.
-			navigate("/troubleshoot/:tree/:node", { params: { tree: option.to.tree, node: option.to.node } });
-			return;
-		}
-		if (option.next) go(option.next, [...path, currentId]);
+	function choose(option: QuestionNode["options"][number]) {
+		go([...trail, optionTarget(option, currentRef.tree)]);
 	}
 
 	function backTo(index: number) {
-		go(path[index], path.slice(0, index));
+		go(trail.slice(0, index + 1));
 	}
 
 	function restart() {
@@ -74,7 +95,7 @@
 
 	function noMatch() {
 		navigate("/troubleshoot/chat", {
-			search: { tree: tree.id, path: [...path, currentId].join(".") },
+			search: { tree: tree.id, path: trail.map(refStr).join(".") },
 		});
 	}
 
@@ -95,7 +116,7 @@
 
 	{#if crumbs.length > 0}
 		<ol class="flex flex-col gap-1.5">
-			{#each crumbs as crumb, i (crumb.nodeId)}
+			{#each crumbs as crumb, i (crumb.ref)}
 				<li>
 					<button
 						onclick={() => backTo(i)}

@@ -442,7 +442,7 @@
 			"id": "reboots",
 			"title": "Radio reboots or drops in matches",
 			"steps": [
-				"Remove one power source if PoE and the DC input are both connected. Dual power caused reboots this season.",
+				"Dual power is usually fine and redundant. If the radio reboots, try removing one of PoE or the DC input, since dual power can occasionally cause odd issues.",
 				{
 					"kind": "check",
 					"text": "Is the radio powered from the switchable channel on the PDH?",

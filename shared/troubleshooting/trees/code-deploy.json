@@ -9,12 +9,30 @@
 			"id": "start",
 			"question": "What is the symptom?",
 			"options": [
-				{ "label": "Deploy fails, cannot find the roboRIO", "next": "deploy-link" },
-				{ "label": "Deploy works but DS says No Robot Code", "next": "crash-log" },
-				{ "label": "Code runs but lags, loop overruns, RIO CPU near 100 percent", "next": "cpu" },
-				{ "label": "DS says Joystick unavailable", "next": "joysticks" },
-				{ "label": "Robot enables but nothing moves", "next": "no-motion" },
-				{ "label": "DS laptop USB devices keep dropping", "next": "ds-usb" }
+				{
+					"label": "Deploy fails, cannot find the roboRIO",
+					"next": "deploy-link"
+				},
+				{
+					"label": "Deploy works but DS says No Robot Code",
+					"next": "crash-log"
+				},
+				{
+					"label": "Code runs but lags, loop overruns, RIO CPU near 100 percent",
+					"next": "cpu"
+				},
+				{
+					"label": "DS says Joystick unavailable",
+					"next": "joysticks"
+				},
+				{
+					"label": "Robot enables but nothing moves",
+					"next": "no-motion"
+				},
+				{
+					"label": "DS laptop USB devices keep dropping",
+					"next": "ds-usb"
+				}
 			]
 		},
 		"deploy-link": {
@@ -22,8 +40,14 @@
 			"id": "deploy-link",
 			"question": "How is the laptop connected to the roboRIO?",
 			"options": [
-				{ "label": "USB cable", "next": "deploy-usb" },
-				{ "label": "Ethernet or Wi-Fi through the radio", "next": "deploy-network" }
+				{
+					"label": "USB cable",
+					"next": "deploy-usb"
+				},
+				{
+					"label": "Ethernet or Wi-Fi through the radio",
+					"next": "deploy-network"
+				}
 			]
 		},
 		"deploy-usb": {
@@ -88,8 +112,14 @@
 			"id": "crash-log",
 			"question": "Open the DS Console (the gear on the right). Is there a stack trace or crash message?",
 			"options": [
-				{ "label": "Yes, there is an error", "next": "crash" },
-				{ "label": "No, nothing useful", "next": "no-code-other" }
+				{
+					"label": "Yes, there is an error",
+					"next": "crash"
+				},
+				{
+					"label": "No, nothing useful",
+					"next": "no-code-other"
+				}
 			]
 		},
 		"crash": {
@@ -98,13 +128,14 @@
 			"title": "Robot code crashes at startup",
 			"steps": [
 				"Read the first line of the stack trace that names a file in the team's package. That is where it died.",
+				"Check quick physical causes first. A crash is often something the code expects that is unplugged: a camera, a motor controller, or a sensor. Plug it back in and restart the code.",
 				"Check the common causes: a CAN ID that does not exist, two devices on one port or ID, a missing config file, a null used in robotInit.",
 				"Check for a vendordep version that does not match the device firmware. Update the firmware or the vendordep.",
 				"Fix, redeploy, and watch the Console again. Restart Robot Code in the DS if the RIO did not restart it.",
 				{
 					"kind": "check",
 					"text": "Does the code still crash at startup?",
-					"yes": "Search the exact error text with the team.",
+					"yes": "It needs deeper code work. Search the exact error text with the team.",
 					"no": "Problem solved."
 				}
 			],
@@ -122,9 +153,9 @@
 			"title": "No Robot Code with no crash shown",
 			"steps": [
 				"Click Restart Robot Code in the DS and wait 20 seconds.",
+				"Do a clean build and redeploy, and let it finish fully. Teams often disconnect the laptop before the deploy completes, which leaves a corrupt deploy that will not start.",
 				"Check the WPILib year of the project matches the RIO image year. A 2025 image will not run 2024 code.",
 				"Reboot the RIO. Watch the Status light turn off, then wait for Robot Code to go green.",
-				"Do a clean build and redeploy. A deploy that says success but builds nothing new is stale. Read the output for errors.",
 				"Open the RIO web page and confirm the team number and image version.",
 				{
 					"kind": "check",
@@ -216,9 +247,18 @@
 				}
 			],
 			"statusLights": [
-				{ "device": "roborio", "label": "roboRIO Mode light" },
-				{ "device": "ctretalonfx", "label": "Talon FX lights" },
-				{ "device": "revsparkmax", "label": "Spark MAX lights" }
+				{
+					"device": "roborio",
+					"label": "roboRIO Mode light"
+				},
+				{
+					"device": "ctretalonfx",
+					"label": "Talon FX lights"
+				},
+				{
+					"device": "revsparkmax",
+					"label": "Spark MAX lights"
+				}
 			]
 		},
 		"ds-usb": {

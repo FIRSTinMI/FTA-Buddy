@@ -1,0 +1,51 @@
+{
+	"id": "pit-connect",
+	"title": "Robot won't connect in the pit",
+	"summary": "Driver Station cannot reach the robot off the field, on a tether or the team's own radio. No FMS involved.",
+	"start": "start",
+	"nodes": {
+		"start": {
+			"kind": "question",
+			"id": "start",
+			"question": "How is the laptop connected to the robot?",
+			"help": "Off the field there is no FMS. The Driver Station talks to the roboRIO directly.",
+			"options": [
+				{ "label": "USB cable straight to the roboRIO", "next": "usb-tether" },
+				{ "label": "Ethernet cable to the radio", "to": { "tree": "driver-station", "node": "pit-ethernet" } },
+				{ "label": "Wi-Fi to the radio", "to": { "tree": "driver-station", "node": "pit-wifi" } },
+				{
+					"label": "Connected, but the DS says No Robot Code",
+					"to": { "tree": "code-deploy", "node": "crash-log" }
+				},
+				{ "label": "The roboRIO lights look wrong", "to": { "tree": "roborio", "node": "start" } },
+				{ "label": "The radio lights look wrong", "to": { "tree": "radio", "node": "start" } }
+			]
+		},
+		"usb-tether": {
+			"kind": "leaf",
+			"id": "usb-tether",
+			"title": "USB tether to the roboRIO",
+			"steps": [
+				"Use a known good USB A to B cable from the laptop to the roboRIO USB device port, the square one.",
+				"Confirm the roboRIO is booted. The Status light goes off when boot completes.",
+				"The roboRIO comes up as a network adapter at 172.22.11.2. In ncpa.cpl confirm that adapter is enabled and set to automatic (DHCP).",
+				"Turn the laptop Wi-Fi off and disable other adapters so the Driver Station does not take a different route.",
+				{
+					"kind": "check",
+					"text": "Does the DS connect over USB?",
+					"yes": "Problem solved.",
+					"no": "Continue."
+				},
+				"Try another USB cable and another port. A charge-only cable carries power but no data.",
+				"Turn off the Windows firewall on all three profiles, then restart the Driver Station software.",
+				{
+					"kind": "check",
+					"text": "Is there still nothing over USB?",
+					"yes": "Work the roboRIO guide. The RIO may not be booting.",
+					"no": "Problem solved."
+				}
+			],
+			"statusLights": [{ "device": "roborio", "label": "roboRIO status lights" }]
+		}
+	}
+}

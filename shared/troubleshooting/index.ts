@@ -3,6 +3,8 @@ import canJson from "./trees/can.json";
 import codeDeployJson from "./trees/code-deploy.json";
 import driverStationJson from "./trees/driver-station.json";
 import fieldConnectionJson from "./trees/field-connection.json";
+import matchDropsJson from "./trees/match-drops.json";
+import pitConnectJson from "./trees/pit-connect.json";
 import powerJson from "./trees/power.json";
 import radioJson from "./trees/radio.json";
 import roborioJson from "./trees/roborio.json";
@@ -12,10 +14,12 @@ export * from "./types";
 // Order here is the order shown in the UI. Most common on-field problem first.
 const rawTrees: unknown[] = [
 	fieldConnectionJson,
+	pitConnectJson,
 	roborioJson,
 	radioJson,
 	canJson,
 	powerJson,
+	matchDropsJson,
 	codeDeployJson,
 	driverStationJson,
 ];

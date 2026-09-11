@@ -140,7 +140,7 @@
 					"yes": "Problem solved.",
 					"no": "Continue."
 				},
-				"The link itself is the issue. Use the Field connection guide in this app, the lag branch, to check signal strength and the RF environment."
+				"The link itself is the issue. Use the Robot drops or lags guide in this app to check signal strength and the RF environment."
 			]
 		},
 		"joysticks": {

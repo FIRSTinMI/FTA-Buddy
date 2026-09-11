@@ -24,7 +24,10 @@
 				},
 				{
 					"label": "All green but No Code",
-					"next": "no-code"
+					"to": {
+						"tree": "code-deploy",
+						"node": "crash-log"
+					}
 				},
 				{
 					"label": "All green but the robot drops or lags in matches",
@@ -323,30 +326,6 @@
 					}
 				}
 			]
-		},
-		"no-code": {
-			"kind": "leaf",
-			"id": "no-code",
-			"title": "Everything green but No Code",
-			"steps": [
-				"In the DS, click Restart Robot Code. Wait 15 seconds.",
-				"Ask if the code changed since it last worked. Check the DS Console for a stack trace or crash message.",
-				"Reboot the roboRIO from the DS or with the reset button. Wait for the Status light to turn off.",
-				"Redeploy if the code was built with a different WPILib year than the RIO image. A mismatch never runs.",
-				{
-					"kind": "check",
-					"text": "Does the DS still show No Code?",
-					"yes": "Read the crash in the DS Console with the team.",
-					"no": "Problem solved."
-				}
-			],
-			"links": [
-				{
-					"label": "DS errors and warnings",
-					"url": "https://docs.wpilib.org/en/stable/docs/software/driverstation/driver-station-errors-warnings.html"
-				}
-			],
-			"escalate": true
 		},
 		"drops": {
 			"kind": "leaf",

@@ -391,40 +391,14 @@
 			"options": [
 				{
 					"label": "Solid red",
-					"next": "no-code"
+					"to": {
+						"tree": "code-deploy",
+						"node": "crash-log"
+					}
 				},
 				{
 					"label": "Blinking red",
 					"next": "estop"
-				}
-			]
-		},
-		"no-code": {
-			"kind": "leaf",
-			"id": "no-code",
-			"title": "Solid red Comm: DS connected, no user code running",
-			"steps": [
-				"In the DS click Restart Robot Code and wait 15 seconds.",
-				"Read the DS Console. A stack trace at start means the code crashed. Fix that first.",
-				"Check the WPILib year of the code matches the RIO image year. A mismatch never runs.",
-				"Reboot the RIO. Redeploy from the team laptop if code still does not start.",
-				{
-					"kind": "check",
-					"text": "Is the Comm light still solid red?",
-					"yes": "Find the crash in the DS Console with the team.",
-					"no": "Problem solved."
-				}
-			],
-			"links": [
-				{
-					"label": "DS errors and warnings",
-					"url": "https://docs.wpilib.org/en/stable/docs/software/driverstation/driver-station-errors-warnings.html"
-				}
-			],
-			"statusLights": [
-				{
-					"device": "roborio",
-					"label": "roboRIO status lights"
 				}
 			]
 		},

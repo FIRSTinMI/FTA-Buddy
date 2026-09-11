@@ -353,21 +353,9 @@
 			"id": "rio-status-blink",
 			"title": "roboRIO Status light is blinking",
 			"steps": [
-				"A blinking Status light after boot means the RIO is not running normally. Count the blinks.",
-				"roboRIO 2: pull the microSD card, check the slot for debris, reseat it fully. Reboot.",
-				{
-					"kind": "check",
-					"text": "Is the Status light still blinking?",
-					"yes": "Continue.",
-					"no": "Problem solved."
-				},
-				"Groups of 2 or 3 blinks: reboot. Constant flashing or 4 flashes then a pause is unrecoverable. Reimage the card or the RIO.",
-				{
-					"kind": "check",
-					"text": "Is it still blinking after a reimage?",
-					"yes": "Swap the roboRIO. Use a loaner if there is no spare.",
-					"no": "Problem solved."
-				}
+				"A blinking Status light is a roboRIO boot problem, not a field or radio problem.",
+				"roboRIO 1 and roboRIO 2 differ here. Use the roboRIO guide in this app. It branches on the model and covers each blink code: 2, 3, 4, or a continuous flash.",
+				"The common one is a continuous flash that never pauses, which is unrecoverable. On a roboRIO 2 reseat or reimage the microSD card; on a roboRIO 1 reimage over USB. The roboRIO guide has the full steps."
 			],
 			"links": [
 				{

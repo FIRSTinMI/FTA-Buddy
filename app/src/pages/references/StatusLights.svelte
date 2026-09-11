@@ -4530,6 +4530,14 @@
 				{/if}
 			</AccordionItem>
 
+			<!-- Archive: superseded hardware, kept for older robots -->
+			<br /> <br />
+			<h1 class="text-xl text-white" style="font-weight: bold">Archive</h1>
+			<p class="px-2 pb-1 text-sm text-gray-300">
+				Superseded hardware. Kept because you still meet it on older robots, not what a team should build with
+				now.
+			</p>
+
 			<!-- CTRE Power Distribution Panel -->
 			<AccordionItem class="text-black dark:text-white" bind:open={openState.ctrepowerdistributionpanel}>
 				{#snippet header()}

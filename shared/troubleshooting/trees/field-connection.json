@@ -56,10 +56,17 @@
 				"Unplug the field cable from the laptop and plug it back in until it clicks. Check the other end at the player station.",
 				"Reseat the USB Ethernet adapter if the laptop uses one. Try a different USB port.",
 				"Run ncpa.cpl. Make sure the Ethernet adapter is enabled, not greyed out.",
-				"Try the spare field cable or a different player station port.",
+				"Replace the field Ethernet cable with a spare.",
 				{
 					"kind": "check",
 					"text": "Does the port still show no link?",
+					"yes": "Continue.",
+					"no": "Problem solved."
+				},
+				"Try a different port on the SCC at the player station. One of the AUX ports should work.",
+				{
+					"kind": "check",
+					"text": "Still no link on the AUX port?",
 					"yes": "Use a USB Ethernet adapter or a loaner laptop.",
 					"no": "Problem solved."
 				}

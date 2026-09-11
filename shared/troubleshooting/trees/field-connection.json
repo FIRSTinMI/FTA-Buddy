@@ -211,8 +211,8 @@
 			"steps": [
 				"Wait 60 seconds after power on. The radio takes that long to boot and join the field.",
 				"Reprogram the radio at this event's kiosk. A radio from another event or home has the wrong key.",
-				"Make sure only one radio on the robot is powered. A spare left on confuses the field.",
-				"Check the DS is fully connected first. The radio cannot link until the DS is.",
+				"Check for a second radio programmed for this event left powered on, often a spare at the pit. It associates with the field and confuses the connection.",
+				"The radio links to the field AP on its own and its status lights show that. The field monitor shows a partial connection until the DS is fully connected, then it goes green.",
 				{
 					"kind": "check",
 					"text": "Is SYS still blinking after a reprogram?",

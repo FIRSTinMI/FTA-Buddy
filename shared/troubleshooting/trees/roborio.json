@@ -202,7 +202,7 @@
 					"yes": "Continue.",
 					"no": "Problem solved."
 				},
-				"Reimage the card on a laptop with balenaEtcher or Raspberry Pi Imager, then set the team number with the Imaging Tool.",
+				"Reimage the card on a laptop with balenaEtcher or Raspberry Pi Imager, then set the team number with the Imaging Tool and redeploy the robot code.",
 				{
 					"kind": "check",
 					"text": "Is it still flashing after a reimage?",
@@ -242,6 +242,7 @@
 					"no": "Problem solved."
 				},
 				"Hold reset at least 5 seconds to boot into Safe Mode. Connect by USB and reimage with the Imaging Tool, Format Target.",
+				"Set the team number and redeploy the robot code.",
 				"Check the RIO power wiring. A loose Weidmuller on the RIO plug can crash it at power on.",
 				{
 					"kind": "check",

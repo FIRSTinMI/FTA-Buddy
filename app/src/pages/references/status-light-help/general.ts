@@ -18,6 +18,7 @@ const REIMAGE_RIO = [
 	"On a roboRIO 1, reimage over USB with the roboRIO Imaging Tool (Format Target).",
 	"On a roboRIO 2, reimage the microSD card on a laptop with balenaEtcher or Raspberry Pi Imager.",
 	"On a roboRIO 2, put the card back and set the team number over USB with the Imaging Tool.",
+	"After imaging, redeploy the robot code. A fresh image has no code.",
 ] as const;
 
 export const generalHelp = {
@@ -454,6 +455,7 @@ export const generalHelp = {
 					"Hold reset while powering on, and release when the Status LED is solid.",
 					"Wait about 60 seconds.",
 					"Reimage with the roboRIO Imaging Tool (Format Target).",
+					"Set the team number and redeploy the robot code.",
 					{
 						kind: "check",
 						text: "Status LED still flashing after recovery and reimage?",
@@ -472,6 +474,7 @@ export const generalHelp = {
 					{ kind: "check", text: "Still flashing?", yes: "Continue.", no: "Problem solved." },
 					"Reimage the card on a laptop with balenaEtcher or Raspberry Pi Imager. Use a fresh card if you have one.",
 					"Put the card back, connect USB, and set the team number with the roboRIO Imaging Tool.",
+					"Redeploy the robot code. A fresh image has no code.",
 					{ kind: "check", text: "Still flashing?", yes: "Continue.", no: "Problem solved." },
 					"Open the case and blow out the SD slot with compressed air. Metal shavings in the slot cause this.",
 					{

@@ -1,10 +1,9 @@
 // Keeps the vendor documentation in troubleshoot_chunks current.
 //
 // Runs on one prod instance at a time (leader lock), weekly with jitter. Vendor docs
-// change a few times a season, so weekly is enough to stay useful without hammering
-// anyone's site; the chat can still pull a page live when it needs the current text
-// (see chat/docs.ts). The next-run time lives in Redis, so a leader change or a
-// redeploy does not restart the cadence and does not trigger an immediate re-crawl.
+// change a few times a season, so weekly is enough to stay current without hammering
+// anyone's site. The next-run time lives in Redis, so a leader change or a redeploy
+// does not restart the cadence and does not trigger an immediate re-crawl.
 
 import { DEFAULT_SOURCES, refreshSources, type WebSource } from "../../../scripts/corpus/lib/refresh-core";
 import { acquireOrRenewLock } from "../leaderLock";

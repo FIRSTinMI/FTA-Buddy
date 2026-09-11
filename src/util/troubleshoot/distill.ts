@@ -109,7 +109,13 @@ async function triageTier(topic: string, items: { title: string; body: string }[
 
 const SYSTEM_PROMPT = `You write concise internal troubleshooting notes for FRC field support volunteers (CSAs).
 Group the material into the recurring problems it shows. For each problem write "**Problem:**", "**Cause:**" and "**Fix:**".
-Only use what the material states. Do not invent causes or fixes. Keep any named vendor or FIRST staff attribution that is already in the text; never name anyone else, any team, or any event.
+
+Rules:
+- Only write up an item when the material actually states a cause or a fix. Skip anything that does not. Never write "Not stated", "Status unclear", "Unknown", or "Could not find the team". A note with nothing to teach is worse than no note.
+- Merge items that describe the same underlying problem into one entry. Prefer a few solid entries over many thin ones.
+- Never write a person's name. The material contains volunteer first names and initials; leave every one of them out, including who was sent or who handled it. Write what was wrong and what fixed it, not who did it. The only exception is a vendor or FIRST staff member already attributed in the text as "Name (FIRST)", "Name (CTRE)" or "Name (REV)", which you may keep.
+- Never name a team or an event, and do not include team numbers.
+- Only use what the material states. Do not invent causes or fixes.
 Short sentences, plain words, no em dashes. Output markdown.`;
 
 function buildUserPrompt(topic: Topic, items: { title: string; body: string }[]): string {
@@ -138,6 +144,18 @@ async function writeDoc(model: TroubleshootModel, topic: Topic, items: { title: 
 // #region Data
 const SOURCE_FILTER = or(eq(troubleshootChunks.source, "slack"), eq(troubleshootChunks.source, "ticket"));
 
+// Words that show a ticket actually reached a cause or a fix. A ticket without one of these is
+// chatter ("on my way", "could not find the team") and makes a worthless entry, so it is not
+// distilled. Slack threads are discussions and carry their own reasoning, so they are kept.
+const RESOLVED_RE =
+	"(fixed|resolved|replaced|swapped|reseat|reseated|tighten|tightened|reimag|reflash|re-?crimp|turned out|was the|root cause|corrected|loose|broken|shorted|blew|blown|unplugged|backwards|reversed|firmware|current limit|reboot)";
+
+/** Material worth writing up: any slack thread, or a ticket that shows a real cause or fix. */
+const WORTH_DISTILLING = and(
+	SOURCE_FILTER,
+	sql`(${troubleshootChunks.source} = 'slack' OR (${troubleshootChunks.body} ~* ${RESOLVED_RE} AND length(${troubleshootChunks.body}) >= 120))`,
+);
+
 /** Material that has not been sorted into a topic yet. */
 async function unclassified(limit: number) {
 	return db
@@ -152,7 +170,7 @@ async function itemsForTopic(topic: Topic) {
 	return db
 		.select({ title: troubleshootChunks.title, body: troubleshootChunks.body, url: troubleshootChunks.url })
 		.from(troubleshootChunks)
-		.where(and(SOURCE_FILTER, eq(troubleshootChunks.heading, topic)))
+		.where(and(WORTH_DISTILLING, eq(troubleshootChunks.heading, topic)))
 		.orderBy(sql`length(${troubleshootChunks.body}) desc`)
 		.limit(MAX_ITEMS_PER_DOC);
 }
@@ -188,7 +206,7 @@ export async function runDistillation(): Promise<number> {
 	const counts = await db
 		.select({ topic: troubleshootChunks.heading, n: sql<number>`count(*)::int` })
 		.from(troubleshootChunks)
-		.where(and(SOURCE_FILTER, inArray(troubleshootChunks.heading, [...TOPICS])))
+		.where(and(WORTH_DISTILLING, inArray(troubleshootChunks.heading, [...TOPICS])))
 		.groupBy(troubleshootChunks.heading);
 	for (const row of counts) {
 		if (row.topic && !haveDocs.has(row.topic) && row.n >= MIN_ITEMS) touched.add(row.topic as Topic);

@@ -346,11 +346,12 @@
 			"title": "RIO light off: no link to the roboRIO",
 			"steps": [
 				"Confirm the roboRIO is powered and booted. Its Status light goes off when boot completes.",
-				"Check the cable is in the radio port labeled RIO, not AUX1, AUX2, or DS.",
-				"Reseat both ends, try a known good cable, and power cycle the radio.",
+				"Reseat the Ethernet cable at both ends.",
+				"Try a known good cable.",
+				"Power cycle the radio.",
 				{
 					"kind": "check",
-					"text": "Is the RIO light still off?",
+					"text": "Is there still no link?",
 					"yes": "Continue.",
 					"no": "Problem solved."
 				},

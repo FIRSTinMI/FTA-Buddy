@@ -292,7 +292,7 @@
 			"options": [
 				{
 					"label": "Power green, Status off",
-					"next": "rio-no-link"
+					"next": "rio-eth-link"
 				},
 				{
 					"label": "Status light blinking",
@@ -307,14 +307,15 @@
 		"rio-no-link": {
 			"kind": "leaf",
 			"id": "rio-no-link",
-			"title": "roboRIO booted but has no link to the radio",
+			"title": "roboRIO Ethernet has no link lights",
 			"steps": [
 				"Confirm the roboRIO is powered and booted. Its Status light goes off when boot completes.",
-				"Check the cable is in the radio port labeled RIO, not AUX1, AUX2, or DS.",
-				"Reseat both ends, try a known good cable, and power cycle the radio.",
+				"Reseat the Ethernet cable at both ends.",
+				"Try a known good cable.",
+				"Power cycle the radio.",
 				{
 					"kind": "check",
-					"text": "Is the RIO light still off?",
+					"text": "Is there still no link?",
 					"yes": "Continue.",
 					"no": "Problem solved."
 				},
@@ -527,6 +528,37 @@
 					"no": "Continue."
 				},
 				"Look at the specific mechanism that lags: its sensors, its command, and any blocking calls in the code."
+			]
+		},
+		"rio-eth-link": {
+			"kind": "question",
+			"id": "rio-eth-link",
+			"question": "Look at the roboRIO Ethernet port. Are the link lights flashing quickly?",
+			"options": [
+				{
+					"label": "No link lights",
+					"next": "rio-no-link"
+				},
+				{
+					"label": "Yes, they are flashing",
+					"next": "rio-eth-good"
+				}
+			]
+		},
+		"rio-eth-good": {
+			"kind": "leaf",
+			"id": "rio-eth-good",
+			"title": "roboRIO Ethernet link is good",
+			"steps": [
+				"The link lights mean the cable and the radio are fine. The problem is above the physical link.",
+				"Set the team number on the roboRIO with the Imaging Tool if it is wrong or unset.",
+				"Redeploy the robot code.",
+				{
+					"kind": "check",
+					"text": "Does the DS reach the roboRIO now?",
+					"yes": "Problem solved.",
+					"no": "Work the roboRIO guide, or the DS side with the Driver station guide."
+				}
 			]
 		}
 	}

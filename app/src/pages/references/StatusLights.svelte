@@ -61,6 +61,7 @@
 		"ctrecandle",
 		"ctrepowerdistributionpanel",
 		"ctrepneumaticscontrolmodule",
+		"om5pradio",
 	];
 
 	let openState = $state(Object.fromEntries(componentKeys.map((k) => [k, false])));
@@ -4883,9 +4884,106 @@
 			<br /> <br />
 			<h1 class="text-xl text-white" style="font-weight: bold">Archive</h1>
 			<p class="px-2 pb-1 text-sm text-gray-300">
-				Hardware that is no longer legal or no longer current, kept because you still meet it on older robots.
-				Nothing here yet.
+				Hardware that is no longer legal or no longer current, kept because you still meet it on older robots
+				and at offseason events.
 			</p>
+
+			<!-- OpenMesh OM5P radio (pre-2025 FRC radio) -->
+			<AccordionItem class="text-black dark:text-white" bind:open={openState.om5pradio}>
+				{#snippet header()}
+					<div class="flex flex-row items-center">
+						<div class="ml-2" style="width: 72px"></div>
+						<div class="ml-8">OpenMesh OM5P (pre-2025 radio)</div>
+					</div>
+				{/snippet}
+
+				{#if openState.om5pradio === true || loadedState.om5pradio === true}
+					<div class="flex flex-col pl-1" style="max-width: 375px;">
+						<table cellpadding="5" cellspacing="0" class="text-black dark:text-white">
+							<tbody>
+								<tr class="border-2 border-gray-400">
+									<td>
+										<table>
+											<tbody>
+												<tr>
+													<td colspan="2" class="bold w-100 pt-2 pl-2">Power</td>
+												</tr>
+												<tr use:tapHelp={"om5p.power.on"}>
+													<td class="w-20 pl-8 pt-2"><span class="blue led"></span></td>
+													<td>Powered and up</td>
+												</tr>
+												<tr use:tapHelp={"om5p.power.booting"}>
+													<td class="w-20 pl-8 pt-2"
+														><span class={LEDToggleState["1Hz"] === true ? "blue led" : "black led"}
+														></span>
+													</td>
+													<td>Blinking: still powering up</td>
+												</tr>
+											</tbody>
+										</table>
+									</td>
+								</tr>
+
+								<tr class="border-2 border-gray-400">
+									<td>
+										<table>
+											<tbody>
+												<tr>
+													<td colspan="2" class="bold w-100 pt-2 pl-2">Eth Link</td>
+												</tr>
+												<tr use:tapHelp={"om5p.eth.link"}>
+													<td class="w-20 pl-8 pt-2"><span class="blue led"></span></td>
+													<td>Wired link up</td>
+												</tr>
+												<tr use:tapHelp={"om5p.eth.traffic"}>
+													<td class="w-20 pl-8 pt-2"
+														><span class={LEDToggleState["3Hz"] === true ? "blue led" : "black led"}
+														></span>
+													</td>
+													<td>Blinking: traffic present</td>
+												</tr>
+											</tbody>
+										</table>
+									</td>
+								</tr>
+
+								<tr class="border-2 border-gray-400">
+									<td>
+										<table>
+											<tbody>
+												<tr>
+													<td colspan="2" class="bold w-100 pt-2 pl-2">WiFi</td>
+												</tr>
+												<tr use:tapHelp={"om5p.wifi.off"}>
+													<td class="w-20 pl-8 pt-2"><span class="black led"></span></td>
+													<td>Off: bridge mode unlinked, or non-FRC firmware</td>
+												</tr>
+												<tr use:tapHelp={"om5p.wifi.ap-unlinked"}>
+													<td class="w-20 pl-8 pt-2"><span class="red led"></span></td>
+													<td>AP mode, nothing connected</td>
+												</tr>
+												<tr use:tapHelp={"om5p.wifi.ap-linked"}>
+													<td class="w-20 pl-8 pt-2"><span class="yellow led"></span></td>
+													<td>AP mode, client connected</td>
+												</tr>
+												<tr use:tapHelp={"om5p.wifi.bridge-linked"}>
+													<td class="w-20 pl-8 pt-2"><span class="green led"></span></td>
+													<td>Bridge mode, linked. What you want on the field</td>
+												</tr>
+											</tbody>
+										</table>
+									</td>
+								</tr>
+							</tbody>
+						</table>
+						<a
+							class="underline px-2 place-self-end"
+							href="https://docs.wpilib.org/en/2024/docs/hardware/hardware-basics/status-lights-ref.html"
+							>Source: WPILib 2024 status lights</a
+						>
+					</div>
+				{/if}
+			</AccordionItem>
 
 			<!-- Other Devices -->
 		</Accordion>

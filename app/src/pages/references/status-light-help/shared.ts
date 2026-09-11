@@ -33,6 +33,8 @@ export interface StatusLightHelpVariant {
 	readonly source?: string;
 }
 
+export const WPILIB_2024 =
+	"https://docs.wpilib.org/en/2024/docs/hardware/hardware-basics/status-lights-ref.html";
 export const WPILIB = "https://docs.wpilib.org/en/stable/docs/hardware/hardware-basics/status-lights-ref.html";
 export const NI_FLASHING = "https://knowledge.ni.com/KnowledgeArticleDetails?id=kA03q000000kOHkCAM&l=en-US";
 export const NI_RED = "https://knowledge.ni.com/KnowledgeArticleDetails?id=kA00Z0000019NlbSAE&l=en-US";

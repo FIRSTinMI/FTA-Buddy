@@ -9,6 +9,7 @@ import {
 	VIVID,
 	VIVID_BOOTLOOP,
 	WPILIB,
+	WPILIB_2024,
 	WPILIB_BROWNOUT,
 	WPILIB_IMAGING,
 } from "./shared";
@@ -37,6 +38,83 @@ export const generalHelp = {
 		],
 		source: VIVID,
 	},
+	// #region OpenMesh OM5P (archive: FRC radio before the VH-109, dropped after the 2024 season)
+	"om5p.power.on": {
+		device: "OpenMesh OM5P radio",
+		led: "Power",
+		state: "Blue",
+		meaning: "The radio is powered and up.",
+		source: WPILIB_2024,
+	},
+	"om5p.power.booting": {
+		device: "OpenMesh OM5P radio",
+		led: "Power",
+		state: "Blue blinking",
+		meaning: "The radio is still powering up. It settles to solid blue once it finishes.",
+		steps: [
+			"Give it about 60 seconds to finish booting.",
+			{
+				kind: "check",
+				text: "Is the Power light still blinking after a minute?",
+				yes: "Check it is on a 12V 2A VRM output, then swap the radio.",
+				no: "Problem solved.",
+			},
+		],
+		source: WPILIB_2024,
+	},
+	"om5p.eth.link": {
+		device: "OpenMesh OM5P radio",
+		led: "Eth Link",
+		state: "Blue",
+		meaning: "The wired Ethernet link is up.",
+		source: WPILIB_2024,
+	},
+	"om5p.eth.traffic": {
+		device: "OpenMesh OM5P radio",
+		led: "Eth Link",
+		state: "Blue blinking",
+		meaning: "Traffic is passing over the wired Ethernet link. This is normal.",
+		source: WPILIB_2024,
+	},
+	"om5p.wifi.off": {
+		device: "OpenMesh OM5P radio",
+		led: "WiFi",
+		state: "Off",
+		meaning:
+			"Bridge mode with no link, or the radio is not running FRC firmware. On the field this means it is not connected.",
+		steps: [
+			"Reprogram the radio with the FRC Radio Configuration Utility.",
+			{
+				kind: "check",
+				text: "Is the WiFi light still off after programming?",
+				yes: "Swap the radio.",
+				no: "Problem solved.",
+			},
+		],
+		source: WPILIB_2024,
+	},
+	"om5p.wifi.ap-unlinked": {
+		device: "OpenMesh OM5P radio",
+		led: "WiFi",
+		state: "Red",
+		meaning: "Access point mode with nothing connected. This is the at-home configuration, not the field one.",
+		source: WPILIB_2024,
+	},
+	"om5p.wifi.ap-linked": {
+		device: "OpenMesh OM5P radio",
+		led: "WiFi",
+		state: "Yellow or orange",
+		meaning: "Access point mode with a client connected. Normal when a laptop is on the radio's own network at home.",
+		source: WPILIB_2024,
+	},
+	"om5p.wifi.bridge-linked": {
+		device: "OpenMesh OM5P radio",
+		led: "WiFi",
+		state: "Green",
+		meaning: "Bridge mode and linked. This is what you want on the field.",
+		source: WPILIB_2024,
+	},
+	// #endregion
 	"radio.no-power": {
 		device: "VH-109 radio",
 		led: "All LEDs",

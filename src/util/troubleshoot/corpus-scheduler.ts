@@ -88,6 +88,8 @@ export function startCorpusRefresh(): void {
 		console.log("[CorpusRefresh] disabled by TROUBLESHOOT_CORPUS_REFRESH_ENABLED");
 		return;
 	}
+	const hours = Math.round(baseIntervalMs() / HOUR_MS);
+	console.log(`[CorpusRefresh] scheduler started, every ${hours}h, sources: ${sources().join(", ")}`);
 	(async () => {
 		while (true) {
 			try {
@@ -95,7 +97,9 @@ export function startCorpusRefresh(): void {
 				if (isLeader) {
 					const stored = await redis.get(NEXT_RUN_KEY);
 					if (!stored) {
-						await redis.set(NEXT_RUN_KEY, String(Date.now() + nextDelayMs()));
+						const next = Date.now() + nextDelayMs();
+						await redis.set(NEXT_RUN_KEY, String(next));
+						console.log(`[CorpusRefresh] first run scheduled for ${new Date(next).toISOString()}`);
 					} else if (Date.now() >= parseInt(stored, 10)) {
 						// Hold the lock for the whole crawl, otherwise it can expire part way
 						// through and a second instance starts its own pass over the same sites.

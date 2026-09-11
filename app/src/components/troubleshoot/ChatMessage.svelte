@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from "@iconify/svelte";
 	import type { ChatCitation } from "../../../../src/router/troubleshoot";
 	import { renderMarkdown } from "./markdown";
 	import SourceChips from "./SourceChips.svelte";
@@ -9,12 +10,15 @@
 		citations = [],
 		streaming = false,
 		error,
+		tools = [],
 	}: {
 		role: "user" | "assistant";
 		text: string;
 		citations?: ChatCitation[];
 		streaming?: boolean;
 		error?: string;
+		/** Progress lines shown while the assistant reads a repo. */
+		tools?: string[];
 	} = $props();
 
 	let html = $derived(role === "assistant" ? renderMarkdown(text) : "");
@@ -33,6 +37,16 @@
 		<div
 			class="max-w-[92%] rounded-2xl rounded-bl-sm bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm text-left"
 		>
+			{#if tools.length > 0}
+				<div class="mb-1.5 flex flex-col gap-0.5">
+					{#each tools as t, i (i)}
+						<span class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+							<Icon icon="heroicons:document-magnifying-glass-16-solid" class="size-3.5 shrink-0" />
+							{t}
+						</span>
+					{/each}
+				</div>
+			{/if}
 			{#if text}
 				<!-- renderMarkdown escapes every input character; only tags it writes survive. -->
 				<div class="assistant-md">{@html html}</div>

@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db/db";
 import { troubleshootChunks, troubleshootConversations, troubleshootDocs, troubleshootMessages } from "../db/schema";
@@ -8,11 +8,19 @@ import { adminProcedure, protectedProcedure, publicProcedure, router } from "../
 import { runDistillation } from "../util/troubleshoot/distill";
 import { streamAnswer } from "../util/troubleshoot/chat/answer";
 import { assertChatEnabled, isChatEnabled, setChatEnabled } from "../util/troubleshoot/chat/enabled";
+import { parseRepoFromTurns } from "../util/troubleshoot/chat/github";
 import { retrieveChunks } from "../util/troubleshoot/chat/retrieve";
 import { searchEventTickets } from "../util/troubleshoot/chat/event-tickets";
 import { SOURCE_LABELS, type ChatCitation, type ChatEvent } from "../util/troubleshoot/chat/types";
 import { assertRateLimit } from "../util/troubleshoot/rate-limit";
-import { assertBudget, getSpendStatus, recordSpend, TROUBLESHOOT_MODEL } from "../util/troubleshoot/spend";
+import {
+	addRepoReads,
+	assertBudget,
+	getRepoReads,
+	getSpendStatus,
+	recordSpend,
+	TROUBLESHOOT_MODEL,
+} from "../util/troubleshoot/spend";
 import { PLANNER_MODEL } from "../util/troubleshoot/pricing";
 
 export type { ChatCitation, ChatEvent } from "../util/troubleshoot/chat/types";
@@ -100,8 +108,18 @@ export const troubleshootRouter = router({
 
 	/** The user's recent conversations, newest first, with the opening message as preview. */
 	list: protectedProcedure
-		.input(z.object({ limit: z.number().int().min(1).max(50).default(20) }).optional())
+		.input(z.object({ limit: z.number().int().min(1).max(50).default(20), q: z.string().trim().max(120).optional() }).optional())
 		.query(async ({ ctx, input }) => {
+			// When searching, narrow to conversations whose messages contain the text.
+			let matchIds: string[] | null = null;
+			if (input?.q) {
+				const hits = await db
+					.selectDistinct({ id: troubleshootMessages.conversation_id })
+					.from(troubleshootMessages)
+					.where(ilike(troubleshootMessages.text, `%${input.q}%`));
+				matchIds = hits.map((h) => h.id);
+				if (matchIds.length === 0) return [];
+			}
 			const convs = await db
 				.select({
 					id: troubleshootConversations.id,
@@ -109,7 +127,11 @@ export const troubleshootRouter = router({
 					updated_at: troubleshootConversations.updated_at,
 				})
 				.from(troubleshootConversations)
-				.where(eq(troubleshootConversations.user_id, ctx.user.id))
+				.where(
+					matchIds
+						? and(eq(troubleshootConversations.user_id, ctx.user.id), inArray(troubleshootConversations.id, matchIds))
+						: eq(troubleshootConversations.user_id, ctx.user.id),
+				)
 				.orderBy(desc(troubleshootConversations.updated_at))
 				.limit(input?.limit ?? 20);
 			if (convs.length === 0) return [];
@@ -227,7 +249,24 @@ export const troubleshootRouter = router({
 				cited_chunk_ids: [],
 			});
 
-			const gen = streamAnswer({ history: prior, message: userText, docs, signal });
+			// A pasted repo URL, from this message or any earlier user turn, attaches the repo tools.
+			const repo = parseRepoFromTurns([...prior.filter((m) => m.role === "user").map((m) => m.text), userText]);
+			const repoReadsBefore = repo ? await getRepoReads(conversationId) : 0;
+
+			const gen = streamAnswer({
+				history: prior,
+				message: userText,
+				docs,
+				signal,
+				repo: repo ?? undefined,
+				repoReadsBefore,
+				// The tool loop makes several API calls; bill each one as it finishes.
+				onUsage: async (usage) => {
+					await recordSpend(conversationId, usage).catch((err) =>
+						console.error("[troubleshoot chat] recordSpend failed", err),
+					);
+				},
+			});
 			let result: Awaited<ReturnType<typeof gen.return>>["value"] | undefined;
 			try {
 				let next = await gen.next();
@@ -257,9 +296,8 @@ export const troubleshootRouter = router({
 					cited_chunk_ids: result.citedChunkIds,
 				})
 				.returning({ id: troubleshootMessages.id });
-			await recordSpend(conversationId, result.usage).catch((err) =>
-				console.error("[troubleshoot chat] recordSpend failed", err),
-			);
+			// Spend was already recorded per API call by onUsage.
+			if (repo) await addRepoReads(conversationId, result.repoReads);
 
 			yield { type: "done", conversationId, messageId: saved.id };
 		}),

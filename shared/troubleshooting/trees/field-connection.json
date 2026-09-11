@@ -125,7 +125,7 @@
 				"Restart the Driver Station software.",
 				"Open the Diagnostics tab and check Firewall. If Dom, Pub, or Prv are orange, run wf.msc and disable the firewall on all three profiles: Domain, Private, and Public.",
 				"In ncpa.cpl, disable every network adapter except the field Ethernet.",
-				"Set the Ethernet adapter to a static IP of 10.TE.AM.200.",
+				"Set the Ethernet adapter to a static IP of 10.TE.AM.200, subnet mask 255.255.255.0, and leave the gateway and DNS servers blank.",
 				"Check for and disable any third-party firewall or antivirus.",
 				"Try a different Ethernet NIC, such as a USB Ethernet dongle.",
 				{

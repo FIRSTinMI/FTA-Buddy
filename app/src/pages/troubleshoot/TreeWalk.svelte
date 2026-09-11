@@ -55,8 +55,13 @@
 		}
 	}
 
-	function choose(next: string) {
-		go(next, [...path, currentId]);
+	function choose(option: (typeof node & { kind: "question" })["options"][number]) {
+		if (option.to) {
+			// Cross-tree link: jump into another guide at that node, fresh path.
+			navigate("/troubleshoot/:tree/:node", { params: { tree: option.to.tree, node: option.to.node } });
+			return;
+		}
+		if (option.next) go(option.next, [...path, currentId]);
 	}
 
 	function backTo(index: number) {
@@ -131,11 +136,11 @@
 			<p class="text-sm text-gray-600 dark:text-gray-300">{node.help}</p>
 		{/if}
 		<div class="flex flex-col gap-2">
-			{#each node.options as option (option.next + option.label)}
+			{#each node.options as option (option.label)}
 				<Button
 					outline
 					class="min-h-12 w-full justify-start px-4 py-3 text-left text-base"
-					onclick={() => choose(option.next)}
+					onclick={() => choose(option)}
 				>
 					{option.label}
 				</Button>

@@ -53,10 +53,16 @@ export const statusLightHintSchema = z.object({
 	label: z.string().min(1),
 });
 
-export const optionSchema = z.object({
-	label: z.string().min(1),
-	next: nodeIdSchema,
-});
+export const optionSchema = z
+	.object({
+		label: z.string().min(1),
+		// Same-tree target node id, OR a cross-tree link. Exactly one.
+		next: nodeIdSchema.optional(),
+		to: z.object({ tree: nodeIdSchema, node: nodeIdSchema }).optional(),
+	})
+	.refine((o) => (o.next === undefined) !== (o.to === undefined), {
+		message: "an option needs exactly one of next or to",
+	});
 
 export const questionNodeSchema = z.object({
 	kind: z.literal("question"),
@@ -117,7 +123,7 @@ export function checkTreeIntegrity(tree: Tree): string[] {
 	for (const node of Object.values(tree.nodes)) {
 		if (node.kind !== "question") continue;
 		for (const option of node.options) {
-			if (!(option.next in tree.nodes)) {
+			if (option.next !== undefined && !(option.next in tree.nodes)) {
 				problems.push(`question "${node.id}" option "${option.label}" points at missing node "${option.next}"`);
 			}
 		}
@@ -131,7 +137,8 @@ export function checkTreeIntegrity(tree: Tree): string[] {
 		const node = tree.nodes[id];
 		if (!node) continue;
 		reachable.add(id);
-		if (node.kind === "question") stack.push(...node.options.map((o) => o.next));
+		if (node.kind === "question")
+			stack.push(...node.options.map((o) => o.next).filter((n): n is string => n !== undefined));
 	}
 	for (const id of ids) {
 		if (!reachable.has(id)) problems.push(`node "${id}" is not reachable from start`);

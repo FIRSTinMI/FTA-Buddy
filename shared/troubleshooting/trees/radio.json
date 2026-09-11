@@ -107,6 +107,7 @@
 			"title": "No power over PoE",
 			"steps": [
 				"PoE comes in on the RIO port only. Move the cable if it is in AUX1, AUX2, or DS.",
+				"Check the injector orientation. On the orange REV injector the male end plugs into the radio. On the black Vivid injector the female end takes the PoE, with a cable from there to the radio's RIO port.",
 				"Check the injector or PoE cable is powered from a PDH or PDP channel with a good fuse.",
 				"Swap the Ethernet cable between injector and radio. A cable with a broken pair carries data but not power.",
 				"Use the DC plug instead and take the PoE power off if the team has it wired.",
@@ -238,8 +239,8 @@
 			"steps": [
 				"Wait 60 seconds after power on.",
 				"Reprogram the radio at this event's kiosk if it came from home or another event.",
-				"Make sure only one radio is powered on the robot.",
-				"Check the DS is fully connected. The radio joins only after the DS is linked.",
+				"Check for a second radio programmed for this event left powered on, often a spare at the pit. It associates with the field and confuses the connection.",
+				"The radio links to the field AP on its own and its status lights show that. The field monitor shows a partial connection until the DS is fully connected, then it goes green.",
 				"Check the radio is mounted in the open, not inside a metal frame or printed box. Move it if needed.",
 				{
 					"kind": "check",
@@ -345,11 +346,12 @@
 			"title": "RIO light off: no link to the roboRIO",
 			"steps": [
 				"Confirm the roboRIO is powered and booted. Its Status light goes off when boot completes.",
-				"Check the cable is in the radio port labeled RIO, not AUX1, AUX2, or DS.",
-				"Reseat both ends, try a known good cable, and power cycle the radio.",
+				"Reseat the Ethernet cable at both ends.",
+				"Try a known good cable.",
+				"Power cycle the radio.",
 				{
 					"kind": "check",
-					"text": "Is the RIO light still off?",
+					"text": "Is there still no link?",
 					"yes": "Continue.",
 					"no": "Problem solved."
 				},

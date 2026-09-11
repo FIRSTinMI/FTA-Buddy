@@ -32,6 +32,22 @@ function loadTree(raw: unknown): Tree {
 /** Every tree, validated once at import time. */
 export const trees: readonly Tree[] = rawTrees.map(loadTree);
 
+// Validate cross-tree links (option.to) once every tree is loaded.
+for (const tree of trees) {
+	for (const node of Object.values(tree.nodes)) {
+		if (node.kind !== "question") continue;
+		for (const option of node.options) {
+			if (!option.to) continue;
+			const target = trees.find((t) => t.id === option.to!.tree);
+			if (!target || !(option.to.node in target.nodes)) {
+				throw new Error(
+					`Tree "${tree.id}" node "${node.id}" links to missing ${option.to.tree}/${option.to.node}`,
+				);
+			}
+		}
+	}
+}
+
 const treesById: ReadonlyMap<string, Tree> = new Map(trees.map((t) => [t.id, t]));
 
 export function getTree(id: string): Tree | undefined {

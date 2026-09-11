@@ -218,7 +218,7 @@
 			"id": "comms-half",
 			"title": "Communications indicator is only half lit",
 			"steps": [
-				"The Communications indicator is split: the left half is TCP, the right half is UDP. Half lit means one protocol reaches the roboRIO and the other is blocked.",
+				"The Communications indicator is split into a TCP half and a UDP half. Half lit means one protocol reaches the roboRIO and the other is blocked. Usually UDP control passes and TCP or dashboard traffic is blocked.",
 				{
 					"kind": "check",
 					"text": "Are the Robot Code indicator, joysticks, and roboRIO IP all good?",

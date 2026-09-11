@@ -56,10 +56,17 @@
 				"Unplug the field cable from the laptop and plug it back in until it clicks. Check the other end at the player station.",
 				"Reseat the USB Ethernet adapter if the laptop uses one. Try a different USB port.",
 				"Run ncpa.cpl. Make sure the Ethernet adapter is enabled, not greyed out.",
-				"Try the spare field cable or a different player station port.",
+				"Replace the field Ethernet cable with a spare.",
 				{
 					"kind": "check",
 					"text": "Does the port still show no link?",
+					"yes": "Continue.",
+					"no": "Problem solved."
+				},
+				"Try a different port on the SCC at the player station. One of the AUX ports should work.",
+				{
+					"kind": "check",
+					"text": "Still no link on the AUX port?",
 					"yes": "Use a USB Ethernet adapter or a loaner laptop.",
 					"no": "Problem solved."
 				}
@@ -97,7 +104,7 @@
 				{
 					"kind": "check",
 					"text": "Is the FMS light still red after 10 seconds?",
-					"yes": "Recheck the number and reseat the field cable.",
+					"yes": "Work the 'DS has link but no FMS' steps in this guide.",
 					"no": "Problem solved."
 				}
 			],
@@ -113,15 +120,18 @@
 			"id": "ds-no-fms",
 			"title": "DS has link but no FMS",
 			"steps": [
-				"Make sure the FRC Driver Station software is open and not a second copy. Close and reopen it.",
-				"Turn Wi-Fi off with the hardware switch or Quick Settings. Disable every other adapter in ncpa.cpl so only the field Ethernet is left.",
-				"Set the Ethernet adapter to Automatic (DHCP). FMS hands out 10.TE.AM.x on the field.",
-				"Turn off all three Windows Defender Firewall profiles. Remove third-party antivirus firewalls.",
-				"In an admin command prompt run ipconfig /release then ipconfig /renew.",
+				"Make sure the FRC Driver Station software is open, and only one copy. Close any extra and reopen it.",
+				"Turn Wi-Fi off with the hardware switch or Quick Settings.",
+				"Restart the Driver Station software.",
+				"Open the Diagnostics tab and check Firewall. If Dom, Pub, or Prv are orange, run wf.msc and disable the firewall on all three profiles: Domain, Private, and Public.",
+				"In ncpa.cpl, disable every network adapter except the field Ethernet.",
+				"Set the Ethernet adapter to a static IP of 10.TE.AM.200, subnet mask 255.255.255.0, and leave the gateway and DNS servers blank.",
+				"Check for and disable any third-party firewall or antivirus.",
+				"Try a different Ethernet NIC, such as a USB Ethernet dongle.",
 				{
 					"kind": "check",
 					"text": "Is the DS still red with no FMS?",
-					"yes": "Swap the field cable, or use a loaner laptop.",
+					"yes": "Use a loaner laptop.",
 					"no": "Problem solved."
 				}
 			],
@@ -166,9 +176,12 @@
 			"id": "radio-no-power",
 			"title": "Radio has no power",
 			"steps": [
-				"Confirm the robot is on and the main breaker is in. Check the roboRIO Power light is green.",
-				"Tug the radio power connector. Reseat the Weidmuller plug or the PoE cable in the RIO port.",
+				"Confirm the robot is on. Check the roboRIO Power light is green.",
 				"Find the PDH or PDP channel that feeds the radio. Check the fuse or breaker is seated and the channel LED is not red.",
+				"PoE power only works on the radio's RIO port. If PoE is the source, make sure it is in the RIO port, not AUX1, AUX2, or DS.",
+				"If PoE: check the injector orientation. On the orange REV injector the male end plugs into the radio. On the black Vivid injector the female end takes the PoE, with a cable from there to the radio's RIO port.",
+				"If the DC input is the source: measure for battery voltage at the end of the power wires with a multimeter. No voltage means the wiring, not the radio.",
+				"Reseat the radio power connector, the Weidmuller DC plug or the PoE cable in the RIO port.",
 				"Remove one power source if PoE and the DC input are both wired. Use one only.",
 				{
 					"kind": "check",
@@ -198,8 +211,8 @@
 			"steps": [
 				"Wait 60 seconds after power on. The radio takes that long to boot and join the field.",
 				"Reprogram the radio at this event's kiosk. A radio from another event or home has the wrong key.",
-				"Make sure only one radio on the robot is powered. A spare left on confuses the field.",
-				"Check the DS is fully connected first. The radio cannot link until the DS is.",
+				"Check for a second radio programmed for this event left powered on, often a spare at the pit. It associates with the field and confuses the connection.",
+				"The radio links to the field AP on its own and its status lights show that. The field monitor shows a partial connection until the DS is fully connected, then it goes green.",
 				{
 					"kind": "check",
 					"text": "Is SYS still blinking after a reprogram?",
@@ -279,125 +292,30 @@
 			"options": [
 				{
 					"label": "Power green, Status off",
-					"next": "rio-no-link"
+					"next": "rio-eth-link"
 				},
 				{
 					"label": "Status light blinking",
-					"next": "rio-status-blink"
+					"to": {
+						"tree": "roborio",
+						"node": "which-rio"
+					}
 				},
 				{
-					"label": "Power amber, red, or off",
-					"next": "rio-power"
+					"label": "Power light off, no lights",
+					"to": {
+						"tree": "roborio",
+						"node": "no-power"
+					}
+				},
+				{
+					"label": "Power light amber or red",
+					"to": {
+						"tree": "roborio",
+						"node": "power-color"
+					}
 				}
 			]
-		},
-		"rio-no-link": {
-			"kind": "leaf",
-			"id": "rio-no-link",
-			"title": "roboRIO booted but has no link to the radio",
-			"steps": [
-				"Confirm the roboRIO is powered and booted. Its Status light goes off when boot completes.",
-				"Check the cable is in the radio port labeled RIO, not AUX1, AUX2, or DS.",
-				"Reseat both ends, try a known good cable, and power cycle the radio.",
-				{
-					"kind": "check",
-					"text": "Is the RIO light still off?",
-					"yes": "Continue.",
-					"no": "Problem solved."
-				},
-				"Connect the roboRIO to a laptop by Ethernet directly, bypassing the radio.",
-				{
-					"kind": "check",
-					"text": "Does the laptop connect to the roboRIO?",
-					"yes": "Swap the radio.",
-					"no": "Continue."
-				},
-				"Plug a USB Ethernet dongle into the roboRIO USB port and connect the laptop through it.",
-				{
-					"kind": "check",
-					"text": "Does the dongle connect?",
-					"yes": "Check the roboRIO web UI for a bad NIC config.",
-					"no": "The roboRIO Ethernet is dead. Swap the roboRIO."
-				}
-			],
-			"links": [
-				{
-					"label": "roboRIO network troubleshooting",
-					"url": "https://docs.wpilib.org/en/stable/docs/networking/networking-introduction/roborio-network-troubleshooting.html"
-				}
-			],
-			"statusLights": [
-				{
-					"device": "roborio",
-					"label": "roboRIO status lights"
-				}
-			],
-			"escalate": true
-		},
-		"rio-status-blink": {
-			"kind": "leaf",
-			"id": "rio-status-blink",
-			"title": "roboRIO Status light is blinking",
-			"steps": [
-				"A blinking Status light after boot means the RIO is not running normally. Count the blinks.",
-				"roboRIO 2: pull the microSD card, check the slot for debris, reseat it fully. Reboot.",
-				{
-					"kind": "check",
-					"text": "Is the Status light still blinking?",
-					"yes": "Continue.",
-					"no": "Problem solved."
-				},
-				"Groups of 2 or 3 blinks: reboot. Constant flashing or 4 flashes then a pause is unrecoverable. Reimage the card or the RIO.",
-				{
-					"kind": "check",
-					"text": "Is it still blinking after a reimage?",
-					"yes": "Swap the roboRIO. Use a loaner if there is no spare.",
-					"no": "Problem solved."
-				}
-			],
-			"links": [
-				{
-					"label": "roboRIO status lights",
-					"url": "https://docs.wpilib.org/en/stable/docs/hardware/hardware-basics/status-lights-ref.html#roborio"
-				}
-			],
-			"statusLights": [
-				{
-					"device": "roborio",
-					"label": "roboRIO status lights"
-				}
-			],
-			"escalate": true
-		},
-		"rio-power": {
-			"kind": "leaf",
-			"id": "rio-power",
-			"title": "roboRIO power problem",
-			"steps": [
-				"Off: check the RIO power Weidmuller plug and the PDH or PDP RIO channel fuse. Tug test the wires.",
-				"Amber: brownout. Check battery voltage in the DS. Swap to a fully charged battery.",
-				"Red: short on a user rail. Unplug everything from the RIO power rails and DIO, then power cycle.",
-				"Check the main breaker lug nuts and battery connector are tight. Loose main power causes both amber and off.",
-				{
-					"kind": "check",
-					"text": "Is the Power light still red with nothing plugged in?",
-					"yes": "Swap the roboRIO.",
-					"no": "Problem solved."
-				}
-			],
-			"links": [
-				{
-					"label": "roboRIO brownouts",
-					"url": "https://docs.wpilib.org/en/stable/docs/software/roborio-info/roborio-brownouts.html"
-				}
-			],
-			"statusLights": [
-				{
-					"device": "roborio",
-					"label": "roboRIO status lights"
-				}
-			],
-			"escalate": true
 		},
 		"no-code": {
 			"kind": "leaf",
@@ -514,6 +432,40 @@
 					"no": "Continue."
 				},
 				"Look at the specific mechanism that lags: its sensors, its command, and any blocking calls in the code."
+			]
+		},
+		"rio-eth-link": {
+			"kind": "question",
+			"id": "rio-eth-link",
+			"question": "Look at the roboRIO Ethernet port. Are the link lights flashing quickly?",
+			"options": [
+				{
+					"label": "No link lights",
+					"to": {
+						"tree": "radio",
+						"node": "rio-link"
+					}
+				},
+				{
+					"label": "Yes, they are flashing",
+					"next": "rio-eth-good"
+				}
+			]
+		},
+		"rio-eth-good": {
+			"kind": "leaf",
+			"id": "rio-eth-good",
+			"title": "roboRIO Ethernet link is good",
+			"steps": [
+				"The link lights mean the cable and the radio are fine. The problem is above the physical link.",
+				"Set the team number on the roboRIO with the Imaging Tool if it is wrong or unset.",
+				"Redeploy the robot code.",
+				{
+					"kind": "check",
+					"text": "Does the DS reach the roboRIO now?",
+					"yes": "Problem solved.",
+					"no": "Work the roboRIO guide, or the DS side with the Driver station guide."
+				}
 			]
 		}
 	}

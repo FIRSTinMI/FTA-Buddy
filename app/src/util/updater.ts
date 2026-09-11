@@ -41,6 +41,8 @@ export const VERSIONS: { [key: string]: Version } = {
         <li>Troubleshooting notes: a knowledge base written from resolved CSA tickets and Slack, grouped by topic</li>
         <li>Status lights: tap any row for what it means and what to do</li>
         <li>Status lights: roboRIO 1 and 2 split where they differ, SystemCore added, radio now listed by LED like every other device</li>
+        <li>Status lights: new Archive section at the bottom for retired hardware, starting with the OM5P radio</li>
+        <li>More controller troubleshooting: the F310 X/D switch, and checking Device Manager when a controller does not show up</li>
         <li>Field monitor: the team dialog is full screen and uses the new step by step format</li>
         </ul>
         `,

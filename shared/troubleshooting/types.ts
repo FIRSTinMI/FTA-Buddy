@@ -34,6 +34,8 @@ export const STATUS_LIGHT_DEVICES = [
 	"ctrecandle",
 	"ctrepowerdistributionpanel",
 	"ctrepneumaticscontrolmodule",
+	"systemcore",
+	"om5pradio",
 ] as const;
 // #endregion
 

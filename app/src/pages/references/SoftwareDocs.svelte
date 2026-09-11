@@ -15,6 +15,7 @@
 		pathPlanner: false,
 		choreo: false,
 		yagsl: false,
+		radioConfig: false,
 	});
 
 	let loadedState = $state({ ...openState });
@@ -507,6 +508,21 @@
 							</a>
 						</AccordionItem>
 					</Accordion>
+				{/if}
+			</AccordionItem>
+			<!-- Archive -->
+			<h2 class="mt-4 text-xl font-bold">Archive</h2>
+			<p class="text-sm text-gray-500 dark:text-gray-400">Hardware and tools that are no longer current. Kept because you still meet them on older robots and at offseason events.</p>
+			<AccordionItem class="text-black dark:text-white" bind:open={openState.radioConfig}>
+				{#snippet header()}
+					<span class="font-bold">FRC Radio Configuration Utility (OM5P)</span>
+				{/snippet}
+				{#if loadedState.radioConfig}
+					<p class="pb-2 text-sm">
+						The tool that programmed the pre-2025 OpenMesh OM5P radio. The download links and the full
+						procedure are on the WPILib page.
+					</p>
+					<a href="https://docs.wpilib.org/en/stable/docs/zero-to-robot/step-3/openmesh.html" target="_blank"><QrCode value="https://docs.wpilib.org/en/stable/docs/zero-to-robot/step-3/openmesh.html" padding={12} /></a>
 				{/if}
 			</AccordionItem>
 		</Accordion>

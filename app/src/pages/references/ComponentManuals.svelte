@@ -14,6 +14,7 @@
 		pigeon: false,
 		pdh: false,
 		cancoder: false,
+		om5p: false,
 	});
 
 	let loadedState = $state({
@@ -32,6 +33,7 @@
 		if (openState.pigeon) loadedState.pigeon = true;
 		if (openState.pdh) loadedState.pdh = true;
 		if (openState.cancoder) loadedState.cancoder = true;
+		if (openState.om5p) loadedState.om5p = true;
 	});
 
 	addEventListener("load", async () => {
@@ -48,6 +50,7 @@
 		loadedState.pigeon = true;
 		loadedState.pdh = true;
 		loadedState.cancoder = true;
+		loadedState.om5p = true;
 	});
 </script>
 
@@ -204,6 +207,17 @@
 							padding={5}
 						/></a
 					>
+				{/if}
+			</AccordionItem>
+			<!-- Archive -->
+			<h2 class="mt-4 text-xl font-bold">Archive</h2>
+			<p class="text-sm text-gray-500 dark:text-gray-400">Hardware and tools that are no longer current. Kept because you still meet them on older robots and at offseason events.</p>
+			<AccordionItem class="text-black dark:text-white" bind:open={openState.om5p}>
+				{#snippet header()}
+					<span class="font-bold">OpenMesh OM5P (pre-2025 radio)</span>
+				{/snippet}
+				{#if openState.om5p === true || loadedState.om5p === true}
+					<a href="https://docs.wpilib.org/en/stable/docs/zero-to-robot/step-3/openmesh.html" target="_blank"><QrCode value="https://docs.wpilib.org/en/stable/docs/zero-to-robot/step-3/openmesh.html" padding={12} /></a>
 				{/if}
 			</AccordionItem>
 		</Accordion>

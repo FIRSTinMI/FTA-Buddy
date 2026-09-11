@@ -45,6 +45,10 @@
 				{
 					"label": "Team wants DS on Wi-Fi in the pit",
 					"next": "ds-wifi"
+				},
+				{
+					"label": "This is the older OpenMesh OM5P radio",
+					"next": "om5p"
 				}
 			]
 		},
@@ -523,6 +527,93 @@
 					"text": "Did it recover?",
 					"yes": "Problem solved.",
 					"no": "View the match logs and check whether other robots are affected too."
+				}
+			]
+		},
+		"om5p": {
+			"kind": "question",
+			"id": "om5p",
+			"question": "OpenMesh OM5P: what do the lights show?",
+			"help": "The pre-2025 radio. Power, Eth Link and WiFi, left to right.",
+			"options": [
+				{
+					"label": "Power light is off",
+					"next": "om5p-no-power"
+				},
+				{
+					"label": "WiFi light is off or red on the field",
+					"next": "om5p-not-linked"
+				},
+				{
+					"label": "It will not take a program",
+					"next": "om5p-programming"
+				}
+			]
+		},
+		"om5p-no-power": {
+			"kind": "leaf",
+			"id": "om5p-no-power",
+			"title": "OM5P has no power",
+			"steps": [
+				"The OM5P runs on 12 V. Wire it to a 12V 2A output on the VRM, centre pin positive.",
+				"Check the barrel plug is seated. Many barrel connectors look alike, so confirm it is the 12 V one.",
+				"If it is powered over PoE instead, check the injector and the Ethernet run.",
+				{
+					"kind": "check",
+					"text": "Is the Power light still off?",
+					"yes": "Swap the radio.",
+					"no": "Problem solved."
+				}
+			],
+			"statusLights": [
+				{
+					"device": "om5pradio",
+					"label": "OM5P status lights"
+				}
+			]
+		},
+		"om5p-not-linked": {
+			"kind": "leaf",
+			"id": "om5p-not-linked",
+			"title": "OM5P is not linked to the field",
+			"steps": [
+				"On the field the WiFi light should be green, which is bridge mode and linked.",
+				"Off means bridge mode with no link, or the radio is not running FRC firmware. Red means it is in access point mode, which is the at-home configuration.",
+				"Reprogram the radio with the FRC Radio Configuration Utility for this event.",
+				{
+					"kind": "check",
+					"text": "Is the WiFi light still not green on the field?",
+					"yes": "Swap the radio.",
+					"no": "Problem solved."
+				}
+			],
+			"statusLights": [
+				{
+					"device": "om5pradio",
+					"label": "OM5P status lights"
+				}
+			]
+		},
+		"om5p-programming": {
+			"kind": "leaf",
+			"id": "om5p-programming",
+			"title": "OM5P will not take a program",
+			"steps": [
+				"Plug the laptop straight into the radio port closest to the power jack. Nothing else connected by Ethernet.",
+				"Disable every other network adapter on the laptop, including Wi-Fi.",
+				"Run the FRC Radio Configuration Utility as administrator.",
+				"If it still will not find the radio, try the other port, or reach it on its programming address 192.168.1.1.",
+				{
+					"kind": "check",
+					"text": "Does it still refuse to program?",
+					"yes": "Swap the radio.",
+					"no": "Problem solved."
+				}
+			],
+			"links": [
+				{
+					"label": "WPILib: Using the OpenMesh OM5P Radio",
+					"url": "https://docs.wpilib.org/en/stable/docs/zero-to-robot/step-3/openmesh.html"
 				}
 			]
 		}

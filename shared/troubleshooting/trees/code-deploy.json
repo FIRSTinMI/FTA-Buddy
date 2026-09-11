@@ -23,7 +23,10 @@
 				},
 				{
 					"label": "DS says Joystick unavailable",
-					"next": "joysticks"
+					"to": {
+						"tree": "driver-station",
+						"node": "joysticks"
+					}
 				},
 				{
 					"label": "Robot enables but nothing moves",
@@ -200,34 +203,6 @@
 				}
 			],
 			"escalate": true
-		},
-		"joysticks": {
-			"kind": "leaf",
-			"id": "joysticks",
-			"title": "Joystick unavailable",
-			"steps": [
-				"Press F1 in the DS to rescan. Every controller in the USB tab should be green.",
-				"Drag each controller to the slot the code reads. Slots reorder when one is unplugged.",
-				"Unplug the controller and plug it back in. Try a different laptop USB port, not a hub.",
-				"Restart the DS software if a controller is listed but greyed out.",
-				"The warning also prints once at startup and when a controller drops while enabled. All green and working means it is noise.",
-				{
-					"kind": "check",
-					"text": "Is a controller still greyed out or missing?",
-					"yes": "Swap the controller. Worn cables drop under vibration.",
-					"no": "Problem solved."
-				}
-			],
-			"links": [
-				{
-					"label": "DS USB tab",
-					"url": "https://docs.wpilib.org/en/stable/docs/software/driverstation/driver-station.html"
-				},
-				{
-					"label": "DS errors and warnings",
-					"url": "https://docs.wpilib.org/en/stable/docs/software/driverstation/driver-station-errors-warnings.html"
-				}
-			]
 		},
 		"no-motion": {
 			"kind": "leaf",

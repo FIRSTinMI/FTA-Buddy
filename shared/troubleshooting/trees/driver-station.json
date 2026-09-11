@@ -144,25 +144,21 @@
 			]
 		},
 		"joysticks": {
-			"kind": "leaf",
+			"kind": "question",
 			"id": "joysticks",
-			"title": "Joysticks not working",
-			"steps": [
-				"Press F1 to rescan. Every controller in the USB tab should be green.",
-				"Drag each controller into the slot the code expects. Lock the order so it survives a rescan.",
-				"Unplug and replug. Try a laptop port instead of a hub. Use a powered hub if a hub is needed.",
-				"Move a stick and watch the axis bars in the USB tab. No movement means the controller, not the code.",
+			"question": "What is the controller doing?",
+			"options": [
 				{
-					"kind": "check",
-					"text": "Is the controller still not working?",
-					"yes": "Swap the controller. Worn cables drop under vibration.",
-					"no": "Problem solved."
-				}
-			],
-			"links": [
+					"label": "It does not show up in the DS at all",
+					"next": "joystick-missing"
+				},
 				{
-					"label": "DS USB tab",
-					"url": "https://docs.wpilib.org/en/stable/docs/software/driverstation/driver-station.html"
+					"label": "It shows up but the wrong buttons or axes respond",
+					"next": "joystick-mapping"
+				},
+				{
+					"label": "It shows up but nothing responds",
+					"next": "joystick-dead"
 				}
 			]
 		},
@@ -234,6 +230,80 @@
 					"no": "Continue."
 				},
 				"Reseat the Ethernet cable at both the roboRIO and the radio, then restart the robot code from the Diagnostics tab."
+			]
+		},
+		"joystick-missing": {
+			"kind": "leaf",
+			"id": "joystick-missing",
+			"title": "Controller does not show up in the Driver Station",
+			"steps": [
+				"Press F1 in the DS to rescan. Every controller in the USB tab should be green.",
+				"Unplug and replug it. Use a port on the laptop rather than a hub, and a powered hub if a hub is unavoidable.",
+				"Open Windows Device Manager and look for the controller while you unplug and replug it.",
+				{
+					"kind": "check",
+					"text": "Does it appear in Device Manager at all?",
+					"yes": "Continue.",
+					"no": "The laptop is not seeing it. Swap the cable, then the controller."
+				},
+				{
+					"kind": "check",
+					"text": "Does it show in Device Manager with a warning triangle?",
+					"yes": "Update or reinstall the driver, then replug it.",
+					"no": "Continue."
+				},
+				"Restart the Driver Station software. It only scans for new devices while disabled, never while enabled.",
+				{
+					"kind": "check",
+					"text": "Is it still missing from the DS?",
+					"yes": "Swap the controller. Worn cables drop under vibration.",
+					"no": "Problem solved."
+				}
+			]
+		},
+		"joystick-mapping": {
+			"kind": "leaf",
+			"id": "joystick-mapping",
+			"title": "Wrong buttons or axes respond",
+			"steps": [
+				"Look at the switch on the back of a Logitech F310. X is XInput, D is DirectInput, and they map buttons differently.",
+				"Code written with XboxController expects XInput, so the switch belongs on X. WPILib's XboxController matches the Xbox 360, Xbox One, and the F310 in XInput mode.",
+				"Unplug and replug after moving the switch so Windows enumerates it again, then press F1 in the DS.",
+				"Check the slot order in the USB tab. Drag each controller into the slot the code reads.",
+				{
+					"kind": "check",
+					"text": "Do the right buttons respond now?",
+					"yes": "Problem solved.",
+					"no": "Check the port numbers in the team's code against the USB tab with them."
+				}
+			],
+			"links": [
+				{
+					"label": "WPILib: Joysticks",
+					"url": "https://docs.wpilib.org/en/stable/docs/software/basic-programming/joystick.html"
+				}
+			]
+		},
+		"joystick-dead": {
+			"kind": "leaf",
+			"id": "joystick-dead",
+			"title": "Controller is listed but nothing responds",
+			"steps": [
+				"Move a stick and watch the axis bars in the USB tab. No movement there means the controller, not the code.",
+				"Drag each controller into the slot the code expects. Slots reorder when one is unplugged.",
+				"Restart the Driver Station software if a controller is listed but greyed out.",
+				{
+					"kind": "check",
+					"text": "Do the axis bars move in the USB tab?",
+					"yes": "The controller is fine, so work the robot code with the team.",
+					"no": "Continue."
+				},
+				{
+					"kind": "check",
+					"text": "Is it still dead after a replug and a rescan?",
+					"yes": "Swap the controller. Worn cables drop under vibration.",
+					"no": "Problem solved."
+				}
 			]
 		}
 	}

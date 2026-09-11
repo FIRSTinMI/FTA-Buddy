@@ -4,7 +4,7 @@
 	import { DSState, MatchStateMap, ROBOT, type MonitorFrame, type RobotInfo } from "../../../shared/types";
 	import { trpc } from "../main";
 	import { navigate } from "../router";
-	import { monitorSteps, waitingKey } from "../../../shared/troubleshooting/monitor-steps";
+	import { monitorIssue, waitingKey } from "../../../shared/troubleshooting/monitor-steps";
 	import type { MonitorFrameHandler } from "../util/monitorFrameHandler";
 	import FormattedTime from "./FormattedTime.svelte";
 	import MonitorRow from "./MonitorRow.svelte";
@@ -48,7 +48,14 @@
 				<div>
 					<p class="font-bold">Ethernet not plugged in</p>
 					<p>Unplugged <FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} /></p>
-					<StepFlowTree steps={monitorSteps["ds-red"].steps} />
+					<StepFlowTree steps={monitorIssue("ds-red").steps} />
+					{#if monitorIssue("ds-red").href}
+						<a
+							href={monitorIssue("ds-red").href ?? "/troubleshoot"}
+							class="mt-2 inline-flex items-center gap-1 text-sm text-blue-600 underline dark:text-blue-400"
+							>Open the full guide</a
+						>
+					{/if}
 				</div>
 			{:else if modalRobot.ds === DSState.GREEN_X}
 				<div>
@@ -57,7 +64,14 @@
 						{modalRobot.improved ? "Plugged in" : "Lost FMS"}
 						<FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} />
 					</p>
-					<StepFlowTree steps={monitorSteps["ds-green-x"].steps} />
+					<StepFlowTree steps={monitorIssue("ds-green-x").steps} />
+					{#if monitorIssue("ds-green-x").href}
+						<a
+							href={monitorIssue("ds-green-x").href ?? "/troubleshoot"}
+							class="mt-2 inline-flex items-center gap-1 text-sm text-blue-600 underline dark:text-blue-400"
+							>Open the full guide</a
+						>
+					{/if}
 				</div>
 			{:else if modalRobot.ds === DSState.MOVE_STATION}
 				<div>
@@ -68,7 +82,14 @@
 							formatter={formatTimeShort}
 						/>
 					</p>
-					<StepFlowTree steps={monitorSteps["move-station"].steps} />
+					<StepFlowTree steps={monitorIssue("move-station").steps} />
+					{#if monitorIssue("move-station").href}
+						<a
+							href={monitorIssue("move-station").href ?? "/troubleshoot"}
+							class="mt-2 inline-flex items-center gap-1 text-sm text-blue-600 underline dark:text-blue-400"
+							>Open the full guide</a
+						>
+					{/if}
 				</div>
 			{:else if modalRobot.ds === DSState.WAITING}
 				<div>
@@ -79,7 +100,7 @@
 							formatter={formatTimeShort}
 						/>
 					</p>
-					<StepFlowTree steps={monitorSteps[waitingKey(MatchStateMap[monitorFrame.field])].steps} />
+					<StepFlowTree steps={monitorIssue(waitingKey(MatchStateMap[monitorFrame.field])).steps} />
 				</div>
 			{:else if modalRobot.ds === DSState.BYPASS}
 				<div>
@@ -90,13 +111,27 @@
 				<div>
 					<p class="font-bold">Team is E-stopped</p>
 					<p><FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} /></p>
-					<StepFlowTree steps={monitorSteps["estop"].steps} />
+					<StepFlowTree steps={monitorIssue("estop").steps} />
+					{#if monitorIssue("estop").href}
+						<a
+							href={monitorIssue("estop").href ?? "/troubleshoot"}
+							class="mt-2 inline-flex items-center gap-1 text-sm text-blue-600 underline dark:text-blue-400"
+							>Open the full guide</a
+						>
+					{/if}
 				</div>
 			{:else if modalRobot.ds === DSState.ASTOP}
 				<div>
 					<p class="font-bold">Team is A-stopped</p>
 					<p><FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} /></p>
-					<StepFlowTree steps={monitorSteps["astop"].steps} />
+					<StepFlowTree steps={monitorIssue("astop").steps} />
+					{#if monitorIssue("astop").href}
+						<a
+							href={monitorIssue("astop").href ?? "/troubleshoot"}
+							class="mt-2 inline-flex items-center gap-1 text-sm text-blue-600 underline dark:text-blue-400"
+							>Open the full guide</a
+						>
+					{/if}
 				</div>
 			{:else if !modalRobot.radio}
 				<div>
@@ -105,7 +140,14 @@
 						{modalRobot.improved ? "DS Connected" : "Lost Radio"}
 						<FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} />
 					</p>
-					<StepFlowTree steps={monitorSteps["no-radio"].steps} />
+					<StepFlowTree steps={monitorIssue("no-radio").steps} />
+					{#if monitorIssue("no-radio").href}
+						<a
+							href={monitorIssue("no-radio").href ?? "/troubleshoot"}
+							class="mt-2 inline-flex items-center gap-1 text-sm text-blue-600 underline dark:text-blue-400"
+							>Open the full guide</a
+						>
+					{/if}
 				</div>
 			{:else if !modalRobot.rio}
 				<div>
@@ -114,7 +156,14 @@
 						{modalRobot.improved ? "Radio Connected" : "Lost RIO"}
 						<FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} />
 					</p>
-					<StepFlowTree steps={monitorSteps["no-rio"].steps} />
+					<StepFlowTree steps={monitorIssue("no-rio").steps} />
+					{#if monitorIssue("no-rio").href}
+						<a
+							href={monitorIssue("no-rio").href ?? "/troubleshoot"}
+							class="mt-2 inline-flex items-center gap-1 text-sm text-blue-600 underline dark:text-blue-400"
+							>Open the full guide</a
+						>
+					{/if}
 				</div>
 			{:else if !modalRobot.code}
 				<div>
@@ -123,7 +172,14 @@
 						{modalRobot.improved ? "RIO Connected" : "Lost Code"}
 						<FormattedTime date={modalRobot?.lastChange} formatter={formatTimeShort} />
 					</p>
-					<StepFlowTree steps={monitorSteps["no-code"].steps} />
+					<StepFlowTree steps={monitorIssue("no-code").steps} />
+					{#if monitorIssue("no-code").href}
+						<a
+							href={monitorIssue("no-code").href ?? "/troubleshoot"}
+							class="mt-2 inline-flex items-center gap-1 text-sm text-blue-600 underline dark:text-blue-400"
+							>Open the full guide</a
+						>
+					{/if}
 				</div>
 			{:else}
 				<div>

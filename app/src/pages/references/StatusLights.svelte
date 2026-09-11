@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Accordion, AccordionItem, Modal } from "flowbite-svelte";
 	import StepFlowTree from "../../components/troubleshoot/StepFlowTree.svelte";
+	import { guideHref, stepsForRef } from "../../../../shared/troubleshooting";
 	import { onDestroy, onMount } from "svelte";
 	import type { Action } from "svelte/action";
 	import { statusLightHelp, type StatusLightHelp, type StatusLightHelpId } from "./status-light-help/index";
@@ -234,10 +235,16 @@
 				<div class="bold">What it means</div>
 				<p>{shown.meaning}</p>
 			</div>
-			{#if shown.steps && shown.steps.length > 0}
+			{#if (shown.ref ? stepsForRef(shown.ref) : (shown.steps ?? [])).length > 0}
 				<div>
 					<div class="bold">What to do</div>
-					<StepFlowTree steps={shown.steps} />
+					<StepFlowTree steps={shown.ref ? stepsForRef(shown.ref) : (shown.steps ?? [])} />
+					{#if shown.ref}
+						<a
+							href={guideHref(shown.ref)}
+							class="mt-2 inline-block text-sm text-blue-600 underline dark:text-blue-400">Open the full guide</a
+						>
+					{/if}
 				</div>
 			{/if}
 			{#if shown.source ?? help.source}

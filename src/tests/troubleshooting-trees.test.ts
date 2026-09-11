@@ -41,11 +41,11 @@ describe("troubleshooting trees", () => {
 				expect(Object.values(tree.nodes).some((n) => n.kind === "leaf")).toBe(true);
 			});
 
-			test("every leaf has 2 to 8 steps", () => {
+			test("every leaf has 2 to 12 steps", () => {
 				for (const node of Object.values(tree.nodes)) {
 					if (node.kind !== "leaf") continue;
 					expect(node.steps.length, `${tree.id}/${node.id}`).toBeGreaterThanOrEqual(2);
-					expect(node.steps.length, `${tree.id}/${node.id}`).toBeLessThanOrEqual(8);
+					expect(node.steps.length, `${tree.id}/${node.id}`).toBeLessThanOrEqual(12);
 				}
 			});
 

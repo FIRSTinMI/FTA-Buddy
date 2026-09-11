@@ -104,7 +104,7 @@
 				{
 					"kind": "check",
 					"text": "Is the FMS light still red after 10 seconds?",
-					"yes": "Recheck the number and reseat the field cable.",
+					"yes": "Work the 'DS has link but no FMS' steps in this guide.",
 					"no": "Problem solved."
 				}
 			],
@@ -120,15 +120,18 @@
 			"id": "ds-no-fms",
 			"title": "DS has link but no FMS",
 			"steps": [
-				"Make sure the FRC Driver Station software is open and not a second copy. Close and reopen it.",
-				"Turn Wi-Fi off with the hardware switch or Quick Settings. Disable every other adapter in ncpa.cpl so only the field Ethernet is left.",
-				"Set the Ethernet adapter to Automatic (DHCP). FMS hands out 10.TE.AM.x on the field.",
-				"Turn off all three Windows Defender Firewall profiles. Remove third-party antivirus firewalls.",
-				"In an admin command prompt run ipconfig /release then ipconfig /renew.",
+				"Make sure the FRC Driver Station software is open, and only one copy. Close any extra and reopen it.",
+				"Turn Wi-Fi off with the hardware switch or Quick Settings.",
+				"Restart the Driver Station software.",
+				"Open the Diagnostics tab and check Firewall. If Dom, Pub, or Prv are orange, run wf.msc and disable the firewall on all three profiles: Domain, Private, and Public.",
+				"In ncpa.cpl, disable every network adapter except the field Ethernet.",
+				"Set the Ethernet adapter to a static IP of 10.TE.AM.200.",
+				"Check for and disable any third-party firewall or antivirus.",
+				"Try a different Ethernet NIC, such as a USB Ethernet dongle.",
 				{
 					"kind": "check",
 					"text": "Is the DS still red with no FMS?",
-					"yes": "Swap the field cable, or use a loaner laptop.",
+					"yes": "Use a loaner laptop.",
 					"no": "Problem solved."
 				}
 			],

@@ -32,6 +32,12 @@ export interface FetchResult {
 export interface FetchOptions {
 	/** Return the body as base64 instead of decoded text (objects.inv and friends). */
 	binary?: boolean;
+	/**
+	 * Treat a disk-cached entry older than this as a miss and re-fetch. The crawlers leave
+	 * it unset, so a cached page is reused for the whole pass. Live callers set a short
+	 * value, otherwise they would keep serving whatever the last weekly crawl saw.
+	 */
+	maxAgeMs?: number;
 }
 
 let cacheEnabled = true;
@@ -44,12 +50,17 @@ function cachePath(url: string, binary: boolean): string {
 	return join(CACHE_DIR, createHash("sha256").update(url).digest("hex") + (binary ? ".bin.json" : ".json"));
 }
 
-function readCache(url: string, binary: boolean): FetchResult | null {
+function readCache(url: string, binary: boolean, maxAgeMs?: number): FetchResult | null {
 	if (!cacheEnabled) return null;
 	const p = cachePath(url, binary);
 	if (!existsSync(p)) return null;
 	try {
-		return { ...(JSON.parse(readFileSync(p, "utf8")) as FetchResult), fromCache: true };
+		const hit = { ...(JSON.parse(readFileSync(p, "utf8")) as FetchResult), fromCache: true };
+		if (maxAgeMs !== undefined) {
+			const age = Date.now() - Date.parse(hit.fetchedAt);
+			if (!Number.isFinite(age) || age > maxAgeMs) return null;
+		}
+		return hit;
 	} catch {
 		return null;
 	}
@@ -206,7 +217,7 @@ export class RobotsDisallowedError extends Error {
  * Successful (2xx) and 404 responses are cached on disk; everything else is not.
  */
 export async function politeFetch(url: string, opts: FetchOptions = {}): Promise<FetchResult> {
-	const cached = readCache(url, !!opts.binary);
+	const cached = readCache(url, !!opts.binary, opts.maxAgeMs);
 	if (cached) return cached;
 	if (!(await isAllowed(url))) throw new RobotsDisallowedError(url);
 	const r = await rawFetch(url, opts);

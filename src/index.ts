@@ -60,6 +60,7 @@ import {
 	userOAuthReturnUrl,
 } from "./util/slack-user-oauth";
 import { startSlackPoller } from "./util/troubleshoot/slack-poller";
+import { startCorpusRefresh } from "./util/troubleshoot/corpus-scheduler";
 import { getTeamAverageCycle } from "./util/team-cycles";
 import { eventLastSeen, events, eventCodes } from "./state";
 import * as nexusEventPoller from "./util/nexusEventPoller";
@@ -641,6 +642,9 @@ connect().then(async () => {
 
 	// Slack history poller for the troubleshooting corpus (leader-locked, 3 h cadence)
 	startSlackPoller();
+
+	// Weekly re-crawl of the vendor documentation (leader-locked)
+	startCorpusRefresh();
 
 	// Start Nexus pollers for events with a key configured that are currently running
 	try {

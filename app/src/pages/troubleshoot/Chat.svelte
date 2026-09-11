@@ -23,6 +23,8 @@
 		citations: ChatCitation[];
 		streaming?: boolean;
 		error?: string;
+		/** Progress lines while it reads a repo, e.g. "Reading Robot.java". */
+		tools?: string[];
 	}
 
 	type Status = Awaited<ReturnType<typeof trpc.troubleshoot.status.query>>;
@@ -177,6 +179,9 @@
 						case "delta":
 							patch((m) => (m.text += ev.text));
 							break;
+						case "tool":
+							patch((m) => (m.tools = [...(m.tools ?? []), ev.label]));
+							break;
 						case "citation":
 							patch((m) => {
 								if (!m.citations.some((c) => c.chunkId === ev.chunkId)) {
@@ -317,6 +322,7 @@
 					citations={m.citations}
 					streaming={m.streaming}
 					error={m.error}
+					tools={m.tools}
 				/>
 			{/each}
 			{#if closed}

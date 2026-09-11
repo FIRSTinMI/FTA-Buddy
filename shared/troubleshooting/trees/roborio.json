@@ -46,7 +46,7 @@
 			"title": "roboRIO has no power",
 			"steps": [
 				"Confirm the robot main breaker is on and the PDH or PDP shows a status light.",
-				"Tug the RIO power Weidmuller plug. Pull the wires, strip fresh copper, push them back in until they lock.",
+				"Check the RIO power screw terminals. Loosen the screws, restrip the wires, and tighten them down firmly.",
 				"Check the RIO channel on the PDH or PDP. Reseat the fuse or breaker. A red channel LED means no output.",
 				"Measure 12 V at the RIO plug. 12 V with no lights means the RIO is dead.",
 				{
@@ -232,7 +232,7 @@
 				},
 				"Hold reset at least 5 seconds to boot into Safe Mode. Connect by USB and reimage with the Imaging Tool, Format Target.",
 				"Set the team number and redeploy the robot code.",
-				"Check the RIO power wiring. A loose Weidmuller on the RIO plug can crash it at power on.",
+				"Check the RIO power wiring. A loose screw terminal on the RIO power plug can crash it at power on.",
 				{
 					"kind": "check",
 					"text": "Does it still crash or refuse to image?",

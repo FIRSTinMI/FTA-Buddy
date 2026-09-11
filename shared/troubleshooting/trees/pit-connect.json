@@ -10,15 +10,52 @@
 			"question": "How is the laptop connected to the robot?",
 			"help": "Off the field there is no FMS. The Driver Station talks to the roboRIO directly.",
 			"options": [
-				{ "label": "USB cable straight to the roboRIO", "next": "usb-tether" },
-				{ "label": "Ethernet cable to the radio", "to": { "tree": "driver-station", "node": "pit-ethernet" } },
-				{ "label": "Wi-Fi to the radio", "to": { "tree": "driver-station", "node": "pit-wifi" } },
+				{
+					"label": "USB cable straight to the roboRIO",
+					"next": "usb-tether"
+				},
+				{
+					"label": "Ethernet cable to the radio",
+					"to": {
+						"tree": "driver-station",
+						"node": "pit-ethernet"
+					}
+				},
+				{
+					"label": "Wi-Fi to the radio",
+					"to": {
+						"tree": "driver-station",
+						"node": "pit-wifi"
+					}
+				},
 				{
 					"label": "Connected, but the DS says No Robot Code",
-					"to": { "tree": "code-deploy", "node": "crash-log" }
+					"to": {
+						"tree": "code-deploy",
+						"node": "crash-log"
+					}
 				},
-				{ "label": "The roboRIO lights look wrong", "to": { "tree": "roborio", "node": "start" } },
-				{ "label": "The radio lights look wrong", "to": { "tree": "radio", "node": "start" } }
+				{
+					"label": "The roboRIO lights look wrong",
+					"to": {
+						"tree": "roborio",
+						"node": "start"
+					}
+				},
+				{
+					"label": "The radio lights look wrong",
+					"to": {
+						"tree": "radio",
+						"node": "start"
+					}
+				},
+				{
+					"label": "Robot has no power at all",
+					"to": {
+						"tree": "power",
+						"node": "start"
+					}
+				}
 			]
 		},
 		"usb-tether": {
@@ -45,7 +82,12 @@
 					"no": "Problem solved."
 				}
 			],
-			"statusLights": [{ "device": "roborio", "label": "roboRIO status lights" }]
+			"statusLights": [
+				{
+					"device": "roborio",
+					"label": "roboRIO status lights"
+				}
+			]
 		}
 	}
 }

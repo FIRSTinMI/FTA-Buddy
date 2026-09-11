@@ -1,7 +1,7 @@
 {
 	"id": "match-drops",
-	"title": "Robot drops or lags during a match",
-	"summary": "Robot stays on the schedule but cuts out, drops, or gets laggy during matches.",
+	"title": "Robot cuts out, reboots, or lags during a match",
+	"summary": "Robot was fine at prestart but dies, drops its connection, or goes laggy once the match runs.",
 	"start": "drop-or-lag",
 	"nodes": {
 		"drop-or-lag": {
@@ -10,7 +10,14 @@
 			"question": "What happens during the match?",
 			"options": [
 				{
-					"label": "Robot loses connection or cuts out",
+					"label": "Robot goes dead, reboots, or browns out",
+					"to": {
+						"tree": "power",
+						"node": "start"
+					}
+				},
+				{
+					"label": "Robot loses connection but stays powered",
 					"next": "drops"
 				},
 				{

@@ -2,6 +2,7 @@
 // Entries live in general.ts (roboRIO, SystemCore, radio), rev.ts and ctre.ts; index.ts merges them.
 // Wording is for phones on an FRC field: short, direct, most likely fix first.
 
+import type { GuideRef } from "../../../../../shared/troubleshooting";
 import type { FlowStep } from "../../../../../shared/troubleshooting/steps";
 
 export interface StatusLightHelp {
@@ -14,6 +15,8 @@ export interface StatusLightHelp {
 	 * check questions: { kind: "check", text: "Still flashing?", yes: "Continue.", no: "Problem solved." }.
 	 */
 	readonly steps?: readonly (string | FlowStep)[];
+	/** The guide leaf that owns this procedure. When set, its steps are shown instead of `steps`. */
+	readonly ref?: GuideRef;
 	readonly source?: string;
 	/** Tabs inside the dialog, for one pattern that means different things on different hardware revisions. */
 	readonly variants?: readonly StatusLightHelpVariant[];
@@ -25,6 +28,8 @@ export interface StatusLightHelpVariant {
 	readonly label: string;
 	readonly meaning: string;
 	readonly steps?: readonly (string | FlowStep)[];
+	/** The guide leaf that owns this procedure. */
+	readonly ref?: GuideRef;
 	readonly source?: string;
 }
 

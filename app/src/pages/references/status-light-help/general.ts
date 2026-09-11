@@ -289,19 +289,7 @@ export const generalHelp = {
 		state: "Solid amber",
 		meaning:
 			"Battery voltage dropped below 6.3 V. The roboRIO disabled all outputs and the user rails until voltage recovers above 7.5 V. The Driver Station shows Voltage Brownout.",
-		steps: [
-			"Swap to a fresh, fully charged battery.",
-			{ kind: "check", text: "Power LED still amber?", yes: "Continue.", no: "Problem solved." },
-			"Check the main battery connections and the main breaker for heat, corrosion, or loose lugs.",
-			{ kind: "check", text: "Power LED still amber?", yes: "Continue.", no: "Problem solved." },
-			"Look for a stalled motor or a short pulling high current. The DS log and PDP or PDH channel currents show it.",
-			{
-				kind: "check",
-				text: "Does it brown out again on a good battery?",
-				yes: "Add current limits in code or cut simultaneous load.",
-				no: "Problem solved.",
-			},
-		],
+		ref: { tree: "roborio", node: "brownout" },
 		source: WPILIB_BROWNOUT,
 	},
 	"roborio.power.fault-short": {
@@ -310,23 +298,7 @@ export const generalHelp = {
 		state: "Solid red",
 		meaning:
 			"One of the user voltage rails (3.3 V, 5 V, 6 V) is shorted or overloaded. Metal shavings inside the case are the usual cause.",
-		steps: [
-			"In the Driver Station, click the power (lightning) indicator. It names the faulted rail.",
-			"Unplug everything from DIO, PWM, analog, I2C, SPI, MXP and USB.",
-			{
-				kind: "check",
-				text: "Power LED still red with everything unplugged?",
-				yes: "Continue.",
-				no: "Plug devices back one at a time to find the short.",
-			},
-			"Open the case: 4 screws on the back, 2 at the power port. Blow it out with compressed air and look for metal shavings.",
-			{
-				kind: "check",
-				text: "Power LED still red with nothing connected and a clean board?",
-				yes: "Swap the roboRIO.",
-				no: "Problem solved.",
-			},
-		],
+		ref: { tree: "roborio", node: "rail-short" },
 		source: NI_RED,
 	},
 	"roborio.power.input-too-high": {
@@ -452,50 +424,13 @@ export const generalHelp = {
 				label: "roboRIO 1",
 				meaning:
 					"The image on the internal flash is corrupt, or a software update was interrupted. The controller cannot boot.",
-				steps: [
-					"Power cycle once.",
-					{ kind: "check", text: "Status LED still flashing?", yes: "Continue.", no: "Problem solved." },
-					"Hold reset for 5 seconds to force safe mode. Safe mode shows 3 blinks with a pause.",
-					"In safe mode, connect USB and reimage with the roboRIO Imaging Tool (Format Target).",
-					{
-						kind: "check",
-						text: "Status LED still flashing, or will it not enter safe mode?",
-						yes: "Continue.",
-						no: "Problem solved.",
-					},
-					"Put NI's recovery.cfg alone on a FAT32 USB stick and plug it in.",
-					"Hold reset while powering on, and release when the Status LED is solid.",
-					"Wait about 60 seconds.",
-					"Reimage with the roboRIO Imaging Tool (Format Target).",
-					"Set the team number and redeploy the robot code.",
-					{
-						kind: "check",
-						text: "Status LED still flashing after recovery and reimage?",
-						yes: "Swap the roboRIO.",
-						no: "Problem solved.",
-					},
-				],
+				ref: { tree: "roborio", node: "rio1-unrecoverable" },
 			},
 			{
 				label: "roboRIO 2",
 				meaning:
 					"The controller cannot read the microSD card. The card is missing, not clicked in, not imaged, or corrupt.",
-				steps: [
-					"Power off. Pull the microSD card and push it back in until it clicks and sits flush with the slot.",
-					"Power on.",
-					{ kind: "check", text: "Still flashing?", yes: "Continue.", no: "Problem solved." },
-					"Reimage the card on a laptop with balenaEtcher or Raspberry Pi Imager. Use a fresh card if you have one.",
-					"Put the card back, connect USB, and set the team number with the roboRIO Imaging Tool.",
-					"Redeploy the robot code. A fresh image has no code.",
-					{ kind: "check", text: "Still flashing?", yes: "Continue.", no: "Problem solved." },
-					"Open the case and blow out the SD slot with compressed air. Metal shavings in the slot cause this.",
-					{
-						kind: "check",
-						text: "Does a freshly imaged card still fail?",
-						yes: "Swap the roboRIO. The card reader is damaged.",
-						no: "Problem solved.",
-					},
-				],
+				ref: { tree: "roborio", node: "rio2-unrecoverable" },
 			},
 		],
 		defaultVariant: 1,
@@ -514,22 +449,7 @@ export const generalHelp = {
 		led: "Comm",
 		state: "Off",
 		meaning: "No Driver Station heartbeat is reaching the roboRIO.",
-		steps: [
-			"On the radio, check SYS is solid (field link) and the RIO LED is lit (Ethernet link).",
-			"Reseat the Ethernet cable between the roboRIO and the radio.",
-			{ kind: "check", text: "Comm LED still off?", yes: "Continue.", no: "Problem solved." },
-			"Swap the Ethernet cable.",
-			{ kind: "check", text: "Comm LED still off?", yes: "Continue.", no: "Problem solved." },
-			"On the DS, check the team number. A radio ping with no roboRIO ping points at the roboRIO or its cable.",
-			"Confirm the roboRIO finished booting. Its Status LED is off when booted.",
-			"Reboot the roboRIO, then the radio.",
-			{
-				kind: "check",
-				text: "Comm LED still off with a known good cable and radio?",
-				yes: "Reimage or swap the roboRIO.",
-				no: "Problem solved.",
-			},
-		],
+		ref: { tree: "roborio", node: "reach" },
 		source: WPILIB,
 	},
 	"roborio.comm.no-code": {
@@ -538,17 +458,7 @@ export const generalHelp = {
 		state: "Solid red",
 		meaning:
 			"The Driver Station is talking to the roboRIO but no robot program is running. Code may still be starting, may have crashed, or was never deployed.",
-		steps: [
-			"Wait. Code can take up to a minute to start after boot.",
-			{ kind: "check", text: "Comm LED still solid red?", yes: "Continue.", no: "Problem solved." },
-			"Read the DS console for a crash or exception.",
-			"Have the team redeploy code. LabVIEW must be deployed with Run as Startup.",
-			{ kind: "check", text: "Comm LED still solid red?", yes: "Continue.", no: "Problem solved." },
-			"Reboot the roboRIO.",
-			{ kind: "check", text: "Comm LED still solid red?", yes: "Continue.", no: "Problem solved." },
-			"Check the image year matches the team's WPILib year. Code that deploys but never runs is often a year mismatch.",
-			{ kind: "check", text: "Is the image year wrong?", yes: "Reimage the roboRIO.", no: "Problem solved." },
-		],
+		ref: { tree: "code-deploy", node: "no-code-other" },
 		source: NI_RED,
 	},
 	"roborio.comm.e-stop": {
@@ -557,23 +467,7 @@ export const generalHelp = {
 		state: "Blinking red",
 		meaning:
 			"The robot is E-Stopped and its outputs stay disabled until it is cleared. The robot E-stop (the DS space bar off the field, or the team's own driver-station E-stop button on the field) is separate from the field E-stop.",
-		steps: [
-			"The robot E-stop and the field E-stop are separate. This is almost always the robot's.",
-			{
-				kind: "check",
-				text: "Does the team have an E-stop button on their driver station?",
-				yes: "Make sure it is released.",
-				no: "Continue.",
-			},
-			"Clear it: reboot the roboRIO and restart the Driver Station software. Both hold a sticky E-stop.",
-			"Do both. A rebooted roboRIO that reconnects to a still-E-stopped DS drops straight back into E-stop.",
-			{
-				kind: "check",
-				text: "Does it E-Stop again after both restart?",
-				yes: "Check the DS laptop for a stuck space bar.",
-				no: "Problem solved.",
-			},
-		],
+		ref: { tree: "roborio", node: "estop" },
 		source: NI_RED,
 	},
 	"roborio.comm.ok": {

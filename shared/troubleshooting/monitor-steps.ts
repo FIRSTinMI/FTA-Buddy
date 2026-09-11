@@ -4,6 +4,7 @@
 // parser cannot express cleanly are authored as check objects.
 
 import { MatchState } from "../types";
+import { guideHref, stepsForRef, type GuideRef } from "./index";
 import type { FlowStep } from "./steps";
 
 export type MonitorIssueKey =
@@ -21,7 +22,10 @@ export type MonitorIssueKey =
 
 export interface MonitorIssue {
 	readonly title: string;
-	readonly steps: readonly (string | FlowStep)[];
+	/** The guide leaf that owns this procedure. Preferred: the steps live there, not here. */
+	readonly ref?: GuideRef;
+	/** Only for states no guide covers, like the FMS waiting states. */
+	readonly steps?: readonly (string | FlowStep)[];
 }
 
 const FMS_WAITING_BUG =
@@ -30,35 +34,11 @@ const FMS_WAITING_BUG =
 export const monitorSteps: Record<MonitorIssueKey, MonitorIssue> = {
 	"ds-red": {
 		title: "Ethernet not plugged in",
-		steps: [
-			"Make sure the cable is plugged into the laptop.",
-			"Check for link lights on the port.",
-			{
-				kind: "check",
-				text: "Are there still no link lights?",
-				yes: "Try a dongle or a new cable.",
-				no: "Problem solved.",
-			},
-		],
+		ref: { tree: "field-connection", node: "ds-no-ethernet" },
 	},
 	"ds-green-x": {
 		title: "Ethernet plugged in but no communication with DS",
-		steps: [
-			"Make sure DS is open, and only one instance is open.",
-			"Check for link lights on the port.",
-			"Turn Wi-Fi off.",
-			"Open the DS Diagnostics tab. Make sure the firewall is green. Turn firewalls off if not (Win + R, wf.msc).",
-			"Click refresh to release and renew the DHCP address.",
-			"Try a dongle.",
-			"Restart the DS software.",
-			"Open network adapters (Win + R, ncpa.cpl). Enable the Ethernet adapter and set auto IP config.",
-			{
-				kind: "check",
-				text: "Is the DS still not communicating?",
-				yes: "Use a spare DS laptop and recommend lunchtime diagnostics.",
-				no: "Problem solved.",
-			},
-		],
+		ref: { tree: "field-connection", node: "ds-no-fms" },
 	},
 	"move-station": {
 		title: "Team is in wrong station",
@@ -85,7 +65,7 @@ export const monitorSteps: Record<MonitorIssueKey, MonitorIssue> = {
 	},
 	estop: {
 		title: "Team is E-stopped",
-		steps: ["RIO and DS must be restarted to clear the E-stop.", "Explain to the team why if HR triggered it."],
+		ref: { tree: "roborio", node: "estop" },
 	},
 	astop: {
 		title: "Team is A-stopped",
@@ -93,49 +73,15 @@ export const monitorSteps: Record<MonitorIssueKey, MonitorIssue> = {
 	},
 	"no-radio": {
 		title: "Radio not connected to field",
-		steps: [
-			"Make sure the robot is on.",
-			"Check radio power. At least one green LED.",
-			{
-				kind: "check",
-				text: "Is the 6 GHz light off instead of blue?",
-				yes: "Reprogram the radio at the kiosk.",
-				no: "Problem solved.",
-			},
-		],
+		ref: { tree: "field-connection", node: "radio-not-linked" },
 	},
 	"no-rio": {
-		title: "Radio connected but no communication with RIO",
-		steps: [
-			"Check the RIO lights: Power green, Status off, Link flashing.",
-			"Reconnect Ethernet. Avoid switches for testing.",
-			"Power cycle the RIO.",
-			"Verify the team number with the team number setter.",
-			{
-				kind: "check",
-				text: "Status light flashing on a roboRIO 2?",
-				yes: "Reseat the card. Reimage or swap it if it persists.",
-				no: "Problem solved.",
-			},
-			{
-				kind: "check",
-				text: "Status light flashing on a roboRIO 1?",
-				yes: "Boot Safe Mode and reimage. Swap it if still dead.",
-				no: "Problem solved.",
-			},
-		],
+		title: "Radio connected but no communication with the roboRIO",
+		ref: { tree: "radio", node: "rio-link" },
 	},
 	"no-code": {
 		title: "Radio and RIO connected, but code not running",
-		steps: [
-			"Restart the RIO. This can be done from the DS on a RIO 2.",
-			{
-				kind: "check",
-				text: "Is the code still not running?",
-				yes: "Check the DS logs. Ask if code was recently changed.",
-				no: "Problem solved.",
-			},
-		],
+		ref: { tree: "code-deploy", node: "no-code-other" },
 	},
 };
 
@@ -149,4 +95,15 @@ export function waitingKey(state: MatchState): MonitorIssueKey {
 		default:
 			return "waiting-running";
 	}
+}
+
+/** What the field monitor shows for a state: the title, the steps, and where the full guide is. */
+export function monitorIssue(key: MonitorIssueKey): {
+	title: string;
+	steps: readonly (string | FlowStep)[];
+	href: string | null;
+} {
+	const issue = monitorSteps[key];
+	if (issue.ref) return { title: issue.title, steps: stepsForRef(issue.ref), href: guideHref(issue.ref) };
+	return { title: issue.title, steps: issue.steps ?? [], href: null };
 }

@@ -69,3 +69,25 @@ export function isQuestion(node: TreeNode): node is QuestionNode {
 export function isLeaf(node: TreeNode): node is LeafNode {
 	return node.kind === "leaf";
 }
+
+// #region Shared procedures
+/** Points at the guide leaf that owns a fix procedure. */
+export interface GuideRef {
+	tree: string;
+	node: string;
+}
+
+/**
+ * The steps that live at a guide leaf. Status lights, the field monitor and the guides all read
+ * procedures through here, so a fix is written in exactly one place.
+ */
+export function stepsForRef(ref: GuideRef): readonly (string | import("./steps").FlowStep)[] {
+	const node = getNode(ref.tree, ref.node);
+	return node && node.kind === "leaf" ? node.steps : [];
+}
+
+/** Deep link to the guide leaf, so any surface can offer "open the full guide". */
+export function guideHref(ref: GuideRef): string {
+	return `/troubleshoot/${ref.tree}/${ref.node}`;
+}
+// #endregion

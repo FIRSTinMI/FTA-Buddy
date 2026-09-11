@@ -22,6 +22,10 @@
 					"next": "latency"
 				},
 				{
+					"label": "Communications indicator is only half lit",
+					"next": "comms-half"
+				},
+				{
 					"label": "Joysticks not working",
 					"next": "joysticks"
 				},
@@ -208,6 +212,29 @@
 				}
 			],
 			"escalate": true
+		},
+		"comms-half": {
+			"kind": "leaf",
+			"id": "comms-half",
+			"title": "Communications indicator is only half lit",
+			"steps": [
+				"The Communications indicator is split: the left half is TCP, the right half is UDP. Half lit means one protocol reaches the roboRIO and the other is blocked.",
+				{
+					"kind": "check",
+					"text": "Are the Robot Code indicator, joysticks, and roboRIO IP all good?",
+					"yes": "Continue.",
+					"no": "Work the roboRIO and code side first. Use the roboRIO guide."
+				},
+				"Open the DS Diagnostics tab and look at Firewall. Dom, Pub, or Prv lit in orange means a firewall is on.",
+				"Turn off any enabled firewall. A firewall blocking one protocol is the usual cause of a half lit indicator.",
+				{
+					"kind": "check",
+					"text": "Is the Communications indicator full green now?",
+					"yes": "Problem solved.",
+					"no": "Continue."
+				},
+				"Reseat the Ethernet cable at both the roboRIO and the radio, then restart the robot code from the Diagnostics tab."
+			]
 		}
 	}
 }

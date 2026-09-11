@@ -107,6 +107,7 @@
 			"title": "No power over PoE",
 			"steps": [
 				"PoE comes in on the RIO port only. Move the cable if it is in AUX1, AUX2, or DS.",
+				"Check the injector orientation. On the orange REV injector the male end plugs into the radio. On the black Vivid injector the female end takes the PoE, with a cable from there to the radio's RIO port.",
 				"Check the injector or PoE cable is powered from a PDH or PDP channel with a good fuse.",
 				"Swap the Ethernet cable between injector and radio. A cable with a broken pair carries data but not power.",
 				"Use the DC plug instead and take the PoE power off if the team has it wired.",

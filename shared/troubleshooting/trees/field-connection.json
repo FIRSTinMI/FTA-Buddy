@@ -176,9 +176,12 @@
 			"id": "radio-no-power",
 			"title": "Radio has no power",
 			"steps": [
-				"Confirm the robot is on and the main breaker is in. Check the roboRIO Power light is green.",
-				"Tug the radio power connector. Reseat the Weidmuller plug or the PoE cable in the RIO port.",
+				"Confirm the robot is on. Check the roboRIO Power light is green.",
 				"Find the PDH or PDP channel that feeds the radio. Check the fuse or breaker is seated and the channel LED is not red.",
+				"PoE power only works on the radio's RIO port. If PoE is the source, make sure it is in the RIO port, not AUX1, AUX2, or DS.",
+				"If PoE: check the injector orientation. On the orange REV injector the male end plugs into the radio. On the black Vivid injector the female end takes the PoE, with a cable from there to the radio's RIO port.",
+				"If the DC input is the source: measure for battery voltage at the end of the power wires with a multimeter. No voltage means the wiring, not the radio.",
+				"Reseat the radio power connector, the Weidmuller DC plug or the PoE cable in the RIO port.",
 				"Remove one power source if PoE and the DC input are both wired. Use one only.",
 				{
 					"kind": "check",

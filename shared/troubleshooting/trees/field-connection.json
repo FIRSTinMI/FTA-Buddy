@@ -1,7 +1,7 @@
 {
 	"id": "field-connection",
-	"title": "Robot not connecting on the field",
-	"summary": "Driver station to FMS, radio link, roboRIO link. Work left to right on the field monitor.",
+	"title": "Robot won't connect on the field",
+	"summary": "Driver Station to FMS, radio link, roboRIO link. Work left to right on the field monitor.",
 	"start": "start",
 	"nodes": {
 		"start": {

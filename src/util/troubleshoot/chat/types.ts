@@ -27,6 +27,8 @@ export interface ChatCitation {
 export type ChatEvent =
 	| { type: "delta"; text: string }
 	| { type: "citation"; chunkId: string; url: string | null; title: string; source: CitationSource }
+	// Progress while the assistant reads a team's GitHub repo, e.g. "Reading src/main/java/frc/robot/Robot.java".
+	| { type: "tool"; label: string }
 	| { type: "done"; conversationId: string; messageId: string }
 	| { type: "error"; message: string };
 

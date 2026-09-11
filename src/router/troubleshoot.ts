@@ -8,11 +8,19 @@ import { adminProcedure, protectedProcedure, publicProcedure, router } from "../
 import { runDistillation } from "../util/troubleshoot/distill";
 import { streamAnswer } from "../util/troubleshoot/chat/answer";
 import { assertChatEnabled, isChatEnabled, setChatEnabled } from "../util/troubleshoot/chat/enabled";
+import { parseRepoFromTurns } from "../util/troubleshoot/chat/github";
 import { retrieveChunks } from "../util/troubleshoot/chat/retrieve";
 import { searchEventTickets } from "../util/troubleshoot/chat/event-tickets";
 import { SOURCE_LABELS, type ChatCitation, type ChatEvent } from "../util/troubleshoot/chat/types";
 import { assertRateLimit } from "../util/troubleshoot/rate-limit";
-import { assertBudget, getSpendStatus, recordSpend, TROUBLESHOOT_MODEL } from "../util/troubleshoot/spend";
+import {
+	addRepoReads,
+	assertBudget,
+	getRepoReads,
+	getSpendStatus,
+	recordSpend,
+	TROUBLESHOOT_MODEL,
+} from "../util/troubleshoot/spend";
 import { PLANNER_MODEL } from "../util/troubleshoot/pricing";
 
 export type { ChatCitation, ChatEvent } from "../util/troubleshoot/chat/types";
@@ -227,7 +235,24 @@ export const troubleshootRouter = router({
 				cited_chunk_ids: [],
 			});
 
-			const gen = streamAnswer({ history: prior, message: userText, docs, signal });
+			// A pasted repo URL, from this message or any earlier user turn, attaches the repo tools.
+			const repo = parseRepoFromTurns([...prior.filter((m) => m.role === "user").map((m) => m.text), userText]);
+			const repoReadsBefore = repo ? await getRepoReads(conversationId) : 0;
+
+			const gen = streamAnswer({
+				history: prior,
+				message: userText,
+				docs,
+				signal,
+				repo: repo ?? undefined,
+				repoReadsBefore,
+				// The tool loop makes several API calls; bill each one as it finishes.
+				onUsage: async (usage) => {
+					await recordSpend(conversationId, usage).catch((err) =>
+						console.error("[troubleshoot chat] recordSpend failed", err),
+					);
+				},
+			});
 			let result: Awaited<ReturnType<typeof gen.return>>["value"] | undefined;
 			try {
 				let next = await gen.next();
@@ -257,9 +282,8 @@ export const troubleshootRouter = router({
 					cited_chunk_ids: result.citedChunkIds,
 				})
 				.returning({ id: troubleshootMessages.id });
-			await recordSpend(conversationId, result.usage).catch((err) =>
-				console.error("[troubleshoot chat] recordSpend failed", err),
-			);
+			// Spend was already recorded per API call by onUsage.
+			if (repo) await addRepoReads(conversationId, result.repoReads);
 
 			yield { type: "done", conversationId, messageId: saved.id };
 		}),

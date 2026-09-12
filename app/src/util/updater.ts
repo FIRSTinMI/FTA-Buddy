@@ -30,6 +30,18 @@ export function compareVersions(a: string, b: string): number {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.10.1": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.10.1</h1>
+        <ul>
+        <li>New Sources page from the chat, showing everything answers come from</li>
+        <li>The WPILib, REV, CTRE and Vivid docs we download are now browsable page by page</li>
+        <li>Current limits: added REV smart current limits alongside the Talon FX stator and supply pair</li>
+        <li>Corrections across the guides from a full content review, including brownout voltages, Driver Station tab names and the field static IP</li>
+        <li>Status lights: photo of the OM5P radio in the Archive</li>
+        </ul>
+        `,
+	},
 	"2.7.10.0": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.10.0</h1>

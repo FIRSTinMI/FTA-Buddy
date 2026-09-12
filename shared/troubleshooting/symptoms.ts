@@ -28,6 +28,11 @@ export const symptoms: readonly Symptom[] = [
 		detail: "One device or a whole section is dead, CAN errors in the DS.",
 		tree: "can",
 	},
+	{
+		label: "Main breaker trips, or the robot browns out",
+		detail: "Breaker pops under load, voltage sags, PDH or PDP lights look wrong.",
+		tree: "power",
+	},
 	{ label: "Code will not deploy", detail: "Deploy fails from the team laptop in the pit.", tree: "code-deploy" },
 	{ label: "roboRIO lights look wrong", detail: "Status blinking, Power red or amber, Comm off.", tree: "roborio" },
 	{

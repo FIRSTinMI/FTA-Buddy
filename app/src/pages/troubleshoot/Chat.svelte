@@ -260,6 +260,9 @@
 	<!-- Header: what this is and where answers come from -->
 	<div class="px-3 pt-2 pb-2 border-b border-gray-200 dark:border-gray-700">
 		<div class="flex items-start gap-2">
+			<Button size="xs" color="light" href="/troubleshoot/sources" title="What the answers come from">
+				<Icon icon="heroicons:book-open-16-solid" class="size-4" /><span class="ml-1">Sources</span>
+			</Button>
 			<div class="flex gap-1 shrink-0 ml-auto">
 				<Button size="xs" color="light" onclick={openRecent} title="Conversation history">
 					<Icon icon="heroicons:clock-16-solid" class="size-4" />

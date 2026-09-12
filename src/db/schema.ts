@@ -479,6 +479,8 @@ export const troubleshootChunks = pgTable(
 		title: varchar("title").notNull(),
 		heading: varchar("heading"),
 		body: text("body").notNull(),
+		/** Position of this chunk within its page, so a browsable page renders in document order. */
+		ordinal: integer("ordinal").notNull().default(0),
 		// Redacted text only. Never store team numbers, event codes or names in body.
 		tsv: tsvector("tsv").generatedAlwaysAs(
 			sql`setweight(to_tsvector('english', coalesce("title", '')), 'A') || setweight(to_tsvector('english', coalesce("heading", '')), 'B') || setweight(to_tsvector('english', coalesce("body", '')), 'C')`,
@@ -490,6 +492,7 @@ export const troubleshootChunks = pgTable(
 	(t) => [
 		index("troubleshoot_chunks_tsv_idx").using("gin", t.tsv),
 		index("troubleshoot_chunks_source_idx").on(t.source),
+		index("troubleshoot_chunks_url_idx").on(t.source, t.url, t.ordinal),
 	],
 );
 

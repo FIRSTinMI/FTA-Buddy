@@ -1,7 +1,7 @@
 {
 	"id": "power",
 	"title": "Power",
-	"summary": "Main breaker trips, brownouts, Kraken current limits, loose PDH and breaker terminals, battery.",
+	"summary": "Main breaker trips, brownouts, motor current limits, loose PDH and breaker terminals, battery.",
 	"start": "start",
 	"nodes": {
 		"start": {
@@ -38,14 +38,18 @@
 		"drive-motors": {
 			"kind": "question",
 			"id": "drive-motors",
-			"question": "Does the drivetrain use Kraken X60 or Falcon (Talon FX) motors?",
+			"question": "What drives the wheels?",
 			"options": [
 				{
-					"label": "Yes",
+					"label": "Kraken or Falcon (Talon FX)",
 					"next": "kraken-limits"
 				},
 				{
-					"label": "No, or not sure",
+					"label": "NEO or NEO Vortex (SPARK MAX or SPARK Flex)",
+					"next": "rev-limits"
+				},
+				{
+					"label": "Something else, or not sure",
 					"next": "main-breaker-other"
 				}
 			]
@@ -156,7 +160,7 @@
 				"Open the DS log and find the voltage dip. Brownout disables the motor outputs at 6.3 V on a roboRIO 1 and 6.75 V by default on a roboRIO 2. It does not reboot the robot, it just cuts the actuators.",
 				"Wiggle the battery connector and main breaker lugs. Try to rotate each lug. Loose main power is the top cause after motors.",
 				"Squeeze the wires at the PDH or PDP main terminals. Confirm the bolts are tight with split washers.",
-				"Lower motor supply current limits. Drive first, then any mechanism that starts from stall.",
+				"Lower the motor current limits. Drive first, then any mechanism that starts from stall. On a Talon FX that is the stator limit; on a SPARK it is the smart current limit stall value.",
 				"Put the RIO on its own channel. A shared channel with a motor pulls it down.",
 				{
 					"kind": "check",
@@ -333,6 +337,37 @@
 					"label": "PDH lights"
 				}
 			]
+		},
+		"rev-limits": {
+			"kind": "leaf",
+			"id": "rev-limits",
+			"title": "Main breaker trip: SPARK smart current limits",
+			"steps": [
+				"SPARK MAX and SPARK Flex default to an 80 A stall current limit. Four drive motors in a pushing match all sit near that at once, which is well past a 120 A main breaker. This is the REV version of the Kraken 70 A problem.",
+				"REV has one smart current limit, not the stator and supply pair CTRE uses. It is motor current, so it behaves like a stator limit: capping it caps what the battery sees.",
+				"The limit has three parts: a stall limit (80 A default), a free speed limit (20 A default), and the RPM where it ramps from one to the other (10000 default). The stall limit is the one to lower.",
+				"Find the number the same way as any other motor: drive against a wall and raise output until the wheels slip, then set the limit just below the current you saw.",
+				"Leave the current chop setting alone. That is a 115 A hardware cutout in the half bridge, not a substitute for the smart current limit.",
+				"Set it in the REV Hardware Client or in the SPARK's configuration in code, then read it back off the device. A limit set in a config object but never applied is a common way to think you have one when you do not.",
+				"Spin each swerve module by hand. A binding module makes this far easier to trigger and no current limit hides it.",
+				{
+					"kind": "check",
+					"text": "Does the main breaker still trip?",
+					"yes": "Swap the breaker and check the battery leads.",
+					"no": "Problem solved."
+				}
+			],
+			"links": [
+				{
+					"label": "SPARK MAX parameters",
+					"url": "https://docs.revrobotics.com/brushless/spark-max/parameters"
+				},
+				{
+					"label": "Preemptive troubleshooting",
+					"url": "https://docs.wpilib.org/en/stable/docs/hardware/hardware-basics/preemptive-troubleshooting.html"
+				}
+			],
+			"escalate": true
 		}
 	}
 }

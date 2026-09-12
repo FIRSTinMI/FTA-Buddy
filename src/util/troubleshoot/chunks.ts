@@ -30,6 +30,7 @@ export async function upsertChunks(rows: TroubleshootChunkInsert[]): Promise<num
 					title: sql`excluded.title`,
 					heading: sql`excluded.heading`,
 					body: sql`excluded.body`,
+					ordinal: sql`excluded.ordinal`,
 					source_date: sql`excluded.source_date`,
 					fetched_at: sql`excluded.fetched_at`,
 				},

@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { and, asc, desc, eq, ilike, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, isNotNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db/db";
 import { troubleshootChunks, troubleshootConversations, troubleshootDocs, troubleshootMessages } from "../db/schema";
@@ -30,6 +30,9 @@ export { SOURCE_LABELS };
 const MAX_USER_TURNS = 8;
 const MAX_MESSAGE_CHARS = 800;
 const RETRIEVE_LIMIT = 6;
+
+/** Corpus sources a user may page through. Tickets and Slack stay out; they are only distilled. */
+const BROWSABLE_SOURCES = ["wpilib", "rev", "ctre", "vivid"] as const;
 
 function firstForwardedIp(ip: string | undefined): string | null {
 	if (!ip) return null;
@@ -87,6 +90,77 @@ export const troubleshootRouter = router({
 		if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "No notes for that topic." });
 		return doc;
 	}),
+
+	/** Which corpus sources can be browsed, with a page count each. */
+	sources: publicProcedure.query(async () => {
+		const rows = await db
+			.select({
+				source: troubleshootChunks.source,
+				pages: sql<number>`count(distinct ${troubleshootChunks.url})::int`,
+				chunks: count(),
+				updated: sql<Date>`max(${troubleshootChunks.fetched_at})`,
+			})
+			.from(troubleshootChunks)
+			.where(and(inArray(troubleshootChunks.source, BROWSABLE_SOURCES), isNotNull(troubleshootChunks.url)))
+			.groupBy(troubleshootChunks.source);
+		return rows.map((r) => ({ ...r, label: SOURCE_LABELS[r.source] ?? r.source }));
+	}),
+
+	/** Pages within one source, newest crawl first. `q` filters on the page title. */
+	sourcePages: publicProcedure
+		.input(
+			z.object({
+				source: z.enum(BROWSABLE_SOURCES),
+				q: z.string().max(100).optional(),
+				limit: z.number().int().min(1).max(200).default(200),
+			}),
+		)
+		.query(async ({ input }) => {
+			const where = [
+				eq(troubleshootChunks.source, input.source),
+				isNotNull(troubleshootChunks.url),
+				...(input.q?.trim() ? [ilike(troubleshootChunks.title, `%${input.q.trim()}%`)] : []),
+			];
+			return db
+				.select({
+					url: troubleshootChunks.url,
+					title: troubleshootChunks.title,
+					sections: count(),
+					updated: sql<Date>`max(${troubleshootChunks.fetched_at})`,
+				})
+				.from(troubleshootChunks)
+				.where(and(...where))
+				.groupBy(troubleshootChunks.url, troubleshootChunks.title)
+				.orderBy(asc(troubleshootChunks.title))
+				.limit(input.limit);
+		}),
+
+	/** One page, its sections joined back together in document order. */
+	sourcePage: publicProcedure
+		.input(z.object({ source: z.enum(BROWSABLE_SOURCES), url: z.string().url().max(500) }))
+		.query(async ({ input }) => {
+			const rows = await db
+				.select({
+					heading: troubleshootChunks.heading,
+					body: troubleshootChunks.body,
+					title: troubleshootChunks.title,
+					fetched_at: troubleshootChunks.fetched_at,
+					created_at: troubleshootChunks.created_at,
+				})
+				.from(troubleshootChunks)
+				.where(and(eq(troubleshootChunks.source, input.source), eq(troubleshootChunks.url, input.url)))
+				// created_at breaks the tie for rows crawled before `ordinal` existed, which all
+				// default to 0. It holds the original insert order, which was document order.
+				.orderBy(asc(troubleshootChunks.ordinal), asc(troubleshootChunks.created_at));
+			if (rows.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: "No such page." });
+			return {
+				title: rows[0].title,
+				url: input.url,
+				label: SOURCE_LABELS[input.source] ?? input.source,
+				fetched_at: rows[0].fetched_at,
+				sections: rows.map((r) => ({ heading: r.heading, body: r.body })),
+			};
+		}),
 
 	/** Run distillation on demand (testing). Returns how many categories were regenerated. */
 	distillNow: adminProcedure.mutation(async () => {

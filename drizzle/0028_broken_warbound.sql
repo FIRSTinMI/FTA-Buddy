@@ -1,0 +1,2 @@
+ALTER TABLE "troubleshoot_chunks" ADD COLUMN "ordinal" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+CREATE INDEX "troubleshoot_chunks_url_idx" ON "troubleshoot_chunks" USING btree ("source","url","ordinal");

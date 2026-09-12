@@ -342,13 +342,14 @@ export interface PageToChunksOptions extends ExtractOptions {
 export function pageToChunks(html: string, opts: PageToChunksOptions): TroubleshootChunkInsert[] {
 	const { title: extracted, sections } = extractSections(html, opts);
 	const title = opts.title ?? extracted ?? opts.url;
-	return sectionsToChunks(sections).map((c) => ({
+	return sectionsToChunks(sections).map((c, i) => ({
 		source: opts.source,
 		source_key: `${opts.url}#${c.slug}`,
 		url: opts.url,
 		title,
 		heading: c.heading,
 		body: c.body,
+		ordinal: i,
 		source_date: opts.sourceDate ?? null,
 	}));
 }

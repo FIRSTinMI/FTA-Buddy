@@ -1,11 +1,16 @@
 ---
-title: Stator or supply current limit, and which one fixes what
+title: Motor current limits on Talon FX and SPARK, and which one fixes what
 date: 2026-09-11
 url: https://v6.docs.ctr-electronics.com/en/stable/docs/hardware-reference/talonfx/improving-performance-with-current-limits.html
 ---
 
-Teams ask which current limit to set on a Kraken or Falcon and usually get told a number.
-The number is not the useful part. The two limits do different jobs.
+Teams ask which current limit to set and usually get told a number. The number is not the useful
+part. CTRE and REV name and model their limits differently, which is most of the confusion, so this
+covers both.
+
+# Talon FX (Kraken, Falcon)
+
+Two limits, doing different jobs.
 
 Stator current is the current in the motor windings. It is proportional to torque. A stator limit
 caps how hard the motor can push and how hot it gets.
@@ -66,6 +71,37 @@ per drive motor in short bursts and be fine, then trip the main breaker the firs
 a pushing match and holds. Check the trip curve in the breaker datasheet rather than assuming the
 rating is a hard ceiling. A binding swerve module makes this much easier to hit, so spin each module
 by hand before blaming the software.
+
+# SPARK MAX and SPARK Flex
+
+REV does not split things into stator and supply. There is one **smart current limit**, measured
+in motor current, and it has three parts:
+
+| Parameter | Default | What it does |
+|---|---|---|
+| Stall limit | 80 A | The limit at stall, and at any speed below the RPM parameter |
+| Free limit | 20 A | The limit at free speed |
+| RPM | 10000 | Where the limit starts ramping down from the stall value toward the free value. Set it above free speed to disable the ramp |
+
+The stall limit is the one that matters for a main breaker. It defaults to 80 A, which is the REV
+equivalent of the Kraken 70 A trap: four drive motors in a pushing match sit near their stall limit
+at once, and 4 x 80 A is well past a 120 A main breaker.
+
+Because the smart current limit is motor current, it behaves like a stator limit. It caps torque,
+which caps battery draw, and it is the right place to start. There is no separate supply limit to
+add afterwards, so if the stall limit alone does not fix it, look at the battery, the wiring or a
+binding mechanism.
+
+Separately there is a current chop limit, default 115 A, maximum 125 A. That is hardware protection
+in the half bridge: it shuts the motor driver off for a set number of PWM cycles when current goes
+past it, and the bridge brakes during that time. It is blunt and it is not a substitute for setting
+the smart current limit. Leave it alone unless you know why you are changing it.
+
+## Setting it
+
+Use the REV Hardware Client, or configure it when the SPARK is set up in code. Either way, read the
+value back off the device afterwards, the same as with Tuner X. A limit that was put in a config
+object but never applied is a common way to think you have a limit and not have one.
 
 ## Brownout thresholds
 

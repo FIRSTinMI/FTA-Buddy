@@ -4887,16 +4887,27 @@
 			     SystemCore takes over. Move the device's AccordionItem below this header to archive it. -->
 			<br /> <br />
 			<h1 class="text-xl text-white" style="font-weight: bold">Archive</h1>
-			<p class="px-2 pb-1 text-sm text-gray-300">
-				Hardware that is no longer legal or no longer current, kept because you still meet it on older robots
-				and at offseason events.
-			</p>
 
 			<!-- OpenMesh OM5P radio (pre-2025 FRC radio) -->
 			<AccordionItem class="text-black dark:text-white" bind:open={openState.om5pradio}>
 				{#snippet header()}
 					<div class="flex flex-row items-center">
-						<div class="ml-2" style="width: 72px"></div>
+						<button
+							onclick={(e) => {
+								e.stopPropagation();
+								enlarge("/references/components/images/om5p-large.webp", "OpenMesh OM5P");
+							}}
+							class="cursor-zoom-in rounded transition hover:ring-2 hover:ring-blue-400"
+							title="Click to enlarge"
+						>
+							<img
+								src="/references/components/icons/om5p.webp"
+								width="72px"
+								alt="OpenMesh OM5P radio"
+								style="background-color: white;"
+								class="ml-2"
+							/>
+						</button>
 						<div class="ml-8">OpenMesh OM5P (pre-2025 radio)</div>
 					</div>
 				{/snippet}

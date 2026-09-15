@@ -14,6 +14,8 @@ import { FmsSource } from "./sources/fmsSource";
 import type { FieldDataSource } from "./sources/types";
 import { trpc, updateValues } from "./trpc";
 import { MatchState, MatchStateMap } from "../../shared/types";
+import type { PowerTelemetry } from "../../shared/types";
+import { DEFAULT_SUBNET_PREFIX, isValidSubnetPrefix, PowerMonitorManager } from "./power-monitor";
 
 const ALARM_TEAM_POLL = "teamPoll";
 const ALARM_MATCH_IMPORT = "matchImport";
@@ -86,6 +88,10 @@ export let cloud: boolean;
 export let useDev: boolean;
 export let changed: number;
 
+export let powerMonitorEnabled: boolean = false;
+/** First three octets of the /24 the monitors live on. The event network by default. */
+export let powerSubnet: string = DEFAULT_SUBNET_PREFIX;
+
 export let fmsApi: boolean = false;
 export let fmsApiEnabled: boolean = true;
 
@@ -97,6 +103,7 @@ async function stop() {
 	outboundNoteSubscription = undefined;
 	extensionConfigSubscription?.unsubscribe();
 	extensionConfigSubscription = undefined;
+	stopPowerMonitor();
 	await source?.stop();
 }
 
@@ -119,6 +126,8 @@ async function start() {
 				"id",
 				"eventToken",
 				"fmsApiEnabled",
+				"powerMonitor",
+				"powerSubnet",
 			],
 			(item) => {
 				if (!item.id) chrome.storage.local.set({ id: crypto.randomUUID() });
@@ -159,6 +168,10 @@ async function start() {
 				sourceMode = item.sourceMode === "cheesy" ? "cheesy" : "fms"; // default fms
 				cheesyPort = sanitizeCheesyPort(item.cheesyPort);
 				eventToken = String(item.eventToken);
+				powerMonitorEnabled = Boolean(item.powerMonitor);
+				powerSubnet = isValidSubnetPrefix(String(item.powerSubnet ?? ""))
+					? String(item.powerSubnet).trim()
+					: DEFAULT_SUBNET_PREFIX;
 				id = String(item.id) || crypto.randomUUID();
 				if (id !== item.id) chrome.storage.local.set({ id });
 				resolve(void 0);
@@ -173,6 +186,12 @@ async function start() {
 		console.log("Expired");
 		return;
 	}
+
+	// Field power monitors are independent of the field data source - they need
+	// nothing from FMS and only the event token to post - so they start before
+	// the field-monitor gate below.
+	await updateValues();
+	await startPowerMonitor();
 
 	// (Re)build the field data source for the selected mode and wire its events.
 	source = buildSource();
@@ -289,6 +308,186 @@ function startExtensionConfigSync() {
 	);
 }
 
+
+// #region Field power monitors
+
+/**
+ * ESP32-P4 + PZEM-004T monitors on the event network. The extension is the only
+ * piece that can reach them (the app is HTTPS, they are plain HTTP on a private
+ * address), so it sweeps for them, holds their SSE streams, pushes live samples
+ * into any open FTA Buddy tab, and posts one-second rollups to the server.
+ */
+let powerManager: PowerMonitorManager | null = null;
+
+/** Origins where the `app` content script runs, i.e. tabs that can receive telemetry. */
+const APP_TAB_PATTERNS = ["https://ftabuddy.com/*", "https://dev.ftabuddy.com/*", "http://localhost:5173/*"];
+
+/**
+ * One second of samples from one monitor: every PZEM register averaged, with
+ * the extreme of each kept alongside. A sag or a spike lives inside a second,
+ * so an average alone would hide exactly what this is for.
+ */
+interface PowerBucket {
+	monitorId: string;
+	second: number;
+	count: number;
+	voltsSum: number;
+	voltsMin: number;
+	voltsMax: number;
+	ampsSum: number;
+	ampsMax: number;
+	wattsSum: number;
+	wattsMax: number;
+	hzSum: number;
+	hzMin: number | null;
+	hzCount: number;
+	pfSum: number;
+	pfMin: number | null;
+	pfCount: number;
+	kwh: number | null;
+	alarm: boolean;
+}
+
+const powerBuckets = new Map<string, PowerBucket>();
+let powerFlushTimer: ReturnType<typeof setInterval> | null = null;
+const POWER_FLUSH_INTERVAL_MS = 5_000;
+
+/** Fold one reading into its one-second bucket. Failed reads are not stored. */
+function bucketTelemetry(telemetry: PowerTelemetry) {
+	if (!telemetry.ok || telemetry.v === null || telemetry.a === null || telemetry.w === null) return;
+	const second = Math.floor(telemetry.ts / 1000);
+	const key = `${telemetry.id}:${second}`;
+	const bucket = powerBuckets.get(key);
+	if (bucket) {
+		bucket.count++;
+		bucket.voltsSum += telemetry.v;
+		bucket.voltsMin = Math.min(bucket.voltsMin, telemetry.v);
+		bucket.voltsMax = Math.max(bucket.voltsMax, telemetry.v);
+		bucket.ampsSum += telemetry.a;
+		bucket.ampsMax = Math.max(bucket.ampsMax, telemetry.a);
+		bucket.wattsSum += telemetry.w;
+		bucket.wattsMax = Math.max(bucket.wattsMax, telemetry.w);
+		if (telemetry.hz != null) {
+			bucket.hzSum += telemetry.hz;
+			bucket.hzCount++;
+			bucket.hzMin = bucket.hzMin === null ? telemetry.hz : Math.min(bucket.hzMin, telemetry.hz);
+		}
+		if (telemetry.pf != null) {
+			bucket.pfSum += telemetry.pf;
+			bucket.pfCount++;
+			bucket.pfMin = bucket.pfMin === null ? telemetry.pf : Math.min(bucket.pfMin, telemetry.pf);
+		}
+		bucket.kwh = telemetry.kwh ?? bucket.kwh;
+		bucket.alarm = bucket.alarm || Boolean(telemetry.alarm);
+	} else {
+		powerBuckets.set(key, {
+			monitorId: telemetry.id,
+			second,
+			count: 1,
+			voltsSum: telemetry.v,
+			voltsMin: telemetry.v,
+			voltsMax: telemetry.v,
+			ampsSum: telemetry.a,
+			ampsMax: telemetry.a,
+			wattsSum: telemetry.w,
+			wattsMax: telemetry.w,
+			hzSum: telemetry.hz ?? 0,
+			hzMin: telemetry.hz ?? null,
+			hzCount: telemetry.hz == null ? 0 : 1,
+			pfSum: telemetry.pf ?? 0,
+			pfMin: telemetry.pf ?? null,
+			pfCount: telemetry.pf == null ? 0 : 1,
+			kwh: telemetry.kwh ?? null,
+			alarm: Boolean(telemetry.alarm),
+		});
+	}
+}
+
+/** Push a reading into every open FTA Buddy tab for the live charts. */
+function broadcastTelemetry(telemetry: PowerTelemetry) {
+	chrome.tabs.query({ url: APP_TAB_PATTERNS }, (tabs) => {
+		for (const tab of tabs) {
+			if (tab.id === undefined) continue;
+			chrome.tabs.sendMessage(tab.id, { type: "powerTelemetry", data: telemetry }).catch(() => {});
+		}
+	});
+}
+
+/**
+ * Post completed buckets to the server. Only buckets older than the current
+ * second are sent, so a second is never split across two posts.
+ */
+async function flushPowerSamples() {
+	if (powerBuckets.size === 0) return;
+	if (!eventToken) return;
+
+	const currentSecond = Math.floor(Date.now() / 1000);
+	const ready = [...powerBuckets.entries()].filter(([, b]) => b.second < currentSecond);
+	if (ready.length === 0) return;
+	for (const [key] of ready) powerBuckets.delete(key);
+
+	const samples = ready
+		.map(([, b]) => ({
+			monitorId: b.monitorId,
+			time: new Date(b.second * 1000),
+			volts: b.voltsSum / b.count,
+			voltsMin: b.voltsMin,
+			voltsMax: b.voltsMax,
+			amps: b.ampsSum / b.count,
+			ampsMax: b.ampsMax,
+			watts: b.wattsSum / b.count,
+			wattsMax: b.wattsMax,
+			hz: b.hzCount > 0 ? b.hzSum / b.hzCount : null,
+			hzMin: b.hzMin,
+			pf: b.pfCount > 0 ? b.pfSum / b.pfCount : null,
+			pfMin: b.pfMin,
+			kwh: b.kwh,
+			alarm: b.alarm,
+		}))
+		.sort((a, b) => a.time.getTime() - b.time.getTime());
+
+	try {
+		await trpc.power.postSamples.mutate({ extensionId: id, samples });
+	} catch (err) {
+		// Dropped on failure rather than retried: this is a continuous stream, and
+		// a backlog replayed later would land out of order behind fresher rows.
+		console.warn("Power sample post failed:", err);
+	}
+}
+
+async function startPowerMonitor() {
+	if (!powerMonitorEnabled) return;
+
+	// The sweep needs permission for arbitrary http origins, granted from the
+	// popup. Without it every probe throws and the sweep silently finds nothing.
+	const granted = await chrome.permissions.contains({ origins: ["http://*/*"] }).catch(() => false);
+	if (!granted) {
+		console.warn("Power monitoring is on but http://*/* is not granted - open the popup and re-toggle it");
+		return;
+	}
+
+	powerManager = new PowerMonitorManager(
+		(telemetry) => {
+			broadcastTelemetry(telemetry);
+			bucketTelemetry(telemetry);
+		},
+		() => powerSubnet,
+	);
+	await powerManager.start();
+	powerFlushTimer = setInterval(() => flushPowerSamples().catch(console.warn), POWER_FLUSH_INTERVAL_MS);
+	console.log(`Power monitoring started on ${powerSubnet}.0/24 - ${powerManager.list().length} monitor(s) found`);
+}
+
+function stopPowerMonitor() {
+	if (powerFlushTimer) clearInterval(powerFlushTimer);
+	powerFlushTimer = null;
+	powerBuckets.clear();
+	powerManager?.stop();
+	powerManager = null;
+}
+
+// #endregion
+
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 	// Cheesy Arena field monitor messages relayed from the `cheesy-inject` content
 	// script (it owns the page-origin websocket; see cheesy-inject.ts).
@@ -370,6 +569,25 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 		(async () => {
 			const ok = await pingFMS();
 			sendResponse({ ok, fmsApi, FMS });
+		})();
+		return true;
+	}
+
+	if (msg?.type === "getPowerStatus") {
+		sendResponse({
+			enabled: powerMonitorEnabled,
+			subnet: powerSubnet,
+			running: powerManager?.running ?? false,
+			monitors: powerManager?.list() ?? [],
+			connected: powerManager?.connectedCount ?? 0,
+		});
+		return false;
+	}
+
+	if (msg?.type === "rescanPowerMonitors") {
+		(async () => {
+			const found = (await powerManager?.discover()) ?? [];
+			sendResponse({ found: found.length, monitors: powerManager?.list() ?? [] });
 		})();
 		return true;
 	}

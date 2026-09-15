@@ -12,6 +12,9 @@
         "http://10.0.100.5/*",
         "http://localhost/*"
     ],
+    "optional_host_permissions": [
+        "http://*/*"
+    ],
     "content_scripts": [
         {
             "run_at": "document_end",

@@ -14,7 +14,14 @@ const fmsApiEnabledInput = document.getElementById("fmsApiEnabled") as HTMLInput
 const sourceModeSelect = document.getElementById("sourceMode") as HTMLSelectElement;
 const cheesyPortInput = document.getElementById("cheesyPort") as HTMLInputElement;
 const cheesyPortRow = document.getElementById("cheesy-port-row") as HTMLDivElement;
+const powerMonitorInput = document.getElementById("powerMonitor") as HTMLInputElement;
+const powerMonitorRow = document.getElementById("power-monitor-row") as HTMLDivElement;
+const powerSubnetInput = document.getElementById("powerSubnet") as HTMLInputElement;
+const powerSubnetRow = document.getElementById("power-subnet-row") as HTMLDivElement;
 const saveButton = document.getElementById("save") as HTMLButtonElement;
+
+const powerMonitorIndicator = document.getElementById("power-monitor-status") as HTMLDivElement;
+const powerMonitorText = document.getElementById("power-monitor-status-text") as HTMLSpanElement;
 
 const extensionStatusIndicator = document.getElementById("extension-status") as HTMLDivElement;
 const fmsApiStatusIndicator = document.getElementById("fms-api-status") as HTMLDivElement;
@@ -50,6 +57,91 @@ async function bgGetStatuses(): Promise<{ signalrStatus: string }> {
 	return chrome.runtime.sendMessage({ type: "getStatuses" });
 }
 
+/** The event network by default; a bench test runs on whatever the bench is on. */
+const DEFAULT_POWER_SUBNET = "10.0.100";
+
+function isValidSubnetPrefix(prefix: string): boolean {
+	const parts = prefix.trim().split(".");
+	return parts.length === 3 && parts.every((p) => /^\d{1,3}$/.test(p) && Number(p) >= 0 && Number(p) <= 255);
+}
+
+async function bgGetPowerStatus(): Promise<{
+	enabled: boolean;
+	subnet: string;
+	running: boolean;
+	connected: number;
+	monitors: { id: string; ip: string; connected: boolean }[];
+}> {
+	return chrome.runtime.sendMessage({ type: "getPowerStatus" });
+}
+
+/**
+ * Sweeping the event subnet needs permission for arbitrary http origins, which
+ * Chrome only grants from a user gesture - so it is requested here, on the
+ * toggle, and the toggle snaps back if the prompt is declined.
+ */
+async function handlePowerMonitorToggle() {
+	if (powerMonitorInput.checked) {
+		const granted = await chrome.permissions.request({ origins: ["http://*/*"] });
+		if (!granted) {
+			powerMonitorInput.checked = false;
+			powerMonitorText.textContent = "Permission denied";
+			return;
+		}
+	}
+	powerMonitorRow.style.display = powerMonitorInput.checked ? "flex" : "none";
+	powerSubnetRow.style.display = powerMonitorInput.checked ? "grid" : "none";
+	await chrome.storage.local.set({ powerMonitor: powerMonitorInput.checked });
+	// Storage change triggers background restart automatically
+	updatePowerMonitorStatus();
+}
+
+/** Persisted on blur rather than per keystroke, or a half-typed subnet starts a sweep. */
+async function handlePowerSubnetChange() {
+	const value = powerSubnetInput.value.trim();
+	if (value && !isValidSubnetPrefix(value)) {
+		powerMonitorText.textContent = "Subnet must be three octets, e.g. 10.0.100";
+		return;
+	}
+	await chrome.storage.local.set({ powerSubnet: value || DEFAULT_POWER_SUBNET });
+	// Storage change triggers background restart automatically
+}
+
+async function updatePowerMonitorStatus() {
+	if (!powerMonitorInput.checked) {
+		powerMonitorRow.style.display = "none";
+		powerSubnetRow.style.display = "none";
+		return;
+	}
+	powerMonitorRow.style.display = "flex";
+	powerSubnetRow.style.display = "grid";
+	powerMonitorIndicator.classList.remove("red", "green", "yellow");
+	try {
+		const status = await bgGetPowerStatus();
+		const total = status.monitors.length;
+		if (!status.running) {
+			powerMonitorIndicator.classList.add("yellow");
+			powerMonitorText.textContent = "Starting...";
+		} else if (status.connected === 0) {
+			powerMonitorIndicator.classList.add("red");
+			powerMonitorText.textContent = total > 0 ? `${total} found, none streaming` : "None found";
+		} else {
+			powerMonitorIndicator.classList.add("green");
+			powerMonitorText.textContent =
+				`${status.connected} connected` +
+				(status.connected === total ? "" : ` of ${total}`) +
+				": " +
+				status.monitors
+					.filter((m) => m.connected)
+					.map((m) => m.id)
+					.join(", ");
+		}
+	} catch {
+		powerMonitorIndicator.classList.add("red");
+		powerMonitorText.textContent = "Background worker not responding";
+	}
+}
+
 function load() {
 	chrome.storage.local.get(
 		[
@@ -65,6 +157,8 @@ function load() {
 			"fmsApiEnabled",
 			"sourceMode",
 			"cheesyPort",
+			"powerMonitor",
+			"powerSubnet",
 		],
 		(item) => {
 			if (
@@ -103,6 +197,10 @@ function load() {
 			sourceModeSelect.value = item.sourceMode === "cheesy" ? "cheesy" : "fms";
 			cheesyPortInput.value = String(item.cheesyPort || 8080);
 			cheesyPortRow.style.display = sourceModeSelect.value === "cheesy" ? "flex" : "none";
+			powerMonitorInput.checked = Boolean(item.powerMonitor);
+			powerMonitorRow.style.display = Boolean(item.powerMonitor) ? "flex" : "none";
+			powerSubnetInput.value = String(item.powerSubnet || DEFAULT_POWER_SUBNET);
+			powerSubnetRow.style.display = Boolean(item.powerMonitor) ? "grid" : "none";
 			tokenInput.value = String(item.eventToken);
 			let changed = Number(item.changed);
 
@@ -120,6 +218,8 @@ function load() {
 			fmsApiEnabledInput.addEventListener("input", handleUpdate);
 			sourceModeSelect.addEventListener("input", handleUpdate);
 			cheesyPortInput.addEventListener("input", handleUpdate);
+			powerMonitorInput.addEventListener("change", handlePowerMonitorToggle);
+			powerSubnetInput.addEventListener("change", handlePowerSubnetChange);
 			if (useDevCheckbox) useDevCheckbox.addEventListener("input", handleUpdate);
 			saveButton.addEventListener("click", handleUpdate);
 			refreshButton.addEventListener("click", () => chrome.runtime.reload());
@@ -189,7 +289,9 @@ async function updateStatusIndicators() {
 		}
 	});
 
-	await Promise.all([bgStatus, ftaBuddy, fmsRes]);
+	const power = updatePowerMonitorStatus();
+
+	await Promise.all([bgStatus, ftaBuddy, fmsRes, power]);
 	setTimeout(updateStatusIndicators, 3000);
 }
 

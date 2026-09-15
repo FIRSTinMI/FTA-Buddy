@@ -1,6 +1,7 @@
 import { relations, sql } from "drizzle-orm";
 import {
 	bigint,
+	bigserial,
 	boolean,
 	customType,
 	index,
@@ -9,6 +10,7 @@ import {
 	pgEnum,
 	pgTable,
 	primaryKey,
+	real,
 	serial,
 	text,
 	timestamp,
@@ -65,6 +67,7 @@ export const events = pgTable("events", {
 	slowWarningSettings: jsonb("slowWarningSettings").$type<Partial<SlowWarningSettings>>().notNull().default({}),
 	notepadOnly: boolean("notepadOnly").notNull().default(false),
 	playoffMode: boolean("playoffMode").notNull().default(false),
+	powerMonitoring: boolean("powerMonitoring").notNull().default(false),
 });
 
 export type Event = typeof events.$inferInsert;
@@ -772,6 +775,46 @@ export const fieldLineups = pgTable(
 export type FieldLineup = typeof fieldLineups.$inferSelect;
 
 // #endregion
+
+/**
+ * One-second rollups of field AC power, one row per monitor per second. Every
+ * register the PZEM-004T has is kept: volts, amps, watts, frequency, power
+ * factor, the cumulative energy counter and the meter's alarm flag.
+ * The extension averages the 2 Hz stream from each PZEM before posting, so an
+ * eight hour event with two monitors is ~58k rows rather than 230k, and the
+ * spikes that matter survive as min/max alongside the mean.
+ */
+export const powerSamples = pgTable(
+	"power_samples",
+	{
+		id: bigserial("id", { mode: "number" }).primaryKey(),
+		event: varchar("event").notNull(),
+		monitor_id: varchar("monitor_id").notNull(),
+		time: timestamp("time").notNull(),
+		volts: real("volts").notNull(),
+		volts_min: real("volts_min").notNull(),
+		volts_max: real("volts_max").notNull(),
+		amps: real("amps").notNull(),
+		amps_max: real("amps_max").notNull(),
+		watts: real("watts").notNull(),
+		watts_max: real("watts_max").notNull(),
+		hz: real("hz"),
+		hz_min: real("hz_min"),
+		/** Power factor. A leg of motors sitting at 0.6 draws far more current than its watts imply. */
+		pf: real("pf"),
+		pf_min: real("pf_min"),
+		/** The meter's own cumulative kWh register, not an integration of watts. */
+		kwh: real("kwh"),
+		/** The PZEM's own over-power alarm flag, true if it fired anywhere in this second. */
+		alarm: boolean("alarm").notNull().default(false),
+	},
+	(t) => [
+		index("power_samples_event_time_idx").on(t.event, t.time),
+		index("power_samples_event_monitor_time_idx").on(t.event, t.monitor_id, t.time),
+	],
+);
+
+export type PowerSample = typeof powerSamples.$inferSelect;
 
 export default {
 	events,

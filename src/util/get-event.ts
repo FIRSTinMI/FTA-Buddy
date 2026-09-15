@@ -133,6 +133,7 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 				meshedEvent: event.meshedEvent !== null,
 				notepadOnly: event.notepadOnly ?? false,
 				playoffMode: event.playoffMode ?? false,
+				powerMonitoring: event.powerMonitoring ?? false,
 				subEvents: event.meshedEvent ? event.meshedEvent : undefined,
 				slackChannel: event.slackChannel,
 				slackTeam: event.slackTeam,

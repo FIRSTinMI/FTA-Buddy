@@ -461,6 +461,27 @@
 				</label>
 			</div>
 
+			<div class="spaced" style="margin-top: 4px">
+				<span class="hstack">Field Power Monitors</span>
+				<label class="switch" aria-label="Field Power Monitors">
+					<input type="checkbox" id="powerMonitor" />
+					<span class="slider"></span>
+				</label>
+			</div>
+
+			<div class="grid" id="power-subnet-row" style="display: none; margin-top: 8px">
+				<div class="field">
+					<label for="powerSubnet">Monitor Subnet (first three octets)</label>
+					<input id="powerSubnet" type="text" placeholder="10.0.100" />
+				</div>
+			</div>
+
+			<div class="row" id="power-monitor-row" style="display: none">
+				<div class="status-indicator" id="power-monitor-status"></div>
+				<div class="status-label">Monitors</div>
+				<span class="status-text" id="power-monitor-status-text"></span>
+			</div>
+
 			<div class="grid" id="url-container" style="display: none; margin-top: 10px">
 				<div class="field">
 					<label for="url">Server Host</label>

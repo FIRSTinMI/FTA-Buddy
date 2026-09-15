@@ -12,6 +12,7 @@ export interface Event {
 	label?: string;
 	notepadOnly?: boolean;
 	playoffMode?: boolean;
+	powerMonitoring?: boolean;
 	startDate?: string;
 	endDate?: string;
 	joinedAt?: string;

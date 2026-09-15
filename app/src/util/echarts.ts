@@ -8,6 +8,7 @@ import {
 	DataZoomInsideComponent,
 	DataZoomSliderComponent,
 	GridComponent,
+	MarkLineComponent,
 	ToolboxComponent,
 	TooltipComponent,
 } from "echarts/components";
@@ -32,6 +33,7 @@ echarts.use([
 	DataZoomInsideComponent,
 	DataZoomSliderComponent,
 	ToolboxComponent,
+	MarkLineComponent,
 ]);
 
 /** Composite option type covering all registered components. */

@@ -6,6 +6,7 @@ import express from "express";
 import { existsSync, readFileSync, readdirSync, statSync } from "fs";
 import hljs from "highlight.js";
 import json from "highlight.js/lib/languages/json";
+import { createHash } from "crypto";
 import { createServer } from "http";
 import { json2csv } from "json-2-csv";
 import { Marked } from "marked";
@@ -176,8 +177,17 @@ app.get("/serviceworker.js", async (req, res) => {
 				f.endsWith(".json")),
 	);
 	const allAssets = [...assets.map((f) => `/assets/${f}`), ...rootFiles.map((f) => `/${f}`), "/"];
-	// Use the main entry JS hash as the SW version for cache busting
-	const swVersion = assets.find((f) => f.startsWith("index-") && f.endsWith(".js")) ?? assets[0] ?? "v1";
+	// SW version = hash of the hashed JS bundle name + the CONTENTS of the non-hashed root
+	// assets (privacy.html, manifest.json, etc). Vite hashes JS/CSS filenames, but static
+	// public files keep stable names, so editing one would otherwise never bust the SW cache.
+	const jsBundle = assets.find((f) => f.startsWith("index-") && f.endsWith(".js")) ?? assets[0] ?? "v1";
+	const versionHash = createHash("sha1");
+	versionHash.update(jsBundle);
+	for (const f of rootFiles.filter((f) => f.endsWith(".html") || f.endsWith(".json")).sort()) {
+		versionHash.update(f);
+		versionHash.update(readFileSync(`./app/dist/${f}`));
+	}
+	const swVersion = `${jsBundle}-${versionHash.digest("hex").slice(0, 8)}`;
 	let serviceWorkerFile = readFileSync("./app/dist/serviceworker.js").toString();
 	serviceWorkerFile = serviceWorkerFile.replace("{{ALL_ASSETS}}", JSON.stringify(allAssets));
 	serviceWorkerFile = serviceWorkerFile.replace("{{SW_VERSION}}", swVersion);

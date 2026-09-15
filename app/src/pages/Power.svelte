@@ -299,18 +299,18 @@
 					<div class="mt-2 grid grid-cols-3 gap-2 text-center">
 						<div>
 							<div class="text-xl font-bold {lowVolts ? 'text-red-500' : ''}">
-								{m.last.v?.toFixed(1)}
+								{m.last.v?.toFixed(1) ?? "-"}
 							</div>
 							<div class="text-xs text-gray-500">Volts</div>
 						</div>
 						<div>
 							<div class="text-xl font-bold {highAmps ? 'text-red-500' : ''}">
-								{m.last.a?.toFixed(2)}
+								{m.last.a?.toFixed(2) ?? "-"}
 							</div>
 							<div class="text-xs text-gray-500">Amps</div>
 						</div>
 						<div>
-							<div class="text-xl font-bold">{m.last.w?.toFixed(0)}</div>
+							<div class="text-xl font-bold">{m.last.w?.toFixed(0) ?? "-"}</div>
 							<div class="text-xs text-gray-500">Watts</div>
 						</div>
 					</div>

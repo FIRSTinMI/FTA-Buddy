@@ -21,3 +21,7 @@ FTA Buddy is a companion app for FIRST Robotics Competition (FRC) event voluntee
 ## Developer Reference
 
 - [Public API](./api/) - REST endpoints for match logs and cycle times
+
+## More FRC Tools
+
+Find more tools, offseason events, practice fields, and photos for FRC, FTC, and FLL teams at [FRC.Tools](https://frc.tools).

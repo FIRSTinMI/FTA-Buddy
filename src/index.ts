@@ -3,7 +3,7 @@ import cors from "cors";
 import "dotenv/config";
 import { and, eq, isNotNull, sql } from "drizzle-orm";
 import express from "express";
-import { readFileSync, readdirSync } from "fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "fs";
 import hljs from "highlight.js";
 import json from "highlight.js/lib/languages/json";
 import { createServer } from "http";
@@ -11,7 +11,7 @@ import { json2csv } from "json-2-csv";
 import { Marked } from "marked";
 import { gfmHeadingId } from "marked-gfm-heading-id";
 import { markedHighlight } from "marked-highlight";
-import { join } from "path";
+import { join, relative } from "path";
 import sanitizeHtml from "sanitize-html";
 import SuperJSON from "superjson";
 import { cycleTimeToMS } from "../shared/cycleTimeToMS";
@@ -579,11 +579,85 @@ function extractDocMeta(markdown: string, urlPath: string): { title: string; des
 	return { title: fullTitle, description };
 }
 
+const DOCS_ROOT = join(__dirname, "../docs");
+
+// Intro paragraph for auto-generated section index pages, keyed by URL path. Feeds the
+// visible lead text and the meta description; falls back to a generic line if absent.
+const DIR_INDEX_INTRO: Record<string, string> = {
+	"/docs/troubleshooting/":
+		"Field-tested fixes for common FRC roboRIO, radio, power, and network problems seen at events.",
+	"/docs/troubleshooting/notes/":
+		"Field-tested fixes for common FRC roboRIO, radio, power, and network problems seen at events.",
+};
+
+// Read a docs page's display title (frontmatter title, else first H1, else prettified filename).
+function docLinkTitle(markdown: string, segment: string): string {
+	const { title: fmTitle, body } = stripFrontmatter(markdown);
+	if (fmTitle) return fmTitle;
+	const h1 = body.match(/^#\s+(.+?)\s*#*\s*$/m);
+	if (h1) return markdownToPlainText(h1[1]);
+	return segment.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+// Read a `date:` value from a page's YAML frontmatter, if present.
+function docDate(markdown: string): string {
+	const fm = markdown.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+	if (!fm) return "";
+	const m = fm[1].match(/^date:\s*(.+)$/m);
+	return m ? m[1].trim().replace(/^["']|["']$/g, "") : "";
+}
+
+// Build a markdown listing for a docs directory that has no index.md of its own, so the pages
+// under it (e.g. auto-distilled troubleshooting notes) are reachable and crawlable instead of
+// orphaned. Recurses into subdirectories; returns null if the dir has no markdown pages.
+function buildDirIndexMarkdown(dirAbs: string, reqPath: string): string | null {
+	if (!existsSync(dirAbs) || !statSync(dirAbs).isDirectory()) return null;
+	const pages: { url: string; title: string; date: string }[] = [];
+	const walk = (d: string) => {
+		for (const entry of readdirSync(d, { withFileTypes: true })) {
+			const full = join(d, entry.name);
+			if (entry.isDirectory()) {
+				walk(full);
+			} else if (entry.isFile() && entry.name.endsWith(".md") && entry.name !== "index.md") {
+				const md = readFileSync(full, "utf8");
+				const rel = relative(DOCS_ROOT, full).replace(/\\/g, "/").replace(/\.md$/, "");
+				pages.push({
+					url: "/docs/" + rel,
+					title: docLinkTitle(md, entry.name.slice(0, -3)),
+					date: docDate(md),
+				});
+			}
+		}
+	};
+	walk(dirAbs);
+	if (pages.length === 0) return null;
+	// Newest first (by frontmatter date), then alphabetical.
+	pages.sort((a, b) => b.date.localeCompare(a.date) || a.title.localeCompare(b.title));
+	const segment = reqPath.replace(/\/$/, "").split("/").pop() || "docs";
+	const heading = segment.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+	const intro = DIR_INDEX_INTRO[reqPath];
+	let out = `# ${heading}\n\n`;
+	if (intro) out += `${intro}\n\n`;
+	for (const p of pages) out += `- [${p.title}](${p.url})${p.date ? ` - ${p.date}` : ""}\n`;
+	return out;
+}
+
 app.get(/^\/docs\//, async (req, res) => {
 	let path = req.path;
 	if (path.endsWith("/")) path += "index";
 	path = join(__dirname, "../", path + ".md");
-	const data = readFileSync(path, "utf8");
+	let data: string;
+	try {
+		data = readFileSync(path, "utf8");
+	} catch {
+		// No index.md for this directory: auto-generate a listing so its pages are not orphaned.
+		const auto = path.endsWith("/index.md") ? buildDirIndexMarkdown(path.slice(0, -"/index.md".length), req.path) : null;
+		if (auto === null) {
+			res.status(404).send("Not found");
+			return;
+		}
+		data = auto;
+	}
 	const { body } = stripFrontmatter(data);
 	const { title, description } = extractDocMeta(data, req.path);
 	const canonical = SITE_URL + req.path;
@@ -630,20 +704,30 @@ app.get(/^\/docs\//, async (req, res) => {
     `);
 });
 
-// Recursively collect docs URLs from the docs/ directory for the sitemap.
+// Recursively collect docs URLs from the docs/ directory for the sitemap. A directory URL is
+// emitted when it has an index.md, or when it has no index.md but contains pages that the docs
+// handler auto-indexes (so those hub pages appear in the sitemap too).
 function collectDocUrls(dir: string, urlPrefix: string): string[] {
 	const urls: string[] = [];
+	const childUrls: string[] = [];
+	let hasIndex = false;
+	let hasDescendant = false;
 	for (const entry of readdirSync(dir, { withFileTypes: true })) {
 		if (entry.isDirectory()) {
-			urls.push(...collectDocUrls(join(dir, entry.name), `${urlPrefix}${entry.name}/`));
+			const sub = collectDocUrls(join(dir, entry.name), `${urlPrefix}${entry.name}/`);
+			if (sub.length > 0) hasDescendant = true;
+			childUrls.push(...sub);
 		} else if (entry.isFile() && entry.name.endsWith(".md")) {
+			hasDescendant = true;
 			if (entry.name === "index.md") {
-				urls.push(urlPrefix); // /docs/foo/index.md -> /docs/foo/
+				hasIndex = true;
 			} else {
 				urls.push(`${urlPrefix}${entry.name.slice(0, -3)}`); // drop .md
 			}
 		}
 	}
+	if (hasIndex || hasDescendant) urls.push(urlPrefix); // /docs/foo/index.md or auto-indexed -> /docs/foo/
+	urls.push(...childUrls);
 	return urls;
 }
 

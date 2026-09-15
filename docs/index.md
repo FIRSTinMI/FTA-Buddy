@@ -17,6 +17,7 @@ FTA Buddy is a companion app for FIRST Robotics Competition (FRC) event voluntee
 - [References](./references) - status lights, wiring diagrams, manuals, and more
 - [Settings](./settings) - customizing alerts, appearance, and notifications
 - [Integrations](./integrations) - FTA App sync, Slack, Nexus, and kiosk modes
+- [Troubleshooting](./troubleshooting/) - field-tested fixes for roboRIO, radio, power, and network issues
 
 ## Developer Reference
 

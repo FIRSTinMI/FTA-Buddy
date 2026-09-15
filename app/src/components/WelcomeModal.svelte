@@ -198,6 +198,13 @@
 					>frc.nexus</a
 				>.
 			</p>
+			<p class="py-1">
+				Find more tools like FTA Buddy at <a
+					href="https://frc.tools"
+					class="text-blue-500 underline"
+					target="_blank">FRC.Tools</a
+				>.
+			</p>
 			<Button color="primary" class="w-full py-1" onclick={() => openChangelog()}>Changelog</Button>
 			<Button color="primary" class="w-full py-1" onclick={() => closeModal()}>Close</Button>
 		{/if}

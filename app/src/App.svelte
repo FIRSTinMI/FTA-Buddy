@@ -17,6 +17,7 @@
 		"mdi:cog",
 		"mdi:cog-outline",
 		"mdi:menu",
+		"mdi:lightning-bolt",
 	]);
 	import {
 		Button,
@@ -89,6 +90,13 @@
 					role: "FTA",
 					admin: false,
 				});
+			}
+
+			// The flag decides whether the Power item renders in the sidebar, and a
+			// device that just joined has never seen a settings push for it.
+			if (checkAuth.event) {
+				const powerMonitoring = checkAuth.event.powerMonitoring;
+				eventStore.update((e) => ({ ...e, powerMonitoring }));
 			}
 
 			if (checkAuth.event?.archived) {
@@ -461,14 +469,20 @@
 		}
 	});
 
-	// Subscribe to server-side event settings changes (playoffMode, notepadOnly) so all
+	// Subscribe to server-side event settings changes (playoffMode, notepadOnly,
+	// powerMonitoring) so all
 	// connected clients update immediately when an FTA toggles them.
 	$effect(() => {
 		const eventToken = $user.eventToken;
 		if (!eventToken) return;
 		const sub = trpc.event.settings.subscribe(undefined, {
 			onData: (data) => {
-				eventStore.update((e) => ({ ...e, playoffMode: data.playoffMode, notepadOnly: data.notepadOnly }));
+				eventStore.update((e) => ({
+					...e,
+					playoffMode: data.playoffMode,
+					notepadOnly: data.notepadOnly,
+					powerMonitoring: data.powerMonitoring,
+				}));
 			},
 		});
 		return () => sub.unsubscribe();
@@ -827,6 +841,19 @@
 							<Icon icon="mdi:database-export-outline" class="size-8" />
 						{/snippet}
 					</SidebarItem>
+					{#if $eventStore.powerMonitoring}
+						<SidebarItem
+							label="Power"
+							onclick={() => {
+								drawerOpen = false;
+								navigate("/power");
+							}}
+						>
+							{#snippet icon()}
+								<Icon icon="mdi:lightning-bolt" class="size-8" />
+							{/snippet}
+						</SidebarItem>
+					{/if}
 					<SidebarItem
 						label="My Notifications"
 						onclick={() => {

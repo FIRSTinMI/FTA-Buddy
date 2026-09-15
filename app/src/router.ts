@@ -34,6 +34,7 @@ export const { p, navigate, isActive, preload, route } = createRouter({
 	"/scorekeeper": () => import("./pages/scorekeeper/Scorekeeper.svelte"),
 	"/field-lineup": () => import("./pages/scorekeeper/FieldLineupEntry.svelte"),
 	"/ftc": () => import("./pages/ftc/FTCStatus.svelte"),
+	"/power": () => import("./pages/Power.svelte"),
 
 	"/manage": () => import("./pages/management/Management.svelte"),
 	"/manage/debug-logs": () => import("./pages/management/DebugLogs.svelte"),

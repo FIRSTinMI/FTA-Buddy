@@ -196,6 +196,7 @@ export const eventRouter = router({
 				subEvents: event.subEvents,
 				playoffMode: event.playoffMode,
 				notepadOnly: event.notepadOnly,
+				powerMonitoring: event.powerMonitoring,
 				startDate: event.startDate,
 				endDate: event.endDate,
 			};
@@ -237,6 +238,7 @@ export const eventRouter = router({
 			subEvents: event.subEvents,
 			playoffMode: event.playoffMode,
 			notepadOnly: event.notepadOnly,
+			powerMonitoring: event.powerMonitoring,
 			startDate: event.startDate,
 			endDate: event.endDate,
 		};
@@ -1411,13 +1413,26 @@ export const eventRouter = router({
 
 	settings: eventProcedure.subscription(async function* ({ ctx, signal }) {
 		const event = ctx.event;
-		const { push, drain } = subscriptionQueue<{ playoffMode: boolean; notepadOnly: boolean }>(signal!);
+		const { push, drain } = subscriptionQueue<{
+			playoffMode: boolean;
+			notepadOnly: boolean;
+			powerMonitoring: boolean;
+		}>(signal!);
+
+		const current = () => ({
+			playoffMode: event.playoffMode,
+			notepadOnly: event.notepadOnly,
+			powerMonitoring: event.powerMonitoring,
+		});
 
 		const playoffUnsub = bus.subscribe(`event:${event.code}:playoff_mode`, (data) => {
-			push({ playoffMode: data as boolean, notepadOnly: event.notepadOnly });
+			push({ ...current(), playoffMode: data as boolean });
 		});
 		const notepadUnsub = bus.subscribe(`event:${event.code}:notepad_only`, (data) => {
-			push({ playoffMode: event.playoffMode, notepadOnly: data as boolean });
+			push({ ...current(), notepadOnly: data as boolean });
+		});
+		const powerUnsub = bus.subscribe(`event:${event.code}:power_monitoring`, (data) => {
+			push({ ...current(), powerMonitoring: data as boolean });
 		});
 
 		try {
@@ -1425,6 +1440,7 @@ export const eventRouter = router({
 		} finally {
 			playoffUnsub();
 			notepadUnsub();
+			powerUnsub();
 		}
 	}),
 });

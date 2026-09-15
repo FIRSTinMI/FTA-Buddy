@@ -462,6 +462,7 @@ export interface ServerEvent {
 	meshedEvent: boolean;
 	notepadOnly: boolean;
 	playoffMode: boolean;
+	powerMonitoring: boolean;
 	subEvents?: {
 		code: string;
 		label: string;
@@ -866,3 +867,78 @@ export interface MatchEvent {
 	converted_note_id: string | null;
 	created_at: Date;
 }
+
+// #region Field power monitoring
+
+/** Voltage below this on any monitor is flagged in the UI. Nominal is 120V. */
+export const POWER_LOW_VOLTAGE = 110;
+/** Current above this on any monitor is flagged in the UI. */
+export const POWER_HIGH_CURRENT = 15;
+
+/**
+ * One reading from a field power monitor (ESP32-P4 + PZEM-004T), as it comes
+ * off the board's SSE stream and as the extension forwards it into the page.
+ * `kwh` is the meter's own cumulative register, so event totals are a delta of
+ * two counter readings rather than an integration of `w`.
+ */
+export interface PowerTelemetry {
+	id: string;
+	ok: boolean;
+	/** RMS volts. */
+	v: number | null;
+	/** RMS amps. */
+	a: number | null;
+	/** Active watts. */
+	w: number | null;
+	hz?: number | null;
+	pf?: number | null;
+	kwh?: number | null;
+	/** The meter's own over-power alarm flag. */
+	alarm?: boolean;
+	/** Board uptime in seconds. */
+	up?: number;
+	/** Millisecond timestamp, stamped by the extension on receipt. */
+	ts: number;
+	/** Monitor address on the event network, for the status list. */
+	ip?: string;
+}
+
+/** A stored one-second rollup, as returned to the dashboard. */
+export interface PowerHistoryPoint {
+	time: number;
+	volts: number;
+	voltsMin: number;
+	voltsMax: number;
+	amps: number;
+	ampsMax: number;
+	watts: number;
+	wattsMax: number;
+	hz: number | null;
+	pf: number | null;
+	pfMin: number | null;
+	alarm: boolean;
+}
+
+/** Per-monitor totals for the whole event. */
+export interface PowerMonitorSummary {
+	monitorId: string;
+	firstSeen: number;
+	lastSeen: number;
+	samples: number;
+	/** kWh drawn over the event, from the meter's counter (reset-safe). */
+	energyKwh: number;
+	peakAmps: number;
+	minVolts: number;
+	maxVolts: number;
+	avgWatts: number;
+	peakWatts: number;
+	/** Worst power factor seen. Low means current the wattage does not account for. */
+	minPf: number | null;
+	avgPf: number | null;
+	minHz: number | null;
+	maxHz: number | null;
+	/** Seconds in which the meter's own alarm was set. */
+	alarmSeconds: number;
+}
+
+// #endregion

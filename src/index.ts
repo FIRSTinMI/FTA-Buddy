@@ -505,12 +505,89 @@ const marked = new Marked(
 
 marked.use(gfmHeadingId());
 
+const SITE_URL = "https://ftabuddy.com";
+
+function escapeHtmlAttr(value: string): string {
+	return value
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;");
+}
+
+// Strip a leading YAML frontmatter block and return the title/description it declares (if any)
+// plus the remaining markdown body.
+function stripFrontmatter(markdown: string): { title?: string; description?: string; body: string } {
+	const match = markdown.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
+	if (!match) return { body: markdown };
+	const block = match[1];
+	const unquote = (s: string) => s.trim().replace(/^["']|["']$/g, "");
+	const titleLine = block.match(/^title:\s*(.+)$/m);
+	const descLine = block.match(/^description:\s*(.+)$/m);
+	return {
+		title: titleLine ? unquote(titleLine[1]) : undefined,
+		description: descLine ? unquote(descLine[1]) : undefined,
+		body: markdown.slice(match[0].length),
+	};
+}
+
+// Reduce inline markdown to readable plain text for use in a meta description.
+function markdownToPlainText(text: string): string {
+	return text
+		.replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+		.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+		.replace(/[*_`>#]/g, "")
+		.replace(/\s+/g, " ")
+		.trim();
+}
+
+// Derive a page title and meta description from the markdown of a docs page.
+function extractDocMeta(markdown: string, urlPath: string): { title: string; description: string } {
+	const { title: fmTitle, description: fmDescription, body } = stripFrontmatter(markdown);
+
+	const h1 = body.match(/^#\s+(.+?)\s*#*\s*$/m);
+	let title = fmTitle || (h1 ? markdownToPlainText(h1[1]) : "");
+	if (!title) {
+		// Fall back to the last path segment, turned into words.
+		const segment = urlPath.replace(/\/$/, "").split("/").pop() || "docs";
+		title = segment.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+	}
+	const fullTitle = /fta buddy/i.test(title) ? title : `${title} - FTA Buddy Docs`;
+
+	let description = fmDescription || "";
+	if (!description) {
+		const lines = body.split(/\r?\n/);
+		// If the body has an H1, skip the nav links that sit above it; otherwise take the first paragraph.
+		let seenHeading = !h1;
+		for (const raw of lines) {
+			const line = raw.trim();
+			if (!line) continue;
+			if (line.startsWith("#")) {
+				seenHeading = true;
+				continue;
+			}
+			if (!seenHeading) continue; // skip nav links above the H1
+			if (line.startsWith("---") || line.startsWith("|") || line.startsWith("![")) continue;
+			if (/^[-*+]\s/.test(line) || /^\d+\.\s/.test(line)) continue;
+			description = markdownToPlainText(line);
+			if (description) break;
+		}
+	}
+	if (!description) description = "FTA Buddy documentation for FRC event volunteers.";
+	if (description.length > 300) description = description.slice(0, 297).trimEnd() + "...";
+
+	return { title: fullTitle, description };
+}
+
 app.get(/^\/docs\//, async (req, res) => {
 	let path = req.path;
 	if (path.endsWith("/")) path += "index";
 	path = join(__dirname, "../", path + ".md");
 	const data = readFileSync(path, "utf8");
-	const html = sanitizeHtml(await marked.parse(data), {
+	const { body } = stripFrontmatter(data);
+	const { title, description } = extractDocMeta(data, req.path);
+	const canonical = SITE_URL + req.path;
+	const html = sanitizeHtml(await marked.parse(body), {
 		allowedAttributes: {
 			span: ["id", "class"],
 			a: ["href", "name", "target"],
@@ -521,10 +598,26 @@ app.get(/^\/docs\//, async (req, res) => {
 			h5: ["id"],
 		},
 	});
-	res.send(`
-    <html>
+	res.send(`<!doctype html>
+    <html lang="en">
         <head>
+            <meta charset="utf-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <title>${escapeHtmlAttr(title)}</title>
+            <meta name="description" content="${escapeHtmlAttr(description)}" />
+            <link rel="canonical" href="${escapeHtmlAttr(canonical)}" />
+            <meta name="theme-color" content="#ac71f4" />
+            <link rel="icon" href="/favicon.ico" sizes="any" />
+            <meta property="og:type" content="article" />
+            <meta property="og:site_name" content="FTA Buddy" />
+            <meta property="og:title" content="${escapeHtmlAttr(title)}" />
+            <meta property="og:description" content="${escapeHtmlAttr(description)}" />
+            <meta property="og:url" content="${escapeHtmlAttr(canonical)}" />
+            <meta property="og:image" content="${SITE_URL}/icon512_rounded.png" />
+            <meta name="twitter:card" content="summary" />
+            <meta name="twitter:title" content="${escapeHtmlAttr(title)}" />
+            <meta name="twitter:description" content="${escapeHtmlAttr(description)}" />
+            <meta name="twitter:image" content="${SITE_URL}/icon512_rounded.png" />
             <link rel="stylesheet" href="/docs.css">
             <link rel="stylesheet" href="/hljs.css">
         </head>
@@ -535,6 +628,45 @@ app.get(/^\/docs\//, async (req, res) => {
         </body>
     </html>
     `);
+});
+
+// Recursively collect docs URLs from the docs/ directory for the sitemap.
+function collectDocUrls(dir: string, urlPrefix: string): string[] {
+	const urls: string[] = [];
+	for (const entry of readdirSync(dir, { withFileTypes: true })) {
+		if (entry.isDirectory()) {
+			urls.push(...collectDocUrls(join(dir, entry.name), `${urlPrefix}${entry.name}/`));
+		} else if (entry.isFile() && entry.name.endsWith(".md")) {
+			if (entry.name === "index.md") {
+				urls.push(urlPrefix); // /docs/foo/index.md -> /docs/foo/
+			} else {
+				urls.push(`${urlPrefix}${entry.name.slice(0, -3)}`); // drop .md
+			}
+		}
+	}
+	return urls;
+}
+
+app.get("/robots.txt", (req, res) => {
+	res.type("text/plain").send(`User-agent: *\nAllow: /\n\nSitemap: ${SITE_URL}/sitemap.xml\n`);
+});
+
+app.get("/sitemap.xml", (req, res) => {
+	let docUrls: string[] = [];
+	try {
+		docUrls = collectDocUrls(join(__dirname, "../docs"), "/docs/");
+	} catch (err) {
+		console.error("[sitemap] failed to enumerate docs", err);
+	}
+	const paths = ["/", ...docUrls.sort()];
+	const body = paths
+		.map((p) => `  <url><loc>${SITE_URL}${escapeHtmlAttr(p)}</loc></url>`)
+		.join("\n");
+	res.type("application/xml").send(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${body}
+</urlset>
+`);
 });
 
 app.get("/docs.css", (req, res) => {

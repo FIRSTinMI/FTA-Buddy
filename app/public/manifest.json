@@ -51,6 +51,6 @@
     "name": "FTA Buddy",
     "prefer_related_applications": false,
     "start_url": "/",
-    "description": "FTA Buddy",
+    "description": "Live FRC field monitoring, match logs, team support notes, and event checklists for event volunteers - FTAs, FTAAs, CSAs, and RIs.",
     "short_name": "FTA Buddy"
 }

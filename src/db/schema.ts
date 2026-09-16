@@ -18,7 +18,7 @@ import {
 	uuid,
 	varchar,
 } from "drizzle-orm/pg-core";
-import type { EventAutoEventSettings, FmsNoteMetadata, SlowWarningSettings } from "../../shared/types";
+import type { EventAutoEventSettings, FmsNoteMetadata, PowerAlertSettings, SlowWarningSettings } from "../../shared/types";
 export const roleEnum = pgEnum("role", ["FTA", "FTAA", "CSA", "RI", "System", "Scorekeeper"]);
 
 export const users = pgTable(
@@ -68,6 +68,7 @@ export const events = pgTable("events", {
 	notepadOnly: boolean("notepadOnly").notNull().default(false),
 	playoffMode: boolean("playoffMode").notNull().default(false),
 	powerMonitoring: boolean("powerMonitoring").notNull().default(false),
+	powerAlertSettings: jsonb("powerAlertSettings").$type<Partial<PowerAlertSettings>>().notNull().default({}),
 });
 
 export type Event = typeof events.$inferInsert;

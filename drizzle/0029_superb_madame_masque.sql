@@ -1,0 +1,1 @@
+ALTER TABLE "events" ADD COLUMN "powerAlertSettings" jsonb DEFAULT '{}'::jsonb NOT NULL;

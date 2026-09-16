@@ -204,6 +204,13 @@
       "when": 1789173569348,
       "tag": "0028_broken_warbound",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1789527447541,
+      "tag": "0029_superb_madame_masque",
+      "breakpoints": true
     }
   ]
 }

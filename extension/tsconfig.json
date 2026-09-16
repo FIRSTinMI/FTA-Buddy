@@ -7,11 +7,25 @@
 		"sourceMap": true,
 		"outDir": "dist/js",
 		"noEmitOnError": true,
-		"typeRoots": ["node_modules/@types"],
-		"lib": ["ES2021", "DOM", "DOM.Iterable", "WebWorker"],
+		"typeRoots": [
+			"node_modules/@types",
+			"../node_modules/@types"
+		],
+		"lib": [
+			"ES2021",
+			"DOM",
+			"DOM.Iterable",
+			"WebWorker"
+		],
 		"paths": {
-			"@shared/*": ["../shared/*"]
+			"@shared/*": [
+				"../shared/*"
+			]
 		},
-		"types": ["chrome"]
+		"types": [
+			"chrome",
+			"bun"
+		],
+		"resolveJsonModule": true
 	}
 }

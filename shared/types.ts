@@ -463,6 +463,7 @@ export interface ServerEvent {
 	notepadOnly: boolean;
 	playoffMode: boolean;
 	powerMonitoring: boolean;
+	powerAlertSettings: PowerAlertSettings;
 	subEvents?: {
 		code: string;
 		label: string;
@@ -939,6 +940,40 @@ export interface PowerMonitorSummary {
 	maxHz: number | null;
 	/** Seconds in which the meter's own alarm was set. */
 	alarmSeconds: number;
+}
+
+
+/** What the power monitors alert on, per event. */
+export interface PowerAlertSettings {
+	enabled: boolean;
+	/** Notify when a monitor reads below this many volts. A sag is instant, so this fires on sight. */
+	lowVoltage: number;
+	/** Notify when a monitor holds above this many amps for `sustainSeconds`. */
+	highCurrent: number;
+	/** How long current must stay high before it counts. Filters the inrush every motor makes. */
+	sustainSeconds: number;
+	/** Notify when a monitor stops reporting, or its meter stops answering, for this long. */
+	offlineSeconds: number;
+	/** Minimum gap between repeats of the same alert on the same monitor. */
+	cooldownMinutes: number;
+}
+
+export const DEFAULT_POWER_ALERT_SETTINGS: PowerAlertSettings = {
+	enabled: false,
+	lowVoltage: POWER_LOW_VOLTAGE,
+	highCurrent: POWER_HIGH_CURRENT,
+	sustainSeconds: 10,
+	offlineSeconds: 30,
+	cooldownMinutes: 5,
+};
+
+/** Live per-monitor state the extension reports alongside its samples. */
+export interface PowerMonitorStatus {
+	monitorId: string;
+	/** The SSE stream is up. */
+	connected: boolean;
+	/** The board answered but its meter did not: mains gone on that circuit. */
+	meterOk: boolean;
 }
 
 // #endregion

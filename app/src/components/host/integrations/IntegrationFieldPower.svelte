@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Toggle } from "flowbite-svelte";
 	import { onMount } from "svelte";
+	import { DEFAULT_POWER_ALERT_SETTINGS, type PowerAlertSettings } from "../../../../../shared/types";
 	import { trpc } from "../../../main";
 	import { eventStore } from "../../../stores/event";
 
@@ -8,14 +9,37 @@
 	let enabled = $state(false);
 	let saving = $state(false);
 	let monitors = $state<{ monitorId: string; lastSeen: number }[]>([]);
+	let alerts: PowerAlertSettings = $state({ ...DEFAULT_POWER_ALERT_SETTINGS });
+	let savingAlerts = $state(false);
 
 	async function load() {
 		try {
 			const res = await trpc.power.getEnabled.query();
 			enabled = res.enabled;
 			eventStore.update((e) => ({ ...e, powerMonitoring: res.enabled }));
-			if (enabled) monitors = await trpc.power.monitors.query();
+			if (enabled) {
+				monitors = await trpc.power.monitors.query();
+				alerts = await trpc.power.getAlertSettings.query();
+			}
 		} catch {}
+	}
+
+	async function saveAlerts() {
+		savingAlerts = true;
+		try {
+			alerts = await trpc.power.setAlertSettings.mutate({
+				enabled: alerts.enabled,
+				lowVoltage: alerts.lowVoltage,
+				highCurrent: alerts.highCurrent,
+				sustainSeconds: alerts.sustainSeconds,
+				offlineSeconds: alerts.offlineSeconds,
+				cooldownMinutes: alerts.cooldownMinutes,
+			});
+		} catch (e: any) {
+			console.error("Failed to save power alert settings", e);
+		} finally {
+			savingAlerts = false;
+		}
 	}
 
 	async function save() {
@@ -83,6 +107,94 @@
 			</div>
 
 			{#if enabled}
+				<div class="flex items-center justify-between gap-2 border-t border-gray-200 dark:border-neutral-700 pt-4">
+					<div>
+						<p class="text-sm font-medium">Notifications</p>
+						<p class="text-xs text-gray-500">
+							Push everyone on this event when a circuit sags, pulls too much for too long, or
+							goes quiet.
+						</p>
+					</div>
+					<Toggle
+						size="small"
+						checked={alerts.enabled}
+						disabled={savingAlerts}
+						onchange={() => {
+							alerts.enabled = !alerts.enabled;
+							saveAlerts();
+						}}
+					/>
+				</div>
+
+				{#if alerts.enabled}
+					<div class="grid grid-cols-2 gap-3">
+						<label class="flex flex-col gap-1 text-xs">
+							<span class="font-medium">Low voltage (V)</span>
+							<input
+								class="rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-1.5 text-sm"
+								type="number"
+								min="80"
+								max="130"
+								bind:value={alerts.lowVoltage}
+								onchange={saveAlerts}
+							/>
+							<span class="text-gray-500">Fires on sight - a sag is instant.</span>
+						</label>
+
+						<label class="flex flex-col gap-1 text-xs">
+							<span class="font-medium">High current (A)</span>
+							<input
+								class="rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-1.5 text-sm"
+								type="number"
+								min="1"
+								max="60"
+								bind:value={alerts.highCurrent}
+								onchange={saveAlerts}
+							/>
+							<span class="text-gray-500">Only once held, see below.</span>
+						</label>
+
+						<label class="flex flex-col gap-1 text-xs">
+							<span class="font-medium">Held for (s)</span>
+							<input
+								class="rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-1.5 text-sm"
+								type="number"
+								min="1"
+								max="300"
+								bind:value={alerts.sustainSeconds}
+								onchange={saveAlerts}
+							/>
+							<span class="text-gray-500">Ignores the inrush every motor makes.</span>
+						</label>
+
+						<label class="flex flex-col gap-1 text-xs">
+							<span class="font-medium">Gone quiet after (s)</span>
+							<input
+								class="rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-1.5 text-sm"
+								type="number"
+								min="5"
+								max="600"
+								bind:value={alerts.offlineSeconds}
+								onchange={saveAlerts}
+							/>
+							<span class="text-gray-500">Covers a dead monitor and a dead circuit.</span>
+						</label>
+
+						<label class="flex flex-col gap-1 text-xs">
+							<span class="font-medium">Repeat at most every (min)</span>
+							<input
+								class="rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-1.5 text-sm"
+								type="number"
+								min="1"
+								max="120"
+								bind:value={alerts.cooldownMinutes}
+								onchange={saveAlerts}
+							/>
+							<span class="text-gray-500">Per monitor, per kind of alert.</span>
+						</label>
+					</div>
+				{/if}
+
 				<div class="flex flex-col gap-1">
 					<span class="text-sm font-medium">Monitors seen</span>
 					{#if monitors.length === 0}

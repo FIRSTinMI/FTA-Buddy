@@ -349,11 +349,18 @@ interface PowerBucket {
 }
 
 const powerBuckets = new Map<string, PowerBucket>();
+/**
+ * Whether each monitor's meter last answered. Tracked separately from the
+ * buckets because a failed read is dropped before it ever reaches one, and a
+ * meter that has stopped answering is exactly what the alerts care about.
+ */
+const powerMeterOk = new Map<string, boolean>();
 let powerFlushTimer: ReturnType<typeof setInterval> | null = null;
 const POWER_FLUSH_INTERVAL_MS = 5_000;
 
 /** Fold one reading into its one-second bucket. Failed reads are not stored. */
 function bucketTelemetry(telemetry: PowerTelemetry) {
+	powerMeterOk.set(telemetry.id, telemetry.ok);
 	if (!telemetry.ok || telemetry.v === null || telemetry.a === null || telemetry.w === null) return;
 	const second = Math.floor(telemetry.ts / 1000);
 	const key = `${telemetry.id}:${second}`;
@@ -418,13 +425,22 @@ function broadcastTelemetry(telemetry: PowerTelemetry) {
  * second are sent, so a second is never split across two posts.
  */
 async function flushPowerSamples() {
-	if (powerBuckets.size === 0) return;
 	if (!eventToken) return;
 
 	const currentSecond = Math.floor(Date.now() / 1000);
 	const ready = [...powerBuckets.entries()].filter(([, b]) => b.second < currentSecond);
-	if (ready.length === 0) return;
 	for (const [key] of ready) powerBuckets.delete(key);
+
+	// Liveness goes up on every flush, with or without samples: a monitor that
+	// has gone dark cannot report its own silence, and the server has no way to
+	// tell "nothing to send" from "the field lost power" without being told.
+	const status = (powerManager?.list() ?? []).map((m) => ({
+		monitorId: m.id,
+		connected: m.connected,
+		meterOk: powerMeterOk.get(m.id) ?? false,
+	}));
+
+	if (ready.length === 0 && status.length === 0) return;
 
 	const samples = ready
 		.map(([, b]) => ({
@@ -447,7 +463,7 @@ async function flushPowerSamples() {
 		.sort((a, b) => a.time.getTime() - b.time.getTime());
 
 	try {
-		await trpc.power.postSamples.mutate({ extensionId: id, samples });
+		await trpc.power.postSamples.mutate({ extensionId: id, samples, status });
 	} catch (err) {
 		// Dropped on failure rather than retried: this is a continuous stream, and
 		// a backlog replayed later would land out of order behind fresher rows.
@@ -482,6 +498,7 @@ function stopPowerMonitor() {
 	if (powerFlushTimer) clearInterval(powerFlushTimer);
 	powerFlushTimer = null;
 	powerBuckets.clear();
+	powerMeterOk.clear();
 	powerManager?.stop();
 	powerManager = null;
 }

@@ -1,10 +1,11 @@
 import { TRPCError } from "@trpc/server";
 import { eq, inArray } from "drizzle-orm";
 import { eventCodes, eventLastSeen, events } from "../state";
-import { DEFAULT_SLOW_WARNING_SETTINGS } from "../../shared/types";
+import { DEFAULT_POWER_ALERT_SETTINGS, DEFAULT_SLOW_WARNING_SETTINGS } from "../../shared/types";
 import type {
 	EventAutoEventSettings,
 	NexusStatus,
+	PowerAlertSettings,
 	Note,
 	ScheduleDetails,
 	ServerEvent,
@@ -134,6 +135,10 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 				notepadOnly: event.notepadOnly ?? false,
 				playoffMode: event.playoffMode ?? false,
 				powerMonitoring: event.powerMonitoring ?? false,
+				powerAlertSettings: {
+					...DEFAULT_POWER_ALERT_SETTINGS,
+					...((event.powerAlertSettings ?? {}) as Partial<PowerAlertSettings>),
+				},
 				subEvents: event.meshedEvent ? event.meshedEvent : undefined,
 				slackChannel: event.slackChannel,
 				slackTeam: event.slackTeam,

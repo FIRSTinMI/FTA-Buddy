@@ -1,9 +1,16 @@
 import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { z } from "zod";
-import type { PowerHistoryPoint, PowerMonitorSummary, PowerTelemetry } from "../../shared/types";
+import {
+	DEFAULT_POWER_ALERT_SETTINGS,
+	type PowerAlertSettings,
+	type PowerHistoryPoint,
+	type PowerMonitorSummary,
+	type PowerTelemetry,
+} from "../../shared/types";
 import { db } from "../db/db";
 import { events, powerSamples } from "../db/schema";
 import { bus } from "../util/eventBus";
+import { evaluatePowerAlerts } from "../util/power-alerts";
 import { eventProcedure, router } from "../trpc";
 import { subscriptionQueue } from "../util/subscription";
 
@@ -35,6 +42,11 @@ const sampleInput = z.object({
 	alarm: z.boolean().optional(),
 });
 
+/** Stored settings merged over the defaults, the same shape the UI edits. */
+function powerAlertSettings(event: { powerAlertSettings?: Partial<PowerAlertSettings> }): PowerAlertSettings {
+	return { ...DEFAULT_POWER_ALERT_SETTINGS, ...(event.powerAlertSettings ?? {}) };
+}
+
 export const powerRouter = router({
 	/**
 	 * Ingest from the extension. Rejected unless the event has power monitoring
@@ -45,33 +57,49 @@ export const powerRouter = router({
 		.input(
 			z.object({
 				extensionId: z.string().optional(),
-				samples: z.array(sampleInput).min(1).max(600),
+				samples: z.array(sampleInput).max(600).default([]),
+				/**
+				 * Per-monitor liveness from the extension. A monitor that has gone
+				 * dark cannot post its own silence, so the extension reports it.
+				 */
+				status: z
+					.array(
+						z.object({
+							monitorId: z.string().min(1).max(64),
+							connected: z.boolean(),
+							meterOk: z.boolean(),
+						}),
+					)
+					.max(32)
+					.default([]),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
 			const event = ctx.event;
 			if (!event.powerMonitoring) return { stored: 0, enabled: false };
 
-			await db.insert(powerSamples).values(
-				input.samples.map((s) => ({
-					event: event.code,
-					monitor_id: s.monitorId,
-					time: s.time,
-					volts: s.volts,
-					volts_min: s.voltsMin,
-					volts_max: s.voltsMax,
-					amps: s.amps,
-					amps_max: s.ampsMax,
-					watts: s.watts,
-					watts_max: s.wattsMax,
-					hz: s.hz ?? null,
-					hz_min: s.hzMin ?? null,
-					pf: s.pf ?? null,
-					pf_min: s.pfMin ?? null,
-					kwh: s.kwh ?? null,
-					alarm: s.alarm ?? false,
-				})),
-			);
+			if (input.samples.length > 0) {
+				await db.insert(powerSamples).values(
+					input.samples.map((s) => ({
+						event: event.code,
+						monitor_id: s.monitorId,
+						time: s.time,
+						volts: s.volts,
+						volts_min: s.voltsMin,
+						volts_max: s.voltsMax,
+						amps: s.amps,
+						amps_max: s.ampsMax,
+						watts: s.watts,
+						watts_max: s.wattsMax,
+						hz: s.hz ?? null,
+						hz_min: s.hzMin ?? null,
+						pf: s.pf ?? null,
+						pf_min: s.pfMin ?? null,
+						kwh: s.kwh ?? null,
+						alarm: s.alarm ?? false,
+					})),
+				);
+			}
 
 			// Fan out to every client on this event, including the phones and
 			// tablets that have no extension of their own.
@@ -92,9 +120,27 @@ export const powerRouter = router({
 					ts: s.time.getTime(),
 				});
 			}
-			bus.publish(liveChannel(event.code), [...latestByMonitor.values()]);
+			if (latestByMonitor.size > 0) bus.publish(liveChannel(event.code), [...latestByMonitor.values()]);
 
-			return { stored: input.samples.length, enabled: true };
+			const alertSettings = powerAlertSettings(event);
+			const fired = await evaluatePowerAlerts(
+				event,
+				alertSettings,
+				input.samples.map((s) => ({
+					monitorId: s.monitorId,
+					time: s.time,
+					voltsMin: s.voltsMin,
+					amps: s.amps,
+					ampsMax: s.ampsMax,
+				})),
+				input.status,
+			).catch((err) => {
+				// An alerting failure must never cost the reading that triggered it.
+				console.error(`[Power] alert evaluation failed for ${event.code}:`, err);
+				return [];
+			});
+
+			return { stored: input.samples.length, enabled: true, alerts: fired };
 		}),
 
 	/** Live telemetry for clients without an extension (phones, tablets, the AV room). */
@@ -263,6 +309,28 @@ export const powerRouter = router({
 	getEnabled: eventProcedure.query(async ({ ctx }) => {
 		return { enabled: ctx.event.powerMonitoring };
 	}),
+
+	getAlertSettings: eventProcedure.query(async ({ ctx }) => {
+		return powerAlertSettings(ctx.event);
+	}),
+
+	setAlertSettings: eventProcedure
+		.input(
+			z.object({
+				enabled: z.boolean(),
+				lowVoltage: z.number().min(80).max(130),
+				highCurrent: z.number().min(1).max(60),
+				sustainSeconds: z.number().int().min(1).max(300),
+				offlineSeconds: z.number().int().min(5).max(600),
+				cooldownMinutes: z.number().int().min(1).max(120),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const event = ctx.event;
+			await db.update(events).set({ powerAlertSettings: input }).where(eq(events.code, event.code));
+			event.powerAlertSettings = input;
+			return input;
+		}),
 
 	setEnabled: eventProcedure.input(z.object({ enabled: z.boolean() })).mutation(async ({ ctx, input }) => {
 		const event = ctx.event;

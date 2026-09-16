@@ -12,6 +12,21 @@ import type { PowerTelemetry } from "../../shared/types";
 
 /** The event network. FMS owns 10.0.100.5; monitors take DHCP leases alongside it. */
 export const SUBNET_PREFIX = "10.0.100";
+
+/**
+ * The host permissions the sweep needs, read straight from the manifest.
+ *
+ * Chrome has no partial-IP wildcard - a match pattern's host must be a literal
+ * or a bare `*` - so the manifest enumerates every address in the range. Taking
+ * the list from the manifest rather than rebuilding it here means the granted
+ * permission and the addresses actually probed cannot drift apart.
+ */
+export function monitorOrigins(): string[] {
+	const manifest = chrome.runtime.getManifest() as chrome.runtime.Manifest & {
+		optional_host_permissions?: string[];
+	};
+	return manifest.optional_host_permissions ?? [];
+}
 const FIRST_HOST = 2;
 const LAST_HOST = 254;
 

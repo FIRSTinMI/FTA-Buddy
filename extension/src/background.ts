@@ -15,7 +15,7 @@ import type { FieldDataSource } from "./sources/types";
 import { trpc, updateValues } from "./trpc";
 import { MatchState, MatchStateMap } from "../../shared/types";
 import type { PowerTelemetry } from "../../shared/types";
-import { PowerMonitorManager, SUBNET_PREFIX } from "./power-monitor";
+import { monitorOrigins, PowerMonitorManager, SUBNET_PREFIX } from "./power-monitor";
 
 const ALARM_TEAM_POLL = "teamPoll";
 const ALARM_MATCH_IMPORT = "matchImport";
@@ -470,9 +470,11 @@ async function startPowerMonitor() {
 
 	// The sweep needs permission for arbitrary http origins, granted from the
 	// popup. Without it every probe throws and the sweep silently finds nothing.
-	const granted = await chrome.permissions.contains({ origins: ["http://*/*"] }).catch(() => false);
+	const granted = await chrome.permissions.contains({ origins: monitorOrigins() }).catch(() => false);
 	if (!granted) {
-		console.warn("Power monitoring is on but http://*/* is not granted - open the popup and re-toggle it");
+		console.warn(
+			`Power monitoring is on but the ${SUBNET_PREFIX}.0/24 host permission is not granted - open the popup and re-toggle it`,
+		);
 		return;
 	}
 

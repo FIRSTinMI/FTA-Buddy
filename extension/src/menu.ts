@@ -66,13 +66,17 @@ async function bgGetPowerStatus(): Promise<{
 }
 
 /**
- * Sweeping the event subnet needs permission for arbitrary http origins, which
+ * Sweeping the event subnet needs host permission for those addresses, which
  * Chrome only grants from a user gesture - so it is requested here, on the
- * toggle, and the toggle snaps back if the prompt is declined.
+ * toggle, and the toggle snaps back if the prompt is declined. The list comes
+ * from the manifest so it is exactly the range the sweep probes.
  */
 async function handlePowerMonitorToggle() {
 	if (powerMonitorInput.checked) {
-		const granted = await chrome.permissions.request({ origins: ["http://*/*"] });
+		const manifest = chrome.runtime.getManifest() as chrome.runtime.Manifest & {
+			optional_host_permissions?: string[];
+		};
+		const granted = await chrome.permissions.request({ origins: manifest.optional_host_permissions ?? [] });
 		if (!granted) {
 			powerMonitorInput.checked = false;
 			powerMonitorText.textContent = "Permission denied";

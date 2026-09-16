@@ -10,18 +10,8 @@ import type { PowerTelemetry } from "../../shared/types";
  * messages.
  */
 
-/**
- * Event-network subnet. FMS owns 10.0.100.5 and monitors take DHCP leases
- * alongside it, so this is the default - but it is a setting, because a bench
- * test happens on whatever network the bench is on.
- */
-export const DEFAULT_SUBNET_PREFIX = "10.0.100";
-
-/** Accepts the first three octets of a /24, e.g. "10.0.100". */
-export function isValidSubnetPrefix(prefix: string): boolean {
-	const parts = prefix.trim().split(".");
-	return parts.length === 3 && parts.every((p) => /^\d{1,3}$/.test(p) && Number(p) >= 0 && Number(p) <= 255);
-}
+/** The event network. FMS owns 10.0.100.5; monitors take DHCP leases alongside it. */
+export const SUBNET_PREFIX = "10.0.100";
 const FIRST_HOST = 2;
 const LAST_HOST = 254;
 
@@ -68,7 +58,7 @@ async function probe(ip: string): Promise<DiscoveredMonitor | null> {
  * Sweep the event subnet for power monitors. 253 probes, `PROBE_CONCURRENCY` at
  * a time, so a full sweep costs roughly two seconds even when nothing answers.
  */
-export async function sweepSubnet(prefix = DEFAULT_SUBNET_PREFIX): Promise<DiscoveredMonitor[]> {
+export async function sweepSubnet(prefix = SUBNET_PREFIX): Promise<DiscoveredMonitor[]> {
 	const addresses: string[] = [];
 	for (let host = FIRST_HOST; host <= LAST_HOST; host++) addresses.push(`${prefix}.${host}`);
 
@@ -218,11 +208,7 @@ export class PowerMonitorManager {
 	private resweepTimer: ReturnType<typeof setInterval> | null = null;
 	private sweeping = false;
 
-	constructor(
-		private readonly onTelemetry: (telemetry: PowerTelemetry) => void,
-		/** Read at each sweep, so changing the setting takes effect on the next one. */
-		private readonly getSubnet: () => string = () => DEFAULT_SUBNET_PREFIX,
-	) {}
+	constructor(private readonly onTelemetry: (telemetry: PowerTelemetry) => void) {}
 
 	get running(): boolean {
 		return this.resweepTimer !== null;
@@ -246,8 +232,7 @@ export class PowerMonitorManager {
 		if (this.sweeping) return this.list();
 		this.sweeping = true;
 		try {
-			const prefix = this.getSubnet();
-			const found = await sweepSubnet(isValidSubnetPrefix(prefix) ? prefix.trim() : DEFAULT_SUBNET_PREFIX);
+			const found = await sweepSubnet();
 			for (const monitor of found) {
 				const existing = this.streams.get(monitor.id);
 				if (existing && existing.monitor.ip === monitor.ip) continue;

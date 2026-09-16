@@ -15,7 +15,7 @@ import type { FieldDataSource } from "./sources/types";
 import { trpc, updateValues } from "./trpc";
 import { MatchState, MatchStateMap } from "../../shared/types";
 import type { PowerTelemetry } from "../../shared/types";
-import { DEFAULT_SUBNET_PREFIX, isValidSubnetPrefix, PowerMonitorManager } from "./power-monitor";
+import { PowerMonitorManager, SUBNET_PREFIX } from "./power-monitor";
 
 const ALARM_TEAM_POLL = "teamPoll";
 const ALARM_MATCH_IMPORT = "matchImport";
@@ -89,8 +89,6 @@ export let useDev: boolean;
 export let changed: number;
 
 export let powerMonitorEnabled: boolean = false;
-/** First three octets of the /24 the monitors live on. The event network by default. */
-export let powerSubnet: string = DEFAULT_SUBNET_PREFIX;
 
 export let fmsApi: boolean = false;
 export let fmsApiEnabled: boolean = true;
@@ -127,7 +125,6 @@ async function start() {
 				"eventToken",
 				"fmsApiEnabled",
 				"powerMonitor",
-				"powerSubnet",
 			],
 			(item) => {
 				if (!item.id) chrome.storage.local.set({ id: crypto.randomUUID() });
@@ -169,9 +166,6 @@ async function start() {
 				cheesyPort = sanitizeCheesyPort(item.cheesyPort);
 				eventToken = String(item.eventToken);
 				powerMonitorEnabled = Boolean(item.powerMonitor);
-				powerSubnet = isValidSubnetPrefix(String(item.powerSubnet ?? ""))
-					? String(item.powerSubnet).trim()
-					: DEFAULT_SUBNET_PREFIX;
 				id = String(item.id) || crypto.randomUUID();
 				if (id !== item.id) chrome.storage.local.set({ id });
 				resolve(void 0);
@@ -482,16 +476,13 @@ async function startPowerMonitor() {
 		return;
 	}
 
-	powerManager = new PowerMonitorManager(
-		(telemetry) => {
-			broadcastTelemetry(telemetry);
-			bucketTelemetry(telemetry);
-		},
-		() => powerSubnet,
-	);
+	powerManager = new PowerMonitorManager((telemetry) => {
+		broadcastTelemetry(telemetry);
+		bucketTelemetry(telemetry);
+	});
 	await powerManager.start();
 	powerFlushTimer = setInterval(() => flushPowerSamples().catch(console.warn), POWER_FLUSH_INTERVAL_MS);
-	console.log(`Power monitoring started on ${powerSubnet}.0/24 - ${powerManager.list().length} monitor(s) found`);
+	console.log(`Power monitoring started on ${SUBNET_PREFIX}.0/24 - ${powerManager.list().length} monitor(s) found`);
 }
 
 function stopPowerMonitor() {
@@ -593,7 +584,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 	if (msg?.type === "getPowerStatus") {
 		sendResponse({
 			enabled: powerMonitorEnabled,
-			subnet: powerSubnet,
+			subnet: SUBNET_PREFIX,
 			running: powerManager?.running ?? false,
 			monitors: powerManager?.list() ?? [],
 			connected: powerManager?.connectedCount ?? 0,

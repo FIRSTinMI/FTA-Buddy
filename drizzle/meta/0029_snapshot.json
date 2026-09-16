@@ -1,6 +1,6 @@
 {
-  "id": "b0247324-bf7c-41c4-a97c-12e42106fb2c",
-  "prevId": "466defda-f0af-490a-b35c-8d04260ebdcc",
+  "id": "d80a44d3-d830-43e2-87d9-911eec7f7d26",
+  "prevId": "437ce7f2-78fd-40c8-a83c-5dc5548dcc9e",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3114,6 +3114,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "ordinal": {
+          "name": "ordinal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
         "tsv": {
           "name": "tsv",
           "type": "tsvector",
@@ -3166,6 +3173,33 @@
           "columns": [
             {
               "expression": "source",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "troubleshoot_chunks_url_idx": {
+          "name": "troubleshoot_chunks_url_idx",
+          "columns": [
+            {
+              "expression": "source",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "url",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "ordinal",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

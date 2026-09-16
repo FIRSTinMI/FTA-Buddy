@@ -17,8 +17,10 @@ mock.module("../util/push-notifications", () => ({
 	},
 }));
 
-const { evaluatePowerAlerts } = await import("../util/power-alerts");
-const { redis } = await import("../util/redis");
+// Imported in beforeAll, after mock.module is registered and without a
+// top-level await (which this tsconfig's module target rejects).
+let evaluatePowerAlerts: typeof import("../util/power-alerts").evaluatePowerAlerts;
+let redis: typeof import("../util/redis").redis;
 
 const SETTINGS: PowerAlertSettings = {
 	enabled: true,
@@ -49,7 +51,9 @@ function freshEvent() {
 	return testEvent(`test-power-${Date.now()}-${n++}`);
 }
 
-beforeAll(() => {
+beforeAll(async () => {
+	({ evaluatePowerAlerts } = await import("../util/power-alerts"));
+	({ redis } = await import("../util/redis"));
 	sent.length = 0;
 });
 

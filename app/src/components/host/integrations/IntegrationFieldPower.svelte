@@ -40,7 +40,7 @@
 		onclick={() => (expanded = !expanded)}
 	>
 		<div class="flex items-center gap-3">
-			<span class="text-2xl">⚡</span>
+			<span class="text-2xl">🔌</span>
 			<div>
 				<p class="font-semibold">Field Power Monitoring</p>
 				<p class="text-sm text-gray-400">Live AC voltage and current from the field power monitors.</p>
@@ -62,7 +62,7 @@
 	</button>
 
 	{#if expanded}
-		<div class="flex flex-col gap-4 px-4 pb-4 border-t border-gray-200 dark:border-neutral-700 pt-4">
+		<div class="flex flex-col gap-4 px-4 pb-4 border-t border-gray-200 dark:border-neutral-700 pt-4 text-left">
 			<div class="flex items-center justify-between gap-2">
 				<div>
 					<p class="text-sm font-medium">Enabled</p>

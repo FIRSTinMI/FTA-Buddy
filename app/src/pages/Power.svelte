@@ -87,9 +87,21 @@
 		ingest(evt.data.telemetry as PowerTelemetry);
 	}
 
+	/** Grid lines are reference, not content: barely there on both themes. */
+	const SPLIT_LINE = { lineStyle: { color: "rgba(128,128,128,0.16)", width: 1 } };
+	const AXIS_LABEL_COLOR = "rgba(128,128,128,0.9)";
+
 	function liveOption(field: "amps" | "volts"): ECOption {
 		const isAmps = field === "amps";
 		const threshold = isAmps ? POWER_HIGH_CURRENT : POWER_LOW_VOLTAGE;
+
+		// Only pull the axis out to the limit line once a reading is near it.
+		// Pinning the current axis to 15A at idle flattened every trace onto the
+		// floor and made a 0.3A change invisible.
+		const values = monitorIds.flatMap((id) => monitors[id].points.map((p) => (isAmps ? p.amps : p.volts)));
+		const dataMax = values.length ? Math.max(...values) : 0;
+		const dataMin = values.length ? Math.min(...values) : 0;
+		const showThreshold = isAmps ? dataMax > threshold * 0.6 : dataMin < threshold * 1.08;
 
 		return {
 			grid: { left: 48, right: 12, top: 12, bottom: 28 },
@@ -97,7 +109,11 @@
 				type: "time",
 				min: now - LIVE_WINDOW_S * 1000,
 				max: now,
+				splitLine: { show: false },
+				axisLine: { lineStyle: { color: "rgba(128,128,128,0.25)" } },
+				axisTick: { show: false },
 				axisLabel: {
+					color: AXIS_LABEL_COLOR,
 					formatter: (value: number) => {
 						const d = new Date(value);
 						return `${d.getMinutes().toString().padStart(2, "0")}:${d
@@ -110,12 +126,19 @@
 			yAxis: {
 				type: "value",
 				name: isAmps ? "Amps" : "Volts",
-				nameTextStyle: { fontSize: 11 },
-				min: isAmps ? 0 : (value: { min: number }) => Math.min(105, Math.floor(value.min - 2)),
+				nameTextStyle: { fontSize: 11, color: AXIS_LABEL_COLOR },
+				min: isAmps
+					? 0
+					: (value: { min: number }) =>
+							Math.floor(Math.min(showThreshold ? threshold - 2 : 999, value.min - 1)),
 				max: isAmps
-					? (value: { max: number }) => Math.max(POWER_HIGH_CURRENT + 2, Math.ceil(value.max + 2))
-					: (value: { max: number }) => Math.max(126, Math.ceil(value.max + 2)),
-				splitLine: { show: true },
+					? (value: { max: number }) =>
+							Math.ceil(Math.max(showThreshold ? threshold + 2 : 1, value.max * 1.25))
+					: (value: { max: number }) => Math.ceil(Math.max(value.max + 1, 124)),
+				splitLine: { show: true, ...SPLIT_LINE },
+				axisLine: { show: false },
+				axisTick: { show: false },
+				axisLabel: { color: AXIS_LABEL_COLOR },
 			},
 			tooltip: {
 				trigger: "axis",
@@ -131,13 +154,22 @@
 				itemStyle: { color: colorFor(id) },
 				data: monitors[id].points.map((p) => [p.ts, isAmps ? p.amps : p.volts]),
 				// The threshold line goes on the first series only; one line, not one per monitor.
+				// One limit line for the chart, on the first series only, and only
+				// once a reading is close enough for it to mean anything. The label
+				// sits inside the plot: at the default end position it was clipped
+				// against the right edge into an unreadable glyph.
 				markLine:
-					index === 0
+					index === 0 && showThreshold
 						? {
 								silent: true,
 								symbol: "none",
-								lineStyle: { color: "#ef4444", type: "dashed" as const, width: 1 },
-								label: { formatter: isAmps ? `${threshold}A` : `${threshold}V`, fontSize: 10 },
+								lineStyle: { color: "rgba(239,68,68,0.55)", type: "dashed" as const, width: 1 },
+								label: {
+									formatter: isAmps ? `${threshold}A limit` : `${threshold}V`,
+									position: "insideStartTop" as const,
+									color: "rgba(239,68,68,0.9)",
+									fontSize: 10,
+								},
 								data: [{ yAxis: threshold }],
 							}
 						: undefined,
@@ -166,8 +198,23 @@
 			const ids = Object.keys(history.monitors).sort();
 			const option: ECOption = {
 				grid: { left: 48, right: 12, top: 12, bottom: 56 },
-				xAxis: { type: "time" },
-				yAxis: { type: "value", name: "Amps", nameTextStyle: { fontSize: 11 }, min: 0 },
+				xAxis: {
+					type: "time",
+					splitLine: { show: false },
+					axisTick: { show: false },
+					axisLabel: { color: AXIS_LABEL_COLOR },
+					axisLine: { lineStyle: { color: "rgba(128,128,128,0.25)" } },
+				},
+				yAxis: {
+					type: "value",
+					name: "Amps",
+					nameTextStyle: { fontSize: 11, color: AXIS_LABEL_COLOR },
+					min: 0,
+					splitLine: { show: true, ...SPLIT_LINE },
+					axisLine: { show: false },
+					axisTick: { show: false },
+					axisLabel: { color: AXIS_LABEL_COLOR },
+				},
 				tooltip: {
 					trigger: "axis",
 					axisPointer: { type: "cross" },
@@ -316,7 +363,7 @@
 					</div>
 					<div class="mt-2 grid grid-cols-3 gap-2 text-center text-xs text-gray-500">
 						<div>{m.last.hz?.toFixed(1) ?? "-"} Hz</div>
-						<div class:text-amber-500={(m.last.pf ?? 1) < 0.7}>
+						<div class:text-amber-500={(m.last.a ?? 0) > 0.1 && (m.last.pf ?? 1) < 0.7}>
 							{m.last.pf?.toFixed(2) ?? "-"} PF
 						</div>
 						<div>{m.last.kwh?.toFixed(2) ?? "-"} kWh</div>

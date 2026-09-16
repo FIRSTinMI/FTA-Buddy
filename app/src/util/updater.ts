@@ -3,7 +3,7 @@ import { eventStore } from "../stores/event";
 import { settingsStore } from "../stores/settings";
 import { userStore } from "../stores/user";
 
-export const LATEST_EXTENSION_VERSION = "1.26.20";
+export const LATEST_EXTENSION_VERSION = "1.26.23";
 
 interface Version {
 	changelog?: string;
@@ -56,6 +56,15 @@ export const VERSIONS: { [key: string]: Version } = {
         <li>Status lights: new Archive section at the bottom for retired hardware, starting with the OM5P radio</li>
         <li>More controller troubleshooting: the F310 X/D switch, and checking Device Manager when a controller does not show up</li>
         <li>Field monitor: the team dialog is full screen and uses the new step by step format</li>
+        </ul>
+        <p class="my-1 font-bold">Field power</p>
+        <ul>
+        <li>New Power page: live voltage and current per field power monitor, with warnings under 110V or over 15A, plus whole-event history and kWh totals</li>
+        <li>Turn it on per event in Event Settings under Integrations</li>
+        </ul>
+        <h2 class="font-bold mt-2">Extension v1.26.23</h2>
+        <ul>
+        <li>Finds field power monitors on the event network and streams their readings to the app</li>
         </ul>
         `,
 	},

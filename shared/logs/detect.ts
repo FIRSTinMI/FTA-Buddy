@@ -13,7 +13,7 @@ import { isWpilog } from "./wpilog";
 export type UploadKind =
 	/** WPILib data log from the robot. */
 	| "wpilog"
-	/** Driver Station telemetry, 20 Hz. */
+	/** Driver Station telemetry, one record per control packet, so 50 Hz. */
 	| "dslog"
 	/** Driver Station message log. */
 	| "dsevents"

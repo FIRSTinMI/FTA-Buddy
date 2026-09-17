@@ -17,7 +17,7 @@
 
 const SUPPORTED_VERSION = 4;
 const PERIOD_SECS = 0.02;
-/** A 2:30 match at 20 Hz is 4500 records. This is a whole day of logging. */
+/** A 2:30 match at 50 Hz is 7,500 records. This is a whole day of logging. */
 const MAX_RECORDS = 5_000_000;
 const MAX_EVENTS = 20_000;
 
@@ -95,7 +95,10 @@ export interface DsLogResult {
 	stoppedEarly: boolean;
 }
 
-/** Read a `.dslog`. Fixed-rate robot telemetry as the DS saw it, 20 Hz. */
+/**
+ * Read a `.dslog`. Robot telemetry as the Driver Station saw it, one record
+ * per control packet: the period is 20 ms, so the rate is 50 Hz.
+ */
 export function readDsLog(data: Uint8Array): DsLogResult {
 	const head = header(data);
 	if (!head) {
@@ -278,7 +281,7 @@ export interface DsLogSummary {
 	peakChannelCurrents: number[];
 }
 
-/** Condense 20 Hz telemetry into the handful of numbers a CSA actually reads. */
+/** Condense 50 Hz telemetry into the handful of numbers a CSA actually reads. */
 export function summarizeDsLog(result: DsLogResult): DsLogSummary | null {
 	if (!result.parsed || result.entries.length === 0) return null;
 	const e = result.entries;

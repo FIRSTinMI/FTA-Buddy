@@ -12,6 +12,8 @@ import {
 	FMS_SERIES,
 	fmsSeries,
 	pdChannelSeries,
+	sampleRateHz,
+	SUPERSEDED_BY,
 	wpilogSeries,
 	wpilogSeriesDef,
 	type SeriesDef,
@@ -281,6 +283,10 @@ export interface SeriesData {
 		unit?: string;
 		axis: string;
 		from: string;
+		/** Rate the samples actually arrived at, measured rather than assumed. */
+		hz: number | null;
+		/** Set when a series the team uploaded records the same thing faster. */
+		supersededBy?: { key: string; because: string };
 		points: { t: number; v: number | null }[];
 	}[];
 	/** Series that could not be read, each with why. Shown rather than dropped. */
@@ -422,6 +428,9 @@ export async function readSeriesData(request: SeriesRequest): Promise<SeriesData
 			unit: s.def.unit,
 			axis: s.def.axis,
 			from: s.def.from,
+			hz: sampleRateHz(s.points),
+			// Only worth saying when the faster series is actually here.
+			supersededBy: SUPERSEDED_BY[s.def.key] && dsResult?.parsed ? SUPERSEDED_BY[s.def.key] : undefined,
 			points: s.points,
 		})),
 		notes,
@@ -429,35 +438,68 @@ export async function readSeriesData(request: SeriesRequest): Promise<SeriesData
 }
 
 /**
- * The same data as a table a model reads well: one row per sampled instant,
- * columns in the order asked for, so the ordering of events is visible.
+ * The same data as a table a model reads well.
+ *
+ * The sources sample at different rates, so a table built from the union of
+ * their timestamps would be mostly holes: the 50 Hz series would put a row every
+ * 20 ms and the slow one would be blank in almost all of them. So this lays down
+ * an even grid and fills each cell from the last sample at or before that
+ * instant, and only while that sample is still fresh for its own rate. A slow
+ * series holds its value across the grid; it never invents one, and a real gap
+ * stays a gap.
  */
 export async function readSeries(request: SeriesRequest): Promise<string> {
 	const data = await readSeriesData(request);
 	if (data.series.length === 0) return data.notes.join("\n") || "Nothing could be read for those series.";
 
-	const times = [...new Set(data.series.flatMap((s) => s.points.map((p) => Math.round(p.t * 10) / 10)))].sort(
-		(a, b) => a - b,
-	);
-	const header = ["t(s)", ...data.series.map((s) => s.label + (s.unit ? ` ${s.unit}` : ""))].join(" | ");
-	const rows = times.slice(0, 400).map((t) => {
-		const cells = data.series.map((series) => {
-			let nearest: { t: number; v: number | null } | null = null;
-			for (const point of series.points) {
-				if (nearest === null || Math.abs(point.t - t) < Math.abs(nearest.t - t)) nearest = point;
-			}
-			if (!nearest || Math.abs(nearest.t - t) > 0.6) return "";
-			return nearest.v === null ? "" : Number.isInteger(nearest.v) ? String(nearest.v) : nearest.v.toFixed(2);
+	const times = data.series.flatMap((s) => s.points.map((p) => p.t));
+	const from = Math.min(...times);
+	const to = Math.max(...times);
+	const span = Math.max(to - from, 0.1);
+	const MAX_ROWS = 300;
+	const step = Math.max(0.1, Math.ceil((span / MAX_ROWS) * 10) / 10);
+
+	// A sample is good for two of its own intervals. At 50 Hz that is 40 ms; for a
+	// slower source it is proportionally longer, which is how long its value stands.
+	const holds = data.series.map((s) => (s.hz && s.hz > 0 ? Math.max(2 / s.hz, step) : step * 2));
+	const cursors = data.series.map(() => 0);
+
+	const header = [
+		"t(s)",
+		...data.series.map(
+			(s) => `${s.label}${s.unit ? ` ${s.unit}` : ""}${s.hz ? ` @${s.hz.toFixed(s.hz < 10 ? 1 : 0)}Hz` : ""}`,
+		),
+	].join(" | ");
+
+	const rows: string[] = [];
+	for (let t = from; t <= to && rows.length < MAX_ROWS; t += step) {
+		const cells = data.series.map((series, index) => {
+			// Walk forward only: the grid is increasing, so each series is scanned once.
+			while (cursors[index] + 1 < series.points.length && series.points[cursors[index] + 1].t <= t)
+				cursors[index]++;
+			const point = series.points[cursors[index]];
+			if (!point || point.t > t + 1e-9 || t - point.t > holds[index]) return "";
+			if (point.v === null) return "";
+			return Number.isInteger(point.v) ? String(point.v) : point.v.toFixed(2);
 		});
-		return [t.toFixed(1), ...cells].join(" | ");
-	});
+		if (cells.some((c) => c !== "")) rows.push([t.toFixed(1), ...cells].join(" | "));
+	}
+
+	const rateNote = data.series
+		.filter((s) => s.supersededBy)
+		.map((s) => `${s.key} is also in the team's own log as ${s.supersededBy!.key}: ${s.supersededBy!.because}.`);
 
 	return [
-		`${data.label}${data.station ? ` ${data.station}` : ""}, seconds from match start.`,
-		...(data.notes.length > 0 ? ["", ...data.notes, ""] : [""]),
+		`${data.label}${data.station ? ` ${data.station}` : ""}, seconds from match start, sampled every ${step.toFixed(1)} s.`,
+		"A blank cell means that source had nothing recent enough to stand for that instant.",
+		...(rateNote.length > 0 ? ["", ...rateNote] : []),
+		...(data.notes.length > 0 ? ["", ...data.notes] : []),
+		"",
 		header,
 		...rows,
-		times.length > 400 ? `... ${times.length - 400} more rows` : "",
+		to - from > MAX_ROWS * step
+			? `... the window is longer than ${MAX_ROWS} rows; ask for a narrower set of series.`
+			: "",
 	]
 		.filter(Boolean)
 		.join("\n");

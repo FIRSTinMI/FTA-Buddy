@@ -185,7 +185,12 @@
 			<LogGraph bind:this={logGraph} {log} />
 
 			{#each teamUploads as upload (upload.uploadId)}
-				<TeamLogChart uploadId={upload.uploadId} matchId={matchid} code={upload.code} />
+				<TeamLogChart
+					uploadId={upload.uploadId}
+					matchId={matchid}
+					code={upload.code}
+					hasDsLog={upload.hasDsLog}
+				/>
 				<p class="text-left text-[11px] text-gray-500 dark:text-gray-400 -mt-1">
 					{upload.reason}
 					<a class="underline" href={`/uploads/${upload.uploadId}`}>Open the upload</a>

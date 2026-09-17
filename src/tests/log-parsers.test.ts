@@ -9,6 +9,14 @@ import {
 	type DsLogResult,
 } from "../../shared/logs/dslog";
 import { readCsvTelemetry, splitCsvLine } from "../../shared/logs/csv-telemetry";
+import {
+	defaultSeriesKeys,
+	downsample,
+	DSLOG_SERIES,
+	FMS_SERIES,
+	sampleRateHz,
+	SUPERSEDED_BY,
+} from "../../shared/logs/series";
 import { hootCompliancy, isHoot } from "../util/uploads/hoot";
 import { parseDsLogFileName, parseWpilogFileName, wpilogNameFromDsEvents } from "../../shared/logs/filenames";
 import {
@@ -626,7 +634,7 @@ describe("windowed driver station summary", () => {
 	/** Ten minutes of bench time with a sag, then a match with a deeper sag. */
 	function session(): DsLogResult {
 		const entries = [];
-		// 30,000 samples at 20 Hz is ten minutes of bench time.
+		// 30,000 samples at 50 Hz is ten minutes of bench time.
 		for (let i = 0; i < 30_000; i++) {
 			const t = i * 0.02;
 			// Pit brownout at 60 s, match at 300 s with its own dip at 340 s.
@@ -671,5 +679,54 @@ describe("windowed driver station summary", () => {
 
 	test("a match the log does not cover has no window", () => {
 		expect(summarizeDsLogWindow(session(), 9000)).toBeNull();
+	});
+});
+
+describe("series rates and defaults", () => {
+	test("the measured rate is the median interval, not an assumption", () => {
+		const fiftyHz = Array.from({ length: 100 }, (_, i) => ({ t: i * 0.02, v: 12 }));
+		expect(sampleRateHz(fiftyHz)).toBeCloseTo(50, 6);
+		const twoHz = Array.from({ length: 20 }, (_, i) => ({ t: i * 0.5, v: 12 }));
+		expect(sampleRateHz(twoHz)).toBeCloseTo(2, 6);
+		// One long gap must not drag the rate down; the median ignores it.
+		const withGap = [...fiftyHz, { t: 60, v: 12 }];
+		expect(sampleRateHz(withGap)).toBeCloseTo(50, 6);
+		expect(sampleRateHz([{ t: 0, v: 1 }])).toBeNull();
+	});
+
+	test("with a driver station log, its series replace the slower ones", () => {
+		const keys = defaultSeriesKeys({ hasDsLog: true });
+		expect(keys).toContain("ds.batteryVolts");
+		expect(keys).not.toContain("fms.battery");
+		expect(keys).not.toContain("fms.averageTripTime");
+		// Packet loss is superseded too, as a rate rather than a count.
+		expect(keys).not.toContain("fms.lostPackets");
+		// The field's view of the link has no counterpart, so it stays on: it is
+		// what the team's battery trace gets compared against.
+		expect(keys).toContain("fms.radioLink");
+		expect(keys).toContain("fms.rioLink");
+	});
+
+	test("without one, the field's series are all there is", () => {
+		const keys = defaultSeriesKeys({ hasDsLog: false });
+		expect(keys).toContain("fms.battery");
+		expect(keys).toContain("fms.rioLink");
+		expect(keys).not.toContain("ds.batteryVolts");
+	});
+
+	test("every superseded key names a series that exists", () => {
+		for (const [slow, faster] of Object.entries(SUPERSEDED_BY)) {
+			expect(FMS_SERIES.some((d) => d.key === slow)).toBe(true);
+			expect(DSLOG_SERIES.some((d) => d.key === faster.key)).toBe(true);
+		}
+	});
+
+	test("thinning keeps real samples, never invented ones", () => {
+		const points = Array.from({ length: 1000 }, (_, i) => ({ t: i * 0.02, v: i === 500 ? 6.2 : 12.4 }));
+		const thinned = downsample(points, 100);
+		expect(thinned.length).toBeLessThanOrEqual(100);
+		// The one dip survives, and every kept point is one that was in the input.
+		expect(thinned.some((p) => p.v === 6.2)).toBe(true);
+		for (const p of thinned) expect(points.some((q) => q.t === p.t && q.v === p.v)).toBe(true);
 	});
 });

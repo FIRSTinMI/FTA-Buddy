@@ -2,7 +2,7 @@
 	import Icon from "@iconify/svelte";
 	import { Button, Modal } from "flowbite-svelte";
 	import { onDestroy, onMount, tick } from "svelte";
-	import { DSLOG_SERIES, FMS_SERIES, type SeriesDef } from "../../../../shared/logs/series";
+	import { defaultSeriesKeys, DSLOG_SERIES, FMS_SERIES, SUPERSEDED_BY } from "../../../../shared/logs/series";
 	import { trpc } from "../../main";
 	import { echarts, type ECharts, type ECOption } from "../../util/echarts";
 
@@ -19,18 +19,23 @@
 	 * and when it is, the trace sits in the wrong place. That is said on screen
 	 * rather than hidden, because a silently shifted trace is worse than none.
 	 */
-	let { uploadId, matchId, code }: { uploadId: string; matchId: string; code: string } = $props();
+	let {
+		uploadId,
+		matchId,
+		code,
+		hasDsLog = false,
+	}: { uploadId: string; matchId: string; code: string; hasDsLog?: boolean } = $props();
 
 	type SeriesData = Awaited<ReturnType<typeof trpc.uploads.series.query>>;
 
-	/** Series offered before anything is loaded; the catalog adds the team's own. */
-	const BASE_SERIES: SeriesDef[] = [...FMS_SERIES, ...DSLOG_SERIES];
-
-	let selected = $state<string[]>(
-		BASE_SERIES.filter((d) => d.defaultOn)
-			.map((d) => d.key)
-			.slice(0, 6),
-	);
+	/**
+	 * Where the team's Driver Station log records the same quantity as the field
+	 * monitor, it wins by default: it records every control packet, so 50 Hz, and a sag shows its actual
+	 * shape instead of one averaged dip. The field's own radio numbers have no
+	 * counterpart, so they stay on. Every series is labelled with the rate it
+	 * actually arrived at rather than one we assumed.
+	 */
+	let selected = $state<string[]>(defaultSeriesKeys({ hasDsLog }));
 	let data = $state<SeriesData | null>(null);
 	let loading = $state(false);
 	let error = $state<string | null>(null);
@@ -72,10 +77,14 @@
 				splitLine: { show: index === 0 },
 			})),
 			series: loaded.series.map((s) => ({
-				name: `${s.label}${s.unit ? ` (${s.unit})` : ""}`,
+				name: `${s.label}${s.unit ? ` (${s.unit})` : ""}${s.hz ? ` ${s.hz < 10 ? s.hz.toFixed(1) : s.hz.toFixed(0)}Hz` : ""}`,
 				type: "line",
 				step: s.axis === "bool" ? "end" : undefined,
 				showSymbol: false,
+				// Render in chunks rather than thinning: a 50 Hz trace over a match is
+				// about 10,000 points per series and the whole point is to keep them.
+				progressive: 2000,
+				progressiveThreshold: 5000,
 				lineStyle: { width: s.from === "fms" ? 2 : 1.5, type: s.from === "fms" ? "solid" : "dashed" },
 				yAxisIndex: groups.indexOf(axisGroup(s)),
 				// A gap has to read as a gap, not as a line drawn across it.
@@ -97,7 +106,15 @@
 		loading = true;
 		error = null;
 		try {
-			data = await trpc.uploads.series.query({ id: uploadId, matchId, keys: selected.slice(0, 8) });
+			// The window is the match plus 20 s either side. At 50 Hz that is about
+			// 10,250 samples per series, so asking for more than that means nothing
+			// is thinned, which is the one thing this chart exists to avoid.
+			data = await trpc.uploads.series.query({
+				id: uploadId,
+				matchId,
+				keys: selected.slice(0, 8),
+				points: 12_000,
+			});
 			await tick();
 			if (container) {
 				chart ??= echarts.init(container);
@@ -169,6 +186,14 @@
 	{/if}
 
 	{#if data}
+		{#each data.series.filter((s) => s.supersededBy) as slower (slower.key)}
+			<p class="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
+				{slower.label} is also in the team's log, {slower.supersededBy?.because}.
+				<button class="underline" onclick={() => toggle(slower.supersededBy?.key ?? "")}
+					>Show that instead</button
+				>
+			</p>
+		{/each}
 		{#if data.notes.length > 0}
 			<ul class="mt-1 text-xs text-gray-500 dark:text-gray-400 list-disc pl-4">
 				{#each data.notes as note}
@@ -193,11 +218,14 @@
 				{#each FMS_SERIES as def (def.key)}
 					<button
 						onclick={() => toggle(def.key)}
+						title={hasDsLog && SUPERSEDED_BY[def.key]
+							? `The team's log has this faster: ${SUPERSEDED_BY[def.key].because}`
+							: undefined}
 						class="rounded-full border px-2 py-0.5 text-xs {selected.includes(def.key)
 							? 'border-primary-500 bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-100'
 							: 'border-gray-300 dark:border-gray-600'}"
 					>
-						{def.label}
+						{def.label}{hasDsLog && SUPERSEDED_BY[def.key] ? " (slower)" : ""}
 					</button>
 				{/each}
 			</div>

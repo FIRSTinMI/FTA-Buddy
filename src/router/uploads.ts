@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { KIND_LABELS } from "../../shared/logs/detect";
 import { db } from "../db/db";
@@ -292,17 +292,40 @@ export const uploadsRouter = router({
 			.where(and(eq(teamUploadMatches.match_id, input.matchId), eq(teamUploads.event, ctx.event.code)))
 			.execute();
 		// One upload can link the same match through several files; one row each.
+		// Prefer the row that knows the station, since that is the one that can
+		// also draw our own station log.
 		const byUpload = new Map<string, (typeof rows)[number]>();
-		for (const row of rows) if (!byUpload.has(row.uploadId)) byUpload.set(row.uploadId, row);
-		return [...byUpload.values()].map((row) => ({
-			uploadId: row.uploadId,
-			code: row.code,
-			team: row.team,
-			createdAt: row.createdAt,
-			how: row.link.how,
-			reason: row.link.reason,
-			station: row.link.station,
-		}));
+		for (const row of rows) {
+			const existing = byUpload.get(row.uploadId);
+			if (!existing || (!existing.link.station && row.link.station)) byUpload.set(row.uploadId, row);
+		}
+		const uploadIds = [...byUpload.keys()];
+		// Which kinds each upload holds, so the viewer can default to the team's
+		// own Driver Station log where there is one: it samples ten times faster
+		// than the field monitor frames we record.
+		const kinds = uploadIds.length
+			? await db
+					.select({ upload_id: teamUploadFiles.upload_id, kind: teamUploadFiles.kind })
+					.from(teamUploadFiles)
+					.where(inArray(teamUploadFiles.upload_id, uploadIds))
+					.execute()
+			: [];
+		const kindsOf = (uploadId: string) => kinds.filter((k) => k.upload_id === uploadId).map((k) => k.kind);
+		return [...byUpload.values()].map((row) => {
+			const has = kindsOf(row.uploadId);
+			return {
+				uploadId: row.uploadId,
+				code: row.code,
+				team: row.team,
+				createdAt: row.createdAt,
+				how: row.link.how,
+				reason: row.link.reason,
+				station: row.link.station,
+				hasDsLog: has.includes("dslog"),
+				hasDataLog: has.includes("wpilog"),
+				hasCsv: has.includes("csv"),
+			};
+		});
 	}),
 
 	/** Which series this upload can plot, as text for the picker's help line. */
@@ -318,7 +341,7 @@ export const uploadsRouter = router({
 				id: z.string().uuid(),
 				matchId: z.string().uuid(),
 				keys: z.array(z.string().max(200)).min(1).max(8),
-				points: z.number().int().min(50).max(4000).default(1200),
+				points: z.number().int().min(50).max(20_000).default(1200),
 			}),
 		)
 		.query(async ({ ctx, input }) => {

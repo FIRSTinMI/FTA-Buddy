@@ -278,9 +278,7 @@
 					</li>
 					<li><strong>Your robot code</strong>, the project folder zipped.</li>
 				</ul>
-				<p class="mt-2 text-xs text-gray-500">
-					Send whatever you have. Up to 25 files, and only event volunteers can open them.
-				</p>
+				<p class="mt-2 text-xs text-gray-500">Up to 25 files.</p>
 			</div>
 		{/if}
 	</div>

@@ -200,8 +200,8 @@
 			</ul>
 		{/if}
 		<p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-			Solid is the field's log, dashed is the team's. A trace sitting far from the match means their laptop clock
-			is out.
+			Solid is the field's log, dashed is the team's. A trace sitting far from the match is a laptop clock that is
+			out.
 		</p>
 	{/if}
 </div>

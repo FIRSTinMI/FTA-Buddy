@@ -123,10 +123,7 @@
 		<!-- Hand a team the link -->
 		<div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3 flex items-center gap-3">
 			<div class="min-w-0 grow">
-				<p class="font-semibold text-black dark:text-white">Teams upload their own logs</p>
-				<p class="text-sm text-gray-600 dark:text-gray-300">
-					Driver Station logs, data logs, CTRE logs, support bundles, robot code. No account needed.
-				</p>
+				<p class="font-semibold text-black dark:text-white">Public submission page</p>
 			</div>
 			<Button size="sm" color="light" class="shrink-0" onclick={() => (linkOpen = true)}>
 				<Icon icon="heroicons:qr-code-16-solid" class="size-4" /><span class="ml-1">Show</span>
@@ -160,9 +157,7 @@
 				<p class="font-semibold text-black dark:text-white">
 					{unassigned.length} upload{unassigned.length === 1 ? "" : "s"} we could not place
 				</p>
-				<p class="text-xs text-gray-600 dark:text-gray-300 mb-2">
-					No event in the files. Attach one if it is yours.
-				</p>
+				<p class="text-xs text-gray-600 dark:text-gray-300 mb-2">Attach one if it belongs to your event.</p>
 				{#each unassigned as u (u.id)}
 					<div class="flex items-center gap-2 py-1 text-sm">
 						<span class="grow min-w-0">
@@ -225,7 +220,7 @@
 	{/if}
 </div>
 
-<Modal bind:open={linkOpen} size="sm" outsideclose title="Teams upload their own logs">
+<Modal bind:open={linkOpen} size="sm" outsideclose title="Public submission page">
 	<div class="flex flex-col gap-2 text-left">
 		<p class="text-sm">Open this on the laptop that drives.</p>
 		<div class="max-w-48 mx-auto"><QrCode value={portalUrl} padding={12} /></div>

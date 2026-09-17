@@ -176,7 +176,9 @@
 			<h1 class="text-xl text-black dark:text-white">
 				{detail?.upload.team ? displayTeam(detail.upload.team) : "Team unknown"}
 			</h1>
-			<span class="font-mono text-sm text-gray-500">{detail?.upload.code ?? ""}</span>
+			{#if detail}
+				<span class="text-sm text-gray-500">{new Date(detail.upload.created_at).toLocaleString()}</span>
+			{/if}
 			<div class="ml-auto flex gap-1">
 				<Button size="xs" color="light" href={`/troubleshoot/chat?upload=${id}`}>
 					<Icon icon="heroicons:chat-bubble-left-right-16-solid" class="size-4" /><span class="ml-1"

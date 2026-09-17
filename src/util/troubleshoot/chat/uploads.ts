@@ -134,7 +134,7 @@ export async function listUploadFiles(uploadId: string): Promise<string> {
 	const links = await db.select().from(teamUploadMatches).where(eq(teamUploadMatches.upload_id, uploadId)).execute();
 
 	const lines: string[] = [];
-	lines.push(`Upload ${upload.code}${upload.team ? `, team ${upload.team}` : ", team unknown"}.`);
+	lines.push(`${upload.team ? `Team ${upload.team}` : "Team unknown"}, uploaded ${upload.created_at.toISOString()}.`);
 	if (links.length > 0) {
 		const seen = new Set<string>();
 		const labels: string[] = [];

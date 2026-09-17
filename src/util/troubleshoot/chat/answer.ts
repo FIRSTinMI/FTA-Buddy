@@ -142,7 +142,7 @@ function repoTools(repo: RepoRef): Anthropic.Tool[] {
  * changes a record, and the only outbound action, Ghost CSA, is its own tool.
  */
 function uploadTools(upload: UploadRef, ghostCsaOffered: boolean): Anthropic.Tool[] {
-	const who = `upload ${upload.code}${upload.team ? ` from team ${upload.team}` : ""}`;
+	const who = upload.team ? `team ${upload.team}'s upload` : "the attached upload";
 	const tools: Anthropic.Tool[] = [
 		{
 			name: "read_upload_summary",
@@ -421,6 +421,7 @@ export async function* streamAnswer(params: AnswerParams): AsyncGenerator<Answer
 
 	async function runUploadTool(block: Anthropic.ToolUseBlock): Promise<Anthropic.ToolResultBlockParam> {
 		if (!upload) return errorResult(block.id, "No upload is attached.");
+		const who = upload.team ? `team ${upload.team}'s upload` : "the attached upload";
 		if (uploadChars >= MAX_UPLOAD_CHARS_PER_TURN) return spentResult(block.id, "The upload budget is spent.");
 		if (uploadReadsLeft() <= 0) {
 			return spentResult(
@@ -446,9 +447,9 @@ export async function* streamAnswer(params: AnswerParams): AsyncGenerator<Answer
 		try {
 			switch (block.name) {
 				case "read_upload_summary":
-					return keep(`Summary of upload ${upload.code}`, await uploadSummary(upload.id));
+					return keep(`Summary of ${who}`, await uploadSummary(upload.id));
 				case "list_upload_files":
-					return keep(`Files in upload ${upload.code}`, await listUploadFiles(upload.id));
+					return keep(`Files in ${who}`, await listUploadFiles(upload.id));
 				case "read_upload_file": {
 					const path = stringInput(block, "path");
 					if (!path) return errorResult(block.id, "Give a path to read.");
@@ -456,7 +457,7 @@ export async function* streamAnswer(params: AnswerParams): AsyncGenerator<Answer
 					return keep(file.path, file.text);
 				}
 				case "list_log_series":
-					return keep(`Series available for upload ${upload.code}`, await availableSeries(upload.id));
+					return keep(`Series available in ${who}`, await availableSeries(upload.id));
 				case "read_log_series": {
 					const matchId = stringInput(block, "match_id");
 					const raw = (block.input as { series?: unknown } | null)?.series;

@@ -212,8 +212,7 @@
 					</blockquote>
 					{#if detail.upload.notes_withheld}
 						<p class="text-xs text-amber-600 dark:text-amber-400">
-							This note reads like instructions to an AI, so it is kept out of the assistant's prompts.
-							You are seeing it; the assistant is not.
+							Held back from the assistant: this reads like instructions rather than a description.
 						</p>
 					{/if}
 				{/if}
@@ -248,9 +247,6 @@
 							</div>
 						{/each}
 					</div>
-					<p class="text-xs text-gray-500 mt-1">
-						Open a match to see the team's logs drawn against the field's own record.
-					</p>
 				</div>
 			{/if}
 
@@ -275,8 +271,7 @@
 						</div>
 					</div>
 					<p class="text-xs text-gray-500">
-						Limelight's analyser for SystemCore support bundles. It reads the device's boot logs, services
-						and ports. The bundle and logs go to Limelight; the team's code never does.
+						Limelight's SystemCore bundle analyser. The bundle and logs go to Limelight; the code does not.
 					</p>
 					{#if detail.upload.ghost_status === "failed" && detail.upload.ghost_error}
 						<p class="text-xs text-red-600 dark:text-red-400 mt-1">{detail.upload.ghost_error}</p>
@@ -390,16 +385,13 @@
 <Modal bind:open={shareOpen} size="md" outsideclose title="Share part of this upload">
 	<div class="flex flex-col gap-2 text-left">
 		{#if shareUrl}
-			<p class="text-sm">Anyone with this link can read the files you ticked, until it expires.</p>
+			<p class="text-sm">Anyone with this link can read the ticked files until it expires.</p>
 			<div class="max-w-48 mx-auto"><QrCode value={shareUrl} padding={12} /></div>
 			<p class="font-mono text-xs break-all">{shareUrl}</p>
 			<Button size="sm" onclick={() => navigator.clipboard.writeText(shareUrl ?? "")}>Copy the link</Button>
 			<Button size="sm" color="light" onclick={() => (shareUrl = null)}>Make another</Button>
 		{:else if detail}
-			<p class="text-sm">
-				Tick the files this link should cover. Nothing else in the upload is readable through it. Leave them all
-				unticked to share the whole upload.
-			</p>
+			<p class="text-sm">Tick the files this link covers. Leave all unticked to share everything.</p>
 			<div class="max-h-60 overflow-y-auto flex flex-col gap-0.5">
 				{#each detail.files as file (file.id)}
 					<label class="flex items-center gap-2 text-xs">

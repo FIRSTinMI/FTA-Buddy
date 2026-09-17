@@ -40,7 +40,10 @@ export const slackSessionRouter = router({
 			try {
 				auth = await slackWebApi<{ team_id: string; team?: string; url?: string }>(session, "auth.test");
 			} catch (err) {
-				throw new TRPCError({ code: "BAD_REQUEST", message: `Slack rejected the token: ${(err as Error).message}` });
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: `Slack rejected the token: ${(err as Error).message}`,
+				});
 			}
 			const existing = await db
 				.select()

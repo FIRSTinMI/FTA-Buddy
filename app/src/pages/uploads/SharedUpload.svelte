@@ -52,7 +52,7 @@
 			<div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
 				<h1 class="text-lg text-black dark:text-white mb-1">This link does not work</h1>
 				<p class="text-sm text-gray-600 dark:text-gray-300">{error}</p>
-				<p class="text-xs text-gray-500 mt-2">Share links expire. Ask whoever sent it for a new one.</p>
+				<p class="text-xs text-gray-500 mt-2">Ask whoever sent it for a new one.</p>
 			</div>
 		{:else if !shared}
 			<p class="text-sm text-gray-500">Loading...</p>
@@ -67,7 +67,7 @@
 					· uploaded {new Date(shared.createdAt).toLocaleString()}
 				</p>
 				<p class="text-xs text-gray-500">
-					Shared from FTA Buddy. This link stops working {new Date(shared.expires).toLocaleString()}.
+					Shared from FTA Buddy. Expires {new Date(shared.expires).toLocaleString()}.
 				</p>
 			</div>
 

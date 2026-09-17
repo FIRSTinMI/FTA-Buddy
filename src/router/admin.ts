@@ -261,9 +261,7 @@ export const adminRouter = router({
 					updated_at: debugLogCategories.updated_at,
 				})
 				.from(debugLogCategories),
-			db
-				.selectDistinct({ category: debugLogs.category })
-				.from(debugLogs),
+			db.selectDistinct({ category: debugLogs.category }).from(debugLogs),
 		]);
 		const map = new Map<string, { category: string; enabled: boolean; updated_at: Date | null }>();
 		for (const row of stored) {

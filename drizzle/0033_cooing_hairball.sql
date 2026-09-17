@@ -1,0 +1,1 @@
+ALTER TABLE "team_uploads" ADD COLUMN "event_why" varchar;

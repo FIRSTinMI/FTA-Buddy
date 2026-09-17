@@ -881,6 +881,11 @@ export const teamUploads = pgTable(
 		team: integer("team"),
 		/** `log-station`, `support-bundle`, `robot-code`, `entered` or `none`. */
 		team_source: varchar("team_source").notNull().default("none"),
+		/**
+		 * Why this landed at this event, in a sentence, since nobody types an event
+		 * code any more. Null when it could not be placed.
+		 */
+		event_why: varchar("event_why"),
 		source: uploadSourceEnum("source").notNull(),
 		uploaded_by: integer("uploaded_by").references(() => users.id),
 		/** Free text name from the portal. Never trusted, only displayed. */

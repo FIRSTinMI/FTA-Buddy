@@ -70,13 +70,47 @@ export async function findUpload(params: {
 	return { id: upload.id, code: upload.code, team: upload.team, event: upload.event };
 }
 
-/** `7K2M-QX4T` anywhere in a message attaches that upload. */
-const CODE_PATTERN = /\b([23456789ABCDEFGHJKMNPQRSTUVWXYZ]{4}-[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{4})\b/;
+/**
+ * Team numbers mentioned in a conversation, newest turn first.
+ *
+ * Deliberately permissive: any three to five digit number counts, because a
+ * volunteer writes "6615 keeps dropping out" as readily as "team 6615". That
+ * costs nothing, because a number only attaches anything if that team actually
+ * uploaded something at this event.
+ */
+const TEAM_PATTERN = /\b(?:team\s*#?\s*|frc\s*)?(\d{3,5})\b/gi;
 
-export function uploadCodeFromTurns(turns: string[]): string | null {
+export function teamNumbersFromTurns(turns: string[]): number[] {
+	const seen: number[] = [];
 	for (const turn of [...turns].reverse()) {
-		const m = CODE_PATTERN.exec(turn.toUpperCase());
-		if (m) return m[1];
+		for (const m of turn.matchAll(TEAM_PATTERN)) {
+			const team = Number(m[1]);
+			if (team > 0 && team < 100_000 && !seen.includes(team)) seen.push(team);
+		}
+	}
+	return seen;
+}
+
+/**
+ * The newest upload a team made at this event. This is how the assistant gets
+ * hold of a team's logs: the volunteer says the team number, which they already
+ * know, rather than a code somebody has to read out.
+ */
+export async function findUploadForTeam(team: number, eventCode: string | null): Promise<UploadRef | null> {
+	if (!eventCode) return null;
+	const upload = await db.query.teamUploads.findFirst({
+		where: and(eq(teamUploads.team, team), eq(teamUploads.event, eventCode)),
+		orderBy: (t, { desc }) => [desc(t.created_at)],
+	});
+	if (!upload) return null;
+	return { id: upload.id, code: upload.code, team: upload.team, event: upload.event };
+}
+
+/** The first team mentioned that actually has an upload at this event. */
+export async function findUploadFromTurns(turns: string[], eventCode: string | null): Promise<UploadRef | null> {
+	for (const team of teamNumbersFromTurns(turns)) {
+		const found = await findUploadForTeam(team, eventCode);
+		if (found) return found;
 	}
 	return null;
 }

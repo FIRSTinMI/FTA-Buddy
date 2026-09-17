@@ -44,10 +44,7 @@
 
 	onMount(async () => {
 		try {
-			[notes, sources] = await Promise.all([
-				trpc.troubleshoot.kb.query(),
-				trpc.troubleshoot.sources.query(),
-			]);
+			[notes, sources] = await Promise.all([trpc.troubleshoot.kb.query(), trpc.troubleshoot.sources.query()]);
 		} catch (err) {
 			error = "Could not load the sources.";
 			console.error(err);
@@ -251,7 +248,8 @@
 									href={url}
 									target="_blank"
 									rel="noopener noreferrer"
-									class="text-sm text-primary-600 hover:underline dark:text-primary-400">Thread {i + 1}</a
+									class="text-sm text-primary-600 hover:underline dark:text-primary-400"
+									>Thread {i + 1}</a
 								>
 							</li>
 						{/each}

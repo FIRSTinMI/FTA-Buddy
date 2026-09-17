@@ -203,6 +203,7 @@
 		"/ftc",
 		"/troubleshoot",
 		"/troubleshoot/chat",
+		"/troubleshoot/logs",
 		"/troubleshoot/kb",
 		"/references",
 		"/references/statuslights",
@@ -223,6 +224,8 @@
 		const currentPath = route.pathname;
 		const isPublicLog = currentPath.startsWith("/logs/") && currentPath.split("/")[3]?.length == 36;
 		const isPublicNoteCreate = currentPath.startsWith("/notepad/submit/");
+		// A team uploading their own logs has no account and no event token.
+		const isPublicUpload = currentPath === "/upload";
 		const isJoinLink = currentPath.startsWith("/join/");
 		const isTroubleshoot = currentPath.startsWith("/troubleshoot");
 
@@ -238,7 +241,7 @@
 
 		if (!publicPaths.includes(currentPath)) {
 			//user trying to acces protected page
-			if (!isPublicLog && !isPublicNoteCreate && !isJoinLink && !isTroubleshoot) {
+			if (!isPublicLog && !isPublicNoteCreate && !isJoinLink && !isTroubleshoot && !isPublicUpload) {
 				//page is not public log or public note creation page
 				if (!$user.token || !$user.eventToken) {
 					navigate("/manage/login"); //user is either not logged in or does not have event token
@@ -339,7 +342,9 @@
 		version,
 		openWelcome,
 		openChangelog,
-		route.pathname.startsWith("/logs/") || route.pathname.startsWith("/notepad/submit/"),
+		route.pathname.startsWith("/logs/") ||
+			route.pathname.startsWith("/notepad/submit/") ||
+			route.pathname === "/upload",
 	);
 
 	// Toast manager
@@ -786,17 +791,6 @@
 						{/snippet}
 					</SidebarItem>
 					<SidebarItem
-						label="Team Logs"
-						onclick={() => {
-							drawerOpen = false;
-							navigate("/uploads");
-						}}
-					>
-						{#snippet icon()}
-							<Icon icon="heroicons:document-arrow-up" class="size-8" />
-						{/snippet}
-					</SidebarItem>
-					<SidebarItem
 						label="Flashcards"
 						onclick={() => {
 							drawerOpen = false;
@@ -930,17 +924,6 @@
 					>
 						{#snippet icon()}
 							<Icon icon="uil:file-graph" class="size-8" />
-						{/snippet}
-					</SidebarItem>
-					<SidebarItem
-						label="Team Logs"
-						onclick={() => {
-							drawerOpen = false;
-							navigate("/uploads");
-						}}
-					>
-						{#snippet icon()}
-							<Icon icon="heroicons:document-arrow-up" class="size-8" />
 						{/snippet}
 					</SidebarItem>
 					<SidebarItem

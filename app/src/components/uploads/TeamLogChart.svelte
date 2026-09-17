@@ -168,7 +168,7 @@
 
 <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-2 text-left">
 	<div class="flex items-center gap-2 mb-1">
-		<h3 class="text-sm font-semibold text-black dark:text-white">Team's own logs, on the match clock</h3>
+		<h3 class="text-sm font-semibold text-black dark:text-white">Team's own logs</h3>
 		<span class="text-xs text-gray-500">upload {code}</span>
 		<Button size="xs" color="light" class="ml-auto" onclick={openPicker}>
 			<Icon icon="heroicons:adjustments-horizontal-16-solid" class="size-4" /><span class="ml-1">Series</span>
@@ -188,10 +188,8 @@
 	{#if data}
 		{#each data.series.filter((s) => s.supersededBy) as slower (slower.key)}
 			<p class="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
-				{slower.label} is also in the team's log, {slower.supersededBy?.because}.
-				<button class="underline" onclick={() => toggle(slower.supersededBy?.key ?? "")}
-					>Show that instead</button
-				>
+				{slower.label}: {slower.supersededBy?.because}.
+				<button class="underline" onclick={() => toggle(slower.supersededBy?.key ?? "")}>Use that</button>
 			</p>
 		{/each}
 		{#if data.notes.length > 0}
@@ -202,8 +200,8 @@
 			</ul>
 		{/if}
 		<p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-			Solid lines are the field's log, dashed are the team's. The team's timestamps come from their own laptop
-			clock, so a trace that sits well away from the match is a clock that is out, not a robot that misbehaved.
+			Solid is the field's log, dashed is the team's. A trace sitting far from the match means their laptop clock
+			is out.
 		</p>
 	{/if}
 </div>

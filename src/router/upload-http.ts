@@ -2,12 +2,11 @@ import { createHash } from "crypto";
 import express, { type Request, type Response, type Router } from "express";
 import { eq } from "drizzle-orm";
 import { db } from "../db/db";
-import { events, teamUploadFiles, teamUploads, teamUploadShares } from "../db/schema";
+import { teamUploadFiles, teamUploads, teamUploadShares } from "../db/schema";
 import { redis } from "../util/redis";
 import { resolveUserFromToken } from "../trpc";
 import { getEvent } from "../util/get-event";
 import { ingestUpload } from "../util/uploads/ingest";
-import { portalErrorPage, portalFormPage, portalResultPage } from "../util/uploads/portal-page";
 import { loadBytes, MAX_UPLOAD_BYTES, UploadTooLargeError } from "../util/uploads/store";
 
 /**
@@ -77,15 +76,6 @@ async function parseMultipart(req: Request): Promise<ParsedForm> {
 	return { fields, files };
 }
 
-/** Resolve a typed event code to a real, unarchived event. */
-async function resolveEventCode(raw: string | undefined): Promise<{ code: string; name: string } | null> {
-	const code = raw?.trim().toLowerCase();
-	if (!code) return null;
-	const event = await db.query.events.findFirst({ where: eq(events.code, code) });
-	if (!event || event.archived) return null;
-	return { code: event.code, name: event.name };
-}
-
 function parsedTeam(raw: string | undefined): number | null {
 	const value = Number(raw?.trim());
 	return Number.isInteger(value) && value > 0 && value < 100_000 ? value : null;
@@ -94,70 +84,36 @@ function parsedTeam(raw: string | undefined): number | null {
 export function uploadHttpRouter(): Router {
 	const router = express.Router();
 
-	// #region public portal
+	// #region public upload
 
-	router.get("/upload", async (req, res) => {
-		const event = await resolveEventCode(typeof req.query.event === "string" ? req.query.event : undefined);
-		res.type("html").send(portalFormPage({ eventCode: event?.code, eventName: event?.name }));
-	});
-
+	/**
+	 * The page for this lives in the app at /upload, unlisted and needing no
+	 * account, so this is JSON only. Nothing about the event is accepted from the
+	 * client: it is worked out from the files.
+	 */
 	router.post(
-		"/upload",
+		"/api/uploads/public",
 		express.raw({ type: "multipart/form-data", limit: MAX_UPLOAD_BYTES }),
 		async (req: Request, res: Response) => {
 			const ipHash = hashIp(clientIp(req));
 			try {
 				if (!(await portalRateLimit(ipHash))) {
-					return res
-						.status(429)
-						.type("html")
-						.send(
-							portalErrorPage(
-								"That is a lot of uploads from one place in an hour. Wait a bit, or hand the files to a volunteer.",
-							),
-						);
+					return res.status(429).json({
+						error: "That is a lot of uploads from one place in an hour. Wait a bit, or hand the files to a volunteer.",
+					});
 				}
 				const { fields, files } = await parseMultipart(req);
-				if (files.length === 0) {
-					const event = await resolveEventCode(fields.event);
-					return res
-						.status(400)
-						.type("html")
-						.send(
-							portalFormPage({
-								eventCode: event?.code,
-								eventName: event?.name,
-								error: "Pick at least one file.",
-							}),
-						);
-				}
-				const event = await resolveEventCode(fields.event);
+				if (files.length === 0) return res.status(400).json({ error: "Pick at least one file." });
+
 				const result = await ingestUpload({
 					files,
 					source: "portal",
-					event: event ? { code: event.code } : null,
 					enteredTeam: parsedTeam(fields.team),
 					uploaderName: fields.uploader?.trim() || null,
 					notes: fields.notes?.trim() || null,
 					ipHash,
 				});
-				res.type("html").send(
-					portalResultPage({
-						code: result.code,
-						team: result.team,
-						teamSource: result.teamSource,
-						fileCount:
-							result.files.filter((f) => f.kind !== "text" || result.files.length === 1).length ||
-							result.files.length,
-						matches: result.matches.map((m) => ({
-							level: m.level,
-							matchNumber: m.matchNumber,
-							how: m.how,
-						})),
-						warnings: result.warnings,
-						eventName: event?.name,
-					}),
-				);
+				res.json(result);
 			} catch (err) {
 				const message =
 					err instanceof UploadTooLargeError
@@ -165,8 +121,8 @@ export function uploadHttpRouter(): Router {
 						: err instanceof Error
 							? err.message
 							: "Something went wrong reading those files.";
-				console.error("[uploads] portal upload failed", err);
-				res.status(400).type("html").send(portalErrorPage(message));
+				console.error("[uploads] public upload failed", err);
+				res.status(err instanceof UploadTooLargeError ? 413 : 400).json({ error: message });
 			}
 		},
 	);
@@ -194,6 +150,8 @@ export function uploadHttpRouter(): Router {
 				const result = await ingestUpload({
 					files,
 					source: "app",
+					// A volunteer uploading from the app is already at an event, so that
+					// beats anything inferred from the files.
 					event: { code: event.code },
 					enteredTeam: parsedTeam(fields.team),
 					uploaderName: user.username,

@@ -1,12 +1,12 @@
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { KIND_LABELS } from "../../shared/logs/detect";
 import { db } from "../db/db";
 import { matchLogs, teamUploadFiles, teamUploadMatches, teamUploads, teamUploadShares } from "../db/schema";
-import { eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
+import { eventProcedure, publicProcedure, router } from "../trpc";
 import { ghostCsaEnabled, ghostCsaTicketUrl, refreshGhostCsa, sendUploadToGhostCsa } from "../util/uploads/ghost-csa";
-import { linkUploadMatch, setUploadTeam, unlinkUploadMatch } from "../util/uploads/ingest";
+import { assignUploadToEvent, linkUploadMatch, setUploadTeam, unlinkUploadMatch } from "../util/uploads/ingest";
 import { availableSeries, readSeriesData } from "../util/troubleshoot/chat/uploads";
 import { deleteBytes, loadBytes } from "../util/uploads/store";
 
@@ -136,12 +136,57 @@ export const uploadsRouter = router({
 		};
 	}),
 
-	/** Find an upload by the code the team was given, so a CSA can pull it up from a sticky note. */
-	byCode: protectedProcedure.input(z.object({ code: z.string().min(4).max(16) })).query(async ({ input }) => {
-		const code = input.code.trim().toUpperCase();
-		const upload = await db.query.teamUploads.findFirst({ where: eq(teamUploads.code, code) });
-		if (!upload) throw new TRPCError({ code: "NOT_FOUND", message: "No upload has that code" });
-		return { id: upload.id, event: upload.event, team: upload.team, created_at: upload.created_at };
+	/** Everything a team uploaded at this event, newest first. */
+	forTeam: eventProcedure
+		.input(z.object({ team: z.number().int().min(1).max(99999) }))
+		.query(async ({ ctx, input }) => {
+			return db
+				.select({
+					id: teamUploads.id,
+					created_at: teamUploads.created_at,
+					source: teamUploads.source,
+					notes: teamUploads.notes,
+					ghost_status: teamUploads.ghost_status,
+				})
+				.from(teamUploads)
+				.where(and(eq(teamUploads.event, ctx.event.code), eq(teamUploads.team, input.team)))
+				.orderBy(desc(teamUploads.created_at))
+				.execute();
+		}),
+
+	/**
+	 * Uploads nothing could place. Visible to any volunteer at any event, because
+	 * an upload nobody can find is worse than one filed in the wrong place.
+	 */
+	unassigned: eventProcedure.query(async () => {
+		return db
+			.select({
+				id: teamUploads.id,
+				team: teamUploads.team,
+				created_at: teamUploads.created_at,
+				uploader_name: teamUploads.uploader_name,
+				notes: teamUploads.notes,
+				file_count: sql<number>`(select count(*) from ${teamUploadFiles} where ${teamUploadFiles.upload_id} = ${teamUploads.id} and ${teamUploadFiles.parent_id} is null)`,
+			})
+			.from(teamUploads)
+			.where(isNull(teamUploads.event))
+			.orderBy(desc(teamUploads.created_at))
+			.limit(50)
+			.execute();
+	}),
+
+	/** Attach an unplaced upload to this event, and link its logs to our matches. */
+	assignToEvent: eventProcedure.input(z.object({ id: z.string().uuid() })).mutation(async ({ ctx, input }) => {
+		const upload = await db.query.teamUploads.findFirst({ where: eq(teamUploads.id, input.id) });
+		if (!upload) throw new TRPCError({ code: "NOT_FOUND", message: "Upload not found" });
+		if (upload.event && upload.event !== ctx.event.code) {
+			throw new TRPCError({
+				code: "BAD_REQUEST",
+				message: `That upload is already filed under ${upload.event}.`,
+			});
+		}
+		await assignUploadToEvent(input.id, ctx.event.code, `Attached to ${ctx.event.code} by a volunteer.`);
+		return { ok: true };
 	}),
 
 	fileText: eventProcedure

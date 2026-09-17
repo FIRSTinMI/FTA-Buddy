@@ -5,20 +5,23 @@
 	import { symptoms } from "../../../../shared/troubleshooting/symptoms";
 	import { navigate, route } from "../../router";
 	import Chat from "./Chat.svelte";
+	import TeamLogs from "./TeamLogs.svelte";
 	import TreeWalk from "./TreeWalk.svelte";
 
-	type Mode = "guided" | "chat";
+	type Mode = "guided" | "chat" | "logs";
 	const STORAGE_KEY = "troubleshootMode";
 
 	function storedMode(): Mode {
-		return localStorage.getItem(STORAGE_KEY) === "chat" ? "chat" : "guided";
+		const stored = localStorage.getItem(STORAGE_KEY);
+		return stored === "chat" || stored === "logs" ? stored : "guided";
 	}
 
 	// The URL decides the mode. localStorage only picks the default when landing on /troubleshoot.
 	let isChat = $derived(route.pathname === "/troubleshoot/chat");
-	let treeId = $derived(isChat ? undefined : route.params.tree);
+	let isLogs = $derived(route.pathname === "/troubleshoot/logs");
+	let treeId = $derived(isChat || isLogs ? undefined : route.params.tree);
 	let tree = $derived(treeId ? getTree(treeId) : undefined);
-	let nodeId = $derived(isChat ? undefined : route.params.node);
+	let nodeId = $derived(isChat || isLogs ? undefined : route.params.node);
 	let pathParam = $derived(typeof route.search.p === "string" ? route.search.p : undefined);
 	let chatTree = $derived(typeof route.search.tree === "string" ? route.search.tree : undefined);
 	let chatPath = $derived(typeof route.search.path === "string" ? route.search.path : undefined);
@@ -41,14 +44,15 @@
 	});
 
 	onMount(() => {
-		if (route.pathname === "/troubleshoot" && storedMode() === "chat") {
-			navigate("/troubleshoot/chat", { replace: true });
+		const stored = storedMode();
+		if (route.pathname === "/troubleshoot" && stored !== "guided") {
+			navigate(`/troubleshoot/${stored}`, { replace: true });
 		}
 	});
 
 	function setMode(mode: Mode) {
 		localStorage.setItem(STORAGE_KEY, mode);
-		navigate(mode === "chat" ? "/troubleshoot/chat" : "/troubleshoot");
+		navigate(mode === "guided" ? "/troubleshoot" : `/troubleshoot/${mode}`);
 	}
 
 	const segment =
@@ -78,9 +82,19 @@
 			>
 				<Icon icon="heroicons:chat-bubble-left-right-16-solid" class="size-5" /> Chat
 			</button>
+			<button
+				role="tab"
+				aria-selected={isLogs}
+				class="{segment} {isLogs ? segmentOn : segmentOff}"
+				onclick={() => setMode("logs")}
+			>
+				<Icon icon="heroicons:document-arrow-up-16-solid" class="size-5" /> Team logs
+			</button>
 		</div>
 
-		{#if isChat}
+		{#if isLogs}
+			<TeamLogs />
+		{:else if isChat}
 			<Chat from={chatFrom} treeTitle={chatTreeTitle} answers={chatAnswers} />
 		{:else if tree}
 			<TreeWalk {tree} {nodeId} {pathParam} />
@@ -93,7 +107,10 @@
 			<p class="text-sm text-gray-600 dark:text-gray-300">What is happening?</p>
 			<div class="flex flex-col gap-2">
 				{#each symptoms as s (s.label)}
-					<a href={`/troubleshoot/${s.tree}`} class="flex min-h-12 items-center justify-between gap-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-left text-black hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700">
+					<a
+						href={`/troubleshoot/${s.tree}`}
+						class="flex min-h-12 items-center justify-between gap-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-left text-black hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
+					>
 						<span class="min-w-0">
 							<span class="block font-semibold">{s.label}</span>
 							<span class="block text-sm text-gray-600 dark:text-gray-300">{s.detail}</span>

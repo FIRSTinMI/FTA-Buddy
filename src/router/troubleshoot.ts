@@ -24,7 +24,7 @@ import {
 	TROUBLESHOOT_MODEL,
 } from "../util/troubleshoot/spend";
 import { PLANNER_MODEL } from "../util/troubleshoot/pricing";
-import { findUpload, uploadCodeFromTurns, type UploadRef } from "../util/troubleshoot/chat/uploads";
+import { findUpload, findUploadFromTurns, type UploadRef } from "../util/troubleshoot/chat/uploads";
 import { ghostCsaEnabled, sendUploadToGhostCsa } from "../util/uploads/ghost-csa";
 import { teamUploadFiles } from "../db/schema";
 
@@ -349,15 +349,14 @@ export const troubleshootRouter = router({
 			const repo = parseRepoFromTurns(userTexts);
 			const repoReadsBefore = repo ? await getRepoReads(conversationId) : 0;
 
-			// An upload attaches the same way: the app can name one outright, or an
-			// upload code read off a sticky note in any message will do it.
+			// An upload attaches the same way: the app can name one outright, or a
+			// team number mentioned in any message finds that team's own upload at
+			// this event. Nobody types a code.
 			let upload: UploadRef | null = null;
 			try {
-				upload = await findUpload({
-					id: input.uploadId,
-					code: input.uploadId ? undefined : (uploadCodeFromTurns(userTexts) ?? undefined),
-					eventCode: eventCode ?? null,
-				});
+				upload = input.uploadId
+					? await findUpload({ id: input.uploadId, eventCode: eventCode ?? null })
+					: await findUploadFromTurns(userTexts, eventCode ?? null);
 			} catch (err) {
 				console.error("[troubleshoot chat] upload lookup failed", err);
 			}

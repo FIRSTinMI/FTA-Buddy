@@ -66,10 +66,23 @@ export async function downloadReport(fileName: string): Promise<Buffer> {
 	return contents;
 }
 
+/**
+ * Whether cloud storage can actually be used. The key is checked for a PEM
+ * header, not merely for being set: a mangled key is the usual failure, and
+ * reporting it as configured means a large upload dies at the point of storing
+ * rather than being refused with something a person can act on.
+ */
 export function isGcsConfigured(): boolean {
-	return (
-		!!bucketName && !!process.env.GOOGLE_PROJECT_ID && !!process.env.GOOGLE_KEY_CLIENT && !!process.env.GOOGLE_KEY
-	);
+	if (!bucketName || !process.env.GOOGLE_PROJECT_ID || !process.env.GOOGLE_KEY_CLIENT) return false;
+	const key = (process.env.GOOGLE_KEY ?? "").trim().replace(/^["']|["']$/g, "");
+	if (!key) return false;
+	if (key.includes("-----BEGIN")) return true;
+	// Base64-wrapped keys are accepted by the loader, so accept them here too.
+	try {
+		return Buffer.from(key, "base64").toString("utf8").includes("-----BEGIN");
+	} catch {
+		return false;
+	}
 }
 
 /**
@@ -77,7 +90,11 @@ export function isGcsConfigured(): boolean {
  * under their own prefix, and unlike reports these are arbitrary binaries, so
  * the content type is given by the caller rather than assumed.
  */
-export async function uploadFile(buffer: Buffer, path: string, contentType = "application/octet-stream"): Promise<void> {
+export async function uploadFile(
+	buffer: Buffer,
+	path: string,
+	contentType = "application/octet-stream",
+): Promise<void> {
 	const file = getBucket().file(`uploads/${path}`);
 	await file.save(buffer, { contentType });
 }
@@ -89,7 +106,5 @@ export async function downloadUploadedFile(path: string): Promise<Buffer> {
 
 /** Best effort: a missing object is not an error, the row is going away either way. */
 export async function deleteUploadedFile(path: string): Promise<void> {
-	await getBucket()
-		.file(`uploads/${path}`)
-		.delete({ ignoreNotFound: true });
+	await getBucket().file(`uploads/${path}`).delete({ ignoreNotFound: true });
 }

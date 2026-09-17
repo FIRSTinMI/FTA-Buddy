@@ -46,7 +46,7 @@ function detectAlliancesFromMatch(
 	red: (number | null)[],
 	blue: (number | null)[],
 ): { redAlliance: number | null; blueAlliance: number | null } {
-	const rosterTeams = (a: (typeof playoffAlliances.$inferSelect)) =>
+	const rosterTeams = (a: typeof playoffAlliances.$inferSelect) =>
 		[a.captain_team, a.pick1_team, a.pick2_team, a.backup_team].filter((t): t is number => t != null);
 
 	const bestMatch = (teams: (number | null)[]) => {
@@ -245,7 +245,8 @@ export const scorekeeperRouter = router({
 				//   3. detection from the match's team assignments in a played match_log.
 				let redAlliance = input.redAlliance ?? null;
 				let blueAlliance = input.blueAlliance ?? null;
-				let detectedFrom: "input" | "schedule" | "match" | "none" = redAlliance || blueAlliance ? "input" : "none";
+				let detectedFrom: "input" | "schedule" | "match" | "none" =
+					redAlliance || blueAlliance ? "input" : "none";
 				if (!redAlliance && !blueAlliance) {
 					const scheduled = ctx.event.scheduleDetails?.matches?.find(
 						(m) => m.match === input.matchNumber && m.level === "Playoff",
@@ -350,7 +351,10 @@ export const scorekeeperRouter = router({
 					),
 				});
 				if (!alliance) {
-					throw new TRPCError({ code: "BAD_REQUEST", message: `Alliance ${input.allianceNumber} not set up` });
+					throw new TRPCError({
+						code: "BAD_REQUEST",
+						message: `Alliance ${input.allianceNumber} not set up`,
+					});
 				}
 
 				const submittedAt = new Date();
@@ -440,7 +444,10 @@ export const scorekeeperRouter = router({
 					})
 					.returning();
 
-				bus.publish(`event:${ctx.event.code}:lineups`, { type: "lineup", allianceNumber: input.allianceNumber });
+				bus.publish(`event:${ctx.event.code}:lineups`, {
+					type: "lineup",
+					allianceNumber: input.allianceNumber,
+				});
 				return { status: denied ? ("denied" as const) : ("ok" as const), card };
 			}),
 

@@ -105,21 +105,23 @@ export const extensionRouter = router({
 		}),
 
 	// Extension listens here for config pushes targeted at it.
-	configSubscription: eventProcedure
-		.input(z.object({ extensionId: z.string() }))
-		.subscription(async function* ({ ctx, input, signal }) {
-			const { event } = ctx;
-			const { push, drain } = subscriptionQueue<ExtensionConfig>(signal!);
-			const unsub = bus.subscribe(`event:${event.code}:extension-config`, (data) => {
-				const msg = data as ExtensionConfigPush;
-				if (!msg.extensionId || msg.extensionId === input.extensionId) push(msg.config);
-			});
-			try {
-				for await (const item of drain()) yield item;
-			} finally {
-				unsub();
-			}
-		}),
+	configSubscription: eventProcedure.input(z.object({ extensionId: z.string() })).subscription(async function* ({
+		ctx,
+		input,
+		signal,
+	}) {
+		const { event } = ctx;
+		const { push, drain } = subscriptionQueue<ExtensionConfig>(signal!);
+		const unsub = bus.subscribe(`event:${event.code}:extension-config`, (data) => {
+			const msg = data as ExtensionConfigPush;
+			if (!msg.extensionId || msg.extensionId === input.extensionId) push(msg.config);
+		});
+		try {
+			for await (const item of drain()) yield item;
+		} finally {
+			unsub();
+		}
+	}),
 
 	// Web app: the extensions currently connected to this event, with their config.
 	list: eventProcedure.query(({ ctx }) => summarize(ctx.event.stats.extensions)),

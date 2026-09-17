@@ -20,6 +20,7 @@ import {
 	linkByTimestamp,
 	pickTeam,
 	type CandidateMatch,
+	type MatchLevel,
 	type MatchLink,
 	type TeamSource,
 } from "../../../shared/logs/match-link";
@@ -30,10 +31,11 @@ import {
 	type CodeFile,
 } from "../../../shared/logs/robot-code";
 import { describeDsEvents, describeDsLog, describeRobotCode, describeWpilog } from "../../../shared/logs/summarize";
-import { readWpilog } from "../../../shared/logs/wpilog";
+import { readWpilog, wpilogClockOffset, type WpilogMatchInfo } from "../../../shared/logs/wpilog";
 import { db } from "../../db/db";
 import { matchLogs, teamUploadFiles, teamUploadMatches, teamUploads } from "../../db/schema";
 import { screenForInstructions } from "../untrusted-text";
+import { inferEvent, UNASSIGNED_REASON } from "./event-inference";
 import { convertHoot, HootError, hootCompliancy, hootDecodeEnabled } from "./hoot";
 import { MAX_FILES_PER_UPLOAD, MAX_UPLOAD_BYTES, storeBytes, UploadTooLargeError } from "./store";
 import { entryText, keepBundleEntry, keepCodeEntry, readZip } from "./zip";
@@ -70,6 +72,10 @@ export interface IngestParams {
 export interface IngestResult {
 	id: string;
 	code: string;
+	/** The event it landed at, null when nothing placed it. */
+	event: string | null;
+	/** The sentence explaining why, shown to whoever uploaded it. */
+	eventWhy: string | null;
 	team: number | null;
 	teamSource: TeamSource;
 	files: { id: string; path: string; kind: UploadKind; size: number }[];
@@ -133,15 +139,29 @@ interface PreparedFile {
 	data: Uint8Array;
 	meta: Record<string, unknown> | null;
 	preview: string | null;
-	/** Filled in after the row is stored, for match linking. */
+	/** Filled in by the linking pass, once the event is known. */
 	links: MatchLink[];
 	/**
-	 * The parsed Driver Station log, kept only for the pairing pass: it needs to
-	 * re-window the entries once the match is known. Never stored.
+	 * What linking and event inference need, gathered while parsing. Parsing
+	 * cannot link, because which event this belongs to is not known until every
+	 * file has been read and its evidence weighed.
 	 */
+	/** The parsed Driver Station log. Also re-windowed per match. Never stored. */
 	dsResult?: DsLogResult;
-	/** Match info read out of a `.dsevents` file, for the same pass. */
+	/** Match info read out of a `.dsevents` file. */
 	dsEventsInfo?: DsEventsMatchInfo;
+	/** Match info a data log recorded over NetworkTables. */
+	wpilogMatch?: WpilogMatchInfo;
+	/** What a data log's file name said, once FMS renamed it. */
+	wpilogName?: ReturnType<typeof parseWpilogFileName>;
+	/** What a Hoot log's file name said, which is the only place it says anything. */
+	hootName?: ReturnType<typeof parseHootFileName>;
+	/** Wall-clock span of a telemetry CSV, when its times are absolute. */
+	csvRange?: { from: number; to: number };
+	/** An event name this file claimed, for working out which event this is. */
+	eventName?: string;
+	/** When this file was written, in unix seconds. */
+	writtenAt?: number;
 }
 
 /**
@@ -150,7 +170,6 @@ interface PreparedFile {
  */
 async function prepareFile(
 	incoming: IncomingFile,
-	candidates: CandidateMatch[],
 	warnings: string[],
 	teamCandidates: { team: number; source: TeamSource }[],
 ): Promise<PreparedFile[]> {
@@ -205,15 +224,13 @@ async function prepareFile(
 				stoppedEarly: summary.stoppedEarly,
 			};
 			root.preview = clip(describeWpilog(summary));
-			const link = linkByMatchInfo(summary.match, candidates) ?? (name ? linkByFileName(name, candidates) : null);
-			if (link) {
-				root.links.push(link);
-				if (link.team) teamCandidates.push({ team: link.team, source: "log-station" });
-			} else if (summary.match.matchNumber && candidates.length > 0) {
-				warnings.push(
-					`${path}: the log says match ${summary.match.matchNumber}, but this event has no station log for that match.`,
-				);
-			}
+			root.wpilogMatch = summary.match;
+			root.wpilogName = name;
+			root.eventName = summary.match.eventName ?? name?.eventName;
+			// A data log counts from robot boot, so its wall clock is the systemTime
+			// entry, falling back to the timestamp in its own name.
+			const offset = wpilogClockOffset(data);
+			root.writtenAt = offset !== null ? offset : name?.startedAt ? name.startedAt.getTime() / 1000 : undefined;
 			break;
 		}
 
@@ -230,9 +247,7 @@ async function prepareFile(
 			root.dsResult = result;
 			root.meta = { startTime: result.startTime, summary, stoppedEarly: result.stoppedEarly };
 			root.preview = clip(describeDsLog(summary, result.startTime));
-			if (result.startTime && summary) {
-				root.links.push(...linkByTimestamp(result.startTime, summary.durationSecs, candidates));
-			}
+			root.writtenAt = result.startTime ?? undefined;
 			break;
 		}
 
@@ -258,19 +273,8 @@ async function prepareFile(
 				dataLogName: wpilogNameFromDsEvents(texts),
 			};
 			root.preview = clip(describeDsEvents(result.entries));
-			const fromEvents = linkByMatchNumber(
-				levelFromDsEvents(matchInfo.matchType) ?? undefined,
-				matchInfo.matchNumber,
-				candidates,
-				"ds-events",
-				`The Driver Station logged "FMS Connected: ${matchInfo.matchType} - ${matchInfo.matchNumber}".`,
-			);
-			if (fromEvents) {
-				root.links.push(fromEvents);
-			} else if (result.startTime) {
-				const last = result.entries[result.entries.length - 1]?.timestamp ?? 0;
-				root.links.push(...linkByTimestamp(result.startTime, last, candidates));
-			}
+			root.eventName = matchInfo.eventName;
+			root.writtenAt = result.startTime ?? undefined;
 			break;
 		}
 
@@ -351,16 +355,11 @@ async function prepareFile(
 			// place a Hoot says which match it came from.
 			const compliancy = hootCompliancy(data);
 			const name = parseHootFileName(path);
-			const fromName = name
-				? linkByMatchNumber(
-						name.matchLevel,
-						name.matchNumber,
-						candidates,
-						"file-name",
-						`Phoenix named this log ${name.matchLevel} ${name.matchNumber} at ${name.eventName}.`,
-					)
-				: null;
-			if (fromName) root.links.push(fromName);
+			root.hootName = name;
+			root.eventName = name?.eventName;
+			// The name's time is the driving laptop's local clock with no zone, so
+			// it is only good enough to pick a day, which is all event inference needs.
+			root.writtenAt = name ? Date.parse(`${name.startedAtLocal}Z`) / 1000 : undefined;
 
 			if (!hootDecodeEnabled()) {
 				root.meta = { hoot: { compliancy, converted: false }, fileName: name };
@@ -441,8 +440,10 @@ async function prepareFile(
 				const times = csv.series.flatMap((s) => s.points.map((p) => p.t));
 				const from = Math.min(...times);
 				const to = Math.max(...times);
-				if (Number.isFinite(from))
-					root.links.push(...linkByTimestamp(from, Math.max(to - from, 0), candidates));
+				if (Number.isFinite(from)) {
+					root.csvRange = { from, to };
+					root.writtenAt = from;
+				}
 			}
 			break;
 		}
@@ -482,14 +483,15 @@ export async function ingestUpload(params: IngestParams): Promise<IngestResult> 
 		}
 	}
 
-	const candidates = await candidateMatches(params.event?.code);
 	const teamCandidates: { team: number; source: TeamSource }[] = [];
 	if (params.enteredTeam) teamCandidates.push({ team: params.enteredTeam, source: "entered" });
 
+	// Parse first, and link nothing yet: which event this belongs to is not known
+	// until every file has been read, because the answer is inside the files.
 	const prepared: PreparedFile[] = [];
 	for (const file of incoming) {
 		try {
-			prepared.push(...(await prepareFile(file, candidates, warnings, teamCandidates)));
+			prepared.push(...(await prepareFile(file, warnings, teamCandidates)));
 		} catch (err) {
 			// One unreadable file must not take the submission down.
 			warnings.push(
@@ -506,6 +508,78 @@ export async function ingestUpload(params: IngestParams): Promise<IngestResult> 
 				preview: null,
 				links: [],
 			});
+		}
+	}
+
+	// #region which event is this
+	let event: { code: string; name?: string } | null = params.event ? { code: params.event.code } : null;
+	let eventWhy: string | null = params.event ? "Chosen by the volunteer who uploaded it." : null;
+	const teamBeforeLinking = pickTeam(teamCandidates);
+	const writtenAt = prepared.map((f) => f.writtenAt).filter((t): t is number => typeof t === "number" && t > 0);
+	const logDate = writtenAt.length > 0 ? new Date(Math.min(...writtenAt) * 1000) : null;
+
+	if (!event) {
+		const guess = await inferEvent({
+			// A name from the file itself, most specific first.
+			eventNames: [...new Set(prepared.map((f) => f.eventName).filter((n): n is string => !!n))],
+			team: teamBeforeLinking?.team ?? null,
+			logDate,
+		});
+		if (guess) {
+			event = { code: guess.code, name: guess.name };
+			eventWhy = guess.why;
+		} else {
+			warnings.push(UNASSIGNED_REASON);
+		}
+	}
+	// #endregion
+
+	const candidates = await candidateMatches(event?.code);
+
+	// #region link each file to its match
+	for (const file of prepared) {
+		if (file.kind === "wpilog" && file.wpilogMatch) {
+			const link =
+				linkByMatchInfo(file.wpilogMatch, candidates) ??
+				(file.wpilogName ? linkByFileName(file.wpilogName, candidates) : null);
+			if (link) {
+				file.links.push(link);
+				if (link.team) teamCandidates.push({ team: link.team, source: "log-station" });
+			} else if (file.wpilogMatch.matchNumber && candidates.length > 0) {
+				warnings.push(
+					`${file.path}: the log says match ${file.wpilogMatch.matchNumber}, but this event has no station log for that match.`,
+				);
+			}
+		} else if (file.kind === "hoot" && file.hootName) {
+			const link = linkByMatchNumber(
+				file.hootName.matchLevel,
+				file.hootName.matchNumber,
+				candidates,
+				"file-name",
+				`Phoenix named this log ${file.hootName.matchLevel} ${file.hootName.matchNumber} at ${file.hootName.eventName}.`,
+			);
+			if (link) file.links.push(link);
+		} else if (file.kind === "dsevents" && file.dsEventsInfo) {
+			const fromEvents = linkByMatchNumber(
+				levelFromDsEvents(file.dsEventsInfo.matchType) ?? undefined,
+				file.dsEventsInfo.matchNumber,
+				candidates,
+				"ds-events",
+				`The Driver Station logged "FMS Connected: ${file.dsEventsInfo.matchType} - ${file.dsEventsInfo.matchNumber}".`,
+			);
+			if (fromEvents) {
+				file.links.push(fromEvents);
+			} else if (file.writtenAt) {
+				const last = (file.meta as { eventCount?: number } | null)?.eventCount ?? 0;
+				file.links.push(...linkByTimestamp(file.writtenAt, last, candidates));
+			}
+		} else if (file.kind === "dslog" && file.dsResult?.startTime) {
+			const summary = summarizeDsLog(file.dsResult);
+			file.links.push(...linkByTimestamp(file.dsResult.startTime, summary?.durationSecs ?? 0, candidates));
+		} else if (file.kind === "csv" && file.csvRange) {
+			file.links.push(
+				...linkByTimestamp(file.csvRange.from, Math.max(file.csvRange.to - file.csvRange.from, 0), candidates),
+			);
 		}
 	}
 
@@ -568,14 +642,14 @@ export async function ingestUpload(params: IngestParams): Promise<IngestResult> 
 			}
 		}
 	}
+	// #endregion
 
 	const notesScreen = screenForInstructions(params.notes);
 	// `events` has no surrogate key; the FMS event GUID only exists on match log
 	// rows, so it is carried over from one of them when this event has any.
 	const eventId =
-		candidates.length > 0
-			? ((await db.query.matchLogs.findFirst({ where: eq(matchLogs.event, params.event!.code) }))?.event_id ??
-				null)
+		event && candidates.length > 0
+			? ((await db.query.matchLogs.findFirst({ where: eq(matchLogs.event, event.code) }))?.event_id ?? null)
 			: null;
 	const code = await uniqueCode();
 	const uploadId = randomUUID();
@@ -585,8 +659,9 @@ export async function ingestUpload(params: IngestParams): Promise<IngestResult> 
 		.values({
 			id: uploadId,
 			code,
-			event: params.event?.code ?? null,
+			event: event?.code ?? null,
 			event_id: eventId,
+			event_why: eventWhy,
 			team: null,
 			team_source: "none",
 			source: params.source,
@@ -604,11 +679,15 @@ export async function ingestUpload(params: IngestParams): Promise<IngestResult> 
 		try {
 			stored = await storeBytes(uploadId, file.id, file.path, file.data);
 		} catch (err) {
-			if (err instanceof UploadTooLargeError) {
-				warnings.push(err.message);
-				continue;
-			}
-			throw err;
+			// One file that will not store must not lose the others. A team sending
+			// four files and a broken bucket should still get three of them.
+			const why =
+				err instanceof UploadTooLargeError
+					? err.message
+					: `${file.path} could not be stored: ${err instanceof Error ? err.message : "unknown error"}`;
+			console.error("[uploads] could not store", file.path, err);
+			warnings.push(why);
+			continue;
 		}
 		await db
 			.insert(teamUploadFiles)
@@ -661,12 +740,14 @@ export async function ingestUpload(params: IngestParams): Promise<IngestResult> 
 			.where(eq(teamUploads.id, uploadId))
 			.execute();
 	} else {
-		warnings.push("We could not work out which team this is. A CSA can set it in the app.");
+		warnings.push("We could not work out which team this is. A volunteer can set it.");
 	}
 
 	return {
 		id: uploadId,
 		code,
+		event: event?.code ?? null,
+		eventWhy,
 		team: team?.team ?? null,
 		teamSource: team?.source ?? "none",
 		files: storedFiles,
@@ -731,4 +812,75 @@ export async function uploadFileRows(uploadId: string) {
 export async function filesByIds(ids: string[]) {
 	if (ids.length === 0) return [];
 	return db.select().from(teamUploadFiles).where(inArray(teamUploadFiles.id, ids)).execute();
+}
+
+/**
+ * File an upload under an event after the fact, and link whatever its logs say
+ * to that event's matches. This is the escape hatch for the cases inference
+ * cannot settle: a bench log with no team number, or a team that has not played
+ * a match yet.
+ */
+export async function assignUploadToEvent(uploadId: string, eventCode: string, why: string): Promise<void> {
+	const eventId = (await db.query.matchLogs.findFirst({ where: eq(matchLogs.event, eventCode) }))?.event_id ?? null;
+	await db
+		.update(teamUploads)
+		.set({ event: eventCode, event_id: eventId, event_why: why })
+		.where(eq(teamUploads.id, uploadId))
+		.execute();
+
+	// Re-link from what we already parsed: the stored metadata holds the match
+	// info, so nothing has to be read from storage again.
+	const candidates = await candidateMatches(eventCode);
+	if (candidates.length === 0) return;
+	const files = await db.select().from(teamUploadFiles).where(eq(teamUploadFiles.upload_id, uploadId)).execute();
+	for (const file of files) {
+		const meta = file.meta as {
+			match?: WpilogMatchInfo;
+			matchInfo?: DsEventsMatchInfo;
+			fileName?: { matchLevel?: MatchLevel; matchNumber?: number };
+		} | null;
+		const links: MatchLink[] = [];
+		if (file.kind === "wpilog" && meta?.match) {
+			const link = linkByMatchInfo(meta.match, candidates);
+			if (link) links.push(link);
+		}
+		if (file.kind === "dsevents" && meta?.matchInfo) {
+			const link = linkByMatchNumber(
+				levelFromDsEvents(meta.matchInfo.matchType) ?? undefined,
+				meta.matchInfo.matchNumber,
+				candidates,
+				"ds-events",
+				`The Driver Station logged "FMS Connected: ${meta.matchInfo.matchType} - ${meta.matchInfo.matchNumber}".`,
+			);
+			if (link) links.push(link);
+		}
+		if (file.kind === "hoot" && meta?.fileName?.matchNumber) {
+			const link = linkByMatchNumber(
+				meta.fileName.matchLevel,
+				meta.fileName.matchNumber,
+				candidates,
+				"file-name",
+				`Phoenix named this log ${meta.fileName.matchLevel} ${meta.fileName.matchNumber}.`,
+			);
+			if (link) links.push(link);
+		}
+		for (const link of links) {
+			await db
+				.insert(teamUploadMatches)
+				.values({
+					upload_id: uploadId,
+					file_id: file.id,
+					match_id: link.matchId,
+					level: link.level,
+					match_number: link.matchNumber,
+					play_number: link.playNumber,
+					station: link.station ?? null,
+					team: link.team ?? null,
+					how: link.how,
+					reason: link.reason,
+				})
+				.onConflictDoNothing()
+				.execute();
+		}
+	}
 }

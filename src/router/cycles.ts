@@ -593,9 +593,7 @@ export const cycleRouter = router({
 			cycles.map((cycle) => {
 				const timeToStart =
 					cycle.start_time && cycle.match_ready_time
-						? formatTimeShortNoAgoSeconds(
-								cycle.start_time.getTime() - cycle.match_ready_time.getTime(),
-							)
+						? formatTimeShortNoAgoSeconds(cycle.start_time.getTime() - cycle.match_ready_time.getTime())
 						: "";
 				return [
 					cycle.match_number,
@@ -673,9 +671,7 @@ async function getAverageTimeToStart(eventCode: string): Promise<number | null> 
 		),
 	});
 
-	let deltas = cycles
-		.map((c) => c.start_time!.getTime() - c.match_ready_time!.getTime())
-		.filter((d) => d > 0);
+	let deltas = cycles.map((c) => c.start_time!.getTime() - c.match_ready_time!.getTime()).filter((d) => d > 0);
 
 	if (deltas.length < 3) return null;
 

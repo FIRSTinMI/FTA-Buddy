@@ -54,20 +54,28 @@ export class HootError extends Error {}
 /**
  * Is this a Hoot log?
  *
- * There is no magic tag, which a real file makes plain: it opens with the CAN
- * bus name in a 64 byte NUL-padded field, then the Phoenix version as text,
- * then the compliancy byte. A real one starts `Drivetrain\0\0...25.3.0\0\r`.
- * So the extension is the primary signal and this shape is the confirmation.
+ * There is no magic tag, which real files make plain. The header is the CAN bus
+ * name in a 64 byte NUL-padded field, then six bytes for the Phoenix version as
+ * text, then the compliancy byte at 70. Three real files:
+ *
+ *   "Drivetrain"             + "25.3.0" + 0x0d   (CANivore, Phoenix 2025)
+ *   "Turret"                 + "26.0.0" + 0x13   (CANivore, Phoenix 2026)
+ *   "roboRIO Native CAN Bus" + zeros    + 0x13   (the rio bus, no version)
+ *
+ * So the version field is optional, and only the name field and the compliancy
+ * byte can be relied on. The extension stays the primary signal; this shape is
+ * the confirmation for a file that was renamed.
  */
 export function isHoot(data: Uint8Array, fileName: string): boolean {
 	if (fileName.toLowerCase().endsWith(".hoot")) return true;
 	if (data.length < 72) return false;
 	const decoder = new TextDecoder("utf-8", { fatal: false });
-	const name = decoder.decode(data.subarray(0, 64));
-	// A printable name, then NUL padding to the end of the field.
-	if (!/^[\x20-\x7e]{1,63}\x00+$/.test(name)) return false;
-	// Then a version like "25.3.0", NUL padded to byte 70.
-	return /^\d+\.\d+\.\d+\x00*$/.test(decoder.decode(data.subarray(64, 70)));
+	// A printable bus name, then NUL padding to the end of the 64 byte field.
+	if (!/^[\x20-\x7e]{1,63}\x00+$/.test(decoder.decode(data.subarray(0, 64)))) return false;
+	const version = decoder.decode(data.subarray(64, 70));
+	const versionOk = /^\d+\.\d+\.\d+\x00*$/.test(version) || /^\x00{6}$/.test(version);
+	// A compliancy of zero is not a version anything can open.
+	return versionOk && data[70] >= 1;
 }
 
 /** The CAN bus the log came from, out of that 64 byte name field. */

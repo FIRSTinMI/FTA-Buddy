@@ -163,7 +163,12 @@ export const powerRouter = router({
 		.input(
 			z.object({
 				/** How far back to read, in minutes. Omit for the whole event. */
-				minutes: z.number().int().min(1).max(60 * 24 * 7).optional(),
+				minutes: z
+					.number()
+					.int()
+					.min(1)
+					.max(60 * 24 * 7)
+					.optional(),
 				/** Seconds per bucket. 1 = raw. */
 				bucketSeconds: z.number().int().min(1).max(600).default(10),
 			}),

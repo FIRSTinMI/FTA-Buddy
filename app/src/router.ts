@@ -48,7 +48,9 @@ export const { p, navigate, isActive, preload, route } = createRouter({
 	"/join/:token": () => import("./pages/management/JoinByLink.svelte"),
 	"/link-slack/:token": () => import("./pages/management/LinkSlack.svelte"),
 
-	"/uploads": () => import("./pages/uploads/UploadsList.svelte"),
+	// Unlisted and public, like /notepad/submit/:eventCode. A team opens this on
+	// their own laptop; no account, and no event code to type.
+	"/upload": () => import("./pages/uploads/PublicUpload.svelte"),
 	"/uploads/:id": () => import("./pages/uploads/Upload.svelte"),
 	"/share/upload/:token": () => import("./pages/uploads/SharedUpload.svelte"),
 
@@ -73,6 +75,8 @@ export const { p, navigate, isActive, preload, route } = createRouter({
 
 	"/troubleshoot": () => import("./pages/troubleshoot/Troubleshoot.svelte"),
 	"/troubleshoot/chat": () => import("./pages/troubleshoot/Troubleshoot.svelte"),
+	// Listed before "/troubleshoot/:tree" so it is not read as a guide name.
+	"/troubleshoot/logs": () => import("./pages/troubleshoot/Troubleshoot.svelte"),
 	"/troubleshoot/sources": () => import("./pages/troubleshoot/Sources.svelte"),
 	// Old path, kept so links already shared keep working.
 	"/troubleshoot/kb": () => import("./pages/troubleshoot/Sources.svelte"),

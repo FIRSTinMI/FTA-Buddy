@@ -540,6 +540,11 @@ export const troubleshootMessages = pgTable(
 		text: text("text").notNull(),
 		// Chunk ids cited by an assistant message.
 		cited_chunk_ids: jsonb("cited_chunk_ids").$type<string[]>().notNull().default([]),
+		/**
+		 * Set when the assistant ended its turn by asking a multiple-choice
+		 * question, so reopening the conversation still shows the buttons.
+		 */
+		question: jsonb("question").$type<import("../../shared/troubleshooting/question").ChatQuestion>(),
 		created_at: timestamp("created_at").notNull().defaultNow(),
 	},
 	(t) => [index("troubleshoot_messages_conversation_idx").on(t.conversation_id)],
@@ -841,6 +846,8 @@ export const uploadKindEnum = pgEnum("upload_kind", [
 	"zip",
 	"text",
 	"other",
+	"hoot",
+	"csv",
 ]);
 
 /** Where an upload came from: the public portal on a team's laptop, or a volunteer in the app. */

@@ -1,6 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import { classifyZip, detectKind } from "../../shared/logs/detect";
-import { readDsEvents, readDsLog, summarizeDsLog } from "../../shared/logs/dslog";
+import {
+	matchInfoFromDsEvents,
+	readDsEvents,
+	readDsLog,
+	summarizeDsLog,
+	summarizeDsLogWindow,
+	type DsLogResult,
+} from "../../shared/logs/dslog";
+import { readCsvTelemetry, splitCsvLine } from "../../shared/logs/csv-telemetry";
+import { hootCompliancy, isHoot } from "../util/uploads/hoot";
 import { parseDsLogFileName, parseWpilogFileName, wpilogNameFromDsEvents } from "../../shared/logs/filenames";
 import {
 	linkByFileName,
@@ -473,5 +482,194 @@ describe("driver station logs", () => {
 
 	test("a file too short to hold a header is not parsed", () => {
 		expect(readDsLog(new Uint8Array([0, 0, 0, 4])).parsed).toBe(false);
+	});
+});
+
+describe("dsevents match info", () => {
+	/** Build a .dsevents file with the given message lines. */
+	function eventsFile(texts: string[]): Uint8Array {
+		const chunks: number[] = [];
+		const pushI32 = (v: number) => chunks.push((v >> 24) & 0xff, (v >> 16) & 0xff, (v >> 8) & 0xff, v & 0xff);
+		const pushLvTime = (seconds: number) => {
+			// LabVIEW time: i64 seconds since 1904, then u64 fraction.
+			const lv = BigInt(seconds + 2082826800);
+			for (let i = 7; i >= 0; i--) chunks.push(Number((lv >> BigInt(i * 8)) & 0xffn));
+			for (let i = 0; i < 8; i++) chunks.push(0);
+		};
+		pushI32(4);
+		pushLvTime(1_700_000_000);
+		for (const [index, text] of texts.entries()) {
+			pushLvTime(1_700_000_000 + index);
+			const bytes = new TextEncoder().encode(text);
+			pushI32(bytes.length);
+			chunks.push(...bytes);
+		}
+		return new Uint8Array(chunks);
+	}
+
+	test("reads the match type, number and event name FMS writes", () => {
+		const file = eventsFile([
+			"Info  FMS Connected:   Qualification - 41: 2 minutes 30 seconds",
+			"Info  FMS Event Name: Kettering University #1",
+			"********** Robot program starting **********",
+		]);
+		const info = matchInfoFromDsEvents(readDsEvents(file).entries);
+		expect(info).toEqual({
+			fmsAttached: true,
+			matchType: "Qualification",
+			matchNumber: 41,
+			eventName: "Kettering University #1",
+		});
+	});
+
+	test("tolerates different spacing and reads eliminations", () => {
+		const info = matchInfoFromDsEvents(readDsEvents(eventsFile(["FMS Connected: Elimination - 7:"])).entries);
+		expect(info.matchType).toBe("Elimination");
+		expect(info.matchNumber).toBe(7);
+	});
+
+	test("a pit session has no match info and says FMS was never attached", () => {
+		const info = matchInfoFromDsEvents(
+			readDsEvents(eventsFile(["********** Robot program starting **********", "NT: Listening on NT3 port 1735"]))
+				.entries,
+		);
+		expect(info).toEqual({ fmsAttached: false });
+	});
+
+	test("FMS attached with no match line is still reported as attached", () => {
+		expect(matchInfoFromDsEvents(readDsEvents(eventsFile(["FMS Disconnect"])).entries).fmsAttached).toBe(true);
+	});
+});
+
+describe("telemetry CSV", () => {
+	test("wide layout, one column per signal", () => {
+		const csv = readCsvTelemetry(
+			["timestamp,Motor1 Velocity,Motor1 Current", "1741712345.2,1200,14.5", "1741712345.4,1180,16.25"].join(
+				"\n",
+			),
+		);
+		expect(csv.parsed).toBe(true);
+		expect(csv.shape).toBe("wide");
+		expect(csv.absoluteTime).toBe(true);
+		expect(csv.series.map((s) => s.label)).toEqual(["Motor1 Velocity", "Motor1 Current"]);
+		expect(csv.series[1].points).toEqual([
+			{ t: 1741712345.2, v: 14.5 },
+			{ t: 1741712345.4, v: 16.25 },
+		]);
+	});
+
+	test("long layout, the REV Hardware Client shape", () => {
+		const csv = readCsvTelemetry(
+			[
+				"timestamp,device,signal,value",
+				"1741712345.2,SPARK MAX 3,Applied Output,0.42",
+				"1741712345.2,SPARK MAX 3,Motor Temperature,31",
+				"1741712345.4,SPARK MAX 3,Applied Output,0.55",
+			].join("\n"),
+		);
+		expect(csv.shape).toBe("long");
+		expect(csv.series.map((s) => s.label)).toEqual([
+			"SPARK MAX 3 / Applied Output",
+			"SPARK MAX 3 / Motor Temperature",
+		]);
+		expect(csv.series[0].points.length).toBe(2);
+	});
+
+	test("milliseconds and ISO timestamps are both wall clocks", () => {
+		expect(readCsvTelemetry("time,v\n1741712345200,1\n1741712345400,2").absoluteTime).toBe(true);
+		expect(readCsvTelemetry("time,v\n2026-03-14T14:34:10Z,1\n2026-03-14T14:34:11Z,2").absoluteTime).toBe(true);
+	});
+
+	test("a relative time column is read but marked as unplaceable", () => {
+		const csv = readCsvTelemetry("time (s),battery\n0.0,12.6\n0.2,12.4");
+		expect(csv.parsed).toBe(true);
+		expect(csv.absoluteTime).toBe(false);
+	});
+
+	test("quoted headers with commas survive", () => {
+		expect(splitCsvLine('timestamp,"Motor 1, Applied Output",b')).toEqual([
+			"timestamp",
+			"Motor 1, Applied Output",
+			"b",
+		]);
+	});
+
+	test("a CSV with no time column is refused with a reason", () => {
+		const csv = readCsvTelemetry("a,b\n1,2");
+		expect(csv.parsed).toBe(false);
+		expect(csv.problem).toContain("No time column");
+	});
+
+	test("detection picks a telemetry CSV out of plain text", () => {
+		const bytes = new TextEncoder().encode("timestamp,battery\n1741712345.2,12.6\n");
+		expect(detectKind("export.csv", bytes)).toBe("csv");
+		expect(detectKind("notes.txt", new TextEncoder().encode("radio lights were off"))).toBe("text");
+	});
+});
+
+describe("hoot detection", () => {
+	test("recognised by tag or extension, and the compliancy byte is read", () => {
+		const data = new Uint8Array(80);
+		data.set(new TextEncoder().encode("HOOT"), 0);
+		data[70] = 6;
+		expect(isHoot(data, "signals.bin")).toBe(true);
+		expect(hootCompliancy(data)).toBe(6);
+		expect(detectKind("signals.hoot", new Uint8Array([1, 2, 3]))).toBe("hoot");
+	});
+
+	test("a file too short to hold the compliancy byte has none", () => {
+		expect(hootCompliancy(new Uint8Array(10))).toBeNull();
+	});
+});
+
+describe("windowed driver station summary", () => {
+	/** Ten minutes of bench time with a sag, then a match with a deeper sag. */
+	function session(): DsLogResult {
+		const entries = [];
+		// 30,000 samples at 20 Hz is ten minutes of bench time.
+		for (let i = 0; i < 30_000; i++) {
+			const t = i * 0.02;
+			// Pit brownout at 60 s, match at 300 s with its own dip at 340 s.
+			const inMatch = t >= 300 && t <= 450;
+			const volts = t > 59 && t < 61 ? 6.2 : t > 339 && t < 341 ? 9.4 : 12.4;
+			entries.push({
+				timestamp: t,
+				tripTimeMs: 3,
+				packetLoss: 0,
+				batteryVolts: volts,
+				cpuUtilization: 0.3,
+				brownout: volts < 7,
+				watchdog: false,
+				dsTeleop: inMatch,
+				dsDisabled: !inMatch,
+				robotTeleop: inMatch,
+				robotAuto: false,
+				robotDisabled: !inMatch,
+				canUtilization: 0.2,
+				wifiDb: 0,
+				wifiMb: 0,
+				powerDistributionCurrents: [],
+			});
+		}
+		return { parsed: true, version: 4, startTime: 1_700_000_000, entries, stoppedEarly: false };
+	}
+
+	test("the whole file reports the pit brownout", () => {
+		const summary = summarizeDsLog(session());
+		expect(summary?.minBatteryVolts).toBeCloseTo(6.2, 2);
+		expect(summary?.brownoutSecs).toBeGreaterThan(0);
+	});
+
+	test("the match window reports the match, not the pit", () => {
+		// Match started 300 s into the log.
+		const summary = summarizeDsLogWindow(session(), 300);
+		expect(summary?.minBatteryVolts).toBeCloseTo(9.4, 2);
+		expect(summary?.brownoutSecs).toBe(0);
+		// Timestamps are re-zeroed on match start, so the dip reads at 40 s in.
+		expect(summary?.durationSecs).toBeCloseTo(180, 0);
+	});
+
+	test("a match the log does not cover has no window", () => {
+		expect(summarizeDsLogWindow(session(), 9000)).toBeNull();
 	});
 });

@@ -1,0 +1,1 @@
+ALTER TABLE "troubleshoot_messages" ADD COLUMN "question" jsonb;

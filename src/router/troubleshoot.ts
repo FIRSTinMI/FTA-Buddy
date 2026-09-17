@@ -15,13 +15,18 @@ import { SOURCE_LABELS, type ChatCitation, type ChatEvent } from "../util/troubl
 import { assertRateLimit } from "../util/troubleshoot/rate-limit";
 import {
 	addRepoReads,
+	addUploadReads,
 	assertBudget,
 	getRepoReads,
+	getUploadReads,
 	getSpendStatus,
 	recordSpend,
 	TROUBLESHOOT_MODEL,
 } from "../util/troubleshoot/spend";
 import { PLANNER_MODEL } from "../util/troubleshoot/pricing";
+import { findUpload, uploadCodeFromTurns, type UploadRef } from "../util/troubleshoot/chat/uploads";
+import { ghostCsaEnabled, sendUploadToGhostCsa } from "../util/uploads/ghost-csa";
+import { teamUploadFiles } from "../db/schema";
 
 export type { ChatCitation, ChatEvent } from "../util/troubleshoot/chat/types";
 export { SOURCE_LABELS };
@@ -182,7 +187,14 @@ export const troubleshootRouter = router({
 
 	/** The user's recent conversations, newest first, with the opening message as preview. */
 	list: protectedProcedure
-		.input(z.object({ limit: z.number().int().min(1).max(50).default(20), q: z.string().trim().max(120).optional() }).optional())
+		.input(
+			z
+				.object({
+					limit: z.number().int().min(1).max(50).default(20),
+					q: z.string().trim().max(120).optional(),
+				})
+				.optional(),
+		)
 		.query(async ({ ctx, input }) => {
 			// When searching, narrow to conversations whose messages contain the text.
 			let matchIds: string[] | null = null;
@@ -203,7 +215,10 @@ export const troubleshootRouter = router({
 				.from(troubleshootConversations)
 				.where(
 					matchIds
-						? and(eq(troubleshootConversations.user_id, ctx.user.id), inArray(troubleshootConversations.id, matchIds))
+						? and(
+								eq(troubleshootConversations.user_id, ctx.user.id),
+								inArray(troubleshootConversations.id, matchIds),
+							)
 						: eq(troubleshootConversations.user_id, ctx.user.id),
 				)
 				.orderBy(desc(troubleshootConversations.updated_at))
@@ -252,6 +267,8 @@ export const troubleshootRouter = router({
 				text: r.text,
 				created_at: r.created_at,
 				citations: r.cited_chunk_ids.map((id) => byId.get(id)).filter((c): c is ChatCitation => c != null),
+				// Present when the assistant ended that turn with a multiple-choice question.
+				question: r.question ?? null,
 			})),
 		};
 	}),
@@ -268,6 +285,10 @@ export const troubleshootRouter = router({
 				message: z.string().trim().min(1).max(MAX_MESSAGE_CHARS),
 				// "<treeId>/<nodeId>" when the user arrived from a guided tree.
 				from: z.string().max(200).optional(),
+				// Attaches a team's upload for this whole conversation. The app sets it
+				// when the chat is opened from an upload; otherwise a code typed into
+				// any message attaches it just as well.
+				uploadId: z.string().uuid().optional(),
 			}),
 		)
 		.subscription(async function* ({ ctx, input, signal }): AsyncGenerator<ChatEvent> {
@@ -324,8 +345,40 @@ export const troubleshootRouter = router({
 			});
 
 			// A pasted repo URL, from this message or any earlier user turn, attaches the repo tools.
-			const repo = parseRepoFromTurns([...prior.filter((m) => m.role === "user").map((m) => m.text), userText]);
+			const userTexts = [...prior.filter((m) => m.role === "user").map((m) => m.text), userText];
+			const repo = parseRepoFromTurns(userTexts);
 			const repoReadsBefore = repo ? await getRepoReads(conversationId) : 0;
+
+			// An upload attaches the same way: the app can name one outright, or an
+			// upload code read off a sticky note in any message will do it.
+			let upload: UploadRef | null = null;
+			try {
+				upload = await findUpload({
+					id: input.uploadId,
+					code: input.uploadId ? undefined : (uploadCodeFromTurns(userTexts) ?? undefined),
+					eventCode: eventCode ?? null,
+				});
+			} catch (err) {
+				console.error("[troubleshoot chat] upload lookup failed", err);
+			}
+			if (upload) yield { type: "upload", uploadId: upload.id, code: upload.code, team: upload.team };
+			const uploadReadsBefore = upload ? await getUploadReads(conversationId) : 0;
+			// Ghost CSA is only offered when there is actually a bundle to send.
+			const hasBundle = upload
+				? (
+						await db
+							.select({ id: teamUploadFiles.id })
+							.from(teamUploadFiles)
+							.where(
+								and(
+									eq(teamUploadFiles.upload_id, upload.id),
+									eq(teamUploadFiles.kind, "support-bundle"),
+								),
+							)
+							.limit(1)
+							.execute()
+					).length > 0
+				: false;
 
 			const gen = streamAnswer({
 				history: prior,
@@ -334,6 +387,10 @@ export const troubleshootRouter = router({
 				signal,
 				repo: repo ?? undefined,
 				repoReadsBefore,
+				upload: upload ?? undefined,
+				uploadReadsBefore,
+				ghostCsaOffered: hasBundle && ghostCsaEnabled(),
+				sendToGhostCsa: upload ? () => sendUploadToGhostCsa(upload!.id, ctx.user.id) : undefined,
 				// The tool loop makes several API calls; bill each one as it finishes.
 				onUsage: async (usage) => {
 					await recordSpend(conversationId, usage).catch((err) =>
@@ -368,10 +425,12 @@ export const troubleshootRouter = router({
 					role: "assistant",
 					text: result.text,
 					cited_chunk_ids: result.citedChunkIds,
+					question: result.question,
 				})
 				.returning({ id: troubleshootMessages.id });
 			// Spend was already recorded per API call by onUsage.
 			if (repo) await addRepoReads(conversationId, result.repoReads);
+			if (upload) await addUploadReads(conversationId, result.uploadReads);
 
 			yield { type: "done", conversationId, messageId: saved.id };
 		}),

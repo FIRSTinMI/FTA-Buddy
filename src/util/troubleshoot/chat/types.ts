@@ -1,3 +1,4 @@
+import type { ChatQuestion } from "../../../../shared/troubleshooting/question";
 import type { TroubleshootChunk } from "../../../db/schema";
 
 export type TroubleshootSource = TroubleshootChunk["source"];
@@ -27,8 +28,14 @@ export interface ChatCitation {
 export type ChatEvent =
 	| { type: "delta"; text: string }
 	| { type: "citation"; chunkId: string; url: string | null; title: string; source: CitationSource }
-	// Progress while the assistant reads a team's GitHub repo, e.g. "Reading src/main/java/frc/robot/Robot.java".
+	// Progress while the assistant reads a repo or an upload, e.g. "Reading Robot.java".
 	| { type: "tool"; label: string }
+	// The assistant ended its turn by asking a multiple-choice question. The app
+	// renders the options as buttons plus a free-text box, and the answer arrives
+	// as the next user message.
+	| { type: "question"; question: ChatQuestion }
+	// A team's upload was attached to this conversation, so the app can show it.
+	| { type: "upload"; uploadId: string; code: string; team: number | null }
 	| { type: "done"; conversationId: string; messageId: string }
 	| { type: "error"; message: string };
 

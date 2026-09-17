@@ -218,6 +218,20 @@
       "when": 1789676409588,
       "tag": "0030_free_scalphunter",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1789677131848,
+      "tag": "0031_little_spitfire",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1789677777958,
+      "tag": "0032_closed_butterfly",
+      "breakpoints": true
     }
   ]
 }

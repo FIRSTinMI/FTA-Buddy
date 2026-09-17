@@ -100,3 +100,19 @@ export async function addRepoReads(conversationId: string, reads: number): Promi
 	await redis.incrby(key, reads);
 	await redis.expire(key, REPO_READS_TTL_SECONDS);
 }
+
+// Upload reads are counted the same way and for the same reason: a log is far
+// bigger than a source file, so the ceiling is per conversation, not per turn.
+const UPLOAD_READS_PREFIX = "ftabuddy:troubleshoot:uploadreads:";
+
+export async function getUploadReads(conversationId: string): Promise<number> {
+	const v = await redis.get(`${UPLOAD_READS_PREFIX}${conversationId}`);
+	return v ? Number(v) : 0;
+}
+
+export async function addUploadReads(conversationId: string, reads: number): Promise<void> {
+	if (reads <= 0) return;
+	const key = `${UPLOAD_READS_PREFIX}${conversationId}`;
+	await redis.incrby(key, reads);
+	await redis.expire(key, REPO_READS_TTL_SECONDS);
+}

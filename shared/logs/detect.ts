@@ -6,6 +6,7 @@
  * So the extension picks the candidate and the bytes confirm it.
  */
 
+import { looksLikeTelemetryCsv } from "./csv-telemetry";
 import { isDsLog } from "./dslog";
 import { isWpilog } from "./wpilog";
 
@@ -18,6 +19,10 @@ export type UploadKind =
 	| "dsevents"
 	/** SystemCore support bundle, `.zip` or `.llsupport`. */
 	| "support-bundle"
+	/** CTRE Phoenix 6 signal log. Closed format; converted by CTRE's owlet. */
+	| "hoot"
+	/** Timestamped CSV, e.g. a REV Hardware Client telemetry export. */
+	| "csv"
 	/** Zip of a robot project. */
 	| "code-zip"
 	/** A zip we could not place. Still stored, still readable. */
@@ -53,6 +58,14 @@ export function detectKind(fileName: string, data: Uint8Array, zipEntryPaths?: s
 
 	if (isWpilog(data)) return "wpilog";
 
+	// A Hoot log states its own tag, and teams rename these constantly.
+	if (
+		name.endsWith(".hoot") ||
+		(data.length >= 4 && new TextDecoder("utf-8", { fatal: false }).decode(data.subarray(0, 4)) === "HOOT")
+	) {
+		return "hoot";
+	}
+
 	// The two DS formats share a header, so the extension is what separates them.
 	if (isDsLog(data)) {
 		if (name.endsWith(".dsevents")) return "dsevents";
@@ -69,7 +82,11 @@ export function detectKind(fileName: string, data: Uint8Array, zipEntryPaths?: s
 	if (name.endsWith(".dslog")) return "dslog";
 	if (name.endsWith(".dsevents")) return "dsevents";
 
-	if (!looksBinary(data)) return "text";
+	if (!looksBinary(data)) {
+		const text = new TextDecoder("utf-8", { fatal: false }).decode(data.subarray(0, 8000));
+		if (looksLikeTelemetryCsv(text)) return "csv";
+		return "text";
+	}
 	return "other";
 }
 
@@ -97,6 +114,8 @@ export const KIND_LABELS: Record<UploadKind, string> = {
 	dslog: "Driver Station log",
 	dsevents: "Driver Station events",
 	"support-bundle": "SystemCore support bundle",
+	hoot: "CTRE signal log",
+	csv: "Telemetry CSV",
 	"code-zip": "Robot code",
 	zip: "Zip",
 	text: "Text log",
@@ -104,7 +123,18 @@ export const KIND_LABELS: Record<UploadKind, string> = {
 };
 
 /** Kinds the portal and the app accept. Anything else is refused at the door. */
-export const ACCEPTED_EXTENSIONS = [".wpilog", ".dslog", ".dsevents", ".log", ".txt", ".zip", ".llsupport", ".json"];
+export const ACCEPTED_EXTENSIONS = [
+	".wpilog",
+	".dslog",
+	".dsevents",
+	".log",
+	".txt",
+	".zip",
+	".llsupport",
+	".json",
+	".hoot",
+	".csv",
+];
 
 export function hasAcceptedExtension(fileName: string): boolean {
 	const lower = fileName.toLowerCase();

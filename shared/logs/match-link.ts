@@ -45,8 +45,12 @@ export interface MatchLink {
 	/** Set when the log also told us which driver station it was. */
 	station?: Station;
 	team?: number;
-	/** `match-info` came out of the log's own fields; `timestamp` is a time overlap. */
-	how: "match-info" | "file-name" | "timestamp";
+	/**
+	 * How we know. `match-info` came out of a data log's own fields, `ds-events`
+	 * out of the Driver Station's FMS Connected line, `file-name` out of a renamed
+	 * data log, `timestamp` is a time overlap, `manual` is a volunteer.
+	 */
+	how: "match-info" | "ds-events" | "file-name" | "timestamp" | "manual";
 	/** Shown in the UI so a CSA can see why we attached this match. */
 	reason: string;
 }
@@ -106,17 +110,20 @@ export function linkByMatchInfo(info: WpilogMatchInfo, candidates: CandidateMatc
 }
 
 /**
- * Link from a renamed data log file name, for the case where the file was
- * renamed by FMS attach but the NetworkTables entries were not logged. There is
- * no station in a file name, so no team comes out of this route.
+ * Link from a level and a match number alone, which is what a renamed data log
+ * file name and the Driver Station's `FMS Connected` line each give us. Neither
+ * names a station, so no team comes out of this route; the latest play wins.
  */
-export function linkByFileName(
-	name: { matchLevel?: MatchLevel; matchNumber?: number },
+export function linkByMatchNumber(
+	level: MatchLevel | undefined,
+	matchNumber: number | undefined,
 	candidates: CandidateMatch[],
+	how: MatchLink["how"],
+	reason: string,
 ): MatchLink | null {
-	if (!name.matchLevel || !name.matchNumber) return null;
+	if (!level || !matchNumber) return null;
 	const sameMatch = candidates
-		.filter((c) => c.level === name.matchLevel && c.match_number === name.matchNumber)
+		.filter((c) => c.level === level && c.match_number === matchNumber)
 		.sort((a, b) => b.play_number - a.play_number);
 	if (sameMatch.length === 0) return null;
 	const match = sameMatch[0];
@@ -126,9 +133,40 @@ export function linkByFileName(
 		matchNumber: match.match_number,
 		playNumber: match.play_number,
 		startTime: match.start_time,
-		how: "file-name",
-		reason: `The file name says ${name.matchLevel} ${name.matchNumber}.`,
+		how,
+		reason,
 	};
+}
+
+/** A data log renamed by FMS attach names its match in the file name. */
+export function linkByFileName(
+	name: { matchLevel?: MatchLevel; matchNumber?: number },
+	candidates: CandidateMatch[],
+): MatchLink | null {
+	return linkByMatchNumber(
+		name.matchLevel,
+		name.matchNumber,
+		candidates,
+		"file-name",
+		`The file name says ${name.matchLevel} ${name.matchNumber}.`,
+	);
+}
+
+/**
+ * The Driver Station's own account of which match it was, out of the `.dsevents`
+ * text. `Elimination` is what FMS calls what our schedule calls `Playoff`.
+ */
+export function levelFromDsEvents(matchType: string | undefined): MatchLevel | null {
+	switch (matchType) {
+		case "Practice":
+			return "Practice";
+		case "Qualification":
+			return "Qualification";
+		case "Elimination":
+			return "Playoff";
+		default:
+			return null;
+	}
 }
 
 /** How far before the log's first sample a match may start and still count. */

@@ -1,11 +1,22 @@
 import { randomUUID } from "crypto";
 import { and, eq, inArray } from "drizzle-orm";
+import { describeCsvTelemetry, readCsvTelemetry } from "../../../shared/logs/csv-telemetry";
 import { detectKind, hasAcceptedExtension, type UploadKind } from "../../../shared/logs/detect";
-import { readDsEvents, readDsLog, summarizeDsLog } from "../../../shared/logs/dslog";
+import {
+	matchInfoFromDsEvents,
+	readDsEvents,
+	readDsLog,
+	summarizeDsLog,
+	summarizeDsLogWindow,
+	type DsEventsMatchInfo,
+	type DsLogResult,
+} from "../../../shared/logs/dslog";
 import { parseWpilogFileName, wpilogNameFromDsEvents } from "../../../shared/logs/filenames";
 import {
+	levelFromDsEvents,
 	linkByFileName,
 	linkByMatchInfo,
+	linkByMatchNumber,
 	linkByTimestamp,
 	pickTeam,
 	type CandidateMatch,
@@ -23,6 +34,7 @@ import { readWpilog } from "../../../shared/logs/wpilog";
 import { db } from "../../db/db";
 import { matchLogs, teamUploadFiles, teamUploadMatches, teamUploads } from "../../db/schema";
 import { screenForInstructions } from "../untrusted-text";
+import { convertHoot, HootError, hootCompliancy, hootDecodeEnabled } from "./hoot";
 import { MAX_FILES_PER_UPLOAD, MAX_UPLOAD_BYTES, storeBytes, UploadTooLargeError } from "./store";
 import { entryText, keepBundleEntry, keepCodeEntry, readZip } from "./zip";
 
@@ -123,18 +135,25 @@ interface PreparedFile {
 	preview: string | null;
 	/** Filled in after the row is stored, for match linking. */
 	links: MatchLink[];
+	/**
+	 * The parsed Driver Station log, kept only for the pairing pass: it needs to
+	 * re-window the entries once the match is known. Never stored.
+	 */
+	dsResult?: DsLogResult;
+	/** Match info read out of a `.dsevents` file, for the same pass. */
+	dsEventsInfo?: DsEventsMatchInfo;
 }
 
 /**
  * Work out what one uploaded file is and what it says. Zips come back as the zip
  * itself plus a child row per entry worth keeping.
  */
-function prepareFile(
+async function prepareFile(
 	incoming: IncomingFile,
 	candidates: CandidateMatch[],
 	warnings: string[],
 	teamCandidates: { team: number; source: TeamSource }[],
-): PreparedFile[] {
+): Promise<PreparedFile[]> {
 	const path = incoming.fileName.replace(/^.*[/\\]/, "");
 	const data = incoming.data;
 	let kind = detectKind(path, data);
@@ -208,6 +227,7 @@ function prepareFile(
 				break;
 			}
 			const summary = summarizeDsLog(result);
+			root.dsResult = result;
 			root.meta = { startTime: result.startTime, summary, stoppedEarly: result.stoppedEarly };
 			root.preview = clip(describeDsLog(summary, result.startTime));
 			if (result.startTime && summary) {
@@ -226,14 +246,28 @@ function prepareFile(
 				break;
 			}
 			const texts = result.entries.map((e) => e.text);
+			// At an event the Driver Station writes the match into this text stream
+			// when FMS attaches, which beats guessing from the clock.
+			const matchInfo = matchInfoFromDsEvents(result.entries);
+			root.dsEventsInfo = matchInfo;
 			root.meta = {
 				startTime: result.startTime,
 				eventCount: result.entries.length,
+				matchInfo,
 				/** The data log the robot was writing at the time, if it said. */
 				dataLogName: wpilogNameFromDsEvents(texts),
 			};
 			root.preview = clip(describeDsEvents(result.entries));
-			if (result.startTime) {
+			const fromEvents = linkByMatchNumber(
+				levelFromDsEvents(matchInfo.matchType) ?? undefined,
+				matchInfo.matchNumber,
+				candidates,
+				"ds-events",
+				`The Driver Station logged "FMS Connected: ${matchInfo.matchType} - ${matchInfo.matchNumber}".`,
+			);
+			if (fromEvents) {
+				root.links.push(fromEvents);
+			} else if (result.startTime) {
 				const last = result.entries[result.entries.length - 1]?.timestamp ?? 0;
 				root.links.push(...linkByTimestamp(result.startTime, last, candidates));
 			}
@@ -310,6 +344,104 @@ function prepareFile(
 			break;
 		}
 
+		case "hoot": {
+			// The format is closed, so the only way in is CTRE's own converter.
+			// A failure here is a stored file with an explanation, not a lost upload.
+			const compliancy = hootCompliancy(data);
+			if (!hootDecodeEnabled()) {
+				root.meta = { hoot: { compliancy, converted: false } };
+				root.preview =
+					"CTRE signal log. Decoding Hoot logs is switched off on this server, so the file is stored as it came.";
+				warnings.push(`${path}: stored without decoding, because Hoot decoding is switched off.`);
+				break;
+			}
+			try {
+				const converted = await convertHoot(data, path);
+				const summary = readWpilog(converted.wpilog);
+				root.meta = {
+					hoot: {
+						compliancy: converted.compliancy,
+						owletVersion: converted.owletVersion,
+						pro: converted.pro,
+						converted: true,
+					},
+				};
+				root.preview = clip(
+					[
+						`CTRE signal log, compliancy ${converted.compliancy}, converted with ${converted.owletVersion}.`,
+						converted.pro === false ? "Holds non-Pro devices, so fewer signals were recorded." : null,
+						"",
+						describeWpilog(summary),
+					]
+						.filter((line) => line !== null)
+						.join("\n"),
+				);
+				// The converted data log is a child file, so every data log tool works on it.
+				const childId = randomUUID();
+				const childPath = `${path.replace(/\.hoot$/i, "")}.wpilog`;
+				const link = linkByMatchInfo(summary.match, candidates);
+				if (link?.team) teamCandidates.push({ team: link.team, source: "log-station" });
+				out.push({
+					id: childId,
+					parentId: rootId,
+					path: childPath,
+					kind: "wpilog",
+					size: converted.wpilog.byteLength,
+					data: converted.wpilog,
+					meta: {
+						match: summary.match,
+						fromHoot: path,
+						durationSecs: summary.durationSecs,
+						recordCount: summary.recordCount,
+						entries: summary.entries
+							.slice(0, 500)
+							.map((e) => ({ name: e.name, type: e.type, count: e.count })),
+						entryCount: summary.entries.length,
+					},
+					preview: clip(describeWpilog(summary)),
+					links: link ? [link] : [],
+				});
+			} catch (err) {
+				const message = err instanceof HootError ? err.message : "The Hoot log could not be converted.";
+				root.meta = { hoot: { compliancy, converted: false, problem: message } };
+				root.preview = `CTRE signal log. ${message}`;
+				warnings.push(`${path}: ${message}`);
+			}
+			break;
+		}
+
+		case "csv": {
+			const text = entryText(data) ?? "";
+			const csv = readCsvTelemetry(text);
+			root.meta = {
+				csv: {
+					parsed: csv.parsed,
+					shape: csv.shape,
+					timeColumn: csv.timeColumn,
+					absoluteTime: csv.absoluteTime,
+					rowCount: csv.rowCount,
+					problem: csv.problem ?? null,
+					series: csv.series.slice(0, 200).map((s) => ({
+						label: s.label,
+						count: s.points.length,
+						min: Math.min(...s.points.map((p) => p.v)),
+						max: Math.max(...s.points.map((p) => p.v)),
+					})),
+				},
+			};
+			root.preview = clip(describeCsvTelemetry(csv));
+			if (!csv.parsed) warnings.push(`${path}: ${csv.problem ?? "not a readable telemetry CSV"}.`);
+			// Only a wall clock can be lined up with a match.
+			if (csv.parsed && csv.absoluteTime) {
+				const times = csv.series.flatMap((s) => s.points.map((p) => p.t));
+				const from = Math.min(...times);
+				const to = Math.max(...times);
+				if (Number.isFinite(from))
+					root.links.push(...linkByTimestamp(from, Math.max(to - from, 0), candidates));
+			}
+			break;
+		}
+
 		case "text": {
 			const text = entryText(data);
 			root.preview = text != null ? clip(text) : null;
@@ -352,7 +484,7 @@ export async function ingestUpload(params: IngestParams): Promise<IngestResult> 
 	const prepared: PreparedFile[] = [];
 	for (const file of incoming) {
 		try {
-			prepared.push(...prepareFile(file, candidates, warnings, teamCandidates));
+			prepared.push(...(await prepareFile(file, candidates, warnings, teamCandidates)));
 		} catch (err) {
 			// One unreadable file must not take the submission down.
 			warnings.push(
@@ -369,6 +501,66 @@ export async function ingestUpload(params: IngestParams): Promise<IngestResult> 
 				preview: null,
 				links: [],
 			});
+		}
+	}
+
+	// A `.dslog` and its `.dsevents` are one session under one name, and only the
+	// events file knows the match. So the pair is matched up by base name, and the
+	// telemetry log inherits the match its own binary never recorded.
+	const baseName = (path: string) => path.replace(/\.(dslog|dsevents)$/i, "").toLowerCase();
+	const infoByBase = new Map<string, DsEventsMatchInfo>();
+	for (const file of prepared) {
+		if (file.kind === "dsevents" && file.dsEventsInfo?.matchNumber)
+			infoByBase.set(baseName(file.path), file.dsEventsInfo);
+	}
+	for (const file of prepared) {
+		if (file.kind !== "dslog") continue;
+		const info = infoByBase.get(baseName(file.path));
+		if (info) {
+			const link = linkByMatchNumber(
+				levelFromDsEvents(info.matchType) ?? undefined,
+				info.matchNumber,
+				candidates,
+				"ds-events",
+				`Its matching events file logged "FMS Connected: ${info.matchType} - ${info.matchNumber}".`,
+			);
+			// The events file is the better evidence, so it replaces any clock guess.
+			if (link) file.links = [link];
+		}
+		// Every attached match gets its own window, because one session covers the
+		// pits as well and a pit brownout is not this match's lowest voltage.
+		if (file.dsResult?.parsed && file.dsResult.startTime !== null && file.links.length > 0) {
+			const startTime = file.dsResult.startTime;
+			const windows = file.links
+				.map((link) => {
+					const offsetSecs = link.startTime.getTime() / 1000 - startTime;
+					const summary = summarizeDsLogWindow(file.dsResult!, offsetSecs);
+					return summary
+						? {
+								matchId: link.matchId,
+								level: link.level,
+								matchNumber: link.matchNumber,
+								playNumber: link.playNumber,
+								summary,
+							}
+						: null;
+				})
+				.filter((w) => w !== null);
+			if (windows.length > 0) {
+				file.meta = { ...(file.meta ?? {}), matchWindows: windows };
+				file.preview = clip(
+					[
+						file.preview ?? "",
+						"",
+						...windows.map((w) =>
+							[
+								`--- ${w.level} ${w.matchNumber}${w.playNumber > 1 ? ` play ${w.playNumber}` : ""} only ---`,
+								describeDsLog(w.summary, null),
+							].join("\n"),
+						),
+					].join("\n"),
+				);
+			}
 		}
 	}
 

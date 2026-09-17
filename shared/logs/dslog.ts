@@ -10,8 +10,9 @@
  * version is reported as unparsed rather than guessed at. Inventing a battery
  * voltage is worse than saying the file could not be read.
  *
- * Neither file carries the match number. A DS log is tied to a match by its
- * timestamp against the FMS schedule; see `matchFromDsLog` in `match-link.ts`.
+ * The `.dslog` binary carries no match number. The `.dsevents` text stream does
+ * once FMS attaches, which `matchInfoFromDsEvents` reads; failing that, a log is
+ * tied to a match by its start time against our schedule.
  */
 
 const SUPPORTED_VERSION = 4;
@@ -344,4 +345,81 @@ export function summarizeDsLog(result: DsLogResult): DsLogSummary | null {
 		dropouts: dropouts.filter((d) => d.durationSecs >= 0.1),
 		peakChannelCurrents: peaks,
 	};
+}
+
+/**
+ * A log is one session of the Driver Station being connected to the robot, in
+ * the pits as much as on the field, and it ends when that connection drops. So a
+ * session can run either side of the match it contains, and a robot that power
+ * cycles mid-match leaves two logs for the same match rather than one.
+ *
+ * A whole-file summary therefore answers "how has this team's day gone" and is
+ * the wrong answer to "what happened in Q12": a pit brownout with nobody driving
+ * would be reported as the match's lowest voltage. This windows the entries to
+ * one match before summarising. `offsetSecs` is where match start falls on the
+ * log's own clock, which is `matchStartUnixSecs - result.startTime`.
+ */
+export function summarizeDsLogWindow(
+	result: DsLogResult,
+	offsetSecs: number,
+	leadSecs = 15,
+	lengthSecs = 180,
+): DsLogSummary | null {
+	if (!result.parsed) return null;
+	const from = offsetSecs - leadSecs;
+	const to = offsetSecs + lengthSecs;
+	const entries = result.entries.filter((e) => e.timestamp >= from && e.timestamp <= to);
+	if (entries.length === 0) return null;
+	// Re-zero the window on match start so every timestamp in the summary reads
+	// as seconds into the match, which is how everyone talks about a match.
+	const shifted = entries.map((e) => ({ ...e, timestamp: e.timestamp - offsetSecs }));
+	return summarizeDsLog({ ...result, entries: shifted });
+}
+
+/**
+ * Match info out of a `.dsevents` message stream.
+ *
+ * The Driver Station does not put match info in the `.dslog` binary, but at an
+ * event it writes it into the event log as text when FMS attaches. The exact
+ * strings, and the fact that the number is terminated by a colon, come from
+ * orangelight's DSLOGMatchCollector, which exists to find match logs in a
+ * folder of session logs:
+ *
+ *   Info  FMS Connected:   Qualification - 41: ...
+ *   Info  FMS Event Name: Kettering University #1
+ *   FMS Disconnect
+ *
+ * Spacing is matched loosely, because the run of spaces after the colon is
+ * exactly the sort of thing a Driver Station release changes quietly.
+ */
+export interface DsEventsMatchInfo {
+	matchType?: "Practice" | "Qualification" | "Elimination" | "None";
+	matchNumber?: number;
+	eventName?: string;
+	/** True when anything in the log says FMS was attached at all. */
+	fmsAttached: boolean;
+}
+
+const FMS_CONNECTED = /FMS Connected:\s*(Qualification|Elimination|Practice|None)\s*-\s*(\d+)/i;
+const FMS_EVENT_NAME = /FMS Event Name:\s*(.+?)\s*$/i;
+const FMS_ANY = /FMS (Connected|Event Name|Disconnect)|FMS-GOOD/i;
+
+export function matchInfoFromDsEvents(entries: DsEventsEntry[]): DsEventsMatchInfo {
+	const info: DsEventsMatchInfo = { fmsAttached: false };
+	for (const entry of entries) {
+		if (!info.fmsAttached && FMS_ANY.test(entry.text)) info.fmsAttached = true;
+		const connected = FMS_CONNECTED.exec(entry.text);
+		if (connected && info.matchNumber === undefined) {
+			const type = connected[1];
+			info.matchType = (type[0].toUpperCase() + type.slice(1).toLowerCase()) as DsEventsMatchInfo["matchType"];
+			const number = Number(connected[2]);
+			if (Number.isInteger(number) && number > 0) info.matchNumber = number;
+		}
+		const named = FMS_EVENT_NAME.exec(entry.text);
+		if (named && !info.eventName) {
+			const name = named[1].trim();
+			if (name) info.eventName = name;
+		}
+	}
+	return info;
 }

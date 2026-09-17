@@ -27,7 +27,7 @@ export interface SeriesDef {
 	unit?: string;
 	axis: SeriesAxis;
 	/** Which file this comes out of. */
-	from: "fms" | "dslog" | "wpilog";
+	from: "fms" | "dslog" | "wpilog" | "csv";
 	/** Shown by default in the viewer. Everything else is behind the picker. */
 	defaultOn?: boolean;
 }
@@ -87,6 +87,11 @@ export function pdChannelSeries(channelCount: number): SeriesDef[] {
 		axis: "amps" as SeriesAxis,
 		from: "dslog" as const,
 	}));
+}
+
+/** A signal from a timestamped CSV, e.g. a REV Hardware Client export. */
+export function csvSeriesDef(label: string): SeriesDef {
+	return { key: `csv.${label}`, label, axis: "number", from: "csv" };
 }
 
 /** A data log entry the team logged themselves, offered by name. */
@@ -152,6 +157,20 @@ export function wpilogSeries(
 		};
 	});
 	return { def, points };
+}
+
+/**
+ * One CSV signal against match start. The CSV's timestamps have to be a wall
+ * clock for this to mean anything; a relative time column cannot be placed.
+ */
+export function csvSeries(
+	points: { t: number; v: number }[],
+	def: SeriesDef,
+	absoluteTime: boolean,
+	matchStartMs: number,
+): Series {
+	if (!absoluteTime) return { def, points: [] };
+	return { def, points: points.map((p) => ({ t: p.t - matchStartMs / 1000, v: p.v })) };
 }
 
 /**

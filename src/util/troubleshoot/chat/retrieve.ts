@@ -15,7 +15,10 @@ Given the conversation, output 2 to 4 short keyword queries, each 2 to 4 words, 
 Output only a JSON array of strings.`;
 
 /** Ask the planner model for short keyword queries. Falls back to the message words on any failure. */
-async function planQueries(message: string, lastAssistant: string | undefined): Promise<{ queries: string[]; usage: TokenUsage | null }> {
+async function planQueries(
+	message: string,
+	lastAssistant: string | undefined,
+): Promise<{ queries: string[]; usage: TokenUsage | null }> {
 	const fallback = { queries: [messageWords(message).slice(0, 8).join(" ")].filter(Boolean), usage: null };
 	try {
 		const client = getAnthropic();
@@ -35,7 +38,10 @@ async function planQueries(message: string, lastAssistant: string | undefined): 
 		if (start < 0 || end < start) return fallback;
 		const parsed: unknown = JSON.parse(text.slice(start, end + 1));
 		const queries = Array.isArray(parsed)
-			? parsed.filter((q): q is string => typeof q === "string" && q.trim().length > 0).map((q) => q.trim()).slice(0, 4)
+			? parsed
+					.filter((q): q is string => typeof q === "string" && q.trim().length > 0)
+					.map((q) => q.trim())
+					.slice(0, 4)
 			: [];
 		if (queries.length === 0) return fallback;
 		return { queries, usage: response.usage };
@@ -50,7 +56,11 @@ async function planQueries(message: string, lastAssistant: string | undefined): 
  * short keyword queries; each runs as an exact (AND) search. If that comes up short, one
  * broad (OR) search over all the query words fills the rest, ranked by how many words match.
  */
-export async function retrieveChunks(message: string, lastAssistant: string | undefined, limit = 6): Promise<Retrieval> {
+export async function retrieveChunks(
+	message: string,
+	lastAssistant: string | undefined,
+	limit = 6,
+): Promise<Retrieval> {
 	const { queries, usage } = await planQueries(message, lastAssistant);
 	const seen = new Map<string, ChunkHit>();
 	const perQuery = Math.max(2, Math.ceil(limit / queries.length));

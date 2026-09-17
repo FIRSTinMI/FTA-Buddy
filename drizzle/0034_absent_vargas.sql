@@ -1,0 +1,1 @@
+ALTER TABLE "team_uploads" ADD COLUMN "log_date" timestamp;

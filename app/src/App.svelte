@@ -203,7 +203,6 @@
 		"/ftc",
 		"/troubleshoot",
 		"/troubleshoot/chat",
-		"/troubleshoot/logs",
 		"/troubleshoot/kb",
 		"/references",
 		"/references/statuslights",

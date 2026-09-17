@@ -663,6 +663,7 @@ export async function ingestUpload(params: IngestParams): Promise<IngestResult> 
 			event: event?.code ?? null,
 			event_id: eventId,
 			event_why: eventWhy,
+			log_date: logDate,
 			team: null,
 			team_source: "none",
 			source: params.source,
@@ -1013,4 +1014,33 @@ export async function relinkUpload(uploadId: string, eventCode: string): Promise
 		}
 	}
 	return written;
+}
+
+/**
+ * Fill in the team on an upload that arrived without one, and take another run
+ * at which event it belongs to.
+ *
+ * The public page asks for a team number only when nothing in the files gave
+ * one, so this is the second half of that: with a team and the date the logs
+ * were written, an event the team played at usually settles it.
+ */
+export async function setTeamAndReinfer(
+	uploadId: string,
+	team: number,
+): Promise<{ event: string | null; eventWhy: string | null }> {
+	const upload = await db.query.teamUploads.findFirst({ where: eq(teamUploads.id, uploadId) });
+	if (!upload) throw new Error("Upload not found");
+
+	await db
+		.update(teamUploads)
+		.set({ team, team_source: upload.team_source === "none" ? "entered" : upload.team_source })
+		.where(eq(teamUploads.id, uploadId))
+		.execute();
+
+	if (upload.event) return { event: upload.event, eventWhy: upload.event_why };
+
+	const guess = await inferEvent({ eventNames: [], team, logDate: upload.log_date });
+	if (!guess) return { event: null, eventWhy: null };
+	await assignUploadToEvent(uploadId, guess.code, guess.why);
+	return { event: guess.code, eventWhy: guess.why };
 }

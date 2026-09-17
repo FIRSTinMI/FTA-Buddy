@@ -886,6 +886,11 @@ export const teamUploads = pgTable(
 		 * code any more. Null when it could not be placed.
 		 */
 		event_why: varchar("event_why"),
+		/**
+		 * When the logs were written, from the files themselves. Kept so the event
+		 * can be worked out again if the team number turns up later.
+		 */
+		log_date: timestamp("log_date"),
 		source: uploadSourceEnum("source").notNull(),
 		uploaded_by: integer("uploaded_by").references(() => users.id),
 		/** Free text name from the portal. Never trusted, only displayed. */

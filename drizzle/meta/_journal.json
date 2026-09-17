@@ -239,6 +239,13 @@
       "when": 1789680406000,
       "tag": "0033_cooing_hairball",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1789681519954,
+      "tag": "0034_absent_vargas",
+      "breakpoints": true
     }
   ]
 }

@@ -1,18 +1,20 @@
 <script lang="ts">
 	import Icon from "@iconify/svelte";
-	import { Button, Input, Label, Textarea } from "flowbite-svelte";
+	import { Button, Input, Textarea } from "flowbite-svelte";
 	import { ACCEPTED_EXTENSIONS } from "../../../../shared/logs/detect";
 	import { toast } from "../../util/toast";
 
 	/**
 	 * The page a team opens on their own laptop to hand their logs to the CSA.
 	 *
-	 * Unlisted and needs no account, the same as the public note page. Nothing is
-	 * asked for that can be worked out: which event this is comes from the files,
-	 * because a Hoot log and a Driver Station events file both name the event, and
-	 * a team number plus the date the log was written places the rest.
+	 * Unlisted and needs no account, the same as the public note page. It asks for
+	 * as little as it can: the files, and a line about the problem if they feel
+	 * like writing one. Which event this is comes out of the files, and the team
+	 * number is only asked for afterwards, in the one case where nothing in the
+	 * files said it.
 	 */
 	interface Result {
+		id: string;
 		event: string | null;
 		eventWhy: string | null;
 		team: number | null;
@@ -23,36 +25,52 @@
 	}
 
 	const TEAM_SOURCE_TEXT: Record<string, string> = {
-		"log-station": "read from the driver station in your data log",
-		"support-bundle": "read from your support bundle",
-		"robot-code": "read from your robot project",
-		entered: "as you typed it",
+		"log-station": "from the driver station in your data log",
+		"support-bundle": "from your support bundle",
+		"robot-code": "from your robot project",
+		entered: "",
 	};
 
-	let files = $state<FileList | null>(null);
-	let team = $state("");
-	let uploader = $state("");
+	let picked = $state<File[]>([]);
 	let notes = $state("");
 	let uploading = $state(false);
 	let progress = $state(0);
+	let dragging = $state(false);
 	let result = $state<Result | null>(null);
 
-	let fileList = $derived(files ? Array.from(files) : []);
-	let totalMb = $derived(fileList.reduce((sum, f) => sum + f.size, 0) / 1e6);
-	let canSend = $derived(fileList.length > 0 && !uploading);
+	let team = $state("");
+	let savingTeam = $state(false);
+
+	let fileInput: HTMLInputElement | undefined = $state();
+	let totalMb = $derived(picked.reduce((sum, f) => sum + f.size, 0) / 1e6);
+
+	function add(list: FileList | null) {
+		if (!list) return;
+		const incoming = Array.from(list);
+		// The same name and size twice is the same file picked twice.
+		picked = [...picked, ...incoming.filter((f) => !picked.some((p) => p.name === f.name && p.size === f.size))];
+	}
+
+	function remove(file: File) {
+		picked = picked.filter((f) => f !== file);
+	}
+
+	function onDrop(e: DragEvent) {
+		e.preventDefault();
+		dragging = false;
+		add(e.dataTransfer?.files ?? null);
+	}
 
 	/**
-	 * XHR rather than fetch, because a team's logs can be tens of megabytes on pit
-	 * wifi and the only useful thing to show them is how far along it is.
+	 * XHR rather than fetch: a team's logs can be tens of megabytes on pit wifi,
+	 * and the only useful thing to show them is how far along it is.
 	 */
 	function send() {
-		if (!canSend) return;
+		if (picked.length === 0 || uploading) return;
 		uploading = true;
 		progress = 0;
 		const body = new FormData();
-		for (const file of fileList) body.append("files", file);
-		if (team.trim()) body.append("team", team.trim());
-		if (uploader.trim()) body.append("uploader", uploader.trim());
+		for (const file of picked) body.append("files", file);
 		if (notes.trim()) body.append("notes", notes.trim());
 
 		const request = new XMLHttpRequest();
@@ -64,15 +82,14 @@
 			uploading = false;
 			if (request.status >= 200 && request.status < 300) {
 				result = JSON.parse(request.responseText) as Result;
-				files = null;
+				picked = [];
 			} else {
-				const detail = (() => {
-					try {
-						return (JSON.parse(request.responseText) as { error?: string }).error;
-					} catch {
-						return undefined;
-					}
-				})();
+				let detail: string | undefined;
+				try {
+					detail = (JSON.parse(request.responseText) as { error?: string }).error;
+				} catch {
+					detail = undefined;
+				}
 				toast("That did not go through", detail ?? `The server answered ${request.status}.`);
 			}
 		};
@@ -83,52 +100,91 @@
 		request.send(body);
 	}
 
+	/** Only asked when the files did not say which team this is. */
+	async function saveTeam() {
+		const value = Number(team.trim());
+		if (!result || !Number.isInteger(value) || value < 1) return;
+		savingTeam = true;
+		try {
+			const response = await fetch(`/api/uploads/${result.id}/team`, {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({ team: value }),
+			});
+			if (!response.ok) {
+				const detail = (await response.json().catch(() => null)) as { error?: string } | null;
+				throw new Error(detail?.error ?? `The server answered ${response.status}.`);
+			}
+			const updated = (await response.json()) as { event: string | null; eventWhy: string | null };
+			result = {
+				...result,
+				team: value,
+				teamSource: "entered",
+				event: updated.event,
+				eventWhy: updated.eventWhy,
+			};
+		} catch (err) {
+			toast("Could not save that", err instanceof Error ? err.message : "Something went wrong.");
+		} finally {
+			savingTeam = false;
+		}
+	}
+
 	function startOver() {
 		result = null;
 		notes = "";
+		team = "";
 		progress = 0;
 	}
 </script>
 
 <div class="h-full overflow-y-auto text-left">
-	<div class="mx-auto p-3 lg:max-w-2xl w-full flex flex-col gap-3 pb-8">
+	<div class="mx-auto flex w-full flex-col gap-3 p-3 pb-8 lg:max-w-2xl">
 		{#if result}
-			<div>
-				<h1 class="text-2xl font-bold text-black dark:text-white">Got it</h1>
+			<h1 class="text-2xl font-bold text-black dark:text-white">Got it</h1>
+
+			<div class="flex flex-col gap-2 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
 				<p class="text-sm text-gray-600 dark:text-gray-300">
 					{result.files.length} file{result.files.length === 1 ? "" : "s"} uploaded.
 				</p>
-			</div>
-
-			<div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3 flex flex-col gap-1">
-				{#if result.event}
-					<p class="text-green-600 dark:text-green-400 font-semibold">Filed under {result.event}.</p>
-					{#if result.eventWhy}
-						<p class="text-xs text-gray-500 dark:text-gray-400">{result.eventWhy}</p>
-					{/if}
-				{:else}
-					<p>We could not work out the event. A volunteer can find it by your team number.</p>
-				{/if}
 
 				{#if result.team}
-					<p class="text-green-600 dark:text-green-400">
+					<p class="font-semibold text-green-600 dark:text-green-400">
 						Team {result.team}
-						{TEAM_SOURCE_TEXT[result.teamSource] ?? ""}.
+						{TEAM_SOURCE_TEXT[result.teamSource] ?? ""}
 					</p>
 				{:else}
-					<p>We could not tell which team this is. Find a CSA.</p>
+					<div class="flex flex-col gap-1">
+						<p class="text-sm">Which team is this?</p>
+						<div class="flex gap-2">
+							<Input
+								bind:value={team}
+								type="number"
+								inputmode="numeric"
+								placeholder="Team number"
+								disabled={savingTeam}
+								class="w-40"
+							/>
+							<Button size="sm" disabled={savingTeam || team.trim().length === 0} onclick={saveTeam}>
+								Save
+							</Button>
+						</div>
+					</div>
+				{/if}
+
+				{#if result.event}
+					<p class="text-sm text-gray-600 dark:text-gray-300">Filed under {result.event}.</p>
 				{/if}
 
 				{#if result.matches.length > 0}
-					<p class="text-sm">
+					<p class="text-sm text-gray-600 dark:text-gray-300">
 						Matched to {[...new Set(result.matches.map((m) => `${m.level} ${m.matchNumber}`))].join(", ")}.
 					</p>
 				{/if}
 			</div>
 
 			{#if result.warnings.length > 0}
-				<div class="rounded-lg border-l-4 border-amber-500 bg-amber-50 dark:bg-amber-950/30 p-3">
-					<p class="text-sm font-semibold text-black dark:text-white">Note</p>
+				<div class="rounded-lg border-l-4 border-amber-500 bg-amber-50 p-3 dark:bg-amber-950/30">
 					<ul class="list-disc pl-5 text-sm text-gray-700 dark:text-gray-200">
 						{#each result.warnings as warning}
 							<li>{warning}</li>
@@ -137,89 +193,99 @@
 				</div>
 			{/if}
 
-			<Button color="alternative" onclick={startOver}>Upload something else</Button>
+			<Button color="alternative" onclick={startOver}>Send something else</Button>
 		{:else}
-			<div>
-				<h1 class="text-2xl font-bold text-black dark:text-white">Send your logs to the CSA</h1>
-				<p class="text-sm text-gray-600 dark:text-gray-300">Pick your files and hit upload.</p>
-			</div>
+			<h1 class="text-2xl font-bold text-black dark:text-white">Send your logs to the CSA</h1>
 
-			<div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3 flex flex-col gap-3">
-				<div>
-					<Label for="upload-files" class="mb-1">Files</Label>
-					<input
-						id="upload-files"
-						type="file"
-						multiple
-						accept={ACCEPTED_EXTENSIONS.join(",")}
-						disabled={uploading}
-						onchange={(e) => (files = (e.currentTarget as HTMLInputElement).files)}
-						class="w-full text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-2"
-					/>
-					{#if fileList.length > 0}
-						<ul class="mt-1 text-xs text-gray-600 dark:text-gray-300">
-							{#each fileList as file (file.name)}
-								<li>
-									{file.name} <span class="text-gray-500">({Math.ceil(file.size / 1024)} KB)</span>
-								</li>
-							{/each}
-						</ul>
-						<p class="text-xs text-gray-500 mt-0.5">{totalMb.toFixed(1)} MB in total.</p>
-					{/if}
+			<!-- One drop area, with a button for anyone who is not dragging -->
+			<button
+				type="button"
+				disabled={uploading}
+				ondragover={(e) => {
+					e.preventDefault();
+					dragging = true;
+				}}
+				ondragleave={() => (dragging = false)}
+				ondrop={onDrop}
+				onclick={() => fileInput?.click()}
+				class="flex w-full flex-col items-center gap-2 rounded-lg border-2 border-dashed p-6 text-center transition-colors disabled:opacity-60 {dragging
+					? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30'
+					: 'border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-800'}"
+			>
+				<Icon icon="heroicons:arrow-up-tray" class="size-8 text-gray-500" />
+				<span class="font-semibold text-black dark:text-white">Drop your files here</span>
+				<span class="text-sm text-gray-600 dark:text-gray-300">or click to pick them</span>
+			</button>
+			<input
+				bind:this={fileInput}
+				type="file"
+				multiple
+				accept={ACCEPTED_EXTENSIONS.join(",")}
+				class="hidden"
+				onchange={(e) => {
+					add((e.currentTarget as HTMLInputElement).files);
+					(e.currentTarget as HTMLInputElement).value = "";
+				}}
+			/>
+
+			{#if picked.length > 0}
+				<div class="rounded-lg border border-gray-200 dark:border-gray-700">
+					{#each picked as file (file.name + file.size)}
+						<div
+							class="flex items-center gap-2 border-b border-gray-200 px-3 py-2 last:border-0 dark:border-gray-700"
+						>
+							<span class="grow truncate text-sm text-black dark:text-white">{file.name}</span>
+							<span class="shrink-0 text-xs text-gray-500">{Math.ceil(file.size / 1024)} KB</span>
+							<button
+								class="shrink-0 text-gray-500 hover:text-red-600"
+								aria-label="Remove {file.name}"
+								onclick={() => remove(file)}
+							>
+								<Icon icon="heroicons:x-mark-16-solid" class="size-4" />
+							</button>
+						</div>
+					{/each}
+					<p class="px-3 py-1 text-xs text-gray-500">{totalMb.toFixed(1)} MB in total.</p>
 				</div>
+			{/if}
 
-				<div>
-					<Label for="upload-team" class="mb-1">Team number</Label>
-					<Input id="upload-team" type="number" bind:value={team} disabled={uploading} placeholder="6615" />
-				</div>
+			<Textarea
+				bind:value={notes}
+				disabled={uploading}
+				rows={3}
+				maxlength={4000}
+				class="w-full"
+				placeholder="What is going wrong? Robot drops out about 30 seconds into every match, radio lights look normal."
+			/>
 
-				<div>
-					<Label for="upload-name" class="mb-1">Your name</Label>
-					<Input id="upload-name" bind:value={uploader} disabled={uploading} maxlength={120} />
-				</div>
+			<Button size="lg" disabled={picked.length === 0 || uploading} onclick={send}>
+				{#if uploading}
+					<Icon icon="svg-spinners:ring-resize" class="mr-2 size-4" />
+					Uploading {progress}%
+				{:else}
+					Upload
+				{/if}
+			</Button>
 
-				<div>
-					<Label for="upload-notes" class="mb-1">What is going wrong?</Label>
-					<Textarea
-						id="upload-notes"
-						bind:value={notes}
-						disabled={uploading}
-						rows={3}
-						maxlength={4000}
-						placeholder="Robot drops out about 30 seconds into every match. Radio lights look normal."
-					/>
-				</div>
-
-				<Button disabled={!canSend} onclick={send}>
-					{#if uploading}
-						<Icon icon="svg-spinners:ring-resize" class="size-4 mr-2" />
-						Uploading {progress}%
-					{:else}
-						Upload
-					{/if}
-				</Button>
-			</div>
-
-			<div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
-				<h2 class="font-semibold text-black dark:text-white mb-1">What to send</h2>
-				<ul class="list-disc pl-5 text-sm text-gray-700 dark:text-gray-200 flex flex-col gap-1">
+			<div class="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+				<h2 class="mb-1 font-semibold text-black dark:text-white">What to send</h2>
+				<ul class="flex list-disc flex-col gap-1 pl-5 text-sm text-gray-700 dark:text-gray-200">
 					<li>
-						<strong>Driver Station logs</strong> (<code>.dslog</code> and <code>.dsevents</code>) from the
-						laptop that drives. In the Driver Station, open the gear tab and press the folder button, or
-						look in <code>C:\Users\Public\Documents\FRC\Log Files</code>. Send both files for the session.
+						<strong>Driver Station logs</strong>, <code>.dslog</code> and <code>.dsevents</code>, from the
+						laptop that drives. They are in
+						<code>C:\Users\Public\Documents\FRC\Log Files</code>. Send both.
 					</li>
+					<li><strong>Data log</strong>, <code>.wpilog</code>, off the roboRIO or SystemCore.</li>
+					<li><strong>CTRE signal log</strong>, <code>.hoot</code>, from Phoenix Tuner.</li>
 					<li>
-						<strong>Robot data log</strong> (<code>.wpilog</code>) off the roboRIO or SystemCore, or the USB
-						stick.
-					</li>
-					<li><strong>CTRE signal log</strong> (<code>.hoot</code>) from Phoenix Tuner.</li>
-					<li>
-						<strong>SystemCore support bundle</strong> (<code>.zip</code> or <code>.llsupport</code>) from
+						<strong>SystemCore support bundle</strong>, <code>.zip</code> or <code>.llsupport</code>, from
 						the device's web page.
 					</li>
-					<li><strong>Your robot code</strong>, zipped. Zip the whole project folder.</li>
+					<li><strong>Your robot code</strong>, the project folder zipped.</li>
 				</ul>
-				<p class="text-xs text-gray-500 mt-2">Up to 25 files. Only event volunteers can open them.</p>
+				<p class="mt-2 text-xs text-gray-500">
+					Send whatever you have. Up to 25 files, and only event volunteers can open them.
+				</p>
 			</div>
 		{/if}
 	</div>

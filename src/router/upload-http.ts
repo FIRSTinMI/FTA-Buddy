@@ -6,7 +6,7 @@ import { teamUploadFiles, teamUploads, teamUploadShares } from "../db/schema";
 import { redis } from "../util/redis";
 import { resolveUserFromToken } from "../trpc";
 import { getEvent } from "../util/get-event";
-import { ingestUpload } from "../util/uploads/ingest";
+import { ingestUpload, setTeamAndReinfer } from "../util/uploads/ingest";
 import { loadBytes, MAX_UPLOAD_BYTES, UploadTooLargeError } from "../util/uploads/store";
 
 /**
@@ -126,6 +126,29 @@ export function uploadHttpRouter(): Router {
 			}
 		},
 	);
+
+	/**
+	 * Fill in the team number when nothing in the files gave one. Public, because
+	 * it is the team finishing the upload they just made: the upload id is an
+	 * unguessable uuid they were handed a second ago, and this can only fill a
+	 * blank, never change an answer the files already gave.
+	 */
+	router.post("/api/uploads/:id/team", express.json(), async (req: Request, res: Response) => {
+		try {
+			const team = Number((req.body as { team?: unknown })?.team);
+			if (!Number.isInteger(team) || team < 1 || team > 99_999) {
+				return res.status(400).json({ error: "That is not a team number." });
+			}
+			const upload = await db.query.teamUploads.findFirst({ where: eq(teamUploads.id, String(req.params.id)) });
+			if (!upload) return res.status(404).json({ error: "Upload not found." });
+			if (upload.team !== null) return res.status(409).json({ error: "This upload already has a team." });
+			const result = await setTeamAndReinfer(upload.id, team);
+			res.json(result);
+		} catch (err) {
+			console.error("[uploads] setting the team failed", err);
+			res.status(400).json({ error: err instanceof Error ? err.message : "Could not set the team." });
+		}
+	});
 
 	// #endregion
 

@@ -11,12 +11,12 @@
 	import { toast } from "../../util/toast";
 
 	/**
-	 * Logs and code teams have handed over, inside the troubleshooting screen
-	 * because that is where a CSA already is when they need them.
+	 * Logs and code teams have handed over. Reached from the Logs button above the
+	 * troubleshooting chat, which is where a CSA already is when they want them.
 	 *
 	 * Two ways in. A team uploads from their own laptop through the link on this
 	 * page, or a volunteer copies the files onto their own device and sends them
-	 * here, which is what happens when the team's laptop has no working network.
+	 * here, which is what happens when the team's laptop has no network.
 	 */
 	type Upload = Awaited<ReturnType<typeof trpc.uploads.list.query>>[number];
 	type Unassigned = Awaited<ReturnType<typeof trpc.uploads.unassigned.query>>[number];

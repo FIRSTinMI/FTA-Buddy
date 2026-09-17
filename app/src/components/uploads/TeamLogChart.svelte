@@ -1,0 +1,249 @@
+<script lang="ts">
+	import Icon from "@iconify/svelte";
+	import { Button, Modal } from "flowbite-svelte";
+	import { onDestroy, onMount, tick } from "svelte";
+	import { DSLOG_SERIES, FMS_SERIES, type SeriesDef } from "../../../../shared/logs/series";
+	import { trpc } from "../../main";
+	import { echarts, type ECharts, type ECOption } from "../../util/echarts";
+
+	/**
+	 * A team's own logs against the field's, on one time axis.
+	 *
+	 * The station log viewer already shows what FMS saw. What a CSA actually needs
+	 * is the ordering: did the battery sag before the field lost the robot, or
+	 * after? So everything here is plotted in seconds from match start, with a
+	 * line at zero, and the axes are grouped by unit so volts and milliseconds do
+	 * not end up on the same scale.
+	 *
+	 * The two clocks are different machines. The team's laptop can be minutes out,
+	 * and when it is, the trace sits in the wrong place. That is said on screen
+	 * rather than hidden, because a silently shifted trace is worse than none.
+	 */
+	let { uploadId, matchId, code }: { uploadId: string; matchId: string; code: string } = $props();
+
+	type SeriesData = Awaited<ReturnType<typeof trpc.uploads.series.query>>;
+
+	/** Series offered before anything is loaded; the catalog adds the team's own. */
+	const BASE_SERIES: SeriesDef[] = [...FMS_SERIES, ...DSLOG_SERIES];
+
+	let selected = $state<string[]>(
+		BASE_SERIES.filter((d) => d.defaultOn)
+			.map((d) => d.key)
+			.slice(0, 6),
+	);
+	let data = $state<SeriesData | null>(null);
+	let loading = $state(false);
+	let error = $state<string | null>(null);
+	let pickerOpen = $state(false);
+	let catalog = $state<string | null>(null);
+	let extraKeys = $state<string[]>([]);
+
+	let container: HTMLDivElement | undefined = $state();
+	let chart: ECharts | undefined;
+	let observer: ResizeObserver | undefined;
+
+	/** Axis index per unit group, so volts, ms, percent and amps each get their own. */
+	function axisGroup(def: { axis: string; unit?: string }): string {
+		return def.axis;
+	}
+
+	function buildOption(loaded: SeriesData): ECOption {
+		const groups = [...new Set(loaded.series.map((s) => axisGroup(s)))];
+		return {
+			animation: false,
+			tooltip: { trigger: "axis", axisPointer: { type: "cross" } },
+			legend: { type: "scroll", top: 0, textStyle: { fontSize: 10 } },
+			grid: { left: 48, right: 48, top: 28, bottom: 28 },
+			xAxis: {
+				type: "value",
+				name: "s from match start",
+				nameLocation: "middle",
+				nameGap: 18,
+				min: (v: { min: number }) => Math.floor(v.min),
+				max: (v: { max: number }) => Math.ceil(v.max),
+			},
+			yAxis: groups.map((group, index) => ({
+				type: "value",
+				name: group === "bool" ? "" : group,
+				position: index % 2 === 0 ? "left" : "right",
+				offset: Math.floor(index / 2) * 40,
+				min: group === "bool" ? 0 : undefined,
+				max: group === "bool" ? 1 : undefined,
+				splitLine: { show: index === 0 },
+			})),
+			series: loaded.series.map((s) => ({
+				name: `${s.label}${s.unit ? ` (${s.unit})` : ""}`,
+				type: "line",
+				step: s.axis === "bool" ? "end" : undefined,
+				showSymbol: false,
+				lineStyle: { width: s.from === "fms" ? 2 : 1.5, type: s.from === "fms" ? "solid" : "dashed" },
+				yAxisIndex: groups.indexOf(axisGroup(s)),
+				// A gap has to read as a gap, not as a line drawn across it.
+				data: s.points.map((p) => [p.t, p.v]),
+				connectNulls: false,
+				markLine:
+					s.from === "fms" && groups.indexOf(axisGroup(s)) === 0
+						? { silent: true, symbol: "none", data: [{ xAxis: 0, label: { formatter: "start" } }] }
+						: undefined,
+			})),
+		} as ECOption;
+	}
+
+	async function load() {
+		if (selected.length === 0) {
+			data = null;
+			return;
+		}
+		loading = true;
+		error = null;
+		try {
+			data = await trpc.uploads.series.query({ id: uploadId, matchId, keys: selected.slice(0, 8) });
+			await tick();
+			if (container) {
+				chart ??= echarts.init(container);
+				chart.setOption(buildOption(data), { replaceMerge: ["yAxis", "series"] });
+			}
+		} catch (err) {
+			error = err instanceof Error ? err.message : "Could not read those series.";
+		} finally {
+			loading = false;
+		}
+	}
+
+	async function openPicker() {
+		pickerOpen = true;
+		if (catalog === null) {
+			try {
+				const result = await trpc.uploads.seriesCatalog.query({ id: uploadId });
+				catalog = result.text;
+				// Anything the upload offers that is not in the fixed lists, e.g. the
+				// team's own data log entries and CSV signals.
+				extraKeys = [...result.text.matchAll(/^\s{2}(log\.\S+|csv\.\S+|ds\.pd\.\d+)/gm)].map((m) => m[1]);
+			} catch {
+				catalog = "Could not load the list of series.";
+			}
+		}
+	}
+
+	function toggle(key: string) {
+		if (selected.includes(key)) {
+			selected = selected.filter((k) => k !== key);
+		} else {
+			if (selected.length >= 8) return;
+			selected = [...selected, key];
+		}
+		void load();
+	}
+
+	onMount(() => {
+		void load();
+		if (container) {
+			observer = new ResizeObserver(() => chart?.resize());
+			observer.observe(container);
+		}
+	});
+
+	onDestroy(() => {
+		observer?.disconnect();
+		chart?.dispose();
+	});
+</script>
+
+<div class="rounded-lg border border-gray-200 dark:border-gray-700 p-2 text-left">
+	<div class="flex items-center gap-2 mb-1">
+		<h3 class="text-sm font-semibold text-black dark:text-white">Team's own logs, on the match clock</h3>
+		<span class="text-xs text-gray-500">upload {code}</span>
+		<Button size="xs" color="light" class="ml-auto" onclick={openPicker}>
+			<Icon icon="heroicons:adjustments-horizontal-16-solid" class="size-4" /><span class="ml-1">Series</span>
+		</Button>
+	</div>
+
+	{#if error}
+		<p class="text-sm text-red-600 dark:text-red-400">{error}</p>
+	{/if}
+
+	<div bind:this={container} class="w-full h-72"></div>
+
+	{#if loading}
+		<p class="text-xs text-gray-500">Reading the logs...</p>
+	{/if}
+
+	{#if data}
+		{#if data.notes.length > 0}
+			<ul class="mt-1 text-xs text-gray-500 dark:text-gray-400 list-disc pl-4">
+				{#each data.notes as note}
+					<li>{note}</li>
+				{/each}
+			</ul>
+		{/if}
+		<p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+			Solid lines are the field's log, dashed are the team's. The team's timestamps come from their own laptop
+			clock, so a trace that sits well away from the match is a clock that is out, not a robot that misbehaved.
+		</p>
+	{/if}
+</div>
+
+<Modal bind:open={pickerOpen} size="md" outsideclose title="Pick series">
+	<div class="text-left flex flex-col gap-3">
+		<p class="text-xs text-gray-500">Up to 8 at a time. {selected.length} picked.</p>
+
+		<div>
+			<p class="text-sm font-semibold mb-1">From the field's log</p>
+			<div class="flex flex-wrap gap-1">
+				{#each FMS_SERIES as def (def.key)}
+					<button
+						onclick={() => toggle(def.key)}
+						class="rounded-full border px-2 py-0.5 text-xs {selected.includes(def.key)
+							? 'border-primary-500 bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-100'
+							: 'border-gray-300 dark:border-gray-600'}"
+					>
+						{def.label}
+					</button>
+				{/each}
+			</div>
+		</div>
+
+		<div>
+			<p class="text-sm font-semibold mb-1">From the team's Driver Station log</p>
+			<div class="flex flex-wrap gap-1">
+				{#each DSLOG_SERIES as def (def.key)}
+					<button
+						onclick={() => toggle(def.key)}
+						class="rounded-full border px-2 py-0.5 text-xs {selected.includes(def.key)
+							? 'border-primary-500 bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-100'
+							: 'border-gray-300 dark:border-gray-600'}"
+					>
+						{def.label}
+					</button>
+				{/each}
+			</div>
+		</div>
+
+		{#if extraKeys.length > 0}
+			<div>
+				<p class="text-sm font-semibold mb-1">From the team's own logging</p>
+				<div class="flex flex-wrap gap-1 max-h-48 overflow-y-auto">
+					{#each extraKeys as key (key)}
+						<button
+							onclick={() => toggle(key)}
+							class="rounded-full border px-2 py-0.5 text-xs {selected.includes(key)
+								? 'border-primary-500 bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-100'
+								: 'border-gray-300 dark:border-gray-600'}"
+						>
+							{key.replace(/^(log|csv)\./, "")}
+						</button>
+					{/each}
+				</div>
+			</div>
+		{/if}
+
+		{#if catalog}
+			<details class="text-xs text-gray-500">
+				<summary class="cursor-pointer">Everything this upload can plot</summary>
+				<pre class="whitespace-pre-wrap mt-1 max-h-60 overflow-y-auto">{catalog}</pre>
+			</details>
+		{/if}
+
+		<Button size="sm" onclick={() => (pickerOpen = false)}>Done</Button>
+	</div>
+</Modal>

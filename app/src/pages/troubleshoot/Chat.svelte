@@ -4,6 +4,8 @@
 	import { onDestroy, onMount, tick } from "svelte";
 	import type { ChatCitation, ChatEvent } from "../../../../src/router/troubleshoot";
 	import ChatMessage from "../../components/troubleshoot/ChatMessage.svelte";
+	import QuestionChoices from "../../components/troubleshoot/QuestionChoices.svelte";
+	import type { ChatQuestion } from "../../../../shared/troubleshooting/question";
 	import { trpc } from "../../main";
 	import { navigate } from "../../router";
 	import { userStore } from "../../stores/user";
@@ -23,8 +25,10 @@
 		citations: ChatCitation[];
 		streaming?: boolean;
 		error?: string;
-		/** Progress lines while it reads a repo, e.g. "Reading Robot.java". */
+		/** Progress lines while it reads a repo or an upload, e.g. "Reading Robot.java". */
 		tools?: string[];
+		/** Set when the turn ended by asking a multiple-choice question. */
+		question?: ChatQuestion | null;
 	}
 
 	type Status = Awaited<ReturnType<typeof trpc.troubleshoot.status.query>>;
@@ -44,6 +48,10 @@
 	let showRecent = $state(false);
 	let recentQuery = $state("");
 	let recentLoading = $state(false);
+	/** A team's upload attached to this conversation, so the assistant can read it. */
+	let attached = $state<{ uploadId: string; code: string; team: number | null } | null>(null);
+	/** Set from ?upload= so the uploads page can open a chat about one upload. */
+	let pinnedUploadId = $state<string | undefined>(undefined);
 	/** Only show the ticket button when an event is actually selected. */
 	let hasEvent = $derived(Boolean($eventStore.code));
 
@@ -65,6 +73,11 @@
 	let inputEl: HTMLTextAreaElement | undefined = $state();
 
 	let loggedIn = $derived(Boolean($userStore.token));
+	/** Only the newest question is answerable; older ones are history. */
+	let openQuestion = $derived.by(() => {
+		const last = messages[messages.length - 1];
+		return last?.role === "assistant" && !last.streaming && last.question ? last.question : null;
+	});
 	let userTurns = $derived(messages.filter((m) => m.role === "user").length);
 	let canSend = $derived(
 		loggedIn &&
@@ -125,7 +138,13 @@
 			const h = await trpc.troubleshoot.history.query({ conversationId: id });
 			conversationId = h.conversationId;
 			closed = h.closed;
-			messages = h.messages.map((m) => ({ id: m.id, role: m.role, text: m.text, citations: m.citations }));
+			messages = h.messages.map((m) => ({
+				id: m.id,
+				role: m.role,
+				text: m.text,
+				citations: m.citations,
+				question: m.question,
+			}));
 			await scrollToBottom();
 		} catch (err) {
 			statusError = err instanceof Error ? err.message : "Could not load that conversation.";
@@ -148,10 +167,11 @@
 		if (listEl) listEl.scrollTop = listEl.scrollHeight;
 	}
 
-	function send() {
-		if (!canSend) return;
-		const text = input.trim();
-		input = "";
+	/** `answer` comes from a question button; otherwise the composer is used. */
+	function send(answer?: string) {
+		const text = (answer ?? input).trim();
+		if (answer ? !loggedIn || sending || closed || !text : !canSend) return;
+		if (!answer) input = "";
 		sending = true;
 		const userMsg: UiMessage = { id: crypto.randomUUID(), role: "user", text, citations: [] };
 		const assistantMsg: UiMessage = {
@@ -172,7 +192,12 @@
 
 		sub?.unsubscribe();
 		sub = trpc.troubleshoot.chat.subscribe(
-			{ conversationId: conversationId ?? undefined, message: text, from: conversationId ? undefined : from },
+			{
+				conversationId: conversationId ?? undefined,
+				message: text,
+				from: conversationId ? undefined : from,
+				uploadId: pinnedUploadId,
+			},
 			{
 				onData: (ev: ChatEvent) => {
 					switch (ev.type) {
@@ -181,6 +206,13 @@
 							break;
 						case "tool":
 							patch((m) => (m.tools = [...(m.tools ?? []), ev.label]));
+							break;
+						case "question":
+							patch((m) => (m.question = ev.question));
+							break;
+						case "upload":
+							attached = { uploadId: ev.uploadId, code: ev.code, team: ev.team };
+							pinnedUploadId = ev.uploadId;
 							break;
 						case "citation":
 							patch((m) => {
@@ -248,6 +280,10 @@
 	}
 
 	onMount(async () => {
+		if (typeof window !== "undefined") {
+			const fromQuery = new URLSearchParams(window.location.search).get("upload");
+			if (fromQuery) pinnedUploadId = fromQuery;
+		}
 		seedFromTree();
 		await Promise.all([loadStatus(), loadRecent()]);
 		if (from) inputEl?.focus();
@@ -267,6 +303,11 @@
 				<Button size="xs" color="light" onclick={openRecent} title="Conversation history">
 					<Icon icon="heroicons:clock-16-solid" class="size-4" />
 				</Button>
+				<Button size="xs" color="light" href="/uploads" title="Logs and code teams have uploaded">
+					<Icon icon="heroicons:document-arrow-up-16-solid" class="size-4" /><span
+						class="ml-1 hidden sm:inline">Logs</span
+					>
+				</Button>
 				<Button size="xs" color="light" onclick={newConversation} title="New conversation">
 					<Icon icon="heroicons:plus-16-solid" class="size-4" /><span class="ml-1 hidden sm:inline">New</span>
 				</Button>
@@ -277,7 +318,6 @@
 				{/if}
 			</div>
 		</div>
-
 	</div>
 
 	<!-- Body -->
@@ -302,9 +342,7 @@
 		<div class="grow flex items-center justify-center p-4">
 			<div class="max-w-sm rounded-lg border border-gray-200 dark:border-gray-700 p-4 text-center">
 				<Icon icon="heroicons:pause-circle-16-solid" class="size-6 mx-auto mb-2 text-gray-500" />
-				<p class="text-sm">
-					The troubleshooting assistant is not available right now. Use the guided trees.
-				</p>
+				<p class="text-sm">The troubleshooting assistant is not available right now. Use the guided trees.</p>
 			</div>
 		</div>
 	{:else if status && status.overBudget}
@@ -328,6 +366,9 @@
 					tools={m.tools}
 				/>
 			{/each}
+			{#if openQuestion}
+				<QuestionChoices question={openQuestion} disabled={sending || closed} onanswer={(text) => send(text)} />
+			{/if}
 			{#if closed}
 				<div class="text-xs text-center text-gray-500 dark:text-gray-400 mt-2">
 					This conversation has reached its limit.
@@ -348,7 +389,7 @@
 					disabled={sending || closed}
 					placeholder={closed
 						? "Start a new conversation to continue"
-						: "Describe the problem you're having, optionally supply a GitHub repository"}
+						: "Describe the problem. A GitHub repo link or an upload code like 7K2M-QX4T attaches it."}
 					class="grow resize-none rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-60"
 				></textarea>
 				<Button size="sm" class="shrink-0 h-10" disabled={!canSend} onclick={send} title="Send">
@@ -385,7 +426,8 @@
 			<div class="flex flex-col divide-y divide-gray-200 dark:divide-gray-700 max-h-96 overflow-y-auto">
 				{#each recent as r (r.id)}
 					<button
-						class="w-full text-left px-2 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 {r.id === conversationId
+						class="w-full text-left px-2 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 {r.id ===
+						conversationId
 							? 'bg-gray-100 dark:bg-gray-800'
 							: ''}"
 						onclick={() => {

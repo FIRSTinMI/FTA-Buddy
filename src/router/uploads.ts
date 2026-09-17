@@ -7,6 +7,7 @@ import { matchLogs, teamUploadFiles, teamUploadMatches, teamUploads, teamUploadS
 import { eventProcedure, protectedProcedure, publicProcedure, router } from "../trpc";
 import { ghostCsaEnabled, ghostCsaTicketUrl, refreshGhostCsa, sendUploadToGhostCsa } from "../util/uploads/ghost-csa";
 import { linkUploadMatch, setUploadTeam, unlinkUploadMatch } from "../util/uploads/ingest";
+import { availableSeries, readSeriesData } from "../util/troubleshoot/chat/uploads";
 import { deleteBytes, loadBytes } from "../util/uploads/store";
 
 /**
@@ -273,6 +274,70 @@ export const uploadsRouter = router({
 		return { ok: true };
 	}),
 
+	/**
+	 * Uploads attached to one match, for the station log viewer. This is what turns
+	 * "what FMS saw" into "what FMS saw and what the team's own laptop saw".
+	 */
+	forMatch: eventProcedure.input(z.object({ matchId: z.string().uuid() })).query(async ({ ctx, input }) => {
+		const rows = await db
+			.select({
+				uploadId: teamUploads.id,
+				code: teamUploads.code,
+				team: teamUploads.team,
+				createdAt: teamUploads.created_at,
+				link: teamUploadMatches,
+			})
+			.from(teamUploadMatches)
+			.innerJoin(teamUploads, eq(teamUploadMatches.upload_id, teamUploads.id))
+			.where(and(eq(teamUploadMatches.match_id, input.matchId), eq(teamUploads.event, ctx.event.code)))
+			.execute();
+		// One upload can link the same match through several files; one row each.
+		const byUpload = new Map<string, (typeof rows)[number]>();
+		for (const row of rows) if (!byUpload.has(row.uploadId)) byUpload.set(row.uploadId, row);
+		return [...byUpload.values()].map((row) => ({
+			uploadId: row.uploadId,
+			code: row.code,
+			team: row.team,
+			createdAt: row.createdAt,
+			how: row.link.how,
+			reason: row.link.reason,
+			station: row.link.station,
+		}));
+	}),
+
+	/** Which series this upload can plot, as text for the picker's help line. */
+	seriesCatalog: eventProcedure.input(z.object({ id: z.string().uuid() })).query(async ({ ctx, input }) => {
+		await uploadOr404(input.id, ctx.event.code);
+		return { text: await availableSeries(input.id) };
+	}),
+
+	/** Series data on the match clock, for the chart. */
+	series: eventProcedure
+		.input(
+			z.object({
+				id: z.string().uuid(),
+				matchId: z.string().uuid(),
+				keys: z.array(z.string().max(200)).min(1).max(8),
+				points: z.number().int().min(50).max(4000).default(1200),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			await uploadOr404(input.id, ctx.event.code);
+			try {
+				return await readSeriesData({
+					uploadId: input.id,
+					matchId: input.matchId,
+					keys: input.keys,
+					points: input.points,
+				});
+			} catch (err) {
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: err instanceof Error ? err.message : "Those series could not be read",
+				});
+			}
+		}),
+
 	// #region public share access
 
 	/** What a share token opens. No account, no event token. */
@@ -297,6 +362,7 @@ export const uploadsRouter = router({
 			.execute();
 
 		return {
+			uploadId: share.upload_id,
 			label: share.label,
 			expires: share.expire_time,
 			team: upload.team,

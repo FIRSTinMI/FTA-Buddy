@@ -48,6 +48,10 @@ export const { p, navigate, isActive, preload, route } = createRouter({
 	"/join/:token": () => import("./pages/management/JoinByLink.svelte"),
 	"/link-slack/:token": () => import("./pages/management/LinkSlack.svelte"),
 
+	"/uploads": () => import("./pages/uploads/UploadsList.svelte"),
+	"/uploads/:id": () => import("./pages/uploads/Upload.svelte"),
+	"/share/upload/:token": () => import("./pages/uploads/SharedUpload.svelte"),
+
 	"/logs": () => import("./pages/match-logs/MatchLogsList.svelte"),
 	"/logs/event/:eventCode/:matchid/:station": () => import("./pages/EventSwitchRedirect.svelte"),
 	"/logs/event/:eventCode/:matchid": () => import("./pages/EventSwitchRedirect.svelte"),

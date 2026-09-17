@@ -59,7 +59,9 @@ running. Required keys:
 - `OPENAI_KEY` / `OPENAI_MODEL` - Event report generation
 - `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET` - Slack bot integration
 - `TOA_KEY` / `FTC_KEY` - FTC event data
-- `GOOGLE_KEY*` / `GCS_BUCKET` - Google Cloud Storage (log uploads)
+- `GOOGLE_KEY*` / `GCS_BUCKET` - Google Cloud Storage (event reports, and team uploads over 8 MB)
+- `GHOST_CSA_ENABLED` - hand SystemCore support bundles to Limelight's Ghost CSA (default on)
+- `HOOT_DECODE_ENABLED` / `OWLET_DIR` - decode CTRE Hoot logs by downloading CTRE's `owlet` converter (default on)
 
 ## Tech Stack
 

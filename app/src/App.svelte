@@ -786,6 +786,17 @@
 						{/snippet}
 					</SidebarItem>
 					<SidebarItem
+						label="Team Logs"
+						onclick={() => {
+							drawerOpen = false;
+							navigate("/uploads");
+						}}
+					>
+						{#snippet icon()}
+							<Icon icon="heroicons:document-arrow-up" class="size-8" />
+						{/snippet}
+					</SidebarItem>
+					<SidebarItem
 						label="Flashcards"
 						onclick={() => {
 							drawerOpen = false;
@@ -919,6 +930,17 @@
 					>
 						{#snippet icon()}
 							<Icon icon="uil:file-graph" class="size-8" />
+						{/snippet}
+					</SidebarItem>
+					<SidebarItem
+						label="Team Logs"
+						onclick={() => {
+							drawerOpen = false;
+							navigate("/uploads");
+						}}
+					>
+						{#snippet icon()}
+							<Icon icon="heroicons:document-arrow-up" class="size-8" />
 						{/snippet}
 					</SidebarItem>
 					<SidebarItem

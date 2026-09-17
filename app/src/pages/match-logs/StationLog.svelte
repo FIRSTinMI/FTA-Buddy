@@ -7,6 +7,7 @@
 	import { formatTimeNoAgo, formatTimeShortNoAgoSeconds } from "../../../../shared/formatTime";
 	import type { FMSLogFrame, ROBOT } from "../../../../shared/types";
 	import LogGraph from "../../components/LogGraph.svelte";
+	import TeamLogChart from "../../components/uploads/TeamLogChart.svelte";
 	import Spinner from "../../components/Spinner.svelte";
 	import { trpc } from "../../main";
 	import { navigate, route } from "../../router";
@@ -85,6 +86,19 @@
 
 	let shareid: string = $state(undefined as any);
 	let shareOpen = $state(false);
+
+	/**
+	 * Logs the team uploaded for this same match. When there are any, the viewer
+	 * stops being "what FMS saw" and becomes both sides on one clock.
+	 */
+	type MatchUpload = Awaited<ReturnType<typeof trpc.uploads.forMatch.query>>[number];
+	let teamUploads = $state<MatchUpload[]>([]);
+	if ($userStore.eventToken) {
+		trpc.uploads.forMatch
+			.query({ matchId: matchid })
+			.then((rows) => (teamUploads = rows))
+			.catch(() => (teamUploads = []));
+	}
 
 	async function share() {
 		if (["blue1", "blue2", "blue3", "red1", "red2", "red3"].includes(station)) {
@@ -169,6 +183,14 @@
 			</div>
 
 			<LogGraph bind:this={logGraph} {log} />
+
+			{#each teamUploads as upload (upload.uploadId)}
+				<TeamLogChart uploadId={upload.uploadId} matchId={matchid} code={upload.code} />
+				<p class="text-left text-[11px] text-gray-500 dark:text-gray-400 -mt-1">
+					{upload.reason}
+					<a class="underline" href={`/uploads/${upload.uploadId}`}>Open the upload</a>
+				</p>
+			{/each}
 
 			<div class="flex flex-col gap-2">
 				{#each match.analysis as logEvent}

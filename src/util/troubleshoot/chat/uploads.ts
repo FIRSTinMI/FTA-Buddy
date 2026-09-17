@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { KIND_LABELS } from "../../../../shared/logs/detect";
-import { readDsLog } from "../../../../shared/logs/dslog";
+import { readDsLog, type DsLogResult } from "../../../../shared/logs/dslog";
 import { readCsvTelemetry } from "../../../../shared/logs/csv-telemetry";
 import {
 	clipToMatch,
@@ -256,12 +256,32 @@ export interface SeriesRequest {
 	points: number;
 }
 
+export interface SeriesData {
+	label: string;
+	level: string;
+	matchNumber: number;
+	station: string | null;
+	series: {
+		key: string;
+		label: string;
+		unit?: string;
+		axis: string;
+		from: string;
+		points: { t: number; v: number | null }[];
+	}[];
+	/** Series that could not be read, each with why. Shown rather than dropped. */
+	notes: string[];
+}
+
 /**
- * Read several series on one axis, as text a model can reason over. Seconds are
- * relative to match start, so a row reads across: what FMS saw and what the
- * team's laptop saw at the same instant.
+ * Read several series onto one axis: seconds from match start, so what FMS saw
+ * and what the team's laptop saw line up instant for instant.
+ *
+ * Every Driver Station log attached to this match is merged, because the Driver
+ * Station starts a new file whenever the robot link drops, so one match can
+ * arrive as two logs.
  */
-export async function readSeries(request: SeriesRequest): Promise<string> {
+export async function readSeriesData(request: SeriesRequest): Promise<SeriesData> {
 	const match = await db.query.matchLogs.findFirst({ where: eq(matchLogs.id, request.matchId) });
 	if (!match) throw new UploadToolError("That match is not one of ours.");
 	const link = await db.query.teamUploadMatches.findFirst({
@@ -286,9 +306,31 @@ export async function readSeries(request: SeriesRequest): Promise<string> {
 		if (raw) fmsFrames = decompressStationLog(raw as string);
 	}
 
-	// The team's Driver Station log, parsed once and reused for every ds.* key.
-	const dsFile = files.find((f) => f.kind === "dslog");
-	const dsResult = dsFile ? readDsLog(await loadBytes(dsFile)) : null;
+	// Every Driver Station log in this upload, merged onto one timeline. The
+	// entries carry seconds from their own file's start, so each file's entries
+	// are shifted onto the first file's clock before they are put together.
+	const dsFiles = files.filter((f) => f.kind === "dslog");
+	const dsParsed: DsLogResult[] = [];
+	for (const file of dsFiles) {
+		const parsed = readDsLog(await loadBytes(file));
+		if (parsed.parsed && parsed.startTime !== null) dsParsed.push(parsed);
+	}
+	let dsResult: DsLogResult | null = null;
+	if (dsParsed.length === 1) {
+		dsResult = dsParsed[0];
+	} else if (dsParsed.length > 1) {
+		const base = Math.min(...dsParsed.map((r) => r.startTime!));
+		const entries = dsParsed
+			.flatMap((r) => r.entries.map((e) => ({ ...e, timestamp: e.timestamp + (r.startTime! - base) })))
+			.sort((a, b) => a.timestamp - b.timestamp);
+		dsResult = {
+			parsed: true,
+			version: dsParsed[0].version,
+			startTime: base,
+			entries,
+			stoppedEarly: dsParsed.some((r) => r.stoppedEarly),
+		};
+	}
 	const pdChannels = dsResult?.entries[0]?.powerDistributionCurrents.length ?? 0;
 
 	for (const key of request.keys.slice(0, 8)) {
@@ -355,16 +397,37 @@ export async function readSeries(request: SeriesRequest): Promise<string> {
 		}
 	}
 
-	if (out.length === 0) return notes.join("\n") || "Nothing could be read for those series.";
+	return {
+		label: `${link.level} ${link.match_number}${link.play_number > 1 ? ` play ${link.play_number}` : ""}`,
+		level: link.level,
+		matchNumber: link.match_number,
+		station,
+		series: out.map((s) => ({
+			key: s.def.key,
+			label: s.def.label,
+			unit: s.def.unit,
+			axis: s.def.axis,
+			from: s.def.from,
+			points: s.points,
+		})),
+		notes,
+	};
+}
 
-	// One row per sampled instant, columns in the order asked for. A model reads
-	// this far better than several separate lists.
-	const times = [...new Set(out.flatMap((s) => s.points.map((p) => Math.round(p.t * 10) / 10)))].sort(
+/**
+ * The same data as a table a model reads well: one row per sampled instant,
+ * columns in the order asked for, so the ordering of events is visible.
+ */
+export async function readSeries(request: SeriesRequest): Promise<string> {
+	const data = await readSeriesData(request);
+	if (data.series.length === 0) return data.notes.join("\n") || "Nothing could be read for those series.";
+
+	const times = [...new Set(data.series.flatMap((s) => s.points.map((p) => Math.round(p.t * 10) / 10)))].sort(
 		(a, b) => a - b,
 	);
-	const header = ["t(s)", ...out.map((s) => s.def.label + (s.def.unit ? ` ${s.def.unit}` : ""))].join(" | ");
+	const header = ["t(s)", ...data.series.map((s) => s.label + (s.unit ? ` ${s.unit}` : ""))].join(" | ");
 	const rows = times.slice(0, 400).map((t) => {
-		const cells = out.map((series) => {
+		const cells = data.series.map((series) => {
 			let nearest: { t: number; v: number | null } | null = null;
 			for (const point of series.points) {
 				if (nearest === null || Math.abs(point.t - t) < Math.abs(nearest.t - t)) nearest = point;
@@ -376,8 +439,8 @@ export async function readSeries(request: SeriesRequest): Promise<string> {
 	});
 
 	return [
-		`${link.level} ${link.match_number}${link.station ? ` ${link.station}` : ""}, seconds from match start.`,
-		...(notes.length > 0 ? ["", ...notes, ""] : [""]),
+		`${data.label}${data.station ? ` ${data.station}` : ""}, seconds from match start.`,
+		...(data.notes.length > 0 ? ["", ...data.notes, ""] : [""]),
 		header,
 		...rows,
 		times.length > 400 ? `... ${times.length - 400} more rows` : "",

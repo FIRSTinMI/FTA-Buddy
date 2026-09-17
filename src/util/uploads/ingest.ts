@@ -38,6 +38,7 @@ import { screenForInstructions } from "../untrusted-text";
 import { inferEvent, UNASSIGNED_REASON } from "./event-inference";
 import { convertHoot, HootError, hootCompliancy, hootDecodeEnabled } from "./hoot";
 import { MAX_FILES_PER_UPLOAD, MAX_UPLOAD_BYTES, storeBytes, UploadTooLargeError } from "./store";
+import { loadBytes } from "./store";
 import { entryText, keepBundleEntry, keepCodeEntry, readZip } from "./zip";
 
 /**
@@ -815,10 +816,13 @@ export async function filesByIds(ids: string[]) {
 }
 
 /**
- * File an upload under an event after the fact, and link whatever its logs say
- * to that event's matches. This is the escape hatch for the cases inference
- * cannot settle: a bench log with no team number, or a team that has not played
- * a match yet.
+ * File an upload under an event after the fact, and link its logs to that
+ * event's matches.
+ *
+ * This has to produce the same links ingest would have produced, so it reads the
+ * stored files back rather than working from metadata alone: a Driver Station
+ * log links by the clock and needs its samples re-windowed per match, and none
+ * of that survives as metadata.
  */
 export async function assignUploadToEvent(uploadId: string, eventCode: string, why: string): Promise<void> {
 	const eventId = (await db.query.matchLogs.findFirst({ where: eq(matchLogs.event, eventCode) }))?.event_id ?? null;
@@ -827,34 +831,49 @@ export async function assignUploadToEvent(uploadId: string, eventCode: string, w
 		.set({ event: eventCode, event_id: eventId, event_why: why })
 		.where(eq(teamUploads.id, uploadId))
 		.execute();
+	await relinkUpload(uploadId, eventCode);
+}
 
-	// Re-link from what we already parsed: the stored metadata holds the match
-	// info, so nothing has to be read from storage again.
+/**
+ * Work out an upload's matches from the files as they are stored. Used when an
+ * upload is attached to an event after the fact, and safe to run again: the
+ * match rows are keyed on (file, match) and conflicts are ignored.
+ */
+export async function relinkUpload(uploadId: string, eventCode: string): Promise<number> {
 	const candidates = await candidateMatches(eventCode);
-	if (candidates.length === 0) return;
+	if (candidates.length === 0) return 0;
 	const files = await db.select().from(teamUploadFiles).where(eq(teamUploadFiles.upload_id, uploadId)).execute();
+
+	const teamCandidates: { team: number; source: TeamSource }[] = [];
+	const linksByFile = new Map<string, MatchLink[]>();
+	// Parsed Driver Station logs, kept for the pairing pass and the windows.
+	const dsResults = new Map<string, DsLogResult>();
+	const eventsInfo = new Map<string, DsEventsMatchInfo>();
+	const baseName = (path: string) => path.replace(/\.(dslog|dsevents)$/i, "").toLowerCase();
+
 	for (const file of files) {
 		const meta = file.meta as {
 			match?: WpilogMatchInfo;
 			matchInfo?: DsEventsMatchInfo;
-			fileName?: { matchLevel?: MatchLevel; matchNumber?: number };
+			fileName?: { matchLevel?: MatchLevel; matchNumber?: number; eventName?: string };
+			csv?: { absoluteTime?: boolean };
 		} | null;
 		const links: MatchLink[] = [];
+
 		if (file.kind === "wpilog" && meta?.match) {
-			const link = linkByMatchInfo(meta.match, candidates);
-			if (link) links.push(link);
-		}
-		if (file.kind === "dsevents" && meta?.matchInfo) {
-			const link = linkByMatchNumber(
-				levelFromDsEvents(meta.matchInfo.matchType) ?? undefined,
-				meta.matchInfo.matchNumber,
-				candidates,
-				"ds-events",
-				`The Driver Station logged "FMS Connected: ${meta.matchInfo.matchType} - ${meta.matchInfo.matchNumber}".`,
-			);
-			if (link) links.push(link);
-		}
-		if (file.kind === "hoot" && meta?.fileName?.matchNumber) {
+			const link =
+				linkByMatchInfo(meta.match, candidates) ??
+				(meta.fileName?.matchNumber
+					? linkByFileName(
+							{ matchLevel: meta.fileName.matchLevel, matchNumber: meta.fileName.matchNumber },
+							candidates,
+						)
+					: null);
+			if (link) {
+				links.push(link);
+				if (link.team) teamCandidates.push({ team: link.team, source: "log-station" });
+			}
+		} else if (file.kind === "hoot" && meta?.fileName?.matchNumber) {
 			const link = linkByMatchNumber(
 				meta.fileName.matchLevel,
 				meta.fileName.matchNumber,
@@ -863,7 +882,63 @@ export async function assignUploadToEvent(uploadId: string, eventCode: string, w
 				`Phoenix named this log ${meta.fileName.matchLevel} ${meta.fileName.matchNumber}.`,
 			);
 			if (link) links.push(link);
+		} else if (file.kind === "dsevents") {
+			if (meta?.matchInfo) eventsInfo.set(baseName(file.path), meta.matchInfo);
+			const fromEvents = meta?.matchInfo
+				? linkByMatchNumber(
+						levelFromDsEvents(meta.matchInfo.matchType) ?? undefined,
+						meta.matchInfo.matchNumber,
+						candidates,
+						"ds-events",
+						`The Driver Station logged "FMS Connected: ${meta.matchInfo.matchType} - ${meta.matchInfo.matchNumber}".`,
+					)
+				: null;
+			if (fromEvents) {
+				links.push(fromEvents);
+			} else {
+				const result = readDsEvents(await loadBytes(file));
+				if (result.parsed && result.startTime) {
+					const last = result.entries[result.entries.length - 1]?.timestamp ?? 0;
+					links.push(...linkByTimestamp(result.startTime, last, candidates));
+				}
+			}
+		} else if (file.kind === "dslog") {
+			const result = readDsLog(await loadBytes(file));
+			if (result.parsed && result.startTime) {
+				dsResults.set(file.id, result);
+				const summary = summarizeDsLog(result);
+				links.push(...linkByTimestamp(result.startTime, summary?.durationSecs ?? 0, candidates));
+			}
+		} else if (file.kind === "csv") {
+			const csv = readCsvTelemetry(new TextDecoder("utf-8", { fatal: false }).decode(await loadBytes(file)));
+			if (csv.parsed && csv.absoluteTime) {
+				const times = csv.series.flatMap((series) => series.points.map((p) => p.t));
+				const from = Math.min(...times);
+				const to = Math.max(...times);
+				if (Number.isFinite(from)) links.push(...linkByTimestamp(from, Math.max(to - from, 0), candidates));
+			}
 		}
+		linksByFile.set(file.id, links);
+	}
+
+	// The events file knows the match; its telemetry twin inherits it.
+	for (const file of files) {
+		if (file.kind !== "dslog") continue;
+		const info = eventsInfo.get(baseName(file.path));
+		if (!info?.matchNumber) continue;
+		const link = linkByMatchNumber(
+			levelFromDsEvents(info.matchType) ?? undefined,
+			info.matchNumber,
+			candidates,
+			"ds-events",
+			`Its matching events file logged "FMS Connected: ${info.matchType} - ${info.matchNumber}".`,
+		);
+		if (link) linksByFile.set(file.id, [link]);
+	}
+
+	let written = 0;
+	for (const file of files) {
+		const links = linksByFile.get(file.id) ?? [];
 		for (const link of links) {
 			await db
 				.insert(teamUploadMatches)
@@ -881,6 +956,61 @@ export async function assignUploadToEvent(uploadId: string, eventCode: string, w
 				})
 				.onConflictDoNothing()
 				.execute();
+			written++;
+		}
+
+		// A session covers the pits too, so each attached match gets its own window.
+		const result = dsResults.get(file.id);
+		if (result?.startTime && links.length > 0) {
+			const startTime = result.startTime;
+			const windows = links
+				.map((link) => {
+					const summary = summarizeDsLogWindow(result, link.startTime.getTime() / 1000 - startTime);
+					return summary
+						? {
+								matchId: link.matchId,
+								level: link.level,
+								matchNumber: link.matchNumber,
+								playNumber: link.playNumber,
+								summary,
+							}
+						: null;
+				})
+				.filter((w) => w !== null);
+			if (windows.length > 0) {
+				const meta = { ...((file.meta as Record<string, unknown> | null) ?? {}), matchWindows: windows };
+				const preview = clip(
+					[
+						file.text_preview?.split("\n--- ")[0] ?? "",
+						"",
+						...windows.map((w) =>
+							[
+								`--- ${w.level} ${w.matchNumber}${w.playNumber > 1 ? ` play ${w.playNumber}` : ""} only ---`,
+								describeDsLog(w.summary, null),
+							].join("\n"),
+						),
+					].join("\n"),
+				);
+				await db
+					.update(teamUploadFiles)
+					.set({ meta, text_preview: preview })
+					.where(eq(teamUploadFiles.id, file.id))
+					.execute();
+			}
 		}
 	}
+
+	// A station read off a data log names the team better than anything typed.
+	const team = pickTeam(teamCandidates);
+	if (team) {
+		const upload = await db.query.teamUploads.findFirst({ where: eq(teamUploads.id, uploadId) });
+		if (upload && (upload.team === null || upload.team_source === "entered")) {
+			await db
+				.update(teamUploads)
+				.set({ team: team.team, team_source: team.source })
+				.where(eq(teamUploads.id, uploadId))
+				.execute();
+		}
+	}
+	return written;
 }

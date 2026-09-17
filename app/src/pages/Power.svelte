@@ -139,6 +139,29 @@
 		ingest(evt.data.telemetry as PowerTelemetry);
 	}
 
+	/**
+	 * A break longer than this is a gap, not a sample interval. The stream is
+	 * 2 Hz and stored history is 1 s, so three seconds clears both without
+	 * breaking the line on an ordinary late frame.
+	 */
+	const GAP_MS = 3000;
+
+	/**
+	 * Series data with an explicit null wherever the monitor stopped reporting.
+	 * Without it ECharts joins the points either side and draws a straight line
+	 * across the outage, which is exactly the period you want to be able to see.
+	 */
+	function withGaps(points: LivePoint[], pick: (p: LivePoint) => number, gapMs = GAP_MS) {
+		const data: [number, number | null][] = [];
+		let previous: LivePoint | null = null;
+		for (const point of points) {
+			if (previous && point.ts - previous.ts > gapMs) data.push([previous.ts + 1, null]);
+			data.push([point.ts, pick(point)]);
+			previous = point;
+		}
+		return data;
+	}
+
 	/** Grid lines are reference, not content: barely there on both themes. */
 	const SPLIT_LINE = { lineStyle: { color: "rgba(128,128,128,0.16)", width: 1 } };
 	const AXIS_LABEL_COLOR = "rgba(128,128,128,0.9)";
@@ -205,7 +228,8 @@
 				showSymbol: false,
 				lineStyle: { color: colorFor(id), width: 2 },
 				itemStyle: { color: colorFor(id) },
-				data: monitors[id].points.map((p) => [p.ts, isAmps ? p.amps : p.volts]),
+				data: withGaps(monitors[id].points, (p) => (isAmps ? p.amps : p.volts)),
+				connectNulls: false,
 				// The threshold line goes on the first series only; one line, not one per monitor.
 				// One limit line for the chart, on the first series only, and only
 				// once a reading is close enough for it to mean anything. The label
@@ -290,8 +314,14 @@
 					lineStyle: { color: colorFor(id), width: 1 },
 					itemStyle: { color: colorFor(id) },
 					// The mean hides the spike that tripped the breaker, so the peak of
-					// each bucket is what gets drawn.
-					data: history.monitors[id].map((p) => [p.time, p.ampsMax]),
+					// each bucket is what gets drawn. Buckets with no rows behind them
+					// are left as a break rather than drawn through.
+					data: withGaps(
+						history.monitors[id].map((p) => ({ ts: p.time, volts: p.volts, amps: p.ampsMax })),
+						(p) => p.amps,
+						history.bucketSeconds * 2500,
+					),
+					connectNulls: false,
 				})) as ECOption["series"],
 				animation: false,
 			};

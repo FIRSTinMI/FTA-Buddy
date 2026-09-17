@@ -11,7 +11,7 @@ import {
 	type DsEventsMatchInfo,
 	type DsLogResult,
 } from "../../../shared/logs/dslog";
-import { parseWpilogFileName, wpilogNameFromDsEvents } from "../../../shared/logs/filenames";
+import { parseHootFileName, parseWpilogFileName, wpilogNameFromDsEvents } from "../../../shared/logs/filenames";
 import {
 	levelFromDsEvents,
 	linkByFileName,
@@ -345,11 +345,25 @@ async function prepareFile(
 		}
 
 		case "hoot": {
-			// The format is closed, so the only way in is CTRE's own converter.
-			// A failure here is a stored file with an explanation, not a lost upload.
+			// The format is closed, so the only way in is CTRE's own converter, and
+			// a failure here is a stored file with an explanation rather than a lost
+			// upload. Phoenix names the file after the match, which is the only
+			// place a Hoot says which match it came from.
 			const compliancy = hootCompliancy(data);
+			const name = parseHootFileName(path);
+			const fromName = name
+				? linkByMatchNumber(
+						name.matchLevel,
+						name.matchNumber,
+						candidates,
+						"file-name",
+						`Phoenix named this log ${name.matchLevel} ${name.matchNumber} at ${name.eventName}.`,
+					)
+				: null;
+			if (fromName) root.links.push(fromName);
+
 			if (!hootDecodeEnabled()) {
-				root.meta = { hoot: { compliancy, converted: false } };
+				root.meta = { hoot: { compliancy, converted: false }, fileName: name };
 				root.preview =
 					"CTRE signal log. Decoding Hoot logs is switched off on this server, so the file is stored as it came.";
 				warnings.push(`${path}: stored without decoding, because Hoot decoding is switched off.`);
@@ -358,52 +372,43 @@ async function prepareFile(
 			try {
 				const converted = await convertHoot(data, path);
 				const summary = readWpilog(converted.wpilog);
+				// The converted log is enormous: a 13.7 MB Hoot expands to about
+				// 250 MB of data log. So it is read for what it says and thrown away,
+				// and converted again on demand when somebody asks for a signal.
 				root.meta = {
 					hoot: {
 						compliancy: converted.compliancy,
 						owletVersion: converted.owletVersion,
+						busName: converted.busName,
+						phoenixVersion: converted.phoenixVersion,
 						pro: converted.pro,
 						converted: true,
+						convertedBytes: converted.wpilog.byteLength,
 					},
+					fileName: name,
+					durationSecs: summary.durationSecs,
+					recordCount: summary.recordCount,
+					recordsTruncated: summary.recordsTruncated,
+					entryCount: summary.entries.length,
+					entries: summary.entries.slice(0, 500).map((e) => ({ name: e.name, type: e.type, count: e.count })),
 				};
 				root.preview = clip(
 					[
-						`CTRE signal log, compliancy ${converted.compliancy}, converted with ${converted.owletVersion}.`,
+						`CTRE signal log from the ${converted.busName ?? "unnamed"} bus, Phoenix ${converted.phoenixVersion ?? "unknown"}, compliancy ${converted.compliancy}, converted with ${converted.owletVersion}.`,
 						converted.pro === false ? "Holds non-Pro devices, so fewer signals were recorded." : null,
+						name ? `Named for ${name.matchLevel} ${name.matchNumber} at ${name.eventName}.` : null,
+						`${summary.entries.length} signals, ${summary.recordCount.toLocaleString()} records, ${summary.durationSecs.toFixed(1)} s.`,
 						"",
-						describeWpilog(summary),
+						"Signals:",
+						...summary.entries.slice(0, 200).map((e) => `  ${e.name}  (${e.type}, ${e.count} samples)`),
+						summary.entries.length > 200 ? `  ... ${summary.entries.length - 200} more` : "",
 					]
-						.filter((line) => line !== null)
+						.filter((line) => line !== null && line !== "")
 						.join("\n"),
 				);
-				// The converted data log is a child file, so every data log tool works on it.
-				const childId = randomUUID();
-				const childPath = `${path.replace(/\.hoot$/i, "")}.wpilog`;
-				const link = linkByMatchInfo(summary.match, candidates);
-				if (link?.team) teamCandidates.push({ team: link.team, source: "log-station" });
-				out.push({
-					id: childId,
-					parentId: rootId,
-					path: childPath,
-					kind: "wpilog",
-					size: converted.wpilog.byteLength,
-					data: converted.wpilog,
-					meta: {
-						match: summary.match,
-						fromHoot: path,
-						durationSecs: summary.durationSecs,
-						recordCount: summary.recordCount,
-						entries: summary.entries
-							.slice(0, 500)
-							.map((e) => ({ name: e.name, type: e.type, count: e.count })),
-						entryCount: summary.entries.length,
-					},
-					preview: clip(describeWpilog(summary)),
-					links: link ? [link] : [],
-				});
 			} catch (err) {
 				const message = err instanceof HootError ? err.message : "The Hoot log could not be converted.";
-				root.meta = { hoot: { compliancy, converted: false, problem: message } };
+				root.meta = { hoot: { compliancy, converted: false, problem: message }, fileName: name };
 				root.preview = `CTRE signal log. ${message}`;
 				warnings.push(`${path}: ${message}`);
 			}

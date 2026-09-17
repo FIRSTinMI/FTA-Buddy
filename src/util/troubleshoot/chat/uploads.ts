@@ -23,6 +23,7 @@ import type { FMSLogFrame } from "../../../../shared/types";
 import { db } from "../../../db/db";
 import { matchLogs, teamUploadFiles, teamUploadMatches, teamUploads } from "../../../db/schema";
 import { decompressStationLog } from "../../station-log-codec";
+import { convertHootCached } from "../../uploads/hoot";
 import { loadBytes } from "../../uploads/store";
 
 /**
@@ -175,13 +176,30 @@ export async function readUploadFile(
 /** Data log entries the team logged themselves, so the model can ask for one by name. */
 export async function readLogEntry(uploadId: string, path: string, entryName: string, limit: number): Promise<string> {
 	const file = await fileByPath(uploadId, path);
-	if (file.kind !== "wpilog") throw new UploadToolError(`${file.path} is not a data log, so it has no entries.`);
-	const samples = readWpilogEntry(await loadBytes(file), entryName, limit);
+	if (file.kind !== "wpilog" && file.kind !== "hoot") {
+		throw new UploadToolError(`${file.path} is not a data log or a CTRE signal log, so it has no entries.`);
+	}
+	const bytes = await logBytes(file);
+	const samples = readWpilogEntry(bytes, entryName, limit);
 	if (samples.length === 0) throw new UploadToolError(`No entry called ${entryName} in ${file.path}.`);
 	return [
 		`${entryName} in ${file.path}, ${samples.length} samples (log time in seconds):`,
 		...samples.map((s) => `  ${(s.timestamp / 1e6).toFixed(3)}  ${s.value}`),
 	].join("\n");
+}
+
+/**
+ * The data log bytes for a file. A Hoot is converted on the way, because the
+ * conversion is too large to keep with the upload.
+ */
+async function logBytes(file: {
+	id: string;
+	kind: string;
+	content: string | null;
+	gcs_path: string | null;
+}): Promise<Uint8Array> {
+	const raw = await loadBytes(file);
+	return file.kind === "hoot" ? convertHootCached(file.id, raw) : raw;
 }
 
 async function fileByPath(uploadId: string, path: string) {
@@ -230,7 +248,10 @@ export async function availableSeries(uploadId: string): Promise<string> {
 			(file.meta as { entries?: { name: string; type: string; count: number }[] } | null)?.entries ?? [];
 		const numeric = entries.filter((e) => ["double", "float", "int64", "boolean"].includes(e.type));
 		if (numeric.length === 0) continue;
-		lines.push("", `From the data log ${file.path}, ask for log.<entry name>:`);
+		lines.push(
+			"",
+			`From the ${file.kind === "hoot" ? "CTRE signal log" : "data log"} ${file.path}, ask for log.<entry name>:`,
+		);
 		for (const entry of numeric.slice(0, 120))
 			lines.push(`  ${entry.name}  (${entry.type}, ${entry.count} samples)`);
 		if (numeric.length > 120) lines.push(`  ... ${numeric.length - 120} more`);
@@ -397,13 +418,25 @@ export async function readSeriesData(request: SeriesRequest): Promise<SeriesData
 			out.push({ def, points: downsample(clipToMatch(series.points), request.points) });
 		} else {
 			const entryName = def.key.slice(4);
-			const logFile = files.find((f) => f.kind === "wpilog");
+			// Prefer a real data log; a Hoot works too but has to be converted.
+			const logFile = files.find((f) => f.kind === "wpilog") ?? files.find((f) => f.kind === "hoot");
 			if (!logFile) {
 				notes.push(`${key}: this upload has no data log.`);
 				continue;
 			}
-			const bytes = await loadBytes(logFile);
-			const offset = wpilogClockOffset(bytes);
+			const bytes = await logBytes(logFile);
+			let offset = wpilogClockOffset(bytes);
+			if (offset === null && logFile.kind === "hoot") {
+				// A CTRE log has no wall clock at all: owlet writes signal time from
+				// the start of the log. The file name says which match it is, so the
+				// log is laid against that match's start. Phoenix begins logging when
+				// the robot is enabled, so this can sit a few seconds out, and the
+				// note below says so rather than presenting it as exact.
+				offset = matchStartMs / 1000;
+				notes.push(
+					`${key}: the CTRE log carries no wall clock, so it is lined up with the start of ${link.level} ${link.match_number}. Phoenix starts logging on enable, so it can be a few seconds out.`,
+				);
+			}
 			if (offset === null) {
 				notes.push(`${key}: the data log has no systemTime entry, so it cannot be placed on the match clock.`);
 				continue;

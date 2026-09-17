@@ -85,3 +85,37 @@ export function wpilogNameFromDsEvents(texts: string[]): string | null {
 	}
 	return null;
 }
+
+export interface HootFileName {
+	/** Event code as Phoenix Tuner saw it, e.g. `INKOK`. */
+	eventName: string;
+	matchLevel: MatchLevel;
+	matchNumber: number;
+	/** `rio`, or the CANivore serial the log came off. */
+	bus: string;
+	/** Local time the log started, as written. Not a UTC instant. */
+	startedAtLocal: string;
+}
+
+/**
+ * `INKOK_Q13_rio_2025-03-15_12-50-36.hoot`, and the same with a CANivore serial
+ * in place of `rio`.
+ *
+ * Phoenix names a Hoot log after the match it was taken in, which is the only
+ * place a Hoot says which match it belongs to: the log itself holds CAN device
+ * signals and nothing about FMS. So for these the file name is the evidence.
+ */
+export function parseHootFileName(name: string): HootFileName | null {
+	const base = name.replace(/^.*[/\\]/, "").replace(/\.hoot$/i, "");
+	const m = /^(.+)_([QEP])(\d+)_(.+)_(\d{4}-\d{2}-\d{2})_(\d{2})-(\d{2})-(\d{2})$/.exec(base);
+	if (!m) return null;
+	const [, eventName, typeChar, matchNumber, bus, date, h, mi, sec] = m;
+	const level: MatchLevel = typeChar === "P" ? "Practice" : typeChar === "Q" ? "Qualification" : "Playoff";
+	return {
+		eventName,
+		matchLevel: level,
+		matchNumber: Number(matchNumber),
+		bus,
+		startedAtLocal: `${date}T${h}:${mi}:${sec}`,
+	};
+}

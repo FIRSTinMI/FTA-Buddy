@@ -1,7 +1,7 @@
 import { spawn } from "child_process";
 import { createHash } from "crypto";
 import { existsSync } from "fs";
-import { chmod, mkdir, readFile, readdir, rm, writeFile } from "fs/promises";
+import { chmod, mkdir, readFile, readdir, rm, stat, writeFile } from "fs/promises";
 import { tmpdir } from "os";
 import { join } from "path";
 
@@ -51,11 +51,37 @@ export function hootDecodeEnabled(): boolean {
 
 export class HootError extends Error {}
 
-/** `.hoot` files start with a recognisable tag. */
+/**
+ * Is this a Hoot log?
+ *
+ * There is no magic tag, which a real file makes plain: it opens with the CAN
+ * bus name in a 64 byte NUL-padded field, then the Phoenix version as text,
+ * then the compliancy byte. A real one starts `Drivetrain\0\0...25.3.0\0\r`.
+ * So the extension is the primary signal and this shape is the confirmation.
+ */
 export function isHoot(data: Uint8Array, fileName: string): boolean {
 	if (fileName.toLowerCase().endsWith(".hoot")) return true;
-	if (data.length < 8) return false;
-	return new TextDecoder("utf-8", { fatal: false }).decode(data.subarray(0, 4)) === "HOOT";
+	if (data.length < 72) return false;
+	const decoder = new TextDecoder("utf-8", { fatal: false });
+	const name = decoder.decode(data.subarray(0, 64));
+	// A printable name, then NUL padding to the end of the field.
+	if (!/^[\x20-\x7e]{1,63}\x00+$/.test(name)) return false;
+	// Then a version like "25.3.0", NUL padded to byte 70.
+	return /^\d+\.\d+\.\d+\x00*$/.test(decoder.decode(data.subarray(64, 70)));
+}
+
+/** The CAN bus the log came from, out of that 64 byte name field. */
+export function hootBusName(data: Uint8Array): string | null {
+	if (data.length < 64) return null;
+	const name = new TextDecoder("utf-8", { fatal: false }).decode(data.subarray(0, 64)).replace(/\0+$/, "");
+	return /^[\x20-\x7e]+$/.test(name) ? name : null;
+}
+
+/** The Phoenix version that wrote it, as text, from bytes 64 to 69. */
+export function hootPhoenixVersion(data: Uint8Array): string | null {
+	if (data.length < 70) return null;
+	const version = new TextDecoder("utf-8", { fatal: false }).decode(data.subarray(64, 70)).replace(/\0+$/, "");
+	return /^\d+\.\d+\.\d+$/.test(version) ? version : null;
 }
 
 /** The compliancy a Hoot file needs, read from byte 70. */
@@ -89,8 +115,11 @@ async function ensureOwlet(compliancy: number): Promise<string> {
 	const dir = owletDir();
 	await mkdir(dir, { recursive: true });
 
+	// The compliancy suffix has to match whole: a search for "-C1" would
+	// otherwise accept the -C13 build, which cannot open a compliancy 1 log.
+	const suffix = new RegExp(`-C${compliancy}(\\.exe)?$`);
 	const existing = (await readdir(dir).catch(() => [] as string[])).filter(
-		(name) => name.startsWith("owlet-") && name.includes(`-C${compliancy}`),
+		(name) => name.startsWith("owlet-") && suffix.test(name),
 	);
 	if (existing.length > 0) return join(dir, existing.sort().reverse()[0]);
 
@@ -165,6 +194,9 @@ export interface HootConversion {
 	wpilog: Uint8Array;
 	owletVersion: string;
 	compliancy: number;
+	/** The CAN bus this log was taken from, e.g. `Drivetrain` or `rio`. */
+	busName: string | null;
+	phoenixVersion: string | null;
 	/** False when the log holds non-Pro devices, which limits what was recorded. */
 	pro: boolean | null;
 }
@@ -213,8 +245,43 @@ export async function convertHoot(data: Uint8Array, fileName: string): Promise<H
 			throw new HootError(`owlet did not produce a data log${detail ? `: ${detail}` : "."}`);
 		}
 		const wpilog = new Uint8Array(await readFile(output));
-		return { wpilog, owletVersion: owlet.replace(/^.*\//, ""), compliancy, pro };
+		return {
+			wpilog,
+			owletVersion: owlet.replace(/^.*\//, ""),
+			compliancy,
+			busName: hootBusName(data),
+			phoenixVersion: hootPhoenixVersion(data),
+			pro,
+		};
 	} finally {
 		await rm(work, { recursive: true, force: true }).catch(() => undefined);
 	}
+}
+
+/**
+ * A Hoot log converted once and kept on disk for a while.
+ *
+ * A 13.7 MB Hoot expands to about 250 MB of data log, so the conversion is not
+ * stored with the upload: it is read for its summary at ingest and thrown away.
+ * When somebody then asks for a signal, this converts again, which takes about
+ * five seconds, and keeps the result in the temp directory so the next question
+ * about the same log is instant.
+ */
+const CACHE_TTL_MS = 30 * 60 * 1000;
+
+function cachePath(fileId: string): string {
+	return join(tmpdir(), `ftabuddy-hoot-${fileId.replace(/[^a-zA-Z0-9-]/g, "")}.wpilog`);
+}
+
+export async function convertHootCached(fileId: string, data: Uint8Array): Promise<Uint8Array> {
+	const path = cachePath(fileId);
+	try {
+		const { mtimeMs } = await stat(path);
+		if (Date.now() - mtimeMs < CACHE_TTL_MS) return new Uint8Array(await readFile(path));
+	} catch {
+		// Not cached yet, or the temp directory was cleared.
+	}
+	const converted = await convertHoot(data, fileId);
+	await writeFile(path, converted.wpilog);
+	return converted.wpilog;
 }

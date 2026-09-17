@@ -17,8 +17,13 @@ import {
 	sampleRateHz,
 	SUPERSEDED_BY,
 } from "../../shared/logs/series";
-import { hootCompliancy, isHoot } from "../util/uploads/hoot";
-import { parseDsLogFileName, parseWpilogFileName, wpilogNameFromDsEvents } from "../../shared/logs/filenames";
+import { hootBusName, hootCompliancy, hootPhoenixVersion, isHoot } from "../util/uploads/hoot";
+import {
+	parseDsLogFileName,
+	parseHootFileName,
+	parseWpilogFileName,
+	wpilogNameFromDsEvents,
+} from "../../shared/logs/filenames";
 import {
 	linkByFileName,
 	linkByMatchInfo,
@@ -28,7 +33,7 @@ import {
 	type CandidateMatch,
 } from "../../shared/logs/match-link";
 import { readRobotCode, stripCommonPrefix, teamFromSupportBundle } from "../../shared/logs/robot-code";
-import { isWpilog, readWpilog, readWpilogEntry } from "../../shared/logs/wpilog";
+import { isWpilog, readWpilog, readWpilogEntry, stationFromAllianceStationId } from "../../shared/logs/wpilog";
 
 // #region wpilog fixture writer
 /**
@@ -213,7 +218,9 @@ describe("wpilog reader", () => {
 			"Robot program starting",
 			"CAN frame not received/too-stale",
 		]);
-		expect(summary.durationSecs).toBeCloseTo(8, 3);
+		// From the first data record to the last. The control record that closes the
+		// log sits at 8 s but carries the writer's clock, not log time.
+		expect(summary.durationSecs).toBeCloseTo(6.999, 3);
 	});
 
 	test("takes match info from the FMSInfo table and ignores the pre-match zeroes", () => {
@@ -616,17 +623,36 @@ describe("telemetry CSV", () => {
 });
 
 describe("hoot detection", () => {
-	test("recognised by tag or extension, and the compliancy byte is read", () => {
-		const data = new Uint8Array(80);
-		data.set(new TextEncoder().encode("HOOT"), 0);
-		data[70] = 6;
+	/**
+	 * A real Hoot header, taken from an actual file: the CAN bus name in a 64 byte
+	 * NUL-padded field, then the Phoenix version as text, then the compliancy at
+	 * byte 70. There is no magic tag.
+	 */
+	function hootHeader(bus = "Drivetrain", version = "25.3.0", compliancy = 13): Uint8Array {
+		const data = new Uint8Array(96);
+		data.set(new TextEncoder().encode(bus), 0);
+		data.set(new TextEncoder().encode(version), 64);
+		data[70] = compliancy;
+		return data;
+	}
+
+	test("recognised by its header shape, with no extension to go on", () => {
+		const data = hootHeader();
 		expect(isHoot(data, "signals.bin")).toBe(true);
-		expect(hootCompliancy(data)).toBe(6);
-		expect(detectKind("signals.hoot", new Uint8Array([1, 2, 3]))).toBe("hoot");
+		expect(hootCompliancy(data)).toBe(13);
+		expect(hootBusName(data)).toBe("Drivetrain");
+		expect(hootPhoenixVersion(data)).toBe("25.3.0");
 	});
 
-	test("a file too short to hold the compliancy byte has none", () => {
+	test("the extension alone is enough, since the shape can change", () => {
+		expect(detectKind("signals.hoot", new Uint8Array([1, 2, 3]))).toBe("hoot");
+		expect(detectKind("INKOK_Q13_rio_2025-03-15_12-50-36.hoot", hootHeader())).toBe("hoot");
+	});
+
+	test("things that are not a hoot are not mistaken for one", () => {
 		expect(hootCompliancy(new Uint8Array(10))).toBeNull();
+		expect(isHoot(new Uint8Array(96), "x.bin")).toBe(false);
+		expect(isHoot(new TextEncoder().encode("timestamp,battery\n1,2\n"), "x.csv")).toBe(false);
 	});
 });
 
@@ -728,5 +754,43 @@ describe("series rates and defaults", () => {
 		// The one dip survives, and every kept point is one that was in the input.
 		expect(thinned.some((p) => p.v === 6.2)).toBe(true);
 		for (const p of thinned) expect(points.some((q) => q.t === p.t && q.v === p.v)).toBe(true);
+	});
+});
+
+describe("hoot file names", () => {
+	test("Phoenix names a hoot after its match", () => {
+		expect(parseHootFileName("INKOK_Q13_rio_2025-03-15_12-50-36.hoot")).toEqual({
+			eventName: "INKOK",
+			matchLevel: "Qualification",
+			matchNumber: 13,
+			bus: "rio",
+			startedAtLocal: "2025-03-15T12:50:36",
+		});
+	});
+
+	test("a CANivore serial in place of the bus name", () => {
+		const parsed = parseHootFileName("INKOK_E11_9ED441DC50374E5320202047041B10FF_2025-03-16_16-02-53.hoot");
+		expect(parsed?.matchLevel).toBe("Playoff");
+		expect(parsed?.matchNumber).toBe(11);
+		expect(parsed?.bus).toBe("9ED441DC50374E5320202047041B10FF");
+	});
+
+	test("practice matches, and names that are not a match", () => {
+		expect(parseHootFileName("INKOK_P1_rio_2025-03-15_09-34-52.hoot")?.matchLevel).toBe("Practice");
+		expect(parseHootFileName("signals.hoot")).toBeNull();
+		expect(parseHootFileName("2025-03-15_12-50-36.hoot")).toBeNull();
+	});
+});
+
+describe("alliance station ids", () => {
+	test("AdvantageKit logs one enum where FMSInfo logs two fields", () => {
+		// AllianceStationID: Unknown, Red1, Red2, Red3, Blue1, Blue2, Blue3.
+		expect(stationFromAllianceStationId(1)).toEqual({ stationNumber: 1, isRedAlliance: true });
+		expect(stationFromAllianceStationId(3)).toEqual({ stationNumber: 3, isRedAlliance: true });
+		expect(stationFromAllianceStationId(4)).toEqual({ stationNumber: 1, isRedAlliance: false });
+		expect(stationFromAllianceStationId(6)).toEqual({ stationNumber: 3, isRedAlliance: false });
+		// Unknown, and anything off the end, is not a station.
+		expect(stationFromAllianceStationId(0)).toBeNull();
+		expect(stationFromAllianceStationId(7)).toBeNull();
 	});
 });

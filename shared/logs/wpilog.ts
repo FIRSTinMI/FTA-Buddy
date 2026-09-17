@@ -18,8 +18,12 @@ const CONTROL_START = 0;
 const CONTROL_FINISH = 1;
 const CONTROL_SET_METADATA = 2;
 
-/** Stop before a hostile or corrupt file can spin the loop forever. */
-const MAX_RECORDS = 4_000_000;
+/**
+ * Stop before a hostile or corrupt file can spin the loop forever. A real
+ * AdvantageKit log runs about 1.5 M records for ten minutes; a Hoot log
+ * converted by owlet is far denser, so this has to clear that too.
+ */
+const MAX_RECORDS = 24_000_000;
 /** Distinct entries we keep in the listing. A real log has a few hundred. */
 const MAX_ENTRIES = 4000;
 /** Text lines kept for the preview and for the assistant. */
@@ -58,8 +62,8 @@ export interface WpilogMatchInfo {
 	/** 1 to 3. Combined with the alliance this identifies the driver station. */
 	stationNumber?: number;
 	isRedAlliance?: boolean;
-	/** Which NT table the values came from, which also tells us the season. */
-	source?: "FMSInfo" | "DriverStation";
+	/** Which NT table the values came from, which also tells us the writer. */
+	source?: "FMSInfo" | "DriverStation" | "AdvantageKit/DriverStation";
 }
 
 export interface WpilogSummary {
@@ -72,8 +76,10 @@ export interface WpilogSummary {
 	entries: WpilogEntryInfo[];
 	/** True when the entry listing hit its cap, so `entries` is incomplete. */
 	entriesTruncated: boolean;
-	/** Log duration in seconds, from the first to the last record timestamp. */
+	/** Log duration in seconds, from the first to the last data record. */
 	durationSecs: number;
+	/** True when the record cap was reached, so the tail was not read. */
+	recordsTruncated: boolean;
 	match: WpilogMatchInfo;
 	messages: WpilogMessage[];
 	messagesTruncated: boolean;
@@ -83,10 +89,20 @@ export interface WpilogSummary {
 
 /**
  * Match info lives in NetworkTables, which DataLogManager records by default
- * under the `NT:` prefix. WPILib 2026 and earlier publish it to `/FMSInfo`;
- * the 2027 rewrite renamed the table to `/DriverStation`. Both are checked.
+ * under the `NT:` prefix. Three tables carry it, and a real log can hold more
+ * than one:
+ *
+ * - `/FMSInfo` is where WPILib 2026 and earlier publish it.
+ * - `/DriverStation` is the same table after the 2027 rewrite renamed it.
+ * - `/AdvantageKit/DriverStation` is AdvantageKit's own copy, which is what a
+ *   log from an AdvantageKit robot actually contains, and plenty of teams run
+ *   AdvantageKit. It names the driver station differently: one
+ *   `AllianceStation` value from WPILib's `AllianceStationID` enum rather than
+ *   a station number and an alliance flag.
  */
-const MATCH_TABLES = ["FMSInfo", "DriverStation"] as const;
+const MATCH_TABLES = ["FMSInfo", "DriverStation", "AdvantageKit/DriverStation"] as const;
+type MatchTable = (typeof MATCH_TABLES)[number];
+
 const MATCH_LEAVES = [
 	"EventName",
 	"MatchNumber",
@@ -94,23 +110,36 @@ const MATCH_LEAVES = [
 	"ReplayNumber",
 	"StationNumber",
 	"IsRedAlliance",
+	"AllianceStation",
 ] as const;
 
-function matchLeafFor(name: string): { table: (typeof MATCH_TABLES)[number]; leaf: string } | null {
-	if (!name.startsWith("NT:/")) return null;
-	const rest = name.slice(4);
-	const slash = rest.indexOf("/");
-	if (slash < 0) return null;
-	const table = rest.slice(0, slash);
-	const leaf = rest.slice(slash + 1);
-	if (!MATCH_TABLES.includes(table as (typeof MATCH_TABLES)[number])) return null;
-	if (!MATCH_LEAVES.includes(leaf as (typeof MATCH_LEAVES)[number])) return null;
-	return { table: table as (typeof MATCH_TABLES)[number], leaf };
+/** `AllianceStationID`: Unknown, Red1, Red2, Red3, Blue1, Blue2, Blue3. */
+export function stationFromAllianceStationId(value: number): { stationNumber: number; isRedAlliance: boolean } | null {
+	if (value < 1 || value > 6) return null;
+	return { stationNumber: ((value - 1) % 3) + 1, isRedAlliance: value <= 3 };
 }
 
-/** `DataLogManager.log()` writes here, and it is where teams put their own prints. */
+function matchLeafFor(name: string): { table: MatchTable; leaf: string } | null {
+	if (!name.startsWith("NT:/")) return null;
+	const rest = name.slice(4);
+	// Longest table first, so `AdvantageKit/DriverStation` is not read as the
+	// bare `DriverStation` table with a `DriverStation/...` leaf.
+	for (const table of [...MATCH_TABLES].sort((a, b) => b.length - a.length)) {
+		if (!rest.startsWith(`${table}/`)) continue;
+		const leaf = rest.slice(table.length + 1);
+		if (!MATCH_LEAVES.includes(leaf as (typeof MATCH_LEAVES)[number])) return null;
+		return { table, leaf };
+	}
+	return null;
+}
+
+/**
+ * Where the robot's own text ends up. `DataLogManager.log()` writes `messages`;
+ * AdvantageKit captures the console to `console`, which is what a real
+ * AdvantageKit log actually contains, and it is the more useful of the two.
+ */
 function isMessageEntry(name: string, type: string): boolean {
-	if (type === "string" && (name === "messages" || name === "NT:/messages")) return true;
+	if (type === "string" && (name === "messages" || name === "NT:/messages" || name === "console")) return true;
 	// The WPILib Alerts class publishes string arrays under a table the team names.
 	if (type === "string[]" && /\/(errors|warnings)$/.test(name)) return true;
 	return false;
@@ -247,6 +276,7 @@ export function readWpilog(data: Uint8Array): WpilogSummary {
 		entries: [],
 		entriesTruncated: false,
 		durationSecs: 0,
+		recordsTruncated: false,
 		match: {},
 		messages: [],
 		messagesTruncated: false,
@@ -268,15 +298,21 @@ export function readWpilog(data: Uint8Array): WpilogSummary {
 	let messagesTruncated = false;
 	const match: WpilogMatchInfo = {};
 	let recordCount = 0;
+	// Duration comes from data records only. A control record carries the
+	// writer's wall clock rather than log time: owlet stamps them with the epoch
+	// while its data records count from the start of the log, so mixing the two
+	// makes every converted Hoot look zero seconds long.
 	let firstTs: number | null = null;
-	let lastTs = 0;
+	let lastTs: number | null = null;
 	let position = 12 + extraSize;
 
 	for (const rec of records(r)) {
 		recordCount++;
 		position = rec.end;
-		if (firstTs === null) firstTs = rec.timestamp;
-		if (rec.timestamp > lastTs) lastTs = rec.timestamp;
+		if (rec.entry !== CONTROL_ENTRY) {
+			if (firstTs === null || rec.timestamp < firstTs) firstTs = rec.timestamp;
+			if (lastTs === null || rec.timestamp > lastTs) lastTs = rec.timestamp;
+		}
 
 		if (rec.entry === CONTROL_ENTRY) {
 			if (rec.size < 1) continue;
@@ -340,6 +376,13 @@ export function readWpilog(data: Uint8Array): WpilogSummary {
 					else if (leaf.leaf === "MatchType" && value > 0) match.matchType = value;
 					else if (leaf.leaf === "ReplayNumber") match.replayNumber = value;
 					else if (leaf.leaf === "StationNumber" && value >= 1 && value <= 3) match.stationNumber = value;
+					else if (leaf.leaf === "AllianceStation") {
+						const station = stationFromAllianceStationId(value);
+						if (station) {
+							match.stationNumber = station.stationNumber;
+							match.isRedAlliance = station.isRedAlliance;
+						}
+					}
 					if (leaf.leaf !== "ReplayNumber" && value > 0) match.source = leaf.table;
 				}
 			} else if (leaf.leaf === "IsRedAlliance" && info.type === "boolean") {
@@ -375,9 +418,10 @@ export function readWpilog(data: Uint8Array): WpilogSummary {
 		version,
 		extraHeader,
 		recordCount,
+		recordsTruncated: recordCount >= MAX_RECORDS,
 		entries,
 		entriesTruncated,
-		durationSecs: firstTs === null ? 0 : Math.max(0, (lastTs - firstTs) / 1e6),
+		durationSecs: firstTs === null || lastTs === null ? 0 : Math.max(0, (lastTs - firstTs) / 1e6),
 		match,
 		messages,
 		messagesTruncated,

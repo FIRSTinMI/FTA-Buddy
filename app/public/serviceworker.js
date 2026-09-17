@@ -51,6 +51,33 @@ self.addEventListener("fetch", (evt) => {
 		return;
 	}
 
+	// HTML goes to the network first, cache second.
+	//
+	// A page served from the SPA fallback once gets cached under its own URL and
+	// then keeps being served from there: /privacy.html is a real file, but if it
+	// was ever requested before that file existed the app shell landed in the
+	// cache under that key and stayed. Network-first means a real page always
+	// wins, and the cache is only the offline copy it was meant to be.
+	const wantsHtml = evt.request.mode === "navigate" || url.pathname.endsWith(".html");
+	if (wantsHtml) {
+		evt.respondWith(
+			fetch(evt.request)
+				.then((response) => {
+					if (response && response.status === 200 && response.type !== "opaque") {
+						const toCache = response.clone();
+						caches.open(cacheName).then((cache) => cache.put(evt.request, toCache));
+					}
+					return response;
+				})
+				.catch(() =>
+					caches
+						.match(evt.request)
+						.then((cached) => cached || caches.match("/index.html").then((r) => r || fetch("/index.html"))),
+				),
+		);
+		return;
+	}
+
 	evt.respondWith(
 		caches.match(evt.request).then((cached) => {
 			if (cached) return cached;

@@ -30,7 +30,7 @@ export function compareVersions(a: string, b: string): number {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
-	"2.7.11.2": {},
+	"2.7.11.3": {},
 	"2.7.10.1": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.10.1</h1>

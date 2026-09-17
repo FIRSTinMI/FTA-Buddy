@@ -85,10 +85,26 @@ const appExtensionData = chrome.runtime.getManifest();
 	// Field power telemetry arrives from the background worker (it owns the SSE
 	// connections) and is republished into the page, which cannot reach the
 	// monitors itself - they are plain HTTP and this page is HTTPS.
-	chrome.runtime.onMessage.addListener((msg) => {
-		if (msg?.type !== "powerTelemetry") return;
-		window.postMessage({ source: "ext", type: "powerTelemetry", telemetry: msg.data });
-	});
+	//
+	// The page connects out to the worker instead of being pushed to: an MV3
+	// service worker is torn down when idle, and a port lets it find us again
+	// on the next wake without needing permission to enumerate tabs.
+	function connectPowerTelemetry() {
+		let port: chrome.runtime.Port;
+		try {
+			port = chrome.runtime.connect({ name: "powerTelemetry" });
+		} catch {
+			setTimeout(connectPowerTelemetry, 2000);
+			return;
+		}
+		port.onMessage.addListener((msg) => {
+			if (msg?.type !== "powerTelemetry") return;
+			window.postMessage({ source: "ext", type: "powerTelemetry", telemetry: msg.data });
+		});
+		// The worker sleeping drops the port; reconnect so the stream resumes.
+		port.onDisconnect.addListener(() => setTimeout(connectPowerTelemetry, 1000));
+	}
+	connectPowerTelemetry();
 
 	window.addEventListener("message", async (evt) => {
 		console.log(evt.data);

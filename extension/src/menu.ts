@@ -68,6 +68,7 @@ function isValidSubnetPrefix(prefix: string): boolean {
 async function bgGetPowerStatus(): Promise<{
 	enabled: boolean;
 	subnet: string;
+	permission: boolean;
 	running: boolean;
 	connected: number;
 	monitors: { id: string; ip: string; connected: boolean }[];
@@ -95,7 +96,7 @@ async function handlePowerMonitorToggle() {
 	}
 	powerMonitorRow.style.display = powerMonitorInput.checked ? "flex" : "none";
 	powerSubnetRow.style.display = powerMonitorInput.checked ? "grid" : "none";
-	await chrome.storage.local.set({ powerMonitor: powerMonitorInput.checked });
+	await chrome.storage.local.set({ powerMonitor: powerMonitorInput.checked, changed: new Date().getTime() });
 	// Storage change triggers background restart automatically
 	updatePowerMonitorStatus();
 }
@@ -108,7 +109,12 @@ async function handlePowerSubnetChange() {
 		return;
 	}
 	await chrome.storage.local.set({ powerSubnet: value || DEFAULT_POWER_SUBNET });
-	// Storage change triggers background restart automatically
+	// The background re-scans on this change; show that something is happening
+	// rather than leaving the last network's result sitting there.
+	powerMonitorIndicator.classList.remove("red", "green");
+	powerMonitorIndicator.classList.add("yellow");
+	powerMonitorText.textContent = "Scanning...";
+	setTimeout(updatePowerMonitorStatus, 3000);
 }
 
 async function updatePowerMonitorStatus() {
@@ -121,9 +127,22 @@ async function updatePowerMonitorStatus() {
 	powerSubnetRow.style.display = "grid";
 	powerMonitorIndicator.classList.remove("red", "green", "yellow");
 	try {
-		const status = await bgGetPowerStatus();
-		const total = status.monitors.length;
-		if (!status.running) {
+		// The service worker can be asleep or mid-restart, in which case the
+		// message resolves to undefined rather than a status object.
+		const status = (await bgGetPowerStatus()) ?? null;
+		if (!status) {
+			powerMonitorIndicator.classList.add("yellow");
+			powerMonitorText.textContent = "Starting...";
+			return;
+		}
+		const monitors = status.monitors ?? [];
+		const total = monitors.length;
+		if (!status.permission) {
+			// Chrome drops granted optional permissions when the manifest changes,
+			// which otherwise looks identical to an empty network.
+			powerMonitorIndicator.classList.add("red");
+			powerMonitorText.textContent = "Permission missing - toggle this off and on";
+		} else if (!status.running) {
 			powerMonitorIndicator.classList.add("yellow");
 			powerMonitorText.textContent = "Starting...";
 		} else if (status.connected === 0) {
@@ -135,7 +154,7 @@ async function updatePowerMonitorStatus() {
 				`${status.connected} connected` +
 				(status.connected === total ? "" : ` of ${total}`) +
 				": " +
-				status.monitors
+				monitors
 					.filter((m) => m.connected)
 					.map((m) => m.id)
 					.join(", ");

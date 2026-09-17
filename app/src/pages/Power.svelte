@@ -8,8 +8,15 @@
 	import { userStore as user } from "../stores/user";
 	import { echarts, type ECharts, type ECOption } from "../util/echarts";
 
-	/** Seconds of live history held in memory and drawn. */
-	const LIVE_WINDOW_S = 60;
+	/** Selectable spans for the live charts. */
+	const WINDOW_OPTIONS = [
+		{ label: "1m", seconds: 60 },
+		{ label: "5m", seconds: 300 },
+		{ label: "15m", seconds: 900 },
+	];
+	/** Points are kept for the longest span, so switching up never shows a gap. */
+	const MAX_WINDOW_S = 900;
+	let windowS = $state(60);
 	/**
 	 * A monitor that has said nothing for this long is shown as disconnected.
 	 *
@@ -82,7 +89,7 @@
 
 		if (telemetry.ok && telemetry.v !== null && telemetry.a !== null) {
 			state.points.push({ ts: sampleTs, volts: telemetry.v, amps: telemetry.a });
-			const cutoff = sampleTs - LIVE_WINDOW_S * 1000;
+			const cutoff = sampleTs - MAX_WINDOW_S * 1000;
 			while (state.points.length > 0 && state.points[0].ts < cutoff) state.points.shift();
 		}
 
@@ -120,7 +127,7 @@
 			grid: { left: 48, right: 12, top: 12, bottom: 28 },
 			xAxis: {
 				type: "time",
-				min: now - LIVE_WINDOW_S * 1000,
+				min: now - windowS * 1000,
 				max: now,
 				splitLine: { show: false },
 				axisLine: { lineStyle: { color: "rgba(128,128,128,0.25)" } },
@@ -129,10 +136,11 @@
 					color: AXIS_LABEL_COLOR,
 					formatter: (value: number) => {
 						const d = new Date(value);
-						return `${d.getMinutes().toString().padStart(2, "0")}:${d
-							.getSeconds()
-							.toString()
-							.padStart(2, "0")}`;
+						const pad = (n: number) => n.toString().padStart(2, "0");
+						// Past a minute or two the seconds are noise, so show clock time.
+						return windowS > 120
+							? `${pad(d.getHours())}:${pad(d.getMinutes())}`
+							: `${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 					},
 				},
 			},
@@ -189,6 +197,11 @@
 			})) as ECOption["series"],
 			animation: false,
 		};
+	}
+
+	function setWindow(seconds: number) {
+		windowS = seconds;
+		redraw();
 	}
 
 	function redraw() {
@@ -303,6 +316,21 @@
 	});
 </script>
 
+{#snippet windowPicker()}
+	<div class="flex items-center gap-1">
+		{#each WINDOW_OPTIONS as option}
+			<button
+				class="rounded-md px-2 py-0.5 text-xs {windowS === option.seconds
+					? 'bg-primary-700 text-white'
+					: 'bg-gray-100 text-gray-600 dark:bg-neutral-800 dark:text-neutral-300'}"
+				onclick={() => setWindow(option.seconds)}
+			>
+				{option.label}
+			</button>
+		{/each}
+	</div>
+{/snippet}
+
 <div class="mx-auto flex w-full max-w-5xl flex-col gap-4 p-3 text-left">
 	<div class="flex items-center justify-between gap-3">
 		<div>
@@ -404,7 +432,7 @@
 		<div class="rounded-xl border border-gray-200 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-900">
 			<div class="mb-1 flex items-center justify-between">
 				<h2 class="font-semibold">Current draw</h2>
-				<span class="text-xs text-gray-500">last {LIVE_WINDOW_S}s</span>
+				{@render windowPicker()}
 			</div>
 			<div bind:this={ampsContainer} class="h-56 w-full"></div>
 		</div>
@@ -412,7 +440,7 @@
 		<div class="rounded-xl border border-gray-200 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-900">
 			<div class="mb-1 flex items-center justify-between">
 				<h2 class="font-semibold">Voltage</h2>
-				<span class="text-xs text-gray-500">last {LIVE_WINDOW_S}s</span>
+				{@render windowPicker()}
 			</div>
 			<div bind:this={voltsContainer} class="h-56 w-full"></div>
 		</div>

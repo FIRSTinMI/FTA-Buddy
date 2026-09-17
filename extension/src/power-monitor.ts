@@ -256,7 +256,18 @@ export class PowerMonitorManager {
 		this.sweeping = true;
 		try {
 			const prefix = this.getSubnet();
-			const found = await sweepSubnet(isValidSubnetPrefix(prefix) ? prefix.trim() : DEFAULT_SUBNET_PREFIX);
+			const subnet = isValidSubnetPrefix(prefix) ? prefix.trim() : DEFAULT_SUBNET_PREFIX;
+			const found = await sweepSubnet(subnet);
+
+			// Drop anything outside the subnet being swept. Without this, changing
+			// the setting leaves the old network's monitors streaming forever and
+			// the status list shows monitors that are no longer being looked for.
+			for (const [id, stream] of this.streams) {
+				if (stream.monitor.ip.startsWith(`${subnet}.`)) continue;
+				stream.stop();
+				this.streams.delete(id);
+			}
+
 			for (const monitor of found) {
 				const existing = this.streams.get(monitor.id);
 				if (existing && existing.monitor.ip === monitor.ip) continue;

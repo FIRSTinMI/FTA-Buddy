@@ -185,16 +185,21 @@ async function start() {
 	if (!enabled) {
 		console.log("Not enabled");
 		return;
-	} else if (changed && changed + 1000 * 60 * 60 * 24 * 4 < new Date().getTime()) {
-		console.log("Expired");
-		return;
 	}
 
-	// Field power monitors are independent of the field data source - they need
-	// nothing from FMS and only the event token to post - so they start before
-	// the field-monitor gate below.
+	// Power monitoring sits under the master Enable toggle but ahead of the
+	// field-data gates: it needs nothing from FMS or the field monitor. In
+	// particular it runs BEFORE the four-day expiry below, which exists to stop
+	// a stale extension posting field frames to an old event. That expiry only
+	// clears when the popup writes settings, so toggling power monitoring alone
+	// left it looking expired and silently started nothing.
 	await updateValues();
 	await startPowerMonitor();
+
+	if (changed && changed + 1000 * 60 * 60 * 24 * 4 < new Date().getTime()) {
+		console.log("Expired (power monitoring unaffected)");
+		return;
+	}
 
 	// (Re)build the field data source for the selected mode and wire its events.
 	source = buildSource();
@@ -322,8 +327,21 @@ function startExtensionConfigSync() {
  */
 let powerManager: PowerMonitorManager | null = null;
 
-/** Origins where the `app` content script runs, i.e. tabs that can receive telemetry. */
-const APP_TAB_PATTERNS = ["https://ftabuddy.com/*", "https://dev.ftabuddy.com/*", "http://localhost:5173/*"];
+/**
+ * Content scripts that want telemetry, one per open FTA Buddy tab.
+ *
+ * They connect to us rather than being found with chrome.tabs.query: filtering
+ * tabs by URL needs host permission for those URLs, which this extension does
+ * not have for ftabuddy.com, so that query quietly returned nothing and the
+ * page only ever saw the server's five-second batches.
+ */
+const powerPorts = new Set<chrome.runtime.Port>();
+
+chrome.runtime.onConnect.addListener((port) => {
+	if (port.name !== "powerTelemetry") return;
+	powerPorts.add(port);
+	port.onDisconnect.addListener(() => powerPorts.delete(port));
+});
 
 /** One reading, shaped for the server. */
 interface PowerSample {
@@ -390,12 +408,14 @@ function recordTelemetry(telemetry: PowerTelemetry) {
 
 /** Push a reading into every open FTA Buddy tab for the live charts. */
 function broadcastTelemetry(telemetry: PowerTelemetry) {
-	chrome.tabs.query({ url: APP_TAB_PATTERNS }, (tabs) => {
-		for (const tab of tabs) {
-			if (tab.id === undefined) continue;
-			chrome.tabs.sendMessage(tab.id, { type: "powerTelemetry", data: telemetry }).catch(() => {});
+	for (const port of powerPorts) {
+		try {
+			port.postMessage({ type: "powerTelemetry", data: telemetry });
+		} catch {
+			// The tab went away between the disconnect event and now.
+			powerPorts.delete(port);
 		}
-	});
+	}
 }
 
 /** Post everything queued since the last flush, plus per-monitor liveness. */
@@ -546,14 +566,18 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 	}
 
 	if (msg?.type === "getPowerStatus") {
-		sendResponse({
-			enabled: powerMonitorEnabled,
-			subnet: powerSubnet,
-			running: powerManager?.running ?? false,
-			monitors: powerManager?.list() ?? [],
-			connected: powerManager?.connectedCount ?? 0,
-		});
-		return false;
+		(async () => {
+			const permission = await chrome.permissions.contains({ origins: monitorOrigins() }).catch(() => false);
+			sendResponse({
+				enabled: powerMonitorEnabled,
+				subnet: powerSubnet,
+				permission,
+				running: powerManager?.running ?? false,
+				monitors: powerManager?.list() ?? [],
+				connected: powerManager?.connectedCount ?? 0,
+			});
+		})();
+		return true;
 	}
 
 	if (msg?.type === "rescanPowerMonitors") {
@@ -908,6 +932,16 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
 let storageDebounce: ReturnType<typeof setTimeout> | null = null;
 chrome.storage.local.onChanged.addListener((changes) => {
+	// Pointing the sweep at a different subnet only needs a re-sweep. Tearing
+	// down SignalR and the field feed to change one text box is not worth it.
+	if (changes.powerSubnet && Object.keys(changes).every((k) => k === "powerSubnet" || k === "changed")) {
+		const next = String(changes.powerSubnet.newValue ?? "");
+		powerSubnet = isValidSubnetPrefix(next) ? next.trim() : DEFAULT_SUBNET_PREFIX;
+		console.log(`Power monitor subnet is now ${powerSubnet}.0/24, re-scanning`);
+		powerManager?.discover().catch(console.warn);
+		return;
+	}
+
 	for (const key of Object.keys(changes)) {
 		if (key === "changed") continue;
 		if (storageDebounce) clearTimeout(storageDebounce);

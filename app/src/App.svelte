@@ -214,7 +214,16 @@
 		"/join",
 	];
 
-	const eventTokenPaths = ["/monitor", "/checklist", "/logs", "/notepad", "/scorekeeper", "/field-lineup", "/power"];
+	const eventTokenPaths = [
+		"/monitor",
+		"/checklist",
+		"/logs",
+		"/notepad",
+		"/scorekeeper",
+		"/field-lineup",
+		"/power",
+		"/uploads",
+	];
 
 	// Roles that can see the Scorekeeper view (playoff lineups).
 	let canScorekeep = $derived($user.admin || ["Scorekeeper", "FTA", "FTAA", "System"].includes($user.role));
@@ -223,17 +232,22 @@
 		const currentPath = route.pathname;
 		const isPublicLog = currentPath.startsWith("/logs/") && currentPath.split("/")[3]?.length == 36;
 		const isPublicNoteCreate = currentPath.startsWith("/notepad/submit/");
-		// A team uploading their own logs has no account and no event token.
-		const isPublicUpload = currentPath === "/upload";
+		// A team uploading their own logs has no account and no event token, and
+		// neither does whoever opens a share link.
+		const isPublicUpload = currentPath === "/upload" || currentPath.startsWith("/share/upload/");
 		const isJoinLink = currentPath.startsWith("/join/");
 		const isTroubleshoot = currentPath.startsWith("/troubleshoot");
 
-		// if user has event token and is trying to access a page that requires an event token
+		// An event token is enough for these. It matters that this returns before
+		// the check below: on a refresh the Firebase id token is restored
+		// asynchronously, so requiring it as well bounces the page to login for
+		// the moment it takes to come back.
 		if (
 			$user.eventToken &&
 			(eventTokenPaths.includes(currentPath) ||
 				currentPath.startsWith("/logs") ||
-				currentPath.startsWith("/notepad"))
+				currentPath.startsWith("/notepad") ||
+				currentPath.startsWith("/uploads"))
 		) {
 			return;
 		}

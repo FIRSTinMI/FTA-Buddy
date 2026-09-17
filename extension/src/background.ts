@@ -924,6 +924,25 @@ function stopSchedulePolling() {
 	chrome.alarms.clear(ALARM_SCHEDULE_POLL);
 }
 
+/**
+ * Start as soon as the host permission is granted, without waiting for another
+ * settings write. The popup is destroyed when Chrome opens a permission prompt,
+ * so it cannot reliably tell us itself, and the grant can also come from the
+ * extensions page rather than from our own toggle.
+ */
+chrome.permissions.onAdded.addListener(() => {
+	if (!powerMonitorEnabled || powerManager) return;
+	console.log("Host permission granted, starting power monitoring");
+	startPowerMonitor().catch(console.warn);
+});
+
+/** Permission taken away in chrome://extensions: stop rather than spin on failed probes. */
+chrome.permissions.onRemoved.addListener(() => {
+	if (!powerManager) return;
+	console.log("Host permission removed, stopping power monitoring");
+	stopPowerMonitor();
+});
+
 chrome.alarms.onAlarm.addListener((alarm) => {
 	if (alarm.name === ALARM_TEAM_POLL) pollTeams().catch(console.warn);
 	else if (alarm.name === ALARM_MATCH_IMPORT) runMatchAutoImport().catch(console.warn);

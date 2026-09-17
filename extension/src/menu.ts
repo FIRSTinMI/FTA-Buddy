@@ -84,6 +84,12 @@ async function bgGetPowerStatus(): Promise<{
  */
 async function handlePowerMonitorToggle() {
 	if (powerMonitorInput.checked) {
+		// Save FIRST, then ask. Chrome closes the popup when a permission prompt
+		// opens, which kills this script mid-call - so a setting written after
+		// the prompt is lost, and the toggle appeared to need a second visit.
+		// The background also watches for the grant and starts on its own.
+		await chrome.storage.local.set({ powerMonitor: true, changed: new Date().getTime() });
+
 		const manifest = chrome.runtime.getManifest() as chrome.runtime.Manifest & {
 			optional_host_permissions?: string[];
 		};
@@ -91,6 +97,7 @@ async function handlePowerMonitorToggle() {
 		if (!granted) {
 			powerMonitorInput.checked = false;
 			powerMonitorText.textContent = "Permission denied";
+			await chrome.storage.local.set({ powerMonitor: false });
 			return;
 		}
 	}

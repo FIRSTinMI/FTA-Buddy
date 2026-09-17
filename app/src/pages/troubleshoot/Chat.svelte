@@ -401,8 +401,13 @@
 				</Button>
 			</div>
 			<div class="flex justify-between mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-				<span>Enter to send, Shift+Enter for a new line.</span>
-				<span class={input.length > MAX_CHARS - 50 ? "text-amber-600" : ""}>{input.length}/{MAX_CHARS}</span>
+				<span>
+					Enter to send, Shift+Enter for a new line. Runs on Anthropic's Claude; what it reads goes to them.
+					<a href="/privacy.html" class="underline">Privacy</a>
+				</span>
+				<span class="shrink-0 {input.length > MAX_CHARS - 50 ? 'text-amber-600' : ''}"
+					>{input.length}/{MAX_CHARS}</span
+				>
 			</div>
 		</div>
 	{/if}

@@ -445,7 +445,7 @@ async function flushPowerSamples() {
 }
 
 async function startPowerMonitor() {
-	if (!powerMonitorEnabled) return;
+	if (!powerMonitorEnabled || powerManager) return;
 
 	// The sweep needs permission for arbitrary http origins, granted from the
 	// popup. Without it every probe throws and the sweep silently finds nothing.
@@ -951,13 +951,26 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
 let storageDebounce: ReturnType<typeof setTimeout> | null = null;
 chrome.storage.local.onChanged.addListener((changes) => {
-	// Pointing the sweep at a different subnet only needs a re-sweep. Tearing
-	// down SignalR and the field feed to change one text box is not worth it.
-	if (changes.powerSubnet && Object.keys(changes).every((k) => k === "powerSubnet" || k === "changed")) {
-		const next = String(changes.powerSubnet.newValue ?? "");
-		powerSubnet = isValidSubnetPrefix(next) ? next.trim() : DEFAULT_SUBNET_PREFIX;
-		console.log(`Power monitor subnet is now ${powerSubnet}.0/24, re-scanning`);
-		powerManager?.discover().catch(console.warn);
+	// Power monitoring is self-contained, so its settings are applied in place.
+	// Everything else falls through to a full restart, which tears down SignalR,
+	// note sync and polling - far too much for one toggle or one text box.
+	const touched = Object.keys(changes).filter((key) => key !== "changed");
+	const powerOnly = touched.length > 0 && touched.every((key) => key === "powerMonitor" || key === "powerSubnet");
+	if (powerOnly) {
+		if (changes.powerSubnet) {
+			const next = String(changes.powerSubnet.newValue ?? "");
+			powerSubnet = isValidSubnetPrefix(next) ? next.trim() : DEFAULT_SUBNET_PREFIX;
+			console.log(`Power monitor subnet is now ${powerSubnet}.0/24`);
+		}
+
+		if (changes.powerMonitor) {
+			powerMonitorEnabled = Boolean(changes.powerMonitor.newValue);
+			if (powerMonitorEnabled) startPowerMonitor().catch(console.warn);
+			else stopPowerMonitor();
+		} else {
+			// Subnet alone: keep streaming, just look again on the new network.
+			powerManager?.discover().catch(console.warn);
+		}
 		return;
 	}
 

@@ -17,6 +17,7 @@ import {
 	sampleRateHz,
 	SUPERSEDED_BY,
 } from "../../shared/logs/series";
+import { covers, distanceDays, MAX_NEAREST_EVENT_DAYS, normalizeEventName } from "../util/uploads/event-inference";
 import { hootBusName, hootCompliancy, hootPhoenixVersion, isHoot } from "../util/uploads/hoot";
 import {
 	parseDsLogFileName,
@@ -792,5 +793,42 @@ describe("alliance station ids", () => {
 		// Unknown, and anything off the end, is not a station.
 		expect(stationFromAllianceStationId(0)).toBeNull();
 		expect(stationFromAllianceStationId(7)).toBeNull();
+	});
+});
+
+describe("event inference dates", () => {
+	const event = { startDate: "2026-04-10", endDate: "2026-04-12" };
+	const day = (iso: string) => new Date(`${iso}T12:00:00Z`);
+
+	test("an event covers every day in its range, including the last", () => {
+		expect(covers(event, day("2026-04-10"))).toBe(true);
+		expect(covers(event, day("2026-04-11"))).toBe(true);
+		// The last day counts in full: a log written that evening still belongs.
+		expect(covers(event, new Date("2026-04-12T23:30:00Z"))).toBe(true);
+		expect(covers(event, day("2026-04-09"))).toBe(false);
+		expect(covers(event, day("2026-04-13"))).toBe(false);
+	});
+
+	test("an event with no dates covers nothing", () => {
+		expect(covers({ startDate: null, endDate: null }, day("2026-04-11"))).toBe(false);
+		expect(distanceDays({ startDate: "", endDate: "" }, day("2026-04-11"))).toBe(Number.POSITIVE_INFINITY);
+	});
+
+	test("distance is zero inside the range and grows either side", () => {
+		expect(distanceDays(event, day("2026-04-11"))).toBe(0);
+		expect(distanceDays(event, day("2026-04-14"))).toBeCloseTo(1.5, 1);
+		expect(distanceDays(event, day("2026-04-07"))).toBeCloseTo(2.5, 1);
+	});
+
+	test("a log from a different season is too far to count", () => {
+		expect(distanceDays(event, day("2025-04-11"))).toBeGreaterThan(MAX_NEAREST_EVENT_DAYS);
+	});
+
+	test("event names reduce so a code and a name can be compared", () => {
+		expect(normalizeEventName("MIFLI")).toBe("mifli");
+		expect(normalizeEventName("2026mifli")).toBe("2026mifli");
+		expect(normalizeEventName("Kettering University #1")).toBe("ketteringuniversity1");
+		// Which is what lets a code ending in the FMS name match it.
+		expect(normalizeEventName("2026mifli").endsWith(normalizeEventName("MIFLI"))).toBe(true);
 	});
 });

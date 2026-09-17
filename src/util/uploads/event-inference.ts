@@ -20,6 +20,9 @@ import { events, matchLogs } from "../../db/schema";
  * it, which is stored on the upload and shown to the volunteer.
  */
 
+/** How far from an event a log can be written and still be filed under it. */
+export const MAX_NEAREST_EVENT_DAYS = 60;
+
 export interface EventGuess {
 	code: string;
 	name: string;
@@ -29,7 +32,7 @@ export interface EventGuess {
 }
 
 /** `FIM District Flint` and `MIFLI` both reduce to something comparable. */
-function normalize(value: string): string {
+export function normalizeEventName(value: string): string {
 	return value.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
@@ -40,7 +43,7 @@ function parseDay(value: string | null): Date | null {
 }
 
 /** Inclusive: an event that ends on the 12th covers all of the 12th. */
-function covers(event: { startDate: string | null; endDate: string | null }, date: Date): boolean {
+export function covers(event: { startDate: string | null; endDate: string | null }, date: Date): boolean {
 	const start = parseDay(event.startDate);
 	const end = parseDay(event.endDate);
 	if (!start || !end) return false;
@@ -48,7 +51,7 @@ function covers(event: { startDate: string | null; endDate: string | null }, dat
 }
 
 /** Days between a date and an event's range, zero when inside it. */
-function distanceDays(event: { startDate: string | null; endDate: string | null }, date: Date): number {
+export function distanceDays(event: { startDate: string | null; endDate: string | null }, date: Date): number {
 	const start = parseDay(event.startDate);
 	const end = parseDay(event.endDate);
 	if (!start || !end) return Number.POSITIVE_INFINITY;
@@ -79,7 +82,7 @@ async function liveEvents(): Promise<EventRow[]> {
  * event dates where they exist and otherwise against the season in the code.
  */
 export async function eventByName(name: string, date: Date | null): Promise<EventGuess | null> {
-	const wanted = normalize(name);
+	const wanted = normalizeEventName(name);
 	if (wanted.length < 3) return null;
 	const all = await liveEvents();
 
@@ -109,14 +112,14 @@ export async function eventByName(name: string, date: Date | null): Promise<Even
 	}
 
 	const byCode = narrow(
-		all.filter((e) => normalize(e.code).endsWith(wanted)),
+		all.filter((e) => normalizeEventName(e.code).endsWith(wanted)),
 		name,
 	);
 	if (byCode) return byCode;
 
 	return narrow(
 		all.filter((e) => {
-			const en = normalize(e.name);
+			const en = normalizeEventName(e.name);
 			return en === wanted || en.includes(wanted) || wanted.includes(en);
 		}),
 		`"${name}"`,
@@ -178,7 +181,7 @@ export async function eventForTeamAndDate(team: number, date: Date): Promise<Eve
 	if (ranked.length === 0) return null;
 	const best = ranked[0];
 	// A log from six months away is not evidence of anything.
-	if (best.days > 60) return null;
+	if (best.days > MAX_NEAREST_EVENT_DAYS) return null;
 	return {
 		code: best.event.code,
 		name: best.event.name,

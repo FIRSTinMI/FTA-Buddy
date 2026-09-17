@@ -16,6 +16,8 @@ const cheesyPortInput = document.getElementById("cheesyPort") as HTMLInputElemen
 const cheesyPortRow = document.getElementById("cheesy-port-row") as HTMLDivElement;
 const powerMonitorInput = document.getElementById("powerMonitor") as HTMLInputElement;
 const powerMonitorRow = document.getElementById("power-monitor-row") as HTMLDivElement;
+const powerSubnetInput = document.getElementById("powerSubnet") as HTMLInputElement;
+const powerSubnetRow = document.getElementById("power-subnet-row") as HTMLDivElement;
 const saveButton = document.getElementById("save") as HTMLButtonElement;
 
 const powerMonitorIndicator = document.getElementById("power-monitor-status") as HTMLDivElement;
@@ -55,6 +57,14 @@ async function bgGetStatuses(): Promise<{ signalrStatus: string }> {
 	return chrome.runtime.sendMessage({ type: "getStatuses" });
 }
 
+/** The event network by default; a bench test runs on whatever the bench is on. */
+const DEFAULT_POWER_SUBNET = "10.0.100";
+
+function isValidSubnetPrefix(prefix: string): boolean {
+	const parts = prefix.trim().split(".");
+	return parts.length === 3 && parts.every((p) => /^\d{1,3}$/.test(p) && Number(p) >= 0 && Number(p) <= 255);
+}
+
 async function bgGetPowerStatus(): Promise<{
 	enabled: boolean;
 	subnet: string;
@@ -84,17 +94,31 @@ async function handlePowerMonitorToggle() {
 		}
 	}
 	powerMonitorRow.style.display = powerMonitorInput.checked ? "flex" : "none";
+	powerSubnetRow.style.display = powerMonitorInput.checked ? "grid" : "none";
 	await chrome.storage.local.set({ powerMonitor: powerMonitorInput.checked });
 	// Storage change triggers background restart automatically
 	updatePowerMonitorStatus();
 }
 
+/** Persisted on blur rather than per keystroke, or a half-typed subnet starts a sweep. */
+async function handlePowerSubnetChange() {
+	const value = powerSubnetInput.value.trim();
+	if (value && !isValidSubnetPrefix(value)) {
+		powerMonitorText.textContent = "Subnet must be three octets, e.g. 10.0.100";
+		return;
+	}
+	await chrome.storage.local.set({ powerSubnet: value || DEFAULT_POWER_SUBNET });
+	// Storage change triggers background restart automatically
+}
+
 async function updatePowerMonitorStatus() {
 	if (!powerMonitorInput.checked) {
 		powerMonitorRow.style.display = "none";
+		powerSubnetRow.style.display = "none";
 		return;
 	}
 	powerMonitorRow.style.display = "flex";
+	powerSubnetRow.style.display = "grid";
 	powerMonitorIndicator.classList.remove("red", "green", "yellow");
 	try {
 		const status = await bgGetPowerStatus();
@@ -138,6 +162,7 @@ function load() {
 			"sourceMode",
 			"cheesyPort",
 			"powerMonitor",
+			"powerSubnet",
 		],
 		(item) => {
 			if (
@@ -178,6 +203,8 @@ function load() {
 			cheesyPortRow.style.display = sourceModeSelect.value === "cheesy" ? "flex" : "none";
 			powerMonitorInput.checked = Boolean(item.powerMonitor);
 			powerMonitorRow.style.display = Boolean(item.powerMonitor) ? "flex" : "none";
+			powerSubnetInput.value = String(item.powerSubnet || DEFAULT_POWER_SUBNET);
+			powerSubnetRow.style.display = Boolean(item.powerMonitor) ? "grid" : "none";
 			tokenInput.value = String(item.eventToken);
 			let changed = Number(item.changed);
 
@@ -196,6 +223,7 @@ function load() {
 			sourceModeSelect.addEventListener("input", handleUpdate);
 			cheesyPortInput.addEventListener("input", handleUpdate);
 			powerMonitorInput.addEventListener("change", handlePowerMonitorToggle);
+			powerSubnetInput.addEventListener("change", handlePowerSubnetChange);
 			if (useDevCheckbox) useDevCheckbox.addEventListener("input", handleUpdate);
 			saveButton.addEventListener("click", handleUpdate);
 			refreshButton.addEventListener("click", () => chrome.runtime.reload());

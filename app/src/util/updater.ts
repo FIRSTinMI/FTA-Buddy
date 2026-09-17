@@ -30,30 +30,7 @@ export function compareVersions(a: string, b: string): number {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
-	"2.7.11.1": {
-		changelog: `
-        <h1 class="text-lg font-bold">v2.7.11.1</h1>
-        <p class="my-1 font-bold">Field power</p>
-        <ul>
-        <li>Monitors no longer flicker between connected and disconnected on devices without the extension</li>
-        </ul>
-        `,
-	},
-	"2.7.11.0": {
-		changelog: `
-        <h1 class="text-lg font-bold">v2.7.11.0</h1>
-        <p class="my-1 font-bold">Field power (new)</p>
-        <ul>
-        <li>New Power page: live voltage and current per monitor, with whole-event history and kWh totals</li>
-        <li>Notifications for a voltage sag, current held too high, a circuit losing power, or a monitor going quiet - thresholds are per event</li>
-        <li>Turn it on in Event Settings under Integrations</li>
-        </ul>
-        <h2 class="font-bold mt-2">Extension v1.26.23</h2>
-        <ul>
-        <li>Finds field power monitors on the event network and streams their readings to the app</li>
-        </ul>
-        `,
-	},
+	"2.7.11.2": {},
 	"2.7.10.1": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.10.1</h1>

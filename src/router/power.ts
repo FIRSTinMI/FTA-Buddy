@@ -102,12 +102,13 @@ export const powerRouter = router({
 			}
 
 			// Fan out to every client on this event, including the phones and
-			// tablets that have no extension of their own.
-			const latestByMonitor = new Map<string, PowerTelemetry>();
-			for (const s of input.samples) {
-				const existing = latestByMonitor.get(s.monitorId);
-				if (existing && existing.ts >= s.time.getTime()) continue;
-				latestByMonitor.set(s.monitorId, {
+			// tablets that have no extension of their own. The whole batch goes,
+			// not just the newest of each: relaying one point per five seconds
+			// gave those devices a chart far coarser than the data behind it.
+			const live: PowerTelemetry[] = input.samples
+				.slice()
+				.sort((a, b) => a.time.getTime() - b.time.getTime())
+				.map((s) => ({
 					id: s.monitorId,
 					ok: true,
 					v: s.volts,
@@ -118,9 +119,8 @@ export const powerRouter = router({
 					kwh: s.kwh ?? null,
 					alarm: s.alarm ?? false,
 					ts: s.time.getTime(),
-				});
-			}
-			if (latestByMonitor.size > 0) bus.publish(liveChannel(event.code), [...latestByMonitor.values()]);
+				}));
+			if (live.length > 0) bus.publish(liveChannel(event.code), live);
 
 			const alertSettings = powerAlertSettings(event);
 			const fired = await evaluatePowerAlerts(

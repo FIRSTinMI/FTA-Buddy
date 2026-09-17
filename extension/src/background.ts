@@ -316,33 +316,33 @@ let powerManager: PowerMonitorManager | null = null;
 /** Origins where the `app` content script runs, i.e. tabs that can receive telemetry. */
 const APP_TAB_PATTERNS = ["https://ftabuddy.com/*", "https://dev.ftabuddy.com/*", "http://localhost:5173/*"];
 
-/**
- * One second of samples from one monitor: every PZEM register averaged, with
- * the extreme of each kept alongside. A sag or a spike lives inside a second,
- * so an average alone would hide exactly what this is for.
- */
-interface PowerBucket {
+/** One reading, shaped for the server. */
+interface PowerSample {
 	monitorId: string;
-	second: number;
-	count: number;
-	voltsSum: number;
+	time: Date;
+	volts: number;
 	voltsMin: number;
 	voltsMax: number;
-	ampsSum: number;
+	amps: number;
 	ampsMax: number;
-	wattsSum: number;
+	watts: number;
 	wattsMax: number;
-	hzSum: number;
+	hz: number | null;
 	hzMin: number | null;
-	hzCount: number;
-	pfSum: number;
+	pf: number | null;
 	pfMin: number | null;
-	pfCount: number;
 	kwh: number | null;
 	alarm: boolean;
 }
 
-const powerBuckets = new Map<string, PowerBucket>();
+/**
+ * Readings waiting to go up. Every sample the board sends is kept: the meter
+ * runs at 2 Hz and averaging threw away exactly the transients this exists to
+ * catch. Posted in batches for the network's sake, not thinned.
+ */
+const powerPending: PowerSample[] = [];
+/** Ceiling so a long outage cannot grow this without bound. */
+const POWER_MAX_PENDING = 600;
 /**
  * Whether each monitor's meter last answered. Tracked separately from the
  * buckets because a failed read is dropped before it ever reaches one, and a
@@ -352,56 +352,31 @@ const powerMeterOk = new Map<string, boolean>();
 let powerFlushTimer: ReturnType<typeof setInterval> | null = null;
 const POWER_FLUSH_INTERVAL_MS = 5_000;
 
-/** Fold one reading into its one-second bucket. Failed reads are not stored. */
-function bucketTelemetry(telemetry: PowerTelemetry) {
+/** Queue one reading. A failed read is recorded as meter state, not stored. */
+function recordTelemetry(telemetry: PowerTelemetry) {
 	powerMeterOk.set(telemetry.id, telemetry.ok);
 	if (!telemetry.ok || telemetry.v === null || telemetry.a === null || telemetry.w === null) return;
-	const second = Math.floor(telemetry.ts / 1000);
-	const key = `${telemetry.id}:${second}`;
-	const bucket = powerBuckets.get(key);
-	if (bucket) {
-		bucket.count++;
-		bucket.voltsSum += telemetry.v;
-		bucket.voltsMin = Math.min(bucket.voltsMin, telemetry.v);
-		bucket.voltsMax = Math.max(bucket.voltsMax, telemetry.v);
-		bucket.ampsSum += telemetry.a;
-		bucket.ampsMax = Math.max(bucket.ampsMax, telemetry.a);
-		bucket.wattsSum += telemetry.w;
-		bucket.wattsMax = Math.max(bucket.wattsMax, telemetry.w);
-		if (telemetry.hz != null) {
-			bucket.hzSum += telemetry.hz;
-			bucket.hzCount++;
-			bucket.hzMin = bucket.hzMin === null ? telemetry.hz : Math.min(bucket.hzMin, telemetry.hz);
-		}
-		if (telemetry.pf != null) {
-			bucket.pfSum += telemetry.pf;
-			bucket.pfCount++;
-			bucket.pfMin = bucket.pfMin === null ? telemetry.pf : Math.min(bucket.pfMin, telemetry.pf);
-		}
-		bucket.kwh = telemetry.kwh ?? bucket.kwh;
-		bucket.alarm = bucket.alarm || Boolean(telemetry.alarm);
-	} else {
-		powerBuckets.set(key, {
-			monitorId: telemetry.id,
-			second,
-			count: 1,
-			voltsSum: telemetry.v,
-			voltsMin: telemetry.v,
-			voltsMax: telemetry.v,
-			ampsSum: telemetry.a,
-			ampsMax: telemetry.a,
-			wattsSum: telemetry.w,
-			wattsMax: telemetry.w,
-			hzSum: telemetry.hz ?? 0,
-			hzMin: telemetry.hz ?? null,
-			hzCount: telemetry.hz == null ? 0 : 1,
-			pfSum: telemetry.pf ?? 0,
-			pfMin: telemetry.pf ?? null,
-			pfCount: telemetry.pf == null ? 0 : 1,
-			kwh: telemetry.kwh ?? null,
-			alarm: Boolean(telemetry.alarm),
-		});
-	}
+
+	// min/max columns predate storing raw samples; for a single reading they are
+	// the reading, and the history query aggregates them the same either way.
+	powerPending.push({
+		monitorId: telemetry.id,
+		time: new Date(telemetry.ts),
+		volts: telemetry.v,
+		voltsMin: telemetry.v,
+		voltsMax: telemetry.v,
+		amps: telemetry.a,
+		ampsMax: telemetry.a,
+		watts: telemetry.w,
+		wattsMax: telemetry.w,
+		hz: telemetry.hz ?? null,
+		hzMin: telemetry.hz ?? null,
+		pf: telemetry.pf ?? null,
+		pfMin: telemetry.pf ?? null,
+		kwh: telemetry.kwh ?? null,
+		alarm: Boolean(telemetry.alarm),
+	});
+	if (powerPending.length > POWER_MAX_PENDING) powerPending.splice(0, powerPending.length - POWER_MAX_PENDING);
 }
 
 /** Push a reading into every open FTA Buddy tab for the live charts. */
@@ -414,16 +389,11 @@ function broadcastTelemetry(telemetry: PowerTelemetry) {
 	});
 }
 
-/**
- * Post completed buckets to the server. Only buckets older than the current
- * second are sent, so a second is never split across two posts.
- */
+/** Post everything queued since the last flush, plus per-monitor liveness. */
 async function flushPowerSamples() {
 	if (!eventToken) return;
 
-	const currentSecond = Math.floor(Date.now() / 1000);
-	const ready = [...powerBuckets.entries()].filter(([, b]) => b.second < currentSecond);
-	for (const [key] of ready) powerBuckets.delete(key);
+	const samples = powerPending.splice(0, powerPending.length);
 
 	// Liveness goes up on every flush, with or without samples: a monitor that
 	// has gone dark cannot report its own silence, and the server has no way to
@@ -434,27 +404,7 @@ async function flushPowerSamples() {
 		meterOk: powerMeterOk.get(m.id) ?? false,
 	}));
 
-	if (ready.length === 0 && status.length === 0) return;
-
-	const samples = ready
-		.map(([, b]) => ({
-			monitorId: b.monitorId,
-			time: new Date(b.second * 1000),
-			volts: b.voltsSum / b.count,
-			voltsMin: b.voltsMin,
-			voltsMax: b.voltsMax,
-			amps: b.ampsSum / b.count,
-			ampsMax: b.ampsMax,
-			watts: b.wattsSum / b.count,
-			wattsMax: b.wattsMax,
-			hz: b.hzCount > 0 ? b.hzSum / b.hzCount : null,
-			hzMin: b.hzMin,
-			pf: b.pfCount > 0 ? b.pfSum / b.pfCount : null,
-			pfMin: b.pfMin,
-			kwh: b.kwh,
-			alarm: b.alarm,
-		}))
-		.sort((a, b) => a.time.getTime() - b.time.getTime());
+	if (samples.length === 0 && status.length === 0) return;
 
 	try {
 		await trpc.power.postSamples.mutate({ extensionId: id, samples, status });
@@ -480,7 +430,7 @@ async function startPowerMonitor() {
 
 	powerManager = new PowerMonitorManager((telemetry) => {
 		broadcastTelemetry(telemetry);
-		bucketTelemetry(telemetry);
+		recordTelemetry(telemetry);
 	});
 	await powerManager.start();
 	powerFlushTimer = setInterval(() => flushPowerSamples().catch(console.warn), POWER_FLUSH_INTERVAL_MS);
@@ -490,7 +440,7 @@ async function startPowerMonitor() {
 function stopPowerMonitor() {
 	if (powerFlushTimer) clearInterval(powerFlushTimer);
 	powerFlushTimer = null;
-	powerBuckets.clear();
+	powerPending.length = 0;
 	powerMeterOk.clear();
 	powerManager?.stop();
 	powerManager = null;

@@ -904,7 +904,7 @@ export interface PowerTelemetry {
 	ip?: string;
 }
 
-/** A stored one-second rollup, as returned to the dashboard. */
+/** One bucket of stored history, as returned to the dashboard. */
 export interface PowerHistoryPoint {
 	time: number;
 	volts: number;

@@ -320,7 +320,7 @@
 
 	function openFullChangelog() {
 		for (let version in VERSIONS) {
-			changelog += VERSIONS[version as keyof typeof VERSIONS].changelog;
+			changelog += VERSIONS[version as keyof typeof VERSIONS].changelog ?? "";
 		}
 		changelogOpen = true;
 	}

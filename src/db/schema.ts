@@ -781,9 +781,13 @@ export type FieldLineup = typeof fieldLineups.$inferSelect;
 // #endregion
 
 /**
- * One-second rollups of field AC power, one row per monitor per second. Every
- * register the PZEM-004T has is kept: volts, amps, watts, frequency, power
- * factor, the cumulative energy counter and the meter's alarm flag.
+ * Every reading from every field power monitor, at the meter's own 2 Hz. All
+ * six PZEM registers are kept - volts, amps, watts, frequency, power factor and
+ * the cumulative energy counter - plus its alarm flag.
+ *
+ * The *_min / *_max columns date from when the extension averaged each second
+ * before posting. Raw samples set them to the reading itself; the history query
+ * aggregates over whichever it finds, so both shapes read back correctly.
  * The extension averages the 2 Hz stream from each PZEM before posting, so an
  * eight hour event with two monitors is ~58k rows rather than 230k, and the
  * spikes that matter survive as min/max alongside the mean.

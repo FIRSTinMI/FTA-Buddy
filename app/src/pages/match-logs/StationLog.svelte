@@ -141,7 +141,8 @@
 	{/snippet}
 	<div class="flex flex-col gap-2">
 		<p>
-			Log published for 72 hours. Share this log only with team #{team} or other volunteers.
+			Log published for 72 hours. Share it only with team #{team} or volunteers at this event, or, with the team's permission,
+			the CSA Slack.
 		</p>
 		<div class="max-w-48 mx-auto">
 			<QrCode value={`https://ftabuddy.com/logs/${matchid}/${shareid}`} padding={12} />

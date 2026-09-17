@@ -66,6 +66,9 @@ import {
 } from "./util/slack-user-oauth";
 import { startSlackPoller } from "./util/troubleshoot/slack-poller";
 import { startCorpusRefresh } from "./util/troubleshoot/corpus-scheduler";
+import { uploadsRouter } from "./router/uploads";
+import { uploadHttpRouter } from "./router/upload-http";
+import { startGhostCsaPoller } from "./util/uploads/ghost-csa";
 import { getTeamAverageCycle } from "./util/team-cycles";
 import { eventLastSeen, events, eventCodes } from "./state";
 import * as nexusEventPoller from "./util/nexusEventPoller";
@@ -112,6 +115,7 @@ const appRouter = router({
 	troubleshoot: troubleshootRouter,
 	slackUser: slackUserRouter,
 	slackSession: slackSessionRouter,
+	uploads: uploadsRouter,
 	app: router({
 		version: publicProcedure.query(() => {
 			return pjson.version ?? "dev";
@@ -476,6 +480,9 @@ app.get("/api/team-average-cycle/:team", async (req, res) => {
 app.get("/api/logs/:shareCode", async (req, res) => {
 	const share = await db.query.logPublishing.findFirst({ where: eq(logPublishing.id, req.params.shareCode) });
 	if (!share) return res.status(404).send("Share code not found");
+	// The tRPC reader checks this; this endpoint did not, so a station log share
+	// stayed downloadable forever once the link was out.
+	if (new Date() > share.expire_time) return res.status(410).send("That share link has expired");
 	const log = await db.query.matchLogs.findFirst({ where: eq(matchLogs.id, share.match_id) });
 	if (!log) return res.status(500).send("Log not found");
 
@@ -529,11 +536,7 @@ marked.use(gfmHeadingId());
 const SITE_URL = "https://ftabuddy.com";
 
 function escapeHtmlAttr(value: string): string {
-	return value
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;")
-		.replace(/"/g, "&quot;");
+	return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 // Strip a leading YAML frontmatter block and return the title/description it declares (if any)
@@ -672,7 +675,9 @@ app.get(/^\/docs\//, async (req, res) => {
 		data = readFileSync(path, "utf8");
 	} catch {
 		// No index.md for this directory: auto-generate a listing so its pages are not orphaned.
-		const auto = path.endsWith("/index.md") ? buildDirIndexMarkdown(path.slice(0, -"/index.md".length), req.path) : null;
+		const auto = path.endsWith("/index.md")
+			? buildDirIndexMarkdown(path.slice(0, -"/index.md".length), req.path)
+			: null;
 		if (auto === null) {
 			res.status(404).send("Not found");
 			return;
@@ -764,9 +769,7 @@ app.get("/sitemap.xml", (req, res) => {
 		console.error("[sitemap] failed to enumerate docs", err);
 	}
 	const paths = ["/", ...docUrls.sort()];
-	const body = paths
-		.map((p) => `  <url><loc>${SITE_URL}${escapeHtmlAttr(p)}</loc></url>`)
-		.join("\n");
+	const body = paths.map((p) => `  <url><loc>${SITE_URL}${escapeHtmlAttr(p)}</loc></url>`).join("\n");
 	res.type("application/xml").send(`<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${body}
@@ -822,6 +825,10 @@ app.post("/api/nexus/event-status", async (req, res) => {
 		event.nexusEventStatus = newStatus;
 	}
 });
+
+// Team log/code uploads: the public portal, the app's upload path and file
+// downloads. Mounted before the static handler so /upload is ours, not the SPA's.
+app.use(uploadHttpRouter());
 
 if (process.env.NODE_ENV === "dev") {
 	app.use("/FieldMonitor", express.static("app/src/public/FieldMonitor"));
@@ -882,6 +889,9 @@ connect().then(async () => {
 
 	// Weekly re-crawl of the vendor documentation (leader-locked)
 	startCorpusRefresh();
+
+	// Poll Ghost CSA for the analyses we asked it for
+	startGhostCsaPoller();
 
 	// Start Nexus pollers for events with a key configured that are currently running
 	try {

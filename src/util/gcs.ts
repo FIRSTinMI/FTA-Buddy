@@ -71,3 +71,25 @@ export function isGcsConfigured(): boolean {
 		!!bucketName && !!process.env.GOOGLE_PROJECT_ID && !!process.env.GOOGLE_KEY_CLIENT && !!process.env.GOOGLE_KEY
 	);
 }
+
+/**
+ * Team uploads: logs, robot code and support bundles a team handed a CSA. Kept
+ * under their own prefix, and unlike reports these are arbitrary binaries, so
+ * the content type is given by the caller rather than assumed.
+ */
+export async function uploadFile(buffer: Buffer, path: string, contentType = "application/octet-stream"): Promise<void> {
+	const file = getBucket().file(`uploads/${path}`);
+	await file.save(buffer, { contentType });
+}
+
+export async function downloadUploadedFile(path: string): Promise<Buffer> {
+	const [contents] = await getBucket().file(`uploads/${path}`).download();
+	return contents;
+}
+
+/** Best effort: a missing object is not an error, the row is going away either way. */
+export async function deleteUploadedFile(path: string): Promise<void> {
+	await getBucket()
+		.file(`uploads/${path}`)
+		.delete({ ignoreNotFound: true });
+}

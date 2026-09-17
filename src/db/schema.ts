@@ -18,7 +18,12 @@ import {
 	uuid,
 	varchar,
 } from "drizzle-orm/pg-core";
-import type { EventAutoEventSettings, FmsNoteMetadata, PowerAlertSettings, SlowWarningSettings } from "../../shared/types";
+import type {
+	EventAutoEventSettings,
+	FmsNoteMetadata,
+	PowerAlertSettings,
+	SlowWarningSettings,
+} from "../../shared/types";
 export const roleEnum = pgEnum("role", ["FTA", "FTAA", "CSA", "RI", "System", "Scorekeeper"]);
 
 export const users = pgTable(
@@ -823,6 +828,207 @@ export const powerSamples = pgTable(
 );
 
 export type PowerSample = typeof powerSamples.$inferSelect;
+
+// #region team uploads
+
+/** What an uploaded file turned out to be. Mirrors `UploadKind` in shared/logs/detect.ts. */
+export const uploadKindEnum = pgEnum("upload_kind", [
+	"wpilog",
+	"dslog",
+	"dsevents",
+	"support-bundle",
+	"code-zip",
+	"zip",
+	"text",
+	"other",
+]);
+
+/** Where an upload came from: the public portal on a team's laptop, or a volunteer in the app. */
+export const uploadSourceEnum = pgEnum("upload_source", ["portal", "app"]);
+
+/** Ghost CSA is Limelight's SystemCore bundle analyser. We hand it a bundle and poll for the report. */
+export const ghostCsaStatusEnum = pgEnum("ghost_csa_status", [
+	"none",
+	"queued",
+	"pending",
+	"running",
+	"complete",
+	"failed",
+]);
+
+/**
+ * One submission from a team: the logs, the robot code, or a support bundle they
+ * gave us, plus what we worked out about it. Teams reach this through the public
+ * portal with no account, so nothing here can be trusted as identity; `team` is
+ * our best inference and `team_source` says how good it is.
+ */
+export const teamUploads = pgTable(
+	"team_uploads",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		/** Short code a team can read out over a pit wall, e.g. `7K2M-QX4T`. */
+		code: varchar("code").notNull().unique(),
+		/** Event this belongs to. Null when the portal was used with no event code. */
+		event: varchar("event"),
+		event_id: uuid("event_id"),
+		team: integer("team"),
+		/** `log-station`, `support-bundle`, `robot-code`, `entered` or `none`. */
+		team_source: varchar("team_source").notNull().default("none"),
+		source: uploadSourceEnum("source").notNull(),
+		uploaded_by: integer("uploaded_by").references(() => users.id),
+		/** Free text name from the portal. Never trusted, only displayed. */
+		uploader_name: varchar("uploader_name"),
+		/** What the team said was wrong, in their words. */
+		notes: text("notes"),
+		/**
+		 * True when the notes tripped the untrusted-text screen, so they are shown to
+		 * a human but kept out of every prompt.
+		 */
+		notes_withheld: boolean("notes_withheld").notNull().default(false),
+		created_at: timestamp("created_at").notNull().defaultNow(),
+		/** Hashed client address, for portal rate limiting only. */
+		ip_hash: varchar("ip_hash"),
+		ghost_status: ghostCsaStatusEnum("ghost_status").notNull().default("none"),
+		ghost_ticket: varchar("ghost_ticket"),
+		ghost_analysis: text("ghost_analysis"),
+		ghost_error: varchar("ghost_error"),
+		ghost_updated_at: timestamp("ghost_updated_at"),
+		ghost_requested_by: integer("ghost_requested_by").references(() => users.id),
+	},
+	(t) => [
+		index("team_uploads_event_idx").on(t.event, t.created_at),
+		index("team_uploads_event_team_idx").on(t.event, t.team),
+		index("team_uploads_ghost_status_idx").on(t.ghost_status),
+	],
+);
+
+export type TeamUpload = typeof teamUploads.$inferSelect;
+
+/**
+ * One file inside an upload. A zip is stored as the zip itself plus a row per
+ * entry we extracted, linked by `parent_id`, so a CSA can open one code file
+ * without downloading the archive.
+ *
+ * Bytes live in `content` when they are small enough for Postgres to hold
+ * comfortably, otherwise in Cloud Storage at `gcs_path`. Exactly one is set.
+ */
+export const teamUploadFiles = pgTable(
+	"team_upload_files",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		upload_id: uuid("upload_id")
+			.references(() => teamUploads.id, { onDelete: "cascade" })
+			.notNull(),
+		/** The zip this entry came out of, null for a file uploaded on its own. */
+		parent_id: uuid("parent_id"),
+		/** Name as uploaded, or the entry path inside a zip. */
+		path: varchar("path").notNull(),
+		kind: uploadKindEnum("kind").notNull(),
+		size: integer("size").notNull(),
+		content: bytea("content"),
+		gcs_path: varchar("gcs_path"),
+		/** Decoded facts: match info, a DS log summary, robot code details. */
+		meta: jsonb("meta"),
+		/** Readable text for the file viewer and for prompts. Truncated. */
+		text_preview: text("text_preview"),
+	},
+	(t) => [index("team_upload_files_upload_idx").on(t.upload_id), index("team_upload_files_kind_idx").on(t.kind)],
+);
+
+export type TeamUploadFile = typeof teamUploadFiles.$inferSelect;
+
+/**
+ * A match an uploaded log belongs to, so the FMS station log we already have can
+ * sit next to the team's own log. A data log names its match outright; a Driver
+ * Station log spans a session, so one file can link several matches.
+ */
+export const teamUploadMatches = pgTable(
+	"team_upload_matches",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		upload_id: uuid("upload_id")
+			.references(() => teamUploads.id, { onDelete: "cascade" })
+			.notNull(),
+		file_id: uuid("file_id")
+			.references(() => teamUploadFiles.id, { onDelete: "cascade" })
+			.notNull(),
+		match_id: uuid("match_id").notNull(),
+		level: levelEnum("level").notNull(),
+		match_number: integer("match_number").notNull(),
+		play_number: integer("play_number").notNull(),
+		station: varchar("station"),
+		team: integer("team"),
+		/** `match-info`, `file-name` or `timestamp`. Shown so a CSA can judge the link. */
+		how: varchar("how").notNull(),
+		reason: varchar("reason").notNull(),
+	},
+	(t) => [
+		unique("team_upload_matches_uq").on(t.file_id, t.match_id),
+		index("team_upload_matches_upload_idx").on(t.upload_id),
+		index("team_upload_matches_match_idx").on(t.match_id),
+	],
+);
+
+export type TeamUploadMatch = typeof teamUploadMatches.$inferSelect;
+
+/**
+ * A link that shows part of an upload to somebody with no account, so a CSA can
+ * drop it in the CSA Slack. The row id is the token in the URL. Same shape as
+ * `log_publishing` for FMS station logs, with a file selection on top: only the
+ * files listed in `file_ids` are readable through the token.
+ */
+export const teamUploadShares = pgTable(
+	"team_upload_shares",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		upload_id: uuid("upload_id")
+			.references(() => teamUploads.id, { onDelete: "cascade" })
+			.notNull(),
+		/** File ids this token may read. Empty array means every file in the upload. */
+		file_ids: jsonb("file_ids").$type<string[]>().notNull().default([]),
+		/** Whether the Ghost CSA report goes out with the files. */
+		include_analysis: boolean("include_analysis").notNull().default(false),
+		/** Whether our FMS station logs for the linked matches go out too. */
+		include_fms_logs: boolean("include_fms_logs").notNull().default(false),
+		/** What the sharer called it, shown on the public page. */
+		label: varchar("label"),
+		event: varchar("event"),
+		created_by: integer("created_by").references(() => users.id),
+		create_time: timestamp("create_time").notNull().defaultNow(),
+		expire_time: timestamp("expire_time").notNull(),
+		view_count: integer("view_count").notNull().default(0),
+		revoked: boolean("revoked").notNull().default(false),
+	},
+	(t) => [
+		index("team_upload_shares_upload_idx").on(t.upload_id),
+		index("team_upload_shares_expire_idx").on(t.expire_time),
+	],
+);
+
+export type TeamUploadShare = typeof teamUploadShares.$inferSelect;
+
+export const teamUploadRelations = relations(teamUploads, ({ many, one }) => ({
+	files: many(teamUploadFiles),
+	matches: many(teamUploadMatches),
+	shares: many(teamUploadShares),
+	uploader: one(users, { fields: [teamUploads.uploaded_by], references: [users.id] }),
+}));
+
+export const teamUploadFileRelations = relations(teamUploadFiles, ({ one, many }) => ({
+	upload: one(teamUploads, { fields: [teamUploadFiles.upload_id], references: [teamUploads.id] }),
+	matches: many(teamUploadMatches),
+}));
+
+export const teamUploadMatchRelations = relations(teamUploadMatches, ({ one }) => ({
+	upload: one(teamUploads, { fields: [teamUploadMatches.upload_id], references: [teamUploads.id] }),
+	file: one(teamUploadFiles, { fields: [teamUploadMatches.file_id], references: [teamUploadFiles.id] }),
+}));
+
+export const teamUploadShareRelations = relations(teamUploadShares, ({ one }) => ({
+	upload: one(teamUploads, { fields: [teamUploadShares.upload_id], references: [teamUploads.id] }),
+}));
+
+// #endregion
 
 export default {
 	events,

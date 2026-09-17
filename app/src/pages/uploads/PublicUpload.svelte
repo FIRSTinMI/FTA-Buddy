@@ -1,17 +1,17 @@
 <script lang="ts">
 	import Icon from "@iconify/svelte";
-	import { Button, Input, Textarea } from "flowbite-svelte";
+	import { Button, Input } from "flowbite-svelte";
 	import { ACCEPTED_EXTENSIONS } from "../../../../shared/logs/detect";
 	import { toast } from "../../util/toast";
 
 	/**
 	 * The page a team opens on their own laptop to hand their logs to the CSA.
 	 *
-	 * Unlisted and needs no account, the same as the public note page. It asks for
-	 * as little as it can: the files, and a line about the problem if they feel
-	 * like writing one. Which event this is comes out of the files, and the team
-	 * number is only asked for afterwards, in the one case where nothing in the
-	 * files said it.
+	 * Unlisted and needs no account, the same as the public note page. It collects
+	 * three things and nothing else: the logs, the robot code, and the team
+	 * number. Which event this is comes out of the files, and the team number is
+	 * only asked for afterwards, in the one case where nothing in the files said
+	 * it. Anything a team wants to say about the problem they say to the CSA.
 	 */
 	interface Result {
 		id: string;
@@ -32,7 +32,6 @@
 	};
 
 	let picked = $state<File[]>([]);
-	let notes = $state("");
 	let uploading = $state(false);
 	let progress = $state(0);
 	let dragging = $state(false);
@@ -78,7 +77,6 @@
 		progress = 0;
 		const body = new FormData();
 		for (const file of picked) body.append("files", file);
-		if (notes.trim()) body.append("notes", notes.trim());
 
 		const request = new XMLHttpRequest();
 		request.open("POST", "/api/uploads/public");
@@ -139,7 +137,6 @@
 
 	function startOver() {
 		result = null;
-		notes = "";
 		team = "";
 		progress = 0;
 	}
@@ -255,15 +252,6 @@
 					<p class="px-3 py-1 text-xs text-gray-500">{totalMb.toFixed(1)} MB in total.</p>
 				</div>
 			{/if}
-
-			<Textarea
-				bind:value={notes}
-				disabled={uploading}
-				rows={3}
-				maxlength={4000}
-				class="w-full"
-				placeholder="What is going wrong? Robot drops out about 30 seconds into every match, radio lights look normal."
-			/>
 
 			<Button size="lg" disabled={picked.length === 0 || uploading} onclick={send}>
 				{#if uploading}

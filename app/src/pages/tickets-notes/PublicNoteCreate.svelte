@@ -87,10 +87,18 @@
 
 				<Button type="submit" disabled={disableSubmit}>Submit Note</Button>
 			</form>
+
+			<!-- Logs go through their own page: this one is for describing a problem. -->
+			<p class="text-left text-sm text-gray-600 dark:text-gray-300">
+				Sending logs instead? <a class="underline" href="/upload">Upload them here</a>.
+			</p>
 		{:else}
 			<h1 class="text-3xl font-bold text-black dark:text-white">Note Has Been Created Successfully!</h1>
 			<p class="font-bold text-black dark:text-white">
 				Please refresh the page if you wish to submit another Note.
+			</p>
+			<p class="text-left text-sm text-gray-600 dark:text-gray-300">
+				If a CSA asks for your logs, <a class="underline" href="/upload">upload them here</a>.
 			</p>
 		{/if}
 	</div>

@@ -110,7 +110,6 @@ export function uploadHttpRouter(): Router {
 					source: "portal",
 					enteredTeam: parsedTeam(fields.team),
 					uploaderName: fields.uploader?.trim() || null,
-					notes: fields.notes?.trim() || null,
 					ipHash,
 				});
 				res.json(result);
@@ -179,7 +178,6 @@ export function uploadHttpRouter(): Router {
 					enteredTeam: parsedTeam(fields.team),
 					uploaderName: user.username,
 					uploadedBy: user.id,
-					notes: fields.notes?.trim() || null,
 					ipHash: hashIp(clientIp(req)),
 				});
 				res.json(result);

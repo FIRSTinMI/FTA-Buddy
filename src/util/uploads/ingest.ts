@@ -34,7 +34,6 @@ import { describeDsEvents, describeDsLog, describeRobotCode, describeWpilog } fr
 import { readWpilog, wpilogClockOffset, type WpilogMatchInfo } from "../../../shared/logs/wpilog";
 import { db } from "../../db/db";
 import { matchLogs, teamUploadFiles, teamUploadMatches, teamUploads } from "../../db/schema";
-import { screenForInstructions } from "../untrusted-text";
 import { inferEvent, UNASSIGNED_REASON } from "./event-inference";
 import { convertHoot, HootError, hootCompliancy, hootDecodeEnabled } from "./hoot";
 import { MAX_FILES_PER_UPLOAD, MAX_UPLOAD_BYTES, storeBytes, UploadTooLargeError } from "./store";
@@ -66,7 +65,6 @@ export interface IngestParams {
 	enteredTeam?: number | null;
 	uploaderName?: string | null;
 	uploadedBy?: number | null;
-	notes?: string | null;
 	ipHash?: string | null;
 }
 
@@ -645,7 +643,6 @@ export async function ingestUpload(params: IngestParams): Promise<IngestResult> 
 	}
 	// #endregion
 
-	const notesScreen = screenForInstructions(params.notes);
 	// `events` has no surrogate key; the FMS event GUID only exists on match log
 	// rows, so it is carried over from one of them when this event has any.
 	const eventId =
@@ -669,8 +666,6 @@ export async function ingestUpload(params: IngestParams): Promise<IngestResult> 
 			source: params.source,
 			uploaded_by: params.uploadedBy ?? null,
 			uploader_name: params.uploaderName?.slice(0, 120) ?? null,
-			notes: params.notes?.slice(0, 4000) ?? null,
-			notes_withheld: notesScreen.suspicious,
 			ip_hash: params.ipHash ?? null,
 		})
 		.execute();

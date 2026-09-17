@@ -139,8 +139,6 @@ export async function sendUploadToGhostCsa(uploadId: string, requestedBy: number
 		const notes = [
 			`Sent from FTA Buddy${upload.event ? ` at event ${upload.event}` : ""}.`,
 			upload.team ? `Team ${upload.team}.` : null,
-			// The team's own words go across verbatim only when they passed screening.
-			upload.notes && !upload.notes_withheld ? `Team's description: ${upload.notes.slice(0, 1500)}` : null,
 		]
 			.filter(Boolean)
 			.join(" ");

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Icon from "@iconify/svelte";
-	import { Button, Input, Modal, Textarea } from "flowbite-svelte";
+	import { Button, Input, Modal } from "flowbite-svelte";
 	import { onMount } from "svelte";
 	import QrCode from "svelte-qrcode";
 	import { ACCEPTED_EXTENSIONS } from "../../../../shared/logs/detect";
@@ -30,7 +30,6 @@
 
 	let files = $state<FileList | null>(null);
 	let team = $state("");
-	let notes = $state("");
 	let uploading = $state(false);
 
 	let hasEvent = $derived(Boolean($userStore.eventToken));
@@ -63,7 +62,6 @@
 			const body = new FormData();
 			for (const file of fileList) body.append("files", file);
 			if (team.trim()) body.append("team", team.trim());
-			if (notes.trim()) body.append("notes", notes.trim());
 			const response = await fetch("/api/uploads", {
 				method: "POST",
 				headers: {
@@ -147,10 +145,7 @@
 				onchange={(e) => (files = (e.currentTarget as HTMLInputElement).files)}
 				class="w-full text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-2"
 			/>
-			<div class="flex gap-2">
-				<Input bind:value={team} type="number" placeholder="Team number" class="w-40" disabled={uploading} />
-				<Input bind:value={notes} placeholder="What is going wrong?" disabled={uploading} />
-			</div>
+			<Input bind:value={team} type="number" placeholder="Team number" class="w-40" disabled={uploading} />
 			<Button size="sm" disabled={fileList.length === 0 || uploading} onclick={upload}>
 				{#if uploading}
 					<Icon icon="svg-spinners:ring-resize" class="size-4 mr-2" /> Uploading
@@ -223,11 +218,6 @@
 							{#if upload.uploader_name}· {upload.uploader_name}{/if}
 							{#if ghostLabel(upload)}· {ghostLabel(upload)}{/if}
 						</div>
-						{#if upload.notes}
-							<p class="text-xs text-gray-700 dark:text-gray-200 truncate">
-								{upload.notes_withheld ? "(held back from the assistant) " : ""}{upload.notes}
-							</p>
-						{/if}
 					</a>
 				{/each}
 			</div>

@@ -71,12 +71,6 @@
 				</p>
 			</div>
 
-			{#if shared.notes}
-				<blockquote class="text-sm border-l-2 border-gray-300 pl-2 text-gray-800 dark:text-gray-100">
-					{shared.notes}
-				</blockquote>
-			{/if}
-
 			{#if shared.matches.length > 0}
 				<div class="rounded-lg border border-gray-200 dark:border-gray-700 p-2">
 					<p class="text-sm font-semibold text-black dark:text-white mb-1">Matches</p>

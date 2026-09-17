@@ -96,8 +96,6 @@ export const uploadsRouter = router({
 					team_source: teamUploads.team_source,
 					source: teamUploads.source,
 					uploader_name: teamUploads.uploader_name,
-					notes: teamUploads.notes,
-					notes_withheld: teamUploads.notes_withheld,
 					created_at: teamUploads.created_at,
 					ghost_status: teamUploads.ghost_status,
 					ghost_ticket: teamUploads.ghost_ticket,
@@ -145,7 +143,6 @@ export const uploadsRouter = router({
 					id: teamUploads.id,
 					created_at: teamUploads.created_at,
 					source: teamUploads.source,
-					notes: teamUploads.notes,
 					ghost_status: teamUploads.ghost_status,
 				})
 				.from(teamUploads)
@@ -165,7 +162,6 @@ export const uploadsRouter = router({
 				team: teamUploads.team,
 				created_at: teamUploads.created_at,
 				uploader_name: teamUploads.uploader_name,
-				notes: teamUploads.notes,
 				file_count: sql<number>`(select count(*) from ${teamUploadFiles} where ${teamUploadFiles.upload_id} = ${teamUploads.id} and ${teamUploadFiles.parent_id} is null)`,
 			})
 			.from(teamUploads)
@@ -436,9 +432,6 @@ export const uploadsRouter = router({
 			team: upload.team,
 			event: upload.event,
 			createdAt: upload.created_at,
-			// The team's own words are shown to a human here, marked when they were withheld from prompts.
-			notes: upload.notes,
-			notesWithheld: upload.notes_withheld,
 			files: files.map((f) => ({ ...f, kindLabel: KIND_LABELS[f.kind] })),
 			analysis: share.include_analysis ? upload.ghost_analysis : null,
 			matches: share.include_fms_logs ? await matchesFor(share.upload_id) : [],

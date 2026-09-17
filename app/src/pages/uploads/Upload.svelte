@@ -198,7 +198,7 @@
 		{#if !detail}
 			<p class="text-sm text-gray-500">Loading...</p>
 		{:else}
-			<!-- What the team said -->
+			<!-- Where it came from -->
 			<div class="rounded-lg border border-gray-200 dark:border-gray-700 p-2 flex flex-col gap-1">
 				<p class="text-xs text-gray-500">
 					{detail.upload.source === "portal" ? "Uploaded by the team" : "Uploaded by a volunteer"}
@@ -207,17 +207,8 @@
 					· team {detail.upload.team_source === "none"
 						? "not identified"
 						: `from ${detail.upload.team_source.replace(/-/g, " ")}`}
+					{#if detail.upload.event_why}· {detail.upload.event_why}{/if}
 				</p>
-				{#if detail.upload.notes}
-					<blockquote class="text-sm text-gray-800 dark:text-gray-100 border-l-2 border-gray-300 pl-2">
-						{detail.upload.notes}
-					</blockquote>
-					{#if detail.upload.notes_withheld}
-						<p class="text-xs text-amber-600 dark:text-amber-400">
-							Held back from the assistant: this reads like instructions rather than a description.
-						</p>
-					{/if}
-				{/if}
 				<div class="flex items-center gap-2 mt-1">
 					<input
 						bind:value={teamEdit}

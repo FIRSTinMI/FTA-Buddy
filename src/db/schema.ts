@@ -895,13 +895,6 @@ export const teamUploads = pgTable(
 		uploaded_by: integer("uploaded_by").references(() => users.id),
 		/** Free text name from the portal. Never trusted, only displayed. */
 		uploader_name: varchar("uploader_name"),
-		/** What the team said was wrong, in their words. */
-		notes: text("notes"),
-		/**
-		 * True when the notes tripped the untrusted-text screen, so they are shown to
-		 * a human but kept out of every prompt.
-		 */
-		notes_withheld: boolean("notes_withheld").notNull().default(false),
 		created_at: timestamp("created_at").notNull().defaultNow(),
 		/** Hashed client address, for portal rate limiting only. */
 		ip_hash: varchar("ip_hash"),

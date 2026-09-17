@@ -20,6 +20,7 @@ import {
 	linkByMatchNumber,
 	linkByTimestamp,
 	pickTeam,
+	stationOfTeam,
 	type CandidateMatch,
 	type MatchLevel,
 	type MatchLink,
@@ -730,7 +731,17 @@ export async function ingestUpload(params: IngestParams): Promise<IngestResult> 
 					how: link.how,
 					reason: link.reason,
 				})
-				.onConflictDoNothing()
+				// Re-linking must be able to improve a row, not just avoid duplicating
+				// it: a station worked out later has to land on the existing link.
+				.onConflictDoUpdate({
+					target: [teamUploadMatches.file_id, teamUploadMatches.match_id],
+					set: {
+						station: link.station ?? null,
+						team: link.team ?? null,
+						how: link.how,
+						reason: link.reason,
+					},
+				})
 				.execute();
 			allLinks.push(link);
 		}
@@ -769,10 +780,16 @@ export async function setUploadTeam(uploadId: string, team: number | null): Prom
 		.execute();
 }
 
-/** Attach or detach a match by hand. */
+/**
+ * Attach a match by hand. Leaves an existing link alone, since a volunteer
+ * pressing the button again should not overwrite something worked out from the
+ * log itself, but it still fills in the station from the schedule.
+ */
 export async function linkUploadMatch(params: { uploadId: string; fileId: string; matchId: string }): Promise<void> {
 	const match = await db.query.matchLogs.findFirst({ where: eq(matchLogs.id, params.matchId) });
 	if (!match) throw new Error("Match not found");
+	const upload = await db.query.teamUploads.findFirst({ where: eq(teamUploads.id, params.uploadId) });
+	const station = upload?.team ? stationOfTeam(match as unknown as CandidateMatch, upload.team) : null;
 	await db
 		.insert(teamUploadMatches)
 		.values({
@@ -782,8 +799,12 @@ export async function linkUploadMatch(params: { uploadId: string; fileId: string
 			level: match.level,
 			match_number: match.match_number,
 			play_number: match.play_number,
+			station,
+			team: station ? upload!.team : null,
 			how: "manual",
-			reason: "Attached by a volunteer.",
+			reason: station
+				? `Attached by a volunteer. Team ${upload!.team} was in ${station} for it.`
+				: "Attached by a volunteer.",
 		})
 		.onConflictDoNothing()
 		.execute();
@@ -966,7 +987,15 @@ export async function relinkUpload(uploadId: string, eventCode: string): Promise
 					how: link.how,
 					reason: link.reason,
 				})
-				.onConflictDoNothing()
+				.onConflictDoUpdate({
+					target: [teamUploadMatches.file_id, teamUploadMatches.match_id],
+					set: {
+						station: link.station ?? null,
+						team: link.team ?? null,
+						how: link.how,
+						reason: link.reason,
+					},
+				})
 				.execute();
 			written++;
 		}

@@ -379,7 +379,29 @@ export const generalHelp = {
 		ref: { tree: "roborio", node: "rail-short" },
 		source: NI_RED,
 	},
-		"roborio.status.ok": {
+	"roborio.power.input-too-high": {
+		device: "roboRIO",
+		led: "Power",
+		state: "Blinking red, 3 Hz",
+		meaning:
+			"Input voltage is above 16 V. The roboRIO turned every output off to protect itself, so the robot is dead until the supply comes back into range.",
+		steps: [
+			{
+				kind: "check",
+				text: "Is the robot on a power supply or charger rather than a battery? Many bench supplies sit above 16 V.",
+			},
+			{
+				kind: "check",
+				text: "Measure at the PDP/PDH main terminals with the robot enabled. A healthy pack sits between 12 V and 13.5 V.",
+			},
+			{
+				kind: "do",
+				text: "Move to a known-good battery before powering up again. Repeated over-voltage damages the roboRIO.",
+			},
+		],
+		source: NI_RED,
+	},
+	"roborio.status.ok": {
 		device: "roboRIO",
 		led: "Status",
 		state: "Off",

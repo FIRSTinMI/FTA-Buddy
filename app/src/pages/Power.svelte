@@ -97,6 +97,38 @@
 	}
 
 	/**
+	 * Fill the charts from stored history so a refresh does not start empty.
+	 *
+	 * Only the points are seeded, never `last` or `lastAt`: those drive the
+	 * connected indicator, and a stored row says nothing about whether the
+	 * monitor is talking to us right now.
+	 */
+	async function seedFromHistory() {
+		try {
+			const history = await trpc.power.history.query({
+				minutes: Math.ceil(MAX_WINDOW_S / 60),
+				bucketSeconds: 1,
+			});
+			const cutoff = Date.now() - MAX_WINDOW_S * 1000;
+
+			for (const [id, points] of Object.entries(history.monitors)) {
+				const state: MonitorState = monitors[id] ?? { id, last: null, lastAt: 0, points: [] };
+				// Live messages may have arrived while this was in flight.
+				const known = new Set(state.points.map((p) => p.ts));
+				const seeded = points
+					.filter((p) => p.time >= cutoff && !known.has(p.time))
+					.map((p) => ({ ts: p.time, volts: p.volts, amps: p.amps }));
+				if (seeded.length === 0) continue;
+				state.points = [...seeded, ...state.points].sort((a, b) => a.ts - b.ts);
+				monitors = { ...monitors, [id]: state };
+			}
+			redraw();
+		} catch (err) {
+			console.warn("[Power] could not load stored history:", err);
+		}
+	}
+
+	/**
 	 * Telemetry from the extension on this machine. The page cannot reach the
 	 * monitors itself - they are plain HTTP on the event network and this is an
 	 * HTTPS origin - so the extension forwards every reading into the window.
@@ -283,6 +315,7 @@
 		ampsChart = echarts.init(ampsContainer);
 		voltsChart = echarts.init(voltsContainer);
 		redraw();
+		seedFromHistory();
 		redrawTimer = setInterval(redraw, REDRAW_MS);
 
 		observer = new ResizeObserver(() => {

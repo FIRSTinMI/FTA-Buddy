@@ -276,6 +276,25 @@
 				opacity: 0.8;
 			}
 
+			.icon-button {
+				margin-left: auto;
+				background: none;
+				border: 1px solid var(--border);
+				border-radius: 6px;
+				color: var(--muted);
+				cursor: pointer;
+				font-size: 13px;
+				line-height: 1;
+				padding: 3px 7px;
+			}
+			.icon-button:hover {
+				color: inherit;
+			}
+			.icon-button:disabled {
+				opacity: 0.5;
+				cursor: default;
+			}
+
 			/* Small badge for “Developer stuff” */
 			.badge {
 				display: inline-flex;
@@ -480,6 +499,15 @@
 				<div class="status-indicator" id="power-monitor-status"></div>
 				<div class="status-label">Monitors</div>
 				<span class="status-text" id="power-monitor-status-text"></span>
+				<button
+					type="button"
+					id="power-rescan"
+					class="icon-button"
+					title="Scan the subnet again"
+					aria-label="Rescan for power monitors"
+				>
+					&#10227;
+				</button>
 			</div>
 
 			<div class="grid" id="url-container" style="display: none; margin-top: 10px">

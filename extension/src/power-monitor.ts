@@ -43,8 +43,14 @@ const PROBE_CONCURRENCY = 48;
 const RECONNECT_DELAY_MS = 3_000;
 /** A stream that has said nothing for this long is treated as dead, not idle. */
 const STALE_STREAM_MS = 5_000;
-/** How often to re-sweep for monitors that were not found (or were unplugged and moved). */
+/** How often to re-sweep once at least one monitor is streaming. */
 const RESWEEP_INTERVAL_MS = 5 * 60_000;
+/**
+ * How often to re-sweep while NOTHING is connected. A sweep that runs before
+ * the boards have their DHCP leases finds an empty network, and waiting five
+ * minutes to look again reads as broken.
+ */
+const IDLE_SWEEP_INTERVAL_MS = 20_000;
 
 export interface DiscoveredMonitor {
 	id: string;
@@ -226,6 +232,7 @@ export class PowerMonitorManager {
 	private streams = new Map<string, MonitorStream>();
 	private resweepTimer: ReturnType<typeof setInterval> | null = null;
 	private sweeping = false;
+	private lastSweepAt = 0;
 
 	constructor(
 		private readonly onTelemetry: (telemetry: PowerTelemetry) => void,
@@ -239,7 +246,13 @@ export class PowerMonitorManager {
 
 	async start() {
 		if (this.running) return;
-		this.resweepTimer = setInterval(() => this.discover().catch(console.warn), RESWEEP_INTERVAL_MS);
+		// One timer, two cadences: keep looking hard until something answers,
+		// then drop back to an occasional check for a monitor that moved.
+		this.resweepTimer = setInterval(() => {
+			const idle = this.connectedCount === 0;
+			const due = Date.now() - this.lastSweepAt >= (idle ? IDLE_SWEEP_INTERVAL_MS : RESWEEP_INTERVAL_MS);
+			if (due) this.discover().catch(console.warn);
+		}, IDLE_SWEEP_INTERVAL_MS);
 		await this.discover();
 	}
 
@@ -254,6 +267,7 @@ export class PowerMonitorManager {
 	async discover(): Promise<DiscoveredMonitor[]> {
 		if (this.sweeping) return this.list();
 		this.sweeping = true;
+		this.lastSweepAt = Date.now();
 		try {
 			const prefix = this.getSubnet();
 			const subnet = isValidSubnetPrefix(prefix) ? prefix.trim() : DEFAULT_SUBNET_PREFIX;

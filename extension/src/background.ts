@@ -582,6 +582,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
 	if (msg?.type === "rescanPowerMonitors") {
 		(async () => {
+			if (!powerManager && powerMonitorEnabled) await startPowerMonitor();
 			const found = (await powerManager?.discover()) ?? [];
 			sendResponse({ found: found.length, monitors: powerManager?.list() ?? [] });
 		})();

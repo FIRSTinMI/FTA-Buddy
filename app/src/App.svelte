@@ -214,7 +214,7 @@
 		"/join",
 	];
 
-	const eventTokenPaths = ["/monitor", "/checklist", "/logs", "/notepad", "/scorekeeper", "/field-lineup"];
+	const eventTokenPaths = ["/monitor", "/checklist", "/logs", "/notepad", "/scorekeeper", "/field-lineup", "/power"];
 
 	// Roles that can see the Scorekeeper view (playoff lineups).
 	let canScorekeep = $derived($user.admin || ["Scorekeeper", "FTA", "FTAA", "System"].includes($user.role));

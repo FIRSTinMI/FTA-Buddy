@@ -16,6 +16,7 @@ const cheesyPortInput = document.getElementById("cheesyPort") as HTMLInputElemen
 const cheesyPortRow = document.getElementById("cheesy-port-row") as HTMLDivElement;
 const powerMonitorInput = document.getElementById("powerMonitor") as HTMLInputElement;
 const powerMonitorRow = document.getElementById("power-monitor-row") as HTMLDivElement;
+const powerRescanButton = document.getElementById("power-rescan") as HTMLButtonElement;
 const powerSubnetInput = document.getElementById("powerSubnet") as HTMLInputElement;
 const powerSubnetRow = document.getElementById("power-subnet-row") as HTMLDivElement;
 const saveButton = document.getElementById("save") as HTMLButtonElement;
@@ -122,6 +123,22 @@ async function handlePowerSubnetChange() {
 	powerMonitorIndicator.classList.add("yellow");
 	powerMonitorText.textContent = "Scanning...";
 	setTimeout(updatePowerMonitorStatus, 3000);
+}
+
+/** Sweep again now, for when a board was plugged in after the last scan. */
+async function handlePowerRescan() {
+	powerRescanButton.disabled = true;
+	powerMonitorIndicator.classList.remove("red", "green");
+	powerMonitorIndicator.classList.add("yellow");
+	powerMonitorText.textContent = "Scanning...";
+	try {
+		await chrome.runtime.sendMessage({ type: "rescanPowerMonitors" });
+	} catch {
+		// The worker was asleep; it scans on wake anyway.
+	} finally {
+		powerRescanButton.disabled = false;
+		updatePowerMonitorStatus();
+	}
 }
 
 async function updatePowerMonitorStatus() {
@@ -250,6 +267,7 @@ function load() {
 			cheesyPortInput.addEventListener("input", handleUpdate);
 			powerMonitorInput.addEventListener("change", handlePowerMonitorToggle);
 			powerSubnetInput.addEventListener("change", handlePowerSubnetChange);
+			powerRescanButton.addEventListener("click", handlePowerRescan);
 			if (useDevCheckbox) useDevCheckbox.addEventListener("input", handleUpdate);
 			saveButton.addEventListener("click", handleUpdate);
 			refreshButton.addEventListener("click", () => chrome.runtime.reload());

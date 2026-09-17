@@ -389,7 +389,7 @@
 					disabled={sending || closed}
 					placeholder={closed
 						? "Start a new conversation to continue"
-						: "Describe the problem. A GitHub repo link or an upload code like 7K2M-QX4T attaches it."}
+						: "Describe the problem. Mention a team number or paste a GitHub link."}
 					class="grow resize-none rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-60"
 				></textarea>
 				<Button size="sm" class="shrink-0 h-10" disabled={!canSend} onclick={send} title="Send">

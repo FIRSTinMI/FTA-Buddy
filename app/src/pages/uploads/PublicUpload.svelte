@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Icon from "@iconify/svelte";
 	import { Button, Input } from "flowbite-svelte";
-	import { ACCEPTED_EXTENSIONS } from "../../../../shared/logs/detect";
+	import FileDrop from "../../components/uploads/FileDrop.svelte";
 	import { toast } from "../../util/toast";
 
 	/**
@@ -34,14 +34,10 @@
 	let picked = $state<File[]>([]);
 	let uploading = $state(false);
 	let progress = $state(0);
-	let dragging = $state(false);
 	let result = $state<Result | null>(null);
 
 	let team = $state("");
 	let savingTeam = $state(false);
-
-	let fileInput: HTMLInputElement | undefined = $state();
-	let totalMb = $derived(picked.reduce((sum, f) => sum + f.size, 0) / 1e6);
 
 	/**
 	 * The warnings worth showing a team. The two about a missing team or event are
@@ -49,23 +45,6 @@
 	 * volunteer's problem rather than theirs.
 	 */
 	let shownWarnings = $derived((result?.warnings ?? []).filter((w) => !w.startsWith("We could not work out which")));
-
-	function add(list: FileList | null) {
-		if (!list) return;
-		const incoming = Array.from(list);
-		// The same name and size twice is the same file picked twice.
-		picked = [...picked, ...incoming.filter((f) => !picked.some((p) => p.name === f.name && p.size === f.size))];
-	}
-
-	function remove(file: File) {
-		picked = picked.filter((f) => f !== file);
-	}
-
-	function onDrop(e: DragEvent) {
-		e.preventDefault();
-		dragging = false;
-		add(e.dataTransfer?.files ?? null);
-	}
 
 	/**
 	 * XHR rather than fetch: a team's logs can be tens of megabytes on pit wifi,
@@ -201,57 +180,7 @@
 		{:else}
 			<h1 class="text-2xl font-bold text-black dark:text-white">Send your logs to the CSA</h1>
 
-			<!-- One drop area, with a button for anyone who is not dragging -->
-			<button
-				type="button"
-				disabled={uploading}
-				ondragover={(e) => {
-					e.preventDefault();
-					dragging = true;
-				}}
-				ondragleave={() => (dragging = false)}
-				ondrop={onDrop}
-				onclick={() => fileInput?.click()}
-				class="flex w-full flex-col items-center gap-2 rounded-lg border-2 border-dashed p-6 text-center transition-colors disabled:opacity-60 {dragging
-					? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30'
-					: 'border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-800'}"
-			>
-				<Icon icon="heroicons:arrow-up-tray" class="size-8 text-gray-500" />
-				<span class="font-semibold text-black dark:text-white">Drop your files here</span>
-				<span class="text-sm text-gray-600 dark:text-gray-300">or click to pick them</span>
-			</button>
-			<input
-				bind:this={fileInput}
-				type="file"
-				multiple
-				accept={ACCEPTED_EXTENSIONS.join(",")}
-				class="hidden"
-				onchange={(e) => {
-					add((e.currentTarget as HTMLInputElement).files);
-					(e.currentTarget as HTMLInputElement).value = "";
-				}}
-			/>
-
-			{#if picked.length > 0}
-				<div class="rounded-lg border border-gray-200 dark:border-gray-700">
-					{#each picked as file (file.name + file.size)}
-						<div
-							class="flex items-center gap-2 border-b border-gray-200 px-3 py-2 last:border-0 dark:border-gray-700"
-						>
-							<span class="grow truncate text-sm text-black dark:text-white">{file.name}</span>
-							<span class="shrink-0 text-xs text-gray-500">{Math.ceil(file.size / 1024)} KB</span>
-							<button
-								class="shrink-0 text-gray-500 hover:text-red-600"
-								aria-label="Remove {file.name}"
-								onclick={() => remove(file)}
-							>
-								<Icon icon="heroicons:x-mark-16-solid" class="size-4" />
-							</button>
-						</div>
-					{/each}
-					<p class="px-3 py-1 text-xs text-gray-500">{totalMb.toFixed(1)} MB in total.</p>
-				</div>
-			{/if}
+			<FileDrop bind:files={picked} disabled={uploading} />
 
 			<Button size="lg" disabled={picked.length === 0 || uploading} onclick={send}>
 				{#if uploading}

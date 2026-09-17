@@ -3,7 +3,7 @@
 	import { Button, Input, Modal } from "flowbite-svelte";
 	import { onMount } from "svelte";
 	import QrCode from "svelte-qrcode";
-	import { ACCEPTED_EXTENSIONS } from "../../../../shared/logs/detect";
+	import FileDrop from "../../components/uploads/FileDrop.svelte";
 	import { trpc } from "../../main";
 	import { navigate } from "../../router";
 	import { userStore } from "../../stores/user";
@@ -28,13 +28,12 @@
 	let linkOpen = $state(false);
 	let busy = $state(false);
 
-	let files = $state<FileList | null>(null);
+	let files = $state<File[]>([]);
 	let team = $state("");
 	let uploading = $state(false);
 
 	let hasEvent = $derived(Boolean($userStore.eventToken));
 	let portalUrl = $derived(`${window.location.origin}/upload`);
-	let fileList = $derived(files ? Array.from(files) : []);
 
 	async function load() {
 		if (!hasEvent) {
@@ -56,11 +55,11 @@
 	}
 
 	async function upload() {
-		if (fileList.length === 0) return;
+		if (files.length === 0) return;
 		uploading = true;
 		try {
 			const body = new FormData();
-			for (const file of fileList) body.append("files", file);
+			for (const file of files) body.append("files", file);
 			if (team.trim()) body.append("team", team.trim());
 			const response = await fetch("/api/uploads", {
 				method: "POST",
@@ -134,20 +133,13 @@
 		<div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3 flex flex-col gap-2">
 			<p class="font-semibold text-black dark:text-white">Upload from this device</p>
 			<p class="text-xs text-gray-500 dark:text-gray-400">For when the team's laptop has no network.</p>
-			<input
-				type="file"
-				multiple
-				accept={ACCEPTED_EXTENSIONS.join(",")}
-				disabled={uploading}
-				onchange={(e) => (files = (e.currentTarget as HTMLInputElement).files)}
-				class="w-full text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-2"
-			/>
+			<FileDrop bind:files disabled={uploading} />
 			<Input bind:value={team} type="number" placeholder="Team number" class="w-40" disabled={uploading} />
-			<Button size="sm" disabled={fileList.length === 0 || uploading} onclick={upload}>
+			<Button size="sm" disabled={files.length === 0 || uploading} onclick={upload}>
 				{#if uploading}
 					<Icon icon="svg-spinners:ring-resize" class="size-4 mr-2" /> Uploading
 				{:else}
-					Upload {fileList.length > 0 ? `${fileList.length} file${fileList.length === 1 ? "" : "s"}` : ""}
+					Upload {files.length > 0 ? `${files.length} file${files.length === 1 ? "" : "s"}` : ""}
 				{/if}
 			</Button>
 		</div>

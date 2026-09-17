@@ -873,7 +873,7 @@ export const teamUploads = pgTable(
 	"team_uploads",
 	{
 		id: uuid("id").primaryKey().defaultRandom(),
-		/** Short code a team can read out over a pit wall, e.g. `7K2M-QX4T`. */
+		/** Short stable id for the row. Not shown to anyone; nothing asks for it. */
 		code: varchar("code").notNull().unique(),
 		/** Event this belongs to. Null when the portal was used with no event code. */
 		event: varchar("event"),

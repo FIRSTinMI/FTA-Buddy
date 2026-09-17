@@ -1,5 +1,4 @@
 import { asc, eq } from "drizzle-orm";
-import { compressSync, decompressSync } from "fflate";
 import { randomUUID } from "node:crypto";
 import type { AutoEventIssueType, DisconnectionEvent, EventAutoEventSettings, FMSLogFrame } from "../../shared/types";
 import { ISSUE_SEVERITY } from "../../shared/issue-severity";
@@ -9,6 +8,7 @@ import { analyzedLogs, events as eventsTable, issueEnum, matchEvents, matchLogs 
 import { events } from "../index";
 import { tryAutoLinkNewMatchEvent } from "./auto-link-events";
 import { bus } from "./eventBus";
+import { compressStationLog, decompressStationLog } from "./station-log-codec";
 
 /**
  * Global cache of autoEventSettings keyed by event code.
@@ -554,23 +554,9 @@ export async function logAnalysisLoop(limit: number) {
 	}
 }
 
-export function compressStationLog(log: FMSLogFrame[]) {
-	const enc = new TextEncoder();
-	const buf = enc.encode(JSON.stringify(log));
-
-	// The default compression method is gzip
-	// Increasing mem may increase performance at the cost of memory
-	// The mem ranges from 0 to 12, where 4 is the default
-	const compressed = Buffer.from(compressSync(buf, { level: 6, mem: 6 }));
-	return compressed.toString("base64");
-}
-
-export function decompressStationLog(compressed: string) {
-	const dec = new TextDecoder();
-	const buf = Uint8Array.from(Buffer.from(compressed, "base64"));
-	const decompressed = decompressSync(buf);
-	return JSON.parse(dec.decode(decompressed)) as FMSLogFrame[];
-}
+// Kept as re-exports so existing importers do not have to change; the
+// implementation moved to station-log-codec.ts, which imports nothing of ours.
+export { compressStationLog, decompressStationLog };
 
 // This was used to migrate to compressed logs
 // export async function compressLogs(limit: number) {

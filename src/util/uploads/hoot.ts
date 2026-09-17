@@ -26,6 +26,11 @@ import { join } from "path";
  * The mechanism here follows AdvantageScope's `owletDownload` and
  * `owletInterface` (BSD, Littleton Robotics), which is where the byte offset and
  * the index layout come from.
+ *
+ * One deployment note: owlet 1.0.1.1 needs glibc 2.34 and GLIBCXX 3.4.30. The
+ * production container (`oven/bun:1`, Debian trixie) has them; an older host
+ * running the server directly does not, and there the conversion fails with a
+ * linker error that is reported as-is rather than swallowed.
  */
 
 const INDEX_URL = "https://redist.ctr-electronics.com/index.json";
@@ -196,7 +201,13 @@ export async function convertHoot(data: Uint8Array, fileName: string): Promise<H
 			// Not worth failing the conversion over.
 		}
 
-		const result = await run(owlet, [input, output, "-f", "wpilog"], 180_000);
+		let result = await run(owlet, [input, output, "-f", "wpilog"], 180_000);
+		if (!existsSync(output) && pro !== false) {
+			// A log holding Phoenix Pro devices fails the licence check. Retrying
+			// without it still gets the non-Pro signals out, which is better than
+			// handing a CSA nothing.
+			result = await run(owlet, [input, output, "-f", "wpilog", "--unlicensed"], 180_000);
+		}
 		if (!existsSync(output)) {
 			const detail = (result.stderr || result.stdout).trim().slice(0, 300);
 			throw new HootError(`owlet did not produce a data log${detail ? `: ${detail}` : "."}`);

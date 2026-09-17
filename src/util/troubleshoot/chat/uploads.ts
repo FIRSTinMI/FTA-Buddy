@@ -20,7 +20,7 @@ import { readWpilogEntry, wpilogClockOffset } from "../../../../shared/logs/wpil
 import type { FMSLogFrame } from "../../../../shared/types";
 import { db } from "../../../db/db";
 import { matchLogs, teamUploadFiles, teamUploadMatches, teamUploads } from "../../../db/schema";
-import { decompressStationLog } from "../../log-analysis";
+import { decompressStationLog } from "../../station-log-codec";
 import { loadBytes } from "../../uploads/store";
 
 /**
@@ -99,9 +99,15 @@ export async function listUploadFiles(uploadId: string): Promise<string> {
 	const lines: string[] = [];
 	lines.push(`Upload ${upload.code}${upload.team ? `, team ${upload.team}` : ", team unknown"}.`);
 	if (links.length > 0) {
-		lines.push(
-			`Attached matches: ${links.map((l) => `${l.level} ${l.match_number}${l.station ? ` ${l.station}` : ""}`).join(", ")}.`,
-		);
+		const seen = new Set<string>();
+		const labels: string[] = [];
+		for (const link of links) {
+			const label = `${link.level} ${link.match_number}${link.station ? ` ${link.station}` : ""}`;
+			if (seen.has(label)) continue;
+			seen.add(label);
+			labels.push(label);
+		}
+		lines.push(`Attached matches: ${labels.join(", ")}.`);
 	}
 	const top = files.filter((f) => f.parent_id === null);
 	lines.push("", "Files the team uploaded:");
@@ -195,8 +201,16 @@ export async function availableSeries(uploadId: string): Promise<string> {
 	const lines: string[] = [];
 	const links = await db.select().from(teamUploadMatches).where(eq(teamUploadMatches.upload_id, uploadId)).execute();
 	if (links.length > 0) {
-		lines.push("Matches with a field log to compare against:");
+		// Several files can attach the same match, one row each. List the match once.
+		const byMatch = new Map<string, (typeof links)[number]>();
 		for (const link of links) {
+			const existing = byMatch.get(link.match_id);
+			// Prefer the row that knows the station, since that is the one that can
+			// also plot the field's own log.
+			if (!existing || (!existing.station && link.station)) byMatch.set(link.match_id, link);
+		}
+		lines.push("Matches with a field log to compare against:");
+		for (const link of byMatch.values()) {
 			lines.push(
 				`  ${link.level} ${link.match_number} play ${link.play_number}${link.station ? ` (${link.station})` : ""}  match_id=${link.match_id}`,
 			);

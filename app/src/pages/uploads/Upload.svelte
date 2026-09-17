@@ -41,6 +41,20 @@
 	let teamEdit = $state("");
 
 	let topFiles = $derived(detail ? detail.files.filter((f) => f.parent_id === null) : []);
+	/**
+	 * Several files in one upload can attach the same match, one row each. The
+	 * list shows the match once, preferring the row that knows the station,
+	 * because that is the one whose link opens the right station log.
+	 */
+	let matches = $derived.by(() => {
+		if (!detail) return [];
+		const byMatch = new Map<string, (typeof detail.matches)[number]>();
+		for (const m of detail.matches) {
+			const existing = byMatch.get(m.match_id);
+			if (!existing || (!existing.station && m.station)) byMatch.set(m.match_id, m);
+		}
+		return [...byMatch.values()];
+	});
 	let childrenOf = $derived((parent: string) => (detail ? detail.files.filter((f) => f.parent_id === parent) : []));
 
 	async function load() {
@@ -216,11 +230,11 @@
 			</div>
 
 			<!-- Matches this upload belongs to -->
-			{#if detail.matches.length > 0}
+			{#if matches.length > 0}
 				<div class="rounded-lg border border-gray-200 dark:border-gray-700 p-2">
 					<p class="text-sm font-semibold text-black dark:text-white mb-1">Matches</p>
 					<div class="flex flex-col gap-1">
-						{#each detail.matches as m (m.id)}
+						{#each matches as m (m.id)}
 							<div class="text-sm">
 								<a
 									class="underline text-black dark:text-white"

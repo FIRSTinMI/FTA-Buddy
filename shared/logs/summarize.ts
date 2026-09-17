@@ -15,8 +15,9 @@ import { levelFromMatchType } from "./match-link";
 function secs(value: number): string {
 	if (value < 1) return `${(value * 1000).toFixed(0)} ms`;
 	if (value < 60) return `${value.toFixed(1)} s`;
-	const m = Math.floor(value / 60);
-	return `${m}m ${Math.round(value % 60)}s`;
+	// Round the whole thing first, or 179.6 s reads as "2m 60s".
+	const whole = Math.round(value);
+	return `${Math.floor(whole / 60)}m ${whole % 60}s`;
 }
 
 function pct(value: number): string {

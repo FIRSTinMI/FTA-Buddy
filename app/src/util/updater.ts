@@ -30,6 +30,15 @@ export function compareVersions(a: string, b: string): number {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.11.1": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.11.1</h1>
+        <p class="my-1 font-bold">Field power</p>
+        <ul>
+        <li>Monitors no longer flicker between connected and disconnected on devices without the extension</li>
+        </ul>
+        `,
+	},
 	"2.7.11.0": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.11.0</h1>

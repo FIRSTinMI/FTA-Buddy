@@ -10,8 +10,14 @@
 
 	/** Seconds of live history held in memory and drawn. */
 	const LIVE_WINDOW_S = 60;
-	/** A monitor that has said nothing for this long is shown as disconnected. */
-	const STALE_MS = 5000;
+	/**
+	 * A monitor that has said nothing for this long is shown as disconnected.
+	 *
+	 * Comfortably above the extension's five-second post interval. At exactly
+	 * five seconds a client fed by the server (any device without the extension)
+	 * went stale between every batch and flickered.
+	 */
+	const STALE_MS = 15000;
 	/** Redraw cadence. The stream is 2 Hz per monitor; redrawing on every message is wasted work. */
 	const REDRAW_MS = 500;
 
@@ -63,13 +69,20 @@
 		const existing = monitors[telemetry.id];
 		const state: MonitorState = existing ?? { id: telemetry.id, last: null, lastAt: 0, points: [] };
 
+		// When it was measured, for the chart's x-axis.
+		const sampleTs = telemetry.ts || Date.now();
+
 		state.last = telemetry;
-		state.lastAt = telemetry.ts || Date.now();
+		// Liveness is when we last HEARD from a monitor, not the timestamp inside
+		// the payload. Samples relayed by the server arrive in five-second batches
+		// stamped with the second they were measured, so they are already several
+		// seconds old on arrival and would read as stale immediately.
+		state.lastAt = Date.now();
 		if (telemetry.ip) state.ip = telemetry.ip;
 
 		if (telemetry.ok && telemetry.v !== null && telemetry.a !== null) {
-			state.points.push({ ts: state.lastAt, volts: telemetry.v, amps: telemetry.a });
-			const cutoff = state.lastAt - LIVE_WINDOW_S * 1000;
+			state.points.push({ ts: sampleTs, volts: telemetry.v, amps: telemetry.a });
+			const cutoff = sampleTs - LIVE_WINDOW_S * 1000;
 			while (state.points.length > 0 && state.points[0].ts < cutoff) state.points.shift();
 		}
 

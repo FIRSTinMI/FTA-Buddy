@@ -44,6 +44,13 @@
 	let fileInput: HTMLInputElement | undefined = $state();
 	let totalMb = $derived(picked.reduce((sum, f) => sum + f.size, 0) / 1e6);
 
+	/**
+	 * The warnings worth showing a team. The two about a missing team or event are
+	 * dropped: this screen already asks for the team, and the event is a
+	 * volunteer's problem rather than theirs.
+	 */
+	let shownWarnings = $derived((result?.warnings ?? []).filter((w) => !w.startsWith("We could not work out which")));
+
 	function add(list: FileList | null) {
 		if (!list) return;
 		const incoming = Array.from(list);
@@ -183,10 +190,10 @@
 				{/if}
 			</div>
 
-			{#if result.warnings.length > 0}
+			{#if shownWarnings.length > 0}
 				<div class="rounded-lg border-l-4 border-amber-500 bg-amber-50 p-3 dark:bg-amber-950/30">
 					<ul class="list-disc pl-5 text-sm text-gray-700 dark:text-gray-200">
-						{#each result.warnings as warning}
+						{#each shownWarnings as warning}
 							<li>{warning}</li>
 						{/each}
 					</ul>

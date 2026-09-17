@@ -29,8 +29,10 @@ import {
 	linkByFileName,
 	linkByMatchInfo,
 	linkByTimestamp,
+	fillStations,
 	pickTeam,
 	stationFrom,
+	stationOfTeam,
 	type CandidateMatch,
 } from "../../shared/logs/match-link";
 import { readRobotCode, stripCommonPrefix, teamFromSupportBundle } from "../../shared/logs/robot-code";
@@ -830,5 +832,53 @@ describe("event inference dates", () => {
 		expect(normalizeEventName("Kettering University #1")).toBe("ketteringuniversity1");
 		// Which is what lets a code ending in the FMS name match it.
 		expect(normalizeEventName("2026mifli").endsWith(normalizeEventName("MIFLI"))).toBe(true);
+	});
+});
+
+describe("filling in the station", () => {
+	const match: CandidateMatch = {
+		id: "m1",
+		level: "Practice",
+		match_number: 1,
+		play_number: 1,
+		start_time: new Date("2026-04-11T14:00:00Z"),
+		red1: 240,
+		red2: 6615,
+		red3: 503,
+		blue1: 6081,
+		blue2: 1502,
+		blue3: 2834,
+	};
+	const link = {
+		matchId: "m1",
+		level: "Practice" as const,
+		matchNumber: 1,
+		playNumber: 1,
+		startTime: match.start_time,
+		how: "timestamp" as const,
+		reason: "It was recording then.",
+	};
+
+	test("a team maps to the station they were standing in", () => {
+		expect(stationOfTeam(match, 240)).toBe("red1");
+		expect(stationOfTeam(match, 1502)).toBe("blue2");
+		expect(stationOfTeam(match, 9999)).toBeNull();
+	});
+
+	test("a link made by the clock gets its station from the team", () => {
+		const [filled] = fillStations([link], [match], 240);
+		expect(filled.station).toBe("red1");
+		expect(filled.team).toBe(240);
+		expect(filled.reason).toContain("red1");
+	});
+
+	test("nothing is invented without a team, or for a team not in that match", () => {
+		expect(fillStations([link], [match], null)[0].station).toBeUndefined();
+		expect(fillStations([link], [match], 9999)[0].station).toBeUndefined();
+	});
+
+	test("a station the log already named is left alone", () => {
+		const named = { ...link, station: "blue3" as const, how: "match-info" as const };
+		expect(fillStations([named], [match], 240)[0].station).toBe("blue3");
 	});
 });

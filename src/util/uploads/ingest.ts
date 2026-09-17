@@ -13,6 +13,7 @@ import {
 } from "../../../shared/logs/dslog";
 import { parseHootFileName, parseWpilogFileName, wpilogNameFromDsEvents } from "../../../shared/logs/filenames";
 import {
+	fillStations,
 	levelFromDsEvents,
 	linkByFileName,
 	linkByMatchInfo,
@@ -582,6 +583,12 @@ export async function ingestUpload(params: IngestParams): Promise<IngestResult> 
 		}
 	}
 
+	// A Driver Station log names no station, so a link made by the clock cannot
+	// say which one it was. The team can, via the schedule.
+	for (const file of prepared) {
+		file.links = fillStations(file.links, candidates, teamBeforeLinking?.team ?? null);
+	}
+
 	// A `.dslog` and its `.dsevents` are one session under one name, and only the
 	// events file knows the match. So the pair is matched up by base name, and the
 	// telemetry log inherits the match its own binary never recorded.
@@ -932,6 +939,15 @@ export async function relinkUpload(uploadId: string, eventCode: string): Promise
 		if (link) linksByFile.set(file.id, [link]);
 	}
 
+	// Fill in the station from the team on the row, for the links that could not
+	// name one themselves.
+	const upload = await db.query.teamUploads.findFirst({ where: eq(teamUploads.id, uploadId) });
+	if (upload?.team) {
+		for (const [fileId, links] of linksByFile) {
+			linksByFile.set(fileId, fillStations(links, candidates, upload.team));
+		}
+	}
+
 	let written = 0;
 	for (const file of files) {
 		const links = linksByFile.get(file.id) ?? [];
@@ -999,7 +1015,6 @@ export async function relinkUpload(uploadId: string, eventCode: string): Promise
 	// A station read off a data log names the team better than anything typed.
 	const team = pickTeam(teamCandidates);
 	if (team) {
-		const upload = await db.query.teamUploads.findFirst({ where: eq(teamUploads.id, uploadId) });
 		if (upload && (upload.team === null || upload.team_source === "entered")) {
 			await db
 				.update(teamUploads)

@@ -225,3 +225,33 @@ export function pickTeam(
 		.sort((a, b) => TEAM_SOURCE_RANK[b.source] - TEAM_SOURCE_RANK[a.source]);
 	return ranked[0] ?? null;
 }
+
+/**
+ * Which station a team was in for a match.
+ *
+ * A Driver Station log names no station and no team, so an upload of one links
+ * by the clock and knows neither. But if we know the team from anywhere else,
+ * the schedule says where they were standing, and that is what lets the field's
+ * own record be drawn next to theirs.
+ */
+export function stationOfTeam(match: CandidateMatch, team: number): Station | null {
+	const stations: Station[] = ["red1", "red2", "red3", "blue1", "blue2", "blue3"];
+	return stations.find((station) => match[station] === team) ?? null;
+}
+
+/** Fill in the station and team on links that could not name them. */
+export function fillStations(links: MatchLink[], candidates: CandidateMatch[], team: number | null): MatchLink[] {
+	if (team === null) return links;
+	return links.map((link) => {
+		if (link.station) return link;
+		const match = candidates.find((c) => c.id === link.matchId);
+		const station = match ? stationOfTeam(match, team) : null;
+		if (!station) return link;
+		return {
+			...link,
+			station,
+			team,
+			reason: `${link.reason} Team ${team} was in ${station} for it.`,
+		};
+	});
+}

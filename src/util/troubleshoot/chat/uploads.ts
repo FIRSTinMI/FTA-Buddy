@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { KIND_LABELS } from "../../../../shared/logs/detect";
-import { readDsLog, type DsLogResult } from "../../../../shared/logs/dslog";
+import { readDsEvents, readDsLog, type DsLogResult } from "../../../../shared/logs/dslog";
 import { readCsvTelemetry } from "../../../../shared/logs/csv-telemetry";
 import {
 	clipToMatch,
@@ -209,6 +209,43 @@ export async function readUploadFile(
 	return { path: file.path, text: text.length > maxChars ? `${text.slice(0, maxChars)}\n\n[truncated]` : text };
 }
 
+/**
+ * The Driver Station's event log for a match, on the match clock.
+ *
+ * `read_upload_file` can reach the same file, but its preview counts seconds
+ * from the start of the file and stops at 200 lines. Lined up against the match
+ * the way the viewer shows it, "Input Voltage Brownout at 87.6s" can be read
+ * against the series the model already pulled for the same match.
+ */
+export async function readDsEventsForMatch(uploadId: string, matchId: string, limit = 400): Promise<string> {
+	const match = await db.query.matchLogs.findFirst({ where: eq(matchLogs.id, matchId) });
+	if (!match) throw new UploadToolError("That match is not one of ours.");
+	const files = await db
+		.select()
+		.from(teamUploadFiles)
+		.where(and(eq(teamUploadFiles.upload_id, uploadId), eq(teamUploadFiles.kind, "dsevents")))
+		.execute();
+	if (files.length === 0) throw new UploadToolError("This upload has no Driver Station event log.");
+
+	const matchStart = match.start_time.getTime() / 1000;
+	const lines: { t: number; text: string }[] = [];
+	for (const file of files) {
+		const parsed = readDsEvents(await loadBytes(file));
+		if (!parsed.parsed || parsed.startTime === null) continue;
+		const offset = parsed.startTime - matchStart;
+		for (const entry of parsed.entries) lines.push({ t: entry.timestamp + offset, text: entry.text });
+	}
+	if (lines.length === 0) throw new UploadToolError("The Driver Station event log could not be read.");
+	lines.sort((a, b) => a.t - b.t);
+
+	const shown = lines.slice(0, limit);
+	return [
+		`Driver Station events, seconds from the start of ${match.level} ${match.match_number}. Negative is before the match started.`,
+		...shown.map((line) => `  ${line.t >= 0 ? " " : ""}${line.t.toFixed(2)}  ${line.text}`),
+		...(lines.length > shown.length ? [`  ... ${lines.length - shown.length} more lines`] : []),
+	].join("\n");
+}
+
 /** Data log entries the team logged themselves, so the model can ask for one by name. */
 export async function readLogEntry(uploadId: string, path: string, entryName: string, limit: number): Promise<string> {
 	const file = await fileByPath(uploadId, path);
@@ -329,6 +366,13 @@ export async function availableSeries(uploadId: string): Promise<string> {
 		}
 		lines.push("", "From the field's own log (always available for an attached match):");
 		for (const def of FMS_SERIES) lines.push(`  ${def.key}  ${def.label}${def.unit ? ` (${def.unit})` : ""}`);
+	}
+	if (files.some((f) => f.kind === "dslog" || f.kind === "wpilog" || f.kind === "hoot")) {
+		lines.push(
+			"",
+			"Summed rather than recorded:",
+			`  ${TOTAL_CURRENT.key}  ${TOTAL_CURRENT.label} (A), from the power distribution channels where the Driver Station log has them, otherwise from the motor controllers' supply currents`,
+		);
 	}
 	if (files.some((f) => f.kind === "dslog")) {
 		lines.push("", "From the team's Driver Station log:");

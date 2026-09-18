@@ -21,6 +21,7 @@ import {
 	MAX_UPLOAD_CHARS_PER_TURN,
 	MAX_UPLOAD_READS_PER_CONVERSATION,
 	MAX_UPLOAD_READS_PER_TURN,
+	readDsEventsForMatch,
 	readLogEntry,
 	readSeries,
 	readUploadFile,
@@ -189,6 +190,18 @@ function uploadTools(upload: UploadRef, ghostCsaOffered: boolean): Anthropic.Too
 			},
 		},
 		{
+			name: "read_ds_events",
+			description:
+				"Read the Driver Station's own event log for one match, timestamped from match start. This is where the robot's printed messages, brownout warnings and FMS connection lines are. Read it alongside read_log_series to see what the robot said at the moment the numbers moved.",
+			input_schema: {
+				type: "object",
+				properties: {
+					match_id: { type: "string", description: "match_id from list_log_series" },
+				},
+				required: ["match_id"],
+			},
+		},
+		{
 			name: "read_log_entry",
 			description:
 				"Read the samples of one entry a team logged themselves in a data log, by exact entry name. Use when list_log_series shows an entry worth looking at directly.",
@@ -230,15 +243,13 @@ const ASK_TOOL: Anthropic.Tool = {
 			question: { type: "string", description: "One sentence, the thing you need to know" },
 			options: {
 				type: "array",
-				items: {
-					type: "object",
-					properties: {
-						label: { type: "string", description: "Short answer in the volunteer's words, not jargon" },
-						detail: { type: "string", description: "Optional one line to make the label unambiguous" },
-					},
-					required: ["label"],
-				},
-				description: "Two to five options, each something a person can see or do",
+				// Plain strings. An array of objects came back from the model as a
+				// string carrying `<parameter name="label">` markup often enough to
+				// break the tool, and a label a person can read does not need a
+				// second field explaining it.
+				items: { type: "string" },
+				description:
+					"Two to five answers in the volunteer's words, not jargon, each something they can see or do",
 			},
 			other_label: {
 				type: "string",
@@ -469,6 +480,14 @@ export async function* streamAnswer(params: AnswerParams): AsyncGenerator<Answer
 						await readSeries({ uploadId: upload.id, matchId, keys: series, points: 120 }),
 					);
 				}
+				case "read_ds_events": {
+					const matchId = stringInput(block, "match_id");
+					if (!matchId) return errorResult(block.id, "Give a match_id.");
+					return keep(
+						`Driver Station events for match ${matchId}`,
+						await readDsEventsForMatch(upload.id, matchId),
+					);
+				}
 				case "read_log_entry": {
 					const path = stringInput(block, "path");
 					const entry = stringInput(block, "entry");
@@ -503,6 +522,7 @@ export async function* streamAnswer(params: AnswerParams): AsyncGenerator<Answer
 		"read_upload_file",
 		"list_log_series",
 		"read_log_series",
+		"read_ds_events",
 		"read_log_entry",
 		"send_to_ghost_csa",
 	]);
@@ -523,6 +543,8 @@ export async function* streamAnswer(params: AnswerParams): AsyncGenerator<Answer
 				return "Checking what can be plotted";
 			case "read_log_series":
 				return "Lining the logs up against the match";
+			case "read_ds_events":
+				return "Reading the Driver Station events";
 			case "read_log_entry":
 				return `Reading ${stringInput(block, "entry") || "a log entry"}`;
 			case "send_to_ghost_csa":
@@ -622,29 +644,40 @@ export async function* streamAnswer(params: AnswerParams): AsyncGenerator<Answer
 		// A question ends the turn: there is nothing to answer until the volunteer
 		// picks. Anything else the model asked for in the same round is dropped,
 		// because it would be answering a question it has not had answered.
-		const ask = toolUses.find((b) => b.name === "ask_user_question");
+		const asks = toolUses.filter((b) => b.name === "ask_user_question");
+		const ask = asks[0];
 		if (ask) {
-			const input = block1(ask);
-			const parsed = normalizeQuestion({
-				question: input.question,
-				options: input.options,
-				otherLabel: input.other_label,
-			});
+			// The model sometimes asks several at once. Take the first one that can
+			// actually be read rather than failing on a broken sibling.
+			let parsed: ChatQuestion | null = null;
+			for (const candidate of asks) {
+				const input = block1(candidate);
+				parsed = normalizeQuestion({
+					question: input.question,
+					options: input.options,
+					otherLabel: input.other_label,
+				});
+				if (parsed) break;
+			}
 			if (parsed) {
 				question = parsed;
 				yield { type: "question", question: parsed };
 				break;
 			}
 			// Malformed question: tell the model and let it try again or answer.
+			// Every tool_use block in the message needs a result, including the ones
+			// we are not acting on, or the next request is rejected outright.
 			messages.push({ role: "assistant", content: finalMessage.content });
 			messages.push({
 				role: "user",
-				content: [
-					errorResult(
-						ask.id,
-						"A question needs a sentence and at least two distinct options. Ask again or answer directly.",
-					),
-				],
+				content: toolUses.map((block) =>
+					block.id === ask.id
+						? errorResult(
+								ask.id,
+								"A question needs a sentence and at least two options, each a plain string. Ask again or answer directly.",
+							)
+						: errorResult(block.id, "Not run: the question in the same turn could not be read."),
+				),
 			});
 			continue;
 		}

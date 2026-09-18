@@ -7,6 +7,7 @@
 	import LineupCardDialog from "../../components/scorekeeper/LineupCardDialog.svelte";
 	import LineupHistory from "../../components/scorekeeper/LineupHistory.svelte";
 	import ReplayFinderDialog from "../../components/scorekeeper/ReplayFinderDialog.svelte";
+	import ScorekeeperSettingsDialog from "../../components/scorekeeper/ScorekeeperSettingsDialog.svelte";
 	import { frameHandler, subscribeToFieldMonitor } from "../../field-monitor";
 	import { trpc } from "../../main";
 	import { eventStore } from "../../stores/event";
@@ -369,6 +370,7 @@
 	// ---- Dialog / history state --------------------------------------------
 	let dialogOpen = $state(false);
 	let replayOpen = $state(false);
+	let settingsOpen = $state(false);
 	let dialogAlliance = $state<number | null>(null);
 	let historyOpen = $state(false);
 	let historyAllianceNumber = $state(1);
@@ -564,6 +566,11 @@
 			<Button color="alternative" size="sm" onclick={() => (replayOpen = true)}>
 				<Icon icon="mdi:reload" class="size-4 mr-1" /> Replay finder
 			</Button>
+			{#if canEdit}
+				<Button color="alternative" size="sm" aria-label="Settings" onclick={() => (settingsOpen = true)}>
+					<Icon icon="mdi:cog-outline" class="size-4" />
+				</Button>
+			{/if}
 			{#if canEdit && alliances.length > 0}
 				<Button color="primary" size="sm" onclick={() => openDialog()}>
 					<Icon icon="mdi:clipboard-plus-outline" class="size-4 mr-1" /> File lineup card
@@ -824,6 +831,10 @@
 	{teamName}
 	onClose={() => (historyOpen = false)}
 />
+
+{#if settingsOpen}
+	<ScorekeeperSettingsDialog bind:open={settingsOpen} onClose={() => (settingsOpen = false)} />
+{/if}
 
 {#if replayOpen}
 	<ReplayFinderDialog

@@ -35,7 +35,8 @@ export const VERSIONS: { [key: string]: Version } = {
         <h1 class="text-lg font-bold">v2.7.13.0</h1>
         <ul>
         <li>Score Autofill: test and practice matches commit without filling in the scoring panel</li>
-        <li>Off by default, and only in test and practice - set it in the host wizard or from Event Management</li>
+        <li>Off by default, and only in test and practice</li>
+        <li>Set it in the host wizard, from Event Management, or from the new cog on the Scorekeeper page</li>
         </ul>
         `,
 	},

@@ -43,8 +43,10 @@ match means clicking through the whole panel first.
 
 **Score Autofill** sets all six to "None" when the match reaches the commit state, so you can commit
 straight away. It is off by default, and it only runs at the Test and Practice tournament levels -
-in quals and playoffs it does nothing. Turn it on here, or later from Event Management >
-**Configure Extension**; the two are the same setting and either one changes the running extension.
+in quals and playoffs it does nothing. Turn it on here, from Event Management >
+**Configure Extension**, or from the cog on the Scorekeeper page; they are all the same setting, and
+any of them changes the running extension. The Scorekeeper cog works from the scorekeeper's own
+laptop - it reaches the extension through the server, not through the browser it is installed in.
 
 It needs the Field Monitor running over SignalR against real FMS. It does not appear in Notepad Only
 Mode, scraping mode, or Cheesy Arena mode.

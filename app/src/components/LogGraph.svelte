@@ -181,7 +181,6 @@
 				connectNulls: false,
 				tooltip: { show: false },
 			})),
-			// Uploaded series, dashed so the source is readable at a glance
 			...overlay.map((s, i) => {
 				const color = OVERLAY_COLORS[i % OVERLAY_COLORS.length];
 				const lane = s.axis === "bool";
@@ -201,7 +200,6 @@
 					lineStyle: {
 						color,
 						width: lane ? 4 : 1.5,
-						type: visibleSeries[s.label] === false ? "solid" : ("dashed" as const),
 						...(visibleSeries[s.label] === false ? { opacity: 0 } : {}),
 					},
 					itemStyle: { color, ...(visibleSeries[s.label] === false ? { opacity: 0 } : {}) },
@@ -457,12 +455,10 @@
 				onclick={() => toggleSeries(s.label)}
 			>
 				<span
-					class="inline-block w-3 h-3 rounded-sm border-2 border-dashed"
-					style="border-color: {OVERLAY_COLORS[i % OVERLAY_COLORS.length]}"
+					class="inline-block w-3 h-3 rounded-sm"
+					style="background-color: {OVERLAY_COLORS[i % OVERLAY_COLORS.length]}"
 				></span>
-				<span class:line-through={visibleSeries[s.label] === false}>
-					{s.label}{s.hz ? ` ${s.hz < 10 ? s.hz.toFixed(1) : s.hz.toFixed(0)}Hz` : ""}
-				</span>
+				<span class:line-through={visibleSeries[s.label] === false}>{s.label}</span>
 			</button>
 		{/each}
 	</div>

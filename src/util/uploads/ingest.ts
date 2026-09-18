@@ -584,12 +584,6 @@ export async function ingestUpload(params: IngestParams): Promise<IngestResult> 
 		}
 	}
 
-	// A Driver Station log names no station, so a link made by the clock cannot
-	// say which one it was. The team can, via the schedule.
-	for (const file of prepared) {
-		file.links = fillStations(file.links, candidates, teamBeforeLinking?.team ?? null);
-	}
-
 	// A `.dslog` and its `.dsevents` are one session under one name, and only the
 	// events file knows the match. So the pair is matched up by base name, and the
 	// telemetry log inherits the match its own binary never recorded.
@@ -649,6 +643,13 @@ export async function ingestUpload(params: IngestParams): Promise<IngestResult> 
 			}
 		}
 	}
+	// Last, because the pairing above replaces a Driver Station log's link
+	// outright and would otherwise throw away the station just worked out.
+	// A .dslog names no station; the schedule does, once the team is known.
+	for (const file of prepared) {
+		file.links = fillStations(file.links, candidates, teamBeforeLinking?.team ?? null);
+	}
+
 	// #endregion
 
 	// `events` has no surrogate key; the FMS event GUID only exists on match log

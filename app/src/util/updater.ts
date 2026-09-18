@@ -30,6 +30,18 @@ export function compareVersions(a: string, b: string): number {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.12.0": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.12.0</h1>
+        <ul>
+        <li>Teams can send you their logs and robot code from a public page</li>
+        <li>Takes Driver Station logs, WPILib data logs, CTRE Hoot, telemetry CSVs, SystemCore bundles and zipped code</li>
+        <li>Unified match station log shows FMS log, uploaded DS log, and DS events log</li>
+        <li>AI Troubleshooting chat can read FMS and uploaded logs</li>
+        <li>Privacy policy updated</li>
+        </ul>
+        `,
+	},
 	"2.7.11.4": {},
 	"2.7.10.1": {
 		changelog: `

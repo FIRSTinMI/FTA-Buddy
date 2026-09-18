@@ -30,6 +30,14 @@ export function compareVersions(a: string, b: string): number {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.13.2": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.13.2</h1>
+        <ul>
+        <li>Fixed losing your role and admin access on some page loads</li>
+        </ul>
+        `,
+	},
 	// Same feature, finished: only-unset towers, test match by match number, and
 	// the copy trimmed. The bump is what makes deployed clients reload.
 	"2.7.13.1": {},

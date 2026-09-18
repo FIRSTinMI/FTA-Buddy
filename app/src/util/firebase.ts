@@ -61,8 +61,24 @@ export const googleProvider = new GoogleAuthProvider();
 // Persist the session across reloads (important for the installed PWA).
 setPersistence(auth, browserLocalPersistence).catch((e) => console.error("[firebase] setPersistence failed", e));
 
-/** Current user's fresh ID token (auto-refreshed by the SDK), or "" if signed out. */
+/**
+ * Resolves once Firebase has finished restoring a persisted session from
+ * IndexedDB.
+ *
+ * `auth.currentUser` is null until that restore completes, and the restore is
+ * async, so anything reading it during boot sees a signed-out user even when
+ * the session is perfectly good. Await this before trusting `currentUser`.
+ */
+export const authReady: Promise<void> = auth.authStateReady();
+
+/**
+ * Current user's fresh ID token (auto-refreshed by the SDK), or "" if signed
+ * out. Waits for {@link authReady} first, so a request made during boot carries
+ * the real token instead of an empty one and the server does not mistake a
+ * still-loading session for an expired one.
+ */
 export async function currentIdToken(): Promise<string> {
+	await authReady;
 	const u = auth.currentUser;
 	if (!u) return "";
 	try {

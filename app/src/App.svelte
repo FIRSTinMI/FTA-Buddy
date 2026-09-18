@@ -53,6 +53,7 @@
 		startNotificationSubscription,
 		stopNotificationSubscription,
 	} from "./util/notifications";
+	import { authReady, currentIdToken } from "./util/firebase";
 	import { registerToast } from "./util/toast";
 	import { track } from "./util/telemetry";
 	import { compareVersions, update, VERSIONS } from "./util/updater";
@@ -61,6 +62,16 @@
 	// On mount check if the user's permissions have changed
 	onMount(async () => {
 		try {
+			// Wait for Firebase to restore a persisted session before asking the
+			// server who we are. Without this the request goes out with an empty
+			// Authorization header, the server finds no user, and the branch below
+			// reads that as an expired session and resets the profile - losing the
+			// admin flag on a user who was signed in the whole time.
+			await authReady;
+			// Whether this request actually carried credentials. Only a request the
+			// server could have authenticated is allowed to invalidate the profile.
+			const sentToken = (await currentIdToken()) !== "";
+
 			// Do NOT pass token here - the Authorization header uses the live Firebase
 			// ID token via currentIdToken(). The token in userStore can lag briefly on
 			// boot and cause the server to resolve the wrong user (or fail).
@@ -78,8 +89,9 @@
 				// Reconcile push subscription in case it was rotated while the app was closed.
 				// Non-blocking: run in background, errors are logged but don't affect startup.
 				ensurePushRegistration().catch(() => {});
-			} else {
-				// Server returned no user: token is invalid/expired - clear it.
+			} else if (sentToken) {
+				// Server returned no user for a token we did send: it is invalid or
+				// expired - clear it.
 				console.warn("[AUTH] Session invalid - clearing token.");
 				user.set({
 					email: "",
@@ -90,6 +102,11 @@
 					role: "FTA",
 					admin: false,
 				});
+			} else {
+				// Signed out, or Firebase has no session to restore. Nothing was
+				// authenticated, so there is no verdict to act on - leave the stored
+				// profile alone rather than overwriting it with a signed-out one.
+				console.info("[AUTH] checkAuth ran without a token; keeping the stored profile.");
 			}
 
 			// The flag decides whether the Power item renders in the sidebar, and a

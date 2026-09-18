@@ -420,7 +420,8 @@ export const uploadsRouter = router({
 			z.object({
 				id: z.string().uuid(),
 				matchId: fmsGuid,
-				keys: z.array(z.string().max(200)).min(1).max(8),
+				// Eight is what fits on a chart. The data table has room for more.
+				keys: z.array(z.string().max(200)).min(1).max(16),
 				points: z.number().int().min(50).max(20_000).default(1200),
 			}),
 		)

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Alert, Button, Label, Modal, MultiSelect, type SelectOptionType } from "flowbite-svelte";
+	import { Alert, Button, Label, Modal } from "flowbite-svelte";
 	import { json2csv } from "json-2-csv";
 	import type { ComponentProps } from "svelte";
 	import QrCode from "svelte-qrcode";
@@ -55,36 +55,41 @@
 
 	let view: "graph" | "table" = "graph";
 
-	let columns: SelectOptionType<keyof FMSLogFrame>[] = [
-		{ name: "DS", value: "dsLinkActive" },
-		{ name: "Radio", value: "radioLink" },
-		{ name: "RIO", value: "rioLink" },
-		{ name: "Code", value: "linkActive" },
-		{ name: "Status", value: "enabled" },
-		{ name: "Battery", value: "battery" },
-		{ name: "Ping", value: "averageTripTime" },
-		{ name: "BWU", value: "dataRateTotal" },
-		{ name: "Lost Pkts", value: "lostPackets" },
-		{ name: "Sent Pkts", value: "sentPackets" },
-		{ name: "Signal", value: "signal" },
-		{ name: "Noise", value: "noise" },
-		{ name: "SNR", value: "snr" },
-		{ name: "TxRate", value: "txRate" },
-		{ name: "TxMCS", value: "txMCS" },
-		{ name: "RxRate", value: "rxRate" },
-		{ name: "RxMCS", value: "rxMCS" },
+	/** Field monitor columns, keyed apart from the uploaded series in one list. */
+	const FMS_COLUMNS: { field: keyof FMSLogFrame; name: string }[] = [
+		{ field: "dsLinkActive", name: "DS" },
+		{ field: "radioLink", name: "Radio" },
+		{ field: "rioLink", name: "RIO" },
+		{ field: "linkActive", name: "Code" },
+		{ field: "enabled", name: "Status" },
+		{ field: "battery", name: "Battery" },
+		{ field: "averageTripTime", name: "Ping" },
+		{ field: "dataRateTotal", name: "BWU" },
+		{ field: "lostPackets", name: "Lost Pkts" },
+		{ field: "sentPackets", name: "Sent Pkts" },
+		{ field: "signal", name: "Signal" },
+		{ field: "noise", name: "Noise" },
+		{ field: "snr", name: "SNR" },
+		{ field: "txRate", name: "TxRate" },
+		{ field: "txMCS", name: "TxMCS" },
+		{ field: "rxRate", name: "RxRate" },
+		{ field: "rxMCS", name: "RxMCS" },
 	];
 
-	let selectedColumns: (keyof FMSLogFrame)[] = $state([
-		"dsLinkActive",
-		"radioLink",
-		"rioLink",
-		"linkActive",
-		"enabled",
-		"battery",
-		"averageTripTime",
-		"dataRateTotal",
+	let tableColumns = $state<string[]>([
+		"fms:dsLinkActive",
+		"fms:radioLink",
+		"fms:rioLink",
+		"fms:linkActive",
+		"fms:enabled",
+		"fms:battery",
+		"fms:averageTripTime",
+		"fms:dataRateTotal",
 	]);
+
+	let selectedColumns = $derived(
+		tableColumns.filter((key) => key.startsWith("fms:")).map((key) => key.slice(4) as keyof FMSLogFrame),
+	);
 
 	let shareid: string = $state(undefined as any);
 	let shareOpen = $state(false);
@@ -188,28 +193,88 @@
 	}
 
 	/**
-	 * An uploaded series at each field monitor row, for the table. The rates do
-	 * not line up, so a cell takes the nearest sample within half a frame and is
-	 * left blank rather than reaching further and inventing a reading.
+	 * The data table, on the union of every sample time.
+	 *
+	 * A row per field monitor frame threw away 24 of every 25 Driver Station
+	 * samples, which is the opposite of the point. So the rows are every instant
+	 * any source recorded, and a field monitor value spans the rows it covers.
+	 * The rowspan is the readable part: you can see at a glance that one source
+	 * ticks twice a second and the other fifty times.
 	 */
-	function overlayAt(serie: OverlaySeries, t: number): number | null {
-		const points = serie.points;
-		if (points.length === 0) return null;
-		let lo = 0;
-		let hi = points.length - 1;
-		while (lo < hi) {
-			const mid = (lo + hi) >> 1;
-			if (points[mid].t < t) lo = mid + 1;
-			else hi = mid;
+	let tableSeriesKeys = $derived(tableColumns.filter((key) => !key.startsWith("fms:")));
+	let tableOverlay = $state<OverlaySeries[]>([]);
+
+	let frameTimes = $derived(
+		match && log
+			? log.map((f) => (new Date(f.timeStamp).getTime() - new Date(match.start_time).getTime()) / 1000)
+			: [],
+	);
+
+	const MAX_TABLE_ROWS = 20_000;
+
+	let tableRows = $derived.by(() => {
+		if (!log || frameTimes.length === 0) return [];
+		const times = new Set<number>();
+		for (const t of frameTimes) times.add(Math.round(t * 1000));
+		for (const serie of tableOverlay) {
+			for (const point of serie.points) if (point.v !== null) times.add(Math.round(point.t * 1000));
 		}
-		const near = [points[lo], points[lo - 1]].filter(Boolean);
-		let best: { t: number; v: number | null } | null = null;
-		for (const point of near) {
-			if (point.v === null) continue;
-			if (!best || Math.abs(point.t - t) < Math.abs(best.t - t)) best = point;
+		const sorted = [...times].sort((a, b) => a - b).slice(0, MAX_TABLE_ROWS);
+
+		const cursors = tableOverlay.map(() => 0);
+		let frame = 0;
+		return sorted.map((ms) => {
+			const t = ms / 1000;
+			while (frame + 1 < frameTimes.length && frameTimes[frame + 1] <= t + 1e-6) frame += 1;
+			const values = tableOverlay.map((serie, col) => {
+				const points = serie.points;
+				while (cursors[col] < points.length && Math.round(points[cursors[col]].t * 1000) < ms)
+					cursors[col] += 1;
+				const point = points[cursors[col]];
+				return point && Math.round(point.t * 1000) === ms ? point.v : null;
+			});
+			return { t, frame, v: values };
+		});
+	});
+
+	/** How many rows each field monitor frame covers, so its cell can span them. */
+	let frameSpans = $derived.by(() => {
+		const spans = new Map<number, number>();
+		for (const row of tableRows) spans.set(row.frame, (spans.get(row.frame) ?? 0) + 1);
+		return spans;
+	});
+
+	async function loadTableSeries() {
+		const upload = primaryUpload;
+		if (!upload || tableSeriesKeys.length === 0) {
+			tableOverlay = [];
+			return;
 		}
-		return best && Math.abs(best.t - t) <= 0.3 ? best.v : null;
+		try {
+			const data = await trpc.uploads.series.query({
+				id: upload.uploadId,
+				matchId: matchid,
+				keys: tableSeriesKeys.slice(0, 16),
+				points: 20_000,
+			});
+			tableOverlay = data.series.map((serie) => ({
+				key: serie.key,
+				label: serie.label,
+				unit: serie.unit,
+				axis: serie.axis,
+				hz: serie.hz,
+				points: serie.points,
+			}));
+		} catch {
+			tableOverlay = [];
+		}
 	}
+
+	/** Field monitor columns and uploaded series in one searchable list. */
+	let tableItems = $derived<SeriesItem[]>([
+		...FMS_COLUMNS.map((c) => ({ key: `fms:${c.field}`, label: c.name, group: "Field monitor" })),
+		...seriesItems,
+	]);
 
 	async function share() {
 		if (["blue1", "blue2", "blue3", "red1", "red2", "red3"].includes(station)) {
@@ -350,49 +415,61 @@
 
 			<div class="text-left">
 				<p class="text-sm font-medium text-gray-900 dark:text-white mb-1">Columns</p>
-				<MultiSelect items={columns} bind:value={selectedColumns} size="sm" />
+				<SeriesSelect
+					items={tableItems}
+					bind:value={tableColumns}
+					max={24}
+					placeholder="Columns"
+					onchange={() => loadTableSeries()}
+				/>
 			</div>
 
-			<div class="overflow-x-auto w-full">
+			<div class="w-full overflow-auto" style="max-height: 70vh">
 				<table class="min-w-full text-sm text-left text-gray-500 dark:text-gray-400 mx-auto">
-					<thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-black dark:text-white">
+					<thead
+						class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-black dark:text-white sticky top-0 z-10"
+					>
 						<tr>
 							<th class="px-4 py-3 sticky bg-gray-50 dark:bg-black left-0 text-gray-700 dark:text-white"
 								>Time</th
 							>
 							{#each selectedColumns as col}
-								<th class="px-4 py-3">{columns.find((c) => c.value === col)?.name}</th>
+								<th class="px-4 py-3">{FMS_COLUMNS.find((c) => c.field === col)?.name}</th>
 							{/each}
-							{#each overlay as serie (serie.key)}
-								<th class="px-4 py-3">{serie.label}</th>
+							{#each tableOverlay as serie (serie.key)}
+								<th class="px-4 py-3">{serie.label}{serie.unit ? ` (${serie.unit})` : ""}</th>
 							{/each}
 						</tr>
 					</thead>
 					<tbody>
-						{#if match}
-							{#each log as frame, frameIndex}
-								<tr
-									class="border-b text-center dark:border-gray-700 odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800"
+						{#each tableRows as row, rowIndex (row.t)}
+							{@const frame = log[row.frame]}
+							{@const firstOfFrame = rowIndex === 0 || tableRows[rowIndex - 1].frame !== row.frame}
+							<tr
+								class="border-b text-center dark:border-gray-700 odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800"
+							>
+								<td
+									class="px-4 py-2 text-gray-800 dark:text-white text-center sticky left-0 bg-gray-50 dark:bg-gray-900 tabular-nums"
+									>{row.t.toFixed(2)}</td
 								>
-									<td
-										class="px-4 py-2 text-gray-800 dark:text-white text-center sticky left-0 bg-gray-50 dark:bg-gray-900"
-										>{frame.matchTime}</td
-									>
+								{#if firstOfFrame}
 									{#each selectedColumns as col}
+										{@const span = frameSpans.get(row.frame) ?? 1}
 										{#if col === "enabled"}
 											{#if frame.eStopPressed}
-												<td class="px-4 py-2 bg-red-500 text-white">E</td>
+												<td rowspan={span} class="px-4 py-2 bg-red-500 text-white">E</td>
 											{:else if frame.aStopPressed}
-												<td class="px-4 py-2 bg-orange-500 text-white">A</td>
+												<td rowspan={span} class="px-4 py-2 bg-orange-500 text-white">A</td>
 											{:else if !frame.enabled}
-												<td class="px-4 py-2 bg-red-500 text-white">N</td>
+												<td rowspan={span} class="px-4 py-2 bg-red-500 text-white">N</td>
 											{:else if frame.auto}
-												<td class="px-4 py-2">A</td>
+												<td rowspan={span} class="px-4 py-2">A</td>
 											{:else}
-												<td class="px-4 py-2">T</td>
+												<td rowspan={span} class="px-4 py-2">T</td>
 											{/if}
 										{:else if col === "battery"}
 											<td
+												rowspan={span}
 												class="px-4 py-2"
 												style="background-color: rgba(255,0,0,{frame.battery < 11 &&
 												frame.battery > 0
@@ -403,40 +480,47 @@
 													: frame.battery}</td
 											>
 										{:else if ["averageTripTime", "lostPackets", "sentPackets", "signal", "noise", "txMCS", "rxMCS"].includes(col)}
-											<td class="px-4 py-2"
+											<td rowspan={span} class="px-4 py-2"
 												>{typeof frame[col] === "number"
 													? frame[col].toFixed(0)
 													: frame[col]}</td
 											>
 										{:else if ["dataRateTotal", "txRate", "rxRate"].includes(col)}
-											<td class="px-4 py-2"
+											<td rowspan={span} class="px-4 py-2"
 												>{typeof frame[col] === "number"
 													? frame[col].toFixed(2)
 													: frame[col]}</td
 											>
 										{:else}
-											<td class="px-4 py-2{frame[col] ? '' : ' bg-red-500 text-white'}"
+											<td
+												rowspan={span}
+												class="px-4 py-2{frame[col] ? '' : ' bg-red-500 text-white'}"
 												>{frame[col] ? "Y" : "N"}</td
 											>
 										{/if}
 									{/each}
-									{#each overlay as serie (serie.key)}
-										{@const v = overlayAt(
-											serie,
-											(new Date(frame.timeStamp).getTime() -
-												new Date(match.start_time).getTime()) /
-												1000,
-										)}
-										<td class="px-4 py-2">
-											{v === null ? "" : serie.axis === "bool" ? (v ? "Y" : "N") : v.toFixed(2)}
-										</td>
-									{/each}
-								</tr>
-							{/each}
-						{/if}
+								{/if}
+								{#each tableOverlay as serie, col (serie.key)}
+									<td class="px-4 py-2 tabular-nums">
+										{row.v[col] === null
+											? ""
+											: serie.axis === "bool"
+												? row.v[col]
+													? "Y"
+													: "N"
+												: row.v[col]?.toFixed(2)}
+									</td>
+								{/each}
+							</tr>
+						{/each}
 					</tbody>
 				</table>
 			</div>
+			{#if tableRows.length >= MAX_TABLE_ROWS}
+				<p class="text-left text-xs text-gray-500 dark:text-gray-400">
+					First {MAX_TABLE_ROWS.toLocaleString()} rows
+				</p>
+			{/if}
 		{/await}
 	</div>
 </div>

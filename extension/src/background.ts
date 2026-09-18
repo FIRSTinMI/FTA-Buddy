@@ -49,7 +49,11 @@ let outboundNoteSubscription: OutboundSubscription;
 let extensionConfigSubscription: { unsubscribe: () => void } | undefined;
 
 const manifestData = chrome.runtime.getManifest();
-export const FMS = "10.0.100.5";
+/**
+ * Where FMS lives. 10.0.100.5 by FRC convention in every shipped build; webpack
+ * substitutes it so a test build can point at fake-fms on localhost instead.
+ */
+export const FMS = __FMS_HOST__;
 /**
  * Cheesy Arena runs on the arena server at the FRC-standard 10.0.100.5 (the IP is
  * fixed by convention and covered by host_permissions regardless of port). Only

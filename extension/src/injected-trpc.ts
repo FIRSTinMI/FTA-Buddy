@@ -83,7 +83,7 @@ function createTRPCConnection() {
 
 export let trpc = createTRPCConnection();
 
-const FMS_HOST = "10.0.100.5";
+const FMS_HOST = __FMS_HOST__;
 const LEVELS = ["None", "Practice", "Qualification", "Playoff"] as const;
 const STATIONS = ["Station1", "Station2", "Station3"] as const;
 

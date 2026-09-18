@@ -49,13 +49,22 @@ function normalizeFmsNote(raw: any): FTANoteRecord {
 }
 
 /**
- * Tournament levels the score autofill may run in. A test match reports the
- * currently active tournament level, and FMS never puts MatchMode (Test vs
- * Play) on the wire at all, so "None" is what a test match looks like before
- * any schedule is activated. Anything past that - a test match run mid-event,
- * quals, playoffs - is left alone.
+ * Tournament levels the score autofill may run in, on top of a test match.
+ * "None" is no activated schedule, so nothing real can be running.
  */
 const SCORE_AUTOFILL_LEVELS: TournamentLevel[] = ["None", "Practice"];
+
+/**
+ * Match numbers that mean "test match": `FMSStaticValues.GetTestMatchNumber`
+ * is `1000 - fieldType` over Primary=1, Secondary=2, Practice=3.
+ *
+ * MatchMode (Test vs Play) never goes on the wire, and MatchStatusInfo.Level
+ * carries `CurrentlyActiveTournamentLevel`, which stays on whatever schedule is
+ * activated - a test match run mid-event reports Qualification. The match
+ * number is how FMS itself tells the two apart, in
+ * EventManagerShellController.OnMatchStatusInfoChanged.
+ */
+const TEST_MATCH_NUMBERS = [999, 998, 997];
 
 /**
  * The three `RobotElementChangeType` keys, in enum order. Both of the per-robot
@@ -152,11 +161,15 @@ export class SignalR extends TypedEventEmitter<SourceEventMap> {
 	 * GameSpecificMatchController.UpdateScoringElement, and the hub relays with
 	 * no filtering (Clients.All), so an alliance with nothing unset gets no
 	 * message at all.
+	 *
+	 * Runs for a test match (by {@link TEST_MATCH_NUMBERS}) or a practice match,
+	 * and nothing else.
 	 */
 	private async autofillUnsetScores(level: TournamentLevel, matchNumber: number, playNumber: number) {
 		if (!this.scoreAutofill) return;
-		if (!SCORE_AUTOFILL_LEVELS.includes(level)) {
-			console.log(`Score autofill skipped: tournament level is ${level}`);
+		const isTestMatch = TEST_MATCH_NUMBERS.includes(matchNumber);
+		if (!isTestMatch && !SCORE_AUTOFILL_LEVELS.includes(level)) {
+			console.log(`Score autofill skipped: level ${level}, match ${matchNumber} is not a test match`);
 			return;
 		}
 

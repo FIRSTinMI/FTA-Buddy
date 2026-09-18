@@ -42,8 +42,10 @@ six have a selection. During field setup nobody is on the scoring tablets, so cl
 match means clicking through the whole panel first.
 
 **Score Autofill** sets the ones still unset to "None" when the match reaches the commit state, so you
-can commit straight away. It is off by default, and it only runs at the Test and Practice tournament levels -
-in quals and playoffs it does nothing. Turn it on here, from Event Management >
+can commit straight away. It is off by default, and it only runs in a test match or a practice match - in
+quals and playoffs it does nothing. Test matches are recognised by their match number (999 on the
+primary field, 998 secondary, 997 practice), because FMS reports a test match at whatever tournament
+level is currently activated. Turn it on here, from Event Management >
 **Configure Extension**, or from the cog on the Scorekeeper page; they are all the same setting, and
 any of them changes the running extension. The Scorekeeper cog works from the scorekeeper's own
 laptop - it reaches the extension through the server, not through the browser it is installed in.

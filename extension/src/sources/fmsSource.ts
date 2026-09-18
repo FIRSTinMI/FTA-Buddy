@@ -34,7 +34,10 @@ export class FmsSource extends SignalR implements FieldDataSource {
 		try {
 			const controller = new AbortController();
 			setTimeout(() => controller.abort(), 500);
-			const res = await fetch(`http://${this.fmsHost}/FieldMonitor`, { signal: controller.signal });
+			// Root, not /FieldMonitor: this is a reachability check, and the root
+			// answers on real FMS, on fake-fms and on anything standing in for
+			// them. background.pingFMS's own fallback probe already used it.
+			const res = await fetch(`http://${this.fmsHost}/`, { signal: controller.signal });
 			return res.ok;
 		} catch {
 			return false;

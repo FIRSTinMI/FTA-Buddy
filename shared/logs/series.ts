@@ -33,7 +33,7 @@ export interface SeriesDef {
 	unit?: string;
 	axis: SeriesAxis;
 	/** Which file this comes out of. */
-	from: "fms" | "dslog" | "wpilog" | "csv";
+	from: "fms" | "dslog" | "wpilog" | "csv" | "derived";
 	/** Shown by default in the viewer. Everything else is behind the picker. */
 	defaultOn?: boolean;
 }
@@ -100,6 +100,39 @@ export const DSLOG_SERIES: SeriesDef[] = [
 	{ key: "ds.dsDisabled", label: "DS says disabled", axis: "bool", from: "dslog" },
 ];
 
+/**
+ * Total current out of the battery.
+ *
+ * Nothing records this directly, so it is summed. The power distribution board's
+ * own channels are the right source when the Driver Station log has them, since
+ * that is one measurement of everything downstream of the main breaker. Where it
+ * does not, the motor controllers' supply currents are summed instead, which
+ * misses anything not on a logged controller and is labelled to say so.
+ */
+export const TOTAL_CURRENT: SeriesDef = {
+	key: "total.current",
+	label: "Total current",
+	unit: "A",
+	axis: "amps",
+	from: "derived",
+};
+
+/**
+ * Entries that are a motor's draw from the battery.
+ *
+ * Supply current is what the breaker sees. Stator and torque current are the
+ * motor's phase current, which at low duty cycle runs several times higher, so
+ * summing those would report a robot pulling hundreds of amps it never drew.
+ */
+export function isMotorSupplyCurrent(name: string): boolean {
+	if (/Stator|Torque|Stall|PID|Limit|Setpoint|Target/i.test(name)) return false;
+	// Phoenix 6 names every device's draw this way, e.g.
+	// "Phoenix6/TalonFX-3/SupplyCurrent".
+	if (/(^|\/)SupplyCurrent$/.test(name)) return true;
+	// REVLib's getOutputCurrent and AdvantageKit's logged equivalent.
+	return /(^|\/)(OutputCurrent|CurrentAmps|SupplyCurrentAmps)$/.test(name);
+}
+
 /** Power distribution channels are numbered, so their series are generated. */
 export function pdChannelSeries(channelCount: number): SeriesDef[] {
 	return Array.from({ length: channelCount }, (_, channel) => ({
@@ -151,10 +184,15 @@ export function dsLogSeries(result: DsLogResult, def: SeriesDef, matchStartMs: n
 	const pd = /^ds\.pd\.(\d+)$/.exec(def.key);
 	const field = def.key.slice("ds.".length);
 	const scale = def.scale ?? 1;
+	const total = def.key === "ds.pd.total";
 	const points = result.entries.map((entry) => {
-		const raw = pd
-			? (entry.powerDistributionCurrents[Number(pd[1])] ?? null)
-			: numberFrom((entry as unknown as Record<string, unknown>)[field]);
+		const raw = total
+			? entry.powerDistributionCurrents.length > 0
+				? entry.powerDistributionCurrents.reduce((sum, amps) => sum + amps, 0)
+				: null
+			: pd
+				? (entry.powerDistributionCurrents[Number(pd[1])] ?? null)
+				: numberFrom((entry as unknown as Record<string, unknown>)[field]);
 		return { t: entry.timestamp + offsetSecs, v: raw === null ? null : raw * scale };
 	});
 	return { def, points };

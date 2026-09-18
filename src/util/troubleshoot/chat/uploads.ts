@@ -11,14 +11,16 @@ import {
 	DSLOG_SERIES,
 	FMS_SERIES,
 	fmsSeries,
+	isMotorSupplyCurrent,
 	pdChannelSeries,
 	sampleRateHz,
 	SUPERSEDED_BY,
+	TOTAL_CURRENT,
 	wpilogSeries,
 	wpilogSeriesDef,
 	type SeriesDef,
 } from "../../../../shared/logs/series";
-import { readWpilogEntry, wpilogClockOffset } from "../../../../shared/logs/wpilog";
+import { readWpilogEntry, sumWpilogEntries, wpilogClockOffset } from "../../../../shared/logs/wpilog";
 import type { FMSLogFrame } from "../../../../shared/types";
 import { db } from "../../../db/db";
 import { matchLogs, teamUploadFiles, teamUploadMatches, teamUploads } from "../../../db/schema";
@@ -236,6 +238,62 @@ async function logBytes(file: {
 	return file.kind === "hoot" ? convertHootCached(file.id, raw) : raw;
 }
 
+/**
+ * Total current out of the battery, from whichever source the upload has.
+ *
+ * The power distribution board is the honest answer when the Driver Station log
+ * carries its channels: one measurement of everything past the main breaker, at
+ * 50 Hz. Failing that the motor controllers' supply currents are summed, which
+ * is the same question asked of a different set of devices and will read low by
+ * whatever the robot draws outside them, so the label says which one you got.
+ */
+async function totalCurrent(
+	def: SeriesDef,
+	dsResult: DsLogResult | null,
+	files: { id: string; kind: string; path: string; content: string | null; gcs_path: string | null }[],
+	matchStartMs: number,
+	points: number,
+	notes: string[],
+): Promise<{ def: SeriesDef; points: { t: number; v: number | null }[] } | null> {
+	if (dsResult?.parsed && (dsResult.entries[0]?.powerDistributionCurrents.length ?? 0) > 0) {
+		const pdDef: SeriesDef = { ...def, key: "ds.pd.total", label: "Total current (PD)", from: "dslog" };
+		const series = dsLogSeries(dsResult, pdDef, matchStartMs);
+		return { def: pdDef, points: downsample(clipToMatch(series.points), points) };
+	}
+
+	const logFile = files.find((f) => f.kind === "wpilog") ?? files.find((f) => f.kind === "hoot");
+	if (!logFile) {
+		notes.push(`${def.key}: no power distribution channels and no data log, so there is nothing to add up.`);
+		return null;
+	}
+	const bytes = await logBytes(logFile);
+	let offset = wpilogClockOffset(bytes);
+	if (offset === null && logFile.kind === "hoot") offset = matchStartMs / 1000;
+	if (offset === null) {
+		notes.push(`${def.key}: the data log has no systemTime entry, so it cannot be placed on the match clock.`);
+		return null;
+	}
+	const summed = sumWpilogEntries(bytes, isMotorSupplyCurrent);
+	if (summed.points.length === 0) {
+		notes.push(`${def.key}: no supply current signals in ${logFile.path}.`);
+		return null;
+	}
+	const motorDef: SeriesDef = {
+		...def,
+		label: `Total current (${summed.names.length} motors)`,
+	};
+	const series = {
+		points: summed.points.map((p) => ({
+			t: p.timestamp / 1e6 + offset - matchStartMs / 1000,
+			v: p.value,
+		})),
+	};
+	notes.push(
+		`${def.key}: summed from ${summed.names.length} motor controllers, so anything not on a logged controller is missing.`,
+	);
+	return { def: motorDef, points: downsample(clipToMatch(series.points), points) };
+}
+
 async function fileByPath(uploadId: string, path: string) {
 	const files = await db.select().from(teamUploadFiles).where(eq(teamUploadFiles.upload_id, uploadId)).execute();
 	const wanted = path.trim();
@@ -334,6 +392,12 @@ export async function seriesOptions(uploadId: string): Promise<SeriesOption[]> {
 
 	for (const def of FMS_SERIES) push(def, "Field monitor");
 
+	// Nothing records total current, so it is offered whenever there is anything
+	// to add up: the Driver Station log's channels, or a device log's motors.
+	if (files.some((f) => f.kind === "dslog" || f.kind === "wpilog" || f.kind === "hoot")) {
+		push(TOTAL_CURRENT, "Derived");
+	}
+
 	if (files.some((f) => f.kind === "dslog")) {
 		for (const def of DSLOG_SERIES) push(def, "Driver Station");
 		// Channel count is in the file's own summary, so the picker can list the
@@ -381,6 +445,9 @@ function seriesDefFor(key: string, pdChannels: number): SeriesDef | null {
 	if (fms) return fms;
 	const ds = DSLOG_SERIES.find((d) => d.key === key);
 	if (ds) return ds;
+	if (key === TOTAL_CURRENT.key) return TOTAL_CURRENT;
+	if (key === "ds.pd.total")
+		return { ...TOTAL_CURRENT, key: "ds.pd.total", label: "Total current (PD)", from: "dslog" };
 	const pd = /^ds\.pd\.(\d+)$/.exec(key);
 	if (pd) return pdChannelSeries(pdChannels).find((d) => d.key === key) ?? null;
 	if (key.startsWith("log.")) return wpilogSeriesDef(key.slice(4));
@@ -497,6 +564,9 @@ export async function readSeriesData(request: SeriesRequest): Promise<SeriesData
 			}
 			const series = dsLogSeries(dsResult, def, matchStartMs);
 			out.push({ def, points: downsample(clipToMatch(series.points), request.points) });
+		} else if (def.from === "derived") {
+			const resolved = await totalCurrent(def, dsResult, files, matchStartMs, request.points, notes);
+			if (resolved) out.push(resolved);
 		} else if (def.from === "csv") {
 			const label = def.key.slice(4);
 			const csvFile = files.find((f) => f.kind === "csv");

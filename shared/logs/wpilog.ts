@@ -498,6 +498,67 @@ export function readWpilogEntry(data: Uint8Array, name: string, limit = 500): Wp
 }
 
 /**
+ * Sum several numeric entries into one series, in a single pass.
+ *
+ * Total current has to add up a dozen motor controllers, and reading the file
+ * once per entry means a dozen passes over what can be tens of megabytes. Each
+ * device reports on its own schedule, so the sum holds every device's last
+ * reading and re-adds at each new sample; a device that has not reported yet
+ * contributes nothing rather than a zero it never sent.
+ */
+export function sumWpilogEntries(
+	data: Uint8Array,
+	matches: (name: string) => boolean,
+	limit = 40_000,
+): { points: { timestamp: number; value: number }[]; names: string[] } {
+	if (!isWpilog(data)) return { points: [], names: [] };
+	const r = new Reader(data);
+	const types = new Map<number, string>();
+	const names = new Map<number, string>();
+	const last = new Map<number, number>();
+	const points: { timestamp: number; value: number }[] = [];
+
+	for (const rec of records(r)) {
+		if (rec.entry === CONTROL_ENTRY) {
+			if (rec.size < 1) continue;
+			const kind = r.u8(rec.start);
+			if (kind === CONTROL_START) {
+				const id = r.u32(rec.start + 1);
+				const nameStr = r.innerString(rec.start + 5);
+				const typeStr = nameStr ? r.innerString(nameStr.next) : null;
+				const type = typeStr?.value ?? "";
+				if (nameStr?.value && matches(nameStr.value) && (type === "double" || type === "float")) {
+					types.set(id, type);
+					names.set(id, nameStr.value);
+				}
+			} else if (kind === CONTROL_FINISH && rec.size >= 5) {
+				const id = r.u32(rec.start + 1);
+				types.delete(id);
+				last.delete(id);
+			}
+			continue;
+		}
+		const type = types.get(rec.entry);
+		if (!type) continue;
+		let value: number;
+		if (type === "double" && rec.size === 8) {
+			value = new DataView(data.buffer, data.byteOffset + rec.start, 8).getFloat64(0, true);
+		} else if (type === "float" && rec.size === 4) {
+			value = new DataView(data.buffer, data.byteOffset + rec.start, 4).getFloat32(0, true);
+		} else {
+			continue;
+		}
+		if (!Number.isFinite(value)) continue;
+		last.set(rec.entry, value);
+		let sum = 0;
+		for (const held of last.values()) sum += held;
+		points.push({ timestamp: rec.timestamp, value: sum });
+		if (points.length >= limit) break;
+	}
+	return { points, names: [...names.values()].sort() };
+}
+
+/**
  * Where a data log sits on the wall clock.
  *
  * A data log's own timestamps count microseconds from robot boot, which places

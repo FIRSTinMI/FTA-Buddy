@@ -39,7 +39,7 @@
 	const DROPDOWN =
 		"absolute z-50 flex flex-col max-h-80 bg-white border border-gray-300 dark:bg-gray-700 dark:border-gray-600 start-0 top-[calc(100%+1rem)] rounded-lg w-full";
 	const ITEM =
-		"w-full text-left py-2 px-3 rounded-lg text-gray-600 hover:text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-600";
+		"w-full text-left py-2 px-3 rounded-lg text-gray-700 hover:text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-600";
 	const ITEM_SELECTED =
 		"bg-gray-100 text-black font-semibold hover:text-black dark:text-white dark:bg-gray-600 dark:hover:text-white";
 
@@ -121,7 +121,7 @@
 	}}
 >
 	{#if chosen.length === 0}
-		<span class="text-gray-400">{placeholder}</span>
+		<span class="text-gray-500 dark:text-gray-400">{placeholder}</span>
 	{/if}
 	<span>
 		{#each chosen as item (item.key)}
@@ -138,7 +138,7 @@
 	</span>
 
 	<div class="ms-auto flex items-center gap-2">
-		<span class="text-xs text-gray-400">{value.length}/{max}</span>
+		<span class="text-xs text-gray-500 dark:text-gray-400">{value.length}/{max}</span>
 		{#if chosen.length > 0}
 			<CloseButton size="md" color="none" class="p-0 focus:ring-gray-400 dark:text-white" onclick={clearAll} />
 		{/if}
@@ -174,7 +174,7 @@
 			</div>
 			<div class="flex flex-col gap-1 overflow-y-auto p-3">
 				{#each groups as group (group.group)}
-					<p class="px-1 pt-1 text-xs font-semibold text-gray-500 uppercase dark:text-gray-400">
+					<p class="px-1 pt-1 text-xs font-semibold text-gray-600 uppercase dark:text-gray-300">
 						{group.group}
 					</p>
 					{#each group.items as item (item.key)}
@@ -188,7 +188,7 @@
 						</button>
 					{/each}
 					{#if group.hidden > 0}
-						<p class="px-1 text-xs text-gray-500 dark:text-gray-400">{group.hidden} more</p>
+						<p class="px-1 text-xs text-gray-500 dark:text-gray-300">{group.hidden} more</p>
 					{/if}
 				{:else}
 					<p class="px-1 py-2 text-sm text-gray-500 dark:text-gray-400">No matches</p>

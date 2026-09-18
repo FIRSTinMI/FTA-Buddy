@@ -18,15 +18,15 @@ same `frame` / `cycleTime` / `sendSchedule` events and expose the same REST look
 
 ### Data mapping (`cheesyArenaMap.ts`)
 
-| FTA Buddy field | Cheesy Arena source |
-| --- | --- |
-| DS state | `Bypass`/`EStop`/`AStop`/`DsLinked`/`WrongStation` on the alliance station + DsConn |
-| radio / rio / code | `DsConn.RadioLinked` / `RioLinked` / `RobotLinked` |
-| enabled | `DsConn.Enabled` + `Auto` (e-stop / a-stop override) |
-| battery / ping / packets | `DsConn.BatteryVoltage` / `DsRobotTripTimeMs` / `MissedPacketCount` |
-| bandwidth / RX / TX / SNR | `WifiStatus.MBits` / `RxRate` / `TxRate` / `SignalNoiseRatio` |
-| radio quality | `WifiStatus.ConnectionQuality` (1-4) |
-| field state | `arenaStatus.MatchState` + `CanStartMatch`, with `matchLoad` = prestart and `scorePosted` = post-result |
+| FTA Buddy field           | Cheesy Arena source                                                                                     |
+| ------------------------- | ------------------------------------------------------------------------------------------------------- |
+| DS state                  | `Bypass`/`EStop`/`AStop`/`DsLinked`/`WrongStation` on the alliance station + DsConn                     |
+| radio / rio / code        | `DsConn.RadioLinked` / `RioLinked` / `RobotLinked`                                                      |
+| enabled                   | `DsConn.Enabled` + `Auto` (e-stop / a-stop override)                                                    |
+| battery / ping / packets  | `DsConn.BatteryVoltage` / `DsRobotTripTimeMs` / `MissedPacketCount`                                     |
+| bandwidth / RX / TX / SNR | `WifiStatus.MBits` / `RxRate` / `TxRate` / `SignalNoiseRatio`                                           |
+| radio quality             | `WifiStatus.ConnectionQuality` (1-4)                                                                    |
+| field state               | `arenaStatus.MatchState` + `CanStartMatch`, with `matchLoad` = prestart and `scorePosted` = post-result |
 
 Match logs are accumulated live from the 2 Hz `arenaStatus` stream (Cheesy Arena has no FMS-style
 `GetLog`) and uploaded at match end with a deterministic synthetic `fmsMatchId`.

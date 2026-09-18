@@ -25,10 +25,7 @@
 		const token = await currentIdToken();
 		if (!token) return;
 		try {
-			const [events, status] = await Promise.all([
-				trpc.dev.listProdEvents.query(),
-				trpc.dev.relayStatus.query(),
-			]);
+			const [events, status] = await Promise.all([trpc.dev.listProdEvents.query(), trpc.dev.relayStatus.query()]);
 			prodEvents = events.map((e) => ({
 				value: e.code,
 				name: e.archived ? `${e.code} - ${e.name} (archived)` : `${e.code} - ${e.name}`,
@@ -60,7 +57,11 @@
 		try {
 			const res = await trpc.dev.copyEventFromProd.mutate({ code: selectedEvent });
 			const total = Object.values(res.counts).reduce((a, b) => a + (b as number), 0);
-			toast("Copied from prod", `${res.code}: ${total} rows across ${Object.keys(res.counts).length} tables`, "green-500");
+			toast(
+				"Copied from prod",
+				`${res.code}: ${total} rows across ${Object.keys(res.counts).length} tables`,
+				"green-500",
+			);
 		} catch (e: any) {
 			toast("Copy failed", e?.message ?? "Unknown error");
 		} finally {
@@ -113,7 +114,12 @@
 			<div class="flex flex-col gap-1">
 				<Label>Copy event from prod</Label>
 				<div class="flex gap-2">
-					<Select class="flex-1 min-w-0" bind:value={selectedEvent} items={prodEvents} placeholder="Select a prod event" />
+					<Select
+						class="flex-1 min-w-0"
+						bind:value={selectedEvent}
+						items={prodEvents}
+						placeholder="Select a prod event"
+					/>
 					<Button size="sm" disabled={busy || !selectedEvent} onclick={copyEvent}>Copy</Button>
 				</div>
 			</div>
@@ -134,9 +140,15 @@
 						{relay.enabled ? "Stop" : "Start"}
 					</Button>
 				</div>
-				<p class="text-xs text-gray-500">Feeds live prod field data into dev using the selected event. Read-only from prod - it can't affect the production event.</p>
+				<p class="text-xs text-gray-500">
+					Feeds live prod field data into dev using the selected event. Read-only from prod - it can't affect
+					the production event.
+				</p>
 				{#if $eventStore.code && selectedEvent && selectedEvent !== $eventStore.code}
-					<p class="text-xs text-yellow-400">⚠️ You're viewing <b>{$eventStore.code}</b> but the relay is set to <b>{selectedEvent}</b> - the monitor won't update unless these match.</p>
+					<p class="text-xs text-yellow-400">
+						⚠️ You're viewing <b>{$eventStore.code}</b> but the relay is set to <b>{selectedEvent}</b> - the monitor
+						won't update unless these match.
+					</p>
 				{/if}
 			</div>
 

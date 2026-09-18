@@ -22,7 +22,12 @@ export async function loadTickets(): Promise<TroubleshootChunkInsert[]> {
 		const replies = await db
 			.select({ note_id: messages.note_id, text: messages.text, created_at: messages.created_at })
 			.from(messages)
-			.where(inArray(messages.note_id, batch.map((n) => n.id)))
+			.where(
+				inArray(
+					messages.note_id,
+					batch.map((n) => n.id),
+				),
+			)
 			.orderBy(asc(messages.created_at));
 		const byNote = new Map<string, string[]>();
 		for (const r of replies) {
@@ -58,7 +63,8 @@ async function main() {
 	process.exit(0);
 }
 
-if (require.main === module) main().catch((e) => {
-	console.error("[tickets] failed:", e);
-	process.exit(1);
-});
+if (require.main === module)
+	main().catch((e) => {
+		console.error("[tickets] failed:", e);
+		process.exit(1);
+	});

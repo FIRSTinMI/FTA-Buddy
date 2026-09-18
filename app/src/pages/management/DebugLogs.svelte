@@ -168,7 +168,9 @@
 		</div>
 
 		{#if error}
-			<div class="rounded border border-red-500 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-3 py-2 text-sm">
+			<div
+				class="rounded border border-red-500 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-3 py-2 text-sm"
+			>
 				{error}
 			</div>
 		{/if}
@@ -184,11 +186,7 @@
 						addCategory();
 					}}
 				>
-					<Input
-						placeholder="New category name"
-						bind:value={newCategoryName}
-						class="text-sm"
-					/>
+					<Input placeholder="New category name" bind:value={newCategoryName} class="text-sm" />
 					<Button type="submit" size="xs" disabled={!newCategoryName.trim()}>
 						<Icon icon="mdi:plus" class="w-4 h-4 mr-1" />
 						Add
@@ -197,8 +195,8 @@
 			</div>
 			{#if categories.length === 0}
 				<p class="text-sm text-gray-500 dark:text-gray-400">
-					No categories registered yet. Start the server (it pre-registers known ones) or
-					add one above to start toggling.
+					No categories registered yet. Start the server (it pre-registers known ones) or add one above to
+					start toggling.
 				</p>
 			{:else}
 				<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
@@ -228,13 +226,7 @@
 					<option value="error">error</option>
 				</Select>
 				<Input placeholder="Search message" bind:value={filterSearch} />
-				<Input
-					type="number"
-					placeholder="Limit"
-					bind:value={limit}
-					min="1"
-					max="1000"
-				/>
+				<Input type="number" placeholder="Limit" bind:value={limit} min="1" max="1000" />
 			</div>
 			<div class="flex items-center justify-between mt-3">
 				<div class="flex items-center gap-3">
@@ -256,7 +248,9 @@
 		</section>
 
 		<!-- Logs table -->
-		<section class="bg-white dark:bg-neutral-800 rounded-lg border border-gray-200 dark:border-neutral-700 overflow-hidden">
+		<section
+			class="bg-white dark:bg-neutral-800 rounded-lg border border-gray-200 dark:border-neutral-700 overflow-hidden"
+		>
 			<div class="overflow-x-auto">
 				<table class="w-full text-sm">
 					<thead class="bg-gray-100 dark:bg-neutral-900 text-gray-600 dark:text-gray-400 text-xs uppercase">
@@ -272,20 +266,30 @@
 					<tbody class="divide-y divide-gray-200 dark:divide-neutral-700">
 						{#each logs as log (log.id)}
 							<tr class="hover:bg-gray-50 dark:hover:bg-neutral-900/40 align-top">
-								<td class="px-3 py-1.5 font-mono text-xs whitespace-nowrap text-gray-600 dark:text-gray-400">
+								<td
+									class="px-3 py-1.5 font-mono text-xs whitespace-nowrap text-gray-600 dark:text-gray-400"
+								>
 									{fmtTimestamp(log.timestamp)}
 								</td>
 								<td class="px-3 py-1.5 whitespace-nowrap">
-									<Badge color={levelColor(log.level)} class="text-[10px] uppercase">{log.level}</Badge>
+									<Badge color={levelColor(log.level)} class="text-[10px] uppercase"
+										>{log.level}</Badge
+									>
 								</td>
-								<td class="px-3 py-1.5 font-mono text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">
+								<td
+									class="px-3 py-1.5 font-mono text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap"
+								>
 									{log.category}
 								</td>
-								<td class="px-3 py-1.5 font-mono text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">
+								<td
+									class="px-3 py-1.5 font-mono text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap"
+								>
 									{log.event_code ?? ""}
 								</td>
 								<td class="px-3 py-1.5 text-gray-800 dark:text-gray-200">{log.message}</td>
-								<td class="px-3 py-1.5 font-mono text-[11px] text-gray-500 dark:text-gray-400 break-all">
+								<td
+									class="px-3 py-1.5 font-mono text-[11px] text-gray-500 dark:text-gray-400 break-all"
+								>
 									{fmtData(log.data)}
 								</td>
 							</tr>

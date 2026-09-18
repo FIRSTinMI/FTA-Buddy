@@ -7,12 +7,22 @@ describe("parseStep", () => {
 	});
 	test("leading If becomes a check with a yes outcome", () => {
 		expect(parseStep("If PWR stays off with known good 12 V at the radio, swap the radio.")).toEqual([
-			{ kind: "check", text: "PWR stays off with known good 12 V at the radio?", yes: "Swap the radio.", no: "Fixed. Stop here." },
+			{
+				kind: "check",
+				text: "PWR stays off with known good 12 V at the radio?",
+				yes: "Swap the radio.",
+				no: "Fixed. Stop here.",
+			},
 		]);
 	});
 	test("Still X: Y becomes a check", () => {
 		expect(parseStep("Still dark: swap the radio, program it at the kiosk.")).toEqual([
-			{ kind: "check", text: "Still dark?", yes: "Swap the radio, program it at the kiosk.", no: "Fixed. Stop here." },
+			{
+				kind: "check",
+				text: "Still dark?",
+				yes: "Swap the radio, program it at the kiosk.",
+				no: "Fixed. Stop here.",
+			},
 		]);
 	});
 	test("action then If splits into do + check", () => {

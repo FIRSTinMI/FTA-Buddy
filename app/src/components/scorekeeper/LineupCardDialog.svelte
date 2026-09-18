@@ -45,7 +45,11 @@
 	);
 	const roster = $derived(alliances.find((a) => a.number === allianceNumber) ?? null);
 	const rosterTeams = $derived(
-		roster ? [roster.captain_team, roster.pick1_team, roster.pick2_team, roster.backup_team].filter((t): t is number => t != null) : [],
+		roster
+			? [roster.captain_team, roster.pick1_team, roster.pick2_team, roster.backup_team].filter(
+					(t): t is number => t != null,
+				)
+			: [],
 	);
 	const rosterSet = $derived(new Set(rosterTeams));
 
@@ -213,7 +217,13 @@
 	const curCls = "text-center text-2xl font-bold tabular-nums";
 </script>
 
-<Modal bind:open title={stage === 1 ? "File a lineup card" : `Lineup card: Alliance ${allianceNumber}, Match ${matchNumber}`} onclose={onClose} size="md" outsideclose={false}>
+<Modal
+	bind:open
+	title={stage === 1 ? "File a lineup card" : `Lineup card: Alliance ${allianceNumber}, Match ${matchNumber}`}
+	onclose={onClose}
+	size="md"
+	outsideclose={false}
+>
 	{#if stage === 1}
 		<div class="flex flex-col gap-4">
 			<div class="flex flex-col gap-1 text-sm text-gray-600 dark:text-gray-300">
@@ -223,12 +233,14 @@
 						<button
 							type="button"
 							onclick={() => selectAlliance(a.number)}
-							class="rounded-md border py-2 text-center font-semibold transition {allianceNumber === a.number
+							class="rounded-md border py-2 text-center font-semibold transition {allianceNumber ===
+							a.number
 								? 'border-primary-600 bg-primary-600 text-white'
 								: 'border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-200 hover:border-primary-400'}"
 						>
 							<span class="text-lg leading-none">{a.number}</span>
-							{#if a.captain}<span class="block text-[10px] font-normal opacity-70">{a.captain}</span>{/if}
+							{#if a.captain}<span class="block text-[10px] font-normal opacity-70">{a.captain}</span
+								>{/if}
 						</button>
 					{/each}
 				</div>
@@ -244,7 +256,8 @@
 			</label>
 			{#if roster}
 				<div class="text-xs text-gray-500">
-					Roster: <span class="font-bold">{roster.captain_team}</span>{#if roster.pick1_team}, {roster.pick1_team}{/if}{#if roster.pick2_team}, {roster.pick2_team}{/if}{#if roster.backup_team}, {roster.backup_team}{/if}
+					Roster: <span class="font-bold">{roster.captain_team}</span>{#if roster.pick1_team}, {roster.pick1_team}{/if}{#if roster.pick2_team},
+						{roster.pick2_team}{/if}{#if roster.backup_team}, {roster.backup_team}{/if}
 				</div>
 			{/if}
 		</div>
@@ -253,15 +266,28 @@
 			{#if roster}
 				<div class="rounded-md bg-gray-50 dark:bg-neutral-800/60 p-2 text-xs text-gray-600 dark:text-gray-300">
 					<span class="font-semibold">Alliance {allianceNumber}:</span>
-					<span class="font-bold">{roster.captain_team}</span>{#if roster.pick1_team}, {roster.pick1_team}{/if}{#if roster.pick2_team}, {roster.pick2_team}{/if}{#if roster.backup_team}, {roster.backup_team} (backup){/if}
+					<span class="font-bold">{roster.captain_team}</span>{#if roster.pick1_team}, {roster.pick1_team}{/if}{#if roster.pick2_team},
+						{roster.pick2_team}{/if}{#if roster.backup_team}, {roster.backup_team} (backup){/if}
 				</div>
 			{/if}
 			<!-- Current lineup flanks the inputs; labels only at the top. -->
 			<div class="grid grid-cols-4 gap-x-2 gap-y-2 items-center max-w-md mx-auto w-full">
-				<div class="col-start-1 row-start-1 text-center text-[10px] uppercase text-gray-400">Current{currentIsDefault ? " (def)" : ""}</div>
-				<div class="col-start-2 row-start-1 text-center text-xs font-bold uppercase text-blue-600 dark:text-blue-400">Blue</div>
-				<div class="col-start-3 row-start-1 text-center text-xs font-bold uppercase text-red-600 dark:text-red-400">Red</div>
-				<div class="col-start-4 row-start-1 text-center text-[10px] uppercase text-gray-400">Current{currentIsDefault ? " (def)" : ""}</div>
+				<div class="col-start-1 row-start-1 text-center text-[10px] uppercase text-gray-400">
+					Current{currentIsDefault ? " (def)" : ""}
+				</div>
+				<div
+					class="col-start-2 row-start-1 text-center text-xs font-bold uppercase text-blue-600 dark:text-blue-400"
+				>
+					Blue
+				</div>
+				<div
+					class="col-start-3 row-start-1 text-center text-xs font-bold uppercase text-red-600 dark:text-red-400"
+				>
+					Red
+				</div>
+				<div class="col-start-4 row-start-1 text-center text-[10px] uppercase text-gray-400">
+					Current{currentIsDefault ? " (def)" : ""}
+				</div>
 
 				<!-- current blue trio (left) -->
 				<div class="col-start-1 row-start-2 {curCls} text-blue-500/70">{onFile?.blue[0] ?? "-"}</div>
@@ -273,12 +299,54 @@
 				<div class="col-start-4 row-start-4 {curCls} text-red-500/70">{onFile?.red[0] ?? "-"}</div>
 
 				<!-- inputs in DOM order b1,b2,b3,r3,r2,r1 so Tab flows blue then red -->
-				<input id="lc-b1" type="number" inputmode="numeric" value={b1} oninput={(e) => (b1 = (e.target as HTMLInputElement).value)} class="{boxClass} {inpCls('blue', b1)} col-start-2 row-start-2" />
-				<input id="lc-b2" type="number" inputmode="numeric" value={b2} oninput={(e) => (b2 = (e.target as HTMLInputElement).value)} class="{boxClass} {inpCls('blue', b2)} col-start-2 row-start-3" />
-				<input id="lc-b3" type="number" inputmode="numeric" value={b3} oninput={(e) => (b3 = (e.target as HTMLInputElement).value)} class="{boxClass} {inpCls('blue', b3)} col-start-2 row-start-4" />
-				<input id="lc-r3" type="number" inputmode="numeric" value={r3} oninput={(e) => (r3 = (e.target as HTMLInputElement).value)} class="{boxClass} {inpCls('red', r3)} col-start-3 row-start-2" />
-				<input id="lc-r2" type="number" inputmode="numeric" value={r2} oninput={(e) => (r2 = (e.target as HTMLInputElement).value)} class="{boxClass} {inpCls('red', r2)} col-start-3 row-start-3" />
-				<input id="lc-r1" type="number" inputmode="numeric" value={r1} oninput={(e) => (r1 = (e.target as HTMLInputElement).value)} class="{boxClass} {inpCls('red', r1)} col-start-3 row-start-4" />
+				<input
+					id="lc-b1"
+					type="number"
+					inputmode="numeric"
+					value={b1}
+					oninput={(e) => (b1 = (e.target as HTMLInputElement).value)}
+					class="{boxClass} {inpCls('blue', b1)} col-start-2 row-start-2"
+				/>
+				<input
+					id="lc-b2"
+					type="number"
+					inputmode="numeric"
+					value={b2}
+					oninput={(e) => (b2 = (e.target as HTMLInputElement).value)}
+					class="{boxClass} {inpCls('blue', b2)} col-start-2 row-start-3"
+				/>
+				<input
+					id="lc-b3"
+					type="number"
+					inputmode="numeric"
+					value={b3}
+					oninput={(e) => (b3 = (e.target as HTMLInputElement).value)}
+					class="{boxClass} {inpCls('blue', b3)} col-start-2 row-start-4"
+				/>
+				<input
+					id="lc-r3"
+					type="number"
+					inputmode="numeric"
+					value={r3}
+					oninput={(e) => (r3 = (e.target as HTMLInputElement).value)}
+					class="{boxClass} {inpCls('red', r3)} col-start-3 row-start-2"
+				/>
+				<input
+					id="lc-r2"
+					type="number"
+					inputmode="numeric"
+					value={r2}
+					oninput={(e) => (r2 = (e.target as HTMLInputElement).value)}
+					class="{boxClass} {inpCls('red', r2)} col-start-3 row-start-3"
+				/>
+				<input
+					id="lc-r1"
+					type="number"
+					inputmode="numeric"
+					value={r1}
+					oninput={(e) => (r1 = (e.target as HTMLInputElement).value)}
+					class="{boxClass} {inpCls('red', r1)} col-start-3 row-start-4"
+				/>
 			</div>
 
 			<input
@@ -304,8 +372,8 @@
 				<Alert color="red">
 					<span class="font-semibold">Late card (T613):</span>
 					{formatLate(warning.secondsLate)} past the deadline{#if warning.deadlineAt}
-						(due {new Date(warning.deadlineAt).toLocaleTimeString()}){/if}. The previous lineup stands unless the
-					head ref accepts it.
+						(due {new Date(warning.deadlineAt).toLocaleTimeString()}){/if}. The previous lineup stands
+					unless the head ref accepts it.
 				</Alert>
 			{/if}
 			{#if error}
@@ -328,10 +396,18 @@
 				<Button color="alternative" onclick={() => (stage = 1)} disabled={submitting}>Back</Button>
 				<div class="flex gap-2">
 					{#if warning}
-						<Button color="red" onclick={() => doSubmit({ deny: true })} disabled={submitting}>Deny (T613)</Button>
-						<Button color="yellow" onclick={() => doSubmit({ acceptAnyway: true })} disabled={submitting}>Accept anyway</Button>
+						<Button color="red" onclick={() => doSubmit({ deny: true })} disabled={submitting}
+							>Deny (T613)</Button
+						>
+						<Button color="yellow" onclick={() => doSubmit({ acceptAnyway: true })} disabled={submitting}
+							>Accept anyway</Button
+						>
 					{:else if validationWarn && !hasDup}
-						<Button color="yellow" onclick={() => doSubmit({ overrideValidation: true })} disabled={submitting}>File anyway</Button>
+						<Button
+							color="yellow"
+							onclick={() => doSubmit({ overrideValidation: true })}
+							disabled={submitting}>File anyway</Button
+						>
 					{:else}
 						<Button color="primary" onclick={() => doSubmit()} disabled={submitting || hasDup}>
 							{submitting ? "Filing..." : "Submit card"}

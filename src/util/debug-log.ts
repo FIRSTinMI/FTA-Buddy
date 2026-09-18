@@ -23,15 +23,7 @@ const RETENTION_INTERVAL_MS = 60_000;
  * lazy registration below handles ad-hoc cases but boot-time entries are
  * what gives the page a populated set on a fresh deploy.
  */
-const KNOWN_CATEGORIES = [
-	"cycle",
-	"field-monitor",
-	"slack",
-	"fms",
-	"match-events",
-	"notifications",
-	"general",
-];
+const KNOWN_CATEGORIES = ["cycle", "field-monitor", "slack", "fms", "match-events", "notifications", "general"];
 
 let enabledCategories = new Set<string>();
 let cacheInitialized = false;

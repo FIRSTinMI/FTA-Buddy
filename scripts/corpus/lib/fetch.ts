@@ -143,7 +143,12 @@ export async function isAllowed(url: string): Promise<boolean> {
 	let best: RobotsRule | null = null;
 	for (const rule of rules) {
 		if (!patternToRegex(rule.pattern).test(path)) continue;
-		if (!best || rule.pattern.length > best.pattern.length || (rule.pattern.length === best.pattern.length && rule.allow)) best = rule;
+		if (
+			!best ||
+			rule.pattern.length > best.pattern.length ||
+			(rule.pattern.length === best.pattern.length && rule.allow)
+		)
+			best = rule;
 	}
 	return best ? best.allow : true;
 }
@@ -154,7 +159,10 @@ async function rawFetch(url: string, opts: FetchOptions = {}): Promise<FetchResu
 	const host = new URL(url).host;
 	const caPath = EXTRA_CA[host];
 	const init: RequestInit & { tls?: { ca: string } } = {
-		headers: { "user-agent": USER_AGENT, accept: "text/html,application/xhtml+xml,application/xml,text/plain,*/*;q=0.5" },
+		headers: {
+			"user-agent": USER_AGENT,
+			accept: "text/html,application/xhtml+xml,application/xml,text/plain,*/*;q=0.5",
+		},
 		redirect: "follow",
 	};
 	if (caPath) init.tls = { ca: readFileSync(caPath, "utf8") };
@@ -167,7 +175,9 @@ async function rawFetch(url: string, opts: FetchOptions = {}): Promise<FetchResu
 			res = await fetch(url, init);
 		} catch (e) {
 			if (attempt >= MAX_ATTEMPTS) throw e;
-			console.warn(`[fetch] ${url} network error (${String(e)}), retry ${attempt}/${MAX_ATTEMPTS - 1} in ${delay}ms`);
+			console.warn(
+				`[fetch] ${url} network error (${String(e)}), retry ${attempt}/${MAX_ATTEMPTS - 1} in ${delay}ms`,
+			);
 			await Bun.sleep(delay);
 			delay *= 2;
 			continue;
@@ -181,7 +191,12 @@ async function rawFetch(url: string, opts: FetchOptions = {}): Promise<FetchResu
 			delay *= 2;
 			continue;
 		}
-		const body = res.status === 204 ? "" : opts.binary ? Buffer.from(await res.arrayBuffer()).toString("base64") : await res.text();
+		const body =
+			res.status === 204
+				? ""
+				: opts.binary
+					? Buffer.from(await res.arrayBuffer()).toString("base64")
+					: await res.text();
 		return {
 			url,
 			finalUrl: res.url || url,

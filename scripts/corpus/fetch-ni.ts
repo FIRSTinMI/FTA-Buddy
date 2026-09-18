@@ -47,9 +47,14 @@ function parseArticle(id: string, page: string): Article | null {
 	const endMarker = page.indexOf("Other Support Options", start);
 	const html = page.slice(start, endMarker === -1 ? undefined : page.lastIndexOf("<h2", endMarker));
 	const title = decodeEntities(page.match(/<h1 class="blog-title">([^<]*)/)?.[1] ?? "").trim();
-	const dateText = page.match(/lastModifiedDate">\s*Updated\s+([^<]+)</)?.[1]?.replace(/\s+/g, " ").trim();
+	const dateText = page
+		.match(/lastModifiedDate">\s*Updated\s+([^<]+)</)?.[1]
+		?.replace(/\s+/g, " ")
+		.trim();
 	const updated = dateText ? new Date(dateText) : null;
-	const links = [...new Set([...html.matchAll(/KnowledgeArticleDetails\?id=([A-Za-z0-9]+)/g)].map((m) => m[1]))].filter((l) => l !== id);
+	const links = [
+		...new Set([...html.matchAll(/KnowledgeArticleDetails\?id=([A-Za-z0-9]+)/g)].map((m) => m[1])),
+	].filter((l) => l !== id);
 	return { id, title, updated: updated && !Number.isNaN(updated.getTime()) ? updated : null, html, links };
 }
 

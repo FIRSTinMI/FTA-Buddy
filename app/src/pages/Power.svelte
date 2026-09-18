@@ -409,12 +409,14 @@
 	</div>
 
 	{#if monitorIds.length === 0}
-		<div class="rounded-xl border border-gray-200 bg-white p-6 text-center dark:border-neutral-700 dark:bg-neutral-900">
+		<div
+			class="rounded-xl border border-gray-200 bg-white p-6 text-center dark:border-neutral-700 dark:bg-neutral-900"
+		>
 			<Icon icon="mdi:lightning-bolt-outline" class="mx-auto size-10 text-gray-400" />
 			<p class="mt-2 font-semibold">No monitors reporting</p>
 			<p class="mt-1 text-sm text-gray-500">
-				Turn on <span class="font-medium">Field Power Monitors</span> in the extension popup, then check that
-				each board has a link light and a DHCP lease on the event network.
+				Turn on <span class="font-medium">Field Power Monitors</span> in the extension popup, then check that each
+				board has a link light and a DHCP lease on the event network.
 			</p>
 		</div>
 	{/if}
@@ -524,7 +526,9 @@
 			{/if}
 		</div>
 
-		<div class="overflow-x-auto rounded-xl border border-gray-200 bg-white dark:border-neutral-700 dark:bg-neutral-900">
+		<div
+			class="overflow-x-auto rounded-xl border border-gray-200 bg-white dark:border-neutral-700 dark:bg-neutral-900"
+		>
 			<table class="w-full text-sm">
 				<thead class="border-b border-gray-200 text-left dark:border-neutral-700">
 					<tr>

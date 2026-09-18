@@ -9,6 +9,7 @@ import { fmsGuid } from "./logs";
 import { ghostCsaEnabled, ghostCsaTicketUrl, refreshGhostCsa, sendUploadToGhostCsa } from "../util/uploads/ghost-csa";
 import { assignUploadToEvent, linkUploadMatch, setUploadTeam, unlinkUploadMatch } from "../util/uploads/ingest";
 import { availableSeries, readSeriesData } from "../util/troubleshoot/chat/uploads";
+import { readDsEvents } from "../../shared/logs/dslog";
 import { deleteBytes, loadBytes } from "../util/uploads/store";
 
 /**
@@ -366,6 +367,7 @@ export const uploadsRouter = router({
 				hasDsLog: has.includes("dslog"),
 				hasDataLog: has.includes("wpilog"),
 				hasCsv: has.includes("csv"),
+				hasEvents: has.includes("dsevents"),
 			};
 		});
 	}),
@@ -375,6 +377,36 @@ export const uploadsRouter = router({
 		await uploadOr404(input.id, ctx.event.code);
 		return { text: await availableSeries(input.id) };
 	}),
+
+	/**
+	 * The Driver Station's event log for a match, timestamped against match start
+	 * so a line in the terminal can point at a moment on the chart.
+	 */
+	events: eventProcedure
+		.input(z.object({ id: z.string().uuid(), matchId: fmsGuid }))
+		.query(async ({ ctx, input }) => {
+			await uploadOr404(input.id, ctx.event.code);
+			const match = await db.query.matchLogs.findFirst({ where: eq(matchLogs.id, input.matchId) });
+			if (!match) throw new TRPCError({ code: "NOT_FOUND", message: "Match not found" });
+			const files = await db
+				.select()
+				.from(teamUploadFiles)
+				.where(and(eq(teamUploadFiles.upload_id, input.id), eq(teamUploadFiles.kind, "dsevents")))
+				.execute();
+
+			const matchStart = match.start_time.getTime() / 1000;
+			const lines: { t: number | null; text: string; file: string }[] = [];
+			for (const file of files) {
+				const parsed = readDsEvents(await loadBytes(file));
+				if (!parsed.parsed || parsed.startTime === null) continue;
+				const offset = parsed.startTime - matchStart;
+				for (const entry of parsed.entries) {
+					lines.push({ t: entry.timestamp + offset, text: entry.text, file: file.path });
+				}
+			}
+			lines.sort((a, b) => (a.t ?? 0) - (b.t ?? 0));
+			return { lines };
+		}),
 
 	/** Series data on the match clock, for the chart. */
 	series: eventProcedure

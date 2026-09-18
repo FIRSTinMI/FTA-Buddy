@@ -65,8 +65,12 @@
 						{#each [{ side: "blue", border: "border-blue-400", text: "text-blue-600", rows: [{ label: "Blue 1", team: card.blue_station1_team }, { label: "Blue 2", team: card.blue_station2_team }, { label: "Blue 3", team: card.blue_station3_team }] }, { side: "red", border: "border-red-400", text: "text-red-600", rows: [{ label: "Red 3", team: card.red_station3_team }, { label: "Red 2", team: card.red_station2_team }, { label: "Red 1", team: card.red_station1_team }] }] as col (col.side)}
 							<div class="flex flex-col gap-1 rounded border p-1 {col.border}">
 								{#each col.rows as row (row.label)}
-									<div class="flex items-center gap-2 rounded bg-gray-50 dark:bg-neutral-800 px-2 py-1">
-										<span class="w-12 shrink-0 text-[10px] font-semibold uppercase {col.text}">{row.label}</span>
+									<div
+										class="flex items-center gap-2 rounded bg-gray-50 dark:bg-neutral-800 px-2 py-1"
+									>
+										<span class="w-12 shrink-0 text-[10px] font-semibold uppercase {col.text}"
+											>{row.label}</span
+										>
 										<span class="text-base font-bold tabular-nums">{row.team ?? "-"}</span>
 										<span class="truncate text-[10px] text-gray-500">{teamName(row.team)}</span>
 									</div>

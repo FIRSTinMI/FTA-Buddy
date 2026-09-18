@@ -98,8 +98,7 @@ export async function generateNotesReportPdf(
 	});
 
 	const allMessages = await db.query.messages.findMany({
-		where:
-			allCodes.length === 1 ? eq(messages.event_code, allCodes[0]) : inArray(messages.event_code, allCodes),
+		where: allCodes.length === 1 ? eq(messages.event_code, allCodes[0]) : inArray(messages.event_code, allCodes),
 		orderBy: [asc(messages.created_at)],
 		with: messageWith,
 	});

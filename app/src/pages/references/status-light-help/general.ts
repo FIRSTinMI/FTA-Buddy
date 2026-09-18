@@ -104,7 +104,8 @@ export const generalHelp = {
 		device: "OpenMesh OM5P radio",
 		led: "WiFi",
 		state: "Yellow or orange",
-		meaning: "Access point mode with a client connected. Normal when a laptop is on the radio's own network at home.",
+		meaning:
+			"Access point mode with a client connected. Normal when a laptop is on the radio's own network at home.",
 		source: WPILIB_2024,
 	},
 	"om5p.wifi.bridge-linked": {
@@ -318,7 +319,8 @@ export const generalHelp = {
 		device: "VH-109 radio",
 		led: "6G",
 		state: "Solid",
-		meaning: "The 6 GHz link to the field access point is up. This light is blue, the radio's other lights are green. This is the normal field link.",
+		meaning:
+			"The 6 GHz link to the field access point is up. This light is blue, the radio's other lights are green. This is the normal field link.",
 		steps: [
 			{
 				kind: "check",

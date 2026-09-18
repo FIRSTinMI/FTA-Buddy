@@ -52,7 +52,10 @@ export function parseStep(sentence: string): FlowStep[] {
 	const still = /^Still ([^:]+):\s*(.+)$/s.exec(s);
 	if (still) return [{ kind: "check", text: question(`Still ${still[1]}`), yes: outcome(still[2]), no: STOP }];
 	const leadingIf = /^If ([^,:]+?)[,:]\s*(.+)$/s.exec(s);
-	if (leadingIf) return [{ kind: "check", text: question(leadingIf[1]), yes: outcome(leadingIf[2]), no: noOutcome(leadingIf[1]) }];
+	if (leadingIf)
+		return [
+			{ kind: "check", text: question(leadingIf[1]), yes: outcome(leadingIf[2]), no: noOutcome(leadingIf[1]) },
+		];
 	const midIf = /^(.+?\.)\s+If ([^,:]+?)[,:]\s*(.+)$/s.exec(s);
 	if (midIf) {
 		return [

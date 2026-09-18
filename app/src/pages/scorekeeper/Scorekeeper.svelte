@@ -17,9 +17,7 @@
 	import { FieldState, MatchState, MatchStateMap } from "../../../../shared/types";
 
 	// FTA/FTAA/Scorekeeper/admin may edit; everyone with the view may read.
-	const canEdit = $derived(
-		$userStore.admin || ["Scorekeeper", "FTA", "FTAA", "System"].includes($userStore.role),
-	);
+	const canEdit = $derived($userStore.admin || ["Scorekeeper", "FTA", "FTAA", "System"].includes($userStore.role));
 
 	// Team number -> short name.
 	let teamNames = $derived.by(() => {
@@ -319,7 +317,12 @@
 			color,
 			allianceNumber: null,
 			alliance: null,
-			lineup: { stations: { station1: s1, station2: s2, station3: s3 }, resolution: "submitted", usesBackup: false, cardId: null },
+			lineup: {
+				stations: { station1: s1, station2: s2, station3: s3 },
+				resolution: "submitted",
+				usesBackup: false,
+				cardId: null,
+			},
 		} as unknown as LineupSide;
 	}
 
@@ -358,7 +361,8 @@
 		const diff = Math.round((deadlineMs - now) / 1000);
 		const past = diff < 0;
 		const s = Math.abs(diff);
-		const label = s < 3600 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : `${Math.floor(s / 3600)}h`;
+		const label =
+			s < 3600 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : `${Math.floor(s / 3600)}h`;
 		return { past, label };
 	});
 
@@ -467,7 +471,9 @@
 		return t ? new Date(t) : null;
 	});
 	const currentCycleMs = $derived(currentCycleStart ? now - currentCycleStart.getTime() : null);
-	const currentCycleLabel = $derived(currentCycleStart ? formatTimeShortNoAgo(currentCycleStart, new Date(now)) : "-");
+	const currentCycleLabel = $derived(
+		currentCycleStart ? formatTimeShortNoAgo(currentCycleStart, new Date(now)) : "-",
+	);
 	const currentCycleRedness = $derived.by(() => {
 		if (currentCycleMs == null) return 0;
 		const avg = cycleData?.averageCycleTime ?? 8 * 60 * 1000;
@@ -542,7 +548,8 @@
 		if (!liveMatchStarted || `${m.level}:${m.match}:${m.play}` !== liveKey) {
 			return { actual: m.actualStartTime, cycle: m.cycleTime };
 		}
-		const liveCycle = cycleData?.lastCycleTime && cycleData.lastCycleTime !== "unk" ? cycleData.lastCycleTime : null;
+		const liveCycle =
+			cycleData?.lastCycleTime && cycleData.lastCycleTime !== "unk" ? cycleData.lastCycleTime : null;
 		return {
 			actual: m.actualStartTime ?? (cycleData?.startTime ? new Date(cycleData.startTime) : null),
 			cycle: m.cycleTime ?? liveCycle,
@@ -573,10 +580,7 @@
 		<div class="text-center">
 			<div class="text-base text-gray-500 uppercase">{selLevel}{selPlay > 1 ? ` (play ${selPlay})` : ""}</div>
 			<div class="text-5xl font-bold text-gray-900 dark:text-white">Match {selMatch}</div>
-			<button
-				class="text-base {following ? 'text-green-600' : 'text-primary-600 underline'}"
-				onclick={goLive}
-			>
+			<button class="text-base {following ? 'text-green-600' : 'text-primary-600 underline'}" onclick={goLive}>
 				{following ? "● Following live" : "Jump to live"}
 			</button>
 		</div>
@@ -617,9 +621,13 @@
 	{#if selLevel === "Playoff"}
 		<div class="flex items-center justify-between">
 			{#if countdown}
-				<div class="text-sm {countdown.past ? 'text-red-600 font-semibold' : 'text-gray-700 dark:text-gray-200'}">
+				<div
+					class="text-sm {countdown.past ? 'text-red-600 font-semibold' : 'text-gray-700 dark:text-gray-200'}"
+				>
 					T613 deadline {fmtTime(forMatch?.deadlineAt ?? null)} -
-					<span class="font-mono font-bold">{countdown.past ? `+${countdown.label} late` : `${countdown.label} left`}</span>
+					<span class="font-mono font-bold"
+						>{countdown.past ? `+${countdown.label} late` : `${countdown.label} left`}</span
+					>
 				</div>
 			{:else}
 				<div class="text-xs text-amber-600">No scheduled start yet, deadline not enforced.</div>
@@ -630,19 +638,54 @@
 			<Spinner />
 		{:else if forMatch}
 			<div class="grid gap-3 md:grid-cols-2">
-				<AllianceLineupCard side={forMatch.blue} {teamName} {canEdit} onEdit={() => openDialog(forMatch!.blue.allianceNumber)} onHistory={() => openHistory(forMatch!.blue)} />
-				<AllianceLineupCard side={forMatch.red} {teamName} {canEdit} onEdit={() => openDialog(forMatch!.red.allianceNumber)} onHistory={() => openHistory(forMatch!.red)} />
+				<AllianceLineupCard
+					side={forMatch.blue}
+					{teamName}
+					{canEdit}
+					onEdit={() => openDialog(forMatch!.blue.allianceNumber)}
+					onHistory={() => openHistory(forMatch!.blue)}
+				/>
+				<AllianceLineupCard
+					side={forMatch.red}
+					{teamName}
+					{canEdit}
+					onEdit={() => openDialog(forMatch!.red.allianceNumber)}
+					onHistory={() => openHistory(forMatch!.red)}
+				/>
 			</div>
 		{/if}
 	{:else if selLevel === "Practice"}
 		{#if fieldLineup}
 			<div class="grid gap-3 md:grid-cols-2">
-				<AllianceLineupCard side={fieldSide("blue", fieldLineup.blue1_team, fieldLineup.blue2_team, fieldLineup.blue3_team)} {teamName} canEdit={false} onEdit={() => {}} onHistory={() => {}} title="" hideActions emptyLabel="bypass" />
-				<AllianceLineupCard side={fieldSide("red", fieldLineup.red1_team, fieldLineup.red2_team, fieldLineup.red3_team)} {teamName} canEdit={false} onEdit={() => {}} onHistory={() => {}} title="" hideActions emptyLabel="bypass" />
+				<AllianceLineupCard
+					side={fieldSide("blue", fieldLineup.blue1_team, fieldLineup.blue2_team, fieldLineup.blue3_team)}
+					{teamName}
+					canEdit={false}
+					onEdit={() => {}}
+					onHistory={() => {}}
+					title=""
+					hideActions
+					emptyLabel="bypass"
+				/>
+				<AllianceLineupCard
+					side={fieldSide("red", fieldLineup.red1_team, fieldLineup.red2_team, fieldLineup.red3_team)}
+					{teamName}
+					canEdit={false}
+					onEdit={() => {}}
+					onHistory={() => {}}
+					title=""
+					hideActions
+					emptyLabel="bypass"
+				/>
 			</div>
-			<div class="text-[11px] text-gray-400">{#if fieldLineup.updated_by_name}Entered by {fieldLineup.updated_by_name} - {/if}{fmtTime(fieldLineup.updated_at)}</div>
+			<div class="text-[11px] text-gray-400">
+				{#if fieldLineup.updated_by_name}Entered by {fieldLineup.updated_by_name} -
+				{/if}{fmtTime(fieldLineup.updated_at)}
+			</div>
 		{:else}
-			<div class="text-sm text-gray-500">No field lineup yet. Have a volunteer sign in and use the Lineup Entry page to send you the lineup.</div>
+			<div class="text-sm text-gray-500">
+				No field lineup yet. Have a volunteer sign in and use the Lineup Entry page to send you the lineup.
+			</div>
 		{/if}
 	{/if}
 
@@ -669,10 +712,15 @@
 			{/each}
 		</div>
 	{/if}
-	<div bind:this={tableScroll} class="overflow-x-auto overflow-y-auto max-h-[38rem] rounded-md border border-gray-200 dark:border-neutral-700">
+	<div
+		bind:this={tableScroll}
+		class="overflow-x-auto overflow-y-auto max-h-[38rem] rounded-md border border-gray-200 dark:border-neutral-700"
+	>
 		<table class="w-full text-lg lg:text-xl">
 			<thead class="sticky top-0 z-10 bg-white dark:bg-neutral-900">
-				<tr class="text-left text-base uppercase text-gray-500 border-b border-gray-200 dark:border-neutral-700">
+				<tr
+					class="text-left text-base uppercase text-gray-500 border-b border-gray-200 dark:border-neutral-700"
+				>
 					<th class="py-2 px-3">Match</th>
 					<th class="py-2 px-3 hidden lg:table-cell">Teams</th>
 					<th class="py-2 px-3">Sched</th>
@@ -689,7 +737,9 @@
 					{@const isSel = m.level === selLevel && m.match === selMatch && m.play === selPlay}
 					<tr
 						data-sel={isSel ? "1" : null}
-						class="border-b border-gray-100 dark:border-neutral-800 cursor-pointer {isSel ? 'bg-primary-50 dark:bg-primary-950/40' : ''}"
+						class="border-b border-gray-100 dark:border-neutral-800 cursor-pointer {isSel
+							? 'bg-primary-50 dark:bg-primary-950/40'
+							: ''}"
 						onclick={() => {
 							following = false;
 							selLevel = m.level;
@@ -702,17 +752,31 @@
 							<span class="font-semibold">{m.match}{m.play > 1 ? `-${m.play}` : ""}</span>
 						</td>
 						<td class="py-2 px-3 whitespace-nowrap text-base lg:text-lg font-mono hidden lg:table-cell">
-							{#each m.red as t, i (i)}<span class="inline-block w-16 text-right tabular-nums text-red-600">{t ?? ""}</span>{/each}
+							{#each m.red as t, i (i)}<span
+									class="inline-block w-16 text-right tabular-nums text-red-600">{t ?? ""}</span
+								>{/each}
 							<span class="inline-block w-3"></span>
-							{#each m.blue as t, i (i)}<span class="inline-block w-16 text-right tabular-nums text-blue-600">{t ?? ""}</span>{/each}
+							{#each m.blue as t, i (i)}<span
+									class="inline-block w-16 text-right tabular-nums text-blue-600">{t ?? ""}</span
+								>{/each}
 						</td>
 						<td class="py-2 px-3 whitespace-nowrap font-mono">{fmtTime(m.scheduledStartTime)}</td>
 						<td class="py-2 px-3 whitespace-nowrap font-mono text-gray-500">{fmtTime(ov.actual)}</td>
-						<td class="py-2 px-3 whitespace-nowrap text-base {delta ? (delta.late ? 'text-red-600' : 'text-green-600') : 'text-gray-400'}">{delta?.text ?? "-"}</td>
+						<td
+							class="py-2 px-3 whitespace-nowrap text-base {delta
+								? delta.late
+									? 'text-red-600'
+									: 'text-green-600'
+								: 'text-gray-400'}">{delta?.text ?? "-"}</td
+						>
 						<td class="py-2 px-3 font-mono text-gray-500">{fmtCycleStr(ov.cycle)}</td>
 						<td class="py-2 px-3 whitespace-nowrap">
 							{#if m.finalScoreRed != null && m.finalScoreBlue != null}
-								<span class="text-red-600 {m.finalScoreRed > m.finalScoreBlue ? 'font-bold' : ''}">{m.finalScoreRed}</span>-<span class="text-blue-600 {m.finalScoreBlue > m.finalScoreRed ? 'font-bold' : ''}">{m.finalScoreBlue}</span>
+								<span class="text-red-600 {m.finalScoreRed > m.finalScoreBlue ? 'font-bold' : ''}"
+									>{m.finalScoreRed}</span
+								>-<span class="text-blue-600 {m.finalScoreBlue > m.finalScoreRed ? 'font-bold' : ''}"
+									>{m.finalScoreBlue}</span
+								>
 							{:else if m.isPlayed}
 								<span class="text-green-600">Played</span>
 							{:else}
@@ -722,7 +786,11 @@
 					</tr>
 				{/each}
 				{#if filteredMatches.length === 0}
-					<tr><td colspan="7" class="py-2 text-gray-500">{search ? "No matches match your search." : "No schedule loaded yet."}</td></tr>
+					<tr
+						><td colspan="7" class="py-2 text-gray-500"
+							>{search ? "No matches match your search." : "No schedule loaded yet."}</td
+						></tr
+					>
 				{/if}
 			</tbody>
 		</table>
@@ -733,7 +801,12 @@
 	<LineupCardDialog
 		bind:open={dialogOpen}
 		{alliances}
-		scheduleMatches={scheduleMatches.map((m) => ({ match: m.match, level: m.level, redAllianceNumber: m.redAllianceNumber, blueAllianceNumber: m.blueAllianceNumber }))}
+		scheduleMatches={scheduleMatches.map((m) => ({
+			match: m.match,
+			level: m.level,
+			redAllianceNumber: m.redAllianceNumber,
+			blueAllianceNumber: m.blueAllianceNumber,
+		}))}
 		liveMatchNumber={selMatch}
 		initialAlliance={dialogAlliance}
 		{teamName}
@@ -745,7 +818,12 @@
 	/>
 {/if}
 
-<LineupHistory bind:open={historyOpen} allianceNumber={historyAllianceNumber} {teamName} onClose={() => (historyOpen = false)} />
+<LineupHistory
+	bind:open={historyOpen}
+	allianceNumber={historyAllianceNumber}
+	{teamName}
+	onClose={() => (historyOpen = false)}
+/>
 
 {#if replayOpen}
 	<ReplayFinderDialog

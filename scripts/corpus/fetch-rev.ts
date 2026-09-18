@@ -14,13 +14,18 @@ const SPACES = new Set(SCOPE.map((s) => s.split("/")[0]));
 
 function inScope(url: string): boolean {
 	const path = url.slice(BASE.length);
-	return SCOPE.some((prefix) => (prefix.endsWith("/") ? path.startsWith(prefix) || path + "/" === prefix : path === prefix));
+	return SCOPE.some((prefix) =>
+		prefix.endsWith("/") ? path.startsWith(prefix) || path + "/" === prefix : path === prefix,
+	);
 }
 
 export async function crawl(opts: CrawlOptions = {}): Promise<TroubleshootChunkInsert[]> {
-	const sitemaps = (await fetchSitemapLocs(BASE + "sitemap.xml")).filter((u) => u.endsWith("sitemap-pages.xml") && SPACES.has(u.slice(BASE.length).split("/")[0]));
+	const sitemaps = (await fetchSitemapLocs(BASE + "sitemap.xml")).filter(
+		(u) => u.endsWith("sitemap-pages.xml") && SPACES.has(u.slice(BASE.length).split("/")[0]),
+	);
 	const urls = new Set<string>();
-	for (const sm of sitemaps) for (const loc of await fetchSitemapLocs(sm)) if (loc.startsWith(BASE) && inScope(loc)) urls.add(loc);
+	for (const sm of sitemaps)
+		for (const loc of await fetchSitemapLocs(sm)) if (loc.startsWith(BASE) && inScope(loc)) urls.add(loc);
 	const all = [...urls].sort();
 	const pages = opts.limit ? all.slice(0, opts.limit) : all;
 	console.log(`[rev] ${pages.length} pages in scope across ${sitemaps.length} spaces`);

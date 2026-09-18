@@ -6,11 +6,7 @@ import {
 	type PartialRobotInfo,
 	type TournamentLevel,
 } from "../../../shared/types";
-import {
-	type CheesyAllianceStation,
-	CheesyMatchState,
-	CheesyMatchType,
-} from "./cheesyArenaTypes";
+import { type CheesyAllianceStation, CheesyMatchState, CheesyMatchType } from "./cheesyArenaTypes";
 
 /**
  * Pure mappers from Cheesy Arena's wire shapes onto FTA-Buddy's internal model.

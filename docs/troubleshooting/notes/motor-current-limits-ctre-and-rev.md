@@ -53,12 +53,12 @@ slightly. A drivetrain needs far more headroom than an intake.
 
 CTRE's own worked example for a swerve robot:
 
-| Mechanism | Stator | Supply |
-|---|---|---|
-| 4 drive motors | 120 A | 70 A |
-| 4 steer motors | 60 A | none needed |
-| Elevator | 80 A | 30 A |
-| Intake | 20 A | none needed |
+| Mechanism      | Stator | Supply      |
+| -------------- | ------ | ----------- |
+| 4 drive motors | 120 A  | 70 A        |
+| 4 steer motors | 60 A   | none needed |
+| Elevator       | 80 A   | 30 A        |
+| Intake         | 20 A   | none needed |
 
 That is a theoretical peak near 570 A, which never happens, because the stator limits stop every
 motor from peaking at once. Four drive motors accelerating together is about 280 A for well under a
@@ -77,11 +77,11 @@ by hand before blaming the software.
 REV does not split things into stator and supply. There is one **smart current limit**, measured
 in motor current, and it has three parts:
 
-| Parameter | Default | What it does |
-|---|---|---|
-| Stall limit | 80 A | The limit at stall, and at any speed below the RPM parameter |
-| Free limit | 20 A | The limit at free speed |
-| RPM | 10000 | Where the limit starts ramping down from the stall value toward the free value. Set it above free speed to disable the ramp |
+| Parameter   | Default | What it does                                                                                                                |
+| ----------- | ------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Stall limit | 80 A    | The limit at stall, and at any speed below the RPM parameter                                                                |
+| Free limit  | 20 A    | The limit at free speed                                                                                                     |
+| RPM         | 10000   | Where the limit starts ramping down from the stall value toward the free value. Set it above free speed to disable the ramp |
 
 The stall limit is the one that matters for a main breaker. It defaults to 80 A, which is the REV
 equivalent of the Kraken 70 A trap: four drive motors in a pushing match sit near their stall limit

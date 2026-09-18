@@ -5,22 +5,119 @@
 
 import type { TroubleshootChunkInsert } from "../../../src/db/schema";
 
-const VOID_TAGS = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"]);
-const DROP_TAGS = new Set(["nav", "aside", "footer", "header", "button", "form", "input", "select", "textarea", "dialog", "label", "img", "video", "audio", "canvas", "map", "object"]);
+const VOID_TAGS = new Set([
+	"area",
+	"base",
+	"br",
+	"col",
+	"embed",
+	"hr",
+	"img",
+	"input",
+	"link",
+	"meta",
+	"param",
+	"source",
+	"track",
+	"wbr",
+]);
+const DROP_TAGS = new Set([
+	"nav",
+	"aside",
+	"footer",
+	"header",
+	"button",
+	"form",
+	"input",
+	"select",
+	"textarea",
+	"dialog",
+	"label",
+	"img",
+	"video",
+	"audio",
+	"canvas",
+	"map",
+	"object",
+]);
 const RAW_TAGS = ["script", "style", "svg", "noscript", "template", "iframe", "math"];
 const BLOCK_TAGS = new Set([
-	"p", "div", "section", "article", "main", "li", "ul", "ol", "dl", "dt", "dd", "table", "thead", "tbody", "tr", "h1", "h2", "h3", "h4", "h5", "h6",
-	"pre", "blockquote", "br", "hr", "details", "summary", "figure", "figcaption", "address", "fieldset",
+	"p",
+	"div",
+	"section",
+	"article",
+	"main",
+	"li",
+	"ul",
+	"ol",
+	"dl",
+	"dt",
+	"dd",
+	"table",
+	"thead",
+	"tbody",
+	"tr",
+	"h1",
+	"h2",
+	"h3",
+	"h4",
+	"h5",
+	"h6",
+	"pre",
+	"blockquote",
+	"br",
+	"hr",
+	"details",
+	"summary",
+	"figure",
+	"figcaption",
+	"address",
+	"fieldset",
 ]);
 // Class, id or role fragments that mark chrome rather than content.
-const DROP_CLASS = /(^|[\s_-])(sidebar|toc|toctree|breadcrumb|breadcrumbs|headerlink|footer|nav|navbar|menu|cookie|rst-footer-buttons|related-pages|bottom-of-page|sphinx-tabs-tab|wy-nav|site-header|sr-only|visually-hidden|skip-link|edit-this-page|prev-next|page-feedback|feedback|announcement|search)([\s_-]|$)/i;
+const DROP_CLASS =
+	/(^|[\s_-])(sidebar|toc|toctree|breadcrumb|breadcrumbs|headerlink|footer|nav|navbar|menu|cookie|rst-footer-buttons|related-pages|bottom-of-page|sphinx-tabs-tab|wy-nav|site-header|sr-only|visually-hidden|skip-link|edit-this-page|prev-next|page-feedback|feedback|announcement|search)([\s_-]|$)/i;
 const KEEP_CLASS = /(^|\s)(document|rst-content|blog-post|blog-title|page-body|content)(\s|$)/i;
-const NOISE_LINES = /^(previous|next|last updated.*|was this helpful\??|yes|no|on this page|copy|edit on github|¶|#|table of contents)$/i;
+const NOISE_LINES =
+	/^(previous|next|last updated.*|was this helpful\??|yes|no|on this page|copy|edit on github|¶|#|table of contents)$/i;
 
 const ENTITIES: Record<string, string> = {
-	amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", copy: "©", reg: "®", trade: "™", mdash: "-", ndash: "-", hellip: "...",
-	rsquo: "'", lsquo: "'", rdquo: '"', ldquo: '"', deg: "°", times: "x", micro: "µ", para: "", middot: "·", bull: "•", laquo: "«", raquo: "»",
-	ouml: "ö", uuml: "ü", auml: "ä", eacute: "é", egrave: "è", agrave: "à", ccedil: "ç", ntilde: "ñ", szlig: "ß", plusmn: "±", frac12: "½", frac14: "¼",
+	amp: "&",
+	lt: "<",
+	gt: ">",
+	quot: '"',
+	apos: "'",
+	nbsp: " ",
+	copy: "©",
+	reg: "®",
+	trade: "™",
+	mdash: "-",
+	ndash: "-",
+	hellip: "...",
+	rsquo: "'",
+	lsquo: "'",
+	rdquo: '"',
+	ldquo: '"',
+	deg: "°",
+	times: "x",
+	micro: "µ",
+	para: "",
+	middot: "·",
+	bull: "•",
+	laquo: "«",
+	raquo: "»",
+	ouml: "ö",
+	uuml: "ü",
+	auml: "ä",
+	eacute: "é",
+	egrave: "è",
+	agrave: "à",
+	ccedil: "ç",
+	ntilde: "ñ",
+	szlig: "ß",
+	plusmn: "±",
+	frac12: "½",
+	frac14: "¼",
 };
 
 export function decodeEntities(s: string): string {
@@ -112,7 +209,8 @@ export function extractSections(html: string, opts: ExtractOptions = {}): { titl
 	const inMain = () => stack.some((e) => e.main);
 	// Pick the highest-priority selector that matches anywhere in the page, so <body> never wins over <article>.
 	const startTags = [...src.matchAll(/<([a-zA-Z][a-zA-Z0-9-]*)((?:\s+[^>]*)?)\/?>/g)];
-	const selector = selectors.find((sel) => startTags.some((t) => sel(t[1].toLowerCase(), t[2] ?? ""))) ?? ((t) => t === "body");
+	const selector =
+		selectors.find((sel) => startTags.some((t) => sel(t[1].toLowerCase(), t[2] ?? ""))) ?? ((t) => t === "body");
 	const flushLine = () => {
 		// A bare list bullet means the <li> wraps a block child; keep the prefix for that child's text.
 		if (/^\s*-\s*$/.test(line)) return;
@@ -179,13 +277,28 @@ export function extractSections(html: string, opts: ExtractOptions = {}): { titl
 		const cls = `${attr(attrs, "class") ?? ""} ${attr(attrs, "id") ?? ""} ${attr(attrs, "role") ?? ""}`;
 		const isMain = !mainFound && selector(tag, attrs);
 		if (isMain) mainFound = true;
-		const drop = !isMain && inMain() && (DROP_TAGS.has(tag) || (DROP_CLASS.test(cls) && !KEEP_CLASS.test(cls)) || (/aria-hidden\s*=\s*["']?true/i.test(attrs) && tag !== "span"));
+		const drop =
+			!isMain &&
+			inMain() &&
+			(DROP_TAGS.has(tag) ||
+				(DROP_CLASS.test(cls) && !KEEP_CLASS.test(cls)) ||
+				(/aria-hidden\s*=\s*["']?true/i.test(attrs) && tag !== "span"));
 		const heading = /^h[1-6]$/.test(tag) ? Number(tag[1]) : 0;
 		// GitBook draws tables with role="row" / role="cell" divs.
 		const role = (attr(attrs, "role") ?? "").toLowerCase();
 		const isRow = tag === "tr" || role === "row";
-		const isCell = tag === "td" || tag === "th" || role === "cell" || role === "columnheader" || role === "rowheader";
-		const el: OpenEl = { tag, drop, pre: tag === "pre", heading, li: tag === "li", cell: isCell, row: isRow, main: isMain };
+		const isCell =
+			tag === "td" || tag === "th" || role === "cell" || role === "columnheader" || role === "rowheader";
+		const el: OpenEl = {
+			tag,
+			drop,
+			pre: tag === "pre",
+			heading,
+			li: tag === "li",
+			cell: isCell,
+			row: isRow,
+			main: isMain,
+		};
 
 		if (!selfClosing) stack.push(el);
 		if (drop || inDrop() || !inMain()) {
@@ -229,7 +342,10 @@ export function extractSections(html: string, opts: ExtractOptions = {}): { titl
 	function closeEl(el: OpenEl) {
 		if (el.drop) return;
 		if (el.heading && headingBuf !== null) {
-			const text = headingBuf.replace(/\s+/g, " ").replace(/[¶#]+$/g, "").trim();
+			const text = headingBuf
+				.replace(/\s+/g, " ")
+				.replace(/[¶#]+$/g, "")
+				.trim();
 			headingBuf = null;
 			if (text) startSection(headingLevel, text, headingId);
 			return;
@@ -256,7 +372,10 @@ export function extractSections(html: string, opts: ExtractOptions = {}): { titl
 
 	if (!title) {
 		const t = html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1];
-		if (t) title = decodeEntities(t).split(/\s+[-—|·]\s+/)[0].trim();
+		if (t)
+			title = decodeEntities(t)
+				.split(/\s+[-—|·]\s+/)[0]
+				.trim();
 	}
 	for (const s of sections) s.lines = s.lines.filter((l) => !NOISE_LINES.test(l.trim()));
 	return { title, sections: sections.filter((s) => s.lines.length > 0 || s.level > 0) };
@@ -311,7 +430,12 @@ export function sectionsToChunks(sections: Section[]): PageChunk[] {
 			continue;
 		}
 		const heading = s.level === 0 ? null : s.level === 3 && h2Context ? `${h2Context} > ${s.heading}` : s.heading;
-		groups.push({ heading, slug: s.slug || (s.level === 0 ? "top" : slugify(s.heading)), lines: [...s.lines], words });
+		groups.push({
+			heading,
+			slug: s.slug || (s.level === 0 ? "top" : slugify(s.heading)),
+			lines: [...s.lines],
+			words,
+		});
 	}
 
 	const chunks: PageChunk[] = [];
@@ -325,7 +449,11 @@ export function sectionsToChunks(sections: Section[]): PageChunk[] {
 		if (g.words < MIN_WORDS) continue;
 		const parts = g.words > SPLIT_ABOVE ? splitLong(g.lines) : [g.lines];
 		parts.forEach((lines, i) => {
-			chunks.push({ heading: g.heading, slug: uniqueSlug(i === 0 ? g.slug : `${g.slug}-${i + 1}`), body: lines.join("\n") });
+			chunks.push({
+				heading: g.heading,
+				slug: uniqueSlug(i === 0 ? g.slug : `${g.slug}-${i + 1}`),
+				body: lines.join("\n"),
+			});
 		});
 	}
 	return chunks;

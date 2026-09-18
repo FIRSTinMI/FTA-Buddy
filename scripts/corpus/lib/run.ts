@@ -24,8 +24,17 @@ export function parseFlags(argv: string[] = process.argv.slice(2)): CliFlags {
 	const flags: CliFlags = { only: null, limit: undefined, noCache: false, rest: [] };
 	for (let i = 0; i < argv.length; i++) {
 		const a = argv[i];
-		if (a === "--only") flags.only = (argv[++i] ?? "").split(",").map((s) => s.trim()).filter(Boolean);
-		else if (a.startsWith("--only=")) flags.only = a.slice(7).split(",").map((s) => s.trim()).filter(Boolean);
+		if (a === "--only")
+			flags.only = (argv[++i] ?? "")
+				.split(",")
+				.map((s) => s.trim())
+				.filter(Boolean);
+		else if (a.startsWith("--only="))
+			flags.only = a
+				.slice(7)
+				.split(",")
+				.map((s) => s.trim())
+				.filter(Boolean);
 		else if (a === "--limit") flags.limit = Number(argv[++i]);
 		else if (a.startsWith("--limit=")) flags.limit = Number(a.slice(8));
 		else if (a === "--no-cache") flags.noCache = true;

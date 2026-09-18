@@ -74,7 +74,8 @@ async function main() {
 	process.exit(0);
 }
 
-if (require.main === module) main().catch((e) => {
-	console.error("[notes] failed:", e);
-	process.exit(1);
-});
+if (require.main === module)
+	main().catch((e) => {
+		console.error("[notes] failed:", e);
+		process.exit(1);
+	});

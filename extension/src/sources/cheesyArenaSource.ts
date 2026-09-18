@@ -237,7 +237,8 @@ export class CheesyArenaSource extends TypedEventEmitter<SourceEventMap> impleme
 			status.MatchState === CheesyMatchState.StartMatch || status.MatchState === CheesyMatchState.AutoPeriod;
 		for (const [station, robot] of STATION_ENTRIES) {
 			const allianceStation = status.AllianceStations[station];
-			if (allianceStation) this.logBuffers[robot].push(mapLogFrame(allianceStation, timeStamp, this.matchTimeSec, auto));
+			if (allianceStation)
+				this.logBuffers[robot].push(mapLogFrame(allianceStation, timeStamp, this.matchTimeSec, auto));
 		}
 	}
 
@@ -382,7 +383,12 @@ export class CheesyArenaSource extends TypedEventEmitter<SourceEventMap> impleme
 		// accumulating once the match is over, so holding this reference is safe.
 		return {
 			ref: { ...this.current },
-			fmsMatchId: buildFmsMatchId(eventCode, this.current.level, this.current.matchNumber, this.current.playNumber),
+			fmsMatchId: buildFmsMatchId(
+				eventCode,
+				this.current.level,
+				this.current.matchNumber,
+				this.current.playNumber,
+			),
 			actualStartTime: this.actualStartTime ?? new Date().toISOString(),
 			teams: this.matchLoad?.Match,
 			logBuffers: this.logBuffers,

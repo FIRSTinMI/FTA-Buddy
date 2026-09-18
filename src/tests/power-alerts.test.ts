@@ -123,10 +123,7 @@ describe("power alerts", () => {
 		expect(await evaluatePowerAlerts(event, SETTINGS, [], offline)).toEqual([]);
 
 		// Backdate the marker to simulate 60s of silence.
-		await redis.set(
-			`ftabuddy:power:downsince:${event.code}:m1:monitor_offline`,
-			(Date.now() - 60_000).toString(),
-		);
+		await redis.set(`ftabuddy:power:downsince:${event.code}:m1:monitor_offline`, (Date.now() - 60_000).toString());
 		expect(await evaluatePowerAlerts(event, SETTINGS, [], offline)).toEqual(["monitor_offline"]);
 	});
 

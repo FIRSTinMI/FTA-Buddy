@@ -23,7 +23,9 @@
 <div class="flex flex-col text-left text-black dark:text-white">
 	{#each flow as step, i (i)}
 		{#if step.kind === "do"}
-			<div class="flex gap-3 rounded-md border border-gray-300 bg-white px-3 py-3 dark:border-gray-600 dark:bg-gray-800">
+			<div
+				class="flex gap-3 rounded-md border border-gray-300 bg-white px-3 py-3 dark:border-gray-600 dark:bg-gray-800"
+			>
 				<span
 					class="flex size-7 shrink-0 items-center justify-center rounded-full bg-gray-200 text-sm font-bold dark:bg-gray-700"
 					>{numbered[i]}</span

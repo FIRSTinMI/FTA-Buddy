@@ -22,6 +22,12 @@ import type { FMSLogFrame } from "../types";
 export type SeriesAxis = "volts" | "ms" | "percent" | "db" | "mbps" | "amps" | "bool" | "number";
 
 export interface SeriesDef {
+	/**
+	 * Multiplier from the parser's units to the unit named above. The DS log
+	 * stores utilisation and loss as a fraction, so a "%" series has to be scaled
+	 * or the chart plots 0.36 next to an axis that says percent.
+	 */
+	scale?: number;
 	key: string;
 	label: string;
 	unit?: string;
@@ -65,9 +71,25 @@ export const FMS_SERIES: SeriesDef[] = [
 export const DSLOG_SERIES: SeriesDef[] = [
 	{ key: "ds.batteryVolts", label: "Battery (DS)", unit: "V", axis: "volts", from: "dslog", defaultOn: true },
 	{ key: "ds.tripTimeMs", label: "Trip time (DS)", unit: "ms", axis: "ms", from: "dslog" },
-	{ key: "ds.packetLoss", label: "Packet loss (DS)", unit: "%", axis: "percent", from: "dslog", defaultOn: true },
-	{ key: "ds.cpuUtilization", label: "roboRIO CPU", unit: "%", axis: "percent", from: "dslog", defaultOn: true },
-	{ key: "ds.canUtilization", label: "CAN bus", unit: "%", axis: "percent", from: "dslog" },
+	{
+		key: "ds.packetLoss",
+		label: "Packet loss (DS)",
+		unit: "%",
+		axis: "percent",
+		from: "dslog",
+		defaultOn: true,
+		scale: 100,
+	},
+	{
+		key: "ds.cpuUtilization",
+		label: "roboRIO CPU",
+		unit: "%",
+		axis: "percent",
+		from: "dslog",
+		defaultOn: true,
+		scale: 100,
+	},
+	{ key: "ds.canUtilization", label: "CAN bus", unit: "%", axis: "percent", from: "dslog", scale: 100 },
 	{ key: "ds.wifiDb", label: "Radio signal (DS)", unit: "dB", axis: "db", from: "dslog" },
 	{ key: "ds.wifiMb", label: "Bandwidth (DS)", unit: "Mbps", axis: "mbps", from: "dslog" },
 	{ key: "ds.brownout", label: "Brownout (DS)", axis: "bool", from: "dslog", defaultOn: true },
@@ -128,12 +150,13 @@ export function dsLogSeries(result: DsLogResult, def: SeriesDef, matchStartMs: n
 	const offsetSecs = result.startTime - matchStartMs / 1000;
 	const pd = /^ds\.pd\.(\d+)$/.exec(def.key);
 	const field = def.key.slice("ds.".length);
-	const points = result.entries.map((entry) => ({
-		t: entry.timestamp + offsetSecs,
-		v: pd
+	const scale = def.scale ?? 1;
+	const points = result.entries.map((entry) => {
+		const raw = pd
 			? (entry.powerDistributionCurrents[Number(pd[1])] ?? null)
-			: numberFrom((entry as unknown as Record<string, unknown>)[field]),
-	}));
+			: numberFrom((entry as unknown as Record<string, unknown>)[field]);
+		return { t: entry.timestamp + offsetSecs, v: raw === null ? null : raw * scale };
+	});
 	return { def, points };
 }
 

@@ -196,15 +196,7 @@
 					"leds": [
 						{
 							"color": "orange",
-							"pattern": [
-								"orange",
-								"black",
-								"orange",
-								"black",
-								"orange",
-								"black",
-								"black"
-							]
+							"pattern": ["orange", "black", "orange", "black", "orange", "black", "black"]
 						}
 					]
 				},
@@ -240,15 +232,7 @@
 					"leds": [
 						{
 							"color": "orange",
-							"pattern": [
-								"orange",
-								"black",
-								"orange",
-								"black",
-								"orange",
-								"black",
-								"black"
-							]
+							"pattern": ["orange", "black", "orange", "black", "orange", "black", "black"]
 						}
 					]
 				},

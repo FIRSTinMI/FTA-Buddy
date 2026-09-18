@@ -127,7 +127,11 @@ function buildUserPrompt(topic: Topic, items: { title: string; body: string }[])
 	);
 }
 
-async function writeDoc(model: TroubleshootModel, topic: Topic, items: { title: string; body: string }[]): Promise<string> {
+async function writeDoc(
+	model: TroubleshootModel,
+	topic: Topic,
+	items: { title: string; body: string }[],
+): Promise<string> {
 	await assertBudget();
 	const client = getAnthropic();
 	const res = await client.messages.create({
@@ -234,7 +238,14 @@ export async function runDistillation(): Promise<number> {
 
 			await db
 				.insert(troubleshootDocs)
-				.values({ category: topic, title, body, source_urls: sourceUrls, thread_count: items.length, updated_at: now })
+				.values({
+					category: topic,
+					title,
+					body,
+					source_urls: sourceUrls,
+					thread_count: items.length,
+					updated_at: now,
+				})
 				.onConflictDoUpdate({
 					target: troubleshootDocs.category,
 					set: { title, body, source_urls: sourceUrls, thread_count: items.length, updated_at: now },

@@ -19,7 +19,8 @@
 	const target = $derived.by(() => {
 		if (testMode) return { level: "Practice" as const, match: 999, play: 1 };
 		const f = monitorFrame;
-		if (f && f.level === "Practice" && f.match) return { level: "Practice" as const, match: f.match, play: f.play || 1 };
+		if (f && f.level === "Practice" && f.match)
+			return { level: "Practice" as const, match: f.match, play: f.play || 1 };
 		return null;
 	});
 	const isTest = $derived(target?.match === 999);
@@ -80,9 +81,7 @@
 			// No stored lineup: prefill a scheduled practice match from the schedule.
 			if (!isTest) {
 				const cycle = await trpc.cycles.getCycleData.query({ eventCode: $eventStore.code });
-				const sched = cycle?.scheduleDetails?.matches?.find(
-					(m) => m.level === t.level && m.match === t.match,
-				);
+				const sched = cycle?.scheduleDetails?.matches?.find((m) => m.level === t.level && m.match === t.match);
 				b1 = String(sched?.blue?.[0] ?? "");
 				b2 = String(sched?.blue?.[1] ?? "");
 				b3 = String(sched?.blue?.[2] ?? "");
@@ -155,12 +154,48 @@
 				playNumber: t.play,
 			});
 			if (!stored) return;
-			applyIfIdle("fl-b1", "blue1", () => b1, (v) => (b1 = v), stored.blue1_team);
-			applyIfIdle("fl-b2", "blue2", () => b2, (v) => (b2 = v), stored.blue2_team);
-			applyIfIdle("fl-b3", "blue3", () => b3, (v) => (b3 = v), stored.blue3_team);
-			applyIfIdle("fl-r1", "red1", () => r1, (v) => (r1 = v), stored.red1_team);
-			applyIfIdle("fl-r2", "red2", () => r2, (v) => (r2 = v), stored.red2_team);
-			applyIfIdle("fl-r3", "red3", () => r3, (v) => (r3 = v), stored.red3_team);
+			applyIfIdle(
+				"fl-b1",
+				"blue1",
+				() => b1,
+				(v) => (b1 = v),
+				stored.blue1_team,
+			);
+			applyIfIdle(
+				"fl-b2",
+				"blue2",
+				() => b2,
+				(v) => (b2 = v),
+				stored.blue2_team,
+			);
+			applyIfIdle(
+				"fl-b3",
+				"blue3",
+				() => b3,
+				(v) => (b3 = v),
+				stored.blue3_team,
+			);
+			applyIfIdle(
+				"fl-r1",
+				"red1",
+				() => r1,
+				(v) => (r1 = v),
+				stored.red1_team,
+			);
+			applyIfIdle(
+				"fl-r2",
+				"red2",
+				() => r2,
+				(v) => (r2 = v),
+				stored.red2_team,
+			);
+			applyIfIdle(
+				"fl-r3",
+				"red3",
+				() => r3,
+				(v) => (r3 = v),
+				stored.red3_team,
+			);
 		} catch (err) {
 			console.error("[field-lineup] merge failed:", err);
 		}
@@ -195,7 +230,9 @@
 		{#if syncState === "saving"}
 			<span class="text-xs text-gray-400">Saving…</span>
 		{:else if syncState === "saved"}
-			<span class="text-xs text-green-600 inline-flex items-center gap-1"><Icon icon="mdi:check" class="size-4" /> Synced</span>
+			<span class="text-xs text-green-600 inline-flex items-center gap-1"
+				><Icon icon="mdi:check" class="size-4" /> Synced</span
+			>
 		{:else if syncState === "error"}
 			<span class="text-xs text-red-600">Save failed</span>
 		{/if}

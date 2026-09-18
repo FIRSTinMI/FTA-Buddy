@@ -114,7 +114,8 @@ class Pacer {
 		this.last = Date.now();
 		this.requests++;
 		if (this.requests % 20 === 0) await this.renew();
-		if (this.source.kind === "session" && this.source.session) return slackWebApi<T>(this.source.session, method, params);
+		if (this.source.kind === "session" && this.source.session)
+			return slackWebApi<T>(this.source.session, method, params);
 		return slackApi<T>(this.source.token, method, params);
 	}
 }
@@ -185,8 +186,7 @@ async function pollChannel(
 		for (const parent of page.messages) {
 			newestSeenMs = Math.max(newestSeenMs, parseFloat(parent.ts) * 1000);
 			if (!isThreadParent(parent)) continue;
-			const replies =
-				(parent.reply_count ?? 0) > 0 ? await fetchReplies(pacer, ctx.channelId, parent.ts) : [];
+			const replies = (parent.reply_count ?? 0) > 0 ? await fetchReplies(pacer, ctx.channelId, parent.ts) : [];
 			threads++;
 			const chunk = buildThreadChunk(ctx, { parent, replies });
 			if (chunk) rows.push(chunk);
@@ -229,7 +229,10 @@ async function pollSource(source: PollSource, stats: PollStats, renew: () => Pro
 				source.kind === "session" && source.session
 					? await listSessionConversations(source.session)
 					: // Bot tokens keep reading the private FiM CSA channels the bot was invited to; user tokens are public only.
-						await listConversations(source.token, source.kind === "bot" ? "public_channel,private_channel" : "public_channel");
+						await listConversations(
+							source.token,
+							source.kind === "bot" ? "public_channel,private_channel" : "public_channel",
+						);
 			targets = conversations.filter((c) => c.is_member !== false).map((c) => ({ id: c.id, name: c.name }));
 		}
 
@@ -362,7 +365,8 @@ export function runSlackPollPass(): Promise<PollStats> {
 			// Rebuild the distilled docs for any categories this pass touched. No-op (zero LLM calls)
 			try {
 				const distilled = await runDistillation();
-				if (distilled > 0) console.log(`[SlackPoller] distilled ${distilled} categor${distilled === 1 ? "y" : "ies"}`);
+				if (distilled > 0)
+					console.log(`[SlackPoller] distilled ${distilled} categor${distilled === 1 ? "y" : "ies"}`);
 			} catch (err) {
 				console.error("[SlackPoller] distillation failed:", (err as Error).message);
 			}

@@ -84,17 +84,22 @@ export type SearchMode = "and" | "or";
 export function expandQuery(query: string, mode: SearchMode = "and"): string {
 	const groups: string[] = [];
 	for (const word of tokenize(query)) {
-		const terms = [word, ...(SYNONYMS[word] ?? [])].map((t) => {
-			const parts = tokenize(t);
-			return parts.length > 1 ? `(${parts.join(" & ")})` : (parts[0] ?? "");
-		}).filter(Boolean);
+		const terms = [word, ...(SYNONYMS[word] ?? [])]
+			.map((t) => {
+				const parts = tokenize(t);
+				return parts.length > 1 ? `(${parts.join(" & ")})` : (parts[0] ?? "");
+			})
+			.filter(Boolean);
 		if (terms.length === 0) continue;
 		groups.push(terms.length > 1 ? `(${terms.join(" | ")})` : terms[0]);
 	}
 	return groups.join(mode === "and" ? " & " : " | ");
 }
 
-export type ChunkHit = Pick<TroubleshootChunk, "id" | "source" | "url" | "title" | "heading" | "body" | "source_date"> & {
+export type ChunkHit = Pick<
+	TroubleshootChunk,
+	"id" | "source" | "url" | "title" | "heading" | "body" | "source_date"
+> & {
 	rank: number;
 };
 

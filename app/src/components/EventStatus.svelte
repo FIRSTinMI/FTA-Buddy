@@ -266,7 +266,9 @@
 				<p class="text-sm lg:py-1 text-right">Best</p>
 				<p class="lg:text-lg text-left font-bold">{formatTimeShortNoAgoSeconds(bestCycleTimeMS)}</p>
 				<p class="text-sm lg:py-1 text-right">Average</p>
-				<p class="lg:text-lg text-left font-bold">{realAvgCycleMS != null ? formatTimeShortNoAgoSeconds(realAvgCycleMS) : "-"}</p>
+				<p class="lg:text-lg text-left font-bold">
+					{realAvgCycleMS != null ? formatTimeShortNoAgoSeconds(realAvgCycleMS) : "-"}
+				</p>
 			</div>
 
 			<p class="lg:text-lg mt-1 lg:mt-2">{scheduleText}</p>

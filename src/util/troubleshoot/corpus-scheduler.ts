@@ -40,7 +40,10 @@ function nextDelayMs(): number {
 function sources(): WebSource[] {
 	const raw = process.env.TROUBLESHOOT_CORPUS_SOURCES;
 	if (!raw) return DEFAULT_SOURCES;
-	const names = raw.split(",").map((s) => s.trim()).filter(Boolean);
+	const names = raw
+		.split(",")
+		.map((s) => s.trim())
+		.filter(Boolean);
 	return names.length ? (names as WebSource[]) : DEFAULT_SOURCES;
 }
 

@@ -91,8 +91,8 @@
 				<div>
 					<p class="text-sm font-medium">Enabled</p>
 					<p class="text-xs text-gray-500">
-						Adds the Power page and stores every reading for the event. Readings are dropped until this
-						is on.
+						Adds the Power page and stores every reading for the event. Readings are dropped until this is
+						on.
 					</p>
 				</div>
 				<Toggle
@@ -107,12 +107,13 @@
 			</div>
 
 			{#if enabled}
-				<div class="flex items-center justify-between gap-2 border-t border-gray-200 dark:border-neutral-700 pt-4">
+				<div
+					class="flex items-center justify-between gap-2 border-t border-gray-200 dark:border-neutral-700 pt-4"
+				>
 					<div>
 						<p class="text-sm font-medium">Notifications</p>
 						<p class="text-xs text-gray-500">
-							Push everyone on this event when a circuit sags, pulls too much for too long, or
-							goes quiet.
+							Push everyone on this event when a circuit sags, pulls too much for too long, or goes quiet.
 						</p>
 					</div>
 					<Toggle
@@ -199,17 +200,14 @@
 					<span class="text-sm font-medium">Monitors seen</span>
 					{#if monitors.length === 0}
 						<p class="text-xs text-gray-500">
-							None yet. Turn on <span class="font-medium">Field Power Monitors</span> in the extension
-							popup - it sweeps the event subnet for them and needs one permission prompt the first
-							time.
+							None yet. Turn on <span class="font-medium">Field Power Monitors</span> in the extension popup
+							- it sweeps the event subnet for them and needs one permission prompt the first time.
 						</p>
 					{:else}
 						<ul class="text-xs text-gray-500">
 							{#each monitors as monitor}
 								<li>
-									{monitor.monitorId} - last reading {new Date(
-										monitor.lastSeen,
-									).toLocaleTimeString()}
+									{monitor.monitorId} - last reading {new Date(monitor.lastSeen).toLocaleTimeString()}
 								</li>
 							{/each}
 						</ul>

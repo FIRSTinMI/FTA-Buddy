@@ -69,11 +69,11 @@ The extension can read either official FMS or a [Cheesy Arena](https://github.co
 
 The project is a [Bun](https://bun.sh) workspace with three components:
 
-| Component     | Location     | Stack                                                  |
-| ------------- | ------------ | ------------------------------------------------------ |
-| **Server**    | `src/`       | Bun + Express + tRPC, PostgreSQL via Drizzle ORM       |
-| **App**       | `app/`       | Svelte 5 + TypeScript + Vite (PWA)                     |
-| **Extension** | `extension/` | Chrome MV3 extension that scrapes FMS and relays data  |
+| Component     | Location     | Stack                                                 |
+| ------------- | ------------ | ----------------------------------------------------- |
+| **Server**    | `src/`       | Bun + Express + tRPC, PostgreSQL via Drizzle ORM      |
+| **App**       | `app/`       | Svelte 5 + TypeScript + Vite (PWA)                    |
+| **Extension** | `extension/` | Chrome MV3 extension that scrapes FMS and relays data |
 
 ### Prerequisites
 

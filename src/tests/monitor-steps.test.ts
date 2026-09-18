@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { MatchState } from "../../shared/types";
-import { monitorIssue, monitorSteps, waitingKey, type MonitorIssueKey } from "../../shared/troubleshooting/monitor-steps";
+import {
+	monitorIssue,
+	monitorSteps,
+	waitingKey,
+	type MonitorIssueKey,
+} from "../../shared/troubleshooting/monitor-steps";
 import { parseSteps } from "../../shared/troubleshooting/steps";
 
 describe("monitorSteps", () => {
@@ -16,7 +21,9 @@ describe("monitorSteps", () => {
 	test("guide-backed entries expose a link to the full guide", () => {
 		for (const [key, entry] of Object.entries(monitorSteps)) {
 			if (!entry.ref) continue;
-			expect(monitorIssue(key as MonitorIssueKey).href, key).toBe(`/troubleshoot/${entry.ref.tree}/${entry.ref.node}`);
+			expect(monitorIssue(key as MonitorIssueKey).href, key).toBe(
+				`/troubleshoot/${entry.ref.tree}/${entry.ref.node}`,
+			);
 		}
 	});
 

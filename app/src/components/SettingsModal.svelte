@@ -118,7 +118,6 @@
 		}
 	}
 
-
 	function formatPolled(d: Date | null) {
 		if (!d) return "not polled yet";
 		return "last poll " + new Date(d).toLocaleString();

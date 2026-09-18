@@ -12,7 +12,7 @@ running and the recently completed matches.
 
 ## Phase 1: 2026 REBUILT playoff and lineup rules
 
-All rules cited below are from the official 2026 *REBUILT* Game Manual, current
+All rules cited below are from the official 2026 _REBUILT_ Game Manual, current
 through Team Update 22 (TU22). Tournament rules live in **Section 10
 "Tournaments (T)"**, and the lineup rules specifically in **10.6 Playoff
 MATCHES**. Robot placement (which alliance sets up last) is in **6.3.3 ROBOTS**.
@@ -70,7 +70,7 @@ member as a DRIVE COACH only.
 
 ### The deadline rule: T613 (the key rule for this feature)
 
-> **T613** *LINEUPS due 2 minutes before the MATCH.* "The ALLIANCE CAPTAIN must
+> **T613** _LINEUPS due 2 minutes before the MATCH._ "The ALLIANCE CAPTAIN must
 > submit their LINEUP in writing to the Head REFEREE (or their designee) 2
 > minutes before their expected MATCH start time.
 > Violation: Late LINEUPS are denied, and the ALLIANCE'S most recent LINEUP is
@@ -79,7 +79,7 @@ member as a DRIVE COACH only.
 > remains in the Question Box to report the LINEUP."
 
 So the deadline is **expected match start time minus 2 minutes**, and it is a
-*written* submission to the Head Referee or designee (the manual does not use
+_written_ submission to the Head Referee or designee (the manual does not use
 the phrase "lineup card," but that is the paper artifact). A late lineup is, per
 the rule, denied and the previous lineup stands. This feature relaxes that into
 a **warn plus explicit "Accept Anyway" override** for the scorekeeper, and
@@ -88,7 +88,7 @@ the tool should document what actually happened rather than hard-blocking.
 
 ### Replays: T614
 
-> **T614** *For replays, no changing LINEUPS (mostly).* "If a MATCH must be
+> **T614** _For replays, no changing LINEUPS (mostly)._ "If a MATCH must be
 > replayed due to an ARENA FAULT, the LINEUP for the replayed MATCH is the same
 > as the original MATCH. The sole exception is if, in the opinion of the Head
 > REFEREE, the ARENA FAULT rendered a ROBOT inoperable, in which case the LINEUP
@@ -103,7 +103,7 @@ the tool should document what actually happened rather than hard-blocking.
 - **T608** no backup until after the alliance's first playoff match.
 - **T609** a recruited backup "must be included in the LINEUP for the ALLIANCE'S
   next MATCH." (Violation: lineup denied.)
-- **T610** *BACKUP TEAMS due 2 minutes before the MATCH start time* (the coupon
+- **T610** _BACKUP TEAMS due 2 minutes before the MATCH start time_ (the coupon
   is submitted to the Head Referee/designee no later than 2 minutes before the
   expected match start, same deadline as T613).
 - **T611 / T612** the top backup pool teams must be present and staff a
@@ -111,15 +111,15 @@ the tool should document what actually happened rather than hard-blocking.
 
 ### Rule citation quick reference
 
-| Rule | Topic |
-|------|-------|
-| 10.6 / 10.6.1 | 8 alliances, double elim, ALLIANCE 1 to 8 by rank |
-| 10.6.2, Fig 10-2 | Alliance color per round (round 1: higher seed = red) |
-| 6.3.3 | Robot placement / who sets up last (higher seed; inter-division coin flip) |
-| 10.6.4 | Lineup = 3 teams + their driver stations; confidential until field set |
-| 10.6.4.2 **T613** | **Lineup deadline: 2 min before expected match start, in writing; late = previous lineup applied. Default: Lead DS2, pick1 DS1, pick2 DS3** |
-| **T614** | Replay keeps the same lineup unless arena fault made a robot inoperable |
-| 10.6.3, T607 to T612 | Backup team: 1 coupon, deadline 2 min before start, in next lineup |
+| Rule                 | Topic                                                                                                                                       |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| 10.6 / 10.6.1        | 8 alliances, double elim, ALLIANCE 1 to 8 by rank                                                                                           |
+| 10.6.2, Fig 10-2     | Alliance color per round (round 1: higher seed = red)                                                                                       |
+| 6.3.3                | Robot placement / who sets up last (higher seed; inter-division coin flip)                                                                  |
+| 10.6.4               | Lineup = 3 teams + their driver stations; confidential until field set                                                                      |
+| 10.6.4.2 **T613**    | **Lineup deadline: 2 min before expected match start, in writing; late = previous lineup applied. Default: Lead DS2, pick1 DS1, pick2 DS3** |
+| **T614**             | Replay keeps the same lineup unless arena fault made a robot inoperable                                                                     |
+| 10.6.3, T607 to T612 | Backup team: 1 coupon, deadline 2 min before start, in next lineup                                                                          |
 
 ---
 
@@ -231,7 +231,7 @@ in priority order:
 
 1. The scheduled start for that Playoff match from
    `event.scheduleDetails.matches[]` (`{ match, level: "Playoff",
-   scheduledStartTime }`), **adjusted by the live ahead/behind delta** from the
+scheduledStartTime }`), **adjusted by the live ahead/behind delta** from the
    monitor frame / cycle data (`getCycleData().exactAheadBehind`) so the
    deadline tracks the real running clock, not the paper schedule.
 2. If the match is the one currently on the field (monitor frame match ==
@@ -250,20 +250,20 @@ Scorekeeper/FTA/FTAA/admin role.
 
 - `alliances.list` query -> all `playoffAlliances` for the event.
 - `alliances.upsert` mutation `{ number, captainTeam, pick1Team, pick2Team?,
-  backupTeam? }` -> create/update one alliance.
+backupTeam? }` -> create/update one alliance.
 - `alliances.importFromTBA` mutation -> pull `/event/{code}/alliances` from TBA
   and upsert all 8 (reuses the TBA key pattern).
 - `lineups.forMatch` query `{ matchNumber, playNumber? }` -> the scorekeeper's
   main payload: the two alliances in that match with `{ allianceNumber, color,
-  resolvedLineup, teamNames }`, plus `deadlineAt` and whether the field is set.
+resolvedLineup, teamNames }`, plus `deadlineAt` and whether the field is set.
   Color and alliance identity are resolved from the match's red/blue team
   numbers (from the schedule / `matchLogs` / FMS) mapped against rosters; if the
   match is not yet assigned, the scorekeeper manually picks the two alliances.
 - `lineups.submit` mutation `{ allianceNumber, matchNumber, playNumber?,
-  stations: {1,2,3}, submittedByName?, acceptAnyway?, note? }` ->
+stations: {1,2,3}, submittedByName?, acceptAnyway?, note? }` ->
   computes deadline + lateness. If `is_late && !acceptAnyway`, it does **not**
   finalize; it throws a typed `LATE_LINEUP` error carrying `{ deadlineAt,
-  secondsLate }` so the client can show the warning and re-call with
+secondsLate }` so the client can show the warning and re-call with
   `acceptAnyway: true`. On success it inserts the new version, supersedes the
   prior accepted card, and records the override fields when late.
 - `lineups.reject` mutation `{ cardId }` -> mark a pending/late card `rejected`

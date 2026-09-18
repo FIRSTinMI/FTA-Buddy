@@ -33,8 +33,7 @@ export interface StatusLightHelpVariant {
 	readonly source?: string;
 }
 
-export const WPILIB_2024 =
-	"https://docs.wpilib.org/en/2024/docs/hardware/hardware-basics/status-lights-ref.html";
+export const WPILIB_2024 = "https://docs.wpilib.org/en/2024/docs/hardware/hardware-basics/status-lights-ref.html";
 export const WPILIB = "https://docs.wpilib.org/en/stable/docs/hardware/hardware-basics/status-lights-ref.html";
 export const NI_FLASHING = "https://knowledge.ni.com/KnowledgeArticleDetails?id=kA03q000000kOHkCAM&l=en-US";
 export const NI_RED = "https://knowledge.ni.com/KnowledgeArticleDetails?id=kA00Z0000019NlbSAE&l=en-US";
@@ -56,8 +55,10 @@ export const CTRE_SRX = "https://ctre.download/files/user-manual/Talon%20SRX%20U
 export const CTRE_VSPX = "https://ctre.download/files/user-manual/Victor%20SPX%20User's%20Guide.pdf";
 export const CTRE_CANIVORE = "https://v6.docs.ctr-electronics.com/en/stable/docs/canivore/canivore-intro.html";
 export const CTRE_PIGEON = "https://v6.docs.ctr-electronics.com/en/stable/docs/hardware-reference/pigeon2/index.html";
-export const CTRE_CANCODER = "https://v6.docs.ctr-electronics.com/en/stable/docs/hardware-reference/cancoder/index.html";
-export const CTRE_CANRANGE = "https://v6.docs.ctr-electronics.com/en/stable/docs/hardware-reference/canrange/index.html";
+export const CTRE_CANCODER =
+	"https://v6.docs.ctr-electronics.com/en/stable/docs/hardware-reference/cancoder/index.html";
+export const CTRE_CANRANGE =
+	"https://v6.docs.ctr-electronics.com/en/stable/docs/hardware-reference/canrange/index.html";
 export const CTRE_CANDLE = "https://v6.docs.ctr-electronics.com/en/stable/docs/hardware-reference/candle/index.html";
 export const CTRE_PDP = "https://ctre.download/files/user-manual/PDP%20User's%20Guide.pdf";
 export const CTRE_PCM = "https://ctre.download/files/user-manual/PCM%20User's%20Guide.pdf";
@@ -67,7 +68,12 @@ export const CAN_WIRING_STEPS: (string | FlowStep)[] = [
 	"Check the CAN wires (yellow CANH, green CANL) at this device and at its neighbours. Wiggle the connectors.",
 	"Check the bus is terminated at both ends with 120 ohm: the roboRIO or CANivore at one end, the PDP or PDH terminator at the other.",
 	"Confirm the roboRIO is powered and booted.",
-	{ kind: "check", text: "Is only this device faulted, with its neighbours fine?", yes: "Swap the device.", no: "Continue." },
+	{
+		kind: "check",
+		text: "Is only this device faulted, with its neighbours fine?",
+		yes: "Swap the device.",
+		no: "Continue.",
+	},
 ];
 
 export const PHOENIX_NOT_RUNNING_STEPS: (string | FlowStep)[] = [
@@ -96,4 +102,3 @@ export const RIO_REIMAGE_STEPS = [
 	"roboRIO 1: reimage over USB with the roboRIO Imaging Tool (Format Target).",
 	"roboRIO 2: reimage the microSD card on a laptop with balenaEtcher or Raspberry Pi Imager, put it back, then set the team number with the Imaging Tool over USB.",
 ];
-

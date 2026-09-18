@@ -48,7 +48,8 @@ export const auth: Auth = getAuth(firebaseApp);
 // needs no extra config. Override with VITE_FIREBASE_AUTH_EMULATOR, or set it to
 // an empty string to force the real Firebase project even in dev.
 const emulatorOverride = import.meta.env.VITE_FIREBASE_AUTH_EMULATOR;
-const emulatorHost = emulatorOverride !== undefined ? emulatorOverride : import.meta.env.DEV ? "http://localhost:9099" : "";
+const emulatorHost =
+	emulatorOverride !== undefined ? emulatorOverride : import.meta.env.DEV ? "http://localhost:9099" : "";
 if (emulatorHost) {
 	const url = emulatorHost.startsWith("http") ? emulatorHost : `http://${emulatorHost}`;
 	connectAuthEmulator(auth, url, { disableWarnings: true });

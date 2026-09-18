@@ -24,7 +24,9 @@
 		matchId,
 		code,
 		hasDsLog = false,
-	}: { uploadId: string; matchId: string; code: string; hasDsLog?: boolean } = $props();
+		/** Seconds from match start to mark, driven by hovering the event log. */
+		markT = null,
+	}: { uploadId: string; matchId: string; code: string; hasDsLog?: boolean; markT?: number | null } = $props();
 
 	type SeriesData = Awaited<ReturnType<typeof trpc.uploads.series.query>>;
 
@@ -76,25 +78,46 @@
 				max: group === "bool" ? 1 : undefined,
 				splitLine: { show: index === 0 },
 			})),
-			series: loaded.series.map((s) => ({
-				name: `${s.label}${s.unit ? ` (${s.unit})` : ""}${s.hz ? ` ${s.hz < 10 ? s.hz.toFixed(1) : s.hz.toFixed(0)}Hz` : ""}`,
-				type: "line",
-				step: s.axis === "bool" ? "end" : undefined,
-				showSymbol: false,
-				// Render in chunks rather than thinning: a 50 Hz trace over a match is
-				// about 10,000 points per series and the whole point is to keep them.
-				progressive: 2000,
-				progressiveThreshold: 5000,
-				lineStyle: { width: s.from === "fms" ? 2 : 1.5, type: s.from === "fms" ? "solid" : "dashed" },
-				yAxisIndex: groups.indexOf(axisGroup(s)),
-				// A gap has to read as a gap, not as a line drawn across it.
-				data: s.points.map((p) => [p.t, p.v]),
-				connectNulls: false,
-				markLine:
-					s.from === "fms" && groups.indexOf(axisGroup(s)) === 0
-						? { silent: true, symbol: "none", data: [{ xAxis: 0, label: { formatter: "start" } }] }
-						: undefined,
-			})),
+			series: [
+				// A one-point series carrying only a markLine, so the marker can move
+				// without rebuilding every trace.
+				{
+					name: "event",
+					type: "line" as const,
+					data: [] as [number, number][],
+					silent: true,
+					markLine:
+						markT === null
+							? undefined
+							: {
+									silent: true,
+									symbol: "none",
+									lineStyle: { color: "#f59e0b", width: 2 },
+									label: { formatter: `${markT.toFixed(1)}s`, position: "insideEndTop" },
+									data: [{ xAxis: markT }],
+								},
+				},
+			].concat(
+				loaded.series.map((s) => ({
+					name: `${s.label}${s.unit ? ` (${s.unit})` : ""}${s.hz ? ` ${s.hz < 10 ? s.hz.toFixed(1) : s.hz.toFixed(0)}Hz` : ""}`,
+					type: "line",
+					step: s.axis === "bool" ? "end" : undefined,
+					showSymbol: false,
+					// Render in chunks rather than thinning: a 50 Hz trace over a match is
+					// about 10,000 points per series and the whole point is to keep them.
+					progressive: 2000,
+					progressiveThreshold: 5000,
+					lineStyle: { width: s.from === "fms" ? 2 : 1.5, type: s.from === "fms" ? "solid" : "dashed" },
+					yAxisIndex: groups.indexOf(axisGroup(s)),
+					// A gap has to read as a gap, not as a line drawn across it.
+					data: s.points.map((p) => [p.t, p.v]),
+					connectNulls: false,
+					markLine:
+						s.from === "fms" && groups.indexOf(axisGroup(s)) === 0
+							? { silent: true, symbol: "none", data: [{ xAxis: 0, label: { formatter: "start" } }] }
+							: undefined,
+				})) as never[],
+			),
 		} as ECOption;
 	}
 
@@ -152,6 +175,69 @@
 		void load();
 	}
 
+	/**
+	 * The same series as a table.
+	 *
+	 * Volunteers read the chart to find the moment and the table to quote the
+	 * number. The two sources sample at different rates, so the rows are the union
+	 * of every timestamp and a series that had nothing at that instant is blank
+	 * rather than carried forward. Carrying a value forward would invent a 50 Hz
+	 * FMS log that does not exist.
+	 */
+	let showTable = $state(false);
+
+	type Row = { t: number; v: (number | null)[] };
+
+	let rows = $derived.by<Row[]>(() => {
+		if (!data) return [];
+		const byTime = new Map<number, (number | null)[]>();
+		const width = data.series.length;
+		data.series.forEach((s, col) => {
+			for (const point of s.points) {
+				if (point.v === null) continue;
+				// Milliseconds is finer than either log records, so this groups the
+				// samples that really are simultaneous without merging distinct ones.
+				const key = Math.round(point.t * 1000);
+				let row = byTime.get(key);
+				if (!row) byTime.set(key, (row = new Array(width).fill(null)));
+				row[col] = point.v;
+			}
+		});
+		return [...byTime.entries()].sort((a, b) => a[0] - b[0]).map(([key, v]) => ({ t: key / 1000, v }));
+	});
+
+	const ROW_PX = 24;
+	const OVERSCAN = 12;
+	let tableScroll = $state(0);
+	let tableHeight = $state(384);
+	let firstRow = $derived(Math.max(0, Math.floor(tableScroll / ROW_PX) - OVERSCAN));
+	let lastRow = $derived(Math.min(rows.length, Math.ceil((tableScroll + tableHeight) / ROW_PX) + OVERSCAN));
+	let window_ = $derived(rows.slice(firstRow, lastRow));
+
+	function cell(value: number | null, axis: string): string {
+		if (value === null) return "";
+		if (axis === "bool") return value ? "Y" : "N";
+		return Math.abs(value) >= 100 ? value.toFixed(0) : value.toFixed(2);
+	}
+
+	function downloadCsv() {
+		if (!data) return;
+		const header = ["t", ...data.series.map((s) => s.key)].join(",");
+		const body = rows.map((row) => [row.t.toFixed(3), ...row.v.map((v) => (v === null ? "" : v))].join(","));
+		const url = URL.createObjectURL(new Blob([`${header}\n${body.join("\n")}\n`], { type: "text/csv" }));
+		const link = document.createElement("a");
+		link.href = url;
+		link.download = `${code}-match-series.csv`;
+		link.click();
+		URL.revokeObjectURL(url);
+	}
+
+	// Moving the marker must not refetch: the series are unchanged.
+	$effect(() => {
+		void markT;
+		if (chart && data) chart.setOption(buildOption(data), { replaceMerge: ["series"] });
+	});
+
 	onMount(() => {
 		void load();
 		if (container) {
@@ -203,6 +289,61 @@
 			Solid is the field's log, dashed is the team's. A trace sitting far from the match is a laptop clock that is
 			out.
 		</p>
+
+		<div class="mt-2 flex items-center gap-2">
+			<Button size="xs" color="light" onclick={() => (showTable = !showTable)}>
+				<Icon
+					icon={showTable ? "heroicons:chevron-down-16-solid" : "heroicons:chevron-right-16-solid"}
+					class="size-4"
+				/>
+				<span class="ml-1">{showTable ? "Hide" : "Show"} data table</span>
+			</Button>
+			<span class="text-[11px] text-gray-500">{rows.length.toLocaleString()} rows</span>
+			{#if showTable}
+				<Button size="xs" color="light" class="ml-auto" onclick={downloadCsv}>
+					<Icon icon="heroicons:arrow-down-tray-16-solid" class="size-4" /><span class="ml-1">CSV</span>
+				</Button>
+			{/if}
+		</div>
+
+		{#if showTable}
+			<div
+				class="mt-1 overflow-auto rounded border border-gray-200 dark:border-gray-700"
+				style="height: {tableHeight}px"
+				onscroll={(e) => (tableScroll = e.currentTarget.scrollTop)}
+			>
+				<table class="min-w-full text-xs text-left tabular-nums">
+					<thead class="sticky top-0 z-10 bg-gray-50 uppercase text-gray-700 dark:bg-black dark:text-white">
+						<tr>
+							<th class="px-2 py-1 font-semibold">s</th>
+							{#each data.series as s (s.key)}
+								<th class="px-2 py-1 font-semibold whitespace-nowrap"
+									>{s.label}{s.unit ? ` (${s.unit})` : ""}</th
+								>
+							{/each}
+						</tr>
+					</thead>
+					<tbody>
+						<tr style="height: {firstRow * ROW_PX}px"></tr>
+						{#each window_ as row (row.t)}
+							<tr
+								class="border-b dark:border-gray-700 odd:bg-white even:bg-gray-50 odd:dark:bg-gray-900 even:dark:bg-gray-800"
+								style="height: {ROW_PX}px"
+							>
+								<td class="px-2 text-gray-800 dark:text-white">{row.t.toFixed(2)}</td>
+								{#each data.series as s, col (s.key)}
+									<td class="px-2 text-gray-600 dark:text-gray-300">{cell(row.v[col], s.axis)}</td>
+								{/each}
+							</tr>
+						{/each}
+						<tr style="height: {Math.max(0, rows.length - lastRow) * ROW_PX}px"></tr>
+					</tbody>
+				</table>
+			</div>
+			<p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+				Every series you pick gets a column. A blank cell means that log had no sample at that instant.
+			</p>
+		{/if}
 	{/if}
 </div>
 

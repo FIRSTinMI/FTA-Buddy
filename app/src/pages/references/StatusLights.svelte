@@ -243,13 +243,16 @@
 					{#if shown.ref}
 						<a
 							href={guideHref(shown.ref)}
-							class="mt-2 inline-block text-sm text-blue-600 underline dark:text-blue-400">Open the full guide</a
+							class="mt-2 inline-block text-sm text-blue-600 underline dark:text-blue-400"
+							>Open the full guide</a
 						>
 					{/if}
 				</div>
 			{/if}
 			{#if shown.source ?? help.source}
-				<a class="underline text-sm" href={shown.source ?? help.source} target="_blank" rel="noreferrer">Source</a>
+				<a class="underline text-sm" href={shown.source ?? help.source} target="_blank" rel="noreferrer"
+					>Source</a
+				>
 			{/if}
 		</div>
 	{/if}
@@ -322,7 +325,8 @@
 										<table>
 											<tbody>
 												<tr class="w-100 border-b-2 border-b-gray-600">
-													<td colspan="2" class="bold w-100 pt-2 pl-2">System Status (SYS)</td>
+													<td colspan="2" class="bold w-100 pt-2 pl-2">System Status (SYS)</td
+													>
 												</tr>
 												<tr
 													class="w-100 border-b-2 border-b-gray-600"
@@ -835,8 +839,8 @@
 				{#if openState.systemcore === true || loadedState.systemcore === true}
 					<div class="flex flex-col pl-1" style="max-width: 375px;">
 						<p class="mb-2 rounded border border-amber-400 bg-amber-50 p-2 text-sm dark:bg-amber-950">
-							SystemCore is pre-release hardware. These codes come from the June 2025 alpha
-							documentation and will change before it ships.
+							SystemCore is pre-release hardware. These codes come from the June 2025 alpha documentation
+							and will change before it ships.
 						</p>
 						<table cellpadding="5" cellspacing="0" class="text-black dark:text-white">
 							<tbody>
@@ -4929,7 +4933,10 @@
 												</tr>
 												<tr use:tapHelp={"om5p.power.booting"}>
 													<td class="w-20 pl-8 pt-2"
-														><span class={LEDToggleState["1Hz"] === true ? "blue led" : "black led"}
+														><span
+															class={LEDToggleState["1Hz"] === true
+																? "blue led"
+																: "black led"}
 														></span>
 													</td>
 													<td>Blinking: still powering up</td>
@@ -4952,7 +4959,10 @@
 												</tr>
 												<tr use:tapHelp={"om5p.eth.traffic"}>
 													<td class="w-20 pl-8 pt-2"
-														><span class={LEDToggleState["3Hz"] === true ? "blue led" : "black led"}
+														><span
+															class={LEDToggleState["3Hz"] === true
+																? "blue led"
+																: "black led"}
 														></span>
 													</td>
 													<td>Blinking: traffic present</td>

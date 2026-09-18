@@ -235,7 +235,9 @@
 				<Icon icon="mdi:reply" class="size-3.5 mt-0.5 text-gray-400 dark:text-gray-500 shrink-0" />
 				<div class="min-w-0">
 					<span class="text-xs text-left font-semibold text-gray-500 dark:text-gray-400">
-						{latestMsg.author_display_name ?? latestMsg.author?.username ?? "Unknown"}{!latestMsg.author_display_name &&
+						{latestMsg.author_display_name ??
+							latestMsg.author?.username ??
+							"Unknown"}{!latestMsg.author_display_name &&
 						latestMsg.author?.username !== latestMsg.author?.role
 							? ` · ${latestMsg.author?.role}`
 							: ""}:

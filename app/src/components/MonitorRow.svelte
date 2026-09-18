@@ -191,12 +191,15 @@
 			<Graph data={parsedData} min={6} max={14} time={20} />
 		</div>
 		<!-- Mobile/tablet: current voltage over the match-minimum, centered on the graph -->
-		<div class="lg:hidden absolute inset-0 flex flex-col items-center justify-center leading-none pointer-events-none">
+		<div
+			class="lg:hidden absolute inset-0 flex flex-col items-center justify-center leading-none pointer-events-none"
+		>
 			<div class="monitor-battery px-1 text-sm sm:text-base tabular-nums">
 				{robot.battery?.toFixed(1)}v
 			</div>
 			<div
-				class="text-xs sm:text-sm font-semibold leading-none tabular-nums {percentileVoltage < 7.8 && percentileVoltage > 0
+				class="text-xs sm:text-sm font-semibold leading-none tabular-nums {percentileVoltage < 7.8 &&
+				percentileVoltage > 0
 					? 'text-red-400'
 					: 'text-gray-400'}"
 				title="Match minimum (2nd percentile)"
@@ -209,7 +212,8 @@
 		     its column it overflows leftward and the trailing "v" is never clipped. -->
 		<div class="hidden lg:grid grid-cols-2 items-end gap-1 px-1 pb-0.5 leading-none pointer-events-none">
 			<span
-				class="justify-self-start whitespace-nowrap font-semibold tabular-nums text-xs xl:text-sm 2xl:text-sm {percentileVoltage < 7.8 && percentileVoltage > 0
+				class="justify-self-start whitespace-nowrap font-semibold tabular-nums text-xs xl:text-sm 2xl:text-sm {percentileVoltage <
+					7.8 && percentileVoltage > 0
 					? 'text-red-400'
 					: 'text-gray-400'}"
 				class:lg:text-lg={$fullscreen}

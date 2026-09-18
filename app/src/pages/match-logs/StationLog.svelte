@@ -8,6 +8,7 @@
 	import type { FMSLogFrame, ROBOT } from "../../../../shared/types";
 	import LogGraph from "../../components/LogGraph.svelte";
 	import TeamLogChart from "../../components/uploads/TeamLogChart.svelte";
+	import TeamLogEvents from "../../components/uploads/TeamLogEvents.svelte";
 	import Spinner from "../../components/Spinner.svelte";
 	import { trpc } from "../../main";
 	import { navigate, route } from "../../router";
@@ -105,6 +106,14 @@
 			});
 	}
 
+	/**
+	 * The moment a hovered Driver Station event happened, and which upload it came
+	 * from. Only one terminal is under the pointer at a time, so one pair is
+	 * enough, and holding the upload id keeps the marker off the other charts.
+	 */
+	let markT = $state<number | null>(null);
+	let markUpload = $state<string | null>(null);
+
 	async function share() {
 		if (["blue1", "blue2", "blue3", "red1", "red2", "red3"].includes(station)) {
 			let response = await trpc.match.publishMatch.mutate({ id: matchid, station: station as ROBOT, team: team });
@@ -196,7 +205,18 @@
 					matchId={matchid}
 					code={upload.code}
 					hasDsLog={upload.hasDsLog}
+					markT={markUpload === upload.uploadId ? markT : null}
 				/>
+				{#if upload.hasEvents}
+					<TeamLogEvents
+						uploadId={upload.uploadId}
+						matchId={matchid}
+						onhover={(t) => {
+							markT = t;
+							markUpload = t === null ? null : upload.uploadId;
+						}}
+					/>
+				{/if}
 				<p class="text-left text-[11px] text-gray-500 dark:text-gray-400 -mt-1">
 					{upload.reason}
 					<a class="underline" href={`/uploads/${upload.uploadId}`}>Open the upload</a>

@@ -83,7 +83,12 @@ async function main() {
 		await Promise.all(
 			chunk
 				.filter((_, idx) => !failedIdx.has(idx))
-				.map((u) => db.update(users).set({ firebase_uid: `pg-${u.id}` }).where(eq(users.id, u.id))),
+				.map((u) =>
+					db
+						.update(users)
+						.set({ firebase_uid: `pg-${u.id}` })
+						.where(eq(users.id, u.id)),
+				),
 		);
 
 		console.log(`  batch ${i / BATCH + 1}: ${result.successCount} imported, ${result.failureCount} failed`);

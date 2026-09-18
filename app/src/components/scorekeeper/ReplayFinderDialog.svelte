@@ -27,7 +27,9 @@
 
 	const levels = $derived([...new Set(matches.map((m) => m.level))]);
 	let level = $state(
-		initialLevel && matches.some((m) => m.level === initialLevel) ? initialLevel : (initialLevel ?? "Qualification"),
+		initialLevel && matches.some((m) => m.level === initialLevel)
+			? initialLevel
+			: (initialLevel ?? "Qualification"),
 	);
 	let replayMatch = $state(initialMatch);
 
@@ -110,11 +112,18 @@
 		{:else}
 			<div class="flex flex-col gap-2">
 				{#each candidates as c, i (c.index)}
-					<div class="rounded-lg border p-3 {i === 0 ? 'border-primary-500' : 'border-gray-200 dark:border-neutral-700'}">
+					<div
+						class="rounded-lg border p-3 {i === 0
+							? 'border-primary-500'
+							: 'border-gray-200 dark:border-neutral-700'}"
+					>
 						<div class="flex items-center justify-between gap-2">
 							<span class="font-semibold text-gray-900 dark:text-white">
-								{#if c.immediate}Immediately{:else if c.afterMatch != null}After Match {c.afterMatch}{:else}Before Match {c.beforeMatch}{/if}
-								{#if fmtTime(c.atTime)}<span class="ml-1 text-xs font-normal text-gray-500">(~{fmtTime(c.atTime)})</span>{/if}
+								{#if c.immediate}Immediately{:else if c.afterMatch != null}After Match {c.afterMatch}{:else}Before
+									Match {c.beforeMatch}{/if}
+								{#if fmtTime(c.atTime)}<span class="ml-1 text-xs font-normal text-gray-500"
+										>(~{fmtTime(c.atTime)})</span
+									>{/if}
 							</span>
 							<div class="flex shrink-0 gap-1">
 								{#if i === 0}<Badge color="green">Best</Badge>{/if}
@@ -123,7 +132,9 @@
 						</div>
 						<div class="mt-1 text-sm text-gray-700 dark:text-gray-200">
 							Rest:
-							{#each restGroups(c.teamGaps) as g, gi (g.label)}{gi > 0 ? "; " : " "}<span class="font-bold tabular-nums">{g.label}</span>: {g.teams.join(", ")}{/each}
+							{#each restGroups(c.teamGaps) as g, gi (g.label)}{gi > 0 ? "; " : " "}<span
+									class="font-bold tabular-nums">{g.label}</span
+								>: {g.teams.join(", ")}{/each}
 						</div>
 					</div>
 				{/each}

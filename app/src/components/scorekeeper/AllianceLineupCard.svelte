@@ -17,17 +17,23 @@
 		emptyLabel?: string;
 	}
 
-	let { side, teamName, canEdit, onEdit, onHistory, title = null, hideActions = false, emptyLabel = "-" }: Props =
-		$props();
+	let {
+		side,
+		teamName,
+		canEdit,
+		onEdit,
+		onHistory,
+		title = null,
+		hideActions = false,
+		emptyLabel = "-",
+	}: Props = $props();
 
 	const colorClasses = $derived(
 		side.color === "red"
 			? "border-red-500 bg-red-50 dark:bg-red-950/40"
 			: "border-blue-500 bg-blue-50 dark:bg-blue-950/40",
 	);
-	const chipClasses = $derived(
-		side.color === "red" ? "bg-red-600 text-white" : "bg-blue-600 text-white",
-	);
+	const chipClasses = $derived(side.color === "red" ? "bg-red-600 text-white" : "bg-blue-600 text-white");
 
 	const stations = $derived(side.lineup?.stations ?? null);
 	const resolution = $derived(side.lineup?.resolution ?? null);
@@ -37,8 +43,16 @@
 	const rows = $derived.by<[string, number | null][]>(() => {
 		if (!stations) return [];
 		return side.color === "blue"
-			? [["Blue 1", stations.station1], ["Blue 2", stations.station2], ["Blue 3", stations.station3]]
-			: [["Red 3", stations.station3], ["Red 2", stations.station2], ["Red 1", stations.station1]];
+			? [
+					["Blue 1", stations.station1],
+					["Blue 2", stations.station2],
+					["Blue 3", stations.station3],
+				]
+			: [
+					["Red 3", stations.station3],
+					["Red 2", stations.station2],
+					["Red 1", stations.station1],
+				];
 	});
 </script>
 
@@ -65,7 +79,9 @@
 				<div class="flex items-center gap-3 rounded-md bg-white dark:bg-neutral-800 px-3 py-3 min-h-[4.5rem]">
 					<span class="w-12 shrink-0 text-xs font-semibold uppercase text-gray-500">{label}</span>
 					{#if team != null}
-						<span class="text-5xl font-bold text-gray-900 dark:text-white tabular-nums leading-none">{team}</span>
+						<span class="text-5xl font-bold text-gray-900 dark:text-white tabular-nums leading-none"
+							>{team}</span
+						>
 						<span class="truncate text-xs text-gray-500" title={teamName(team)}>{teamName(team)}</span>
 					{:else}
 						<span class="text-sm italic text-gray-400">{emptyLabel}</span>
@@ -78,11 +94,17 @@
 			<div class="flex flex-wrap items-center justify-between gap-2">
 				<div class="text-xs text-gray-500">
 					{#if resolution === "submitted"}
-						<span class="inline-flex items-center gap-1"><Icon icon="mdi:check-circle" class="size-4" /> Submitted lineup</span>
+						<span class="inline-flex items-center gap-1"
+							><Icon icon="mdi:check-circle" class="size-4" /> Submitted lineup</span
+						>
 					{:else if resolution === "carried-forward"}
-						<span class="inline-flex items-center gap-1"><Icon icon="mdi:arrow-right-bold" class="size-4" /> Carried forward (T613)</span>
+						<span class="inline-flex items-center gap-1"
+							><Icon icon="mdi:arrow-right-bold" class="size-4" /> Carried forward (T613)</span
+						>
 					{:else}
-						<span class="inline-flex items-center gap-1"><Icon icon="mdi:information-outline" class="size-4" /> Default lineup</span>
+						<span class="inline-flex items-center gap-1"
+							><Icon icon="mdi:information-outline" class="size-4" /> Default lineup</span
+						>
 					{/if}
 				</div>
 				<div class="flex gap-2">

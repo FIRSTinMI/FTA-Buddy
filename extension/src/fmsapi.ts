@@ -88,9 +88,7 @@ export async function getMatch(matchNumber: number, playNumber: number, level: T
 }
 
 export async function getScheduleBreakdown() {
-	const raw = (await fetch(`http://${FMS}/api/v1.0/match/get/GetCurrentSchedule`).then((res) =>
-		res.json(),
-	)) as any[];
+	const raw = (await fetch(`http://${FMS}/api/v1.0/match/get/GetCurrentSchedule`).then((res) => res.json())) as any[];
 
 	// Every match (any tournament level) goes into `matches` so downstream consumers -
 	// notably the scorekeeper's T613 playoff lineup deadline - can read playoff start
@@ -225,16 +223,18 @@ export async function getAlliances(): Promise<
 	const raw = (await res.json()) as any[];
 	if (!Array.isArray(raw)) return [];
 	const num = (v: any): number | null => (typeof v === "number" && v > 0 ? v : null);
-	return raw
-		.map((a) => ({
-			number: a.allianceNumber as number,
-			captainTeam: num(a.captainTeamNumber) ?? 0,
-			pick1Team: num(a.firstRoundTeamNumber) ?? 0,
-			pick2Team: num(a.secondRoundTeamNumber),
-			backupTeam: num(a.alternateTeamNumber),
-		}))
-		// Only alliances that actually have a captain + first pick (i.e. selection done).
-		.filter((a) => a.number >= 1 && a.captainTeam > 0 && a.pick1Team > 0);
+	return (
+		raw
+			.map((a) => ({
+				number: a.allianceNumber as number,
+				captainTeam: num(a.captainTeamNumber) ?? 0,
+				pick1Team: num(a.firstRoundTeamNumber) ?? 0,
+				pick2Team: num(a.secondRoundTeamNumber),
+				backupTeam: num(a.alternateTeamNumber),
+			}))
+			// Only alliances that actually have a captain + first pick (i.e. selection done).
+			.filter((a) => a.number >= 1 && a.captainTeam > 0 && a.pick1Team > 0)
+	);
 }
 
 // ---------------------------------------------------------------------------

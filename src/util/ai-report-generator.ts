@@ -270,7 +270,12 @@ function isDiagnosticLike(text: string): boolean {
 	);
 }
 
-type MessageExcerptInput = { text: string; created_at: Date; author?: { username: string } | null; author_display_name?: string | null };
+type MessageExcerptInput = {
+	text: string;
+	created_at: Date;
+	author?: { username: string } | null;
+	author_display_name?: string | null;
+};
 
 function selectMessageExcerpts(
 	noteText: string,

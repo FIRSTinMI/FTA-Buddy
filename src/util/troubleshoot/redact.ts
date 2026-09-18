@@ -5,15 +5,15 @@
 
 import { slackStaff } from "./slack-staff";
 
-const UNITS = /^(a|amps?|v|volts?|hz|khz|mhz|ms|s|sec|secs|min|mins|%|mm|cm|in|ft|lbs?|kg|g|rpm|psi|mbps|kbps|w|watts?|db|deg|°|x|px|fps)$/i;
+const UNITS =
+	/^(a|amps?|v|volts?|hz|khz|mhz|ms|s|sec|secs|min|mins|%|mm|cm|in|ft|lbs?|kg|g|rpm|psi|mbps|kbps|w|watts?|db|deg|°|x|px|fps)$/i;
 
 const EVENT_CODE = /\b20\d{2}[a-z]{2,6}\d?\b/gi;
 const TEAM_WORD = /\b(team|frc|frc team)\s*#?\s*(\d{1,5})\b/gi;
 const SLACK_MENTION = /<@([A-Z0-9]+)(\|[^>]*)?>/g;
 const SLACK_CHANNEL = /<#[A-Z0-9]+\|([^>]*)>/g;
 // "TCP 1735", "UDP 1180 to 1190", "port 5800-5810", "ports 5810 and 5811".
-const PORT_CONTEXT =
-	/\b(?:tcp|udp|ports?)\b(?:\s*(?:and|or|to|\/|,|-|&)?\s*\d{2,5})+/gi;
+const PORT_CONTEXT = /\b(?:tcp|udp|ports?)\b(?:\s*(?:and|or|to|\/|,|-|&)?\s*\d{2,5})+/gi;
 
 const SLACK_LINK = /<(https?:\/\/[^|>]+)(\|[^>]*)?>/g;
 

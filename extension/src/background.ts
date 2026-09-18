@@ -316,7 +316,6 @@ function startExtensionConfigSync() {
 	);
 }
 
-
 // #region Field power monitors
 
 /**

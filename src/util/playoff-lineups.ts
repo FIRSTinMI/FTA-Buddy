@@ -8,7 +8,9 @@ export const LINEUP_DEADLINE_MS = 2 * 60 * 1000;
  * Default lineup when an alliance has never submitted one (REBUILT 10.6.4.2):
  * ALLIANCE Lead -> DS2, 1st pick -> DS1, 2nd pick -> DS3.
  */
-export function defaultLineupStations(alliance: Pick<PlayoffAlliance, "captain_team" | "pick1_team" | "pick2_team">): LineupStations {
+export function defaultLineupStations(
+	alliance: Pick<PlayoffAlliance, "captain_team" | "pick1_team" | "pick2_team">,
+): LineupStations {
 	return {
 		station1: alliance.pick1_team ?? null,
 		station2: alliance.captain_team ?? null,

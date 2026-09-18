@@ -292,7 +292,11 @@
 										{KIND_LABELS[file.kind]} · {Math.max(1, Math.ceil(file.size / 1024))} KB
 									</span>
 								</button>
-								<a class="text-xs underline text-gray-500" href={downloadUrl(file.id)}>download</a>
+								<a
+									class="text-xs underline text-gray-500"
+									href={downloadUrl(file.id)}
+									download={file.path}>download</a
+								>
 							</div>
 							{#if openFile === file.id}
 								<pre
@@ -317,6 +321,7 @@
 												<a
 													class="text-[11px] underline text-gray-500"
 													href={downloadUrl(child.id)}
+													download={child.path}
 												>
 													download
 												</a>

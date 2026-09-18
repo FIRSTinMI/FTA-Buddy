@@ -880,7 +880,7 @@
 		{/if}
 		<DevToolsPanel />
 		<p class="text-sm text-neutral-500">
-			<a href="/privacy.html" class="underline">Privacy Policy</a>
+			<a href="/privacy.html" target="_self" class="underline">Privacy Policy</a>
 			&middot;
 			<a href="https://discord.gg/Kpnj55seHr" class="underline" target="_blank">Discord</a>
 		</p>

@@ -111,6 +111,7 @@
 								<a
 									class="text-xs underline text-gray-500"
 									href={`/api/uploads/${shared.uploadId}/files/${file.id}?share=${token}`}
+									download={file.path}
 								>
 									download
 								</a>

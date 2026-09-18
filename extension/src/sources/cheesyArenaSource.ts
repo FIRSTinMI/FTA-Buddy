@@ -448,6 +448,11 @@ export class CheesyArenaSource extends TypedEventEmitter<SourceEventMap> impleme
 		// No-op: Cheesy Arena has no FMS event password / note sync.
 	}
 
+	public setScoreAutofill(): void {
+		// No-op: the score autofill writes to an FMS hub Cheesy Arena has no
+		// equivalent of, and Cheesy has no unset-by-default scoring fields.
+	}
+
 	// #region Helpers
 
 	private matchKey(level: TournamentLevel, matchNumber: number): string {

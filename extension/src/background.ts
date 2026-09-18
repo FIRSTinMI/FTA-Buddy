@@ -94,6 +94,8 @@ export let powerSubnet: string = DEFAULT_SUBNET_PREFIX;
 
 export let fmsApi: boolean = false;
 export let fmsApiEnabled: boolean = true;
+/** Fill unset tower selections at commit, test and practice only. Off by default. */
+export let scoreAutofill: boolean = false;
 
 async function stop() {
 	stopTeamPolling();
@@ -126,6 +128,7 @@ async function start() {
 				"id",
 				"eventToken",
 				"fmsApiEnabled",
+				"scoreAutofill",
 				"powerMonitor",
 				"powerSubnet",
 			],
@@ -165,6 +168,7 @@ async function start() {
 				fieldMonitor = Boolean(item.fieldMonitor);
 				useSignalR = item.useSignalR !== false; // default true
 				fmsApiEnabled = item.fmsApiEnabled !== false; // default true
+				scoreAutofill = item.scoreAutofill === true; // default false
 				sourceMode = item.sourceMode === "cheesy" ? "cheesy" : "fms"; // default fms
 				cheesyPort = sanitizeCheesyPort(item.cheesyPort);
 				eventToken = String(item.eventToken);
@@ -203,6 +207,9 @@ async function start() {
 
 	// (Re)build the field data source for the selected mode and wire its events.
 	source = buildSource();
+	// Must be set before start(): the source only opens the gameSpecificHub
+	// connection the autofill writes to when the feature is on.
+	source.setScoreAutofill(scoreAutofill);
 	source.on("frame", sendFrame);
 	source.on("cycleTime", sendCycletime);
 	source.on("sendSchedule", sendScheduleDetails);
@@ -277,7 +284,7 @@ function buildSource(): FieldDataSource {
 
 /** The extension settings mirrored to the server for remote configuration. */
 function currentExtensionConfig() {
-	return { enabled, fieldMonitor, useSignalR, fmsApiEnabled, sourceMode, cheesyPort };
+	return { enabled, fieldMonitor, useSignalR, fmsApiEnabled, scoreAutofill, sourceMode, cheesyPort };
 }
 
 /** Report the current config + version to the server so any device can see it. */
@@ -306,6 +313,7 @@ function startExtensionConfigSync() {
 				if (config.fieldMonitor !== undefined) updates.fieldMonitor = config.fieldMonitor;
 				if (config.useSignalR !== undefined) updates.useSignalR = config.useSignalR;
 				if (config.fmsApiEnabled !== undefined) updates.fmsApiEnabled = config.fmsApiEnabled;
+				if (config.scoreAutofill !== undefined) updates.scoreAutofill = config.scoreAutofill;
 				if (config.sourceMode !== undefined)
 					updates.sourceMode = config.sourceMode === "cheesy" ? "cheesy" : "fms";
 				if (config.cheesyPort !== undefined) updates.cheesyPort = sanitizeCheesyPort(config.cheesyPort);

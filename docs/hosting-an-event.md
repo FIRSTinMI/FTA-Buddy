@@ -35,6 +35,24 @@ If you don't want the extension to connect to SignalR enable **Notepad Only Mode
 - The extension and FMS connection are still required for notes sync and match log import.
 - Match logs will still be pulled automatically, but it may take a minute or two after the match ends.
 
+### Score Autofill
+
+Every robot's Auto Tower and Endgame Tower starts unset, and FMS will not commit a match until all
+six have a selection. During field setup nobody is on the scoring tablets, so closing out a test
+match means clicking through the whole panel first.
+
+**Score Autofill** sets all six to "None" when the match reaches the commit state, so you can commit
+straight away. It is off by default, and it only runs at the Test and Practice tournament levels -
+in quals and playoffs it does nothing. Turn it on here, or later from Event Management >
+**Configure Extension**; the two are the same setting and either one changes the running extension.
+
+It needs the Field Monitor running over SignalR against real FMS. It does not appear in Notepad Only
+Mode, scraping mode, or Cheesy Arena mode.
+
+Because FMS never sends the scoring tablets' current selections back to anyone, there is no way to
+fill in only the blanks: all six go to "None", overwriting anything a ref had already picked, and
+the tablets show the change. That is why it is limited to test and practice.
+
 Once the extension is detected and FMS is connected, click **Next**.
 
 ---

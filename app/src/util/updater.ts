@@ -3,7 +3,7 @@ import { eventStore } from "../stores/event";
 import { settingsStore } from "../stores/settings";
 import { userStore } from "../stores/user";
 
-export const LATEST_EXTENSION_VERSION = "1.26.24";
+export const LATEST_EXTENSION_VERSION = "1.26.25";
 
 interface Version {
 	changelog?: string;
@@ -30,6 +30,15 @@ export function compareVersions(a: string, b: string): number {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.13.0": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.13.0</h1>
+        <ul>
+        <li>Score Autofill: test and practice matches commit without filling in the scoring panel</li>
+        <li>Off by default, and only in test and practice - set it in the host wizard or from Event Management</li>
+        </ul>
+        `,
+	},
 	"2.7.12.0": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.12.0</h1>

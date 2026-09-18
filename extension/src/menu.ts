@@ -11,6 +11,8 @@ const useSignalRInput = document.getElementById("useSignalR") as HTMLInputElemen
 const signalRRow = document.getElementById("signalr-row") as HTMLDivElement;
 const tokenInput = document.getElementById("eventToken") as HTMLInputElement;
 const fmsApiEnabledInput = document.getElementById("fmsApiEnabled") as HTMLInputElement;
+const scoreAutofillInput = document.getElementById("scoreAutofill") as HTMLInputElement;
+const scoreAutofillRow = document.getElementById("score-autofill-row") as HTMLDivElement;
 const sourceModeSelect = document.getElementById("sourceMode") as HTMLSelectElement;
 const cheesyPortInput = document.getElementById("cheesyPort") as HTMLInputElement;
 const cheesyPortRow = document.getElementById("cheesy-port-row") as HTMLDivElement;
@@ -202,6 +204,7 @@ function load() {
 			"fieldMonitor",
 			"useSignalR",
 			"fmsApiEnabled",
+			"scoreAutofill",
 			"sourceMode",
 			"cheesyPort",
 			"powerMonitor",
@@ -240,8 +243,10 @@ function load() {
 			fieldMonitorInput.checked = Boolean(item.fieldMonitor);
 			useSignalRInput.checked = item.useSignalR !== false; // default true
 			fmsApiEnabledInput.checked = item.fmsApiEnabled !== false; // default true
+			scoreAutofillInput.checked = item.scoreAutofill === true; // default false
 			signalRRow.style.display = Boolean(item.fieldMonitor) ? "flex" : "none";
 			sourceModeSelect.value = item.sourceMode === "cheesy" ? "cheesy" : "fms";
+			scoreAutofillRow.style.display = scoreAutofillVisible() ? "flex" : "none";
 			cheesyPortInput.value = String(item.cheesyPort || 8080);
 			cheesyPortRow.style.display = sourceModeSelect.value === "cheesy" ? "flex" : "none";
 			powerMonitorInput.checked = Boolean(item.powerMonitor);
@@ -263,6 +268,7 @@ function load() {
 			fieldMonitorInput.addEventListener("input", handleUpdate);
 			useSignalRInput.addEventListener("input", handleUpdate);
 			fmsApiEnabledInput.addEventListener("input", handleUpdate);
+			scoreAutofillInput.addEventListener("input", handleUpdate);
 			sourceModeSelect.addEventListener("input", handleUpdate);
 			cheesyPortInput.addEventListener("input", handleUpdate);
 			powerMonitorInput.addEventListener("change", handlePowerMonitorToggle);
@@ -389,6 +395,7 @@ function handleUpdate() {
 		fieldMonitor: fieldMonitorInput.checked,
 		useSignalR: useSignalRInput.checked,
 		fmsApiEnabled: fmsApiEnabledInput.checked,
+		scoreAutofill: scoreAutofillInput.checked,
 		eventToken: tokenInput.value,
 		sourceMode: sourceModeSelect.value === "cheesy" ? "cheesy" : "fms",
 		cheesyPort: Number(cheesyPortInput.value) || 8080,
@@ -397,7 +404,16 @@ function handleUpdate() {
 	urlContainer.style.display = cloudCheckbox.checked ? "none" : "block";
 	signalRRow.style.display = fieldMonitorInput.checked ? "flex" : "none";
 	cheesyPortRow.style.display = sourceModeSelect.value === "cheesy" ? "flex" : "none";
+	scoreAutofillRow.style.display = scoreAutofillVisible() ? "flex" : "none";
 	// Storage change triggers background restart automatically
+}
+
+/**
+ * The autofill writes to an FMS SignalR hub, so it is only reachable on real
+ * FMS with the field monitor running over SignalR rather than page scraping.
+ */
+function scoreAutofillVisible(): boolean {
+	return fieldMonitorInput.checked && useSignalRInput.checked && sourceModeSelect.value !== "cheesy";
 }
 
 function updatePopup(
@@ -409,6 +425,7 @@ function updatePopup(
 		| "fieldMonitor"
 		| "useSignalR"
 		| "fmsApiEnabled"
+		| "scoreAutofill"
 		| "event"
 		| "eventToken"
 		| "sourceMode"
@@ -425,6 +442,9 @@ function updatePopup(
 	// Keep the SignalR row visibility in sync
 	if (setting === "fieldMonitor") {
 		signalRRow.style.display = (value as boolean) ? "flex" : "none";
+	}
+	if (setting === "fieldMonitor" || setting === "useSignalR" || setting === "sourceMode") {
+		scoreAutofillRow.style.display = scoreAutofillVisible() ? "flex" : "none";
 	}
 	// Keep the Cheesy port row visibility in sync with the field system
 	if (setting === "sourceMode") {
@@ -444,6 +464,7 @@ chrome.storage.local.onChanged.addListener((changes) => {
 				| "fieldMonitor"
 				| "useSignalR"
 				| "fmsApiEnabled"
+				| "scoreAutofill"
 				| "event"
 				| "eventToken"
 				| "sourceMode"

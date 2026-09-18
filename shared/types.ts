@@ -520,6 +520,7 @@ export interface ExtensionConfig {
 	fieldMonitor?: boolean;
 	useSignalR?: boolean;
 	fmsApiEnabled?: boolean;
+	scoreAutofill?: boolean;
 	sourceMode?: "fms" | "cheesy";
 	cheesyPort?: number;
 }

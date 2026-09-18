@@ -69,4 +69,6 @@ export interface FieldDataSource extends TypedEventEmitter<SourceEventMap> {
 
 	/** FMS-only; safe no-op elsewhere. */
 	setFmsEventPassword(password: string | null): void;
+	/** FMS-only; safe no-op elsewhere. Fill unset tower selections at commit. */
+	setScoreAutofill(enabled: boolean): void;
 }

@@ -8,6 +8,7 @@ const appExtensionData = chrome.runtime.getManifest();
 		fieldMonitor: boolean,
 		useSignalR: boolean,
 		fmsApiEnabled: boolean,
+		scoreAutofill: boolean,
 		sourceMode: "fms" | "cheesy",
 		cheesyPort: number,
 		eventCode: string,
@@ -25,6 +26,7 @@ const appExtensionData = chrome.runtime.getManifest();
 				"fieldMonitor",
 				"useSignalR",
 				"fmsApiEnabled",
+				"scoreAutofill",
 				"sourceMode",
 				"cheesyPort",
 				"eventToken",
@@ -40,6 +42,7 @@ const appExtensionData = chrome.runtime.getManifest();
 				fieldMonitor = Boolean(item.fieldMonitor);
 				useSignalR = item.useSignalR !== false; // default true
 				fmsApiEnabled = item.fmsApiEnabled !== false; // default true
+				scoreAutofill = item.scoreAutofill === true; // default false
 				sourceMode = item.sourceMode === "cheesy" ? "cheesy" : "fms"; // default fms
 				cheesyPort = Number(item.cheesyPort) || 8080;
 				eventToken = String(item.eventToken);
@@ -60,6 +63,7 @@ const appExtensionData = chrome.runtime.getManifest();
 			fieldMonitor,
 			useSignalR,
 			fmsApiEnabled,
+			scoreAutofill,
 			sourceMode,
 			cheesyPort,
 			signalR: enabled,
@@ -129,6 +133,10 @@ const appExtensionData = chrome.runtime.getManifest();
 				fmsApiEnabled = Boolean(evt.data.fmsApiEnabled);
 				updates.fmsApiEnabled = fmsApiEnabled;
 			}
+			if ("scoreAutofill" in evt.data) {
+				scoreAutofill = Boolean(evt.data.scoreAutofill);
+				updates.scoreAutofill = scoreAutofill;
+			}
 			applySourceFields(evt.data, updates);
 			await chrome.storage.local.set(updates);
 			// Storage change triggers background restart automatically
@@ -151,6 +159,10 @@ const appExtensionData = chrome.runtime.getManifest();
 			if ("fmsApiEnabled" in evt.data) {
 				fmsApiEnabled = Boolean(evt.data.fmsApiEnabled);
 				updates.fmsApiEnabled = fmsApiEnabled;
+			}
+			if ("scoreAutofill" in evt.data) {
+				scoreAutofill = Boolean(evt.data.scoreAutofill);
+				updates.scoreAutofill = scoreAutofill;
 			}
 			applySourceFields(evt.data, updates);
 			await chrome.storage.local.set(updates);

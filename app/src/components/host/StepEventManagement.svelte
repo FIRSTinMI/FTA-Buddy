@@ -24,6 +24,7 @@
 		fieldMonitor?: boolean;
 		useSignalR?: boolean;
 		fmsApiEnabled?: boolean;
+		scoreAutofill?: boolean;
 		sourceMode?: "fms" | "cheesy";
 		cheesyPort?: number;
 	};
@@ -51,6 +52,8 @@
 	let extensionFieldMonitor = $derived(activeExtension?.config?.fieldMonitor ?? false);
 	let extensionUseSignalR = $derived(activeExtension?.config?.useSignalR ?? true);
 	let extensionFmsApiEnabled = $derived(activeExtension?.config?.fmsApiEnabled ?? true);
+	let extensionScoreAutofill = $derived(activeExtension?.config?.scoreAutofill ?? false);
+	let extensionSourceMode = $derived(activeExtension?.config?.sourceMode ?? "fms");
 	let extensionOutdated = $derived(!!extensionVersion && extensionVersion < LATEST_EXTENSION_VERSION);
 	let fmsExtensionConnected = $derived(activeExtension?.fmsApi ?? false);
 
@@ -60,8 +63,14 @@
 	let configFieldMonitor = $state(true);
 	let configUseSignalR = $state(true);
 	let configFmsApiEnabled = $state(true);
+	let configScoreAutofill = $state(false);
 
-	async function configureExtension(fieldMonitor: boolean, useSignalR: boolean, fmsApiEnabled: boolean) {
+	async function configureExtension(
+		fieldMonitor: boolean,
+		useSignalR: boolean,
+		fmsApiEnabled: boolean,
+		scoreAutofill: boolean,
+	) {
 		extensionConfiguring = true;
 		extensionConfigured = false;
 		try {
@@ -70,7 +79,9 @@
 			eventStore.update((e) => ({ ...e, notepadOnly }));
 			// Push config through the server to the connected extension(s); works
 			// from any device, unlike the old in-browser postMessage.
-			await trpc.extension.setConfig.mutate({ config: { fieldMonitor, useSignalR, fmsApiEnabled } });
+			await trpc.extension.setConfig.mutate({
+				config: { fieldMonitor, useSignalR, fmsApiEnabled, scoreAutofill },
+			});
 			extensionConfigured = true;
 		} catch (e) {
 			if (e instanceof Error) toast("Error", e.message);
@@ -83,6 +94,7 @@
 		configFieldMonitor = $eventStore.notepadOnly ? false : extensionDetected ? extensionFieldMonitor : true;
 		configUseSignalR = extensionDetected ? extensionUseSignalR : true;
 		configFmsApiEnabled = extensionDetected ? extensionFmsApiEnabled : true;
+		configScoreAutofill = extensionDetected ? extensionScoreAutofill : false;
 		extensionConfigDialogOpen = true;
 	}
 
@@ -173,6 +185,9 @@
 					{/if}
 					{#if remoteConfigSupported && extensionFmsApiEnabled}
 						&middot; {fmsExtensionConnected ? "FMS connected" : "FMS not detected"}
+					{/if}
+					{#if remoteConfigSupported && extensionScoreAutofill}
+						&middot; Score autofill
 					{/if}
 				</span>
 			{:else}
@@ -341,6 +356,17 @@
 				</div>
 				<Toggle bind:checked={configFmsApiEnabled} class="ml-4 shrink-0" />
 			</div>
+			{#if configFieldMonitor && configUseSignalR && extensionSourceMode === "fms"}
+				<div class="flex items-center justify-between border-t border-neutral-700 pt-3">
+					<div>
+						<p class="font-semibold">Score Autofill</p>
+						<p class="text-sm text-gray-400">
+							Test and practice matches. Auto and endgame tower, both alliances.
+						</p>
+					</div>
+					<Toggle bind:checked={configScoreAutofill} class="ml-4 shrink-0" />
+				</div>
+			{/if}
 		</div>
 		{#snippet footer()}
 			<div class="flex gap-2 justify-end">
@@ -348,7 +374,12 @@
 				<Button
 					disabled={extensionConfiguring}
 					onclick={async () => {
-						await configureExtension(configFieldMonitor, configUseSignalR, configFmsApiEnabled);
+						await configureExtension(
+							configFieldMonitor,
+							configUseSignalR,
+							configFmsApiEnabled,
+							configScoreAutofill,
+						);
 						extensionConfigDialogOpen = false;
 					}}
 				>

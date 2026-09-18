@@ -15,13 +15,23 @@
 	let fieldMonitor = $state(!$hostWizardStore.notepadOnly);
 	let useSignalR = $state($hostWizardStore.useSignalR ?? true);
 	let fmsApiEnabled = $state($hostWizardStore.fmsApiEnabled ?? true);
+	let scoreAutofill = $state($hostWizardStore.scoreAutofill ?? false);
 	let sourceMode = $state<"fms" | "cheesy">($hostWizardStore.sourceMode ?? "fms");
 	// Cheesy Arena's IP is fixed by FRC convention (10.0.100.5); only the port is configurable.
 	let cheesyPort = $state($hostWizardStore.cheesyPort ?? 8080);
 
 	$effect(() => {
 		window.postMessage(
-			{ source: "page", type: "enable", fieldMonitor, useSignalR, fmsApiEnabled, sourceMode, cheesyPort },
+			{
+				source: "page",
+				type: "enable",
+				fieldMonitor,
+				useSignalR,
+				fmsApiEnabled,
+				scoreAutofill,
+				sourceMode,
+				cheesyPort,
+			},
 			"*",
 		);
 	});
@@ -76,7 +86,15 @@
 	});
 
 	function advance() {
-		hostWizardStore.set({ notepadOnly: !fieldMonitor, useSignalR, fmsApiEnabled, sourceMode, cheesyPort, teams });
+		hostWizardStore.set({
+			notepadOnly: !fieldMonitor,
+			useSignalR,
+			fmsApiEnabled,
+			scoreAutofill,
+			sourceMode,
+			cheesyPort,
+			teams,
+		});
 		navigate("/manage/host/create");
 	}
 </script>
@@ -131,6 +149,7 @@
 									fieldMonitor,
 									useSignalR,
 									fmsApiEnabled,
+									scoreAutofill,
 									sourceMode,
 									cheesyPort,
 								},
@@ -221,6 +240,18 @@
 						</p>
 					</div>
 					<Toggle bind:checked={useSignalR} class="shrink-0" />
+				</div>
+			{/if}
+
+			{#if fieldMonitor && useSignalR && sourceMode === "fms"}
+				<div class="flex items-center justify-between gap-4 border-t border-neutral-700 pt-3">
+					<div class="text-left min-w-0">
+						<p class="font-semibold">Score Autofill</p>
+						<p class="text-sm text-gray-400">
+							Test and practice matches. Auto and endgame tower, both alliances.
+						</p>
+					</div>
+					<Toggle bind:checked={scoreAutofill} class="shrink-0" />
 				</div>
 			{/if}
 		</div>

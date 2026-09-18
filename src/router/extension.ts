@@ -9,6 +9,7 @@ const extensionConfigSchema = z.object({
 	fieldMonitor: z.boolean().optional(),
 	useSignalR: z.boolean().optional(),
 	fmsApiEnabled: z.boolean().optional(),
+	scoreAutofill: z.boolean().optional(),
 	sourceMode: z.enum(["fms", "cheesy"]).optional(),
 	cheesyPort: z.number().int().min(1).max(65535).optional(),
 });

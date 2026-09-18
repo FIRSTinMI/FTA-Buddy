@@ -13,6 +13,7 @@
 
 	let notepadOnly = $hostWizardStore.notepadOnly;
 	let fmsApiEnabled = $hostWizardStore.fmsApiEnabled ?? true;
+	let scoreAutofill = $hostWizardStore.scoreAutofill ?? false;
 	let teams = $hostWizardStore.teams;
 
 	let eventCode = $state("");
@@ -117,6 +118,7 @@
 					token: res.token,
 					fieldMonitor: !notepadOnly,
 					fmsApiEnabled,
+					scoreAutofill,
 				},
 				"*",
 			);

@@ -21,9 +21,11 @@ import {
 	MAX_UPLOAD_CHARS_PER_TURN,
 	MAX_UPLOAD_READS_PER_CONVERSATION,
 	MAX_UPLOAD_READS_PER_TURN,
+	matchLabel,
 	readDsEventsForMatch,
 	readLogEntry,
 	readSeries,
+	seriesSources,
 	readUploadFile,
 	uploadSummary,
 	UploadToolError,
@@ -527,26 +529,42 @@ export async function* streamAnswer(params: AnswerParams): AsyncGenerator<Answer
 		"send_to_ghost_csa",
 	]);
 
-	function toolLabel(block: Anthropic.ToolUseBlock): string {
+	/**
+	 * The line shown while a tool runs. "Lining the logs up against the match"
+	 * told a volunteer nothing about which match, whose robot, or which log, and
+	 * those are the three things they want to check over the assistant's
+	 * shoulder. A match id costs one small query to turn into a match number.
+	 */
+	async function toolLabel(block: Anthropic.ToolUseBlock): Promise<string> {
+		const team = upload?.team ? `team ${upload.team}` : "the upload";
+		const forMatch = async (): Promise<string> => {
+			const id = stringInput(block, "match_id");
+			const label = id ? await matchLabel(id).catch(() => null) : null;
+			return label ? `${label}, ${team}` : team;
+		};
 		switch (block.name) {
 			case "read_repo_file":
 				return `Reading ${stringInput(block, "path") || "a file"}`;
 			case "list_repo_files":
 				return "Listing files";
 			case "read_upload_summary":
-				return "Reading the log summary";
+				return `Reading the log summary for ${team}`;
 			case "list_upload_files":
-				return "Listing the uploaded files";
+				return `Listing the files ${team} uploaded`;
 			case "read_upload_file":
-				return `Reading ${stringInput(block, "path") || "a file"}`;
+				return `Reading ${stringInput(block, "path") || "a file"} from ${team}`;
 			case "list_log_series":
-				return "Checking what can be plotted";
-			case "read_log_series":
-				return "Lining the logs up against the match";
+				return `Checking what ${team} uploaded can plot`;
+			case "read_log_series": {
+				const raw = (block.input as { series?: unknown } | null)?.series;
+				const keys = Array.isArray(raw) ? raw.filter((k): k is string => typeof k === "string") : [];
+				const sources = seriesSources(keys);
+				return `Reading ${sources.length > 0 ? sources.join(" and ") : "the logs"} for ${await forMatch()}`;
+			}
 			case "read_ds_events":
-				return "Reading the Driver Station events";
+				return `Reading DS events for ${await forMatch()}`;
 			case "read_log_entry":
-				return `Reading ${stringInput(block, "entry") || "a log entry"}`;
+				return `Reading ${stringInput(block, "entry") || "a log entry"} from ${stringInput(block, "path") || "the data log"}`;
 			case "send_to_ghost_csa":
 				return "Sending the bundle to Ghost CSA";
 			default:
@@ -685,7 +703,7 @@ export async function* streamAnswer(params: AnswerParams): AsyncGenerator<Answer
 		messages.push({ role: "assistant", content: finalMessage.content });
 		const results: Anthropic.ToolResultBlockParam[] = [];
 		for (const block of toolUses) {
-			yield { type: "tool", label: toolLabel(block) };
+			yield { type: "tool", label: await toolLabel(block) };
 			results.push(UPLOAD_TOOL_NAMES.has(block.name) ? await runUploadTool(block) : await runRepoTool(block));
 		}
 		messages.push({ role: "user", content: results });

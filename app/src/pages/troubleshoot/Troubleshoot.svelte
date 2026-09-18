@@ -57,7 +57,12 @@
 	const segmentOff = "text-gray-600 dark:text-gray-300";
 </script>
 
-<div class="h-full overflow-y-auto">
+<!--
+	`container-type: size` turns this scroller into the reference for `cqh`, so the
+	chat below can be exactly as tall as the space between the top bar and the
+	bottom nav without anyone hardcoding how tall those are.
+-->
+<div class="h-full overflow-y-auto [container-type:size]">
 	<div class="container mx-auto flex w-full flex-col gap-3 p-2 pr-3">
 		<h1 class="text-3xl font-bold text-black dark:text-white">Troubleshooting</h1>
 
@@ -81,7 +86,16 @@
 		</div>
 
 		{#if isChat}
-			<Chat from={chatFrom} treeTitle={chatTreeTitle} answers={chatAnswers} />
+			<!--
+				A conversation is the page, so it holds the full height and sticks to
+				the top. Scrolling moves the title and the tabs out of the way and
+				leaves the thread filling the screen, with its own body scrolling
+				inside it and the composer on the bottom edge. The 1rem is this
+				container's own padding.
+			-->
+			<div class="sticky top-0 flex h-[calc(100cqh-1rem)] min-h-0 flex-col">
+				<Chat from={chatFrom} treeTitle={chatTreeTitle} answers={chatAnswers} />
+			</div>
 		{:else if tree}
 			<TreeWalk {tree} {nodeId} {pathParam} />
 		{:else if treeId}

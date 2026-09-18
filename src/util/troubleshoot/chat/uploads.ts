@@ -246,6 +246,35 @@ export async function readDsEventsForMatch(uploadId: string, matchId: string, li
 	].join("\n");
 }
 
+/**
+ * How a match reads to a volunteer, for the progress line while a tool runs.
+ * Falls back to nothing rather than showing a guid at somebody.
+ */
+export async function matchLabel(matchId: string): Promise<string | null> {
+	const match = await db.query.matchLogs.findFirst({ where: eq(matchLogs.id, matchId) });
+	if (!match) return null;
+	const level = match.level === "None" ? "Test" : match.level;
+	return match.play_number > 1
+		? `${level} ${match.match_number} play ${match.play_number}`
+		: `${level} ${match.match_number}`;
+}
+
+/** Which log each series key comes out of, in the words on the page. */
+export function seriesSources(keys: string[]): string[] {
+	const sources: string[] = [];
+	const add = (name: string) => {
+		if (!sources.includes(name)) sources.push(name);
+	};
+	for (const key of keys) {
+		if (key.startsWith("fms.")) add("FMS log");
+		else if (key.startsWith("ds.")) add("DS log");
+		else if (key.startsWith("csv.")) add("telemetry CSV");
+		else if (key === TOTAL_CURRENT.key) add("total current");
+		else add("data log");
+	}
+	return sources;
+}
+
 /** Data log entries the team logged themselves, so the model can ask for one by name. */
 export async function readLogEntry(uploadId: string, path: string, entryName: string, limit: number): Promise<string> {
 	const file = await fileByPath(uploadId, path);

@@ -55,7 +55,7 @@
 				<p class="text-xs text-gray-500 mt-2">Ask whoever sent it for a new one.</p>
 			</div>
 		{:else if !shared}
-			<p class="text-sm text-gray-500">Loading...</p>
+			<p class="text-sm text-gray-500">Loading…</p>
 		{:else}
 			<div>
 				<h1 class="text-xl text-black dark:text-white">
@@ -67,7 +67,7 @@
 					· uploaded {new Date(shared.createdAt).toLocaleString()}
 				</p>
 				<p class="text-xs text-gray-500">
-					Shared from FTA Buddy. Expires {new Date(shared.expires).toLocaleString()}.
+					Expires {new Date(shared.expires).toLocaleString()}
 				</p>
 			</div>
 

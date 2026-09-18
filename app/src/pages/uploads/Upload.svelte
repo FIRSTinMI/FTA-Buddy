@@ -196,7 +196,7 @@
 		{/if}
 
 		{#if !detail}
-			<p class="text-sm text-gray-500">Loading...</p>
+			<p class="text-sm text-gray-500">Loading…</p>
 		{:else}
 			<!-- Where it came from -->
 			<div class="rounded-lg border border-gray-200 dark:border-gray-700 p-2 flex flex-col gap-1">
@@ -264,9 +264,7 @@
 							{/if}
 						</div>
 					</div>
-					<p class="text-xs text-gray-500">
-						Limelight's SystemCore bundle analyser. The bundle and logs go to Limelight; the code does not.
-					</p>
+					<p class="text-xs text-gray-500">Sends the bundle and logs to Limelight. Not the code.</p>
 					{#if detail.upload.ghost_status === "failed" && detail.upload.ghost_error}
 						<p class="text-xs text-red-600 dark:text-red-400 mt-1">{detail.upload.ghost_error}</p>
 					{:else if ["queued", "pending", "running"].includes(detail.upload.ghost_status)}

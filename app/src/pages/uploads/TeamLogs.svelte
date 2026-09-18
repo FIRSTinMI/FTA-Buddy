@@ -16,7 +16,7 @@
 	 *
 	 * Two ways in. A team uploads from their own laptop through the link on this
 	 * page, or a volunteer copies the files onto their own device and sends them
-	 * here, which is what happens when the team's laptop has no network.
+	 * here.
 	 */
 	type Upload = Awaited<ReturnType<typeof trpc.uploads.list.query>>[number];
 	type Unassigned = Awaited<ReturnType<typeof trpc.uploads.unassigned.query>>[number];
@@ -132,7 +132,6 @@
 		<!-- Upload on a team's behalf -->
 		<div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3 flex flex-col gap-2">
 			<p class="font-semibold text-black dark:text-white">Upload from this device</p>
-			<p class="text-xs text-gray-500 dark:text-gray-400">For when the team's laptop has no network.</p>
 			<FileDrop bind:files disabled={uploading} />
 			<Input bind:value={team} type="number" placeholder="Team number" class="w-40" disabled={uploading} />
 			<Button size="sm" disabled={files.length === 0 || uploading} onclick={upload}>
@@ -181,7 +180,7 @@
 		{#if error}
 			<p class="text-sm text-red-600 dark:text-red-400">{error}</p>
 		{:else if loading}
-			<p class="text-sm text-gray-500">Loading...</p>
+			<p class="text-sm text-gray-500">Loading…</p>
 		{:else if uploads.length === 0}
 			<p class="text-sm text-gray-500">Nothing uploaded at this event yet.</p>
 		{:else}

@@ -22,9 +22,11 @@
 
 			<h2>Field data from FMS</h2>
 
-			<p>When an event runs FTA Buddy, a browser extension on the FTA's laptop relays what the FMS field monitor shows: for each robot in each match, roughly twice a second, the battery voltage, the round trip time, packet counts, radio signal and bandwidth, and whether the robot is enabled, connected, or in a brownout. It also records match schedules, cycle times, and the same E-stop and A-stop states the field monitor shows.</p>
+			<p>When an event runs FTA Buddy, a browser extension on the FTA's laptop relays what the field sees: for each robot in each match, roughly twice a second, the battery voltage, the round trip time, packet counts, radio signal and bandwidth, and whether the robot is enabled, connected, or in a brownout. It also records match schedules, cycle times, and E-stop and A-stop states.</p>
 
-			<p>This is the field's own view of a match, the same information anyone standing at the field monitor can see. It does not include camera images, robot code, or anything a robot sends over the network beyond the counts above.</p>
+			<p>Where the event turns on the extension's <strong>FMS API Calls</strong> option, FTA Buddy also collects the match log FMS keeps for each robot in each match, along with team lists and schedule details. With that option off, no match logs are captured and schedule data comes from The Blue Alliance instead.</p>
+
+			<p>This is the field's own view of a match. It does not include camera images, robot code, or anything a robot sends over the network beyond the counts above.</p>
 
 			<p>This data is collected under the authority of the event's FTA, who chooses to run the app and decides which volunteers get access to the event. It is kept indefinitely so that a volunteer at a later event can see what a robot did at an earlier one, which is often the fastest way to recognise a recurring fault.</p>
 

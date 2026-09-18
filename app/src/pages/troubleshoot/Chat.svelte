@@ -130,6 +130,21 @@
 		}
 	}
 
+	/**
+	 * The open conversation lives in the URL, so a refresh, a back button or a
+	 * pasted link land back in it. Replace rather than push: picking up where you
+	 * were is not a new place to go back from.
+	 */
+	function setUrlConversation(id: string | null) {
+		if (typeof window === "undefined") return;
+		const url = new URL(window.location.href);
+		if (id) url.searchParams.set("c", id);
+		else url.searchParams.delete("c");
+		if (url.toString() !== window.location.href) {
+			window.history.replaceState(window.history.state, "", url);
+		}
+	}
+
 	async function openConversation(id: string) {
 		sub?.unsubscribe();
 		sending = false;
@@ -137,6 +152,7 @@
 		try {
 			const h = await trpc.troubleshoot.history.query({ conversationId: id });
 			conversationId = h.conversationId;
+			setUrlConversation(conversationId);
 			closed = h.closed;
 			messages = h.messages.map((m) => ({
 				id: m.id,
@@ -155,6 +171,7 @@
 		sub?.unsubscribe();
 		sending = false;
 		conversationId = null;
+		setUrlConversation(null);
 		messages = [];
 		closed = false;
 		input = "";
@@ -232,6 +249,7 @@
 							break;
 						case "done":
 							conversationId = ev.conversationId;
+							setUrlConversation(conversationId);
 							patch((m) => {
 								m.id = ev.messageId;
 								m.streaming = false;
@@ -280,13 +298,27 @@
 	}
 
 	onMount(async () => {
+		let resume: string | null = null;
 		if (typeof window !== "undefined") {
-			const fromQuery = new URLSearchParams(window.location.search).get("upload");
+			const query = new URLSearchParams(window.location.search);
+			const fromQuery = query.get("upload");
 			if (fromQuery) pinnedUploadId = fromQuery;
+			resume = query.get("c");
 		}
-		seedFromTree();
+		if (resume) {
+			// A stale or someone else's id in the URL is not an error worth showing.
+			// Drop it and start where a fresh visit would.
+			await openConversation(resume);
+			if (!conversationId) {
+				statusError = null;
+				setUrlConversation(null);
+				seedFromTree();
+			}
+		} else {
+			seedFromTree();
+		}
 		await Promise.all([loadStatus(), loadRecent()]);
-		if (from) inputEl?.focus();
+		if (from && !resume) inputEl?.focus();
 	});
 
 	onDestroy(() => sub?.unsubscribe());

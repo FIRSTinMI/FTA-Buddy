@@ -16,7 +16,20 @@
 	 * It can come in as a prop or as the ?from= query param; both are handled.
 	 * `treeTitle` and `answers` are optional extras the tree page may pass.
 	 */
-	let { from: fromProp, treeTitle, answers }: { from?: string; treeTitle?: string; answers?: string[] } = $props();
+	let {
+		from: fromProp,
+		treeTitle,
+		answers,
+		/** True once there is a thread, so the page can give it the whole height. */
+		started = $bindable(false),
+		onstart,
+	}: {
+		from?: string;
+		treeTitle?: string;
+		answers?: string[];
+		started?: boolean;
+		onstart?: () => void;
+	} = $props();
 
 	interface UiMessage {
 		id: string;
@@ -319,6 +332,15 @@
 		}
 		await Promise.all([loadStatus(), loadRecent()]);
 		if (from && !resume) inputEl?.focus();
+	});
+
+	// The first message turns the chat into the page. Fires on the edge only, so
+	// opening an old conversation does not re-scroll on every render.
+	$effect(() => {
+		const now = messages.length > 0;
+		if (now === started) return;
+		started = now;
+		if (now) onstart?.();
 	});
 
 	onDestroy(() => sub?.unsubscribe());

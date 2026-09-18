@@ -14,6 +14,19 @@
 		return localStorage.getItem(STORAGE_KEY) === "chat" ? "chat" : "guided";
 	}
 
+	/**
+	 * The title and the tabs are measured rather than assumed, so an empty chat
+	 * can sit in exactly the space they leave and a started one can take the lot.
+	 */
+	let scroller: HTMLDivElement | undefined = $state();
+	let headerHeight = $state(0);
+	let started = $state(false);
+
+	/** Put the thread against the top bar the moment it becomes the page. */
+	function scrollPastHeader() {
+		requestAnimationFrame(() => scroller?.scrollTo({ top: scroller.scrollHeight, behavior: "smooth" }));
+	}
+
 	// The URL decides the mode. localStorage only picks the default when landing on /troubleshoot.
 	let isChat = $derived(route.pathname === "/troubleshoot/chat");
 	let treeId = $derived(isChat ? undefined : route.params.tree);
@@ -62,39 +75,51 @@
 	chat below can be exactly as tall as the space between the top bar and the
 	bottom nav without anyone hardcoding how tall those are.
 -->
-<div class="h-full overflow-y-auto [container-type:size]">
+<div bind:this={scroller} class="h-full overflow-y-auto [container-type:size]">
 	<div class="container mx-auto flex w-full flex-col gap-3 p-2 pr-3">
-		<h1 class="text-3xl font-bold text-black dark:text-white">Troubleshooting</h1>
+		<div bind:clientHeight={headerHeight} class="flex flex-col gap-3">
+			<h1 class="text-3xl font-bold text-black dark:text-white">Troubleshooting</h1>
 
-		<div class="flex rounded-lg bg-gray-200 p-1 dark:bg-gray-800" role="tablist">
-			<button
-				role="tab"
-				aria-selected={!isChat}
-				class="{segment} {isChat ? segmentOff : segmentOn}"
-				onclick={() => setMode("guided")}
-			>
-				<Icon icon="heroicons:list-bullet-16-solid" class="size-5" /> Guided
-			</button>
-			<button
-				role="tab"
-				aria-selected={isChat}
-				class="{segment} {isChat ? segmentOn : segmentOff}"
-				onclick={() => setMode("chat")}
-			>
-				<Icon icon="heroicons:chat-bubble-left-right-16-solid" class="size-5" /> Chat
-			</button>
+			<div class="flex rounded-lg bg-gray-200 p-1 dark:bg-gray-800" role="tablist">
+				<button
+					role="tab"
+					aria-selected={!isChat}
+					class="{segment} {isChat ? segmentOff : segmentOn}"
+					onclick={() => setMode("guided")}
+				>
+					<Icon icon="heroicons:list-bullet-16-solid" class="size-5" /> Guided
+				</button>
+				<button
+					role="tab"
+					aria-selected={isChat}
+					class="{segment} {isChat ? segmentOn : segmentOff}"
+					onclick={() => setMode("chat")}
+				>
+					<Icon icon="heroicons:chat-bubble-left-right-16-solid" class="size-5" /> Chat
+				</button>
+			</div>
 		</div>
 
 		{#if isChat}
 			<!--
-				A conversation is the page, so it holds the full height and sticks to
-				the top. Scrolling moves the title and the tabs out of the way and
-				leaves the thread filling the screen, with its own body scrolling
-				inside it and the composer on the bottom edge. The 1rem is this
-				container's own padding.
+				An empty chat fits the space left under the title, so the composer is
+				on screen without anyone scrolling for it. Once there is a thread the
+				conversation is the page: it takes the whole height, sticks to the top
+				and the title scrolls away above it. The 1rem is this container's own
+				padding; `cqh` is the scroller's height, so neither case needs to know
+				how tall the app's own chrome is.
 			-->
-			<div class="sticky top-0 flex h-[calc(100cqh-1rem)] min-h-0 flex-col">
-				<Chat from={chatFrom} treeTitle={chatTreeTitle} answers={chatAnswers} />
+			<div
+				class="sticky top-0 flex min-h-0 flex-col"
+				style="height: calc(100cqh - 1rem - {started ? 0 : headerHeight}px)"
+			>
+				<Chat
+					from={chatFrom}
+					treeTitle={chatTreeTitle}
+					answers={chatAnswers}
+					bind:started
+					onstart={scrollPastHeader}
+				/>
 			</div>
 		{:else if tree}
 			<TreeWalk {tree} {nodeId} {pathParam} />

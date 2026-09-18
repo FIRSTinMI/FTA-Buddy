@@ -93,7 +93,7 @@ export const DSLOG_SERIES: SeriesDef[] = [
 	{ key: "ds.wifiDb", label: "Radio signal (DS)", unit: "dB", axis: "db", from: "dslog" },
 	{ key: "ds.wifiMb", label: "Bandwidth (DS)", unit: "Mbps", axis: "mbps", from: "dslog" },
 	{ key: "ds.brownout", label: "Brownout (DS)", axis: "bool", from: "dslog", defaultOn: true },
-	{ key: "ds.watchdog", label: "Watchdog", axis: "bool", from: "dslog", defaultOn: true },
+	{ key: "ds.watchdog", label: "Watchdog tripped", axis: "bool", from: "dslog", defaultOn: true },
 	{ key: "ds.robotDisabled", label: "Robot reports disabled", axis: "bool", from: "dslog" },
 	{ key: "ds.robotAuto", label: "Robot in auto", axis: "bool", from: "dslog" },
 	{ key: "ds.robotTeleop", label: "Robot in teleop", axis: "bool", from: "dslog" },

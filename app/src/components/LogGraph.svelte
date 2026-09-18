@@ -125,15 +125,38 @@
 		return visibleSeries[name] !== false && !hide.includes(name);
 	}
 
-	// Y-axis default show state (used to restore after mobile collapse)
+	/**
+	 * `eligible` is whether this axis is ever worth drawing, not whether it is
+	 * drawn now: signal and noise share a scale with each other and are read off
+	 * the tooltip.
+	 */
 	const yAxisDefaults = [
-		{ show: true, position: "left" as const, min: 6, max: 14, name: "Voltage", offset: 0 },
-		{ show: true, position: "right" as const, min: 0, max: 50, name: "Ping (ms)", offset: 0 },
-		{ show: true, position: "right" as const, min: 0, max: 8, name: "Bandwidth (Mbps)", offset: 60 },
-		{ show: false, position: "right" as const, min: -100, max: -30, name: "Signal (dBm)", offset: 120 },
-		{ show: false, position: "right" as const, min: -100, max: -30, name: "Noise (dBm)", offset: 180 },
-		{ show: false, position: "left" as const, min: 0, max: 1.02, name: "", offset: 0 }, // hidden lane axis
+		{ eligible: true, min: 6, max: 14, unit: "V" },
+		{ eligible: true, min: 0, max: 50, unit: "ms" },
+		{ eligible: true, min: 0, max: 8, unit: "Mbps" },
+		{ eligible: false, min: -100, max: -30, unit: "dBm" },
+		{ eligible: false, min: -100, max: -30, unit: "dBm" },
+		{ eligible: false, min: 0, max: 1.02, unit: "" }, // hidden lane axis
 	];
+
+	/**
+	 * Three axes, and the rest are read off the tooltip.
+	 *
+	 * Every series carrying its own scale down the side eats the plot and stacks
+	 * axis names on top of each other. Three is what fits.
+	 */
+	const MAX_AXES = 3;
+
+	/** Short enough to sit above an axis without running into the next one. */
+	const UNIT_LABEL: Record<string, string> = {
+		volts: "V",
+		ms: "ms",
+		mbps: "Mbps",
+		db: "dBm",
+		amps: "A",
+		percent: "%",
+		number: "",
+	};
 
 	/** Which of the fixed axes an uploaded series belongs on, by unit. */
 	const SHARED_AXIS: Record<string, number> = { volts: 0, ms: 1, mbps: 2, db: 3, bool: 5 };
@@ -146,6 +169,29 @@
 	function overlayAxisIndex(series: OverlaySeries): number {
 		const shared = SHARED_AXIS[series.axis];
 		return shared !== undefined ? shared : yAxisDefaults.length + extraUnits.indexOf(series.axis);
+	}
+
+	/** How many samples each series has, used to pick the finest for the readout. */
+	let pointCounts = $derived(
+		new Map<string, number>([
+			...metricSeries.map((s) => [s.name, log.length] as [string, number]),
+			...overlay.map((s) => [s.label, s.points.length] as [string, number]),
+		]),
+	);
+
+	/** The field monitor frame covering a moment on the match clock. */
+	function frameAt(t: number): FMSLogFrame | undefined {
+		if (log.length === 0) return undefined;
+		let lo = 0;
+		let hi = frameT.length - 1;
+		while (lo < hi) {
+			const mid = (lo + hi) >> 1;
+			if (frameT[mid] < t) lo = mid + 1;
+			else hi = mid;
+		}
+		// Round to whichever of the two neighbours is nearer.
+		if (lo > 0 && Math.abs(frameT[lo - 1] - t) < Math.abs(frameT[lo] - t)) lo -= 1;
+		return log[lo];
 	}
 
 	function buildOption(): ECOption {
@@ -238,39 +284,52 @@
 			});
 		}
 
-		// Compute which axes should be visible based on series visibility
+		// Which axes carry something visible, in the order they first appear. Only
+		// the first few are drawn; the rest still scale their series, they are just
+		// read off the tooltip instead of the side.
+		const carrying: number[] = [];
+		const carry = (index: number) => {
+			const eligible = index >= yAxisDefaults.length || yAxisDefaults[index].eligible;
+			if (eligible && !carrying.includes(index)) carrying.push(index);
+		};
+		metricSeries.forEach((s) => shown(s.name) && carry(s.yAxisIndex));
+		overlay.forEach((s) => visibleSeries[s.label] !== false && carry(overlayAxisIndex(s)));
+		// The volts axis draws the grid lines, so it is the one that stays.
+		const drawn = isMobile ? [0] : [...new Set([0, ...carrying])].slice(0, MAX_AXES);
+		// Right-hand axes step outwards in the order they were kept.
+		const rightOf = drawn.filter((i) => i !== 0);
+
+		const axisName = (index: number) =>
+			index < yAxisDefaults.length
+				? yAxisDefaults[index].unit
+				: (UNIT_LABEL[extraUnits[index - yAxisDefaults.length]] ?? "");
+
 		const yAxes: unknown[] = yAxisDefaults.map((def, i) => {
-			// Lane axis (5) is always hidden; metric axes show if their series is visible AND axis default permits
-			const usedByOverlay = overlay.some((s) => overlayAxisIndex(s) === i && visibleSeries[s.label] !== false);
-			const axisVisible =
-				i === 5
-					? false
-					: i < metricSeries.length
-						? (shown(metricSeries[i].name) || usedByOverlay) && def.show
-						: false;
+			const visible = drawn.includes(i);
 			return {
 				type: "value" as const,
-				show: isMobile ? (i === 0 ? true : false) : axisVisible,
-				position: def.position,
+				show: visible,
+				position: i === 0 ? ("left" as const) : ("right" as const),
 				min: def.min,
 				max: def.max,
-				name: isMobile ? "" : axisVisible ? def.name : "",
+				name: visible ? def.unit : "",
 				nameTextStyle: { fontSize: 11 },
-				offset: def.offset,
+				offset: rightOf.indexOf(i) * 60,
 				splitLine: { show: i === 0 }, // only primary axis draws grid lines
-				axisLine: { show: axisVisible },
-				axisTick: { show: axisVisible },
-				axisLabel: { show: isMobile ? i === 0 : axisVisible },
+				axisLine: { show: visible },
+				axisTick: { show: visible },
+				axisLabel: { show: visible },
 			};
 		});
 		extraUnits.forEach((unit, i) => {
-			const visible = !isMobile && overlay.some((s) => s.axis === unit && visibleSeries[s.label] !== false);
+			const index = yAxisDefaults.length + i;
+			const visible = drawn.includes(index);
 			yAxes.push({
 				type: "value" as const,
 				show: visible,
 				position: "right" as const,
-				offset: 240 + i * 60,
-				name: visible ? unit : "",
+				offset: rightOf.indexOf(index) * 60,
+				name: visible ? axisName(index) : "",
 				nameTextStyle: { fontSize: 11 },
 				splitLine: { show: false },
 				axisLabel: { show: visible },
@@ -280,7 +339,7 @@
 		return {
 			grid: {
 				left: 50,
-				right: isMobile ? 10 : 80 + extraUnits.length * 60,
+				right: isMobile ? 10 : 20 + rightOf.length * 60,
 				top: 10,
 				bottom: 60,
 				containLabel: false,
@@ -300,11 +359,24 @@
 				triggerOn: isMobile ? "click" : "mousemove|click",
 				formatter: (params: any) => {
 					if (!Array.isArray(params) || params.length === 0) return "";
-					const metricNames = new Set(metricSeries.map((m) => m.name));
-					const fmsParam = params.find((p: any) => metricNames.has(p.seriesName)) ?? params[0];
-					const idx = fmsParam?.dataIndex ?? 0;
-					const frame = metricNames.has(fmsParam?.seriesName) ? log[idx] : undefined;
-					const t = Array.isArray(fmsParam?.value) ? fmsParam.value[0] : undefined;
+					// Every series snaps the pointer to its own nearest sample, so the
+					// time at the top has to come from the fastest one on screen.
+					// Taking it from a field monitor frame pinned the readout, and the
+					// status line with it, to half-second steps.
+					let t: number | undefined;
+					let best = -1;
+					for (const p of params) {
+						const count = pointCounts.get(p.seriesName) ?? 0;
+						const x = Array.isArray(p.value) ? p.value[0] : undefined;
+						if (typeof x === "number" && count > best) {
+							best = count;
+							t = x;
+						}
+					}
+					// The status line is the field's, so it is read off whichever frame
+					// covers that moment rather than the one the pointer happened to
+					// snap to.
+					const frame = t === undefined ? undefined : frameAt(t);
 
 					let status = "";
 					if (frame) {
@@ -330,19 +402,22 @@
 						}
 					}
 
-					const boolLabels = new Map(overlay.filter((s) => s.axis === "bool").map((s) => [s.label, true]));
+					// A boolean series only has a point where it is true, so the row is
+					// the whole message: "Watchdog tripped: yes" says nothing that
+					// "Watchdog tripped" does not.
+					const boolLabels = new Set(overlay.filter((s) => s.axis === "bool").map((s) => s.label));
 					let html = `<div style="text-align:left">`;
-					html += `<div style="margin-bottom:4px"><b>${(frame?.matchTime ?? t ?? 0).toFixed ? Number(frame?.matchTime ?? t).toFixed(1) : frame?.matchTime}s</b>${status}</div>`;
+					html += `<div style="margin-bottom:4px"><b>${(t ?? 0).toFixed(2)}s</b>${status}</div>`;
 					for (const p of params) {
 						if (laneSeries.some((l) => l.name === p.seriesName)) continue;
 						const value = Array.isArray(p.value) ? p.value[1] : p.value;
 						if (value == null) continue;
-						const shown = boolLabels.has(p.seriesName)
-							? "yes"
-							: typeof value === "number"
-								? value.toFixed(2)
-								: value;
-						html += `<div>${p.marker} ${p.seriesName}: <b>${shown}</b></div>`;
+						if (boolLabels.has(p.seriesName)) {
+							html += `<div>${p.marker} ${p.seriesName}</div>`;
+							continue;
+						}
+						const text = typeof value === "number" ? value.toFixed(2) : value;
+						html += `<div>${p.marker} ${p.seriesName}: <b>${text}</b></div>`;
 					}
 					html += `</div>`;
 					return html;

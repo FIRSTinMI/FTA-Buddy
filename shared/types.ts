@@ -456,6 +456,8 @@ export interface ServerEvent {
 	name: string;
 	pin: string;
 	token: string;
+	/** Archived events are read-only history: the app refuses tokens for them. */
+	archived: boolean;
 	users: Profile[];
 	scheduleDetails: ScheduleDetails;
 	notes: Note[];
@@ -941,7 +943,6 @@ export interface PowerMonitorSummary {
 	/** Seconds in which the meter's own alarm was set. */
 	alarmSeconds: number;
 }
-
 
 /** What the power monitors alert on, per event. */
 export interface PowerAlertSettings {

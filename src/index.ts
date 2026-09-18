@@ -69,6 +69,7 @@ import { startCorpusRefresh } from "./util/troubleshoot/corpus-scheduler";
 import { uploadsRouter } from "./router/uploads";
 import { uploadHttpRouter } from "./router/upload-http";
 import { startGhostCsaPoller } from "./util/uploads/ghost-csa";
+import { startYearEndArchive } from "./util/year-end-archive";
 import { getTeamAverageCycle } from "./util/team-cycles";
 import { eventLastSeen, events, eventCodes } from "./state";
 import * as nexusEventPoller from "./util/nexusEventPoller";
@@ -892,6 +893,9 @@ connect().then(async () => {
 
 	// Poll Ghost CSA for the analyses we asked it for
 	startGhostCsaPoller();
+
+	// Archive last year's events so their notes, logs and uploads leave the app
+	startYearEndArchive();
 
 	// Start Nexus pollers for events with a key configured that are currently running
 	try {

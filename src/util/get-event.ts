@@ -128,6 +128,7 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 				pin: event.pin,
 				code: eventCode,
 				token: eventToken,
+				archived: event.archived ?? false,
 				users: users,
 				scheduleDetails: event.scheduleDetails as ScheduleDetails,
 				notes: (await getEventNotes(eventCode)) as Note[],

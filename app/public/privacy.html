@@ -28,11 +28,11 @@
 
 			<p>This is the field's own view of a match. It does not include camera images, robot code, or anything a robot sends over the network beyond the counts above.</p>
 
-			<p>This data is collected under the authority of the event's FTA, who chooses to run the app and decides which volunteers get access to the event. It is kept indefinitely so that a volunteer at a later event can see what a robot did at an earlier one, which is often the fastest way to recognise a recurring fault.</p>
+			<p>This data is collected under the authority of the event's FTA, who chooses to run the app and decides which volunteers get access to the event.</p>
 
 			<h2>Notes and tickets</h2>
 
-			<p>Volunteers write notes about teams and robots, and teams can submit their own notes through a public link the event chooses to share. Notes are kept after the event and can be read by volunteers at other events that team attends, which is stated on the page where a note is written.</p>
+			<p>Volunteers write notes about teams and robots, and teams can submit their own notes through a public link the event chooses to share. Notes can be read by volunteers at other events that team attends, which is stated on the page where a note is written.</p>
 
 			<h2>Logs and code a team uploads</h2>
 
@@ -42,16 +42,27 @@
 
 			<h2>Share links</h2>
 
-			<p>A volunteer can create a link to part of an upload, or to a single match log, so that somebody without an account can read it. Anyone holding the link can read exactly the files the volunteer selected, and nothing else in the upload. Every link expires, and a volunteer can revoke one at any time. A volunteer creating a link is told to share it only with volunteers at that event, or, with the team's permission, the FRC CSA Slack.</p>
+			<p>A volunteer can create a link to part of an upload, or to a single match log, so that somebody without an account can read it. Anyone holding the link can read exactly the files the volunteer selected, and nothing else in the upload. A volunteer can revoke a link at any time. A volunteer creating a link is told to share it only with volunteers at that event, or, with the team's permission, the FRC CSA Slack.</p>
 
 			<h2>What leaves our servers</h2>
 
 			<p>Three things send data to somebody else, and each is a volunteer's deliberate action rather than something that happens on its own:</p>
 
 			<ul>
-				<li><strong>The troubleshooting assistant.</strong> The assistant built into FTA Buddy is powered by Anthropic's Claude models, which run on Anthropic's servers rather than ours. When a volunteer asks it a question, the conversation and whatever it reads to answer, which can include a team's uploaded logs, code, and the event's own match logs, are sent to Anthropic for processing. Anthropic does not train its models on this. Conversations are kept so we can see where the assistant gives poor answers.</li>
+				<li><strong>The troubleshooting assistant.</strong> The assistant built into FTA Buddy is powered by Anthropic's Claude models, which run on Anthropic's servers rather than ours. When a volunteer asks it a question, the conversation and whatever it reads to answer, which can include a team's uploaded logs, code, and the event's own match logs, are sent to Anthropic for processing. Anthropic does not train its models on this.</li>
 				<li><strong>Ghost CSA.</strong> A volunteer can send a SystemCore support bundle and its log files to Limelight's Ghost CSA for a device-level analysis. A team's robot code is never sent there. The button says so before it is pressed.</li>
 				<li><strong>Share links.</strong> Described above.</li>
+			</ul>
+
+			<h2>How long we keep things</h2>
+
+			<p>Notes, match logs and team uploads are archived at the end of the calendar year the event ran in. The event closes to volunteers at that point, so none of it is reachable in the app any more. It is not deleted; it stays in storage.</p>
+
+			<ul>
+				<li><strong>Match data and match logs from the field</strong>, and <strong>notes</strong>: in the app until the end of the calendar year, then archived. Being able to see what a robot did at an earlier event is often the fastest way to recognise a recurring fault, which is the reason the record is worth keeping at all.</li>
+				<li><strong>Files a team uploads</strong>: the same, and a team can have one removed sooner. Any volunteer at that event can delete an upload, or email <a href="mailto:me@filipkin.com">me@filipkin.com</a>.</li>
+				<li><strong>Share links</strong>: hours to two weeks, chosen by the volunteer who creates the link, and revocable before that. A match log share is fixed at 72 hours.</li>
+				<li><strong>Assistant conversations</strong>: kept, and may be reviewed for quality purposes.</li>
 			</ul>
 
 			<h2>Accounts</h2>
@@ -74,7 +85,7 @@
 
 			<ul>
 				<li>A team that does not want to share their logs or code simply does not upload them.</li>
-				<li>A team can ask a volunteer at the event to delete an upload, which removes the files.</li>
+				<li>A team can ask a volunteer at their event to delete an upload, which removes the files. Failing that, email <a href="mailto:me@filipkin.com">me@filipkin.com</a>.</li>
 				<li>You can ask us for a copy of the personal information we hold about you, ask us to correct it, or ask us to delete it. This covers account information and anything identifiable; it does not extend to a match record the event itself created.</li>
 				<li>Under the CCPA and the GDPR you have rights of access, correction, erasure, restriction, objection and portability. Email <a href="mailto:me@filipkin.com">me@filipkin.com</a> to use them and we will respond within a month.</li>
 			</ul>

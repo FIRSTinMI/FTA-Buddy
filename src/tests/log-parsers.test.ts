@@ -882,3 +882,40 @@ describe("filling in the station", () => {
 		expect(fillStations([named], [match], 240)[0].station).toBe("blue3");
 	});
 });
+
+describe("year end archiving", () => {
+	// The sweep decides an event's year from its end date, falling back to its
+	// start. Getting this wrong either strands a live event or leaves last
+	// season's data reachable, so the boundaries are pinned down.
+	const year = (e: { startDate: string | null; endDate: string | null }) => {
+		const raw = e.endDate || e.startDate;
+		if (!raw) return null;
+		const y = Number(raw.slice(0, 4));
+		return Number.isInteger(y) && y > 2000 ? y : null;
+	};
+	const stale = (e: { startDate: string | null; endDate: string | null }, now: number) => {
+		const y = year(e);
+		return y !== null && y < now;
+	};
+
+	test("an event from last year is archived, this year's is not", () => {
+		expect(stale({ startDate: "2025-04-10", endDate: "2025-04-12" }, 2026)).toBe(true);
+		expect(stale({ startDate: "2026-04-10", endDate: "2026-04-12" }, 2026)).toBe(false);
+	});
+
+	test("an event running over new year is placed by when it ended", () => {
+		// Ends in the new year, so it survives that year.
+		expect(stale({ startDate: "2025-12-30", endDate: "2026-01-02" }, 2026)).toBe(false);
+	});
+
+	test("no end date falls back to the start date", () => {
+		expect(stale({ startDate: "2025-08-15", endDate: null }, 2026)).toBe(true);
+		expect(stale({ startDate: "2026-08-15", endDate: null }, 2026)).toBe(false);
+	});
+
+	test("an event with no dates is left alone rather than guessed at", () => {
+		expect(year({ startDate: null, endDate: null })).toBeNull();
+		expect(stale({ startDate: null, endDate: null }, 2026)).toBe(false);
+		expect(stale({ startDate: "", endDate: "" }, 2026)).toBe(false);
+	});
+});

@@ -87,6 +87,17 @@ export const eventProcedure = t.procedure.use(async (opts) => {
 
 	if (ctx.token) user = await resolveUserFromToken(ctx.token);
 
+	// Joining an archived event is already refused, but a token minted before the
+	// event was archived kept working: archiving locked the door without asking
+	// anyone already inside to leave. Admins keep access so history stays
+	// reachable for support.
+	if (event.archived && !user?.admin) {
+		throw new TRPCError({
+			code: "FORBIDDEN",
+			message: "This event has been archived. Its notes, logs and uploads are no longer available in the app.",
+		});
+	}
+
 	return opts.next({
 		ctx: {
 			...ctx,

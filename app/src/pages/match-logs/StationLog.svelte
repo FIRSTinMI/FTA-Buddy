@@ -7,8 +7,9 @@
 	import { formatTimeNoAgo, formatTimeShortNoAgoSeconds } from "../../../../shared/formatTime";
 	import type { FMSLogFrame, ROBOT } from "../../../../shared/types";
 	import LogGraph from "../../components/LogGraph.svelte";
-	import TeamLogChart from "../../components/uploads/TeamLogChart.svelte";
 	import TeamLogEvents from "../../components/uploads/TeamLogEvents.svelte";
+	import SeriesSelect, { type SeriesItem } from "../../components/uploads/SeriesSelect.svelte";
+	import type { OverlaySeries } from "../../components/LogGraph.svelte";
 	import Spinner from "../../components/Spinner.svelte";
 	import { trpc } from "../../main";
 	import { navigate, route } from "../../router";
@@ -107,12 +108,108 @@
 	}
 
 	/**
-	 * The moment a hovered Driver Station event happened, and which upload it came
-	 * from. Only one terminal is under the pointer at a time, so one pair is
-	 * enough, and holding the upload id keeps the marker off the other charts.
+	 * Everything the team uploaded for this match goes onto the one graph above,
+	 * not into a second chart. The upload that holds a Driver Station log is the
+	 * one worth plotting first, since that is the higher rate record of the same
+	 * things the field monitor saw.
 	 */
+	let primaryUpload = $derived(teamUploads.find((u) => u.hasDsLog) ?? teamUploads[0]);
+	let eventsUpload = $derived(teamUploads.find((u) => u.hasEvents));
+
+	let seriesItems = $state<SeriesItem[]>([]);
+	let selectedSeries = $state<string[]>([]);
+	let overlay = $state<OverlaySeries[]>([]);
+	let seriesError = $state<string | null>(null);
+	let seriesNotes = $state<string[]>([]);
+
+	/** The moment of a hovered event line, marked on the graph. */
 	let markT = $state<number | null>(null);
-	let markUpload = $state<string | null>(null);
+
+	/**
+	 * The field monitor's battery line comes off when the team's own is plotted.
+	 * Both are the same measurement and one of them is 25 times the resolution;
+	 * drawn together the slower one just fattens the trace.
+	 */
+	let hideOnGraph = $derived(selectedSeries.includes("ds.batteryVolts") ? ["Voltage"] : []);
+
+	$effect(() => {
+		const upload = primaryUpload;
+		if (!upload) return;
+		trpc.uploads.seriesOptions
+			.query({ id: upload.uploadId })
+			.then((options) => {
+				// The field monitor series are already legend entries on the graph, so
+				// offering them here as well would be two controls for one line.
+				seriesItems = options.filter((o) => o.group !== "Field monitor");
+				if (selectedSeries.length === 0) {
+					// The team's battery trace is the reason to open this page with an
+					// upload attached, so it starts on and the field's own is hidden.
+					const battery = seriesItems.find((o) => o.key === "ds.batteryVolts");
+					if (battery) {
+						selectedSeries = [battery.key];
+						void loadSeries();
+					}
+				}
+			})
+			.catch(() => (seriesItems = []));
+	});
+
+	async function loadSeries() {
+		const upload = primaryUpload;
+		if (!upload) return;
+		if (selectedSeries.length === 0) {
+			overlay = [];
+			seriesNotes = [];
+			return;
+		}
+		seriesError = null;
+		try {
+			// The window is the match plus 20 s either side. At 50 Hz that is about
+			// 10,250 samples, so asking for more than that means nothing is thinned,
+			// which is the point of plotting the team's log at all.
+			const data = await trpc.uploads.series.query({
+				id: upload.uploadId,
+				matchId: matchid,
+				keys: selectedSeries.slice(0, 8),
+				points: 12_000,
+			});
+			overlay = data.series.map((serie) => ({
+				key: serie.key,
+				label: serie.label,
+				unit: serie.unit,
+				axis: serie.axis,
+				hz: serie.hz,
+				points: serie.points,
+			}));
+			seriesNotes = data.notes;
+		} catch (err) {
+			seriesError = err instanceof Error ? err.message : "Unable to load those series";
+		}
+	}
+
+	/**
+	 * An uploaded series at each field monitor row, for the table. The rates do
+	 * not line up, so a cell takes the nearest sample within half a frame and is
+	 * left blank rather than reaching further and inventing a reading.
+	 */
+	function overlayAt(serie: OverlaySeries, t: number): number | null {
+		const points = serie.points;
+		if (points.length === 0) return null;
+		let lo = 0;
+		let hi = points.length - 1;
+		while (lo < hi) {
+			const mid = (lo + hi) >> 1;
+			if (points[mid].t < t) lo = mid + 1;
+			else hi = mid;
+		}
+		const near = [points[lo], points[lo - 1]].filter(Boolean);
+		let best: { t: number; v: number | null } | null = null;
+		for (const point of near) {
+			if (point.v === null) continue;
+			if (!best || Math.abs(point.t - t) < Math.abs(best.t - t)) best = point;
+		}
+		return best && Math.abs(best.t - t) <= 0.3 ? best.v : null;
+	}
 
 	async function share() {
 		if (["blue1", "blue2", "blue3", "red1", "red2", "red3"].includes(station)) {
@@ -197,31 +294,43 @@
 				<p class="md:hidden text-gray-600 text-sm">View on desktop for more detail</p>
 			</div>
 
-			<LogGraph bind:this={logGraph} {log} />
+			<LogGraph
+				bind:this={logGraph}
+				{log}
+				matchStartMs={new Date(match.start_time).getTime()}
+				{overlay}
+				{markT}
+				hide={hideOnGraph}
+			/>
 
-			{#each teamUploads as upload (upload.uploadId)}
-				<TeamLogChart
-					uploadId={upload.uploadId}
-					matchId={matchid}
-					code={upload.code}
-					hasDsLog={upload.hasDsLog}
-					markT={markUpload === upload.uploadId ? markT : null}
-				/>
-				{#if upload.hasEvents}
-					<TeamLogEvents
-						uploadId={upload.uploadId}
-						matchId={matchid}
-						onhover={(t) => {
-							markT = t;
-							markUpload = t === null ? null : upload.uploadId;
-						}}
+			{#if primaryUpload}
+				<div class="flex flex-col gap-1 text-left">
+					<div class="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+						<a class="underline" href={`/uploads/${primaryUpload.uploadId}`}>
+							Upload {primaryUpload.code}
+						</a>
+						{#if primaryUpload.hasDsLog}<span>DS log</span>{/if}
+						{#if primaryUpload.hasDataLog}<span>Data log</span>{/if}
+						{#if primaryUpload.hasCsv}<span>CSV</span>{/if}
+					</div>
+					<SeriesSelect
+						items={seriesItems}
+						bind:value={selectedSeries}
+						onchange={() => loadSeries()}
+						placeholder="Add series from the team's logs"
 					/>
-				{/if}
-				<p class="text-left text-[11px] text-gray-500 dark:text-gray-400 -mt-1">
-					{upload.reason}
-					<a class="underline" href={`/uploads/${upload.uploadId}`}>Open the upload</a>
-				</p>
-			{/each}
+					{#if seriesError}
+						<p class="text-sm text-red-600 dark:text-red-400">{seriesError}</p>
+					{/if}
+					{#each seriesNotes as note}
+						<p class="text-xs text-amber-600 dark:text-amber-400">{note}</p>
+					{/each}
+				</div>
+			{/if}
+
+			{#if eventsUpload}
+				<TeamLogEvents uploadId={eventsUpload.uploadId} matchId={matchid} onhover={(t) => (markT = t)} />
+			{/if}
 
 			<div class="flex flex-col gap-2">
 				{#each match.analysis as logEvent}
@@ -240,7 +349,7 @@
 			</div>
 
 			<div class="text-left">
-				<p class="text-sm font-medium text-gray-900 dark:text-white mb-1">Select Columns</p>
+				<p class="text-sm font-medium text-gray-900 dark:text-white mb-1">Columns</p>
 				<MultiSelect items={columns} bind:value={selectedColumns} size="sm" />
 			</div>
 
@@ -254,11 +363,14 @@
 							{#each selectedColumns as col}
 								<th class="px-4 py-3">{columns.find((c) => c.value === col)?.name}</th>
 							{/each}
+							{#each overlay as serie (serie.key)}
+								<th class="px-4 py-3">{serie.label}</th>
+							{/each}
 						</tr>
 					</thead>
 					<tbody>
 						{#if match}
-							{#each log as frame}
+							{#each log as frame, frameIndex}
 								<tr
 									class="border-b text-center dark:border-gray-700 odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800"
 								>
@@ -307,6 +419,17 @@
 												>{frame[col] ? "Y" : "N"}</td
 											>
 										{/if}
+									{/each}
+									{#each overlay as serie (serie.key)}
+										{@const v = overlayAt(
+											serie,
+											(new Date(frame.timeStamp).getTime() -
+												new Date(match.start_time).getTime()) /
+												1000,
+										)}
+										<td class="px-4 py-2">
+											{v === null ? "" : serie.axis === "bool" ? (v ? "Y" : "N") : v.toFixed(2)}
+										</td>
 									{/each}
 								</tr>
 							{/each}

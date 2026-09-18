@@ -8,7 +8,7 @@ import { eventProcedure, publicProcedure, router } from "../trpc";
 import { fmsGuid } from "./logs";
 import { ghostCsaEnabled, ghostCsaTicketUrl, refreshGhostCsa, sendUploadToGhostCsa } from "../util/uploads/ghost-csa";
 import { assignUploadToEvent, linkUploadMatch, setUploadTeam, unlinkUploadMatch } from "../util/uploads/ingest";
-import { availableSeries, readSeriesData } from "../util/troubleshoot/chat/uploads";
+import { availableSeries, readSeriesData, seriesOptions } from "../util/troubleshoot/chat/uploads";
 import { readDsEvents } from "../../shared/logs/dslog";
 import { deleteBytes, loadBytes } from "../util/uploads/store";
 
@@ -372,10 +372,16 @@ export const uploadsRouter = router({
 		});
 	}),
 
-	/** Which series this upload can plot, as text for the picker's help line. */
+	/** Which series this upload can plot, as text for the assistant's prompt. */
 	seriesCatalog: eventProcedure.input(z.object({ id: z.string().uuid() })).query(async ({ ctx, input }) => {
 		await uploadOr404(input.id, ctx.event.code);
 		return { text: await availableSeries(input.id) };
+	}),
+
+	/** The same catalogue, structured, for the graph's series picker. */
+	seriesOptions: eventProcedure.input(z.object({ id: z.string().uuid() })).query(async ({ ctx, input }) => {
+		await uploadOr404(input.id, ctx.event.code);
+		return await seriesOptions(input.id);
 	}),
 
 	/**

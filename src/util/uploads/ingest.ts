@@ -246,7 +246,14 @@ async function prepareFile(
 			}
 			const summary = summarizeDsLog(result);
 			root.dsResult = result;
-			root.meta = { startTime: result.startTime, summary, stoppedEarly: result.stoppedEarly };
+			root.meta = {
+				startTime: result.startTime,
+				summary,
+				stoppedEarly: result.stoppedEarly,
+				// How many power distribution channels this session recorded, so the
+				// series picker can offer the channels that exist.
+				pdChannels: result.entries[0]?.powerDistributionCurrents.length ?? 0,
+			};
 			root.preview = clip(describeDsLog(summary, result.startTime));
 			root.writtenAt = result.startTime ?? undefined;
 			break;

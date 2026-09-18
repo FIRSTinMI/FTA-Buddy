@@ -1,15 +1,13 @@
 <script lang="ts">
-	import Icon from "@iconify/svelte";
 	import { onMount } from "svelte";
 	import { trpc } from "../../main";
 
 	/**
-	 * The Driver Station's event log as a terminal, on the match clock.
+	 * The Driver Station's own event log, on the match clock.
 	 *
-	 * The point of putting it next to the chart is the pairing: a line that says
-	 * "Input Voltage Brownout" is worth something on its own, but worth a great
-	 * deal more when you can see the voltage trace at that instant. Hovering a
-	 * line marks it on the chart.
+	 * A line reading "Input Voltage Brownout" is worth something on its own and
+	 * worth a great deal more next to the voltage trace at that instant, so
+	 * hovering a line marks the moment on the graph above.
 	 */
 	let { uploadId, matchId, onhover }: { uploadId: string; matchId: string; onhover?: (t: number | null) => void } =
 		$props();
@@ -35,15 +33,14 @@
 	}
 
 	function stamp(t: number | null): string {
-		if (t === null) return "     ";
+		if (t === null) return "      ";
 		const sign = t < 0 ? "-" : " ";
 		const a = Math.abs(t);
 		return `${sign}${String(Math.floor(a / 60)).padStart(2, "0")}:${(a % 60).toFixed(1).padStart(4, "0")}`;
 	}
 
 	function hover(line: Line) {
-		if (pinned !== null) return;
-		onhover?.(line.t);
+		if (pinned === null) onhover?.(line.t);
 	}
 
 	function pin(line: Line) {
@@ -51,42 +48,51 @@
 		onhover?.(pinned);
 	}
 
-	onMount(async () => {
+	async function load() {
+		loading = true;
+		error = null;
 		try {
-			const result = await trpc.uploads.events.query({ id: uploadId, matchId });
-			lines = result.lines;
+			lines = (await trpc.uploads.events.query({ id: uploadId, matchId })).lines;
 		} catch (err) {
-			error = err instanceof Error ? err.message : "Could not read the event log.";
+			error = err instanceof Error ? err.message : "Unable to load the event log";
 		} finally {
 			loading = false;
 		}
-	});
+	}
+
+	onMount(load);
 </script>
 
-<div class="rounded-lg border border-gray-200 dark:border-gray-700 p-2 text-left">
+<div class="text-left">
 	<div class="mb-1 flex items-center gap-2">
-		<h3 class="text-sm font-semibold text-black dark:text-white">Driver Station events</h3>
+		<p class="text-sm font-medium text-gray-900 dark:text-white">Driver Station events</p>
 		<input
 			bind:value={filter}
 			placeholder="Filter"
-			class="ml-auto w-40 rounded border border-gray-300 bg-white px-2 py-0.5 text-xs dark:border-gray-600 dark:bg-gray-800"
+			aria-label="Filter events"
+			class="ml-auto w-40 rounded-lg border border-gray-300 bg-gray-50 px-2 py-1 text-xs text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
 		/>
 		{#if pinned !== null}
-			<button class="text-xs underline text-gray-500" onclick={() => ((pinned = null), onhover?.(null))}>
-				unpin
-			</button>
+			<button
+				class="text-xs text-gray-500 underline dark:text-gray-400"
+				onclick={() => ((pinned = null), onhover?.(null))}>Unpin</button
+			>
 		{/if}
 	</div>
 
-	{#if error}
-		<p class="text-sm text-red-600 dark:text-red-400">{error}</p>
-	{:else if loading}
-		<p class="text-xs text-gray-500">Reading...</p>
+	{#if loading}
+		<p class="text-xs text-gray-500 dark:text-gray-400">Loading…</p>
+	{:else if error}
+		<p class="text-sm text-red-600 dark:text-red-400">
+			{error}
+			<button class="underline" onclick={load}>Retry</button>
+		</p>
 	{:else if lines.length === 0}
-		<p class="text-xs text-gray-500">No Driver Station event log in this upload.</p>
+		<p class="text-xs text-gray-500 dark:text-gray-400">No events</p>
 	{:else}
+		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 		<div
-			class="max-h-64 overflow-y-auto rounded bg-gray-950 p-2 font-mono text-[11px] leading-relaxed"
+			class="max-h-64 overflow-y-auto rounded-lg bg-gray-950 p-2 font-mono text-[11px] leading-relaxed"
 			onmouseleave={() => pinned === null && onhover?.(null)}
 			role="log"
 		>
@@ -96,16 +102,13 @@
 					onmouseenter={() => hover(line)}
 					onfocus={() => hover(line)}
 					onclick={() => pin(line)}
-					title="Click to pin this moment on the chart"
 				>
-					<span class="shrink-0 tabular-nums text-gray-500">{stamp(line.t)}</span>
+					<span class="shrink-0 tabular-nums whitespace-pre text-gray-500">{stamp(line.t)}</span>
 					<span class="{tone(line.text)} whitespace-pre-wrap break-words">{line.text}</span>
 				</button>
+			{:else}
+				<span class="text-gray-500">No matches</span>
 			{/each}
 		</div>
-		<p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-			<Icon icon="heroicons:cursor-arrow-rays-16-solid" class="inline size-3.5" />
-			Hover a line to mark it on the chart, click to pin it. Times are from match start.
-		</p>
 	{/if}
 </div>

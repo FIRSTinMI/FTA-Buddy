@@ -307,6 +307,75 @@ export async function availableSeries(uploadId: string): Promise<string> {
 	return lines.length > 0 ? lines.join("\n") : "This upload has no plottable series.";
 }
 
+/**
+ * The same catalogue as `availableSeries`, structured for the series picker.
+ * The prose version is written for the assistant's prompt; the UI needs the
+ * keys and their units, not sentences about them.
+ */
+export interface SeriesOption {
+	key: string;
+	label: string;
+	unit?: string;
+	axis: string;
+	/** Which log it comes from, used as the group heading in the picker. */
+	group: string;
+}
+
+export async function seriesOptions(uploadId: string): Promise<SeriesOption[]> {
+	const files = await db
+		.select({ path: teamUploadFiles.path, kind: teamUploadFiles.kind, meta: teamUploadFiles.meta })
+		.from(teamUploadFiles)
+		.where(eq(teamUploadFiles.upload_id, uploadId))
+		.execute();
+
+	const out: SeriesOption[] = [];
+	const push = (def: SeriesDef, group: string) =>
+		out.push({ key: def.key, label: def.label, unit: def.unit, axis: def.axis, group });
+
+	for (const def of FMS_SERIES) push(def, "Field monitor");
+
+	if (files.some((f) => f.kind === "dslog")) {
+		for (const def of DSLOG_SERIES) push(def, "Driver Station");
+		// Channel count is in the file's own summary, so the picker can list the
+		// channels that exist rather than a fixed 24.
+		// Uploads ingested before `pdChannels` was stored fall back to the summary,
+		// which has held one peak per channel all along.
+		const channels = Math.max(
+			0,
+			...files
+				.filter((f) => f.kind === "dslog")
+				.map((f) => {
+					const meta = f.meta as {
+						pdChannels?: number;
+						summary?: { peakChannelCurrents?: number[] };
+					} | null;
+					return meta?.pdChannels ?? meta?.summary?.peakChannelCurrents?.length ?? 0;
+				}),
+		);
+		for (const def of pdChannelSeries(channels)) push(def, "Power distribution");
+	}
+
+	for (const file of files.filter((f) => f.kind === "wpilog" || f.kind === "hoot")) {
+		const entries =
+			(file.meta as { entries?: { name: string; type: string; count: number }[] } | null)?.entries ?? [];
+		const group = file.kind === "hoot" ? `Hoot: ${file.path}` : `Data log: ${file.path}`;
+		for (const entry of entries) {
+			if (!["double", "float", "int64", "boolean"].includes(entry.type)) continue;
+			push(wpilogSeriesDef(entry.name), group);
+		}
+	}
+
+	for (const file of files.filter((f) => f.kind === "csv")) {
+		const meta = file.meta as {
+			csv?: { absoluteTime?: boolean; series?: { label: string; count: number }[] };
+		} | null;
+		if (!meta?.csv?.absoluteTime) continue;
+		for (const signal of meta.csv.series ?? []) push(csvSeriesDef(signal.label), `CSV: ${file.path}`);
+	}
+
+	return out;
+}
+
 function seriesDefFor(key: string, pdChannels: number): SeriesDef | null {
 	const fms = FMS_SERIES.find((d) => d.key === key);
 	if (fms) return fms;

@@ -97,7 +97,12 @@
 		trpc.uploads.forMatch
 			.query({ matchId: matchid })
 			.then((rows) => (teamUploads = rows))
-			.catch(() => (teamUploads = []));
+			.catch((err) => {
+				// Swallowing this made a 400 look like "no uploads for this match",
+				// which is indistinguishable from the normal empty case.
+				console.error("[station log] could not load team uploads", err);
+				teamUploads = [];
+			});
 	}
 
 	async function share() {

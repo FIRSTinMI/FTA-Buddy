@@ -5,6 +5,7 @@ import { KIND_LABELS } from "../../shared/logs/detect";
 import { db } from "../db/db";
 import { matchLogs, teamUploadFiles, teamUploadMatches, teamUploads, teamUploadShares } from "../db/schema";
 import { eventProcedure, publicProcedure, router } from "../trpc";
+import { fmsGuid } from "./logs";
 import { ghostCsaEnabled, ghostCsaTicketUrl, refreshGhostCsa, sendUploadToGhostCsa } from "../util/uploads/ghost-csa";
 import { assignUploadToEvent, linkUploadMatch, setUploadTeam, unlinkUploadMatch } from "../util/uploads/ingest";
 import { availableSeries, readSeriesData } from "../util/troubleshoot/chat/uploads";
@@ -210,7 +211,7 @@ export const uploadsRouter = router({
 		}),
 
 	linkMatch: eventProcedure
-		.input(z.object({ id: z.string().uuid(), fileId: z.string().uuid(), matchId: z.string().uuid() }))
+		.input(z.object({ id: z.string().uuid(), fileId: z.string().uuid(), matchId: fmsGuid }))
 		.mutation(async ({ ctx, input }) => {
 			await uploadOr404(input.id, ctx.event.code);
 			await linkUploadMatch({ uploadId: input.id, fileId: input.fileId, matchId: input.matchId });
@@ -218,7 +219,7 @@ export const uploadsRouter = router({
 		}),
 
 	unlinkMatch: eventProcedure
-		.input(z.object({ id: z.string().uuid(), matchId: z.string().uuid() }))
+		.input(z.object({ id: z.string().uuid(), matchId: fmsGuid }))
 		.mutation(async ({ ctx, input }) => {
 			await uploadOr404(input.id, ctx.event.code);
 			await unlinkUploadMatch(input.id, input.matchId);
@@ -319,7 +320,7 @@ export const uploadsRouter = router({
 	 * Uploads attached to one match, for the station log viewer. This is what turns
 	 * "what FMS saw" into "what FMS saw and what the team's own laptop saw".
 	 */
-	forMatch: eventProcedure.input(z.object({ matchId: z.string().uuid() })).query(async ({ ctx, input }) => {
+	forMatch: eventProcedure.input(z.object({ matchId: fmsGuid })).query(async ({ ctx, input }) => {
 		const rows = await db
 			.select({
 				uploadId: teamUploads.id,
@@ -380,7 +381,7 @@ export const uploadsRouter = router({
 		.input(
 			z.object({
 				id: z.string().uuid(),
-				matchId: z.string().uuid(),
+				matchId: fmsGuid,
 				keys: z.array(z.string().max(200)).min(1).max(8),
 				points: z.number().int().min(50).max(20_000).default(1200),
 			}),

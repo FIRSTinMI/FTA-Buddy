@@ -11,7 +11,12 @@ import { generateReport } from "../util/report-generator";
 
 // FMS generates Windows-style GUIDs which may have version nibbles outside [1-8],
 // so we use a permissive hex pattern instead of the strict RFC 4122 z.string().uuid().
-const fmsGuid = z
+/**
+ * FMS match ids look like UUIDs but are not RFC 4122: the version and variant
+ * nibbles are whatever FMS felt like, so `z.string().uuid()` rejects real ones
+ * such as `cf64c9a6-4028-a50e-3626-2b6ba4a4b9cc`. Shape only.
+ */
+export const fmsGuid = z
 	.string()
 	.regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/, "Invalid GUID");
 

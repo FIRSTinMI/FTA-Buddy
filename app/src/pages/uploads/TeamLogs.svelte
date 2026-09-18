@@ -160,7 +160,7 @@
 								· {u.file_count} file{u.file_count === 1 ? "" : "s"} · {new Date(
 									u.created_at,
 								).toLocaleString()}
-								{#if u.uploader_name}· {u.uploader_name}{/if}
+								{#if u.source !== "portal" && u.uploader_name}· {u.uploader_name}{/if}
 							</span>
 						</span>
 						<a class="underline text-xs" href={`/uploads/${u.id}`}>open</a>
@@ -202,7 +202,7 @@
 						<div class="text-xs text-gray-600 dark:text-gray-300">
 							{upload.file_count} file{upload.file_count === 1 ? "" : "s"}
 							· {upload.source === "portal" ? "from the team" : "from a volunteer"}
-							{#if upload.uploader_name}· {upload.uploader_name}{/if}
+							{#if upload.source !== "portal" && upload.uploader_name}· {upload.uploader_name}{/if}
 							{#if ghostLabel(upload)}· {ghostLabel(upload)}{/if}
 						</div>
 					</a>

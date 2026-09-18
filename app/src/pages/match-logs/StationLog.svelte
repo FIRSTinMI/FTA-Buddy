@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { Alert, Button, Label, Modal } from "flowbite-svelte";
-	import { json2csv } from "json-2-csv";
 	import type { ComponentProps } from "svelte";
 	import QrCode from "svelte-qrcode";
 	import { MCS_LOOKUP_TABLE } from "../../../../shared/constants";
@@ -287,13 +286,109 @@
 		}
 	}
 
+	/**
+	 * One CSV of everything on this page.
+	 *
+	 * Every field monitor field, not only the columns on screen, plus every
+	 * uploaded series that has been loaded, on the union of all sample times. A
+	 * field monitor value repeats down the rows it covers, which is what the
+	 * table's rowspan draws; an uploaded series is blank where it took no sample,
+	 * so the rate each source ran at survives into the file.
+	 */
+	let exporting = $state(false);
+
+	/**
+	 * Which uploaded series go in the export.
+	 *
+	 * Everything the Driver Station log holds, channel by channel, because that is
+	 * a fixed and small set that describes the match. A team's data log can carry
+	 * fifteen hundred entries, which is a database rather than a record of this
+	 * match, so from those only what is on screen goes in.
+	 */
+	function exportKeys(): string[] {
+		const fromDriverStation = seriesItems
+			.filter((item) => ["Driver Station", "Power distribution", "Derived"].includes(item.group))
+			.map((item) => item.key);
+		return [...new Set([...fromDriverStation, ...selectedSeries, ...tableSeriesKeys])];
+	}
+
 	async function exportLog() {
-		const body = json2csv(log, {});
+		exporting = true;
+		const series = [...overlay, ...tableOverlay];
+		try {
+			const upload = primaryUpload;
+			const wanted = upload ? exportKeys().filter((key) => !series.some((s) => s.key === key)) : [];
+			// The endpoint takes sixteen keys a call, so a full Driver Station log
+			// goes over in batches rather than being cut off at sixteen.
+			for (let i = 0; i < wanted.length; i += 16) {
+				const data = await trpc.uploads.series.query({
+					id: upload!.uploadId,
+					matchId: matchid,
+					keys: wanted.slice(i, i + 16),
+					points: 20_000,
+				});
+				for (const serie of data.series) {
+					series.push({
+						key: serie.key,
+						label: serie.label,
+						unit: serie.unit,
+						axis: serie.axis,
+						hz: serie.hz,
+						points: serie.points,
+					});
+				}
+			}
+		} catch (err) {
+			console.error("[station log] could not read every series for the export", err);
+		}
+
+		const unique = series.filter((serie, i, all) => all.findIndex((other) => other.key === serie.key) === i);
+		series.length = 0;
+		series.push(...unique);
+
+		const times = new Set<number>();
+		for (const t of frameTimes) times.add(Math.round(t * 1000));
+		for (const serie of series) {
+			for (const point of serie.points) if (point.v !== null) times.add(Math.round(point.t * 1000));
+		}
+		const sorted = [...times].sort((a, b) => a - b);
+
+		const fields = Object.keys(log[0] ?? {}) as (keyof FMSLogFrame)[];
+		const header = ["t", ...fields, ...series.map((serie) => serie.key)];
+
+		const cursors = series.map(() => 0);
+		let frame = 0;
+		const rows = sorted.map((ms) => {
+			const t = ms / 1000;
+			while (frame + 1 < frameTimes.length && frameTimes[frame + 1] <= t + 1e-6) frame += 1;
+			const source = log[frame];
+			const cells = [
+				t.toFixed(3),
+				...fields.map((field) => {
+					const value = source?.[field];
+					if (value === null || value === undefined) return "";
+					const text = String(value);
+					return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+				}),
+				...series.map((serie, col) => {
+					const points = serie.points;
+					while (cursors[col] < points.length && Math.round(points[cursors[col]].t * 1000) < ms)
+						cursors[col] += 1;
+					const point = points[cursors[col]];
+					return point && Math.round(point.t * 1000) === ms && point.v !== null ? String(point.v) : "";
+				}),
+			];
+			return cells.join(",");
+		});
+
+		const body = `${header.join(",")}\n${rows.join("\n")}\n`;
 		const url = URL.createObjectURL(new Blob([body], { type: "text/csv" }));
 		const a = document.createElement("a");
 		a.href = url;
 		a.download = `${match.event.toUpperCase()}-${match.level === "None" ? "Test" : match.level}-${match.match_number}-${team}.csv`;
 		a.click();
+		URL.revokeObjectURL(url);
+		exporting = false;
 	}
 
 	const analysisEventColors: {
@@ -338,7 +433,7 @@
 					<Icon icon="ion:share-outline" class="size-4 mr-1" /> Share
 				</Button>
 			{/if}
-			<Button size="sm" color="alternative" onclick={exportLog}>
+			<Button size="sm" color="alternative" onclick={exportLog} disabled={exporting}>
 				<Icon icon="mynaui:download" class="size-4 mr-1" /> Download
 			</Button>
 		</div>

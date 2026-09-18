@@ -202,7 +202,8 @@
 			<div class="rounded-lg border border-gray-200 dark:border-gray-700 p-2 flex flex-col gap-1">
 				<p class="text-xs text-gray-500">
 					{detail.upload.source === "portal" ? "Uploaded by the team" : "Uploaded by a volunteer"}
-					{#if detail.upload.uploader_name}· {detail.upload.uploader_name}{/if}
+					{#if detail.upload.source !== "portal" && detail.upload.uploader_name}· {detail.upload
+							.uploader_name}{/if}
 					· {new Date(detail.upload.created_at).toLocaleString()}
 					· team {detail.upload.team_source === "none"
 						? "not identified"

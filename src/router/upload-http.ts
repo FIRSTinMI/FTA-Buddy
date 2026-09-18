@@ -109,7 +109,9 @@ export function uploadHttpRouter(): Router {
 					files,
 					source: "portal",
 					enteredTeam: parsedTeam(fields.team),
-					uploaderName: fields.uploader?.trim() || null,
+					// The portal asks for a team number and files, nothing else. It
+					// used to take a name; we do not want one.
+					uploaderName: null,
 					ipHash,
 				});
 				res.json(result);

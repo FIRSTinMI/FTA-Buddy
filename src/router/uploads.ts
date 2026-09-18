@@ -101,7 +101,7 @@ export const uploadsRouter = router({
 					created_at: teamUploads.created_at,
 					ghost_status: teamUploads.ghost_status,
 					ghost_ticket: teamUploads.ghost_ticket,
-					file_count: sql<number>`(select count(*) from ${teamUploadFiles} where ${teamUploadFiles.upload_id} = ${teamUploads.id} and ${teamUploadFiles.parent_id} is null)`,
+					file_count: sql<number>`(select count(*)::int from ${teamUploadFiles} where ${teamUploadFiles}.upload_id = ${teamUploads}.id and ${teamUploadFiles}.parent_id is null)`,
 				})
 				.from(teamUploads)
 				.where(where)
@@ -164,7 +164,7 @@ export const uploadsRouter = router({
 				team: teamUploads.team,
 				created_at: teamUploads.created_at,
 				uploader_name: teamUploads.uploader_name,
-				file_count: sql<number>`(select count(*) from ${teamUploadFiles} where ${teamUploadFiles.upload_id} = ${teamUploads.id} and ${teamUploadFiles.parent_id} is null)`,
+				file_count: sql<number>`(select count(*)::int from ${teamUploadFiles} where ${teamUploadFiles}.upload_id = ${teamUploads}.id and ${teamUploadFiles}.parent_id is null)`,
 			})
 			.from(teamUploads)
 			.where(isNull(teamUploads.event))

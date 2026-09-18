@@ -103,10 +103,7 @@
 <Modal title="Scorekeeper Settings" bind:open onclose={onClose} outsideclose size="sm">
 	<div class="flex flex-col gap-4 text-left">
 		<div class="flex items-center justify-between gap-4">
-			<div class="min-w-0">
-				<p class="font-semibold">Fill "Not Set" scores in Test/Practice matches</p>
-				<p class="text-sm text-gray-400">Auto and endgame tower, all six robots, at commit.</p>
-			</div>
+			<p class="font-semibold min-w-0">Fill "Not Set" scores in Test/Practice matches</p>
 			<Toggle
 				bind:checked={toggleValue}
 				disabled={!available || applying}

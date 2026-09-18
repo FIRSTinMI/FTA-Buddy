@@ -245,12 +245,7 @@
 
 			{#if fieldMonitor && useSignalR && sourceMode === "fms"}
 				<div class="flex items-center justify-between gap-4 border-t border-neutral-700 pt-3">
-					<div class="text-left min-w-0">
-						<p class="font-semibold">Score Autofill</p>
-						<p class="text-sm text-gray-400">
-							Test and practice matches. Auto and endgame tower, both alliances.
-						</p>
-					</div>
+					<p class="font-semibold text-left min-w-0">Fill "Not Set" scores in Test/Practice matches</p>
 					<Toggle bind:checked={scoreAutofill} class="shrink-0" />
 				</div>
 			{/if}

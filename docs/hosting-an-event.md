@@ -41,8 +41,8 @@ Every robot's Auto Tower and Endgame Tower starts unset, and FMS will not commit
 six have a selection. During field setup nobody is on the scoring tablets, so closing out a test
 match means clicking through the whole panel first.
 
-**Score Autofill** sets all six to "None" when the match reaches the commit state, so you can commit
-straight away. It is off by default, and it only runs at the Test and Practice tournament levels -
+**Score Autofill** sets the ones still unset to "None" when the match reaches the commit state, so you
+can commit straight away. It is off by default, and it only runs at the Test and Practice tournament levels -
 in quals and playoffs it does nothing. Turn it on here, from Event Management >
 **Configure Extension**, or from the cog on the Scorekeeper page; they are all the same setting, and
 any of them changes the running extension. The Scorekeeper cog works from the scorekeeper's own
@@ -51,9 +51,10 @@ laptop - it reaches the extension through the server, not through the browser it
 It needs the Field Monitor running over SignalR against real FMS. It does not appear in Notepad Only
 Mode, scraping mode, or Cheesy Arena mode.
 
-Because FMS never sends the scoring tablets' current selections back to anyone, there is no way to
-fill in only the blanks: all six go to "None", overwriting anything a ref had already picked, and
-the tablets show the change. That is why it is limited to test and practice.
+Anything a ref did pick is left alone. The scoring tablets broadcast each change to every client, so
+FTA Buddy tracks what has been selected since prestart and only fills the gaps. A robot whose
+selection was made before FTA Buddy connected counts as unset and gets "None" - at worst that
+overwrites a selection with the value it already had, and the tablets show the change.
 
 Once the extension is detected and FMS is connected, click **Next**.
 

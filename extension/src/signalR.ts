@@ -58,32 +58,39 @@ function normalizeFmsNote(raw: any): FTANoteRecord {
 const SCORE_AUTOFILL_LEVELS: TournamentLevel[] = ["None", "Practice"];
 
 /**
- * A `ScoringElementChangedData` setting every robot's Auto Tower and Endgame
- * Tower to None. Property names are FMS's own; the hub's MessagePack `[Key(n)]`
- * attributes do not apply to us because we speak the JSON hub protocol, which
- * binds by property name (case-insensitively).
- *
- * Both dictionaries are keyed by `RobotElementChangeType` - the endgame one too,
- * despite `EndgameRobotElementChangeType` existing. Keys go out as enum *names*
- * and values as *numbers*: System.Text.Json parses an enum dictionary key with
- * `Enum.TryParse`, which takes either a name or a number, while enum values need
- * numbers unless a string converter is registered (and `JsonStringEnumConverter`
- * still accepts numbers). That pairing binds under either configuration.
- *
- * `None = 0` on both `RobotAutoClimbType` and `RobotEndGameType` (`Unknown` is
- * -1). FMS reads the endgame value as `EndgameClimbOptions[value + 1]`, so 0
- * lands on the no-climb option. The three remaining fields are inert here:
- * `ChangeSourceIsPLC` is never read, and the two `Goal_AutoDone` flags only do
- * anything while the match state is MatchTeleop.
+ * The three `RobotElementChangeType` keys, in enum order. Both of the per-robot
+ * dictionaries on `ScoringElementChangedData` use this enum - the endgame one
+ * too, despite `EndgameRobotElementChangeType` existing.
  */
-const SCORING_ELEMENT_NONE = {
-	AutoRobotData: { Robot1: 0, Robot2: 0, Robot3: 0 },
-	EndgameRobotData: { Robot1: 0, Robot2: 0, Robot3: 0 },
-	GoalPhaseCountData: {},
-	ChangeSourceIsPLC: false,
-	Blue_Goal_AutoDone: false,
-	Red_Goal_AutoDone: false,
-};
+const ROBOT_KEYS = ["Robot1", "Robot2", "Robot3"] as const;
+type RobotKey = (typeof ROBOT_KEYS)[number];
+
+/** `RobotAutoClimbType.Unknown` and `RobotEndGameType.Unknown`. Both are -1. */
+const TOWER_UNKNOWN = -1;
+/** `None` on both enums. FMS reads endgame as `EndgameClimbOptions[value + 1]`. */
+const TOWER_NONE = 0;
+
+/** What the tablets have picked this match, as far as we have seen. */
+type TowerState = Record<RobotKey, number>;
+
+function unknownTowers(): TowerState {
+	return { Robot1: TOWER_UNKNOWN, Robot2: TOWER_UNKNOWN, Robot3: TOWER_UNKNOWN };
+}
+
+/**
+ * Read a `Dictionary<RobotElementChangeType, ...>` off the wire into the
+ * matching robots. System.Text.Json writes an enum dictionary key as the
+ * numeric value in a string ("0"), but writes the name ("Robot1") when a string
+ * enum converter is registered, so accept either.
+ */
+function mergeTowerData(into: TowerState, data: Record<string, unknown> | undefined) {
+	for (const [rawKey, rawValue] of Object.entries(data ?? {})) {
+		const index = ROBOT_KEYS.indexOf(rawKey as RobotKey);
+		const key = index >= 0 ? (rawKey as RobotKey) : ROBOT_KEYS[Number(rawKey)];
+		const value = Number(rawValue);
+		if (key && Number.isFinite(value)) into[key] = value;
+	}
+}
 
 export class SignalR extends TypedEventEmitter<SourceEventMap> {
 	public connection: HubConnection | null = null;
@@ -95,6 +102,15 @@ export class SignalR extends TypedEventEmitter<SourceEventMap> {
 	private scoreAutofill = false;
 	/** level-match-play of the last autofill, so a repeated status does not resend. */
 	private lastScoreAutofillKey: string | null = null;
+	/**
+	 * Every tower selection the tablets have broadcast since the last prestart.
+	 * gameSpecificHub relays each change to every client, so watching that
+	 * stream is how we know which robots a ref has already dealt with.
+	 */
+	private towers = {
+		Red: { auto: unknownTowers(), endgame: unknownTowers() },
+		Blue: { auto: unknownTowers(), endgame: unknownTowers() },
+	};
 
 	public frame: PartialMonitorFrame = DEFAULT_MONITOR;
 	private ip: string;
@@ -117,23 +133,25 @@ export class SignalR extends TypedEventEmitter<SourceEventMap> {
 	}
 
 	/**
-	 * Fill every robot's Auto Tower and Endgame Tower with "None" so a test or
-	 * practice match can be committed without walking the scoring panel.
+	 * Fill in the tower selections a ref never made, so a test or practice match
+	 * can be committed without walking the scoring panel.
 	 *
-	 * Both selections start at Unknown (-1) and FMS refuses the commit until a
-	 * ref has picked something for all six robots - "Robot N requires a Auto
-	 * Tower selection", from ScoringIsValid in GameSpecificControllerBase.
-	 * During field setup nobody is on the tablets, so the match cannot be
-	 * closed out by hand without a lot of clicking.
+	 * Auto Tower and Endgame Tower both start at Unknown (-1) and FMS refuses the
+	 * commit until all six robots have a selection - "Robot N requires a Auto
+	 * Tower selection", from ScoringIsValid in GameSpecificControllerBase. During
+	 * field setup nobody is on the tablets, so the match cannot be closed out
+	 * without a lot of clicking.
 	 *
-	 * gameSpecificHub relays Red/BlueScoringElementsChanged verbatim to every
-	 * client (Clients.All, no filtering) and FMS applies whatever arrives
-	 * through GameSpecificMatchController.UpdateScoringElement. FMS never
-	 * broadcasts the tablets' own selections back - its RequestUpdate handlers
-	 * return Task.CompletedTask - so there is no way to tell a picked value
-	 * from an unset one, and all six have to be sent. That overwrites a ref who
-	 * did pick something, and the tablets see the change too, which is why this
-	 * is opt-in and confined to the levels in {@link SCORE_AUTOFILL_LEVELS}.
+	 * Only the entries still at Unknown are sent. The tablets broadcast each
+	 * change through gameSpecificHub to every client, so {@link towers} holds
+	 * what they have picked since prestart and a ref's own selections are left
+	 * alone. A robot we never saw a change for is treated as unset, which is the
+	 * safe direction: at worst we send None for something already None.
+	 *
+	 * FMS applies whatever arrives through
+	 * GameSpecificMatchController.UpdateScoringElement, and the hub relays with
+	 * no filtering (Clients.All), so an alliance with nothing unset gets no
+	 * message at all.
 	 */
 	private async autofillUnsetScores(level: TournamentLevel, matchNumber: number, playNumber: number) {
 		if (!this.scoreAutofill) return;
@@ -156,19 +174,69 @@ export class SignalR extends TypedEventEmitter<SourceEventMap> {
 		if (this.lastScoreAutofillKey === key) return;
 		this.lastScoreAutofillKey = key;
 
-		// invoke, not send: invoke waits for the server's completion message, so
-		// a hub method that does not exist or a payload the server cannot bind to
-		// `ScoringElementChangedData` comes back as a rejection we can log. `send`
-		// would drop both silently. This is the only thing FTA Buddy writes to
-		// FMS, so it is worth knowing when it does not land.
-		for (const method of ["RedScoringElementsChanged", "BlueScoringElementsChanged"]) {
+		for (const alliance of ["Red", "Blue"] as const) {
+			const payload = this.unsetTowerPayload(alliance);
+			if (!payload) {
+				console.log(`Score autofill: ${alliance} already set, nothing to send`);
+				continue;
+			}
+			// invoke, not send: invoke waits for the server's completion message,
+			// so a hub method that does not exist or a payload the server cannot
+			// bind to `ScoringElementChangedData` comes back as a rejection we can
+			// log. `send` would drop both silently. This is the only thing FTA
+			// Buddy writes to FMS, so it is worth knowing when it does not land.
+			const method = `${alliance}ScoringElementsChanged`;
 			try {
-				await connection.invoke(method, SCORING_ELEMENT_NONE);
-				console.log(`Score autofill: ${method} accepted`);
+				await connection.invoke(method, payload);
+				console.log(`Score autofill: ${method} accepted`, payload);
 			} catch (err) {
 				console.warn(`Score autofill: ${method} rejected:`, err);
 			}
 		}
+	}
+
+	/**
+	 * A `ScoringElementChangedData` carrying None for this alliance's robots that
+	 * are still Unknown, or null when the refs left nothing unset.
+	 *
+	 * Property names are FMS's own; the MessagePack `[Key(n)]` attributes on the
+	 * class do not apply to us because we speak the JSON hub protocol, which
+	 * binds by property name. Dictionary keys go out as enum *names* and values
+	 * as *numbers*: System.Text.Json parses an enum dictionary key with
+	 * `Enum.TryParse`, which takes either a name or a number, while enum values
+	 * need numbers unless a string converter is registered (and
+	 * `JsonStringEnumConverter` accepts numbers anyway). That pairing binds under
+	 * either configuration. The remaining fields are inert:
+	 * `ChangeSourceIsPLC` is never read and the two `Goal_AutoDone` flags only do
+	 * anything while the match state is MatchTeleop.
+	 */
+	private unsetTowerPayload(alliance: "Red" | "Blue") {
+		const state = this.towers[alliance];
+		const pick = (towers: TowerState) =>
+			Object.fromEntries(
+				ROBOT_KEYS.filter((key) => towers[key] === TOWER_UNKNOWN).map((key) => [key, TOWER_NONE]),
+			);
+
+		const AutoRobotData = pick(state.auto);
+		const EndgameRobotData = pick(state.endgame);
+		if (!Object.keys(AutoRobotData).length && !Object.keys(EndgameRobotData).length) return null;
+
+		return {
+			AutoRobotData,
+			EndgameRobotData,
+			GoalPhaseCountData: {},
+			ChangeSourceIsPLC: false,
+			Blue_Goal_AutoDone: false,
+			Red_Goal_AutoDone: false,
+		};
+	}
+
+	/** Forget last match's selections so the next one starts from Unknown. */
+	private resetTowers() {
+		this.towers = {
+			Red: { auto: unknownTowers(), endgame: unknownTowers() },
+			Blue: { auto: unknownTowers(), endgame: unknownTowers() },
+		};
 	}
 
 	private buildConnection(url: string, logPrefix: string, onRetry?: () => void): HubConnection {
@@ -251,6 +319,7 @@ export class SignalR extends TypedEventEmitter<SourceEventMap> {
 				case "WaitingForMatchPreview":
 				case "WaitingForMatchPreviewTO":
 					this.frame.field = FieldState.PRESTART_COMPLETED;
+					this.resetTowers();
 					this.frame.match = data.MatchNumber;
 					this.frame.play = data.PlayNumber;
 					this.frame.level = data.Level;
@@ -396,6 +465,20 @@ export class SignalR extends TypedEventEmitter<SourceEventMap> {
 
 		this.ftaAppHubConnection.onreconnecting(() => console.log("ftaAppHub connection lost, reconnecting"));
 		this.ftaAppHubConnection.onclose(() => console.log("ftaAppHub connection closed"));
+
+		// #region gameSpecificHub
+
+		// The tablets' changes are relayed to every client, so this is how we
+		// learn which towers a ref has already picked. FMS itself never answers
+		// with the current state - its RequestUpdate handlers return
+		// Task.CompletedTask - and nothing in the REST API exposes the live,
+		// uncommitted scoring view models, so this stream is the only source.
+		for (const alliance of ["Red", "Blue"] as const) {
+			this.gameSpecificConnection?.on(`${alliance}ScoringElementsChanged`, (data: any) => {
+				mergeTowerData(this.towers[alliance].auto, data?.AutoRobotData ?? data?.autoRobotData);
+				mergeTowerData(this.towers[alliance].endgame, data?.EndgameRobotData ?? data?.endgameRobotData);
+			});
+		}
 
 		this.gameSpecificConnection?.onreconnecting(() => console.log("gameSpecificHub connection lost, reconnecting"));
 		this.gameSpecificConnection?.onclose(() => console.log("gameSpecificHub connection closed"));

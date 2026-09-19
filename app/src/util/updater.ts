@@ -30,6 +30,14 @@ export function compareVersions(a: string, b: string): number {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.13.7": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.13.7</h1>
+        <ul>
+        <li>Click anywhere on the station log graph to jump the Driver Station events to that moment</li>
+        </ul>
+        `,
+	},
 	"2.7.13.6": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.13.6</h1>

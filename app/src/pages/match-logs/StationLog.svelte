@@ -129,6 +129,9 @@
 	/** The moment of a hovered event line, marked on the graph. */
 	let markT = $state<number | null>(null);
 
+	/** The moment clicked on the graph, which the event log scrolls to. */
+	let jumpT = $state<number | null>(null);
+
 	/**
 	 * The field monitor's battery line comes off when the team's own is plotted.
 	 * Both are the same measurement and one of them is 25 times the resolution;
@@ -461,6 +464,7 @@
 				{overlay}
 				{markT}
 				hide={hideOnGraph}
+				onpick={(t) => (jumpT = t)}
 			/>
 
 			{#if primaryUpload}
@@ -489,7 +493,12 @@
 			{/if}
 
 			{#if eventsUpload}
-				<TeamLogEvents uploadId={eventsUpload.uploadId} matchId={matchid} onhover={(t) => (markT = t)} />
+				<TeamLogEvents
+					uploadId={eventsUpload.uploadId}
+					matchId={matchid}
+					onhover={(t) => (markT = t)}
+					jumpTo={jumpT}
+				/>
 			{/if}
 
 			<div class="flex flex-col gap-2">

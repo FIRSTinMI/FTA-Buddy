@@ -30,6 +30,7 @@
 		overlay = [],
 		markT = null,
 		hide = [],
+		onpick,
 	}: {
 		log: FMSLogFrame[];
 		matchStartMs?: number;
@@ -38,6 +39,8 @@
 		hide?: string[];
 		/** Seconds from match start to mark, driven by the event log terminal. */
 		markT?: number | null;
+		/** Seconds from match start of a click anywhere in the plot. */
+		onpick?: (t: number) => void;
 	} = $props();
 
 	let chartContainer: HTMLDivElement;
@@ -500,6 +503,23 @@
 		if (!chartContainer) return;
 		chart = echarts.init(chartContainer);
 		chart.setOption(buildOption());
+
+		/**
+		 * A click anywhere in the plot reports the second it landed on.
+		 *
+		 * On the zrender canvas rather than `chart.on("click")`, which only fires
+		 * when the pointer is on a data item: at 50 Hz the points are a pixel
+		 * apart and at 2 Hz they are nowhere near where you aimed. The grid test
+		 * keeps the axis labels, the legend and the zoom slider out of it, and a
+		 * drag ends without a click, so panning does not move the log.
+		 */
+		chart.getZr().on("click", (event: { offsetX: number; offsetY: number }) => {
+			if (!onpick) return;
+			const at = [event.offsetX, event.offsetY];
+			if (!chart.containPixel("grid", at)) return;
+			const [t] = chart.convertFromPixel({ gridIndex: 0 }, at);
+			if (Number.isFinite(t)) onpick(t);
+		});
 
 		observer = new ResizeObserver(() => handleResize());
 		observer.observe(chartContainer);

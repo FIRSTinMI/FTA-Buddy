@@ -367,14 +367,22 @@
 
 	// Update checking
 
+	// The pages a team or a guest lands on, where an FTA Buddy welcome tour and a
+	// changelog are somebody else's news. Read off window.location rather than the
+	// router: this runs once, at init, before the router has resolved a path, so
+	// `route.pathname` was still "/" here and every one of these pages opened with
+	// the welcome modal over it. A team came to /upload to hand over their logs
+	// and got a carousel about live match monitoring and installing the app.
+	const landingPath = window.location.pathname;
 	update(
 		settings.version,
 		version,
 		openWelcome,
 		openChangelog,
-		route.pathname.startsWith("/logs/") ||
-			route.pathname.startsWith("/notepad/submit/") ||
-			route.pathname === "/upload",
+		landingPath.startsWith("/logs/") ||
+			landingPath.startsWith("/notepad/submit/") ||
+			landingPath.startsWith("/share/") ||
+			landingPath === "/upload",
 	);
 
 	// Toast manager

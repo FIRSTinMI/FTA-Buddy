@@ -30,6 +30,15 @@ export function compareVersions(a: string, b: string): number {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.13.6": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.13.6</h1>
+        <ul>
+        <li>The upload page now says plainly that logs arrived, with the team, event and match it worked out</li>
+        <li>The welcome tour no longer opens over the upload, shared log and public note pages</li>
+        </ul>
+        `,
+	},
 	"2.7.13.5": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.13.5</h1>

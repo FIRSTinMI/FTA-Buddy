@@ -26,21 +26,18 @@
 		duplicate: boolean;
 	}
 
-	const TEAM_SOURCE_TEXT: Record<string, string> = {
-		"log-station": "from the driver station in your data log",
-		"support-bundle": "from your support bundle",
-		"ds-network": "from the addresses in your driver station log",
-		"robot-code": "from your robot project",
-		entered: "",
-	};
-
 	let picked = $state<File[]>([]);
 	let uploading = $state(false);
 	let progress = $state(0);
 	let result = $state<Result | null>(null);
+	let scroller = $state<HTMLDivElement | null>(null);
 
 	let team = $state("");
 	let savingTeam = $state(false);
+
+	let matchLabel = $derived(
+		[...new Set((result?.matches ?? []).map((m) => `${m.level} ${m.matchNumber}`))].join(", "),
+	);
 
 	/**
 	 * The warnings worth showing a team. The two about a missing team or event are
@@ -74,6 +71,10 @@
 			if (request.status >= 200 && request.status < 300) {
 				result = JSON.parse(request.responseText) as Result;
 				picked = [];
+				// The form is taller than the result, so a team who scrolled down to
+				// read the file list is left staring at blank space where the answer
+				// is above them. Two of them uploaded twice over exactly that.
+				scroller?.scrollTo({ top: 0 });
 			} else {
 				let detail: string | undefined;
 				try {
@@ -128,53 +129,77 @@
 	}
 </script>
 
-<div class="h-full overflow-y-auto text-left">
+<div class="h-full overflow-y-auto text-left" bind:this={scroller}>
 	<div class="mx-auto flex w-full flex-col gap-3 p-3 pb-8 lg:max-w-2xl">
 		{#if result}
-			<h1 class="text-2xl font-bold text-black dark:text-white">
-				{result.duplicate ? "Already uploaded" : "Got it"}
-			</h1>
+			<!--
+				A team standing in a pit needs to see at a glance that this landed. The
+				old screen said "Got it" in the same weight as everything else, so one
+				of them uploaded the same session twice within a minute rather than
+				risk it not having worked. Colour, a tick, and their own team number
+				back are what make it unmistakable.
+			-->
+			<div
+				role="status"
+				class="flex items-center gap-3 rounded-lg border-2 p-4 {result.duplicate
+					? 'border-amber-400 bg-amber-50 dark:border-amber-600 dark:bg-amber-950/30'
+					: 'border-green-500 bg-green-50 dark:border-green-600 dark:bg-green-950/30'}"
+			>
+				<Icon
+					icon="mdi:check-circle"
+					class="size-12 shrink-0 {result.duplicate
+						? 'text-amber-500 dark:text-amber-400'
+						: 'text-green-600 dark:text-green-400'}"
+				/>
+				<div>
+					<h1 class="text-3xl font-bold text-black dark:text-white">
+						{result.duplicate ? "Already uploaded" : "Uploaded"}
+					</h1>
+					<p class="text-sm text-gray-700 dark:text-gray-200">With the CSA</p>
+				</div>
+			</div>
 
-			<div class="flex flex-col gap-2 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-				<p class="text-sm text-gray-600 dark:text-gray-300">
-					{result.files.length} file{result.files.length === 1 ? "" : "s"}
-					{result.duplicate ? "already here." : "uploaded."}
-				</p>
+			<dl
+				class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 rounded-lg border border-gray-200 p-3 text-sm dark:border-gray-700"
+			>
+				<dt class="text-gray-500 dark:text-gray-400">Files</dt>
+				<dd class="font-medium text-black dark:text-white">{result.files.length}</dd>
 
 				{#if result.team}
-					<p class="font-semibold text-green-600 dark:text-green-400">
-						Team {result.team}
-						{TEAM_SOURCE_TEXT[result.teamSource] ?? ""}
-					</p>
-				{:else}
-					<div class="flex flex-col gap-1">
-						<p class="text-sm">Which team is this?</p>
-						<div class="flex gap-2">
-							<Input
-								bind:value={team}
-								type="number"
-								inputmode="numeric"
-								placeholder="Team number"
-								disabled={savingTeam}
-								class="w-40"
-							/>
-							<Button size="sm" disabled={savingTeam || team.trim().length === 0} onclick={saveTeam}>
-								Save
-							</Button>
-						</div>
-					</div>
+					<dt class="text-gray-500 dark:text-gray-400">Team</dt>
+					<dd class="font-medium text-black dark:text-white">{result.team}</dd>
 				{/if}
 
 				{#if result.event}
-					<p class="text-sm text-gray-600 dark:text-gray-300">Filed under {result.event}.</p>
+					<dt class="text-gray-500 dark:text-gray-400">Event</dt>
+					<dd class="font-medium text-black dark:text-white">{result.event}</dd>
 				{/if}
 
-				{#if result.matches.length > 0}
-					<p class="text-sm text-gray-600 dark:text-gray-300">
-						Matched to {[...new Set(result.matches.map((m) => `${m.level} ${m.matchNumber}`))].join(", ")}.
-					</p>
+				{#if matchLabel}
+					<dt class="text-gray-500 dark:text-gray-400">Match</dt>
+					<dd class="font-medium text-black dark:text-white">{matchLabel}</dd>
 				{/if}
-			</div>
+			</dl>
+
+			{#if !result.team}
+				<div class="flex flex-col gap-1 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+					<label for="upload-team" class="text-sm font-medium text-black dark:text-white">Team</label>
+					<div class="flex gap-2">
+						<Input
+							id="upload-team"
+							bind:value={team}
+							type="number"
+							inputmode="numeric"
+							placeholder="Team number"
+							disabled={savingTeam}
+							class="w-40"
+						/>
+						<Button size="sm" disabled={savingTeam || team.trim().length === 0} onclick={saveTeam}>
+							Save
+						</Button>
+					</div>
+				</div>
+			{/if}
 
 			{#if shownWarnings.length > 0}
 				<div class="rounded-lg border-l-4 border-amber-500 bg-amber-50 p-3 dark:bg-amber-950/30">

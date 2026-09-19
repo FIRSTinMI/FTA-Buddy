@@ -30,6 +30,15 @@ export function compareVersions(a: string, b: string): number {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.13.5": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.13.5</h1>
+        <ul>
+        <li>Sending the same files twice returns the first upload instead of making a second one</li>
+        <li>Uploads can be re-read after a parser fix, so old ones pick up the team and the corrected times</li>
+        </ul>
+        `,
+	},
 	"2.7.13.4": {
 		changelog: `
         <h2 class="font-bold mt-2">Extension v1.26.26</h2>

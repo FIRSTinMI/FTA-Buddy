@@ -22,11 +22,14 @@
 		files: { path: string; kind: string; size: number }[];
 		matches: { level: string; matchNumber: number }[];
 		warnings: string[];
+		/** These exact files were already here; this is where they landed. */
+		duplicate: boolean;
 	}
 
 	const TEAM_SOURCE_TEXT: Record<string, string> = {
 		"log-station": "from the driver station in your data log",
 		"support-bundle": "from your support bundle",
+		"ds-network": "from the addresses in your driver station log",
 		"robot-code": "from your robot project",
 		entered: "",
 	};
@@ -44,7 +47,11 @@
 	 * dropped: this screen already asks for the team, and the event is a
 	 * volunteer's problem rather than theirs.
 	 */
-	let shownWarnings = $derived((result?.warnings ?? []).filter((w) => !w.startsWith("We could not work out which")));
+	let shownWarnings = $derived(
+		(result?.warnings ?? []).filter(
+			(w) => !w.startsWith("We could not work out which") && !w.startsWith("We already have these files"),
+		),
+	);
 
 	/**
 	 * XHR rather than fetch: a team's logs can be tens of megabytes on pit wifi,
@@ -124,11 +131,14 @@
 <div class="h-full overflow-y-auto text-left">
 	<div class="mx-auto flex w-full flex-col gap-3 p-3 pb-8 lg:max-w-2xl">
 		{#if result}
-			<h1 class="text-2xl font-bold text-black dark:text-white">Got it</h1>
+			<h1 class="text-2xl font-bold text-black dark:text-white">
+				{result.duplicate ? "Already uploaded" : "Got it"}
+			</h1>
 
 			<div class="flex flex-col gap-2 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
 				<p class="text-sm text-gray-600 dark:text-gray-300">
-					{result.files.length} file{result.files.length === 1 ? "" : "s"} uploaded.
+					{result.files.length} file{result.files.length === 1 ? "" : "s"}
+					{result.duplicate ? "already here." : "uploaded."}
 				</p>
 
 				{#if result.team}

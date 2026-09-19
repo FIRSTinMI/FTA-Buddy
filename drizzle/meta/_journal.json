@@ -253,6 +253,13 @@
       "when": 1789682076093,
       "tag": "0035_boring_snowbird",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1789844505128,
+      "tag": "0036_tiresome_cerebro",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import { and, eq, inArray } from "drizzle-orm";
 import { describeCsvTelemetry, readCsvTelemetry } from "../../../shared/logs/csv-telemetry";
 import { detectKind, hasAcceptedExtension, type UploadKind } from "../../../shared/logs/detect";
@@ -84,6 +84,11 @@ export interface IngestResult {
 	matches: MatchLink[];
 	/** Things a person should know: a file we could not read, a file too big, a link we could not make. */
 	warnings: string[];
+	/**
+	 * True when these exact files were already here and this is the upload they
+	 * landed in the first time. Nothing new was stored.
+	 */
+	duplicate: boolean;
 }
 
 /** No 0, O, 1, I or L: this code gets read out across a pit table and typed by hand. */
@@ -479,6 +484,94 @@ async function prepareFile(
  * Take one submission all the way in: store the bytes, parse what we can, link
  * the matches, and decide which team it belongs to.
  */
+/**
+ * Fingerprint of a submission: the SHA-256 of its files' SHA-256s, sorted.
+ *
+ * Teams send the same files twice. The portal gives back a code on a page that
+ * is easy to lose, the upload takes long enough on pit wifi to look stuck, and a
+ * volunteer standing over them says "try again". Two rows for one session is
+ * worse than it sounds: a CSA opening the team's history sees the same match
+ * twice and has to work out whether anything differs.
+ *
+ * Sorted, so the same files picked in a different order are the same
+ * submission. Bytes only and not names, because a Driver Station log renamed on
+ * the way out is still that session.
+ */
+export function submissionHash(files: IncomingFile[]): string {
+	const perFile = files.map((f) => createHash("sha256").update(f.data).digest("hex")).sort();
+	return createHash("sha256").update(perFile.join("\n")).digest("hex");
+}
+
+/**
+ * The upload these files already landed in, if they did.
+ *
+ * Scoped to the event as well as the fingerprint: the event is inferred from
+ * these same bytes, so a genuine resend always matches, while identical files
+ * that somehow belong to two different events stay apart.
+ */
+async function existingSubmission(hash: string, eventCode: string | null): Promise<string | null> {
+	const rows = await db
+		.select({ id: teamUploads.id, event: teamUploads.event })
+		.from(teamUploads)
+		.where(eq(teamUploads.submission_hash, hash))
+		.execute();
+	return rows.find((row) => (row.event ?? null) === eventCode)?.id ?? null;
+}
+
+/** Rebuild the result for an upload that already exists, for a duplicate submission. */
+async function resultForExisting(uploadId: string, warnings: string[]): Promise<IngestResult> {
+	const upload = await db.query.teamUploads.findFirst({ where: eq(teamUploads.id, uploadId) });
+	if (!upload) throw new Error("Upload not found");
+	const files = await db
+		.select({
+			id: teamUploadFiles.id,
+			path: teamUploadFiles.path,
+			kind: teamUploadFiles.kind,
+			size: teamUploadFiles.size,
+		})
+		.from(teamUploadFiles)
+		.where(eq(teamUploadFiles.upload_id, uploadId))
+		.execute();
+	const links = await db
+		.select({
+			match_id: teamUploadMatches.match_id,
+			level: teamUploadMatches.level,
+			match_number: teamUploadMatches.match_number,
+			play_number: teamUploadMatches.play_number,
+			station: teamUploadMatches.station,
+			team: teamUploadMatches.team,
+			how: teamUploadMatches.how,
+			reason: teamUploadMatches.reason,
+			start_time: matchLogs.start_time,
+		})
+		.from(teamUploadMatches)
+		.leftJoin(matchLogs, eq(matchLogs.id, teamUploadMatches.match_id))
+		.where(eq(teamUploadMatches.upload_id, uploadId))
+		.execute();
+	return {
+		id: upload.id,
+		code: upload.code,
+		event: upload.event,
+		eventWhy: upload.event_why,
+		team: upload.team,
+		teamSource: upload.team_source as TeamSource,
+		files,
+		matches: links.map((link) => ({
+			matchId: link.match_id,
+			level: link.level,
+			matchNumber: link.match_number,
+			playNumber: link.play_number,
+			startTime: link.start_time ?? new Date(0),
+			station: (link.station as MatchLink["station"]) ?? undefined,
+			team: link.team ?? undefined,
+			how: link.how as MatchLink["how"],
+			reason: link.reason,
+		})),
+		warnings,
+		duplicate: true,
+	};
+}
+
 export async function ingestUpload(params: IngestParams): Promise<IngestResult> {
 	const warnings: string[] = [];
 	const incoming = params.files.filter((f) => f.data.byteLength > 0 || hasAcceptedExtension(f.fileName));
@@ -546,6 +639,16 @@ export async function ingestUpload(params: IngestParams): Promise<IngestResult> 
 		}
 	}
 	// #endregion
+
+	// Same files, sent again. Return the upload they already landed in rather
+	// than storing a second copy, and do it here - after the event is known, but
+	// before anything is written or put in the bucket.
+	const fingerprint = submissionHash(incoming);
+	const already = await existingSubmission(fingerprint, event?.code ?? null);
+	if (already) {
+		warnings.push("We already have these files. This is the upload they came in on.");
+		return resultForExisting(already, warnings);
+	}
 
 	const candidates = await candidateMatches(event?.code);
 
@@ -688,6 +791,7 @@ export async function ingestUpload(params: IngestParams): Promise<IngestResult> 
 			uploaded_by: params.uploadedBy ?? null,
 			uploader_name: params.uploaderName?.slice(0, 120) ?? null,
 			ip_hash: params.ipHash ?? null,
+			submission_hash: fingerprint,
 		})
 		.execute();
 
@@ -781,6 +885,7 @@ export async function ingestUpload(params: IngestParams): Promise<IngestResult> 
 		files: storedFiles,
 		matches: allLinks,
 		warnings,
+		duplicate: false,
 	};
 }
 
@@ -1066,6 +1171,121 @@ export async function relinkUpload(uploadId: string, eventCode: string): Promise
 		}
 	}
 	return written;
+}
+
+/**
+ * Read an upload's stored files again and bring what was derived from them up to
+ * date: the parsed metadata, the previews, the log date, the team, and then the
+ * match links.
+ *
+ * The importer keeps improving after uploads have landed, and until now nothing
+ * could carry that back to the rows already written. The Driver Station reader
+ * was five hours out and could not name a team at all, which left real uploads
+ * filed under nobody with their match windows computed against the wrong clock.
+ *
+ * Only re-reads what the Driver Station writes - the `.dslog` and `.dsevents`
+ * pair. Data logs, Hoot files, telemetry CSVs and archives keep the metadata
+ * they were imported with, because nothing about how those are read has changed;
+ * their match links are still recomputed, by `relinkUpload` at the end.
+ *
+ * Also fills in the submission fingerprint for uploads that predate it, so a
+ * team resending those same files gets the upload they already have.
+ */
+export async function reprocessUpload(uploadId: string): Promise<{
+	files: number;
+	team: { team: number; source: TeamSource } | null;
+	logDate: Date | null;
+	links: number;
+}> {
+	const upload = await db.query.teamUploads.findFirst({ where: eq(teamUploads.id, uploadId) });
+	if (!upload) throw new Error("Upload not found");
+	const files = await db.select().from(teamUploadFiles).where(eq(teamUploadFiles.upload_id, uploadId)).execute();
+
+	const teamCandidates: { team: number; source: TeamSource }[] = [];
+	if (upload.team && upload.team_source === "entered") {
+		teamCandidates.push({ team: upload.team, source: "entered" });
+	}
+	const writtenAt: number[] = [];
+	const rootBytes: IncomingFile[] = [];
+	let rewritten = 0;
+
+	for (const file of files) {
+		// Uploads that predate the fingerprint have none, so it is worked out here
+		// from the files as stored. Root files only - the entries pulled out of an
+		// archive were never submitted in their own right.
+		let bytes: Uint8Array | null = null;
+		if (file.parent_id === null) {
+			bytes = await loadBytes(file);
+			rootBytes.push({ fileName: file.path, data: bytes });
+		}
+
+		if (file.kind === "dslog") {
+			const result = readDsLog(bytes ?? (await loadBytes(file)));
+			if (!result.parsed || !result.startTime) continue;
+			const summary = summarizeDsLog(result);
+			// matchWindows are dropped deliberately: they were measured from the old
+			// start time, and relinkUpload puts fresh ones back.
+			await db
+				.update(teamUploadFiles)
+				.set({
+					meta: {
+						startTime: result.startTime,
+						summary,
+						stoppedEarly: result.stoppedEarly,
+						pdChannels: result.entries[0]?.powerDistributionCurrents.length ?? 0,
+					},
+					text_preview: clip(describeDsLog(summary, result.startTime)),
+				})
+				.where(eq(teamUploadFiles.id, file.id))
+				.execute();
+			writtenAt.push(result.startTime);
+			rewritten++;
+		} else if (file.kind === "dsevents") {
+			const result = readDsEvents(bytes ?? (await loadBytes(file)));
+			if (!result.parsed) continue;
+			const texts = result.entries.map((e) => e.text);
+			const matchInfo = matchInfoFromDsEvents(result.entries);
+			const fromNetwork = teamFromDsEvents(texts);
+			if (fromNetwork) teamCandidates.push({ team: fromNetwork, source: "ds-network" });
+			await db
+				.update(teamUploadFiles)
+				.set({
+					meta: {
+						startTime: result.startTime,
+						eventCount: result.entries.length,
+						matchInfo,
+						dataLogName: wpilogNameFromDsEvents(texts),
+					},
+					text_preview: clip(describeDsEvents(result.entries)),
+				})
+				.where(eq(teamUploadFiles.id, file.id))
+				.execute();
+			if (result.startTime) writtenAt.push(result.startTime);
+			rewritten++;
+		} else {
+			// Untouched formats still carry a written-at, and the log date is the
+			// earliest across the whole upload.
+			const meta = file.meta as { startTime?: number } | null;
+			if (typeof meta?.startTime === "number" && meta.startTime > 0) writtenAt.push(meta.startTime);
+		}
+	}
+
+	const logDate = writtenAt.length > 0 ? new Date(Math.min(...writtenAt) * 1000) : upload.log_date;
+	const team = pickTeam(teamCandidates);
+	await db
+		.update(teamUploads)
+		.set({
+			log_date: logDate,
+			submission_hash: rootBytes.length > 0 ? submissionHash(rootBytes) : upload.submission_hash,
+			// A team a volunteer set by hand outranks anything found here: they were
+			// standing in front of the robot.
+			...(team && upload.team_source !== "entered" ? { team: team.team, team_source: team.source } : {}),
+		})
+		.where(eq(teamUploads.id, uploadId))
+		.execute();
+
+	const links = upload.event ? await relinkUpload(uploadId, upload.event) : 0;
+	return { files: rewritten, team, logDate, links };
 }
 
 /**

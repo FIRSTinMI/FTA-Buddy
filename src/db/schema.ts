@@ -879,7 +879,7 @@ export const teamUploads = pgTable(
 		event: varchar("event"),
 		event_id: uuid("event_id"),
 		team: integer("team"),
-		/** `log-station`, `support-bundle`, `robot-code`, `entered` or `none`. */
+		/** `log-station`, `support-bundle`, `ds-network`, `robot-code`, `entered` or `none`. */
 		team_source: varchar("team_source").notNull().default("none"),
 		/**
 		 * Why this landed at this event, in a sentence, since nobody types an event
@@ -898,6 +898,12 @@ export const teamUploads = pgTable(
 		created_at: timestamp("created_at").notNull().defaultNow(),
 		/** Hashed client address, for portal rate limiting only. */
 		ip_hash: varchar("ip_hash"),
+		/**
+		 * Fingerprint of the files this submission was made of, so sending the same
+		 * files twice returns the first upload instead of making a second one. See
+		 * `submissionHash`.
+		 */
+		submission_hash: varchar("submission_hash"),
 		ghost_status: ghostCsaStatusEnum("ghost_status").notNull().default("none"),
 		ghost_ticket: varchar("ghost_ticket"),
 		ghost_analysis: text("ghost_analysis"),
@@ -909,6 +915,7 @@ export const teamUploads = pgTable(
 		index("team_uploads_event_idx").on(t.event, t.created_at),
 		index("team_uploads_event_team_idx").on(t.event, t.team),
 		index("team_uploads_ghost_status_idx").on(t.ghost_status),
+		index("team_uploads_submission_hash_idx").on(t.submission_hash),
 	],
 );
 

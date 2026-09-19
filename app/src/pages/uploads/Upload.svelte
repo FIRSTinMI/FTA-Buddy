@@ -10,6 +10,16 @@
 	import { userStore } from "../../stores/user";
 	import { displayTeam } from "../../util/team-name";
 
+	/** How the team on an upload was worked out, for the provenance line. */
+	const TEAM_SOURCE_LABEL: Record<string, string> = {
+		none: "not identified",
+		"log-station": "from the data log station",
+		"support-bundle": "from the support bundle",
+		"ds-network": "from the driver station addresses",
+		"robot-code": "from the robot code",
+		entered: "set by hand",
+	};
+
 	/**
 	 * One team's upload: what they sent, what we made of it, and the two things a
 	 * CSA does next. Which are: look at the logs next to the field's own record,
@@ -205,9 +215,8 @@
 					{#if detail.upload.source !== "portal" && detail.upload.uploader_name}· {detail.upload
 							.uploader_name}{/if}
 					· {new Date(detail.upload.created_at).toLocaleString()}
-					· team {detail.upload.team_source === "none"
-						? "not identified"
-						: `from ${detail.upload.team_source.replace(/-/g, " ")}`}
+					· team {TEAM_SOURCE_LABEL[detail.upload.team_source] ??
+						detail.upload.team_source.replace(/-/g, " ")}
 					{#if detail.upload.event_why}· {detail.upload.event_why}{/if}
 				</p>
 				<div class="flex items-center gap-2 mt-1">

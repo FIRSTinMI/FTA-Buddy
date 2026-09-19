@@ -206,12 +206,18 @@ export function linkByTimestamp(
  * Which team an upload belongs to, taking the strongest evidence available.
  * An exact station from a data log beats a team number typed into the portal,
  * because the typed one is a team guessing at their own upload form.
+ *
+ * `ds-network` is the 10.TE.AM.x addresses in a Driver Station events log. It
+ * sits above `robot-code` because it is what the machine was actually doing that
+ * session, where a team number in a repo can be left over from whoever's example
+ * the code was started from.
  */
-export type TeamSource = "log-station" | "robot-code" | "support-bundle" | "entered" | "none";
+export type TeamSource = "log-station" | "support-bundle" | "ds-network" | "robot-code" | "entered" | "none";
 
 export const TEAM_SOURCE_RANK: Record<TeamSource, number> = {
-	"log-station": 4,
-	"support-bundle": 3,
+	"log-station": 5,
+	"support-bundle": 4,
+	"ds-network": 3,
 	"robot-code": 2,
 	entered: 1,
 	none: 0,

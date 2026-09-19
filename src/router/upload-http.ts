@@ -109,8 +109,10 @@ export function uploadHttpRouter(): Router {
 					files,
 					source: "portal",
 					enteredTeam: parsedTeam(fields.team),
-					// The portal asks for a team number and files, nothing else. It
-					// used to take a name; we do not want one.
+					// The portal posts files and nothing else - the team number comes
+					// out of the files, or out of the box the team is offered after
+					// the upload lands. This field stays because the volunteer-side
+					// path can send one. It used to take a name; we do not want one.
 					uploaderName: null,
 					ipHash,
 				});

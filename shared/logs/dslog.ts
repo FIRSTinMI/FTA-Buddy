@@ -58,9 +58,16 @@ export enum PowerDistributionType {
 	None,
 }
 
-/** LabVIEW timestamps count from 1904-01-01. */
+/**
+ * LabVIEW timestamps count from 1904-01-01 UTC, which is 2082844800 seconds
+ * before the Unix epoch. The constant here used to be 18000 lower - a US Eastern
+ * offset baked into what is a UTC-to-UTC conversion - so every Driver Station
+ * log decoded five hours late. That is enough to put an evening session on the
+ * next calendar day, and it moved every sample outside its own match window, so
+ * a CSA was shown whole-session battery minimums instead of match ones.
+ */
 function convertLVTime(seconds: bigint, fractional: bigint): number {
-	let time = -2082826800;
+	let time = -2082844800;
 	time += Number(seconds);
 	time += Number(fractional) / Math.pow(2, 64);
 	return time;
@@ -406,6 +413,49 @@ export interface DsEventsMatchInfo {
 const FMS_CONNECTED = /FMS Connected:\s*(Qualification|Elimination|Practice|None)\s*-\s*(\d+)/i;
 const FMS_EVENT_NAME = /FMS Event Name:\s*(.+?)\s*$/i;
 const FMS_ANY = /FMS (Connected|Event Name|Disconnect)|FMS-GOOD/i;
+
+/**
+ * Team number out of the addresses a `.dsevents` stream mentions.
+ *
+ * Everything on a team's network sits on 10.TE.AM.x, so any address the Driver
+ * Station writes down - a NetworkTables client connecting, the robot it is
+ * talking to - carries the team number in its middle two octets. This is the
+ * only place a Driver Station log says whose it is: the `.dslog` binary has no
+ * team field at all, and the text stream otherwise only names the match. Without
+ * it a team who uploads nothing but their Driver Station logs cannot be
+ * identified, which is exactly what the upload portal receives most of.
+ *
+ * Both octets are two digits by construction, so anything above 99 is not a team
+ * address: that is what keeps FMS's own 10.0.100.5 from reading as team 100.
+ * (Team 100 is 10.1.0.x, so the guard costs nothing.) The most-seen team wins,
+ * which shrugs off a stray address left over from another network earlier in the
+ * session.
+ */
+const TEAM_ADDRESS = /\b10\.(\d{1,3})\.(\d{1,3})\.\d{1,3}\b/g;
+
+export function teamFromDsEvents(texts: string[]): number | null {
+	const seen = new Map<number, number>();
+	for (const text of texts) {
+		for (const match of text.matchAll(TEAM_ADDRESS)) {
+			const high = Number(match[1]);
+			const low = Number(match[2]);
+			if (high > 99 || low > 99) continue;
+			const team = high * 100 + low;
+			if (team <= 0) continue;
+			seen.set(team, (seen.get(team) ?? 0) + 1);
+		}
+	}
+
+	let best: number | null = null;
+	let bestCount = 0;
+	for (const [team, count] of seen) {
+		if (count > bestCount) {
+			best = team;
+			bestCount = count;
+		}
+	}
+	return best;
+}
 
 export function matchInfoFromDsEvents(entries: DsEventsEntry[]): DsEventsMatchInfo {
 	const info: DsEventsMatchInfo = { fmsAttached: false };

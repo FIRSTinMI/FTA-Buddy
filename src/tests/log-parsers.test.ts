@@ -3,6 +3,7 @@ import { classifyZip, detectKind } from "../../shared/logs/detect";
 import {
 	matchInfoFromDsEvents,
 	readDsEvents,
+	teamFromDsEvents,
 	readDsLog,
 	summarizeDsLog,
 	summarizeDsLogWindow,
@@ -510,7 +511,7 @@ describe("dsevents match info", () => {
 		const pushI32 = (v: number) => chunks.push((v >> 24) & 0xff, (v >> 16) & 0xff, (v >> 8) & 0xff, v & 0xff);
 		const pushLvTime = (seconds: number) => {
 			// LabVIEW time: i64 seconds since 1904, then u64 fraction.
-			const lv = BigInt(seconds + 2082826800);
+			const lv = BigInt(seconds + 2082844800);
 			for (let i = 7; i >= 0; i--) chunks.push(Number((lv >> BigInt(i * 8)) & 0xffn));
 			for (let i = 0; i < 8; i++) chunks.push(0);
 		};
@@ -556,6 +557,43 @@ describe("dsevents match info", () => {
 
 	test("FMS attached with no match line is still reported as attached", () => {
 		expect(matchInfoFromDsEvents(readDsEvents(eventsFile(["FMS Disconnect"])).entries).fmsAttached).toBe(true);
+	});
+
+	test("the header time is the LabVIEW epoch, not five hours off it", () => {
+		// 1904-01-01 UTC is 2082844800 seconds before the Unix epoch, which is
+		// what eventsFile() writes. A US Eastern offset used to be baked into the
+		// reader, putting every Driver Station log five hours late.
+		expect(readDsEvents(eventsFile(["FMS Disconnect"])).startTime).toBe(1_700_000_000);
+	});
+});
+
+describe("team number from dsevents addresses", () => {
+	test("reads the team out of a 10.TE.AM.x address", () => {
+		expect(teamFromDsEvents(["NT: Got a NT4 connection from 10.37.67.22 port 51647"])).toBe(3767);
+	});
+
+	test("reads a two-digit and a three-digit team", () => {
+		expect(teamFromDsEvents(["NT: CONNECTED NT4 client 'shuffleboard@1' (from 10.0.33.201:50789)"])).toBe(33);
+		expect(teamFromDsEvents(["connection from 10.1.0.5 port 1735"])).toBe(100);
+	});
+
+	test("FMS at 10.0.100.5 is not team 100", () => {
+		expect(teamFromDsEvents(["FMS-GOOD, connected to 10.0.100.5"])).toBeNull();
+	});
+
+	test("the most-seen team wins over a stray address", () => {
+		expect(
+			teamFromDsEvents([
+				"connection from 10.87.28.201",
+				"connection from 10.87.28.2",
+				"earlier session on 10.12.34.5",
+			]),
+		).toBe(8728);
+	});
+
+	test("no addresses at all means no team", () => {
+		expect(teamFromDsEvents(["********** Robot program starting **********"])).toBeNull();
+		expect(teamFromDsEvents([])).toBeNull();
 	});
 });
 

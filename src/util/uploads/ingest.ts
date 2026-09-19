@@ -8,6 +8,7 @@ import {
 	readDsLog,
 	summarizeDsLog,
 	summarizeDsLogWindow,
+	teamFromDsEvents,
 	type DsEventsMatchInfo,
 	type DsLogResult,
 } from "../../../shared/logs/dslog";
@@ -273,6 +274,10 @@ async function prepareFile(
 			// when FMS attaches, which beats guessing from the clock.
 			const matchInfo = matchInfoFromDsEvents(result.entries);
 			root.dsEventsInfo = matchInfo;
+			// A Driver Station log carries no team field anywhere, so the addresses
+			// it mentions are the only thing that says whose session this was.
+			const fromNetwork = teamFromDsEvents(texts);
+			if (fromNetwork) teamCandidates.push({ team: fromNetwork, source: "ds-network" });
 			root.meta = {
 				startTime: result.startTime,
 				eventCount: result.entries.length,

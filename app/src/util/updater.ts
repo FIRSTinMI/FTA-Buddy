@@ -30,6 +30,15 @@ export function compareVersions(a: string, b: string): number {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.13.3": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.13.3</h1>
+        <ul>
+        <li>Driver Station log uploads find the team number on their own</li>
+        <li>Driver Station log times were five hours late, so match windows and battery minimums were taken from the whole session instead of the match</li>
+        </ul>
+        `,
+	},
 	"2.7.13.2": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.13.2</h1>

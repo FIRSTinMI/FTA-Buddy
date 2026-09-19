@@ -3,7 +3,7 @@ import { eventStore } from "../stores/event";
 import { settingsStore } from "../stores/settings";
 import { userStore } from "../stores/user";
 
-export const LATEST_EXTENSION_VERSION = "1.26.25";
+export const LATEST_EXTENSION_VERSION = "1.26.26";
 
 interface Version {
 	changelog?: string;
@@ -30,6 +30,14 @@ export function compareVersions(a: string, b: string): number {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.13.4": {
+		changelog: `
+        <h2 class="font-bold mt-2">Extension v1.26.26</h2>
+        <ul>
+        <li>Radio kiosk turns the whole page green when a radio programs, until the next radio</li>
+        </ul>
+        `,
+	},
 	"2.7.13.3": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.13.3</h1>

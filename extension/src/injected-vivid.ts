@@ -23,6 +23,41 @@ if (!url || !cloud || !eventCode || !eventToken) {
 
 const completedTeams: string[] = [];
 
+/**
+ * A programmed radio has to be obvious from across the pit, so the whole page
+ * turns green behind the kiosk's own card rather than just the heading.
+ *
+ * The kiosk (ghcr.io/vivid-hosting/frc-radio-kiosk) is a Next.js app whose page
+ * background is Tailwind's bg-background on <body>; <main> and the wrapper it
+ * renders into are transparent, and the status card is a shadcn Card carrying
+ * its own bg-card. So body is the only element to repaint - !important to beat
+ * the utility class - and the card still reads as a card on a green page. Do not
+ * widen this to main's children: the 2.4GHz warning is one of them.
+ *
+ * The "Success!" heading sits inside that white card, not on the page, so the
+ * background is free to be a full green-500 without costing the heading any
+ * contrast.
+ */
+const SUCCESS_CLASS = "fta-buddy-radio-success";
+const SUCCESS_STYLE_ID = "fta-buddy-radio-success-style";
+
+function installSuccessStyle() {
+	if (document.getElementById(SUCCESS_STYLE_ID)) return;
+	const style = document.createElement("style");
+	style.id = SUCCESS_STYLE_ID;
+	style.textContent = `html.${SUCCESS_CLASS},
+html.${SUCCESS_CLASS} body {
+	background-color: #22c55e !important;
+}`;
+	document.head.appendChild(style);
+}
+
+/** Green while a radio reads ACTIVE, back to normal as soon as the kiosk resets. */
+function setSuccessBackground(on: boolean) {
+	if (on) installSuccessStyle();
+	document.documentElement.classList.toggle(SUCCESS_CLASS, on);
+}
+
 function scrapeTeamList() {
 	const div = document.querySelector("div.relative.overflow-hidden > div > div > div");
 	if (!div) return;
@@ -54,9 +89,12 @@ function scrapeProgrammingPage() {
 		titleDiv.style.fontWeight = "bold";
 		titleDiv.innerText = "Success!";
 		titleDiv.style.color = "green";
+		setSuccessBackground(true);
 		const team = window.location.search.split("=")[1];
 
 		return team;
+	} else {
+		setSuccessBackground(false);
 	}
 }
 
@@ -90,5 +128,9 @@ setInterval(async () => {
 setInterval(async () => {
 	if (window.location.pathname === "/status") {
 		scrapeProgrammingPage();
+	} else {
+		// The kiosk is a single-page app, so leaving /status never reloads the
+		// document and would otherwise leave the page green.
+		setSuccessBackground(false);
 	}
 }, 200); // More frequent to make the interface update faster

@@ -11,6 +11,7 @@ import { getEvent } from "../util/get-event";
 import { generateReport } from "../util/report-generator";
 import { subscriptionQueue } from "../util/subscription";
 import { computeOvernightOffset } from "../util/frame-processing";
+import { applyScheduleOffset } from "../util/schedule-offset";
 import { getTeamAverageCycle } from "../util/team-cycles";
 import { bus } from "../util/eventBus";
 import { getChecklist, getMonitorFrame, getTiming, setTiming } from "../util/event-state";
@@ -491,8 +492,12 @@ export const cycleRouter = router({
 				extensionId: z.string().optional(),
 			}),
 		)
-		.mutation(async ({ input }) => {
-			const event = await getEvent(input.eventToken);
+		.mutation(async ({ input: postedSchedule }) => {
+			const event = await getEvent(postedSchedule.eventToken);
+
+			// Correct a schedule FMS generated on the wrong date, for the one event
+			// that needs it. No-op everywhere else. Temporary - see schedule-offset.ts.
+			const input = applyScheduleOffset(event.code, postedSchedule);
 
 			// Merge matches by (level, match) rather than replacing. FMS's
 			// GetCurrentSchedule only returns the active tournament level, so a naive

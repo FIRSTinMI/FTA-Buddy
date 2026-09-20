@@ -30,6 +30,14 @@ export function compareVersions(a: string, b: string): number {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.13.8": {
+		changelog: `
+        <h1 class="text-lg font-bold">v2.7.13.8</h1>
+        <ul>
+        <li>Troubleshooting chat now reads the screenshots posted in CSA Slack threads, not just the text</li>
+        </ul>
+        `,
+	},
 	"2.7.13.7": {
 		changelog: `
         <h1 class="text-lg font-bold">v2.7.13.7</h1>

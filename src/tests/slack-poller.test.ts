@@ -151,3 +151,64 @@ describe("helpers", () => {
 		expect(slackPermalink(null, "C1", "1.2")).toBeNull();
 	});
 });
+
+describe("image captions", () => {
+	test("a caption is appended to the message text", () => {
+		const c = buildThreadChunk(ctx, {
+			parent: {
+				ts: "1.000000",
+				text: "what is this code",
+				user: "U1",
+				reply_count: 1,
+				files: [{ id: "F1", mimetype: "image/png" }],
+				captions: ["Driver Station diagnostics tab showing ERROR 44002 No robot code."],
+			},
+			replies: [{ ts: "2.000000", text: "deploy is failing, check the rio console", user: "U2" }],
+		});
+		expect(c?.body).toBe(
+			"what is this code\n[Image: Driver Station diagnostics tab showing ERROR 44002 No robot code.]\n" +
+				"Reply: deploy is failing, check the rio console",
+		);
+	});
+
+	test("an image-only standalone is kept when the caption is long enough", () => {
+		const c = buildThreadChunk(ctx, {
+			parent: {
+				ts: "1.000000",
+				user: "U1",
+				subtype: "file_share",
+				files: [{ id: "F2", mimetype: "image/jpeg" }],
+				captions: ["Radio with a solid red power LED and no 2.4GHz or 6GHz light, PoE cable plugged in."],
+			},
+			replies: [],
+		});
+		expect(c?.body).toBe(
+			"[Image: Radio with a solid red power LED and no 2.4GHz or 6GHz light, PoE cable plugged in.]",
+		);
+	});
+
+	test("an image-only standalone with no readable caption is skipped", () => {
+		const c = buildThreadChunk(ctx, {
+			parent: { ts: "1.000000", user: "U1", subtype: "file_share", files: [{ id: "F3", mimetype: "image/png" }] },
+			replies: [],
+		});
+		expect(c).toBeNull();
+	});
+
+	test("an image-only reply is kept in the body", () => {
+		const c = buildThreadChunk(ctx, {
+			parent: { ts: "1.000000", text: longText, user: "U1", reply_count: 1 },
+			replies: [
+				{
+					ts: "2.000000",
+					user: "U2",
+					files: [{ id: "F4", mimetype: "image/png" }],
+					captions: ["Phoenix Tuner device list with one Talon FX reporting a duplicate CAN ID."],
+				},
+			],
+		});
+		expect(c?.body).toBe(
+			`${longText}\nReply: [Image: Phoenix Tuner device list with one Talon FX reporting a duplicate CAN ID.]`,
+		);
+	});
+});

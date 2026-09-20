@@ -15,6 +15,7 @@ import { listSessionConversations, slackWebApi, type SlackSession } from "../sla
 import { upsertChunks } from "./chunks";
 import { runDistillation } from "./distill";
 import { buildThreadChunk, isThreadParent, type SlackChannelContext, type SlackMessage } from "./slack-chunks";
+import { SlackImageCaptioner, type ImageAuth } from "./slack-images";
 
 // #region Config
 export const LOCK_NAME = "troubleshoot-slack-poller";
@@ -87,6 +88,8 @@ export interface PollStats {
 	channels: number;
 	threads: number;
 	chunks: number;
+	/** Images read and captioned into the chunks (see slack-images.ts). */
+	captions: number;
 	requests: number;
 	errors: number;
 	skippedSources: number;
@@ -160,6 +163,7 @@ async function pollChannel(
 	pacer: Pacer,
 	source: PollSource,
 	ctx: SlackChannelContext,
+	captioner: SlackImageCaptioner,
 	stats: PollStats,
 ): Promise<void> {
 	const key = cursorKey(source.teamId, ctx.channelId);
@@ -188,6 +192,8 @@ async function pollChannel(
 			if (!isThreadParent(parent)) continue;
 			const replies = (parent.reply_count ?? 0) > 0 ? await fetchReplies(pacer, ctx.channelId, parent.ts) : [];
 			threads++;
+			// Screenshots carry most of the detail in a CSA thread, so read them before building the chunk.
+			await captioner.attach([parent, ...replies], ctx.channelName);
 			const chunk = buildThreadChunk(ctx, { parent, replies });
 			if (chunk) rows.push(chunk);
 		}
@@ -209,8 +215,15 @@ async function pollChannel(
 // #region Source pass
 const teamDomains = new Map<string, string | null>();
 
+function imageAuth(source: PollSource): ImageAuth {
+	return source.kind === "session" && source.session
+		? { kind: "session", session: source.session }
+		: { kind: "token", token: source.token };
+}
+
 async function pollSource(source: PollSource, stats: PollStats, renew: () => Promise<void>): Promise<void> {
 	const pacer = new Pacer(source, renew);
+	const captioner = new SlackImageCaptioner(imageAuth(source));
 	try {
 		if (source.kind === "session" && source.session) {
 			teamDomains.set(source.teamId, source.session.teamDomain);
@@ -247,6 +260,7 @@ async function pollSource(source: PollSource, stats: PollStats, renew: () => Pro
 					pacer,
 					source,
 					{ teamId: source.teamId, teamDomain, channelId: ch.id, channelName: ch.name },
+					captioner,
 					stats,
 				);
 			} catch (err) {
@@ -290,6 +304,7 @@ async function pollSource(source: PollSource, stats: PollStats, renew: () => Pro
 		);
 	} finally {
 		stats.requests += pacer.requests;
+		stats.captions += captioner.captioned;
 	}
 }
 
@@ -350,6 +365,7 @@ export function runSlackPollPass(): Promise<PollStats> {
 			channels: 0,
 			threads: 0,
 			chunks: 0,
+			captions: 0,
 			requests: 0,
 			errors: 0,
 			skippedSources: 0,
@@ -378,7 +394,7 @@ export function runSlackPollPass(): Promise<PollStats> {
 		}
 		const secs = Math.round((Date.now() - started) / 1000);
 		console.log(
-			`[SlackPoller] pass done in ${secs}s: ${stats.sources} sources, ${stats.channels} channels, ${stats.threads} threads, ${stats.chunks} chunks, ${stats.requests} requests, ${stats.errors} errors, ${stats.skippedSources} revoked`,
+			`[SlackPoller] pass done in ${secs}s: ${stats.sources} sources, ${stats.channels} channels, ${stats.threads} threads, ${stats.chunks} chunks, ${stats.captions} captions, ${stats.requests} requests, ${stats.errors} errors, ${stats.skippedSources} revoked`,
 		);
 		return stats;
 	})();

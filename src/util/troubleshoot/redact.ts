@@ -15,6 +15,16 @@ const SLACK_CHANNEL = /<#[A-Z0-9]+\|([^>]*)>/g;
 // "TCP 1735", "UDP 1180 to 1190", "port 5800-5810", "ports 5810 and 5811".
 const PORT_CONTEXT = /\b(?:tcp|udp|ports?)\b(?:\s*(?:and|or|to|\/|,|-|&)?\s*\d{2,5})+/gi;
 
+// Years look like team numbers too. Only a 20xx number in a date context counts as a year:
+// "in 2027", "since 2025", "September 2026", or "2027 season", "2027 kickoff". Team
+// numbers 2000 to 2099 exist, so "2056 had a CAN break", "after 2056 left" and
+// "in 2056's pit" are still redacted.
+const YEAR_CONTEXT = new RegExp(
+	"\\b(?:(?:in|since|during|early|mid|late|fall|spring|summer|winter|jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\\s+20\\d{2}\\b(?!['’]s|\\s+(?:pit|robot|bot|team)\\b)" +
+		"|\\b20\\d{2}(?=\\s+(?:season|seasons|offseason|kickoff|game|games|rules|championship|control\\s+system|game\\s+manual)\\b))",
+	"gi",
+);
+
 const SLACK_LINK = /<(https?:\/\/[^|>]+)(\|[^>]*)?>/g;
 
 export function redactTeamNumbers(input: string): string {
@@ -26,10 +36,11 @@ export function redactTeamNumbers(input: string): string {
 		.replace(SLACK_CHANNEL, "#$1")
 		.replace(SLACK_LINK, "$1");
 	out = out.replace(EVENT_CODE, "[event]");
-	// Port numbers look exactly like team numbers. Park them before the bare-number pass
-	// and put them back after, so "TCP 1735" and "5800 to 5810" survive intact.
-	const ports: string[] = [];
-	out = out.replace(PORT_CONTEXT, (m) => `\u0000P${ports.push(m) - 1}\u0000`);
+	// Port numbers and years look exactly like team numbers. Park them before the bare-number
+	// pass and put them back after, so "TCP 1735", "5800 to 5810" and "the 2027 season" survive.
+	const parked: string[] = [];
+	const park = (m: string) => `\u0000P${parked.push(m) - 1}\u0000`;
+	out = out.replace(PORT_CONTEXT, park).replace(YEAR_CONTEXT, park);
 	out = out.replace(TEAM_WORD, "$1 ####");
 	// Bare 3 to 5 digit numbers that are not followed by a unit are treated as team numbers.
 	// "70 A" and "6.2 V" survive; "3641 had a CAN break" becomes "#### had a CAN break".
@@ -37,6 +48,6 @@ export function redactTeamNumbers(input: string): string {
 		if (unit && UNITS.test(unit)) return m;
 		return `${pre}####${ws}${unit ?? ""}`;
 	});
-	out = out.replace(/\u0000P(\d+)\u0000/g, (_m, i: string) => ports[Number(i)]);
+	out = out.replace(/\u0000P(\d+)\u0000/g, (_m, i: string) => parked[Number(i)]);
 	return out;
 }

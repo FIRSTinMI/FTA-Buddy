@@ -66,12 +66,12 @@ Rules:
 
 - No team numbers, event names or people. The redactor catches numbers, it cannot catch a venue name.
 - Say what you saw, not what you assume. "The DS log showed voltage collapsing" beats "the battery was probably bad".
-- Numbers with units are fine (70 A, 12 V, 20 ms). A bare three to five digit number will be redacted to `####`, so write `100%` rather than `100 percent`.
+- Numbers with units are fine (70 A, 12 V, 20 ms). A bare three to five digit number will be redacted to `####`, so write `100%` rather than `100 percent`. Years survive in a date context ("in 2027", "the 2027 season", "September 2026"); a year on its own does not.
 
 Then run `bun run corpus:notes`. The folder is the source of truth: the loader replaces the whole `note` source, so deleting a file removes it from search.
 
 ## The redaction rule
 
-`upsertChunks()` runs `redactTeamNumbers()` over title, heading and body of every row before it is written, whatever the source. It replaces event codes (`2026micmp`), `team 1234` forms and bare 3 to 5 digit numbers not followed by a unit with `####`, and strips Slack user mentions. So a Slack thread or ticket that says "3641 had a CAN break" is stored as "#### had a CAN break".
+`upsertChunks()` runs `redactTeamNumbers()` over title, heading and body of every row before it is written, whatever the source. It replaces event codes (`2026micmp`), `team 1234` forms and bare 3 to 5 digit numbers not followed by a unit with `####`, and strips Slack user mentions. So a Slack thread or ticket that says "3641 had a CAN break" is stored as "#### had a CAN break". Port numbers (`TCP 1735`) and years in a date context (`in 2027`, `2027 season`, `2027 kickoff`) are kept. The year words are deliberately narrow because teams 2000 to 2099 exist: "the 2056 robot" and "after 2056 left" are still redacted. `src/tests/redact.test.ts` holds the cases.
 
 That is the last line of defence, not the first. `load-tickets.ts` never selects `team`, `event_code`, `author_id`, `resolved_by_id` or display names, so they cannot reach the corpus at all. Keep it that way: if you add a field to a ticket chunk, ask whether it identifies a team, an event or a person before you add it.

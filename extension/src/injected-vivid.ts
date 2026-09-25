@@ -37,6 +37,14 @@ const completedTeams: string[] = [];
  * The "Success!" heading sits inside that white card, not on the page, so the
  * background is free to be a full green-500 without costing the heading any
  * contrast.
+ *
+ * The green goes on <html> and <body> is made transparent, not the other way
+ * round. The kiosk's own confetti is a canvas at z-index -10, and a negative
+ * z-index layer paints above the root background but below body's own
+ * background. A green body therefore hid the confetti completely. The kiosk's
+ * confetti is also the canvas-confetti default rainbow, which includes a green
+ * that disappears on this page, so it is hidden and replaced with a gold burst
+ * of our own drawn above everything.
  */
 const SUCCESS_CLASS = "fta-buddy-radio-success";
 const SUCCESS_STYLE_ID = "fta-buddy-radio-success-style";
@@ -45,17 +53,82 @@ function installSuccessStyle() {
 	if (document.getElementById(SUCCESS_STYLE_ID)) return;
 	const style = document.createElement("style");
 	style.id = SUCCESS_STYLE_ID;
-	style.textContent = `html.${SUCCESS_CLASS},
-html.${SUCCESS_CLASS} body {
+	style.textContent = `html.${SUCCESS_CLASS} {
 	background-color: #22c55e !important;
+}
+html.${SUCCESS_CLASS} body {
+	background-color: transparent !important;
+}
+html.${SUCCESS_CLASS} canvas[class~="z-[-10]"] {
+	display: none !important;
 }`;
 	document.head.appendChild(style);
 }
+
+const GOLD = ["#ffd700", "#ffc400", "#f5b301", "#ffe27a", "#daa520"];
+
+/** Two gold cannons from the bottom corners, drawn above the kiosk's card. */
+function fireGoldConfetti() {
+	const canvas = document.createElement("canvas");
+	canvas.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:2147483647";
+	document.body.appendChild(canvas);
+	const ctx = canvas.getContext("2d");
+	if (!ctx) {
+		canvas.remove();
+		return;
+	}
+	canvas.width = window.innerWidth;
+	canvas.height = window.innerHeight;
+
+	const particles = Array.from({ length: 200 }, (_, i) => {
+		const side = i % 2 === 0 ? 1 : -1;
+		return {
+			x: side === 1 ? 0 : canvas.width,
+			y: canvas.height * 0.8,
+			vx: side * (6 + Math.random() * 12),
+			vy: -(10 + Math.random() * 14),
+			color: GOLD[Math.floor(Math.random() * GOLD.length)],
+			w: 8 + Math.random() * 8,
+			h: 10 + Math.random() * 8,
+			rot: Math.random() * Math.PI * 2,
+			rotV: (Math.random() - 0.5) * 0.3,
+		};
+	});
+
+	let tick = 0;
+	function animate() {
+		ctx!.clearRect(0, 0, canvas.width, canvas.height);
+		for (const p of particles) {
+			p.x += p.vx;
+			p.y += p.vy;
+			p.vy += 0.4;
+			p.vx *= 0.99;
+			p.rot += p.rotV;
+			ctx!.save();
+			ctx!.translate(p.x, p.y);
+			ctx!.rotate(p.rot);
+			ctx!.fillStyle = p.color;
+			ctx!.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+			// A dark gold edge keeps each piece distinct against the green.
+			ctx!.strokeStyle = "#8a6400";
+			ctx!.lineWidth = 1.5;
+			ctx!.strokeRect(-p.w / 2, -p.h / 2, p.w, p.h);
+			ctx!.restore();
+		}
+		if (++tick < 240) requestAnimationFrame(animate);
+		else canvas.remove();
+	}
+	requestAnimationFrame(animate);
+}
+
+let successShown = false;
 
 /** Green while a radio reads ACTIVE, back to normal as soon as the kiosk resets. */
 function setSuccessBackground(on: boolean) {
 	if (on) installSuccessStyle();
 	document.documentElement.classList.toggle(SUCCESS_CLASS, on);
+	if (on && !successShown) fireGoldConfetti();
+	successShown = on;
 }
 
 function scrapeTeamList() {

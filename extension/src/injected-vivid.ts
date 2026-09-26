@@ -265,6 +265,8 @@ function simplifyConnectPage() {
  * spinner, "Programming", the team and "Do not unplug". The checks stay under
  * it, with the pending ones as a grey pulsing dot instead of a red cross. The
  * kiosk's header comes back the moment it is done, under the green page.
+ * The page itself is amber while it works, the same way it turns green when
+ * done, so the state reads from across the pit.
  *
  * The panel is inserted into the kiosk's Card and the header is hidden with
  * CSS rather than removed, so React's nodes are never touched.
@@ -311,6 +313,12 @@ function installKioskStyle() {
 	font-size: 1.25rem;
 	font-weight: 700;
 	color: #b91c1c;
+}
+html.${PROGRAMMING_CLASS} {
+	background-color: #f59e0b !important;
+}
+html.${PROGRAMMING_CLASS} body {
+	background-color: transparent !important;
 }
 html.${PROGRAMMING_CLASS} [data-fb-card] > :first-child {
 	display: none !important;

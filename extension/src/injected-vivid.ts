@@ -555,7 +555,7 @@ function scrapeProgrammingPage() {
 		if (!document.getElementById(DISCONNECT_ID)) {
 			const line = document.createElement("p");
 			line.id = DISCONNECT_ID;
-			line.textContent = "You may now disconnect the radio";
+			line.textContent = "You may now unplug the radio";
 			line.style.cssText = "font-size:1.125rem;font-weight:600;margin-top:0.25rem";
 			titleDiv.insertAdjacentElement("afterend", line);
 		}

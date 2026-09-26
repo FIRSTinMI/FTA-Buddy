@@ -3,7 +3,7 @@ import { eventStore } from "../stores/event";
 import { settingsStore } from "../stores/settings";
 import { userStore } from "../stores/user";
 
-export const LATEST_EXTENSION_VERSION = "1.26.29";
+export const LATEST_EXTENSION_VERSION = "1.26.30";
 
 interface Version {
 	changelog?: string;
@@ -32,7 +32,7 @@ export function compareVersions(a: string, b: string): number {
 export const VERSIONS: { [key: string]: Version } = {
 	"2.7.13.11": {
 		changelog: `
-        <h2 class="font-bold mt-2">Extension v1.26.29</h2>
+        <h2 class="font-bold mt-2">Extension v1.26.30</h2>
         <ul>
         <li>Radio kiosk: the connect page keeps the kiosk's own spinner after Program; no "Programming" panel left on the success or waiting screens</li>
         </ul>

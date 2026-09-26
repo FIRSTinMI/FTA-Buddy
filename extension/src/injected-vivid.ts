@@ -141,11 +141,11 @@ function setSuccessBackground(on: boolean) {
  * alarms people), the firmware version, an instruction sentence, the field and
  * "Numeric only". Students stall on the warning.
  *
- * This cuts it to two: the team number, large, and a large button that names
- * the team it will program. The kiosk (v2.0.1) already prefills the field with
- * the radio's current team, so the usual case is check the number, press the
- * button. With no team on the radio the field is empty and focused, and the
- * button stays disabled until a number is in it. The firmware line and reflash
+ * This cuts it to two: the team number, large, and a large "Program Radio"
+ * button. The kiosk (v2.0.1) already prefills the field with the radio's
+ * current team, so the usual case is check the number, press the button. With
+ * no team on the radio the field is empty and focused, and the button stays
+ * disabled until a number is in it. The firmware line and reflash
  * link stay, small, under the button for the FTA.
  *
  * Markup, from the v2.0.1 bundle: a flex column holding [info div (current
@@ -252,8 +252,7 @@ function simplifyConnectPage() {
 
 	const team = input.value.trim();
 	const valid = /^\d{1,5}$/.test(team) && Number(team) > 0;
-	const text = valid ? `Program team ${team}` : "Program";
-	if (button.textContent !== text) button.textContent = text;
+	if (button.textContent !== "Program Radio") button.textContent = "Program Radio";
 	if (button.disabled === valid) button.disabled = !valid;
 }
 

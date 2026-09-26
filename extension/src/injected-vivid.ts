@@ -242,6 +242,9 @@ function simplifyConnectPage() {
 		if (input.value === "") input.focus();
 		// Typing a different team replaces the detected one instead of appending.
 		input.addEventListener("focus", () => input.select());
+		form.addEventListener("submit", () => {
+			lastProgrammedTeam = input.value.trim() || null;
+		});
 	}
 
 	const team = input.value.trim();
@@ -249,6 +252,237 @@ function simplifyConnectPage() {
 	const text = valid ? `Program team ${team}` : "Program";
 	if (button.textContent !== text) button.textContent = text;
 	if (button.disabled === valid) button.disabled = !valid;
+}
+
+/**
+ * While the radio programs, the kiosk's /status card lists Team, Status,
+ * Version and WPA Key with red crosses next to everything not done yet, and a
+ * small spinner in the corner. Students read the red crosses as failure. Until
+ * the radio is done, the card's contents are swapped for one panel: a large
+ * spinner, "Programming", the team and "Do not unplug". The kiosk's own
+ * contents come back the moment it is done, under the green success page.
+ *
+ * The panel is appended to the kiosk's Card and the Card's own children are
+ * hidden with CSS rather than removed, so React's nodes are never touched.
+ */
+const PROGRAMMING_CLASS = "fta-buddy-programming";
+const PROGRAMMING_PANEL_ID = "fta-buddy-programming-panel";
+const KIOSK_STYLE_ID = "fta-buddy-kiosk-style";
+
+function installKioskStyle() {
+	if (document.getElementById(KIOSK_STYLE_ID)) return;
+	const style = document.createElement("style");
+	style.id = KIOSK_STYLE_ID;
+	style.textContent = `@keyframes fta-buddy-spin {
+	to { transform: rotate(360deg); }
+}
+.fta-buddy-panel {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 2.5rem 1.5rem;
+	text-align: center;
+}
+.fta-buddy-spinner {
+	width: 7rem;
+	height: 7rem;
+	border-radius: 9999px;
+	border: 0.75rem solid hsl(var(--muted));
+	border-top-color: #2563eb;
+	animation: fta-buddy-spin 0.9s linear infinite;
+	margin-bottom: 1rem;
+}
+.fta-buddy-panel-title {
+	font-size: 2.5rem;
+	font-weight: 700;
+	line-height: 1.1;
+}
+.fta-buddy-panel-team {
+	font-size: 1.75rem;
+	font-weight: 600;
+}
+.fta-buddy-panel-warn {
+	margin-top: 0.5rem;
+	font-size: 1.25rem;
+	font-weight: 700;
+	color: #b91c1c;
+}
+html.${PROGRAMMING_CLASS} [data-fb-card] > :not(#${PROGRAMMING_PANEL_ID}) {
+	display: none !important;
+}
+html.${OUTOFDATE_CLASS} [data-fb-ood="container"] {
+	width: 32rem;
+	max-width: calc(100vw - 2rem);
+	align-items: stretch;
+	text-align: center;
+	gap: 1.5rem;
+}
+html.${OUTOFDATE_CLASS} [data-fb-ood="title"] {
+	font-size: 2.5rem;
+}
+html.${OUTOFDATE_CLASS} [data-fb-ood="sentence"] {
+	display: none !important;
+}
+html.${OUTOFDATE_CLASS} [data-fb-ood="buttons"] {
+	flex-direction: column-reverse;
+	gap: 1rem;
+}
+html.${OUTOFDATE_CLASS} [data-fb-ood="buttons"] > a,
+html.${OUTOFDATE_CLASS} [data-fb-ood="buttons"] button {
+	width: 100%;
+}
+html.${OUTOFDATE_CLASS} [data-fb-ood="upgrade"] {
+	height: 5rem;
+	font-size: 2rem;
+	font-weight: 700;
+}
+html.${OUTOFDATE_CLASS} [data-fb-ood="back"] {
+	height: 3rem;
+	font-size: 1.1rem;
+}
+.fta-buddy-versions {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 1.25rem;
+	font-family: ui-monospace, monospace;
+	font-size: 2.5rem;
+	font-weight: 700;
+}
+.fta-buddy-versions-old {
+	color: #b91c1c;
+}
+.fta-buddy-versions-label {
+	font-family: ui-sans-serif, system-ui, sans-serif;
+	font-size: 0.9rem;
+	font-weight: 500;
+	color: hsl(var(--muted-foreground));
+	display: block;
+}`;
+	document.head.appendChild(style);
+}
+
+function programmingPanel(team: string | null): HTMLElement {
+	const panel = document.createElement("div");
+	panel.className = "fta-buddy-panel";
+	const spinner = document.createElement("div");
+	spinner.className = "fta-buddy-spinner";
+	const title = document.createElement("div");
+	title.className = "fta-buddy-panel-title";
+	title.textContent = "Programming";
+	panel.append(spinner, title);
+	if (team) {
+		const teamEl = document.createElement("div");
+		teamEl.className = "fta-buddy-panel-team";
+		teamEl.textContent = `Team ${team}`;
+		panel.append(teamEl);
+	}
+	const warn = document.createElement("div");
+	warn.className = "fta-buddy-panel-warn";
+	warn.textContent = "Do not unplug";
+	panel.append(warn);
+	return panel;
+}
+
+/** Programming panel over the /status card while the radio is not done yet. */
+function setProgrammingPanel(card: HTMLElement | null, on: boolean) {
+	document.documentElement.classList.toggle(PROGRAMMING_CLASS, on && !!card);
+	const existing = document.getElementById(PROGRAMMING_PANEL_ID);
+	if (!on || !card) {
+		existing?.remove();
+		return;
+	}
+	installKioskStyle();
+	card.dataset.fbCard = "1";
+	if (existing?.parentElement === card) return;
+	existing?.remove();
+	const panel = programmingPanel(new URLSearchParams(window.location.search).get("team"));
+	panel.id = PROGRAMMING_PANEL_ID;
+	card.appendChild(panel);
+}
+
+/**
+ * The same panel on /connect for the second or two between pressing Program
+ * and the kiosk moving to /status, where the kiosk shows only a bare spinner.
+ */
+const CONNECT_PROGRAMMING_ID = "fta-buddy-connect-programming";
+let lastProgrammedTeam: string | null = null;
+
+function showConnectProgramming() {
+	const main = document.querySelector("main");
+	const form = main?.querySelector("form");
+	const spinner = main?.querySelector(":scope > svg.animate-spin, :scope > div > svg.animate-spin") as SVGElement | null;
+	const existing = document.getElementById(CONNECT_PROGRAMMING_ID);
+	if (!main || form || !spinner || !lastProgrammedTeam) {
+		existing?.remove();
+		if (spinner) spinner.style.removeProperty("display");
+		return;
+	}
+	if (existing) return;
+	installKioskStyle();
+	spinner.style.display = "none";
+	const panel = programmingPanel(lastProgrammedTeam);
+	panel.id = CONNECT_PROGRAMMING_ID;
+	spinner.insertAdjacentElement("afterend", panel);
+}
+
+/**
+ * /connect/outofdate is one sentence ("Firmware must be updated from version
+ * X to a minimum version of Y to proceed") and two small buttons, Back first.
+ * It becomes the two versions, large, old one red, and one large "Update
+ * firmware" button with Back small underneath. The page is a server component
+ * with no client state, so rewriting its button text is safe.
+ */
+const OUTOFDATE_CLASS = "fta-buddy-outofdate";
+
+function simplifyOutOfDatePage() {
+	const title =
+		document.querySelector('main h1[data-fb-ood="title"]') ??
+		Array.from(document.querySelectorAll("main h1")).find((h) => h.textContent?.includes("Out of Date"));
+	const container = title?.parentElement;
+	const sentence = container?.querySelector("p");
+	const samps = sentence ? Array.from(sentence.querySelectorAll("samp")) : [];
+	const buttons = container?.querySelector("div.flex");
+	const back = buttons?.querySelector('a[href="/connect"] button') as HTMLButtonElement | null;
+	const upgrade = buttons?.querySelector('a[href="/upgrade"] button') as HTMLButtonElement | null;
+	if (!title || !container || !sentence || samps.length < 2 || !buttons || !back || !upgrade) {
+		document.documentElement.classList.remove(OUTOFDATE_CLASS);
+		return;
+	}
+	installKioskStyle();
+	document.documentElement.classList.add(OUTOFDATE_CLASS);
+	mark2(container, "container");
+	mark2(title, "title");
+	mark2(sentence, "sentence");
+	mark2(buttons, "buttons");
+	mark2(back, "back");
+	mark2(upgrade, "upgrade");
+	if (title.textContent !== "Firmware update") title.textContent = "Firmware update";
+	if (upgrade.textContent !== "Update firmware") upgrade.textContent = "Update firmware";
+	if (back.textContent !== "Back") back.textContent = "Back";
+	if (!container.querySelector(".fta-buddy-versions")) {
+		const [from, to] = samps.map((el) => el.textContent ?? "");
+		const versions = document.createElement("div");
+		versions.className = "fta-buddy-versions";
+		const cell = (label: string, value: string, cls: string) => {
+			const el = document.createElement("div");
+			el.className = cls;
+			const l = document.createElement("span");
+			l.className = "fta-buddy-versions-label";
+			l.textContent = label;
+			el.append(l, value);
+			return el;
+		};
+		const arrow = document.createElement("div");
+		arrow.textContent = "\u2192";
+		versions.append(cell("Radio", from, "fta-buddy-versions-old"), arrow, cell("Required", to, ""));
+		sentence.insertAdjacentElement("afterend", versions);
+	}
+}
+
+function mark2(el: Element, role: string) {
+	if ((el as HTMLElement).dataset.fbOod !== role) (el as HTMLElement).dataset.fbOod = role;
 }
 
 function scrapeTeamList() {
@@ -272,11 +506,20 @@ function scrapeProgrammingPage() {
 	const statusDiv = document.querySelector(
 		"div.p-6.pt-0.flex.flex-col.gap-y-4 > div:nth-child(2) > p.text-sm.text-muted-foreground",
 	) as HTMLParagraphElement;
-	const titleDiv = document.querySelector(
-		"body > main > div:nth-child(1) > div > div > div > p",
-	) as HTMLParagraphElement;
-	if (!statusDiv || !titleDiv) return;
-	if (statusDiv.innerText === "ACTIVE") {
+	const card = statusDiv?.closest("div.rounded-lg.border") as HTMLElement | null;
+	// The Card's title. Not a path from <main>: the "No team keys are loaded"
+	// alert, when shown, is main's first child and shifts every nth-child.
+	const titleDiv = card?.querySelector(".text-2xl") as HTMLParagraphElement | null;
+	if (!statusDiv || !titleDiv) {
+		setProgrammingPanel(null, false);
+		return;
+	}
+	// The kiosk calls it done only when team, status and WPA key all tick green.
+	// Right after Program the radio can still read ACTIVE on its old settings,
+	// so ACTIVE alone would flash the success page early.
+	const done = statusDiv.innerText === "ACTIVE" && !card?.querySelector(".text-red-600");
+	setProgrammingPanel(card, !done);
+	if (done) {
 		titleDiv.style.marginTop = "0.5rem";
 		titleDiv.style.fontSize = "3rem";
 		titleDiv.style.fontWeight = "bold";
@@ -319,8 +562,13 @@ setInterval(async () => {
 }, 1000);
 
 setInterval(async () => {
-	if (window.location.pathname === "/connect") simplifyConnectPage();
-	else document.documentElement.classList.remove(CONNECT_CLASS);
+	if (window.location.pathname === "/connect") {
+		simplifyConnectPage();
+		showConnectProgramming();
+	} else document.documentElement.classList.remove(CONNECT_CLASS);
+
+	if (window.location.pathname === "/connect/outofdate") simplifyOutOfDatePage();
+	else document.documentElement.classList.remove(OUTOFDATE_CLASS);
 
 	if (window.location.pathname === "/status") {
 		scrapeProgrammingPage();
@@ -328,5 +576,6 @@ setInterval(async () => {
 		// The kiosk is a single-page app, so leaving /status never reloads the
 		// document and would otherwise leave the page green.
 		setSuccessBackground(false);
+		setProgrammingPanel(null, false);
 	}
 }, 200); // More frequent to make the interface update faster

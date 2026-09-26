@@ -123,8 +123,11 @@ function fireGoldConfetti() {
 
 let successShown = false;
 
+const DISCONNECT_ID = "fta-buddy-disconnect";
+
 /** Green while a radio reads ACTIVE, back to normal as soon as the kiosk resets. */
 function setSuccessBackground(on: boolean) {
+	if (!on) document.getElementById(DISCONNECT_ID)?.remove();
 	if (on) installSuccessStyle();
 	document.documentElement.classList.toggle(SUCCESS_CLASS, on);
 	if (on && !successShown) fireGoldConfetti();
@@ -258,12 +261,13 @@ function simplifyConnectPage() {
  * While the radio programs, the kiosk's /status card lists Team, Status,
  * Version and WPA Key with red crosses next to everything not done yet, and a
  * small spinner in the corner. Students read the red crosses as failure. Until
- * the radio is done, the card's contents are swapped for one panel: a large
- * spinner, "Programming", the team and "Do not unplug". The kiosk's own
- * contents come back the moment it is done, under the green success page.
+ * the radio is done, the card's header is swapped for one panel: a large
+ * spinner, "Programming", the team and "Do not unplug". The checks stay under
+ * it, with the pending ones as a grey pulsing dot instead of a red cross. The
+ * kiosk's header comes back the moment it is done, under the green page.
  *
- * The panel is appended to the kiosk's Card and the Card's own children are
- * hidden with CSS rather than removed, so React's nodes are never touched.
+ * The panel is inserted into the kiosk's Card and the header is hidden with
+ * CSS rather than removed, so React's nodes are never touched.
  */
 const PROGRAMMING_CLASS = "fta-buddy-programming";
 const PROGRAMMING_PANEL_ID = "fta-buddy-programming-panel";
@@ -308,8 +312,29 @@ function installKioskStyle() {
 	font-weight: 700;
 	color: #b91c1c;
 }
-html.${PROGRAMMING_CLASS} [data-fb-card] > :not(#${PROGRAMMING_PANEL_ID}) {
+html.${PROGRAMMING_CLASS} [data-fb-card] > :first-child {
 	display: none !important;
+}
+html.${PROGRAMMING_CLASS} [data-fb-card] #${PROGRAMMING_PANEL_ID} {
+	padding-bottom: 1.5rem;
+}
+@keyframes fta-buddy-pulse {
+	50% { opacity: 0.3; }
+}
+html.${PROGRAMMING_CLASS} [data-fb-card] span.text-red-600 {
+	color: #9ca3af !important;
+}
+html.${PROGRAMMING_CLASS} [data-fb-card] span.text-red-600 > svg {
+	display: none;
+}
+html.${PROGRAMMING_CLASS} [data-fb-card] span.text-red-600::before {
+	content: "";
+	display: inline-block;
+	width: 0.6rem;
+	height: 0.6rem;
+	border-radius: 9999px;
+	background: currentColor;
+	animation: fta-buddy-pulse 1.2s ease-in-out infinite;
 }
 html.${OUTOFDATE_CLASS} [data-fb-ood="container"] {
 	width: 32rem;
@@ -399,7 +424,9 @@ function setProgrammingPanel(card: HTMLElement | null, on: boolean) {
 	existing?.remove();
 	const panel = programmingPanel(new URLSearchParams(window.location.search).get("team"));
 	panel.id = PROGRAMMING_PANEL_ID;
-	card.appendChild(panel);
+	// After the kiosk's header, which is hidden; its Team / Status / WPA Key
+	// checks stay visible underneath, pending ones as a grey pulsing dot.
+	card.firstElementChild?.insertAdjacentElement("afterend", panel);
 }
 
 /**
@@ -525,6 +552,13 @@ function scrapeProgrammingPage() {
 		titleDiv.style.fontWeight = "bold";
 		titleDiv.innerText = "Success!";
 		titleDiv.style.color = "green";
+		if (!document.getElementById(DISCONNECT_ID)) {
+			const line = document.createElement("p");
+			line.id = DISCONNECT_ID;
+			line.textContent = "You may now disconnect the radio";
+			line.style.cssText = "font-size:1.125rem;font-weight:600;margin-top:0.25rem";
+			titleDiv.insertAdjacentElement("afterend", line);
+		}
 		setSuccessBackground(true);
 		const team = window.location.search.split("=")[1];
 

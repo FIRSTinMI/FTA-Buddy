@@ -284,30 +284,30 @@ function installKioskStyle() {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 0.75rem;
-	padding: 2.5rem 1.5rem;
+	gap: 0.25rem;
+	padding: 1.25rem 1.5rem;
 	text-align: center;
 }
 .fta-buddy-spinner {
-	width: 7rem;
-	height: 7rem;
+	width: 3.5rem;
+	height: 3.5rem;
 	border-radius: 9999px;
-	border: 0.75rem solid hsl(var(--muted));
+	border: 0.45rem solid hsl(var(--muted));
 	border-top-color: #2563eb;
 	animation: fta-buddy-spin 0.9s linear infinite;
-	margin-bottom: 1rem;
+	margin-bottom: 0.5rem;
 }
 .fta-buddy-panel-title {
-	font-size: 2.5rem;
+	font-size: 2rem;
 	font-weight: 700;
 	line-height: 1.1;
 }
 .fta-buddy-panel-team {
-	font-size: 1.75rem;
+	font-size: 1.5rem;
 	font-weight: 600;
 }
 .fta-buddy-panel-warn {
-	margin-top: 0.5rem;
+	margin-top: 0.25rem;
 	font-size: 1.25rem;
 	font-weight: 700;
 	color: #b91c1c;
@@ -316,7 +316,7 @@ html.${PROGRAMMING_CLASS} [data-fb-card] > :first-child {
 	display: none !important;
 }
 html.${PROGRAMMING_CLASS} [data-fb-card] #${PROGRAMMING_PANEL_ID} {
-	padding-bottom: 1.5rem;
+	padding-bottom: 1rem;
 }
 @keyframes fta-buddy-pulse {
 	50% { opacity: 0.3; }

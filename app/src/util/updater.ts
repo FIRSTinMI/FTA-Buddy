@@ -35,7 +35,7 @@ export const VERSIONS: { [key: string]: Version } = {
         <h2 class="font-bold mt-2">Extension v1.26.28</h2>
         <ul>
         <li>Radio kiosk connect screen: large team number and one Program button</li>
-        <li>Radio kiosk programming screen: large spinner, team, "Do not unplug" and the status checks</li>
+        <li>Radio kiosk programming screen: amber page, large spinner, team, "Do not unplug" and the status checks</li>
         <li>Radio kiosk success screen: "You may now unplug the radio"</li>
         <li>Radio kiosk firmware screen: both versions large and one Update firmware button</li>
         </ul>

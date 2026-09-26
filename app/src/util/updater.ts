@@ -34,8 +34,7 @@ export const VERSIONS: { [key: string]: Version } = {
 		changelog: `
         <h2 class="font-bold mt-2">Extension v1.26.29</h2>
         <ul>
-        <li>Radio kiosk: the "Programming" panel no longer stays on the success screen</li>
-        <li>Radio kiosk: no "Programming" panel while it waits for a radio to be plugged in</li>
+        <li>Radio kiosk: the connect page keeps the kiosk's own spinner after Program; no "Programming" panel left on the success or waiting screens</li>
         </ul>
         `,
 	},

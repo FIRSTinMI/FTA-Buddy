@@ -245,9 +245,6 @@ function simplifyConnectPage() {
 		if (input.value === "") input.focus();
 		// Typing a different team replaces the detected one instead of appending.
 		input.addEventListener("focus", () => input.select());
-		form.addEventListener("submit", () => {
-			lastProgrammedTeam = input.value.trim() || null;
-		});
 	}
 
 	const team = input.value.trim();
@@ -437,43 +434,6 @@ function setProgrammingPanel(card: HTMLElement | null, on: boolean) {
 }
 
 /**
- * The same panel on /connect for the second or two between pressing Program
- * and the kiosk moving to /status, where the kiosk shows only a bare spinner.
- *
- * "Waiting for Connection" (no radio plugged in) also shows a spinner with no
- * form, so a spinner alone is not enough: the bare one has no text next to it.
- * The kiosk is translated, so this checks for any text, not for the words.
- */
-const CONNECT_PROGRAMMING_ID = "fta-buddy-connect-programming";
-let lastProgrammedTeam: string | null = null;
-
-function removeConnectProgramming() {
-	document.getElementById(CONNECT_PROGRAMMING_ID)?.remove();
-	document
-		.querySelectorAll<SVGElement>("main svg.animate-spin")
-		.forEach((svg) => svg.style.removeProperty("display"));
-}
-
-function showConnectProgramming() {
-	const main = document.querySelector("main");
-	const form = main?.querySelector("form");
-	const spinner = main?.querySelector(":scope > svg.animate-spin, :scope > div > svg.animate-spin") as SVGElement | null;
-	const existing = document.getElementById(CONNECT_PROGRAMMING_ID);
-	// Everything the kiosk itself shows in <main>, less our own panel's text.
-	const kioskText = (main?.innerText ?? "").replace((existing as HTMLElement | null)?.innerText ?? "", "").trim();
-	if (!main || form || !spinner || !lastProgrammedTeam || kioskText) {
-		removeConnectProgramming();
-		return;
-	}
-	if (existing) return;
-	installKioskStyle();
-	spinner.style.display = "none";
-	const panel = programmingPanel(lastProgrammedTeam);
-	panel.id = CONNECT_PROGRAMMING_ID;
-	spinner.insertAdjacentElement("afterend", panel);
-}
-
-/**
  * /connect/outofdate is one sentence ("Firmware must be updated from version
  * X to a minimum version of Y to proceed") and two small buttons, Back first.
  * It becomes the two versions, large, old one red, and one large "Update
@@ -615,17 +575,8 @@ setInterval(async () => {
 }, 1000);
 
 setInterval(async () => {
-	if (window.location.pathname === "/connect") {
-		simplifyConnectPage();
-		showConnectProgramming();
-	} else {
-		document.documentElement.classList.remove(CONNECT_CLASS);
-		// The kiosk is a single-page app and React leaves nodes it did not
-		// create where they are, so the /connect panel would ride along onto
-		// /status and stay over the success screen.
-		removeConnectProgramming();
-		lastProgrammedTeam = null;
-	}
+	if (window.location.pathname === "/connect") simplifyConnectPage();
+	else document.documentElement.classList.remove(CONNECT_CLASS);
 
 	if (window.location.pathname === "/connect/outofdate") simplifyOutOfDatePage();
 	else document.documentElement.classList.remove(OUTOFDATE_CLASS);

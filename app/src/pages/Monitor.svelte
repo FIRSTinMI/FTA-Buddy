@@ -386,15 +386,15 @@
 			class="col-span-6 lg:col-span-9 flex text-lg md:text-2xl font-semibold tabular-nums"
 			class:lg:text-4xl={$fullscreen}
 		>
-			<div class="text-left" class:lg:text-4xl={$fullscreen} class:text-green-500={currentCycleIsBest}>
+			<div class="text-left" class:text-4xl={$fullscreen} class:text-green-500={currentCycleIsBest}>
 				C: {lastCycleTime} (A: {formatTimeShortNoAgoSeconds(averageCycleTimeMS)})
 			</div>
-			<div class="grow" class:lg:text-4xl={$fullscreen}>
+			<div class="grow" class:text-4xl={$fullscreen}>
 				<span class="hidden sm:inline">{scheduleText}</span>
 			</div>
 			<div
 				class="text-right"
-				class:lg:text-4xl={$fullscreen}
+				class:text-4xl={$fullscreen}
 				style="color: rgba({75 * currentCycleTimeRedness + 180}, {180 * (1 - currentCycleTimeRedness)}, {180 *
 					(1 - currentCycleTimeRedness)}, 1)"
 			>

@@ -3,7 +3,7 @@
 	import { Button, Label, Modal, Select, Textarea, type SelectOptionType } from "flowbite-svelte";
 	import { onMount, tick } from "svelte";
 	import { get } from "svelte/store";
-	import { formatTimeNoAgoHourMins } from "../../../../shared/formatTime";
+	import { formatTimeAgoHourMins } from "../../../../shared/formatTime";
 	import { ROBOT, type Message, type Note, type Profile } from "../../../../shared/types";
 	import FormattedTime from "../../components/FormattedTime.svelte";
 	import MessageCard from "../../components/MessageCard.svelte";
@@ -646,7 +646,7 @@
 						<div
 							class="justify-center text-center sm:justify-start sm:text-left text-xs text-gray-400 dark:text-gray-500"
 						>
-							<FormattedTime date={note.created_at} formatter={formatTimeNoAgoHourMins} /> ago by {note.author_display_name ??
+							<FormattedTime date={note.created_at} formatter={formatTimeAgoHourMins} /> by {note.author_display_name ??
 								note.author.username}
 						</div>
 

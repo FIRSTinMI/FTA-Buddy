@@ -138,6 +138,14 @@ export function formatTimeNoAgoHourMins(time: Date, compare: Date = new Date()) 
 	}
 }
 
+/** formatTimeNoAgoHourMins with "ago" on the relative forms ("31s ago", "5m ago", "2h4m ago"). */
+export function formatTimeAgoHourMins(time: Date, compare: Date = new Date()) {
+	if (typeof time === "string") time = new Date(time);
+	const diff = compare.getTime() - time.getTime();
+	const text = formatTimeNoAgoHourMins(time, compare).replace(/ ago$/, "");
+	return diff >= 1e3 && diff < 24 * 60 * 60e3 ? `${text} ago` : text;
+}
+
 export function formatTimeShortNoAgoSecondsOnly(time: Date, compare: Date = new Date()) {
 	if (typeof time === "string") time = new Date(time);
 	let diff = compare.getTime() - time.getTime();

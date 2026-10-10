@@ -191,8 +191,9 @@ const urlBase64ToUint8Array = (base64String: string) => {
 	return outputArray;
 };
 
+// The server filters pushes by these toggles, so a change has to re-register the device.
 function subscriptionFingerprint(endpoint: string): string {
-	return endpoint;
+	return endpoint + "|" + JSON.stringify(get(settingsStore).notificationCategories ?? null);
 }
 
 const PUSH_FINGERPRINT_KEY = "ftabuddy-push-fingerprint";
@@ -239,6 +240,7 @@ async function doRegisterPush(
 			endpoint,
 			expirationTime,
 			keys: { p256dh: keys.p256dh, auth: keys.auth },
+			categories: get(settingsStore).notificationCategories ?? null,
 		});
 
 		localStorage.setItem(PUSH_FINGERPRINT_KEY, fingerprint);
@@ -272,7 +274,7 @@ export async function subscribeToPush() {
 }
 
 export async function ensurePushRegistration(): Promise<void> {
-	if (!("serviceWorker" in navigator)) return;
+	if (!("serviceWorker" in navigator) || !("Notification" in window)) return;
 	if (Notification.permission !== "granted") return;
 
 	const token = get(userStore).token;
@@ -347,3 +349,11 @@ export function setupSwMessageHandler() {
 		}
 	});
 }
+
+// Re-register when a category toggle changes so the server stops (or starts) sending it.
+let lastCategories: string | null = null;
+settingsStore.subscribe((s) => {
+	const next = JSON.stringify(s.notificationCategories ?? null);
+	if (lastCategories !== null && next !== lastCategories) ensurePushRegistration().catch(() => {});
+	lastCategories = next;
+});

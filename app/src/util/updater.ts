@@ -30,6 +30,21 @@ export function compareVersions(a: string, b: string): number {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.13.11": {
+		changelog: `
+        <h2 class="font-bold mt-2">Notepad</h2>
+        <ul>
+        <li>The feed shows every note by default, not only open ones</li>
+        </ul>
+        `,
+		// "Open" was the old default, so a saved "Open" is almost always the default, not a choice.
+		update: () => {
+			settingsStore.update((s) => {
+				if (s.supportFeedStatusFilter === "Open") s.supportFeedStatusFilter = "all";
+				return s;
+			});
+		},
+	},
 	"2.7.13.10": {
 		changelog: `
         <h2 class="font-bold mt-2">Extension v1.26.28</h2>

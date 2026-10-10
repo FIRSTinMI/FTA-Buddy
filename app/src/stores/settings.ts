@@ -58,7 +58,7 @@ const defaultSettings: Settings = {
 	acknowledgedNotesPolicy: false,
 	supportFeedFilter: "all",
 	supportFeedTypeFilter: "all",
-	supportFeedStatusFilter: "Open",
+	supportFeedStatusFilter: "all",
 	supportFeedSelectedFields: null,
 	notificationCategories: {
 		create: true,

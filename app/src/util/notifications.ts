@@ -139,6 +139,11 @@ export function startNotificationSubscription() {
 							sendNotification = get(settingsStore).notificationCategories.follow;
 							break;
 						}
+						case "Note-Mention": {
+							// A direct mention is not a category setting; always deliver it.
+							sendNotification = true;
+							break;
+						}
 						case "Robot-Status": {
 							sendNotification = get(settingsStore).notificationCategories.robot;
 							break;

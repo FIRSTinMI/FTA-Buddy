@@ -163,6 +163,11 @@
 	onMount(async () => {
 		getNoteAndMatch();
 		foregroundUpdate();
+		// For @mention suggestions in the reply box.
+		trpc.event.getUsers
+			.query()
+			.then((users) => (eventUsers = users))
+			.catch(() => {});
 	});
 
 	const isOpen = $derived(note?.resolution_status === "Open");
@@ -292,7 +297,65 @@
 		}
 	}
 
+	// @mention autocomplete for the reply box. The query runs from the "@" to the caret and
+	// may contain spaces, since usernames can.
+	let mentionQuery = $state<string | null>(null);
+	let mentionStart = 0;
+	let mentionIndex = $state(0);
+	let mentionOptions = $derived(
+		mentionQuery === null
+			? []
+			: eventUsers
+					.filter((u) => u.id !== user?.id && u.username.toLowerCase().includes(mentionQuery!.toLowerCase()))
+					.slice(0, 6),
+	);
+
+	function chatInput() {
+		return document.getElementById("chat-input") as HTMLTextAreaElement | null;
+	}
+
+	function updateMention() {
+		const caret = chatInput()?.selectionStart ?? message_text.length;
+		const m = /(^|[^\p{L}\p{N}_])@([^@\n]{0,30})$/u.exec(message_text.slice(0, caret));
+		if (m) {
+			mentionQuery = m[2];
+			mentionStart = caret - m[2].length - 1;
+			mentionIndex = 0;
+		} else {
+			mentionQuery = null;
+		}
+	}
+
+	async function pickMention(u: Profile) {
+		const el = chatInput();
+		const caret = el?.selectionStart ?? message_text.length;
+		message_text = message_text.slice(0, mentionStart) + "@" + u.username + " " + message_text.slice(caret);
+		mentionQuery = null;
+		await tick();
+		const pos = mentionStart + u.username.length + 2;
+		el?.focus();
+		el?.setSelectionRange(pos, pos);
+	}
+
 	function sendKey(event: KeyboardEvent) {
+		if (mentionOptions.length > 0) {
+			if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+				event.preventDefault();
+				const step = event.key === "ArrowDown" ? 1 : -1;
+				mentionIndex = (mentionIndex + step + mentionOptions.length) % mentionOptions.length;
+				return;
+			}
+			if (event.key === "Enter" || event.key === "Tab") {
+				event.preventDefault();
+				pickMention(mentionOptions[mentionIndex]);
+				return;
+			}
+			if (event.key === "Escape") {
+				event.preventDefault();
+				mentionQuery = null;
+				return;
+			}
+		}
 		if (event.key === "Enter" && !event.shiftKey) {
 			event.preventDefault();
 			postMessage(new SubmitEvent("submit"));
@@ -686,13 +749,39 @@
 						<div class="w-full rounded-xl bg-white dark:bg-neutral-800 shadow-sm py-3 mt-1">
 							<form class="flex flex-row gap-2 w-full" style="width: 100%" onsubmit={postMessage}>
 								<label for="chat-input" class="sr-only">Reply</label>
-								<div class="flex-1 min-w-0 [&_textarea]:w-full">
+								<div class="relative flex-1 min-w-0 [&_textarea]:w-full">
+									{#if mentionOptions.length > 0}
+										<ul
+											class="absolute bottom-full left-0 mb-1 w-64 max-w-full z-20 rounded-lg border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-800 shadow-lg py-1 text-sm"
+										>
+											{#each mentionOptions as option, i}
+												<li>
+													<button
+														type="button"
+														class="w-full text-left px-3 py-2 flex items-center justify-between gap-2 {i ===
+														mentionIndex
+															? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200'
+															: 'text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-700'}"
+														onmousedown={(e) => {
+															e.preventDefault();
+															pickMention(option);
+														}}
+													>
+														<span class="truncate">@{option.username}</span>
+														<span class="text-xs text-gray-400">{option.role}</span>
+													</button>
+												</li>
+											{/each}
+										</ul>
+									{/if}
 									<Textarea
 										id="chat-input"
 										class="flex-1 min-w-0"
 										rows={2}
-										placeholder="Write a reply…"
+										placeholder="Write a reply… type @ to mention someone"
 										onkeydown={sendKey}
+										oninput={updateMention}
+										onblur={() => (mentionQuery = null)}
 										bind:value={message_text}
 									/>
 								</div>

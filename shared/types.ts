@@ -676,6 +676,7 @@ export type NotificationTopic =
 	| "Note-Status"
 	| "Note-Assigned"
 	| "New-Note-Message"
+	| "Note-Mention"
 	| "Note-Follow"
 	| "Robot-Status";
 

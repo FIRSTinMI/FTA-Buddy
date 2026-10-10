@@ -3,6 +3,7 @@
 	import { Badge, Button, Label, Modal, Textarea } from "flowbite-svelte";
 	import { get } from "svelte/store";
 	import { formatTimeNoAgoHourMins } from "../../../shared/formatTime";
+	import { splitMentions } from "../../../shared/mentions";
 	import type { Message } from "../../../shared/types";
 	import { trpc } from "../main";
 	import { eventStore } from "../stores/event";
@@ -18,6 +19,8 @@
 	}
 
 	let { message, simple = false }: Props = $props();
+
+	let segments = $derived(splitMentions(message.text, event.users ?? []));
 
 	let deleteMessagePopup = $state(false);
 
@@ -132,7 +135,13 @@
 			{#if simple}
 				{message.text.slice(0, 240) + (message.text.length > 240 ? "…" : "")}
 			{:else}
-				{message.text}
+				<span
+					>{#each segments as seg}{#if seg.user}<span
+								class="font-semibold text-blue-600 dark:text-blue-400 {seg.user.id === user.id
+									? 'bg-blue-100 dark:bg-blue-900/50 rounded px-0.5'
+									: ''}">{seg.text}</span
+							>{:else}{seg.text}{/if}{/each}</span
+				>
 			{/if}
 		</p>
 	</div>

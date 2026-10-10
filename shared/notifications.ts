@@ -7,6 +7,7 @@ import type { Notification, TournamentLevel } from "./types";
 export type NotificationKind =
 	| "note.created"
 	| "note.message"
+	| "note.mention"
 	| "note.statusChanged"
 	| "note.assigned"
 	| "note.assignedToYou"
@@ -56,6 +57,14 @@ export type NotificationContext =
 			author: string;
 			messageText: string;
 			messageId?: string;
+	  }
+	| {
+			kind: "note.mention";
+			eventCode: string;
+			note: NoteContext;
+			author: string;
+			messageText: string;
+			messageId: string;
 	  }
 	| {
 			kind: "note.statusChanged";
@@ -116,6 +125,7 @@ function noteUrl(eventCode: string, noteId: string): string {
 const TOPIC_FOR_KIND: Record<NotificationKind, Notification["topic"]> = {
 	"note.created": "Note-Created",
 	"note.message": "New-Note-Message",
+	"note.mention": "Note-Mention",
 	"note.statusChanged": "Note-Status",
 	"note.assigned": "Note-Assigned",
 	"note.assignedToYou": "Note-Assigned",
@@ -161,6 +171,17 @@ export function buildNotification(ctx: NotificationContext): Notification {
 			id = ctx.messageId
 				? `note.message:${ctx.messageId}`
 				: `note.message:${ctx.note.noteId}:${Math.floor(now.getTime() / 1000)}`;
+			url = noteUrl(ctx.eventCode, ctx.note.noteId);
+			break;
+		}
+
+		case "note.mention": {
+			const label = noteLabel(ctx.note);
+			title = trunc(`${ctx.author} mentioned you${label ? " • " + label : ""}`, MAX_TITLE);
+			body = trunc(ctx.messageText, MAX_BODY);
+			tag = `note-${ctx.note.noteId}`;
+			id = `note.mention:${ctx.messageId}`;
+			urgency = "high";
 			url = noteUrl(ctx.eventCode, ctx.note.noteId);
 			break;
 		}

@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import { and, asc, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { formatTimeShortNoAgoMinutes } from "../../shared/formatTime";
+import { findMentions } from "../../shared/mentions";
 import { buildNotification, toNoteCtx } from "../../shared/notifications";
 import type { Notification } from "../../shared/types";
 import type { FmsNoteMetadata, Message, Note, NoteUpdateEventData, Profile } from "../../shared/types";
@@ -380,9 +381,33 @@ const messagesSubRouter = router({
 				message: wireMessage,
 			});
 
+			const noteEvent = note.event_code !== event.code ? await getEvent("", note.event_code) : event;
+
+			// @mentions resolve against the users of the note's event and the event the
+			// reply came from (they differ on a meshed event). A mentioned user gets the
+			// mention notification instead of the follower one.
+			const eventUsers = [...((event.users as Profile[]) ?? []), ...((noteEvent.users as Profile[]) ?? [])];
+			const mentionedIds = findMentions(wireMessage.text, eventUsers)
+				.map((u) => u.id)
+				.filter((id) => id !== resolvedProfile.id);
+			if (mentionedIds.length > 0) {
+				createNotification(
+					mentionedIds,
+					buildNotification({
+						kind: "note.mention",
+						eventCode: note.event_code,
+						note: toNoteCtx(note as any),
+						author: resolvedProfile.username,
+						messageText: wireMessage.text,
+						messageId: wireMessage.id,
+					}),
+					note.event_code,
+				);
+			}
+
 			const msgFollowers = await getNoteFollowers(note.id);
 			createNotification(
-				msgFollowers.filter((id: number) => id !== resolvedProfile.id),
+				msgFollowers.filter((id: number) => id !== resolvedProfile.id && !mentionedIds.includes(id)),
 				buildNotification({
 					kind: "note.message",
 					eventCode: note.event_code,
@@ -393,8 +418,6 @@ const messagesSubRouter = router({
 				}),
 				note.event_code,
 			);
-
-			const noteEvent = note.event_code !== event.code ? await getEvent("", note.event_code) : event;
 
 			if (noteEvent.slackTeam && note.slack_channel && note.slack_ts) {
 				const messageTS = await sendSlackMessage(

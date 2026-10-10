@@ -20,6 +20,7 @@
 	import MatchEventCard from "../MatchEventCard.svelte";
 	import NoteCard from "../NoteCard.svelte";
 	import NotesPolicy from "../NotesPolicy.svelte";
+	import RequestPicker from "./RequestPicker.svelte";
 	import Spinner from "../Spinner.svelte";
 
 	interface Props {
@@ -702,28 +703,16 @@
 		<Textarea id="new-note-text" class="w-full" rows={5} bind:value={newNoteText} autofocus />
 
 		{#if newNoteType === "TeamIssue"}
-			<div class="flex flex-col gap-1 text-sm">
-				{#each [{ value: "CSA", label: "CSA Request" }, { value: "RI", label: "RI Request" }] as opt}
-					<button
-						type="button"
-						class="flex items-center gap-2 px-3 py-1.5 rounded border text-left transition-colors
-						{newRequestType === opt.value
-							? 'border-blue-500 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-							: 'border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-neutral-700 text-gray-700 dark:text-gray-300'}"
-						onclick={() =>
-							(newRequestType = newRequestType === opt.value ? null : (opt.value as "CSA" | "RI"))}
-					>
-						<span
-							class="size-3 rounded-full border-2 shrink-0
-						{newRequestType === opt.value ? 'border-blue-500 bg-blue-500' : 'border-gray-400'}"
-						></span>
-						{opt.label}
-					</button>
-				{/each}
-			</div>
+			<RequestPicker bind:value={newRequestType} />
 		{/if}
 
-		<Button type="submit" disabled={disableSubmit}>Create Note</Button>
+		<Button type="submit" disabled={disableSubmit}
+			>{newNoteType !== "TeamIssue"
+				? "Create Note"
+				: newRequestType
+					? `Create ${newRequestType} Request`
+					: "Create as Log Entry"}</Button
+		>
 	</form>
 </Modal>
 

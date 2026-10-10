@@ -30,6 +30,15 @@ export function compareVersions(a: string, b: string): number {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.13.12": {
+		changelog: `
+        <h2 class="font-bold mt-2">Notepad</h2>
+        <ul>
+        <li>Type @ in a note reply to mention someone; they get a notification</li>
+        <li>iOS: push notifications no longer stop after a few</li>
+        </ul>
+        `,
+	},
 	"2.7.13.11": {
 		changelog: `
         <h2 class="font-bold mt-2">Notepad</h2>

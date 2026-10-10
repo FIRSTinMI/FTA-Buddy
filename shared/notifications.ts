@@ -17,6 +17,22 @@ export type NotificationKind =
 
 export type Urgency = "low" | "normal" | "high";
 
+/** Settings toggle that controls each topic. The server filters pushes by it (push-notifications.ts). */
+export type NotificationCategory = "create" | "follow" | "assign" | "robot";
+
+export const CATEGORY_FOR_TOPIC: Record<string, NotificationCategory> = {
+	"Note-Created": "create",
+	"Note-Assigned": "assign",
+	"Note-Status": "follow",
+	"New-Note-Message": "follow",
+	"Note-Follow": "follow",
+	"Robot-Status": "robot",
+	"Ticket-Created": "create",
+	"Ticket-Assigned": "assign",
+	"Ticket-Status": "follow",
+	"New-Ticket-Message": "follow",
+};
+
 // Per-kind note context
 
 export interface NoteContext {

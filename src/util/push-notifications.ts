@@ -4,6 +4,7 @@ import webpush from "web-push";
 import type { PushSubscription, SendResult } from "web-push";
 import { bus } from "./eventBus";
 import type { Notification } from "../../shared/types";
+import { CATEGORY_FOR_TOPIC } from "../../shared/notifications";
 import { db } from "../db/db";
 import { pushSubscriptions, users, events } from "../db/schema";
 
@@ -73,9 +74,14 @@ export async function sendWebPushNotification(userIds: number[], data: Notificat
 		if (filteredUserIds.length === 0) return;
 	}
 
-	const subscriptions = await db.query.pushSubscriptions.findMany({
-		where: inArray(pushSubscriptions.user_id, filteredUserIds),
-	});
+	// Category settings are applied here, not in the service worker: Safari revokes a
+	// subscription after three pushes that end without a visible notification.
+	const category = CATEGORY_FOR_TOPIC[data.topic];
+	const subscriptions = (
+		await db.query.pushSubscriptions.findMany({
+			where: inArray(pushSubscriptions.user_id, filteredUserIds),
+		})
+	).filter((s) => !category || s.categories?.[category] !== false);
 
 	const notifications: Promise<SendResult | void>[] = [];
 	const subscriptionsToDelete: number[] = [];

@@ -306,7 +306,7 @@
 			}
 			eventCode = $eventStore.code;
 			eventPin = res.pin;
-			if (!$settingsStore.notificationsDoNotAsk && Notification.permission !== "granted") {
+			if (!$settingsStore.notificationsDoNotAsk && "Notification" in window && Notification.permission !== "granted") {
 				notificationModalOpen = true;
 			}
 		} catch (err: any) {
@@ -551,7 +551,10 @@
 	const ios = () => {
 		if (typeof window === `undefined` || typeof navigator === `undefined`) return false;
 
-		return /iPhone|iPad|iPod/i.test(navigator.userAgent || navigator.vendor);
+		// Already running from the Home Screen: push works, so don't ask to install.
+		const standalone =
+			(navigator as any).standalone === true || window.matchMedia("(display-mode: standalone)").matches;
+		return /iPhone|iPad|iPod/i.test(navigator.userAgent || navigator.vendor) && !standalone;
 	};
 </script>
 

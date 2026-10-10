@@ -1863,9 +1863,17 @@ export const notesRouter = router({
 				endpoint: z.string(),
 				expirationTime: z.date().nullable(),
 				keys: z.object({ p256dh: z.string(), auth: z.string() }),
+				categories: z
+					.object({ create: z.boolean(), follow: z.boolean(), assign: z.boolean(), robot: z.boolean() })
+					.partial()
+					.nullable()
+					.optional(),
 			}),
 		)
 		.mutation(async ({ input, ctx }) => {
+			// One row per endpoint. Re-registering (new categories, new account) replaces the old
+			// row instead of adding one, which would send the device every push twice.
+			await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, input.endpoint)).execute();
 			await db
 				.insert(pushSubscriptions)
 				.values({
@@ -1873,6 +1881,7 @@ export const notesRouter = router({
 					expirationTime: input.expirationTime,
 					keys: input.keys,
 					user_id: ctx.user.id,
+					categories: input.categories ?? null,
 				})
 				.execute();
 			return true;

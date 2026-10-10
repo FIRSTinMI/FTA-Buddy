@@ -24,6 +24,7 @@ import type {
 	PowerAlertSettings,
 	SlowWarningSettings,
 } from "../../shared/types";
+import type { NotificationCategory } from "../../shared/notifications";
 export const roleEnum = pgEnum("role", ["FTA", "FTAA", "CSA", "RI", "System", "Scorekeeper"]);
 
 export const users = pgTable(
@@ -456,6 +457,8 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
 	endpoint: text("endpoint").notNull(),
 	expirationTime: timestamp("expirationTime"),
 	keys: jsonb("keys").notNull(),
+	/** Category toggles from the device's settings; null means every category. */
+	categories: jsonb("categories").$type<Partial<Record<NotificationCategory, boolean>>>(),
 });
 
 // #region Troubleshooting (decision trees + chat assistant + knowledge corpus)

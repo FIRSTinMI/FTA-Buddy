@@ -776,9 +776,9 @@
 									{/if}
 									<Textarea
 										id="chat-input"
-										class="flex-1 min-w-0"
+										class="flex-1 min-w-0 placeholder-gray-400"
 										rows={2}
-										placeholder="Write a reply… type @ to mention someone"
+										placeholder="Write a reply…"
 										onkeydown={sendKey}
 										oninput={updateMention}
 										onblur={() => (mentionQuery = null)}

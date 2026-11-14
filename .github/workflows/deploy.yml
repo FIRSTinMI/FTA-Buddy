@@ -14,6 +14,25 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
+
+            # One line per pushed commit: linked short hash + first line of the message,
+            # trimmed so the embed stays under Discord's 4096-char description limit.
+            # workflow_dispatch has no commit list, so fall back to the checked-out HEAD.
+            - name: Collect commits for the Discord message
+              env:
+                  COMMITS: ${{ toJSON(github.event.commits) }}
+                  REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+              run: |
+                  if [ "$COMMITS" = "null" ] || [ "$COMMITS" = "[]" ]; then
+                    COMMITS=$(git log -1 --format='%H%x00%s' | jq -Rc --arg u "$REPO_URL" 'split("\u0000") | [{id: .[0], message: .[1], url: ($u + "/commit/" + .[0])}]')
+                  fi
+                  echo "$COMMITS" | jq -r '
+                    def short: if length > 72 then .[0:71] + "…" else . end;
+                    (map("[`\(.id[0:7])`](\(.url)) \(.message | split("\n")[0] | short)")) as $l
+                    | ($l[0:15] | join("\n")) + (if ($l | length) > 15 then "\n+\(($l | length) - 15) more" else "" end)
+                  ' > "$RUNNER_TEMP/commits.txt"
+                  cat "$RUNNER_TEMP/commits.txt"
+
             - name: Check app version is in sync (abort deploy on mismatch)
               run: node .github/ci/check-version-sync.mjs
 
@@ -46,12 +65,20 @@ jobs:
 
             - name: Notify Discord (success)
               if: success() && github.ref_name == 'main'
+              env:
+                  WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
               run: |
-                  curl -s -X POST ${{ secrets.DISCORD_WEBHOOK }} -H "Content-Type: application/json" \
-                    -d '{"embeds":[{"title":"✅ FTA Buddy Deployed","description":"Coolify built the image on the NAS build server and deployed it.","color":3066993}]}'
+                  jq -n --rawfile c "$RUNNER_TEMP/commits.txt" \
+                    '{embeds: [{title: "✅ FTA Buddy Deployed", description: ($c | rtrimstr("\n")), color: 3066993}]}' \
+                    | curl -s -X POST "$WEBHOOK" -H "Content-Type: application/json" -d @-
 
             - name: Notify Discord (failure)
               if: failure() && github.ref_name == 'main'
+              env:
+                  WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+                  RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
               run: |
-                  curl -s -X POST ${{ secrets.DISCORD_WEBHOOK }} -H "Content-Type: application/json" \
-                    -d '{"embeds":[{"title":"❌ FTA Buddy Deploy Failed","description":"Check [GitHub Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).","color":15158332}]}'
+                  touch "$RUNNER_TEMP/commits.txt"
+                  jq -n --rawfile c "$RUNNER_TEMP/commits.txt" --arg run "$RUN_URL" \
+                    '{embeds: [{title: "❌ FTA Buddy Deploy Failed", description: (($c | rtrimstr("\n")) + "\n[GitHub Actions](" + $run + ")"), color: 15158332}]}' \
+                    | curl -s -X POST "$WEBHOOK" -H "Content-Type: application/json" -d @-

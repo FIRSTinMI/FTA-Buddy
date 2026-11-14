@@ -78,7 +78,7 @@
 			{/await}
 		</div>
 		<div>
-			<Checkbox bind:checked={includeMeets}>Include Leauge Meets</Checkbox>
+			<Checkbox bind:checked={includeMeets}>League meets</Checkbox>
 		</div>
 	</div>
 	<div class="grid grid-cols-3 md:grid-cols-[.20fr_.15fr_.30fr_.12fr_.12fr_.11fr] gap-2 items-end">
@@ -89,7 +89,7 @@
 		<h2 class="text-lg font-semibold">Current Cycle Time</h2>
 		<h2 class="text-lg font-semibold">Avg Cycle Time</h2>
 		{#each eventData as event}
-			{#if events.includes(event.key) && (includeMeets || !event.name.toLowerCase().includes("meet"))}
+			{#if events.includes(event.key) && (includeMeets || !event.isLeagueMeet)}
 				<p
 					class="col-span-3 md:col-span-1 font-semibold border-t border-gray-600 pt-1 mt-1 md:border-none md:mt-0 md:pt-0"
 				>

@@ -1,5 +1,6 @@
 import { API } from "@the-orange-alliance/api";
 import Match from "@the-orange-alliance/api/lib/esm/models/Match";
+import EventType from "@the-orange-alliance/api/lib/esm/models/types/EventType";
 import StreamType from "@the-orange-alliance/api/lib/esm/models/types/StreamType";
 import { z } from "zod";
 import { publicProcedure, router } from "../trpc";
@@ -16,6 +17,7 @@ export interface FTCEvent {
 	key: string;
 	code: string;
 	name: string;
+	isLeagueMeet: boolean;
 	startDate: Date;
 	endDate: Date;
 	matches: FTCMatch[];
@@ -154,6 +156,7 @@ async function createEventTracker(key: string) {
 			key: event.eventKey,
 			code: event.firstEventCode,
 			name: event.eventName,
+			isLeagueMeet: event.eventTypeKey === EventType.LeagueMeet,
 			startDate: new Date(event.startDate),
 			endDate: new Date(event.endDate),
 			matches: [],

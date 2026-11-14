@@ -30,7 +30,7 @@ export namespace FTCAPI {
 
 	export async function getMatches(eventCode: string) {
 		const res = await fetch(
-			`http://ftc-api.firstinspires.org/v2.0/2024/matches/${eventCode}?tournamentLevel=0&start=0&end=999`,
+			`http://ftc-api.firstinspires.org/v2.0/${new Date().getMonth() >= 8 ? new Date().getFullYear() : new Date().getFullYear() - 1}/matches/${eventCode}?tournamentLevel=0&start=0&end=999`,
 			{
 				headers,
 			},

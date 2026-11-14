@@ -86,49 +86,13 @@ export const ftcRouter = router({
 			}),
 		)
 		.subscription(async function* ({ input, signal }) {
-			const promises = [];
+			await loadEvents(input.events);
 
-			for (const key of input.events) {
-				if (!eventData[key]) {
-					console.log("Creating event tracker for ", key);
-					const event = await toa.getEvent(key);
-					const schedule = await toa.getEventMatches(key);
-					for (const match of schedule) {
-						match.scheduledTime = match.scheduledTime?.substring(0, 22);
-					}
-					const teams = await toa.getEventTeams(key);
-
-					eventData[key] = {
-						key: event.eventKey,
-						code: event.firstEventCode,
-						name: event.eventName,
-						startDate: new Date(event.startDate),
-						endDate: new Date(event.endDate),
-						matches: [],
-						currentLevel: "QUALIFICATION",
-						currentMatch: null,
-						averageCycleTime: 0,
-						totalMatches: 0,
-						completedMatches: 0,
-						schedule,
-						aheadBehind: null,
-						streams: [],
-						timezone: event.timeZone,
-						teamCount: teams.length,
-						// matchCount: event.matchCount
-					};
-					setInterval(() => updateEventStatus(eventData[key]), 30000);
-				}
-				promises.push(updateEventStatus(eventData[key]));
-			}
-
-			await Promise.all(promises);
-
-			yield input.events.map((key) => eventData[key]);
+			yield getLoadedEvents(input.events);
 
 			while (!signal?.aborted) {
 				await abortableSleep(30000, signal!);
-				if (!signal?.aborted) yield input.events.map((key) => eventData[key]);
+				if (!signal?.aborted) yield getLoadedEvents(input.events);
 			}
 		}),
 
@@ -156,47 +120,71 @@ export const ftcRouter = router({
 			}),
 		)
 		.query(async ({ input }) => {
-			let promises = [];
+			await loadEvents(input.events);
 
-			for (const key of input.events) {
-				if (!eventData[key]) {
-					console.log("Creating event tracker for ", key);
-					const event = await toa.getEvent(key);
-					const schedule = await toa.getEventMatches(key);
-					for (const match of schedule) {
-						match.scheduledTime = match.scheduledTime?.substring(0, 22);
-					}
-					const teams = await toa.getEventTeams(key);
-
-					eventData[key] = {
-						key: event.eventKey,
-						code: event.firstEventCode,
-						name: event.eventName,
-						startDate: new Date(event.startDate),
-						endDate: new Date(event.endDate),
-						matches: [],
-						currentLevel: "QUALIFICATION",
-						currentMatch: null,
-						averageCycleTime: 0,
-						totalMatches: 0,
-						completedMatches: 0,
-						schedule,
-						aheadBehind: null,
-						streams: [],
-						timezone: event.timeZone,
-						teamCount: teams.length,
-						// matchCount: event.matchCount
-					};
-					setInterval(() => updateEventStatus(eventData[key]), 30000);
-					promises.push(updateEventStatus(eventData[key]));
-				}
-			}
-
-			await Promise.all(promises);
-
-			return input.events.map((key) => eventData[key]);
+			return getLoadedEvents(input.events);
 		}),
 });
+
+const eventLoads: { [key: string]: Promise<void> } = {};
+
+// Loads every event at once; an event already loading or loaded is not fetched again
+async function loadEvents(keys: string[]) {
+	await Promise.allSettled(keys.map((key) => (eventLoads[key] ??= createEventTracker(key))));
+}
+
+// Events that failed to load are left out instead of failing the whole dashboard
+function getLoadedEvents(keys: string[]) {
+	return keys.map((key) => eventData[key]).filter((event) => event !== undefined);
+}
+
+async function createEventTracker(key: string) {
+	console.log("Creating event tracker for ", key);
+	try {
+		const [event, schedule, teams] = await Promise.all([
+			toa.getEvent(key),
+			toa.getEventMatches(key),
+			toa.getEventTeams(key),
+		]);
+		for (const match of schedule) {
+			match.scheduledTime = match.scheduledTime?.substring(0, 22);
+		}
+
+		const ftcEvent: FTCEvent = {
+			key: event.eventKey,
+			code: event.firstEventCode,
+			name: event.eventName,
+			startDate: new Date(event.startDate),
+			endDate: new Date(event.endDate),
+			matches: [],
+			currentLevel: "QUALIFICATION",
+			currentMatch: null,
+			averageCycleTime: 0,
+			totalMatches: 0,
+			completedMatches: 0,
+			schedule,
+			aheadBehind: null,
+			streams: [],
+			timezone: event.timeZone,
+			teamCount: teams.length,
+			// matchCount: event.matchCount
+		};
+
+		await updateEventStatus(ftcEvent);
+		eventData[key] = ftcEvent;
+		setInterval(
+			() =>
+				updateEventStatus(ftcEvent).catch((err) =>
+					console.error("FTC event status update failed for", key, err),
+				),
+			30000,
+		);
+	} catch (err) {
+		console.error("Creating FTC event tracker failed for", key, err);
+		// Forget the failed load so the next request tries again
+		delete eventLoads[key];
+	}
+}
 
 async function getEventsThisWeek(region: string) {
 	const now = new Date();
@@ -239,38 +227,13 @@ async function getEventsThisWeek(region: string) {
 
 async function updateEventStatus(event: FTCEvent) {
 	console.log("Updating event status for ", event.code);
-	const matches = await FTCAPIgetMatches(event.code);
+	const [matches] = await Promise.all([FTCAPIgetMatches(event.code), refreshScheduleAndStreams(event)]);
 
 	for (const match of matches) {
 		match.actualStartTime = new Date(match.actualStartTime);
 		match.actualStartTime.setHours(match.actualStartTime.getHours() - getTimezoneOffset(event.timezone));
 		match.postResultTime = new Date(match.postResultTime);
 		match.postResultTime.setHours(match.postResultTime.getHours() - getTimezoneOffset(event.timezone));
-	}
-
-	// If the schedule is empty, try to get it again
-	if (event.schedule.length === 0) {
-		event.schedule = await toa.getEventMatches(event.key);
-		for (const match of event.schedule) {
-			match.scheduledTime = match.scheduledTime?.substring(0, 22);
-		}
-	}
-
-	if (event.streams.length === 0) {
-		event.streams = (await toa.getEventStreams(event.key)).map((stream) => ({
-			live: false,
-			streamKey: stream.streamKey,
-			eventKey: stream.eventKey,
-			streamType: stream.streamType,
-			isActive: stream.isActive,
-			streamURL: stream.streamURL,
-			channelName: stream.channelName,
-			streamName: stream.streamName,
-			startDateTime: stream.startDateTime,
-			endDateTime: stream.endDateTime,
-			channelURL: stream.channelURL,
-			fullURL: stream.fullURL,
-		}));
 	}
 
 	// If there are no matches, set the event status to empty
@@ -345,19 +308,59 @@ async function updateEventStatus(event: FTCEvent) {
 		: null;
 }
 
+async function refreshScheduleAndStreams(event: FTCEvent) {
+	// If the schedule is empty, try to get it again
+	if (event.schedule.length === 0) {
+		event.schedule = await toa.getEventMatches(event.key);
+		for (const match of event.schedule) {
+			match.scheduledTime = match.scheduledTime?.substring(0, 22);
+		}
+	}
+
+	if (event.streams.length === 0) {
+		event.streams = (await toa.getEventStreams(event.key)).map((stream) => ({
+			live: false,
+			streamKey: stream.streamKey,
+			eventKey: stream.eventKey,
+			streamType: stream.streamType,
+			isActive: stream.isActive,
+			streamURL: stream.streamURL,
+			channelName: stream.channelName,
+			streamName: stream.streamName,
+			startDateTime: stream.startDateTime,
+			endDateTime: stream.endDateTime,
+			channelURL: stream.channelURL,
+			fullURL: stream.fullURL,
+		}));
+	}
+}
+
 function getTOAMatchKey(eventKey: string, matchNumber: number, level: "QUALIFICATION" | "PLAYOFF") {
 	return `${eventKey}-${level === "QUALIFICATION" ? "Q" : "E"}${matchNumber.toString().padStart(3, "0")}-1`;
 }
 
-async function FTCAPIgetMatches(eventKey: string) {
-	const response = await fetch(`https://ftc-api.firstinspires.org/v2.0/2025/matches/${eventKey}?start=0&end=999`, {
-		headers: {
-			Accept: "application/json",
-			Authorization: `Basic ${btoa(process.env.FTC_KEY ?? "")}`,
-		},
-	});
+// The FTC API names a season by the year it kicks off in September (2026 = the 2026-27 season)
+function getFTCSeason(date: Date = new Date()) {
+	return date.getMonth() >= 8 ? date.getFullYear() : date.getFullYear() - 1;
+}
 
-	return (await response.json()).matches as FTCAPIMatch[];
+async function FTCAPIgetMatches(eventKey: string) {
+	const response = await fetch(
+		`https://ftc-api.firstinspires.org/v2.0/${getFTCSeason()}/matches/${eventKey}?start=0&end=999`,
+		{
+			headers: {
+				Accept: "application/json",
+				Authorization: `Basic ${btoa(process.env.FTC_KEY ?? "")}`,
+			},
+		},
+	);
+
+	if (!response.ok) {
+		console.error(`FTC API ${response.status} for ${eventKey}: ${(await response.text()).substring(0, 200)}`);
+		return [];
+	}
+
+	return ((await response.json()).matches ?? []) as FTCAPIMatch[];
 }
 
 function getAverageCycleTime(cycleTimes: number[], rollingAverage: number = 6) {

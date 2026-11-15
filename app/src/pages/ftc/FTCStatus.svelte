@@ -106,7 +106,7 @@
 					<p class="mb-1 text-base font-medium dark:text-white">
 						{event.currentMatch?.description ?? "Unknown"}
 						{#if event.currentLevel === "QUALIFICATION"}
-							of {event.schedule.length}
+							of {event.qualMatchCount}
 						{/if}
 					</p>
 					<Progressbar color="red" progress={(event.completedMatches / event.totalMatches) * 100} />

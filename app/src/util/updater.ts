@@ -30,6 +30,16 @@ export function compareVersions(a: string, b: string): number {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.13.15": {
+		changelog: `
+        <h2 class="font-bold mt-2">FTC dashboard</h2>
+        <ul>
+        <li>Progress bars follow the BioBuzz playoff bracket</li>
+        <li>League meets without playoffs</li>
+        <li>Practice matches not counted</li>
+        </ul>
+        `,
+	},
 	"2.7.13.14": {
 		changelog: `
         <h2 class="font-bold mt-2">FTC dashboard</h2>

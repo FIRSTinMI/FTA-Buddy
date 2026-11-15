@@ -31,6 +31,12 @@ export interface FTCEvent {
 	streams: Streams[];
 	timezone: string;
 	teamCount: number;
+	qualMatchCount: number;
+	// Playoff bracket size from Table 13-2 of the competition manual, 0 for league meets
+	allianceCount: number;
+	// FTC API event codes: the parent event of a division, and the divisions of a dual division parent
+	parentCode: string | null;
+	divisionCodes: string[];
 	// matchCount: number;
 }
 
@@ -58,7 +64,7 @@ export interface FTCMatch extends FTCAPIMatch {
 export interface FTCAPIMatch {
 	actualStartTime: Date;
 	description: string;
-	tournamentLevel: "QUALIFICATION" | "PLAYOFF";
+	tournamentLevel: "PRACTICE" | "QUALIFICATION" | "PLAYOFF";
 	series: number;
 	matchNumber: number;
 	scoreRedFinal: number;
@@ -70,6 +76,28 @@ export interface FTCAPIMatch {
 	postResultTime: Date;
 	teams: FTCAPITeam[];
 	modifiedOn: Date;
+}
+
+export interface FTCAPIScheduledMatch {
+	description: string;
+	tournamentLevel: "QUALIFICATION";
+	series: number;
+	matchNumber: number;
+	teams: { teamNumber: number; station: string; surrogate: boolean; noShow: boolean }[];
+}
+
+export interface FTCAPIEvent {
+	code: string;
+	divisionCode: string | null;
+}
+
+interface FTCAPIAlliance {
+	number: number;
+	captain: { teamNumber: number } | null;
+	round1: { teamNumber: number } | null;
+	round2: { teamNumber: number } | null;
+	round3: { teamNumber: number } | null;
+	backup: { teamNumber: number } | null;
 }
 
 export interface FTCAPITeam {
@@ -143,10 +171,11 @@ function getLoadedEvents(keys: string[]) {
 async function createEventTracker(key: string) {
 	console.log("Creating event tracker for ", key);
 	try {
-		const [event, schedule, teams] = await Promise.all([
+		const [event, schedule, teams, seasonEvents] = await Promise.all([
 			toa.getEvent(key),
 			toa.getEventMatches(key),
 			toa.getEventTeams(key),
+			FTCAPIgetSeasonEvents(),
 		]);
 		for (const match of schedule) {
 			match.scheduledTime = match.scheduledTime?.substring(0, 22);
@@ -170,6 +199,10 @@ async function createEventTracker(key: string) {
 			streams: [],
 			timezone: event.timeZone,
 			teamCount: teams.length,
+			qualMatchCount: 0,
+			allianceCount: 0,
+			parentCode: seasonEvents.find((e) => e.code === event.firstEventCode)?.divisionCode ?? null,
+			divisionCodes: seasonEvents.filter((e) => e.divisionCode === event.firstEventCode).map((e) => e.code),
 			// matchCount: event.matchCount
 		};
 
@@ -230,7 +263,15 @@ async function getEventsThisWeek(region: string) {
 
 async function updateEventStatus(event: FTCEvent) {
 	console.log("Updating event status for ", event.code);
-	const [matches] = await Promise.all([FTCAPIgetMatches(event.code), refreshScheduleAndStreams(event)]);
+	const [apiMatches, qualSchedule, alliances] = await Promise.all([
+		FTCAPIgetMatches(event.code),
+		getQualSchedule(event.code),
+		event.isLeagueMeet ? new Map<number, number>() : getAlliances(event.code),
+		refreshScheduleAndStreams(event),
+	]);
+
+	// Practice matches are not part of the event's progress
+	const matches = apiMatches.filter((match) => match.tournamentLevel !== "PRACTICE");
 
 	for (const match of matches) {
 		match.actualStartTime = new Date(match.actualStartTime);
@@ -239,13 +280,21 @@ async function updateEventStatus(event: FTCEvent) {
 		match.postResultTime.setHours(match.postResultTime.getHours() - getTimezoneOffset(event.timezone));
 	}
 
+	const playedQuals = matches.filter((match) => match.tournamentLevel === "QUALIFICATION");
+	event.qualMatchCount = Math.max(
+		qualSchedule.length,
+		event.schedule.filter((match) => match.tournamentLevel === 1).length,
+		playedQuals.length,
+	);
+	event.allianceCount = await getAllianceCount(event, qualSchedule, playedQuals, alliances);
+
 	// If there are no matches, set the event status to empty
 	if (matches.length === 0) {
 		event.matches = [];
 		event.currentMatch = null;
 		event.currentLevel = "QUALIFICATION";
 		event.completedMatches = 0;
-		event.totalMatches = 1;
+		event.totalMatches = Math.max(event.qualMatchCount + (event.allianceCount > 0 ? 2 * event.allianceCount - 1 : 0), 1);
 		event.averageCycleTime = 0;
 		event.aheadBehind = null;
 		return;
@@ -265,12 +314,11 @@ async function updateEventStatus(event: FTCEvent) {
 
 		if (match.postResultTime !== null) {
 			lastCompletedMatch = i;
-			lastCompletedMatchLevel = match.tournamentLevel;
+			lastCompletedMatchLevel = match.tournamentLevel === "PLAYOFF" ? "PLAYOFF" : "QUALIFICATION";
 		}
 
 		const scheduledMatch = event.schedule.find(
-			(scheduledMatch) =>
-				scheduledMatch.matchKey === getTOAMatchKey(event.key, match.matchNumber, match.tournamentLevel),
+			(scheduledMatch) => scheduledMatch.matchKey === getTOAMatchKey(event.key, match),
 		);
 		const startTime = scheduledMatch?.scheduledTime ? new Date(scheduledMatch.scheduledTime) : null;
 
@@ -286,29 +334,129 @@ async function updateEventStatus(event: FTCEvent) {
 		newMatches.push(ftcMatch);
 	}
 
-	let extraMatches = 0;
-
-	if (event.teamCount < 11) {
-		extraMatches = 2; // 3 matches at most
-	} else if (event.teamCount < 21) {
-		extraMatches = 6; // 7 matches at most
-	} else if (event.teamCount < 41) {
-		extraMatches = 10; // 11 matches at most
-	} else {
-		extraMatches = 14; // 15 match at most
-	}
+	const completedQuals = newMatches.filter((match) => match.completed && match.tournamentLevel === "QUALIFICATION");
+	const completedPlayoffs = newMatches.filter((match) => match.completed && match.tournamentLevel === "PLAYOFF");
 
 	event.matches = newMatches;
-	event.currentMatch = newMatches[lastCompletedMatch];
+	event.currentMatch = newMatches[lastCompletedMatch] ?? null;
 	event.currentLevel = lastCompletedMatchLevel;
-	event.totalMatches = Math.max(event.schedule.length + extraMatches, newMatches.length);
-	event.completedMatches = newMatches.filter((match) => match.completed).length;
+	event.completedMatches = completedQuals.length + completedPlayoffs.length;
+	event.totalMatches = Math.max(
+		event.qualMatchCount +
+			completedPlayoffs.length +
+			getPlayoffMatchesLeft(completedPlayoffs, event.allianceCount, alliances),
+		event.completedMatches,
+		1,
+	);
 	event.averageCycleTime = getAverageCycleTime(
 		newMatches.map((match) => match.cycleTime ?? 0).filter((time) => time !== null),
 	);
 	event.aheadBehind = event.currentMatch?.scheduledStartTime
 		? event.currentMatch.actualStartTime.getTime() - event.currentMatch.scheduledStartTime.getTime()
 		: null;
+}
+
+// Table 13-2: number of playoff alliances from the teams playing qualification matches
+function getAllianceCountForTeams(teams: number) {
+	if (teams <= 10) return 2;
+	if (teams <= 20) return 4;
+	if (teams <= 40) return 6;
+	return 8;
+}
+
+// Teams in the qualification schedule, leaving out teams marked no-show in every match they had
+function getQualTeams(schedule: { teams: { teamNumber: number; noShow?: boolean }[] }[]) {
+	const teams = new Set<number>();
+	for (const match of schedule) {
+		for (const team of match.teams) {
+			if (!team.noShow) teams.add(team.teamNumber);
+		}
+	}
+	return teams.size;
+}
+
+async function getAllianceCount(
+	event: FTCEvent,
+	qualSchedule: FTCAPIScheduledMatch[],
+	playedQuals: FTCAPIMatch[],
+	alliances: Map<number, number>,
+) {
+	// League meets do not play playoffs (Section 14)
+	if (event.isLeagueMeet) return 0;
+	// After alliance selection the bracket size is known exactly
+	if (alliances.size > 0) return new Set(alliances.values()).size;
+	// A dual division parent event plays the 2 division winners (Section 13.8.2)
+	if (event.divisionCodes.length > 0) return 2;
+
+	let teams = getQualTeams(qualSchedule) || getQualTeams(playedQuals) || event.teamCount;
+
+	// Divisions all use the bracket size of the smallest division (T801)
+	if (event.parentCode) {
+		const siblings = (await FTCAPIgetSeasonEvents()).filter(
+			(e) => e.divisionCode === event.parentCode && e.code !== event.code,
+		);
+		for (const sibling of siblings) {
+			const siblingTeams = getQualTeams(await getQualSchedule(sibling.code));
+			if (siblingTeams > 0) teams = Math.min(teams, siblingTeams);
+		}
+	}
+
+	return getAllianceCountForTeams(teams);
+}
+
+// Double elimination (Section 13.7.2): an alliance is out after 2 lost matches, ties are replayed.
+// The bracket takes at most 2 * alliances - 1 decided matches and ends when 1 alliance is left.
+function getPlayoffMatchesLeft(completedPlayoffs: FTCMatch[], allianceCount: number, alliances: Map<number, number>) {
+	if (allianceCount === 0) return 0;
+
+	const losses = new Map<string, number>();
+	let decided = 0;
+
+	for (const match of completedPlayoffs) {
+		if (match.scoreRedFinal === match.scoreBlueFinal) continue;
+		decided++;
+
+		const loser = match.scoreRedFinal < match.scoreBlueFinal ? "Red" : "Blue";
+		const loserTeams = match.teams
+			.filter((team) => team.station.startsWith(loser))
+			.map((team) => team.teamNumber)
+			.sort((a, b) => a - b);
+		const alliance = alliances.get(loserTeams[0]);
+		const key = alliance !== undefined ? `A${alliance}` : loserTeams.join(",");
+		losses.set(key, (losses.get(key) ?? 0) + 1);
+	}
+
+	const eliminated = [...losses.values()].filter((count) => count >= 2).length;
+	if (decided > 0 && allianceCount - eliminated <= 1) return 0;
+
+	return Math.max(2 * allianceCount - 1 - decided, 1);
+}
+
+const allianceSelections: { [code: string]: Map<number, number> } = {};
+
+// Team number -> playoff alliance number; fetched until alliance selection is published, then kept
+async function getAlliances(code: string) {
+	if (allianceSelections[code]?.size) return allianceSelections[code];
+	const teams = new Map<number, number>();
+	const res = await FTCAPIget<{ alliances: FTCAPIAlliance[] }>(`alliances/${code}`);
+	for (const alliance of res?.alliances ?? []) {
+		for (const pick of [alliance.captain, alliance.round1, alliance.round2, alliance.round3, alliance.backup]) {
+			if (pick) teams.set(pick.teamNumber, alliance.number);
+		}
+	}
+	allianceSelections[code] = teams;
+	return teams;
+}
+
+const qualSchedules: { [code: string]: FTCAPIScheduledMatch[] } = {};
+
+// A published qualification schedule does not change, so it is fetched until it exists and then kept
+async function getQualSchedule(code: string) {
+	if (qualSchedules[code]?.length) return qualSchedules[code];
+	const schedule =
+		(await FTCAPIget<{ schedule: FTCAPIScheduledMatch[] }>(`schedule/${code}?tournamentLevel=qual`))?.schedule ?? [];
+	qualSchedules[code] = schedule;
+	return schedule;
 }
 
 async function refreshScheduleAndStreams(event: FTCEvent) {
@@ -338,8 +486,12 @@ async function refreshScheduleAndStreams(event: FTCEvent) {
 	}
 }
 
-function getTOAMatchKey(eventKey: string, matchNumber: number, level: "QUALIFICATION" | "PLAYOFF") {
-	return `${eventKey}-${level === "QUALIFICATION" ? "Q" : "E"}${matchNumber.toString().padStart(3, "0")}-1`;
+// TOA keys quals as Q045 and playoffs as E{series}{match:2}, e.g. E1001 for match 10 of the bracket
+function getTOAMatchKey(eventKey: string, match: FTCAPIMatch) {
+	if (match.tournamentLevel === "PLAYOFF") {
+		return `${eventKey}-E${match.series}${match.matchNumber.toString().padStart(2, "0")}-1`;
+	}
+	return `${eventKey}-Q${match.matchNumber.toString().padStart(3, "0")}-1`;
 }
 
 // The FTC API names a season by the year it kicks off in September (2026 = the 2026-27 season)
@@ -347,23 +499,39 @@ function getFTCSeason(date: Date = new Date()) {
 	return date.getMonth() >= 8 ? date.getFullYear() : date.getFullYear() - 1;
 }
 
-async function FTCAPIgetMatches(eventKey: string) {
-	const response = await fetch(
-		`https://ftc-api.firstinspires.org/v2.0/${getFTCSeason()}/matches/${eventKey}?start=0&end=999`,
-		{
-			headers: {
-				Accept: "application/json",
-				Authorization: `Basic ${btoa(process.env.FTC_KEY ?? "")}`,
-			},
+async function FTCAPIget<T>(path: string): Promise<T | null> {
+	const response = await fetch(`https://ftc-api.firstinspires.org/v2.0/${getFTCSeason()}/${path}`, {
+		headers: {
+			Accept: "application/json",
+			Authorization: `Basic ${btoa(process.env.FTC_KEY ?? "")}`,
 		},
-	);
+	});
 
 	if (!response.ok) {
-		console.error(`FTC API ${response.status} for ${eventKey}: ${(await response.text()).substring(0, 200)}`);
-		return [];
+		console.error(`FTC API ${response.status} for ${path}: ${(await response.text()).substring(0, 200)}`);
+		return null;
 	}
 
-	return ((await response.json()).matches ?? []) as FTCAPIMatch[];
+	return (await response.json()) as T;
+}
+
+async function FTCAPIgetMatches(eventKey: string) {
+	return (await FTCAPIget<{ matches: FTCAPIMatch[] }>(`matches/${eventKey}?start=0&end=999`))?.matches ?? [];
+}
+
+let seasonEvents: { fetched: number; events: Promise<FTCAPIEvent[]> } | null = null;
+
+// The season's event list, for division links; refreshed every 6 hours
+function FTCAPIgetSeasonEvents() {
+	if (!seasonEvents || Date.now() - seasonEvents.fetched > 6 * 60 * 60 * 1000) {
+		const events = FTCAPIget<{ events: FTCAPIEvent[] }>("events").then((res) => res?.events ?? []);
+		seasonEvents = { fetched: Date.now(), events };
+		// A failed fetch is retried on the next call instead of being kept for 6 hours
+		events.then((list) => {
+			if (list.length === 0) seasonEvents = null;
+		});
+	}
+	return seasonEvents.events;
 }
 
 function getAverageCycleTime(cycleTimes: number[], rollingAverage: number = 6) {

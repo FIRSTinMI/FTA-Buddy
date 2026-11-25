@@ -23,9 +23,9 @@ const inserted: Record<string, unknown>[] = [];
 mock.module("../db/db", () => ({
 	db: {
 		insert: () => ({
-			values: (row: Record<string, unknown>) => ({
+			values: (rows: Record<string, unknown> | Record<string, unknown>[]) => ({
 				execute: async () => {
-					inserted.push(row);
+					inserted.push(...(Array.isArray(rows) ? rows : [rows]));
 				},
 			}),
 		}),
@@ -396,7 +396,8 @@ describe("season event codes", () => {
 describe("debugLog", () => {
 	test("a never-before-seen category is recorded on its first call", async () => {
 		const category = `never-seen-${randomUUID()}`;
-		await debugLogMod.debugLog({ category, message: "first", eventCode: "2026test" });
+		debugLogMod.debugLog({ category, message: "first", eventCode: "2026test" });
+		await debugLogMod.flushDebugLogs();
 		const row = inserted.find((r) => r.category === category);
 		expect(row).toMatchObject({ category, message: "first", event_code: "2026test", level: "info" });
 	});

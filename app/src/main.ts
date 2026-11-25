@@ -8,7 +8,8 @@ import "./app.css";
 import App from "./App.svelte";
 import { settingsStore } from "./stores/settings";
 import { userStore } from "./stores/user";
-import { auth, currentIdToken } from "./util/firebase";
+import { decideBootAuth } from "./util/authGuard";
+import { auth, authReady, currentIdToken } from "./util/firebase";
 
 let token = get(userStore).token;
 let eventToken = get(userStore).eventToken;
@@ -97,35 +98,58 @@ userStore.subscribe((value) => {
 // whichever user Firebase happens to have persisted, hiding accidental account
 // changes (cross-tab sign-in, stray Google popup, etc.). Subsequent fires are
 // left alone so intentional sign-ins during a session work normally.
+//
+// A missing Firebase user alone does not sign out: the first reading is
+// re-checked once after authStateReady() and a short delay, so one failed
+// session restore at boot does not destroy the stored profile.
+const AUTH_RECHECK_DELAY_MS = 1500;
 let firstAuthFire = true;
-onIdTokenChanged(auth, async (fbUser) => {
+onIdTokenChanged(auth, async (firstUser) => {
 	const isFirstFire = firstAuthFire;
 	firstAuthFire = false;
 
-	token = fbUser ? await fbUser.getIdToken() : "";
+	let fbUser = firstUser;
 	const cur = get(userStore);
 
-	if (isFirstFire && cur.email && (!fbUser || (fbUser.email && cur.email !== fbUser.email))) {
-		console.warn(
-			`[AUTH] Firebase session (${fbUser?.email ?? "signed out"}) does not match stored profile (${cur.email}). Signing out to force re-authentication.`,
-		);
-		try {
-			await signOut(auth);
-		} catch (e) {
-			console.error("[AUTH] signOut on mismatch failed", e);
+	if (isFirstFire && cur.email) {
+		let decision = decideBootAuth(cur.email, fbUser ? (fbUser.email ?? "") : null);
+		if (decision === "recheck") {
+			console.warn(`[AUTH] No Firebase session for stored profile (${cur.email}); re-checking once.`);
+			await authReady;
+			await new Promise((r) => setTimeout(r, AUTH_RECHECK_DELAY_MS));
+			fbUser = auth.currentUser;
+			decision = decideBootAuth(cur.email, null, fbUser ? (fbUser.email ?? "") : null);
+			if (decision === "keep") {
+				console.info(`[AUTH] Firebase session present on re-check (${fbUser?.email}); keeping profile.`);
+			}
 		}
-		userStore.set({
-			email: "",
-			username: "",
-			id: -1,
-			token: "",
-			eventToken: cur.eventToken,
-			role: "FTA",
-			admin: false,
-		});
-		window.location.reload();
-		return;
+
+		if (decision === "signout-no-session" || decision === "signout-mismatch") {
+			const why =
+				decision === "signout-no-session"
+					? `no Firebase session after retry for stored profile (${cur.email})`
+					: `Firebase session (${fbUser?.email}) does not match stored profile (${cur.email})`;
+			console.warn(`[AUTH] Signing out to force re-authentication: ${why}.`);
+			try {
+				await signOut(auth);
+			} catch (e) {
+				console.error("[AUTH] signOut on mismatch failed", e);
+			}
+			userStore.set({
+				email: "",
+				username: "",
+				id: -1,
+				token: "",
+				eventToken: cur.eventToken,
+				role: "FTA",
+				admin: false,
+			});
+			window.location.reload();
+			return;
+		}
 	}
+
+	token = fbUser ? await fbUser.getIdToken() : "";
 
 	if (cur.token !== token) {
 		userStore.set({ ...cur, token });

@@ -2,10 +2,8 @@ import { type FirebaseApp, initializeApp } from "firebase/app";
 import {
 	type Auth,
 	GoogleAuthProvider,
-	browserLocalPersistence,
 	connectAuthEmulator,
 	getAuth,
-	setPersistence,
 } from "firebase/auth";
 
 // Public Firebase web config. The apiKey is a client identifier, not a secret -
@@ -41,6 +39,10 @@ const isDevHost = typeof window !== "undefined" && window.location.hostname.star
 const firebaseConfig = isDevHost ? DEV_CONFIG : PROD_CONFIG;
 
 export const firebaseApp: FirebaseApp = initializeApp(firebaseConfig);
+// getAuth() uses Firebase's default persistence (IndexedDB, then localStorage,
+// then sessionStorage), so the session survives reloads and installed-PWA
+// restarts. Do not call setPersistence here: it moves the saved session to
+// another storage on every start, and the app can be closed in between.
 export const auth: Auth = getAuth(firebaseApp);
 
 // Local development points at the Firebase Auth emulator. In dev mode it
@@ -58,12 +60,8 @@ if (emulatorHost) {
 
 export const googleProvider = new GoogleAuthProvider();
 
-// Persist the session across reloads (important for the installed PWA).
-setPersistence(auth, browserLocalPersistence).catch((e) => console.error("[firebase] setPersistence failed", e));
-
 /**
- * Resolves once Firebase has finished restoring a persisted session from
- * IndexedDB.
+ * Resolves once Firebase has finished restoring a persisted session.
  *
  * `auth.currentUser` is null until that restore completes, and the restore is
  * async, so anything reading it during boot sees a signed-out user even when

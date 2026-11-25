@@ -53,6 +53,7 @@
 		startNotificationSubscription,
 		stopNotificationSubscription,
 	} from "./util/notifications";
+	import { POWER_MONITOR_UI } from "./util/features";
 	import { authReady, currentIdToken } from "./util/firebase";
 	import { registerToast } from "./util/toast";
 	import { track } from "./util/telemetry";
@@ -114,7 +115,8 @@
 			// device that just joined has never seen a settings push for it.
 			if (checkAuth.event) {
 				const powerMonitoring = checkAuth.event.powerMonitoring;
-				eventStore.update((e) => ({ ...e, powerMonitoring }));
+				const extensionsEnabled = checkAuth.event.extensionsEnabled !== false;
+				eventStore.update((e) => ({ ...e, powerMonitoring, extensionsEnabled }));
 			}
 
 			if (checkAuth.event?.archived) {
@@ -164,6 +166,7 @@
 						meshedEventCode: res.code,
 						startDate: res.startDate ?? undefined,
 						endDate: res.endDate ?? undefined,
+						extensionsEnabled: res.extensionsEnabled !== false,
 						joinedAt: new Date().toISOString().split("T")[0],
 					});
 					saveEvent({
@@ -188,6 +191,7 @@
 						users: res.users as Profile[],
 						startDate: res.startDate ?? undefined,
 						endDate: res.endDate ?? undefined,
+						extensionsEnabled: res.extensionsEnabled !== false,
 						joinedAt: new Date().toISOString().split("T")[0],
 					});
 					saveEvent({
@@ -516,8 +520,8 @@
 	});
 
 	// Subscribe to server-side event settings changes (playoffMode, notepadOnly,
-	// powerMonitoring) so all
-	// connected clients update immediately when an FTA toggles them.
+	// powerMonitoring, extensionsEnabled) so all
+	// connected clients update immediately when an FTA or admin toggles them.
 	$effect(() => {
 		const eventToken = $user.eventToken;
 		if (!eventToken) return;
@@ -528,6 +532,7 @@
 					playoffMode: data.playoffMode,
 					notepadOnly: data.notepadOnly,
 					powerMonitoring: data.powerMonitoring,
+					extensionsEnabled: data.extensionsEnabled !== false,
 				}));
 			},
 		});
@@ -887,7 +892,7 @@
 							<Icon icon="mdi:database-export-outline" class="size-8" />
 						{/snippet}
 					</SidebarItem>
-					{#if $eventStore.powerMonitoring}
+					{#if POWER_MONITOR_UI && $eventStore.powerMonitoring}
 						<SidebarItem
 							label="Power"
 							onclick={() => {

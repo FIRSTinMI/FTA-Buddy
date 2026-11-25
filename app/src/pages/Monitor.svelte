@@ -331,6 +331,16 @@
 </div>
 
 <div class="flex-1 min-h-0 overflow-hidden">
+	{#if $eventStore?.extensionsEnabled === false}
+		<div
+			class="mx-auto mb-1 flex items-center justify-center gap-2 rounded-lg bg-red-600 px-3 py-1 text-center text-sm font-semibold text-white md:text-xl"
+			class:lg:text-3xl={$fullscreen}
+			role="status"
+		>
+			<Icon icon="mdi:power-plug-off" class="size-5 md:size-6 shrink-0" />
+			<span>Field data stopped: extensions off by admin</span>
+		</div>
+	{/if}
 	<div
 		class="grid grid-cols-fieldmonitor 2xl:grid-cols-fieldmonitor-large gap-0.5 md:gap-1 2xl:gap-2 mx-auto justify-center"
 		class:fullscreen={$fullscreen}

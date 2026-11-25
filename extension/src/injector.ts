@@ -1,7 +1,19 @@
 console.log("Loaded injector");
 const manifestData = chrome.runtime.getManifest();
 chrome.storage.local.get(
-	["url", "cloud", "event", "changed", "enabled", "fieldMonitor", "useSignalR", "id", "useDev", "eventToken"],
+	[
+		"url",
+		"cloud",
+		"event",
+		"changed",
+		"enabled",
+		"remoteDisabled",
+		"fieldMonitor",
+		"useSignalR",
+		"id",
+		"useDev",
+		"eventToken",
+	],
 	(item) => {
 		console.log(item);
 		let enabled = Boolean(item.enabled);
@@ -18,6 +30,11 @@ chrome.storage.local.get(
 			return;
 		}
 
+		if (item.remoteDisabled === true) {
+			console.log("Switched off for this event by an admin");
+			return;
+		}
+
 		if (expired) {
 			console.log("Expired");
 			return;
@@ -27,6 +44,13 @@ chrome.storage.local.get(
 			item.id = crypto.randomUUID();
 			chrome.storage.local.set({ id: item.id });
 		}
+
+		// The injected scripts below run in the page and keep talking to FMS until
+		// the page goes away. If the extension is switched off (locally or by an
+		// admin) after injecting, reload so the page comes back without them.
+		chrome.storage.local.onChanged.addListener((changes) => {
+			if (changes.enabled?.newValue === false || changes.remoteDisabled?.newValue === true) location.reload();
+		});
 
 		// Always inject the visual overlay (toggle button ± full FTA Buddy grid)
 		const overlayScript = document.createElement("script");

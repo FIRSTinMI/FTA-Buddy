@@ -41,6 +41,7 @@ import {
 import { subscriptionQueue } from "../util/subscription";
 import { bus } from "../util/eventBus";
 import { autoLinkEventsToNote } from "../util/auto-link-events";
+import { assertExtensionDataAllowed } from "../util/event-extensions";
 
 /**
  * Given an event code and match number (plus optional play number / level),
@@ -1625,6 +1626,8 @@ export const notesRouter = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			const event = ctx.event;
+			// Refused while an admin has extensions switched off for this event.
+			await assertExtensionDataAllowed(event.code);
 
 			const field = await getFieldProfile();
 			const meta = input.fms_metadata as FmsNoteMetadata | null;
@@ -1684,6 +1687,8 @@ export const notesRouter = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			const event = ctx.event;
+			// Refused while an admin has extensions switched off for this event.
+			await assertExtensionDataAllowed(event.code);
 
 			const whereClause = input.id
 				? and(eq(notes.id, input.id), eq(notes.event_code, event.code))
@@ -1734,6 +1739,8 @@ export const notesRouter = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			const event = ctx.event;
+			// Refused while an admin has extensions switched off for this event.
+			await assertExtensionDataAllowed(event.code);
 			await db
 				.update(notes)
 				.set({
@@ -1764,6 +1771,8 @@ export const notesRouter = router({
 
 	deleteByFmsNoteId: eventProcedure.input(z.object({ fms_note_id: z.string() })).mutation(async ({ ctx, input }) => {
 		const event = ctx.event;
+		// Refused while an admin has extensions switched off for this event.
+		await assertExtensionDataAllowed(event.code);
 		const note = await db.query.notes.findFirst({
 			where: and(eq(notes.fms_note_id, input.fms_note_id), eq(notes.event_code, event.code)),
 			with: noteWith,

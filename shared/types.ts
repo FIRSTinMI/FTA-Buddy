@@ -465,6 +465,8 @@ export interface ServerEvent {
 	notepadOnly: boolean;
 	playoffMode: boolean;
 	powerMonitoring: boolean;
+	/** Admin switch for every extension on the event; false stops them. */
+	extensionsEnabled: boolean;
 	powerAlertSettings: PowerAlertSettings;
 	subEvents?: {
 		code: string;
@@ -524,6 +526,116 @@ export interface ExtensionConfig {
 	sourceMode?: "fms" | "cheesy";
 	cheesyPort?: number;
 }
+
+/**
+ * What the server sends an extension over `extension.configSubscription`.
+ * `remoteDisabled: true` marks the stop for an event whose extensions an admin
+ * switched off: old extensions apply the `enabled: false` beside it, new ones
+ * set their separate remote flag and leave their own Enable setting alone.
+ */
+export type ExtensionConfigDelivery = ExtensionConfig & { remoteDisabled?: boolean };
+
+// #region Extension presence (admin dashboard)
+
+/**
+ * What an extension is doing, from its own settings:
+ * - `remote-disabled`: an admin switched extensions off for its event; same as disabled.
+ * - `disabled`: the master Enable toggle is off; it talks to nothing but the heartbeat.
+ * - `expired`: settings last changed more than four days ago; field data stays off.
+ * - `no-event`: enabled but holds no event token, so it is not attached to an event.
+ * - `running`: enabled, fresh and attached to an event.
+ */
+export type ExtensionRunState = "running" | "remote-disabled" | "disabled" | "expired" | "no-event";
+
+/**
+ * Live-feed mode: `signalr` (FMS hubs), `cheesy` (Cheesy Arena websocket),
+ * `scraping` (FMS field monitor page posts frames itself), `off` (field monitor off).
+ */
+export type ExtensionRealtimeFeed = "signalr" | "cheesy" | "scraping" | "off";
+
+/**
+ * Runtime stats an extension reports with each heartbeat. Every field is
+ * optional: the extension leaves out what it cannot report truthfully.
+ * Times are epoch milliseconds.
+ */
+export interface ExtensionHeartbeatStats {
+	sourceMode?: "fms" | "cheesy";
+	/** Result of the last reachability ping to the field system. */
+	fmsReachable?: boolean;
+	/** When that ping ran. */
+	fmsPingAt?: number;
+	/** FMS REST API usable (same probe the extension gates its FMS API calls on). */
+	fmsApi?: boolean;
+	realtimeFeed?: ExtensionRealtimeFeed;
+	/** SignalR hub state ("Connected", "Reconnecting", ...) or the Cheesy Arena feed state. */
+	realtimeStatus?: string;
+	/** Frames the service worker posted since it started. Absent in scraping mode (the page posts those). */
+	framesSent?: number;
+	lastFrameAt?: number;
+	lastError?: string;
+	lastErrorAt?: number;
+	/** When the current service worker instance started. */
+	workerStartedAt?: number;
+	/** When the extension settings last changed (drives the four-day expiry). */
+	changed?: number;
+}
+
+/** One extension's presence record as stored by the server (Redis, ~24 h after the last heartbeat). */
+export interface ExtensionPresence {
+	id: string;
+	version: string;
+	state: ExtensionRunState;
+	/** Event code resolved on the server from the extension's event token; null when it has none or it is unknown. */
+	eventCode: string | null;
+	/** Event code the extension has stored locally (may be stale or a placeholder). */
+	reportedEventCode: string | null;
+	config: ExtensionConfig;
+	stats: ExtensionHeartbeatStats;
+	ip: string | null;
+	userAgent: string | null;
+	firstSeen: number;
+	lastSeen: number;
+}
+
+/** Row returned by `admin.listExtensions`. */
+export interface AdminExtensionEntry {
+	id: string;
+	/**
+	 * True for extensions known only from an event's in-memory stats (versions
+	 * before the heartbeat). Remote enable cannot reach them once disabled.
+	 */
+	legacy: boolean;
+	online: boolean;
+	version: string | null;
+	/** Null for legacy extensions, which do not report it. */
+	state: ExtensionRunState | null;
+	eventCode: string | null;
+	reportedEventCode: string | null;
+	config: ExtensionConfig;
+	/** Config set by an admin and not yet picked up by a heartbeat. */
+	pendingConfig: ExtensionConfig | null;
+	stats: ExtensionHeartbeatStats;
+	/** Legacy only: frames the server counted for this extension; null otherwise. */
+	legacyFrames: number | null;
+	ip: string | null;
+	userAgent: string | null;
+	/** Epoch ms. For legacy entries: when the server first saw it on this event. */
+	firstSeen: number;
+	/** Epoch ms. For legacy entries: its last frame or state report. */
+	lastSeen: number;
+}
+
+/** One point of `admin.getActiveUsers`. */
+export interface ActiveUsersPoint {
+	/** Bucket start, epoch ms. */
+	t: number;
+	/** Distinct users and devices seen in the bucket. */
+	users: number;
+	/** Of those, distinct users and devices whose tab showed the field monitor ("/" or "/monitor"). */
+	fieldMonitors: number;
+}
+
+// #endregion
 
 export type NotificationEvents = {
 	send: (data: { users: number[]; notification: Notification }) => void;

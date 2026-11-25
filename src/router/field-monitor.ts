@@ -19,6 +19,7 @@ import { getEvent } from "../util/get-event";
 import { getMonitorFrame, getTiming, setTiming } from "../util/event-state";
 import { withEventLock } from "../util/event-mutex";
 import { subscriptionQueue } from "../util/subscription";
+import { assertExtensionDataAllowed } from "../util/event-extensions";
 
 export interface Post {
 	type: "test";
@@ -78,6 +79,8 @@ export const fieldMonitorRouter = router({
 			}
 
 			const event = await getEvent(input.eventToken || "", input.eventCode);
+			// Refused while an admin has extensions switched off for this event.
+			await assertExtensionDataAllowed(event.code);
 
 			// Serialize per-event so the read-modify-write sequences against Redis
 			// (timing, monitor_frame, checklist, cycle_tracking) and the bus publishes

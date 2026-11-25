@@ -13,6 +13,7 @@ import { bus } from "../util/eventBus";
 import { evaluatePowerAlerts } from "../util/power-alerts";
 import { eventProcedure, router } from "../trpc";
 import { subscriptionQueue } from "../util/subscription";
+import { assertExtensionDataAllowed } from "../util/event-extensions";
 
 /** Live telemetry channel for an event. One message carries every monitor's latest sample. */
 function liveChannel(eventCode: string) {
@@ -76,6 +77,8 @@ export const powerRouter = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			const event = ctx.event;
+			// Refused while an admin has extensions switched off for this event.
+			await assertExtensionDataAllowed(event.code);
 			if (!event.powerMonitoring) return { stored: 0, enabled: false };
 
 			if (input.samples.length > 0) {

@@ -1,6 +1,6 @@
 console.log("Loaded injector");
 chrome.storage.local.get(
-	["url", "cloud", "useDev", "event", "changed", "eventToken", "enabled", "signalR", "id"],
+	["url", "cloud", "useDev", "event", "changed", "eventToken", "enabled", "remoteDisabled", "signalR", "id"],
 	(item) => {
 		console.log(item);
 		let enabled = Boolean(item.enabled);
@@ -8,8 +8,8 @@ chrome.storage.local.get(
 		let changed = Number(item.changed);
 		let signalR = Boolean(item.signalR);
 
-		// Don't inject if not enabled, expired
-		if (!enabled) {
+		// Don't inject if not enabled, switched off by an admin, expired
+		if (!enabled || item.remoteDisabled === true) {
 			console.log("Not enabled");
 			return;
 		} else if (changed + 1000 * 60 * 60 * 24 * 4 < new Date().getTime()) {

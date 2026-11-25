@@ -14,12 +14,20 @@ import { FmsSource } from "./sources/fmsSource";
 import type { FieldDataSource } from "./sources/types";
 import { trpc, updateValues } from "./trpc";
 import { MatchState, MatchStateMap } from "../../shared/types";
-import type { PowerTelemetry } from "../../shared/types";
+import type {
+	ExtensionConfig,
+	ExtensionConfigDelivery,
+	ExtensionHeartbeatStats,
+	ExtensionRealtimeFeed,
+	PowerTelemetry,
+} from "../../shared/types";
+import { deriveExtensionState, remoteConfigToStorageUpdates } from "../../shared/extension-state";
 import { DEFAULT_SUBNET_PREFIX, isValidSubnetPrefix, monitorOrigins, PowerMonitorManager } from "./power-monitor";
 
 const ALARM_TEAM_POLL = "teamPoll";
 const ALARM_MATCH_IMPORT = "matchImport";
 const ALARM_SCHEDULE_POLL = "schedulePoll";
+const ALARM_HEARTBEAT = "heartbeat";
 
 let qualsScheduleAvailable = false;
 let inboundSyncInProgress = false;
@@ -84,6 +92,17 @@ export let eventToken: string;
 export let url: string;
 export let id: string;
 export let enabled: boolean;
+/**
+ * An admin switched extensions off for this extension's event (heartbeat reply
+ * or live push). Kept apart from `enabled` so the host's own setting comes back
+ * untouched when the admin switches the event on again.
+ */
+export let remoteDisabled: boolean = false;
+
+/** Enabled locally and not switched off by an admin: the only state that may touch the field network. */
+function isActive(): boolean {
+	return Boolean(enabled) && !remoteDisabled;
+}
 export let fieldMonitor: boolean = false;
 export let useSignalR: boolean = true;
 export let sourceMode: "fms" | "cheesy" = "fms";
@@ -101,6 +120,30 @@ export let fmsApiEnabled: boolean = true;
 /** Fill unset tower selections at commit, test and practice only. Off by default. */
 export let scoreAutofill: boolean = false;
 
+// #region Runtime stats (reported in the heartbeat)
+
+/** When this service worker instance started. */
+const workerStartedAt = Date.now();
+/** Which live feed start() actually opened; "off" until it does and after stop(). */
+let realtimeFeed: ExtensionRealtimeFeed = "off";
+/** Frames this worker posted to the server (SignalR / Cheesy Arena feed only). */
+let framesSent = 0;
+let lastFrameAt: number | undefined;
+/** Result and time of the last field-system ping that actually ran. */
+let fmsReachable: boolean | undefined;
+let fmsPingAt: number | undefined;
+let lastError: string | undefined;
+let lastErrorAt: number | undefined;
+
+/** Remember the most recent error the worker caught, for the admin dashboard. */
+function noteError(context: string, err: unknown) {
+	const text = err instanceof Error ? err.message : String(err);
+	lastError = `${context}: ${text}`.slice(0, 300);
+	lastErrorAt = Date.now();
+}
+
+// #endregion
+
 async function stop() {
 	stopTeamPolling();
 	stopMatchAutoImport();
@@ -111,9 +154,22 @@ async function stop() {
 	extensionConfigSubscription = undefined;
 	stopPowerMonitor();
 	await source?.stop();
+	// Drop the stopped source so nothing (popup ping, page getEventCode) can
+	// reach the field system through it while the extension is disabled.
+	source = null;
+	realtimeFeed = "off";
 }
 
+/** Apply settings, then send a heartbeat so the admin dashboard sees the new state at once. */
 async function start() {
+	try {
+		await startInner();
+	} finally {
+		sendHeartbeat();
+	}
+}
+
+async function startInner() {
 	await stop();
 
 	await new Promise((resolve) => {
@@ -125,6 +181,7 @@ async function start() {
 				"event",
 				"changed",
 				"enabled",
+				"remoteDisabled",
 				"fieldMonitor",
 				"useSignalR",
 				"sourceMode",
@@ -169,6 +226,7 @@ async function start() {
 				eventCode = String(item.event);
 				changed = Number(item.changed);
 				enabled = Boolean(item.enabled);
+				remoteDisabled = item.remoteDisabled === true;
 				fieldMonitor = Boolean(item.fieldMonitor);
 				useSignalR = item.useSignalR !== false; // default true
 				fmsApiEnabled = item.fmsApiEnabled !== false; // default true
@@ -190,8 +248,12 @@ async function start() {
 		);
 	});
 
-	if (!enabled) {
-		console.log("Not enabled");
+	// Point the server client at the configured server before any gate below, so
+	// the heartbeat reaches the right server even while disabled. Storage read only.
+	await updateValues();
+
+	if (!isActive()) {
+		console.log(remoteDisabled ? "Switched off for this event by an admin" : "Not enabled");
 		return;
 	}
 
@@ -244,12 +306,15 @@ async function start() {
 	// SignalR feed is optional (scraping mode posts frames from a content script).
 	if (sourceMode === "cheesy") {
 		console.log("Starting Cheesy Arena source");
+		realtimeFeed = "cheesy";
 		await source.start();
 	} else if (useSignalR) {
 		console.log("Starting SignalR");
+		realtimeFeed = "signalr";
 		await source.start();
 	} else {
 		console.log("SignalR disabled, using scraping mode");
+		realtimeFeed = "scraping";
 	}
 
 	if (!(eventCode || eventToken)) return;
@@ -273,6 +338,7 @@ async function start() {
 			startOutboundNoteSync();
 		} catch (err) {
 			console.warn("Could not fetch FMS event password:", err);
+			noteError("FMS event password", err);
 		}
 	}
 }
@@ -287,8 +353,32 @@ function buildSource(): FieldDataSource {
 // #region Remote config sync
 
 /** The extension settings mirrored to the server for remote configuration. */
-function currentExtensionConfig() {
-	return { enabled, fieldMonitor, useSignalR, fmsApiEnabled, scoreAutofill, sourceMode, cheesyPort };
+function currentExtensionConfig(): ExtensionConfig {
+	return {
+		enabled: Boolean(enabled),
+		fieldMonitor,
+		useSignalR,
+		fmsApiEnabled,
+		scoreAutofill,
+		sourceMode,
+		cheesyPort,
+	};
+}
+
+/**
+ * Apply a config that came from the server (live subscription or heartbeat
+ * reply). Written to chrome.storage.local, whose change listener restarts the
+ * extension so the new settings take effect.
+ */
+function applyRemoteConfig(config: ExtensionConfigDelivery) {
+	// An admin switched the event off: set the separate remote flag and leave the
+	// host's own settings (Enable included) as they are.
+	if (config.remoteDisabled === true) {
+		if (!remoteDisabled) chrome.storage.local.set({ remoteDisabled: true });
+		return;
+	}
+	const updates = remoteConfigToStorageUpdates(config, sanitizeCheesyPort);
+	if (Object.keys(updates).length > 0) chrome.storage.local.set(updates);
 }
 
 /** Report the current config + version to the server so any device can see it. */
@@ -296,7 +386,10 @@ function reportExtensionState() {
 	if (!eventToken) return;
 	trpc.extension.reportState
 		.mutate({ extensionId: id, version: manifestData.version, fmsApi, config: currentExtensionConfig() })
-		.catch((err) => console.warn("Extension reportState failed:", err));
+		.catch((err) => {
+			console.warn("Extension reportState failed:", err);
+			noteError("reportState", err);
+		});
 }
 
 /**
@@ -311,22 +404,91 @@ function startExtensionConfigSync() {
 	extensionConfigSubscription = trpc.extension.configSubscription.subscribe(
 		{ extensionId: id },
 		{
-			onData: (config) => {
-				const updates: Record<string, any> = {};
-				if (config.enabled !== undefined) updates.enabled = config.enabled;
-				if (config.fieldMonitor !== undefined) updates.fieldMonitor = config.fieldMonitor;
-				if (config.useSignalR !== undefined) updates.useSignalR = config.useSignalR;
-				if (config.fmsApiEnabled !== undefined) updates.fmsApiEnabled = config.fmsApiEnabled;
-				if (config.scoreAutofill !== undefined) updates.scoreAutofill = config.scoreAutofill;
-				if (config.sourceMode !== undefined)
-					updates.sourceMode = config.sourceMode === "cheesy" ? "cheesy" : "fms";
-				if (config.cheesyPort !== undefined) updates.cheesyPort = sanitizeCheesyPort(config.cheesyPort);
-				if (Object.keys(updates).length > 0) chrome.storage.local.set(updates);
+			onData: (config) => applyRemoteConfig(config),
+			onError: (err) => {
+				console.warn("Extension configSubscription error:", err);
+				noteError("configSubscription", err);
 			},
-			onError: (err) => console.warn("Extension configSubscription error:", err),
 		},
 	);
 }
+
+// #endregion
+
+// #region Heartbeat
+
+/**
+ * Once a minute, whatever the state (disabled, expired, no event), tell the
+ * server this extension exists and how it is set up, and apply any config an
+ * admin queued for it. This is the only request a disabled extension makes:
+ * it goes to the FTA Buddy server, never to FMS, Cheesy Arena or the field
+ * network, and reads only in-memory state.
+ */
+function sendHeartbeat() {
+	// start() has not loaded settings yet; it sends one itself when it finishes.
+	if (!id) return;
+
+	const now = Date.now();
+	const stats: ExtensionHeartbeatStats = {
+		sourceMode,
+		fmsApi,
+		realtimeFeed,
+		workerStartedAt,
+	};
+	if (fmsReachable !== undefined && fmsPingAt !== undefined) {
+		stats.fmsReachable = fmsReachable;
+		stats.fmsPingAt = fmsPingAt;
+	}
+	if ((realtimeFeed === "signalr" || realtimeFeed === "cheesy") && source) {
+		stats.realtimeStatus = source.getConnectionStatus().slice(0, 40);
+	}
+	// In scraping mode the FMS page posts frames itself, so this worker's count would be a false zero.
+	if (realtimeFeed !== "scraping") {
+		stats.framesSent = framesSent;
+		if (lastFrameAt !== undefined) stats.lastFrameAt = lastFrameAt;
+	}
+	if (lastError !== undefined && lastErrorAt !== undefined) {
+		stats.lastError = lastError;
+		stats.lastErrorAt = lastErrorAt;
+	}
+	if (Number.isFinite(changed) && changed > 0) stats.changed = changed;
+
+	const state = deriveExtensionState({ enabled: Boolean(enabled), remoteDisabled, changed, eventToken, now });
+	trpc.extension.heartbeat
+		.mutate({
+			extensionId: id.slice(0, 64),
+			version: manifestData.version,
+			state,
+			eventCode: eventCode ? eventCode.slice(0, 64) : undefined,
+			config: currentExtensionConfig(),
+			stats,
+		})
+		.then((reply) => {
+			// Older servers send no `remoteDisabled`; only a real boolean changes the flag.
+			if (typeof reply.remoteDisabled === "boolean" && reply.remoteDisabled !== remoteDisabled) {
+				console.log(reply.remoteDisabled ? "Admin switched this event off" : "Admin switched this event on");
+				chrome.storage.local.set({ remoteDisabled: reply.remoteDisabled });
+			}
+			if (reply.config) {
+				console.log("Applying config queued by an admin:", reply.config);
+				applyRemoteConfig(reply.config);
+			}
+		})
+		.catch((err) => {
+			// Older servers have no heartbeat route; nothing to do but try next minute.
+			console.debug("Extension heartbeat failed:", err);
+		});
+}
+
+/** Create the heartbeat alarm if it is missing; recreating it would reset its period on every worker wake. */
+function ensureHeartbeatAlarm() {
+	chrome.alarms.get(ALARM_HEARTBEAT, (alarm) => {
+		if (!alarm) chrome.alarms.create(ALARM_HEARTBEAT, { delayInMinutes: 1, periodInMinutes: 1 });
+	});
+}
+
+chrome.runtime.onInstalled.addListener(() => ensureHeartbeatAlarm());
+ensureHeartbeatAlarm();
 
 // #region Field power monitors
 
@@ -449,6 +611,7 @@ async function flushPowerSamples() {
 	try {
 		await trpc.power.postSamples.mutate({ extensionId: id, samples, status });
 	} catch (err) {
+		noteError("power samples", err);
 		// Dropped on failure rather than retried: this is a continuous stream, and
 		// a backlog replayed later would land out of order behind fresher rows.
 		console.warn("Power sample post failed:", err);
@@ -456,7 +619,8 @@ async function flushPowerSamples() {
 }
 
 async function startPowerMonitor() {
-	if (!powerMonitorEnabled || powerManager) return;
+	// The monitors are on the field network: nothing goes there while disabled.
+	if (!isActive() || !powerMonitorEnabled || powerManager) return;
 
 	// The sweep needs permission for arbitrary http origins, granted from the
 	// popup. Without it every probe throws and the sweep silently finds nothing.
@@ -525,6 +689,11 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 		});
 		return true;
 	} else if (msg?.type === "getEventCode") {
+		// Disabled: answer without asking the field system.
+		if (!isActive()) {
+			sendResponse({ source: "ext", version: manifestData.version, type: "eventCode", code: "", teams: [], id });
+			return false;
+		}
 		const codeP = source ? source.getEventCode() : getEventCode();
 		const teamsP = source ? source.getTeamNumbers() : getTeamNumbers();
 		Promise.all([codeP, teamsP]).then(([code, teams]) => {
@@ -555,6 +724,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 			eventCode,
 			eventToken,
 			enabled,
+			remoteDisabled,
 			fieldMonitor,
 			useSignalR,
 			sourceMode,
@@ -613,22 +783,28 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 });
 
 export async function pingFMS() {
+	// Disabled means no request to the field system at all, including this probe.
+	if (!isActive()) {
+		fmsApi = false;
+		return false;
+	}
+	fmsPingAt = Date.now();
 	try {
 		// Use the active source when available; fall back to a direct FMS probe
 		// (e.g. for popup pings before the source has been built).
 		if (source) {
 			fmsApi = await source.ping();
-			return fmsApi;
+		} else {
+			const controller = new AbortController();
+			setTimeout(() => controller.abort(), 500);
+			const res = await fetch(`http://${FMS}/`, { signal: controller.signal });
+			fmsApi = !!res.ok;
 		}
-		const controller = new AbortController();
-		setTimeout(() => controller.abort(), 500);
-		const res = await fetch(`http://${FMS}/`, { signal: controller.signal });
-		fmsApi = !!res.ok;
-		return res.ok;
 	} catch {
 		fmsApi = false;
-		return false;
 	}
+	fmsReachable = fmsApi;
+	return fmsApi;
 }
 
 const NOTE_TYPE_MAP: Record<string, "TeamIssue" | "EventNote" | "MatchNote"> = {
@@ -810,9 +986,16 @@ async function sendFrame(data: any) {
 	// frames separately); the Cheesy Arena source always feeds frames.
 	if (!fieldMonitor) return;
 	if (sourceMode === "fms" && !useSignalR) return;
-	await trpc.field.post.mutate(
-		eventToken ? { eventToken, ...data, extensionId: id } : { eventCode, ...data, extensionId: id },
-	);
+	try {
+		await trpc.field.post.mutate(
+			eventToken ? { eventToken, ...data, extensionId: id } : { eventCode, ...data, extensionId: id },
+		);
+		framesSent++;
+		lastFrameAt = Date.now();
+	} catch (err) {
+		console.warn("Frame post failed:", err);
+		noteError("frame post", err);
+	}
 }
 
 async function sendCycletime(
@@ -862,6 +1045,7 @@ async function sendAlliances() {
 		await trpc.scorekeeper.alliances.syncFromFMS.mutate({ alliances });
 	} catch (err) {
 		console.warn("[scorekeeper] alliance sync failed:", err);
+		noteError("alliance sync", err);
 	}
 }
 
@@ -891,6 +1075,7 @@ async function pollTeams() {
 		}
 	} catch (err) {
 		console.warn("Team polling error:", err);
+		noteError("team polling", err);
 	}
 }
 
@@ -907,12 +1092,13 @@ function stopTeamPolling() {
 }
 
 async function runMatchAutoImport() {
-	if (!enabled || !eventToken || !source) return;
+	if (!isActive() || !eventToken || !source) return;
 	if (isMatchRunning()) return; // Skip iteration if a match is running
 	try {
 		await source.uploadAllUnimportedMatchLogs();
 	} catch (err) {
 		console.warn("Match auto-import error:", err);
+		noteError("match import", err);
 	}
 }
 
@@ -958,7 +1144,12 @@ chrome.permissions.onRemoved.addListener(() => {
 chrome.alarms.onAlarm.addListener((alarm) => {
 	if (alarm.name === ALARM_TEAM_POLL) pollTeams().catch(console.warn);
 	else if (alarm.name === ALARM_MATCH_IMPORT) runMatchAutoImport().catch(console.warn);
-	else if (alarm.name === ALARM_SCHEDULE_POLL) sendScheduleDetails().catch(console.warn);
+	else if (alarm.name === ALARM_SCHEDULE_POLL)
+		sendScheduleDetails().catch((err) => {
+			console.warn(err);
+			noteError("schedule", err);
+		});
+	else if (alarm.name === ALARM_HEARTBEAT) sendHeartbeat();
 });
 
 let storageDebounce: ReturnType<typeof setTimeout> | null = null;

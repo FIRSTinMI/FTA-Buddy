@@ -26,7 +26,7 @@ export function archiveEnabled(): boolean {
 }
 
 /** The year an event ran in, from its end date, falling back to its start. */
-function eventYear(event: { startDate: string | null; endDate: string | null }): number | null {
+export function eventYear(event: { startDate: string | null; endDate: string | null }): number | null {
 	const raw = event.endDate || event.startDate;
 	if (!raw) return null;
 	const year = Number(raw.slice(0, 4));

@@ -8,6 +8,7 @@ import { eventProcedure, publicProcedure, router } from "../trpc";
 import { getEvent } from "../util/get-event";
 import { getChecklist, setChecklist } from "../util/event-state";
 import { subscriptionQueue } from "../util/subscription";
+import { assertExtensionDataAllowed } from "../util/event-extensions";
 
 function rowsToChecklist(
 	rows: {
@@ -56,6 +57,9 @@ export const checklistRouter = router({
 		)
 		.mutation(async ({ input, ctx }) => {
 			const event = ctx.event;
+			// The app uses this too; only extension writes (Nexus / VIVID injectors send
+			// Extension-Id) are refused while extensions are switched off for the event.
+			if (ctx.extensionId) await assertExtensionDataAllowed(event.code);
 
 			// Read current checklist from Redis (fast), apply mutations, write back
 			const checklist = await getChecklist(event.code);

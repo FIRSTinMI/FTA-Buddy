@@ -8,6 +8,7 @@ import { analyzedLogs, cycleLogs, events, logPublishing, matchLogs } from "../db
 import { eventProcedure, publicProcedure, router } from "../trpc";
 import { compressStationLog } from "../util/log-analysis";
 import { generateReport } from "../util/report-generator";
+import { assertExtensionDataAllowed } from "../util/event-extensions";
 
 // FMS generates Windows-style GUIDs which may have version nibbles outside [1-8],
 // so we use a permissive hex pattern instead of the strict RFC 4122 z.string().uuid().
@@ -50,6 +51,8 @@ export const matchRouter = router({
 			}),
 		)
 		.mutation(async ({ input }) => {
+			// Refused while an admin has extensions switched off for this event.
+			await assertExtensionDataAllowed(input.event);
 			const existing = await db
 				.select({ id: matchLogs.id })
 				.from(matchLogs)
@@ -139,6 +142,8 @@ export const matchRouter = router({
 			}),
 		)
 		.mutation(async ({ input }) => {
+			// Refused while an admin has extensions switched off for this event.
+			await assertExtensionDataAllowed(input.event);
 			const existing = await db
 				.select({ id: matchLogs.id })
 				.from(matchLogs)

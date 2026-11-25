@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { redis } from "./redis";
 
 // Unique ID for this server process - used to verify lock ownership before renewing/releasing.
-const instanceId = randomUUID();
+export const instanceId = randomUUID();
 console.log(`[LeaderLock] Instance ID: ${instanceId}`);
 
 const LOCK_PREFIX = "ftabuddy:lock:";

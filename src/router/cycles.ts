@@ -17,6 +17,7 @@ import { bus } from "../util/eventBus";
 import { getChecklist, getMonitorFrame, getTiming, setTiming } from "../util/event-state";
 import SuperJSON from "superjson";
 import { redis } from "../util/redis";
+import { assertExtensionDataAllowed } from "../util/event-extensions";
 
 function computeChecklistTotals(checklist: EventChecklist | null | undefined) {
 	let present = 0,
@@ -57,6 +58,8 @@ export const cycleRouter = router({
 		)
 		.mutation(async ({ input }) => {
 			const event = await getEvent(input.eventToken);
+			// Refused while an admin has extensions switched off for this event.
+			await assertExtensionDataAllowed(event.code);
 
 			let cycle: any = await db.query.cycleLogs.findFirst({
 				where: and(
@@ -494,6 +497,8 @@ export const cycleRouter = router({
 		)
 		.mutation(async ({ input: postedSchedule }) => {
 			const event = await getEvent(postedSchedule.eventToken);
+			// Refused while an admin has extensions switched off for this event.
+			await assertExtensionDataAllowed(event.code);
 
 			// Correct a schedule FMS generated on the wrong date, for the one event
 			// that needs it. No-op everywhere else. Temporary - see schedule-offset.ts.

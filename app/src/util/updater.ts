@@ -30,6 +30,21 @@ export function compareVersions(a: string, b: string): number {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.13.16": {
+		changelog: `
+        <h2 class="font-bold mt-2">Admin dashboard</h2>
+        <ul>
+        <li>Events, Analytics and Logs tabs</li>
+        <li>Extension switch per event</li>
+        <li>Extensions can be enabled or disabled remotely</li>
+        </ul>
+        <h2 class="font-bold mt-2">Extension</h2>
+        <ul>
+        <li>Notice on the field monitor and event settings when an admin has switched extensions off</li>
+        <li>Keeps a once-a-minute connection so it can be managed while disabled</li>
+        </ul>
+        `,
+	},
 	"2.7.13.15": {
 		changelog: `
         <h2 class="font-bold mt-2">FTC dashboard</h2>

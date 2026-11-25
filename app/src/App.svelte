@@ -56,6 +56,7 @@
 	import { authReady, currentIdToken } from "./util/firebase";
 	import { registerToast } from "./util/toast";
 	import { track } from "./util/telemetry";
+	import { startActiveHeartbeat } from "./util/activeHeartbeat";
 	import { compareVersions, update, VERSIONS } from "./util/updater";
 	import { getPlayoffViewLabel } from "./util/playoffViewLabel";
 
@@ -290,6 +291,7 @@
 
 	onMount(() => {
 		redirectForAuth();
+		startActiveHeartbeat();
 		user.subscribe(() => {
 			redirectForAuth();
 		});

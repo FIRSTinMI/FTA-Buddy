@@ -1,0 +1,1 @@
+CREATE INDEX "debug_logs_level_timestamp_idx" ON "debug_logs" USING btree ("level","timestamp" DESC NULLS LAST);

@@ -21,7 +21,10 @@ import type {
 import { events as eventsInMemory } from "../state";
 import { adminProcedure, router } from "../trpc";
 import { getActiveUsers } from "../util/active-users";
-import { debugLog } from "../util/debug-log";
+import { debugLog, listLogCategories } from "../util/debug-log";
+
+/** Log rows with `data` bigger than this are listed without it. */
+const LOG_DATA_INLINE_BYTES = 8 * 1024;
 import { bus } from "../util/eventBus";
 import {
 	extensionConfigSchema,
@@ -268,12 +271,19 @@ export const adminRouter = router({
 
 	// #region Debug logs
 
-	/** Distinct categories present in `debug_logs`, sorted, for the filter dropdown. */
-	getLogCategories: adminProcedure.query(async (): Promise<string[]> => {
-		const rows = await db.selectDistinct({ category: debugLogs.category }).from(debugLogs);
-		return rows.map((r) => r.category).sort((x, y) => x.localeCompare(y));
-	}),
+	/**
+	 * Distinct categories present in `debug_logs`, sorted, for the filter dropdown.
+	 * A recursive index skip scan with a 30 s cache (see `listLogCategories`), so it
+	 * stays fast with millions of rows.
+	 */
+	getLogCategories: adminProcedure.query(async (): Promise<string[]> => listLogCategories()),
 
+	/**
+	 * Filtered log rows, newest first. Every query is bounded by a time window
+	 * (`range`, default 24 h, "all" only when asked) so the message `ilike` and the
+	 * level filter never scan the whole table. Rows whose `data` is over 8 KB come
+	 * back without it (`dataBytes` says how big); `getLogData` fetches one.
+	 */
 	queryLogs: adminProcedure
 		.input(
 			z.object({
@@ -281,6 +291,7 @@ export const adminRouter = router({
 				category: z.string().optional(),
 				level: z.enum(["debug", "info", "warn", "error"]).optional(),
 				search: z.string().optional(),
+				range: z.enum(["1h", "24h", "7d", "all"]).default("24h"),
 				since: z.date().optional(),
 				until: z.date().optional(),
 				limit: z.number().int().min(1).max(1000).default(200),
@@ -293,12 +304,23 @@ export const adminRouter = router({
 			if (input.category) filters.push(eq(debugLogs.category, input.category));
 			if (input.level) filters.push(eq(debugLogs.level, input.level));
 			if (input.search) filters.push(ilike(debugLogs.message, `%${input.search}%`));
-			if (input.since) filters.push(gte(debugLogs.timestamp, input.since));
+			const windowMs = { "1h": 3_600_000, "24h": 86_400_000, "7d": 604_800_000, all: 0 }[input.range];
+			const since = input.since ?? (windowMs ? new Date(Date.now() - windowMs) : undefined);
+			if (since) filters.push(gte(debugLogs.timestamp, since));
 			if (input.until) filters.push(lte(debugLogs.timestamp, input.until));
 			if (input.cursor) filters.push(lte(debugLogs.timestamp, input.cursor));
 
 			const rows = await db
-				.select()
+				.select({
+					id: debugLogs.id,
+					timestamp: debugLogs.timestamp,
+					event_code: debugLogs.event_code,
+					category: debugLogs.category,
+					level: debugLogs.level,
+					message: debugLogs.message,
+					data: sql<unknown>`CASE WHEN pg_column_size(${debugLogs.data}) > ${LOG_DATA_INLINE_BYTES} THEN NULL ELSE ${debugLogs.data} END`,
+					dataBytes: sql<number | null>`pg_column_size(${debugLogs.data})`,
+				})
 				.from(debugLogs)
 				.where(filters.length ? and(...filters) : undefined)
 				.orderBy(desc(debugLogs.timestamp))
@@ -309,6 +331,12 @@ export const adminRouter = router({
 			const nextCursor = hasMore ? items[items.length - 1].timestamp : null;
 			return { items, nextCursor };
 		}),
+
+	/** The `data` of one log row (queryLogs leaves out data over 8 KB). */
+	getLogData: adminProcedure.input(z.object({ id: z.string().uuid() })).query(async ({ input }) => {
+		const [row] = await db.select({ data: debugLogs.data }).from(debugLogs).where(eq(debugLogs.id, input.id));
+		return row?.data ?? null;
+	}),
 
 	clearLogs: adminProcedure
 		.input(z.object({ category: z.string().optional(), eventCode: z.string().optional() }).optional())

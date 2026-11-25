@@ -8,6 +8,14 @@
 	type LogRow = Awaited<ReturnType<typeof trpc.admin.queryLogs.query>>["items"][number];
 	type Level = "" | "debug" | "info" | "warn" | "error";
 
+	type Range = "1h" | "24h" | "7d" | "all";
+	const RANGES: { value: Range; name: string }[] = [
+		{ value: "1h", name: "1 hour" },
+		{ value: "24h", name: "24 hours" },
+		{ value: "7d", name: "7 days" },
+		{ value: "all", name: "All" },
+	];
+
 	const LEVELS: { value: Level; name: string }[] = [
 		{ value: "", name: "All" },
 		{ value: "debug", name: "Debug" },
@@ -26,6 +34,10 @@
 	let filterEventCode = $state("");
 	let filterLevel = $state<Level>("");
 	let filterSearch = $state("");
+	let filterRange = $state<Range>("24h");
+	// Row data over 8 KB is not sent with the list; it is fetched per row.
+	let fullData: Record<string, unknown> = $state({});
+	let loadingData: Record<string, boolean> = $state({});
 	let limit = $state(200);
 	let tail = $state(true);
 
@@ -58,6 +70,7 @@
 				category: filterCategory || undefined,
 				level: filterLevel || undefined,
 				search: filterSearch || undefined,
+				range: filterRange,
 				limit: Math.min(1000, Math.max(1, Math.round(Number(limit) || 200))),
 			});
 			if (id !== requestId) return;
@@ -69,6 +82,21 @@
 		} finally {
 			if (id === requestId) loading = false;
 		}
+	}
+
+	async function loadRowData(id: string) {
+		loadingData[id] = true;
+		try {
+			fullData[id] = await trpc.admin.getLogData.query({ id });
+		} catch (err) {
+			fail("Data", err);
+		} finally {
+			loadingData[id] = false;
+		}
+	}
+
+	function fmtBytes(n: number): string {
+		return n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`;
 	}
 
 	async function clearAllLogs() {
@@ -85,7 +113,7 @@
 
 	// Reload on any filter change (message search debounced).
 	$effect(() => {
-		void [filterCategory, filterEventCode, filterLevel, filterSearch, limit];
+		void [filterCategory, filterEventCode, filterLevel, filterSearch, filterRange, limit];
 		const t = setTimeout(loadLogs, 300);
 		return () => clearTimeout(t);
 	});
@@ -128,7 +156,7 @@
 
 <div class="flex flex-col gap-4 min-w-0">
 	<section class="bg-white dark:bg-neutral-800 rounded-lg border border-gray-200 dark:border-neutral-700 p-4">
-		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
 			<div>
 				<label for="log-category" class={labelClass}>Category</label>
 				<Select id="log-category" placeholder="" bind:value={filterCategory}>
@@ -152,6 +180,14 @@
 				<Select id="log-level" placeholder="" bind:value={filterLevel}>
 					{#each LEVELS as l (l.value)}
 						<option value={l.value}>{l.name}</option>
+					{/each}
+				</Select>
+			</div>
+			<div>
+				<label for="log-range" class={labelClass}>Range</label>
+				<Select id="log-range" placeholder="" bind:value={filterRange}>
+					{#each RANGES as r (r.value)}
+						<option value={r.value}>{r.name}</option>
 					{/each}
 				</Select>
 			</div>
@@ -233,8 +269,19 @@
 								>{log.message}</td
 							>
 							<td class="px-3 py-1.5 min-w-64">
-								{#if log.data != null}
+								{#if fullData[log.id] != null}
+									<JsonTree value={fullData[log.id]} />
+								{:else if log.data != null}
 									<JsonTree value={log.data} />
+								{:else if log.dataBytes}
+									<Button
+										size="xs"
+										color="light"
+										onclick={() => loadRowData(log.id)}
+										disabled={loadingData[log.id]}
+									>
+										Data {fmtBytes(log.dataBytes)}
+									</Button>
 								{/if}
 							</td>
 						</tr>

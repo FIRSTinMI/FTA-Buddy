@@ -655,6 +655,7 @@ export const debugLogs = pgTable(
 		index("debug_logs_timestamp_idx").on(t.timestamp.desc()),
 		index("debug_logs_event_timestamp_idx").on(t.event_code, t.timestamp.desc()),
 		index("debug_logs_category_timestamp_idx").on(t.category, t.timestamp.desc()),
+		index("debug_logs_level_timestamp_idx").on(t.level, t.timestamp.desc()),
 	],
 );
 

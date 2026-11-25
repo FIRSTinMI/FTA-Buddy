@@ -1092,3 +1092,68 @@ export interface PowerMonitorStatus {
 }
 
 // #endregion
+
+// #region Admin event integrations
+
+/**
+ * One event's integration state, returned by `admin.getEventIntegrations`.
+ * No secret is ever included: only whether a key or password is set.
+ * Fields marked "live" come from the in-memory event of the instance that
+ * answered, and are omitted when that instance has not loaded the event.
+ */
+export interface EventIntegrationStatus {
+	code: string;
+	name: string;
+	nexus: {
+		/** An API key is stored. Configuration only: says nothing about whether it works. */
+		configured: boolean;
+		/** Live, per instance; omitted when this instance has not loaded the event or no key is set. */
+		poll?: {
+			state: NexusPollState;
+			/** ISO time of the last successful inspection poll. */
+			lastSuccessAt?: string;
+			lastErrorAt?: string;
+			lastErrorMessage?: string;
+			isAllInspected: boolean;
+			/** Epoch ms of the newest Nexus schedule data this instance holds (webhook or fallback fetch). */
+			scheduleDataAsOf?: number;
+		};
+	};
+	slack: {
+		/** Both a channel and a team are stored on the event. Configuration only. */
+		connected: boolean;
+		channelId: string | null;
+		teamId: string | null;
+		/** From the installed workspace row; null when the team has no row (bot not installed). */
+		teamName: string | null;
+		/** A bot token row exists for the team. Not a check that the token still works. */
+		workspaceInstalled: boolean;
+	};
+	fms: {
+		/** An FMS event password is set, so the extension can sync notes. Configuration only. */
+		passwordSet: boolean;
+		/** Live, cross-instance (Redis): extensions attached to the event that sent a heartbeat or frame in the last 150 s. */
+		extensionsOnline?: number;
+	};
+	notepadOnly: boolean;
+	publicTicketSubmit: boolean;
+	playoffMode: boolean;
+	extensionsEnabled: boolean;
+	powerMonitoring: boolean;
+	/** Power alerts switch, after defaults. */
+	powerAlertsEnabled: boolean;
+	meshed: {
+		/** This event is a meshed parent; lists its sub-events. */
+		subEvents: { code: string; label: string }[];
+		/** This event is a sub-event of this parent code, if any. */
+		parentCode: string | null;
+	};
+	/** Issue types that generate match events (a type is on unless explicitly false). */
+	autoMatchEvents: { enabledCount: number; total: number; enabled: AutoEventIssueType[] };
+	slowWarning: { enabled: boolean; mode: SlowWarningMode };
+	timezone: string | null;
+	startDate: string | null;
+	endDate: string | null;
+}
+
+// #endregion

@@ -1,3 +1,6 @@
+import { installPageErrorReporting } from "./error-reporter";
+installPageErrorReporting("content:cheesy-inject");
+
 // Content script for Cheesy Arena's field monitor display page.
 //
 // Cheesy Arena's `/displays/field_monitor/websocket` feed enforces

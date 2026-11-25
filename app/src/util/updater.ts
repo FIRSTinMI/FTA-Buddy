@@ -3,7 +3,7 @@ import { eventStore } from "../stores/event";
 import { settingsStore } from "../stores/settings";
 import { userStore } from "../stores/user";
 
-export const LATEST_EXTENSION_VERSION = "1.26.31";
+export const LATEST_EXTENSION_VERSION = "1.26.32";
 
 interface Version {
 	changelog?: string;
@@ -30,6 +30,19 @@ export function compareVersions(a: string, b: string): number {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.13.19": {
+		changelog: `
+        <h2 class="font-bold mt-2">Extension v1.26.32</h2>
+        <ul>
+        <li>Reports its own errors to the server so they can be diagnosed without a screen share</li>
+        </ul>
+        <h2 class="font-bold mt-2">Admin</h2>
+        <ul>
+        <li>Logs tab: Range filter, data on request, many more server events and integration payloads</li>
+        <li>Event cards: "FMS Notepad" chip, Auto events chip removed</li>
+        </ul>
+        `,
+	},
 	"2.7.13.18": {
 		changelog: `
         <ul>

@@ -1,3 +1,6 @@
+import { installPageErrorReporting } from "./error-reporter";
+installPageErrorReporting("popup");
+
 import { shouldDisableForExpiry } from "../../shared/extension-state";
 import { updateValues } from "./trpc";
 

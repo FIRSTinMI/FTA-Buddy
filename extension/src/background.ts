@@ -13,6 +13,7 @@ import { CheesyArenaSource } from "./sources/cheesyArenaSource";
 import { FmsSource } from "./sources/fmsSource";
 import type { FieldDataSource } from "./sources/types";
 import { trpc, updateValues } from "./trpc";
+import { installWorkerErrorReporting } from "./error-reporter";
 import { MatchState, MatchStateMap } from "../../shared/types";
 import type {
 	ExtensionConfig,
@@ -154,7 +155,22 @@ function noteError(context: string, err: unknown) {
 	const text = err instanceof Error ? err.message : String(err);
 	lastError = `${context}: ${text}`.slice(0, 300);
 	lastErrorAt = Date.now();
+	errorReporting.reportCaught(context, err);
 }
+
+/**
+ * Errors go to the FTA Buddy server (and only there: never FMS, Cheesy Arena or
+ * the field network), so this is safe while the extension is disabled.
+ */
+const errorReporting = installWorkerErrorReporting((surface, errors) =>
+	trpc.telemetry.reportErrors.mutate({
+		source: "extension",
+		surface,
+		version: manifestData.version,
+		extensionId: id ? id.slice(0, 64) : undefined,
+		errors,
+	}),
+);
 
 // #endregion
 
@@ -676,6 +692,12 @@ function stopPowerMonitor() {
 // #endregion
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+	// Errors from the popup, content scripts and injected scripts, relayed to the server.
+	if (msg?.type === "reportErrors") {
+		if (Array.isArray(msg.errors)) errorReporting.relay(String(msg.surface ?? "unknown"), msg.errors);
+		return false;
+	}
+
 	// Cheesy Arena field monitor messages relayed from the `cheesy-inject` content
 	// script (it owns the page-origin websocket; see cheesy-inject.ts).
 	if (msg?.type === "cheesyWs") {

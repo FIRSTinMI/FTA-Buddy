@@ -10,6 +10,7 @@ import { settingsStore } from "./stores/settings";
 import { userStore } from "./stores/user";
 import { decideBootAuth } from "./util/authGuard";
 import { auth, authReady, currentIdToken } from "./util/firebase";
+import { errorReportLink } from "./util/errorReporter";
 
 let token = get(userStore).token;
 let eventToken = get(userStore).eventToken;
@@ -61,6 +62,7 @@ function buildLinks(token: string, eventToken: string) {
 
 	return [
 		devLogLink,
+		errorReportLink,
 		// 1st split: subscriptions → SSE (requires HTTP/2 in production for multi-tab)
 		splitLink({
 			condition: (op) => op.type === "subscription",

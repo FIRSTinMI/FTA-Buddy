@@ -1,3 +1,6 @@
+import { installInjectedErrorReporting } from "./error-reporter";
+installInjectedErrorReporting();
+
 import { trpc, updateValues } from "./injected-trpc";
 
 let url = document.getElementById("fta-buddy")?.dataset.host;
@@ -232,7 +235,8 @@ function simplifyConnectPage() {
 	mark(input, "input");
 	mark(button, "button");
 	// "Numeric only" is the one muted <p> before any validation message.
-	const description = input.parentElement?.querySelector("p.text-muted-foreground") ?? item?.querySelector("p.text-muted-foreground");
+	const description =
+		input.parentElement?.querySelector("p.text-muted-foreground") ?? item?.querySelector("p.text-muted-foreground");
 	mark(description, "hide");
 
 	const label = item?.querySelector("label");

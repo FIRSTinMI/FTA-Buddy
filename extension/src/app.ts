@@ -1,3 +1,6 @@
+import { installPageErrorReporting } from "./error-reporter";
+installPageErrorReporting("content:app");
+
 const appExtensionData = chrome.runtime.getManifest();
 
 (async () => {

@@ -1,3 +1,6 @@
+import { installPageErrorReporting } from "./error-reporter";
+installPageErrorReporting("content:vivid");
+
 console.log("Loaded injector");
 chrome.storage.local.get(
 	["url", "cloud", "useDev", "event", "changed", "eventToken", "enabled", "remoteDisabled", "signalR", "id"],

@@ -1,3 +1,6 @@
+import { installInjectedErrorReporting } from "./error-reporter";
+installInjectedErrorReporting();
+
 import { trpc, updateValues, uploadAllUnimportedMatchLogs } from "./injected-trpc";
 import {
 	DSState,

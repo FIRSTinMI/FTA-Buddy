@@ -1,3 +1,6 @@
+import { installPageErrorReporting } from "./error-reporter";
+installPageErrorReporting("content:injector");
+
 console.log("Loaded injector");
 const manifestData = chrome.runtime.getManifest();
 chrome.storage.local.get(

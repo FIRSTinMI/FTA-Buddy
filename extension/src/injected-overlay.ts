@@ -1,3 +1,6 @@
+import { installInjectedErrorReporting } from "./error-reporter";
+installInjectedErrorReporting();
+
 /**
  * injected-overlay.ts - Extension visual overlay for FMS FieldMonitor.
  *

@@ -1,3 +1,6 @@
+import { installInjectedErrorReporting } from "./error-reporter";
+installInjectedErrorReporting();
+
 import { trpc, updateValues } from "./injected-trpc";
 
 let url = document.getElementById("fta-buddy")?.dataset.host;

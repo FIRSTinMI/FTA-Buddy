@@ -9,6 +9,7 @@ import {
 	type RawError,
 } from "../../../shared/error-reporting";
 import { trpc } from "../main";
+import { isExpectedSignedOutError } from "./expectedErrors";
 import { compareVersions, VERSIONS } from "./updater";
 
 /**
@@ -176,7 +177,10 @@ export const errorReportLink: TRPCLink<AppRouter> = () => {
 								err instanceof TRPCClientError
 									? (err.data as { code?: string } | undefined)?.code
 									: undefined;
-							if (!code || !EXPECTED_TRPC_CODES.has(code)) {
+							if (
+								(!code || !EXPECTED_TRPC_CODES.has(code)) &&
+								!isExpectedSignedOutError(op.path, err instanceof Error ? err.message : "")
+							) {
 								reportError(
 									toRawError("trpc", err, {
 										message:

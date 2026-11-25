@@ -868,7 +868,7 @@ app.post("/api/nexus/event-status", async (req, res) => {
 	debugLogOnChange("nexus-webhook:token", "accepted", {
 		category: "nexus",
 		level: "info",
-		message: "Nexus webhook token accepted again",
+		message: "Nexus webhook token accepted",
 	});
 	debugLogOnChange(`nexus-webhook:${eventCode}`, "receiving", {
 		category: "nexus",

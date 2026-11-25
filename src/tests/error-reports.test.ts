@@ -52,7 +52,13 @@ describe("storeErrorReport", () => {
 
 // #region Noise filter and dedupe (shared with the app and the extension)
 
-import { ErrorDeduper, noiseReason, type NoiseContext, type RawError } from "../../shared/error-reporting";
+import {
+	ErrorDeduper,
+	noiseReason,
+	type NoiseContext,
+	type RawError,
+} from "../../shared/error-reporting";
+import { isExpectedSignedOutError } from "../../app/src/util/expectedErrors";
 
 const appCtx: NoiseContext = { ownOrigins: ["https://ftabuddy.com"], online: true };
 const extCtx: NoiseContext = { ownOrigins: ["chrome-extension://ours"], ownExtensionId: "ours", online: true };
@@ -130,3 +136,11 @@ describe("ErrorDeduper", () => {
 });
 
 // #endregion
+
+describe("isExpectedSignedOutError", () => {
+	test("the signed-out checkAuth answer is expected, other failures are not", () => {
+		expect(isExpectedSignedOutError("user.checkAuth", "No token provided")).toBe(true);
+		expect(isExpectedSignedOutError("user.checkAuth", "Failed query: select")).toBe(false);
+		expect(isExpectedSignedOutError("match.putMatchLogs", "No token provided")).toBe(false);
+	});
+});

@@ -13,6 +13,8 @@ export interface Event {
 	notepadOnly?: boolean;
 	playoffMode?: boolean;
 	powerMonitoring?: boolean;
+	/** False when an FTA Buddy admin switched extensions off for this event. Absent counts as true. */
+	extensionsEnabled?: boolean;
 	startDate?: string;
 	endDate?: string;
 	joinedAt?: string;

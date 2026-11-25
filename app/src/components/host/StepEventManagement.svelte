@@ -6,6 +6,7 @@
 	import { trpc } from "../../main";
 	import { toast } from "../../util/toast";
 	import { getPlayoffViewLabel } from "../../util/playoffViewLabel";
+	import { POWER_MONITOR_UI } from "../../util/features";
 	import { LATEST_EXTENSION_VERSION } from "../../util/updater";
 	import { navigate } from "../../router";
 	import QrCode from "svelte-qrcode";
@@ -56,6 +57,9 @@
 	let extensionSourceMode = $derived(activeExtension?.config?.sourceMode ?? "fms");
 	let extensionOutdated = $derived(!!extensionVersion && extensionVersion < LATEST_EXTENSION_VERSION);
 	let fmsExtensionConnected = $derived(activeExtension?.fmsApi ?? false);
+
+	// An admin switched extensions off for the event; the host cannot undo it here.
+	let extensionsOff = $derived($eventStore.extensionsEnabled === false);
 
 	let extensionConfiguring = $state(false);
 	let extensionConfigured = $state(false);
@@ -151,15 +155,27 @@
 
 <h1 class="text-2xl font-bold mb-4">Event Management</h1>
 
+{#if extensionsOff}
+	<div class="mb-4 flex flex-col gap-0.5 text-left" role="status">
+		<span class="inline-flex gap-2 font-bold">
+			<Indicator color="red" class="my-auto" />
+			<span class="text-red-400">Extensions off by admin</span>
+		</span>
+		<span class="text-xs text-gray-500">Extension settings kept</span>
+	</div>
+{/if}
+
 {#if $eventStore.notepadOnly}
 	<div class="flex items-center gap-3 mb-4">
 		<div class="inline-flex gap-2 font-bold">
 			<Indicator color="yellow" class="my-auto" />
 			<span class="text-yellow-300">Notepad Only Mode - live field data streaming is disabled</span>
 		</div>
-		<Button size="xs" color="alternative" onclick={openConfigDialog}>Configure Extension</Button>
+		<Button size="xs" color="alternative" disabled={extensionsOff} onclick={openConfigDialog}
+			>Configure Extension</Button
+		>
 	</div>
-{:else}
+{:else if !extensionsOff}
 	<div class="flex items-center gap-3 mb-4">
 		<div class="flex flex-col gap-0.5">
 			<span class="inline-flex gap-2 font-bold">
@@ -201,7 +217,9 @@
 				</span>
 			{/if}
 		</div>
-		<Button size="xs" color="alternative" onclick={openConfigDialog}>Configure Extension</Button>
+		<Button size="xs" color="alternative" disabled={extensionsOff} onclick={openConfigDialog}
+			>Configure Extension</Button
+		>
 	</div>
 {/if}
 
@@ -324,7 +342,9 @@
 	<IntegrationSlack />
 	<IntegrationAutoEvents />
 	<IntegrationSlowWarning />
-	<IntegrationFieldPower />
+	{#if POWER_MONITOR_UI}
+		<IntegrationFieldPower />
+	{/if}
 </div>
 
 {#if $userStore.eventToken}

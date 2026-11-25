@@ -20,6 +20,9 @@ import { getMonitorFrame, getTiming, setTiming } from "../util/event-state";
 import { withEventLock } from "../util/event-mutex";
 import { subscriptionQueue } from "../util/subscription";
 import { assertExtensionDataAllowed } from "../util/event-extensions";
+import { debugLog, debugLogThrottled } from "../util/debug-log";
+import { logFramePayload } from "../util/payload-log";
+import { subscriberTracker } from "../util/subscriber-tracking";
 
 export interface Post {
 	type: "test";
@@ -103,6 +106,14 @@ export const fieldMonitorRouter = router({
 						// Cap to 100 entries so a spoofed stream of unique IDs can't grow this unboundedly
 						if (event.stats.extensions.length >= 100) event.stats.extensions.shift();
 						event.stats.extensions.push(connection);
+						// Once per extension per server process, not per frame.
+						debugLog({
+							category: "field-monitor",
+							eventCode: event.code,
+							level: "info",
+							message: `Extension ${extensionId} sent its first frame to this instance`,
+							data: { extensionId, match: input.match, level: input.level, version: input.version },
+						});
 					}
 
 					connection.lastFrame = new Date();
@@ -136,6 +147,15 @@ export const fieldMonitorRouter = router({
 
 				const prevField = prevFrame.field;
 				const fieldChanged = prevField !== processed.currentFrame.field;
+				// Raw frame as the extension sent it: first per event, on a transition (field state, match
+				// or level changed; all already computed above), on a shape change, or one per 30 s.
+				logFramePayload({
+					category: "fms-payload",
+					source: "fms field monitor frame",
+					eventCode: event.code,
+					payload: input,
+					transition: fieldChanged || prevFrame.match !== input.match || prevFrame.level !== input.level,
+				});
 				let timingChanged = false;
 
 				if (fieldChanged) {
@@ -205,7 +225,17 @@ export const fieldMonitorRouter = router({
 					.ltrim(`ftabuddy:event:${event.code}:history`, 0, 49)
 					.expire(`ftabuddy:event:${event.code}:history`, 86400)
 					.exec()
-					.catch((err) => console.error(`[Redis] Frame pipeline failed for ${event.code}:`, err));
+					.catch((err) => {
+						console.error(`[Redis] Frame pipeline failed for ${event.code}:`, err);
+						// A Redis outage fails every frame, so one row per distinct error per minute.
+						debugLogThrottled(`frame-pipeline:${event.code}`, 60_000, {
+							category: "field-monitor",
+							eventCode: event.code,
+							level: "error",
+							message: "Frame could not be written to Redis",
+							data: { error: (err as Error)?.message },
+						});
+					});
 
 				for (const change of processed.changes) {
 					bus.publish(`event:${event.code}:robot_state`, change);
@@ -252,10 +282,12 @@ export const fieldMonitorRouter = router({
 			console.log("robots subscription", event.code);
 			const { push, drain } = subscriptionQueue<MonitorFrame>(signal!);
 			const unsub = bus.subscribe(`event:${event.code}:frame`, (data) => push(data as MonitorFrame));
+			subscriberTracker.adjust(event.code, 1);
 			try {
 				yield* drain();
 			} finally {
 				unsub();
+				subscriberTracker.adjust(event.code, -1);
 			}
 		}),
 
@@ -270,10 +302,12 @@ export const fieldMonitorRouter = router({
 			console.log("robot status subscription", event.code);
 			const { push, drain } = subscriptionQueue<StateChange>(signal!);
 			const unsub = bus.subscribe(`event:${event.code}:robot_state`, (data) => push(data as StateChange));
+			subscriberTracker.adjust(event.code, 1);
 			try {
 				yield* drain();
 			} finally {
 				unsub();
+				subscriberTracker.adjust(event.code, -1);
 			}
 		}),
 
@@ -288,10 +322,12 @@ export const fieldMonitorRouter = router({
 			console.log("field status subscription", event.code);
 			const { push, drain } = subscriptionQueue<FieldState>(signal!);
 			const unsub = bus.subscribe(`event:${event.code}:field_status`, (data) => push(data as FieldState));
+			subscriberTracker.adjust(event.code, 1);
 			try {
 				yield* drain();
 			} finally {
 				unsub();
+				subscriberTracker.adjust(event.code, -1);
 			}
 		}),
 
@@ -311,12 +347,14 @@ export const fieldMonitorRouter = router({
 			// Seed with current frame from Redis for late joiners
 			const stored = await redis.get(`ftabuddy:event:${event.code}:monitor_frame`);
 			if (stored) push(SuperJSON.parse<MonitorFrame>(stored));
+			subscriberTracker.adjust(event.code, 1);
 			try {
 				yield* drain();
 			} finally {
 				unsubFrame();
 				unsubRobot();
 				unsubField();
+				subscriberTracker.adjust(event.code, -1);
 			}
 		}),
 
@@ -330,7 +368,15 @@ export const fieldMonitorRouter = router({
 		)
 		.subscription(async function* ({ ctx, signal }) {
 			const user = await resolveUserFromToken(ctx.token);
-			if (!user || !user.admin) throw new Error("Unauthorized");
+			if (!user || !user.admin) {
+				debugLogThrottled(`admin-refused:management:${user?.id ?? "unresolved"}`, 60_000, {
+					category: "auth",
+					level: "warn",
+					message: "Admin-only management stream refused",
+					data: { userId: user?.id ?? null },
+				});
+				throw new Error("Unauthorized");
+			}
 
 			const { push, drain } = subscriptionQueue<EventState>(signal!);
 			const cleanups: Array<() => void> = [];
@@ -405,6 +451,12 @@ export const fieldMonitorRouter = router({
 				}
 			} catch (err) {
 				console.error("[management] Failed to scan live events from Redis:", err);
+				debugLog({
+					category: "field-monitor",
+					level: "error",
+					message: "Management view failed to scan live events from Redis",
+					data: { error: (err as Error)?.message },
+				});
 			}
 
 			try {

@@ -8,6 +8,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "../db/db";
 import { slackUserTokens } from "../db/schema";
 import { redis } from "./redis";
+import { logFramePayload, logPayload } from "./payload-log";
 
 // #region Config
 // Public channels only. User tokens never get groups:* so a connected account cannot expose private channels.
@@ -84,6 +85,13 @@ export async function slackApi<T extends Record<string, unknown>>(
 			}
 			throw new SlackApiError(method, data.error ?? `http_${res.status}`);
 		}
+		// The history poller makes many calls per run, so sampled (first, shape change, once per 30 s) not every one.
+		logFramePayload({
+			category: "slack-payload",
+			source: `slack user api ${method}`,
+			payload: data,
+			transition: false,
+		});
 		return data as T & { ok: true };
 	}
 }
@@ -194,6 +202,7 @@ export async function completeUserInstall(code: string, userId: number): Promise
 		signal: AbortSignal.timeout(15_000),
 	});
 	const data = (await res.json()) as OAuthAccessResponse;
+	logPayload({ category: "slack-payload", source: "slack user oauth.v2.access", payload: data });
 	if (!data.ok) throw new Error(data.error ?? "oauth_failed");
 
 	const token = data.authed_user?.access_token;

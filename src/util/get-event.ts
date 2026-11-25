@@ -1,3 +1,4 @@
+import { debugLog } from "./debug-log";
 import { TRPCError } from "@trpc/server";
 import { eq, inArray } from "drizzle-orm";
 import { eventCodes, eventLastSeen, events } from "../state";
@@ -170,9 +171,16 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 			bus.publish("global:new_event", eventCode);
 
 			// Warm the Redis checklist cache so frame processing has it immediately.
-			getChecklist(eventCode).catch((err) =>
-				console.warn(`[getEvent] Failed to warm checklist cache for ${eventCode}:`, err),
-			);
+			getChecklist(eventCode).catch((err) => {
+				console.warn(`[getEvent] Failed to warm checklist cache for ${eventCode}:`, err);
+				debugLog({
+					category: "general",
+					eventCode,
+					level: "warn",
+					message: "Failed to warm checklist cache for event",
+					data: { error: (err as Error)?.message },
+				});
+			});
 
 			// Keep playoffMode in sync across instances; track unsub for cleanup on eviction
 			const playoffUnsub = bus.subscribe(`event:${eventCode}:playoff_mode`, (data) => {

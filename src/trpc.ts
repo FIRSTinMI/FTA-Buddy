@@ -6,6 +6,7 @@ import { db } from "./db/db";
 import { users } from "./db/schema";
 import { verifyIdToken } from "./util/firebase-admin";
 import { getEvent } from "./util/get-event";
+import { debugLog, debugLogThrottled } from "./util/debug-log";
 
 /**
  * Verify a Firebase ID token and resolve the matching user profile row.
@@ -28,6 +29,12 @@ export async function resolveUserFromToken(idToken: string | undefined) {
 		if (byEmail && byEmail.firebase_uid == null) {
 			await db.update(users).set({ firebase_uid: decoded.uid }).where(eq(users.id, byEmail.id));
 			user = { ...byEmail, firebase_uid: decoded.uid };
+			debugLog({
+				category: "auth",
+				level: "info",
+				message: `Backfilled firebase_uid for user ${byEmail.id} by verified email`,
+				data: { userId: byEmail.id },
+			});
 		}
 	}
 
@@ -92,6 +99,13 @@ export const eventProcedure = t.procedure.use(async (opts) => {
 	// anyone already inside to leave. Admins keep access so history stays
 	// reachable for support.
 	if (event.archived && !user?.admin) {
+		debugLogThrottled(`event-archived-refused:${event.code}:${user?.id ?? "anon"}`, 60_000, {
+			category: "event",
+			eventCode: event.code,
+			level: "info",
+			message: "Access to archived event refused",
+			data: { userId: user?.id ?? null },
+		});
 		throw new TRPCError({
 			code: "FORBIDDEN",
 			message: "This event has been archived. Its notes, logs and uploads are no longer available in the app.",
@@ -112,7 +126,17 @@ export const adminProcedure = t.procedure.use(async (opts) => {
 	if (!ctx.token) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
 
 	const user = await resolveUserFromToken(ctx.token);
-	if (!user || user.admin !== true) throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+	if (!user || user.admin !== true) {
+		debugLogThrottled(`admin-refused:${user?.id ?? "unresolved"}`, 60_000, {
+			category: "auth",
+			level: "warn",
+			message: user
+				? `Admin-only access refused for user ${user.id}`
+				: "Admin-only access refused: no profile for token",
+			data: { userId: user?.id ?? null },
+		});
+		throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+	}
 
 	return opts.next({
 		ctx: {

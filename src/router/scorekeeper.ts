@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server";
+import { logPayload } from "../util/payload-log";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import type { AllianceColor } from "../../shared/types";
@@ -126,6 +127,12 @@ export const scorekeeperRouter = router({
 				});
 			}
 			const alliances = (await res.json()) as { picks?: string[]; backup?: { in?: string } | null }[] | null;
+			logPayload({
+				category: "tba-payload",
+				source: "tba alliances",
+				eventCode: ctx.event.code,
+				payload: alliances,
+			});
 			if (!alliances?.length) {
 				throw new TRPCError({ code: "BAD_REQUEST", message: "No alliances published for this event yet" });
 			}
@@ -189,6 +196,12 @@ export const scorekeeperRouter = router({
 			.mutation(async ({ ctx, input }) => {
 				// Refused while an admin has extensions switched off for this event.
 				await assertExtensionDataAllowed(ctx.event.code);
+				logPayload({
+					category: "fms-payload",
+					source: "fms alliances",
+					eventCode: ctx.event.code,
+					payload: input,
+				});
 				let synced = 0;
 				for (const a of input.alliances) {
 					await db

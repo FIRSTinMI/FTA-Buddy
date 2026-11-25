@@ -11,6 +11,7 @@
 
 import type { ServerEvent } from "../../shared/types";
 import { bus } from "./eventBus";
+import { logPayload } from "./payload-log";
 import { sql } from "drizzle-orm";
 import { db } from "../db/db";
 import schema from "../db/schema";
@@ -156,6 +157,8 @@ async function pollNexus(event: ServerEvent): Promise<void> {
 		scheduleNext(event, intervalMs(event));
 		return;
 	}
+
+	logPayload({ category: "nexus-payload", source: "nexus inspection poll", eventCode: event.code, payload: data });
 
 	const checklist = await getChecklist(event.code);
 	const updates: { team: string; inspected: boolean }[] = [];

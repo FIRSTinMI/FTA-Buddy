@@ -10,6 +10,8 @@ import { eventProcedure, publicProcedure, router } from "../trpc";
 import { getEvent } from "../util/get-event";
 import { generateReport } from "../util/report-generator";
 import { subscriptionQueue } from "../util/subscription";
+import { logPayload } from "../util/payload-log";
+import { debugLogThrottled } from "../util/debug-log";
 import { computeOvernightOffset } from "../util/frame-processing";
 import { applyScheduleOffset } from "../util/schedule-offset";
 import { getTeamAverageCycle } from "../util/team-cycles";
@@ -60,6 +62,7 @@ export const cycleRouter = router({
 			const event = await getEvent(input.eventToken);
 			// Refused while an admin has extensions switched off for this event.
 			await assertExtensionDataAllowed(event.code);
+			logPayload({ category: "fms-payload", source: "fms cycle time", eventCode: event.code, payload: input });
 
 			let cycle: any = await db.query.cycleLogs.findFirst({
 				where: and(
@@ -88,7 +91,16 @@ export const cycleRouter = router({
 			if (input.type === "lastCycleTime" && input.lastCycleTime) {
 				// Update lastCycleTime in the Redis frame
 				frame.lastCycleTime = input.lastCycleTime;
-				redis.set(`ftabuddy:event:${event.code}:monitor_frame`, SuperJSON.stringify(frame)).catch(() => {});
+				redis.set(`ftabuddy:event:${event.code}:monitor_frame`, SuperJSON.stringify(frame)).catch((err) => {
+					console.error(`[Redis] lastCycleTime frame write failed for ${event.code}:`, err);
+					debugLogThrottled(`cycle-frame-write:${event.code}`, 60_000, {
+						category: "cycle",
+						eventCode: event.code,
+						level: "error",
+						message: "lastCycleTime could not be written to the Redis frame",
+						data: { error: (err as Error)?.message },
+					});
+				});
 				await db
 					.update(cycleLogs)
 					.set({ calculated_cycle_time: input.lastCycleTime })
@@ -499,6 +511,12 @@ export const cycleRouter = router({
 			const event = await getEvent(postedSchedule.eventToken);
 			// Refused while an admin has extensions switched off for this event.
 			await assertExtensionDataAllowed(event.code);
+			logPayload({
+				category: "fms-payload",
+				source: "fms schedule details",
+				eventCode: event.code,
+				payload: postedSchedule,
+			});
 
 			// Correct a schedule FMS generated on the wrong date, for the one event
 			// that needs it. No-op everywhere else. Temporary - see schedule-offset.ts.

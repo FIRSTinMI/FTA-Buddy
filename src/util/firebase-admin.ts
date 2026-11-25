@@ -1,5 +1,6 @@
 import { type App, cert, getApps, initializeApp } from "firebase-admin/app";
 import { type DecodedIdToken, getAuth } from "firebase-admin/auth";
+import { debugLogThrottled } from "./debug-log";
 
 /**
  * Firebase Admin SDK initialization.
@@ -43,7 +44,16 @@ export const adminAuth = getAuth(firebaseApp);
 export async function verifyIdToken(idToken: string): Promise<DecodedIdToken | null> {
 	try {
 		return await adminAuth.verifyIdToken(idToken);
-	} catch {
+	} catch (err) {
+		// Expired tokens are routine and repeat on every request until the client refreshes,
+		// so one row per error code per minute.
+		const code = (err as { code?: string })?.code ?? "unknown";
+		debugLogThrottled(`auth-verify:${code}`, 60_000, {
+			category: "auth",
+			level: "warn",
+			message: `Firebase token verification failed: ${code}`,
+			data: { code },
+		});
 		return null;
 	}
 }

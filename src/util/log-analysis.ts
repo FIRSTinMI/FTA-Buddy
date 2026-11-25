@@ -7,6 +7,7 @@ import { db } from "../db/db";
 import { analyzedLogs, events as eventsTable, issueEnum, matchEvents, matchLogs } from "../db/schema";
 import { events } from "../index";
 import { tryAutoLinkNewMatchEvent } from "./auto-link-events";
+import { debugLog } from "./debug-log";
 import { bus } from "./eventBus";
 import { compressStationLog, decompressStationLog } from "./station-log-codec";
 
@@ -418,6 +419,20 @@ export async function logAnalysisLoop(limit: number) {
 							})
 							.returning()
 							.execute();
+						debugLog({
+							category: "match-events",
+							eventCode: log.event,
+							level: "info",
+							message: `Match event created: team ${teamNumber} bypassed in ${log.level} ${log.match_number}`,
+							data: {
+								matchEventId,
+								team: teamNumber,
+								rule: "empty station log (Bypassed)",
+								match: log.match_number,
+								play: log.play_number,
+								level: log.level,
+							},
+						});
 
 						if (serverEvent) {
 							const wasAutoLinked = await tryAutoLinkNewMatchEvent(inserted, log.event, serverEvent);
@@ -513,6 +528,22 @@ export async function logAnalysisLoop(limit: number) {
 							})
 							.returning()
 							.execute();
+						debugLog({
+							category: "match-events",
+							eventCode: log.event,
+							level: "info",
+							message: `Match event created: team ${teamNumber} ${primaryIssue} in ${log.level} ${log.match_number}`,
+							data: {
+								matchEventId,
+								team: teamNumber,
+								rule: `log analysis: ${issueDetails.map((d) => d.issue).join(", ")}`,
+								primaryIssue,
+								issues: issueDetails.map((d) => ({ issue: d.issue, duration: d.duration })),
+								match: log.match_number,
+								play: log.play_number,
+								level: log.level,
+							},
+						});
 
 						if (serverEvent) {
 							const wasAutoLinked = await tryAutoLinkNewMatchEvent(inserted, log.event, serverEvent);
@@ -532,6 +563,18 @@ export async function logAnalysisLoop(limit: number) {
 			console.error(`[LogAnalysis] Error on log ${log.id} (event: "${log.event}"): ${err}`);
 			const state = analysisFailed.get(log.id) ?? { count: 0, retryAfter: 0 };
 			state.count++;
+			debugLog({
+				category: "match-events",
+				eventCode: log.event,
+				level: state.count > MAX_RETRIES ? "error" : "warn",
+				message: `Log analysis failed for match ${log.level} ${log.match_number} (attempt ${state.count}/${MAX_RETRIES})`,
+				data: {
+					matchLogId: log.id,
+					attempt: state.count,
+					giveUp: state.count > MAX_RETRIES,
+					error: String(err).slice(0, 300),
+				},
+			});
 			if (state.count > MAX_RETRIES) {
 				console.error(
 					`[LogAnalysis] Log ${log.id} failed ${state.count} times - marking analyzed to stop retrying`,

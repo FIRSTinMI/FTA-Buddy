@@ -42,6 +42,8 @@ import { subscriptionQueue } from "../util/subscription";
 import { bus } from "../util/eventBus";
 import { autoLinkEventsToNote } from "../util/auto-link-events";
 import { assertExtensionDataAllowed } from "../util/event-extensions";
+import { debugLog } from "../util/debug-log";
+import { logPayload } from "../util/payload-log";
 
 /**
  * Given an event code and match number (plus optional play number / level),
@@ -1628,6 +1630,7 @@ export const notesRouter = router({
 			const event = ctx.event;
 			// Refused while an admin has extensions switched off for this event.
 			await assertExtensionDataAllowed(event.code);
+			logPayload({ category: "fms-payload", source: "fms note create", eventCode: event.code, payload: input });
 
 			const field = await getFieldProfile();
 			const meta = input.fms_metadata as FmsNoteMetadata | null;
@@ -1661,8 +1664,31 @@ export const notesRouter = router({
 				.execute();
 
 			const inserted = await db.query.notes.findFirst({ where: eq(notes.id, noteId), with: noteWith });
-			if (!inserted)
+			if (!inserted) {
+				debugLog({
+					category: "fms",
+					eventCode: event.code,
+					level: "error",
+					message: "FMS note insert not readable back",
+					data: { noteId, fmsNoteId: input.fms_note_id },
+				});
 				throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create Note from FMS" });
+			}
+			// One row per FMS note; the first sync after install can post the whole backlog at once.
+			debugLog({
+				category: "fms",
+				eventCode: event.code,
+				level: "debug",
+				message: `FMS note created (${input.note_type}${input.team ? `, team ${input.team}` : ""})`,
+				data: {
+					noteId,
+					fmsNoteId: input.fms_note_id,
+					noteType: input.note_type,
+					team: input.team ?? null,
+					match: input.match_number ?? null,
+					level: input.tournament_level ?? null,
+				},
+			});
 			const fmsNoteResult = noteToWire(inserted);
 			bus.publish(`event:${event.code}:note_update`, { kind: "create", note: fmsNoteResult, source: "fms" });
 			return fmsNoteResult;
@@ -1689,13 +1715,23 @@ export const notesRouter = router({
 			const event = ctx.event;
 			// Refused while an admin has extensions switched off for this event.
 			await assertExtensionDataAllowed(event.code);
+			logPayload({ category: "fms-payload", source: "fms note edit", eventCode: event.code, payload: input });
 
 			const whereClause = input.id
 				? and(eq(notes.id, input.id), eq(notes.event_code, event.code))
 				: and(eq(notes.fms_note_id, input.fms_note_id!), eq(notes.event_code, event.code));
 
 			const note = await db.query.notes.findFirst({ where: whereClause });
-			if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
+			if (!note) {
+				debugLog({
+					category: "fms",
+					eventCode: event.code,
+					level: "warn",
+					message: "FMS note edit refused: note not found",
+					data: { id: input.id ?? null, fmsNoteId: input.fms_note_id ?? null },
+				});
+				throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
+			}
 
 			const editMeta = input.fms_metadata as FmsNoteMetadata | null;
 			const editResStatus = editMeta?.resolutionStatus ?? null;
@@ -1716,8 +1752,23 @@ export const notesRouter = router({
 				.where(eq(notes.id, note.id))
 				.execute();
 			const updated = await db.query.notes.findFirst({ where: eq(notes.id, note.id), with: noteWith });
-			if (!updated)
+			if (!updated) {
+				debugLog({
+					category: "fms",
+					eventCode: event.code,
+					level: "error",
+					message: "FMS note update not readable back",
+					data: { noteId: note.id },
+				});
 				throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to update Note from FMS" });
+			}
+			debugLog({
+				category: "fms",
+				eventCode: event.code,
+				level: "debug",
+				message: "FMS note edited",
+				data: { noteId: note.id, fmsNoteId: note.fms_note_id, resolutionStatus: editResStatus },
+			});
 
 			const fmsEditFollowers = await getNoteFollowers(updated.id);
 			const wireNote = noteToWire(updated, fmsEditFollowers);
@@ -1741,6 +1792,7 @@ export const notesRouter = router({
 			const event = ctx.event;
 			// Refused while an admin has extensions switched off for this event.
 			await assertExtensionDataAllowed(event.code);
+			logPayload({ category: "fms-payload", source: "fms note id link", eventCode: event.code, payload: input });
 			await db
 				.update(notes)
 				.set({
@@ -1754,8 +1806,16 @@ export const notesRouter = router({
 				where: and(eq(notes.id, input.id), eq(notes.event_code, event.code)),
 				with: noteWith,
 			});
-			if (!updated)
+			if (!updated) {
+				debugLog({
+					category: "fms",
+					eventCode: event.code,
+					level: "warn",
+					message: "FMS id link refused: note not found for this event",
+					data: { noteId: input.id, fmsNoteId: input.fms_note_id },
+				});
 				throw new TRPCError({ code: "NOT_FOUND", message: "Note not found or does not belong to this event" });
+			}
 			return noteToWire(updated);
 		}),
 
@@ -1773,13 +1833,30 @@ export const notesRouter = router({
 		const event = ctx.event;
 		// Refused while an admin has extensions switched off for this event.
 		await assertExtensionDataAllowed(event.code);
+		logPayload({ category: "fms-payload", source: "fms note delete", eventCode: event.code, payload: input });
 		const note = await db.query.notes.findFirst({
 			where: and(eq(notes.fms_note_id, input.fms_note_id), eq(notes.event_code, event.code)),
 			with: noteWith,
 		});
-		if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found for given FMS note ID" });
+		if (!note) {
+			debugLog({
+				category: "fms",
+				eventCode: event.code,
+				level: "warn",
+				message: "FMS note delete refused: note not found",
+				data: { fmsNoteId: input.fms_note_id },
+			});
+			throw new TRPCError({ code: "NOT_FOUND", message: "Note not found for given FMS note ID" });
+		}
 		await db.delete(messages).where(eq(messages.note_id, note.id));
 		await db.delete(notes).where(eq(notes.id, note.id));
+		debugLog({
+			category: "fms",
+			eventCode: event.code,
+			level: "debug",
+			message: "FMS note deleted",
+			data: { noteId: note.id, fmsNoteId: input.fms_note_id },
+		});
 		bus.publish(`event:${event.code}:note_update`, { kind: "delete", note: noteToWire(note), source: "fms" });
 		return note.id;
 	}),
@@ -2226,6 +2303,13 @@ export async function createFromNexus(channel_id: string, message_ts: string, te
 
 	const inserted = await db.query.notes.findFirst({ where: eq(notes.id, noteId), with: noteWith });
 	if (!inserted) return;
+	debugLog({
+		category: "nexus",
+		eventCode: noteEvent.code,
+		level: "info",
+		message: `Nexus CSA request imported as ticket${team !== null ? ` for team ${team}` : ""}`,
+		data: { noteId, team, matchNumber, tournamentLevel, playNumber, channelId: channel_id },
+	});
 	const nexusNoteResult = noteToWire(inserted);
 	bus.publish(`event:${noteEvent.code}:note_update`, { kind: "create", note: nexusNoteResult });
 
@@ -2268,6 +2352,13 @@ export async function createFromNexus(channel_id: string, message_ts: string, te
 			);
 		} catch (err) {
 			console.error("[Nexus] Failed to post reply to Nexus thread:", err);
+			debugLog({
+				category: "slack",
+				eventCode: noteEvent.code,
+				level: "error",
+				message: "Failed to post ticket link in the Nexus thread",
+				data: { noteId, channelId: channel_id, error: (err as Error)?.message },
+			});
 		}
 	}
 }
@@ -2480,8 +2571,22 @@ export async function createFromSlashCommand(
 
 	const insertedNote = await db.query.notes.findFirst({ where: eq(notes.id, noteId), with: noteWith });
 	if (!insertedNote) {
+		debugLog({
+			category: "slack",
+			eventCode: noteEvent.code,
+			level: "error",
+			message: "Slack ticket row not readable after insert",
+			data: { noteId, teamNumber, channelId: channel_id },
+		});
 		return { response_type: "ephemeral", text: "Failed to create ticket." };
 	}
+	debugLog({
+		category: "slack",
+		eventCode: noteEvent.code,
+		level: "info",
+		message: `Ticket created from Slack for team ${teamNumber}`,
+		data: { noteId, teamNumber, channelId: channel_id },
+	});
 
 	// Import existing thread replies and reactions before publishing so clients
 	// see a fully-populated note the moment it arrives.
@@ -2559,6 +2664,13 @@ export async function createFromSlashCommand(
 		);
 	} catch (err) {
 		console.error("[/ftabuddy-ticket] Failed to post thread reply:", err);
+		debugLog({
+			category: "slack",
+			eventCode: noteEvent.code,
+			level: "error",
+			message: "Failed to post ticket link in the Slack thread",
+			data: { noteId, channelId: channel_id, error: (err as Error)?.message },
+		});
 	}
 
 	return {

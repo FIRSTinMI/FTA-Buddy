@@ -73,8 +73,8 @@
 	let fms = $derived.by(
 		(): Chip =>
 			status?.fms.passwordSet
-				? { label: "FMS password: set", color: "blue" }
-				: { label: "FMS password: not set", color: "gray" },
+				? { label: "FMS Notepad: set", color: "blue" }
+				: { label: "FMS Notepad: not set", color: "gray" },
 	);
 
 	let modes = $derived.by((): Chip[] => {
@@ -94,14 +94,6 @@
 		if (m.parentCode) out.push({ label: `Sub-event of ${m.parentCode.toUpperCase()}`, color: "indigo" });
 		if (status.slowWarning.enabled) {
 			out.push({ label: `Slow warning: ${status.slowWarning.mode.replace(/_/g, " ")}`, color: "yellow" });
-		}
-		const a = status.autoMatchEvents;
-		if (a.enabledCount > 0) {
-			out.push({
-				label: `Auto events ${a.enabledCount}/${a.total}`,
-				color: a.enabledCount === a.total ? "green" : "blue",
-				title: a.enabled.join(", "),
-			});
 		}
 		return out;
 	});

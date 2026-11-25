@@ -5,7 +5,6 @@
     "version": "1.26.31",
     "permissions": [
         "storage",
-        "scripting",
         "alarms"
     ],
     "host_permissions": [

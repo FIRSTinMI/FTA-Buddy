@@ -1,8 +1,23 @@
 import { and, count, desc, eq, gt, gte, ilike, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db/db";
-import { appTelemetry, debugLogs, events, matchEvents, matchLogs, messages, notes, users } from "../db/schema";
-import type { ActiveUsersPoint, AdminExtensionEntry, ExtensionConfig } from "../../shared/types";
+import {
+	appTelemetry,
+	debugLogs,
+	events,
+	matchEvents,
+	matchLogs,
+	messages,
+	notes,
+	slackServers,
+	users,
+} from "../db/schema";
+import type {
+	ActiveUsersPoint,
+	AdminExtensionEntry,
+	EventIntegrationStatus,
+	ExtensionConfig,
+} from "../../shared/types";
 import { events as eventsInMemory } from "../state";
 import { adminProcedure, router } from "../trpc";
 import { getActiveUsers } from "../util/active-users";
@@ -15,6 +30,7 @@ import {
 	listExtensions,
 	setPendingConfig,
 } from "../util/extension-presence";
+import { buildParentMap, toEventIntegrationStatus, type LiveEventState } from "../util/event-integrations";
 import { filterSeasonEvents } from "../util/season-events";
 import { listEventsWithExtensionsOff, setEventExtensionsEnabled } from "../util/event-extensions";
 import { TRPCError } from "@trpc/server";
@@ -394,6 +410,71 @@ export const adminRouter = router({
 	listEventsWithExtensionsOff: adminProcedure.query(
 		async (): Promise<{ code: string; name: string }[]> => listEventsWithExtensionsOff(),
 	),
+
+	/**
+	 * Integration state for every unarchived event, keyed by event code, for the
+	 * admin event cards. One DB query (events left-joined to slack_servers).
+	 * Config fields come from Postgres. `nexus.poll` is read from THIS instance's
+	 * memory (production runs two instances, so it is omitted for events this
+	 * instance has not loaded and may differ between them). `fms.extensionsOnline`
+	 * comes from Redis and covers both instances. No secret is returned.
+	 */
+	getEventIntegrations: adminProcedure.query(async (): Promise<Record<string, EventIntegrationStatus>> => {
+		const rows = await db
+			.select({
+				code: events.code,
+				name: events.name,
+				nexusApiKey: events.nexusApiKey,
+				slackChannel: events.slackChannel,
+				slackTeam: events.slackTeam,
+				slackTeamName: slackServers.team_name,
+				fmsEventPassword: events.fmsEventPassword,
+				notepadOnly: events.notepadOnly,
+				publicTicketSubmit: events.publicTicketSubmit,
+				playoffMode: events.playoffMode,
+				extensionsEnabled: events.extensionsEnabled,
+				powerMonitoring: events.powerMonitoring,
+				powerAlertSettings: events.powerAlertSettings,
+				meshedEvent: events.meshedEvent,
+				autoEventSettings: events.autoEventSettings,
+				slowWarningSettings: events.slowWarningSettings,
+				timezone: events.timezone,
+				startDate: events.startDate,
+				endDate: events.endDate,
+			})
+			.from(events)
+			.leftJoin(slackServers, eq(slackServers.team_id, events.slackTeam))
+			.where(eq(events.archived, false));
+
+		const live: Record<string, LiveEventState | undefined> = {};
+		for (const row of rows) {
+			const mem = eventsInMemory[row.code];
+			if (mem) live[row.code] = { nexus: mem.nexus, nexusEventStatus: mem.nexusEventStatus };
+		}
+
+		let extensionsOnline: Record<string, number> | undefined;
+		try {
+			extensionsOnline = {};
+			for (const ext of await listExtensions()) {
+				if (ext.online && ext.eventCode)
+					extensionsOnline[ext.eventCode] = (extensionsOnline[ext.eventCode] ?? 0) + 1;
+			}
+		} catch (err) {
+			console.warn("[admin] getEventIntegrations: extension presence unavailable:", (err as Error)?.message);
+			extensionsOnline = undefined;
+		}
+
+		const parentByChild = buildParentMap(rows);
+		const result: Record<string, EventIntegrationStatus> = {};
+		for (const row of rows) {
+			result[row.code] = toEventIntegrationStatus(row as Parameters<typeof toEventIntegrationStatus>[0], {
+				parentByChild,
+				live,
+				extensionsOnline,
+			});
+		}
+		return result;
+	}),
 
 	/**
 	 * Event codes for the current season (UTC calendar year, the same year the

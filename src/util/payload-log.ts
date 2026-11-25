@@ -17,10 +17,9 @@ import { debugLog } from "./debug-log";
  * - {@link logFramePayload} for the field monitor frame and power samples, which
  *   arrive several times a second per event. A row is written on the first
  *   frame per (source, event) per process, on a transition the caller reports
- *   (field state, match number or level changed), on a shape change, and
- *   otherwise at most one sampled frame per 30 s. The common path is a Map
- *   lookup and two comparisons; the shape signature is computed only on the
- *   sampled frames.
+ *   (field state, match number or level changed), on a shape change (limited
+ *   to a few per minute, see {@link decideFrame}), and otherwise at most one
+ *   sampled frame per 30 s. The shape signature is computed for every frame.
  *
  * Stored per row (`data`): { source, reason, bytes, shape: { hash, outline }, payload },
  * `bytes` being the size of the original payload. `payload` is bounded (see
@@ -121,13 +120,24 @@ export function decideLowRate(
 export interface FrameState {
 	lastAt: number;
 	signature: string;
+	/** When recent shape-change rows were written (bounded by {@link SHAPE_CHANGE_BUDGET}). */
+	shapeRows?: number[];
 }
 
+/** At most this many immediate shape-change rows per key per {@link SHAPE_CHANGE_WINDOW_MS}. */
+export const SHAPE_CHANGE_BUDGET = 4;
+export const SHAPE_CHANGE_WINDOW_MS = 60 * 1000;
+
 /**
- * High-rate decision. The common path (a frame that is not first, not a
- * transition, inside the 30 s window) is one comparison. `computeSignature` is
- * called only when a frame is about to be sampled, so the shape cost is paid
- * once per 30 s per key, not per frame. Pure apart from the map.
+ * High-rate decision. The shape signature is computed for every frame (about
+ * 8 microseconds for a field monitor frame), so a frame whose shape differs
+ * from the last written one is written at once. Nullable fields that flip
+ * between null and a value change the shape; to keep a flapping source from
+ * writing a row per frame, immediate shape-change rows are limited to
+ * {@link SHAPE_CHANGE_BUDGET} per {@link SHAPE_CHANGE_WINDOW_MS}. A change past
+ * the budget waits for the next sample, which then writes it as a shape change.
+ * Otherwise: first per key, every transition, and one sample per `sampleMs`.
+ * Pure apart from the map.
  */
 export function decideFrame(
 	states: Map<string, FrameState>,
@@ -137,19 +147,25 @@ export function decideFrame(
 	computeSignature: () => string,
 	sampleMs = FRAME_SAMPLE_INTERVAL_MS,
 ): { reason: PayloadReason; signature: string } | null {
+	const signature = computeSignature();
 	const last = states.get(key);
 	if (!last) {
-		const signature = computeSignature();
 		states.set(key, { lastAt: now, signature });
 		return { reason: "first", signature };
 	}
+	const shapeChanged = signature !== last.signature;
+	if (shapeChanged && !transition) {
+		const recent = (last.shapeRows ?? []).filter((t) => now - t < SHAPE_CHANGE_WINDOW_MS);
+		last.shapeRows = recent;
+		if (recent.length < SHAPE_CHANGE_BUDGET) {
+			recent.push(now);
+			last.lastAt = now;
+			last.signature = signature;
+			return { reason: "shape-change", signature };
+		}
+	}
 	if (!transition && now - last.lastAt < sampleMs) return null;
-	const signature = computeSignature();
-	const reason: PayloadReason = transition
-		? "transition"
-		: signature !== last.signature
-			? "shape-change"
-			: "interval";
+	const reason: PayloadReason = transition ? "transition" : shapeChanged ? "shape-change" : "interval";
 	last.lastAt = now;
 	last.signature = signature;
 	return { reason, signature };

@@ -128,7 +128,9 @@ export function flushDebugLogs(): Promise<void> {
  * live rows (`pg_stat_user_tables.n_live_tup`, which drops as soon as rows are
  * deleted) times the average row size (a 1 % block sample of `data`, `message`
  * and the fixed columns, plus an allowance for the indexes). The file size is
- * only reported in the warn row.
+ * only reported in the warn row. The row count is an estimate and can be wrong,
+ * so when it says the table is over the cap the pruner counts exactly and plans
+ * again before it deletes anything.
  *
  * Order: `*-payload` rows first (they are large and low value once old), each
  * payload category oldest-first through its (category, timestamp) index, then,
@@ -202,12 +204,14 @@ export async function pruneOldLogs(): Promise<{ deleted: number; rowsToDelete: n
 		const row = stats.rows[0] as
 			| { live_rows: number | null; file_bytes: number; avg_row: number | null }
 			| undefined;
-		const plan = planPrune({
-			liveRows: Number(row?.live_rows ?? 0),
-			avgRowBytes: Number(row?.avg_row ?? 0),
-			maxBytes,
-			targetBytes,
-		});
+		const avgRowBytes = Number(row?.avg_row ?? 0);
+		let plan = planPrune({ liveRows: Number(row?.live_rows ?? 0), avgRowBytes, maxBytes, targetBytes });
+		if (plan.rowsToDelete === 0) return { deleted: 0, rowsToDelete: 0 };
+		// `n_live_tup` is only an estimate and can be far off after bulk deletes or an ANALYZE of a table
+		// full of dead tuples. Before deleting anything, count exactly (an index-only scan, and only
+		// when the estimate says the table is over its cap) and plan again from that.
+		const exact = await db.execute(sql`SELECT count(*)::float8 AS n FROM debug_logs`);
+		plan = planPrune({ liveRows: Number((exact.rows[0] as { n: number }).n), avgRowBytes, maxBytes, targetBytes });
 		if (plan.rowsToDelete === 0) return { deleted: 0, rowsToDelete: 0 };
 
 		let deleted = 0;

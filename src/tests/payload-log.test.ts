@@ -5,6 +5,7 @@ import {
 	sanitizePayload,
 	shapeSignature,
 	FRAME_SAMPLE_INTERVAL_MS,
+	SHAPE_CHANGE_BUDGET,
 	UNCHANGED_INTERVAL_MS,
 	type FrameState,
 	type LowRateState,
@@ -112,18 +113,31 @@ describe("decideLowRate", () => {
 describe("decideFrame", () => {
 	test("first, silent inside the window, transition, then a sampled frame", () => {
 		const st = new Map<string, FrameState>();
-		let sigCalls = 0;
-		const sig = (v: string) => () => {
-			sigCalls++;
-			return v;
-		};
-		expect(decideFrame(st, "k", false, 0, sig("A"))?.reason).toBe("first");
-		for (let t = 100; t < FRAME_SAMPLE_INTERVAL_MS; t += 100)
-			expect(decideFrame(st, "k", false, t, sig("A"))).toBeNull();
-		expect(sigCalls).toBe(1); // the signature is not computed on the common path
-		expect(decideFrame(st, "k", true, 5000, sig("A"))?.reason).toBe("transition");
-		expect(decideFrame(st, "k", false, 5000 + FRAME_SAMPLE_INTERVAL_MS, sig("A"))?.reason).toBe("interval");
-		expect(decideFrame(st, "k", false, 5000 + 2 * FRAME_SAMPLE_INTERVAL_MS, sig("B"))?.reason).toBe("shape-change");
+		expect(decideFrame(st, "k", false, 0, () => "A")?.reason).toBe("first");
+		for (let t = 100; t < FRAME_SAMPLE_INTERVAL_MS; t += 100) expect(decideFrame(st, "k", false, t, () => "A")).toBeNull();
+		expect(decideFrame(st, "k", true, 5000, () => "A")?.reason).toBe("transition");
+		expect(decideFrame(st, "k", false, 5000 + FRAME_SAMPLE_INTERVAL_MS, () => "A")?.reason).toBe("interval");
+		expect(decideFrame(st, "k", false, 5000 + 2 * FRAME_SAMPLE_INTERVAL_MS, () => "B")?.reason).toBe("shape-change");
+	});
+	test("a changed shape inside the window is written at once, the same shape after it is not", () => {
+		const st = new Map<string, FrameState>();
+		decideFrame(st, "k", false, 0, () => "A");
+		expect(decideFrame(st, "k", false, 200, () => "A")).toBeNull();
+		expect(decideFrame(st, "k", false, 400, () => "B")?.reason).toBe("shape-change");
+		expect(decideFrame(st, "k", false, 600, () => "B")).toBeNull();
+	});
+	test("a flapping shape writes at most the budget per minute, then waits for the next sample", () => {
+		const st = new Map<string, FrameState>();
+		decideFrame(st, "k", false, 0, () => "A");
+		let written = 0;
+		for (let i = 1; i <= 100; i++) {
+			const r = decideFrame(st, "k", false, i * 200, () => (i % 2 ? "B" : "A"));
+			if (r) written++;
+		}
+		expect(written).toBe(SHAPE_CHANGE_BUDGET); // 20 s of flapping at 5 frames per second
+		// 30 s after the last row the pending change is written as a shape change
+		const later = decideFrame(st, "k", false, 100 * 200 + FRAME_SAMPLE_INTERVAL_MS, () => "B");
+		expect(later?.reason).toBe("shape-change");
 	});
 });
 

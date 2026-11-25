@@ -50,7 +50,7 @@ export async function slackOAuth(code: string) {
 		throw new Error(data.error);
 	}
 
-	console.log(data);
+	console.log(`[Slack] oauth.v2.access ok for team ${data.team?.id} (${data.team?.name})`);
 	logPayload({ category: "slack-payload", source: "slack oauth.v2.access", payload: data });
 
 	await db
@@ -238,7 +238,6 @@ export async function sendEphemeralMessage(
 }
 
 async function isBotInChannel(channel_id: string, team_id: string): Promise<boolean> {
-	console.log(await getTokenByTeam(team_id));
 	const response = await fetch(`https://slack.com/api/conversations.info?channel=${channel_id}`, {
 		method: "GET",
 		headers: {

@@ -16,6 +16,8 @@
 
 import type { NexusEventStatus, ServerEvent } from "../../shared/types";
 import { bus } from "./eventBus";
+import { debugLogOnChange, resetDebugLogState } from "./debug-log";
+import { logPayload } from "./payload-log";
 
 const NEXUS_BASE = "https://frc.nexus/api/v1";
 
@@ -56,21 +58,49 @@ export async function fetchOnce(event: ServerEvent): Promise<void> {
 		});
 	} catch (err: any) {
 		console.warn(`[NexusEvent] Network error fetching status for ${event.code}:`, err?.message);
+		debugLogOnChange(`nexus-poll:${event.code}`, "network-error", {
+			category: "nexus",
+			eventCode: event.code,
+			level: "warn",
+			message: "Nexus status fetch failed: network error",
+			data: { error: err?.message },
+		});
 		return;
 	}
 
 	if (response.status === 401 || response.status === 403) {
 		console.warn(`[NexusEvent] HTTP ${response.status} for ${event.code} – check Nexus API key`);
+		debugLogOnChange(`nexus-poll:${event.code}`, `http-${response.status}`, {
+			category: "nexus",
+			eventCode: event.code,
+			level: "error",
+			message: `Nexus rejected the API key (HTTP ${response.status})`,
+			data: { status: response.status },
+		});
 		return;
 	}
 
 	if (response.status === 404) {
 		// Event not yet live on Nexus; not an error
+		debugLogOnChange(`nexus-poll:${event.code}`, "http-404", {
+			category: "nexus",
+			eventCode: event.code,
+			level: "info",
+			message: "Event not live on Nexus yet (HTTP 404)",
+			data: { status: 404 },
+		});
 		return;
 	}
 
 	if (!response.ok) {
 		console.warn(`[NexusEvent] HTTP ${response.status} for ${event.code}`);
+		debugLogOnChange(`nexus-poll:${event.code}`, `http-${response.status}`, {
+			category: "nexus",
+			eventCode: event.code,
+			level: "warn",
+			message: `Nexus status fetch failed: HTTP ${response.status}`,
+			data: { status: response.status },
+		});
 		return;
 	}
 
@@ -79,8 +109,26 @@ export async function fetchOnce(event: ServerEvent): Promise<void> {
 		data = await response.json();
 	} catch (err: any) {
 		console.warn(`[NexusEvent] Failed to parse response for ${event.code}:`, err?.message);
+		debugLogOnChange(`nexus-poll:${event.code}`, "parse-error", {
+			category: "nexus",
+			eventCode: event.code,
+			level: "warn",
+			message: "Nexus status response could not be parsed",
+			data: { error: err?.message },
+		});
 		return;
 	}
+
+	logPayload({ category: "nexus-payload", source: "nexus event poll", eventCode: event.code, payload: data });
+
+	// Recovered from a previous failure (or first successful fetch): log the state change once.
+	debugLogOnChange(`nexus-poll:${event.code}`, "ok", {
+		category: "nexus",
+		eventCode: event.code,
+		level: "info",
+		message: "Nexus status fetch ok",
+		data: { matches: data.matches?.length ?? 0, nowQueuing: data.nowQueuing ?? null },
+	});
 
 	// Only update if this data is newer than what we already have
 	if (data.dataAsOfTime <= (event.nexusEventStatus?.dataAsOfTime ?? 0)) return;
@@ -107,6 +155,7 @@ export function stopForEvent(eventCode: string): void {
 		clearTimeout(handle);
 		activePollers.delete(eventCode);
 	}
+	resetDebugLogState(`nexus-poll:${eventCode}`);
 	const unsub = subscribedEvents.get(eventCode);
 	if (unsub) {
 		unsub();

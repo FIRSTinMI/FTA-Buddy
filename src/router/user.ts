@@ -5,6 +5,7 @@ import { db } from "../db/db";
 import { events, slackLinkTokens, users } from "../db/schema";
 import { protectedProcedure, publicProcedure, resolveUserFromToken, router } from "../trpc";
 import { verifyIdToken } from "../util/firebase-admin";
+import { debugLog, debugLogThrottled } from "../util/debug-log";
 
 const ROLES = ["FTA", "FTAA", "CSA", "RI", "Scorekeeper"] as const;
 
@@ -42,8 +43,17 @@ export const userRouter = router({
 			if (!ctx.token) throw new TRPCError({ code: "UNAUTHORIZED", message: "Missing Authorization Header" });
 
 			const decoded = await verifyIdToken(ctx.token);
-			if (!decoded || !decoded.email)
+			if (!decoded || !decoded.email) {
+				debugLogThrottled("auth-sync-invalid", 60_000, {
+					category: "auth",
+					level: "warn",
+					message: decoded
+						? "Profile sync refused: token has no email"
+						: "Profile sync refused: invalid or expired token",
+					data: { hasDecoded: !!decoded },
+				});
 				throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid or expired session" });
+			}
 
 			const existing = await resolveUserFromToken(ctx.token);
 			if (existing) {
@@ -64,7 +74,21 @@ export const userRouter = router({
 			});
 
 			const created = await db.query.users.findFirst({ where: eq(users.firebase_uid, decoded.uid) });
-			if (!created) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "User not created" });
+			if (!created) {
+				debugLog({
+					category: "auth",
+					level: "error",
+					message: "Profile insert did not produce a readable row",
+					data: { role: input.role },
+				});
+				throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "User not created" });
+			}
+			debugLog({
+				category: "auth",
+				level: "info",
+				message: `Profile created for user ${created.id}`,
+				data: { userId: created.id, role: input.role },
+			});
 
 			return { user: publicProfile(created) };
 		}),

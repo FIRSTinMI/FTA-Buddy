@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import type { MatchEventIssueDetail, ServerEvent } from "../../shared/types";
 import { bus } from "./eventBus";
+import { debugLog } from "./debug-log";
 import { db } from "../db/db";
 import { matchEvents, messages, notes } from "../db/schema";
 import { messageToWire, messageWith } from "./notes-projection";
@@ -87,6 +88,19 @@ export async function autoLinkEventsToNote(
 			message: messageToWire(autoMsg),
 		});
 	}
+
+	debugLog({
+		category: "match-events",
+		eventCode: event.code,
+		level: "info",
+		message: `Match events auto-linked to open note (${eventIds.length})`,
+		data: {
+			noteId,
+			matchEventIds: eventIds.slice(0, 20),
+			count: eventIds.length,
+			rule: "open TeamIssue note for the same team and match",
+		},
+	});
 
 	// Emit conversion events so clients remove the match events from feeds
 	for (const evtId of eventIds) {

@@ -4,6 +4,32 @@ import { events, slackServers, users } from "../db/schema";
 import type { Profile } from "../../shared/types";
 import { getEvent } from "./get-event";
 import { getFieldProfile } from "./system-profiles";
+import { debugLog } from "./debug-log";
+import { logPayload } from "./payload-log";
+
+/** Log a failed Slack Web API call. Never includes tokens or message bodies. */
+function logSlackFailure(method: string, error: string, extra: Record<string, unknown> = {}, eventCode?: string) {
+	debugLog({
+		category: "slack",
+		eventCode,
+		level: "error",
+		message: `Slack ${method} failed: ${error}`,
+		data: { method, error, ...extra },
+	});
+}
+
+/** Methods whose response the caller ignores: read it only to record a failure. */
+async function logSlackIgnoredResponse(method: string, response: Response, extra: Record<string, unknown>) {
+	try {
+		const data = await response.json();
+		if (!data?.ok) logSlackFailure(method, String(data?.error ?? `HTTP ${response.status}`), extra);
+	} catch (err) {
+		logSlackFailure(method, `unreadable response: ${(err as Error).message}`, {
+			status: response.status,
+			...extra,
+		});
+	}
+}
 
 export async function slackOAuth(code: string) {
 	const url = new URL("https://slack.com/api/oauth.v2.access");
@@ -20,10 +46,12 @@ export async function slackOAuth(code: string) {
 	const data = await response.json();
 
 	if (!data.ok) {
+		logSlackFailure("oauth.v2.access", String(data.error));
 		throw new Error(data.error);
 	}
 
 	console.log(data);
+	logPayload({ category: "slack-payload", source: "slack oauth.v2.access", payload: data });
 
 	await db
 		.insert(slackServers)
@@ -42,6 +70,13 @@ export async function slackOAuth(code: string) {
 			},
 		})
 		.execute();
+
+	debugLog({
+		category: "slack",
+		level: "info",
+		message: `Slack workspace installed: ${data.team.name}`,
+		data: { teamId: data.team.id, teamName: data.team.name },
+	});
 
 	return true;
 }
@@ -63,6 +98,13 @@ export async function linkChannel(args: string[], channel_id: string, team_id: s
 	)[0];
 
 	if (!event || event.pin !== eventPin) {
+		debugLog({
+			category: "slack",
+			eventCode,
+			level: "warn",
+			message: `Slack link refused: ${event ? "wrong pin" : "event not found"}`,
+			data: { channelId: channel_id, teamId: team_id, reason: event ? "wrong_pin" : "not_found" },
+		});
 		throw new Error("Event not found");
 	}
 
@@ -70,6 +112,13 @@ export async function linkChannel(args: string[], channel_id: string, team_id: s
 	const botInChannel = await isBotInChannel(channel_id, team_id);
 
 	if (!botInChannel) {
+		debugLog({
+			category: "slack",
+			eventCode,
+			level: "warn",
+			message: "Slack link refused: bot is not in the channel",
+			data: { channelId: channel_id, teamId: team_id },
+		});
 		throw new Error(`Bot is not in channel, invite the bot using \`/invite @FTA Buddy\`, then try again!`);
 	}
 
@@ -90,6 +139,14 @@ export async function linkChannel(args: string[], channel_id: string, team_id: s
 	const eventObj = await getEvent("", eventCode);
 	eventObj.slackChannel = channel_id;
 	eventObj.slackTeam = team_id;
+
+	debugLog({
+		category: "slack",
+		eventCode,
+		level: "info",
+		message: `Slack channel linked to ${eventCode}`,
+		data: { channelId: channel_id, teamId: team_id },
+	});
 
 	return {
 		response_type: "in_channel",
@@ -172,7 +229,9 @@ export async function sendEphemeralMessage(
 	});
 
 	const data = await response.json();
+	logPayload({ category: "slack-payload", source: "slack chat.postEphemeral", payload: data });
 	if (!data.ok) {
+		logSlackFailure("chat.postEphemeral", String(data.error), { channelId: channel_id, teamId: team_id });
 		throw new Error(`Slack postEphemeral error: ${data.error}`);
 	}
 	return data;
@@ -190,10 +249,12 @@ async function isBotInChannel(channel_id: string, team_id: string): Promise<bool
 	});
 
 	const data = await response.json();
+	logPayload({ category: "slack-payload", source: "slack conversations.info", payload: data });
 
 	console.log(data);
 
 	if (!data.ok) {
+		logSlackFailure("conversations.info", String(data.error), { channelId: channel_id, teamId: team_id });
 		return false;
 	}
 
@@ -248,8 +309,14 @@ export async function sendSlackMessage(channel_id: string, team_id: string, mess
 	});
 
 	const data = await response.json();
+	logPayload({ category: "slack-payload", source: "slack chat.postMessage", payload: data });
 
 	if (!data.ok) {
+		logSlackFailure("chat.postMessage", String(data.error), {
+			channelId: channel_id,
+			teamId: team_id,
+			isReply: !!thread_ts,
+		});
 		throw new Error(data.error);
 	}
 
@@ -279,6 +346,7 @@ export async function updateSlackMessage(
 		body: JSON.stringify({ channel: channel_id, ts: message_ts, ...message }),
 		signal: AbortSignal.timeout(10_000),
 	});
+	await logSlackIgnoredResponse("chat.update", response, { channelId: channel_id, teamId: team_id });
 
 	return message_ts;
 }
@@ -293,6 +361,7 @@ export async function deleteSlackMessage(channel_id: string, team_id: string, me
 		body: JSON.stringify({ channel: channel_id, ts: message_ts }),
 		signal: AbortSignal.timeout(10_000),
 	});
+	await logSlackIgnoredResponse("chat.delete", response, { channelId: channel_id, teamId: team_id });
 
 	return message_ts;
 }
@@ -312,6 +381,7 @@ export async function addSlackReaction(
 		body: JSON.stringify({ channel: channel_id, timestamp: message_ts, name: reaction }),
 		signal: AbortSignal.timeout(10_000),
 	});
+	await logSlackIgnoredResponse("reactions.add", response, { channelId: channel_id, teamId: team_id, reaction });
 }
 
 export async function removeSlackReaction(
@@ -329,6 +399,7 @@ export async function removeSlackReaction(
 		body: JSON.stringify({ channel: channel_id, timestamp: message_ts, name: reaction }),
 		signal: AbortSignal.timeout(10_000),
 	});
+	await logSlackIgnoredResponse("reactions.remove", response, { channelId: channel_id, teamId: team_id, reaction });
 }
 
 /**
@@ -369,7 +440,10 @@ export async function openTicketModal(trigger_id: string, team_id: string, chann
 		signal: AbortSignal.timeout(10_000),
 	});
 	const data = await response.json();
-	if (!data.ok) throw new Error(`views.open error: ${data.error}`);
+	if (!data.ok) {
+		logSlackFailure("views.open", String(data.error), { channelId: channel_id, teamId: team_id });
+		throw new Error(`views.open error: ${data.error}`);
+	}
 }
 
 /**
@@ -394,6 +468,9 @@ export async function fetchSlackThreadReplies(
 	});
 
 	const data = await response.json();
+	logPayload({ category: "slack-payload", source: "slack conversations.replies (thread)", payload: data });
+	if (!data.ok)
+		logSlackFailure("conversations.replies", String(data.error), { channelId: channel_id, teamId: team_id });
 	if (!data.ok || !data.messages?.length) return [];
 	// Index 0 is always the parent message; skip it.
 	return data.messages.slice(1);
@@ -419,7 +496,11 @@ export async function fetchSlackMessageReactions(
 	});
 
 	const data = await response.json();
-	if (!data.ok) return [];
+	logPayload({ category: "slack-payload", source: "slack reactions.get", payload: data });
+	if (!data.ok) {
+		logSlackFailure("reactions.get", String(data.error), { channelId: channel_id, teamId: team_id });
+		return [];
+	}
 	return data.message?.reactions ?? [];
 }
 
@@ -444,6 +525,9 @@ export async function fetchSlackMessage(
 	});
 
 	const data = await response.json();
+	logPayload({ category: "slack-payload", source: "slack conversations.replies (parent)", payload: data });
+	if (!data.ok)
+		logSlackFailure("conversations.replies", String(data.error), { channelId: channel_id, teamId: team_id });
 	if (!data.ok || !data.messages?.length) return null;
 	return (data.messages[0].text as string) ?? null;
 }
@@ -536,6 +620,7 @@ async function fetchSlackDisplayName(slackUserId: string, teamId: string): Promi
 			signal: AbortSignal.timeout(10_000),
 		});
 		const data = await response.json();
+		logPayload({ category: "slack-payload", source: "slack users.info", payload: data });
 		if (data.ok && data.user) {
 			return (
 				data.user.profile?.display_name ||
@@ -546,8 +631,20 @@ async function fetchSlackDisplayName(slackUserId: string, teamId: string): Promi
 			);
 		}
 		console.warn(`[Slack] users.info failed for ${slackUserId}:`, data.error ?? "unknown error");
+		debugLog({
+			category: "slack",
+			level: "warn",
+			message: `Slack users.info failed: ${data.error ?? "unknown error"}`,
+			data: { slackUserId, teamId },
+		});
 	} catch (err) {
 		console.warn(`[Slack] fetchSlackDisplayName error for ${slackUserId}:`, err);
+		debugLog({
+			category: "slack",
+			level: "warn",
+			message: "Slack display name lookup threw",
+			data: { slackUserId, teamId, error: (err as Error)?.message },
+		});
 	}
 	return "Slack User";
 }

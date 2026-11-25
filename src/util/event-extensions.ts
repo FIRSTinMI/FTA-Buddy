@@ -4,6 +4,7 @@ import type { ExtensionConfigDelivery } from "../../shared/types";
 import { db } from "../db/db";
 import { events as eventsTable } from "../db/schema";
 import { events } from "../state";
+import { debugLogThrottled } from "./debug-log";
 import { bus } from "./eventBus";
 
 /**
@@ -104,6 +105,13 @@ export const EXTENSIONS_OFF_MESSAGE = "Extensions off for this event";
 /** Refuse extension data for an event whose extensions are switched off. */
 export async function assertExtensionDataAllowed(eventCode: string): Promise<void> {
 	if (!(await getEventExtensionsEnabled(eventCode))) {
+		// Frames arrive several times a second, so one row per event per minute with a count of the rest.
+		debugLogThrottled(`ext-refused:${eventCode}`, 60_000, {
+			category: "fms",
+			eventCode,
+			level: "warn",
+			message: "Extension data refused: extensions are switched off for this event",
+		});
 		throw new TRPCError({ code: "FORBIDDEN", message: EXTENSIONS_OFF_MESSAGE });
 	}
 }

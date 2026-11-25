@@ -33,6 +33,8 @@ import { generateToken } from "./user";
 import { setChecklist } from "../util/event-state";
 import { subscriptionQueue } from "../util/subscription";
 import { assertExtensionDataAllowed } from "../util/event-extensions";
+import { debugLog, debugLogThrottled } from "../util/debug-log";
+import { logPayload } from "../util/payload-log";
 
 const fullEventList: {
 	fetched: Date | undefined;
@@ -57,6 +59,7 @@ async function updateFullEventList() {
 		).json();
 
 		fullEventList.fetched = new Date();
+		logPayload({ category: "tba-payload", source: "tba events list", payload: updatedEventList });
 		if (!Array.isArray(updatedEventList)) {
 			console.warn("[TBA] Unexpected response from TBA API (bad key?):", updatedEventList);
 			return;
@@ -131,6 +134,12 @@ export const eventRouter = router({
 					},
 				})
 			).json();
+			logPayload({
+				category: "tba-payload",
+				source: "tba event (check code)",
+				eventCode: input.code,
+				payload: eventData,
+			});
 
 			// Event code not found
 			if ("Error" in eventData) {
@@ -162,10 +171,37 @@ export const eventRouter = router({
 
 			const eventDB = await db.query.events.findFirst({ where: eq(events.code, input.code) });
 
-			if (!eventDB) throw new TRPCError({ code: "NOT_FOUND", message: "Event not found" });
+			if (!eventDB) {
+				debugLog({
+					category: "event",
+					eventCode: input.code,
+					level: "info",
+					message: "Join failed: event not found",
+					data: { userId: ctx.user.id },
+				});
+				throw new TRPCError({ code: "NOT_FOUND", message: "Event not found" });
+			}
 
-			if (eventDB.pin !== input.pin) throw new TRPCError({ code: "UNAUTHORIZED", message: "Incorrect pin" });
-			if (eventDB.archived) throw new TRPCError({ code: "BAD_REQUEST", message: "Event has been archived" });
+			if (eventDB.pin !== input.pin) {
+				debugLog({
+					category: "event",
+					eventCode: input.code,
+					level: "warn",
+					message: "Join failed: incorrect pin",
+					data: { userId: ctx.user.id },
+				});
+				throw new TRPCError({ code: "UNAUTHORIZED", message: "Incorrect pin" });
+			}
+			if (eventDB.archived) {
+				debugLog({
+					category: "event",
+					eventCode: input.code,
+					level: "info",
+					message: "Join refused: event is archived",
+					data: { userId: ctx.user.id },
+				});
+				throw new TRPCError({ code: "BAD_REQUEST", message: "Event has been archived" });
+			}
 
 			const event = await getEvent(eventDB?.token ?? "");
 
@@ -207,8 +243,25 @@ export const eventRouter = router({
 	joinByToken: protectedProcedure.input(z.object({ token: z.string() })).mutation(async ({ input, ctx }) => {
 		const eventDB = await db.query.events.findFirst({ where: eq(events.token, input.token) });
 
-		if (!eventDB) throw new TRPCError({ code: "NOT_FOUND", message: "Event not found" });
-		if (eventDB.archived) throw new TRPCError({ code: "BAD_REQUEST", message: "Event has been archived" });
+		if (!eventDB) {
+			debugLog({
+				category: "event",
+				level: "info",
+				message: "Join by link failed: unknown event token",
+				data: { userId: ctx.user.id },
+			});
+			throw new TRPCError({ code: "NOT_FOUND", message: "Event not found" });
+		}
+		if (eventDB.archived) {
+			debugLog({
+				category: "event",
+				eventCode: eventDB.code,
+				level: "info",
+				message: "Join by link refused: event is archived",
+				data: { userId: ctx.user.id },
+			});
+			throw new TRPCError({ code: "BAD_REQUEST", message: "Event has been archived" });
+		}
 
 		const event = await getEvent(eventDB.token);
 
@@ -271,7 +324,16 @@ export const eventRouter = router({
 				.from(events)
 				.where(eq(events.code, input.code));
 
-			if (eventDB.archived) throw new TRPCError({ code: "BAD_REQUEST", message: "Event has been archived" });
+			if (eventDB.archived) {
+				debugLog({
+					category: "event",
+					eventCode: input.code,
+					level: "info",
+					message: "Admin open refused: event is archived",
+					data: { userId: ctx.user.id },
+				});
+				throw new TRPCError({ code: "BAD_REQUEST", message: "Event has been archived" });
+			}
 
 			// Query teams from normalized tables
 			const subEventCodes = eventDB.subEvents
@@ -344,6 +406,12 @@ export const eventRouter = router({
 			const teams: TeamList = [];
 
 			if (await db.query.events.findFirst({ where: eq(events.code, input.code) })) {
+				debugLog({
+					category: "event",
+					eventCode: input.code,
+					level: "info",
+					message: "Create refused: event already exists",
+				});
 				throw new TRPCError({ code: "CONFLICT", message: "Event already exists" });
 			}
 
@@ -355,11 +423,24 @@ export const eventRouter = router({
 				})
 			).json();
 
+			logPayload({
+				category: "tba-payload",
+				source: "tba event (create)",
+				eventCode: input.code,
+				payload: eventData,
+			});
+
 			const teamsData = await fetch(`https://www.thebluealliance.com/api/v3/event/${input.code}/teams/simple`, {
 				headers: {
 					"X-TBA-Auth-Key": process.env.TBA_API_KEY ?? "",
 				},
 			}).then((res) => res.json());
+			logPayload({
+				category: "tba-payload",
+				source: "tba event teams (create)",
+				eventCode: input.code,
+				payload: teamsData,
+			});
 
 			if (teamsData) {
 				for (let team of teamsData) {
@@ -448,6 +529,14 @@ export const eventRouter = router({
 					)
 					.onConflictDoNothing();
 			}
+
+			debugLog({
+				category: "event",
+				eventCode: input.code,
+				level: "info",
+				message: `Event created: ${name.trim()}`,
+				data: { teams: uniqueTeams.length, notepadOnly: input.notepadOnly ?? false, creatorResolved: !!user },
+			});
 
 			return {
 				...event[0],
@@ -546,6 +635,7 @@ export const eventRouter = router({
 			const event = ctx.event;
 			// Refused while an admin has extensions switched off for this event.
 			await assertExtensionDataAllowed(event.code);
+			logPayload({ category: "fms-payload", source: "fms team sync", eventCode: event.code, payload: input });
 
 			const existingRows = await db
 				.select({ teamNumber: schema.checklist.teamNumber })
@@ -560,6 +650,21 @@ export const eventRouter = router({
 
 			if (teamsToAdd.length === 0 && teamsToRemove.length === 0) return { added: 0, removed: 0 };
 
+			// Only a real change is recorded; the extension syncs the team list every 5 minutes.
+			debugLog({
+				category: "fms",
+				eventCode: event.code,
+				level: "info",
+				message: `FMS team list sync: ${teamsToAdd.length} added, ${teamsToRemove.length} removed`,
+				data: {
+					added: teamsToAdd.slice(0, 20),
+					removed: teamsToRemove.slice(0, 20),
+					addedCount: teamsToAdd.length,
+					removedCount: teamsToRemove.length,
+					incoming: incomingNumbers.size,
+				},
+			});
+
 			if (teamsToAdd.length > 0) {
 				const newTeams = await Promise.all(
 					teamsToAdd.map(async (num) => {
@@ -570,7 +675,15 @@ export const eventRouter = router({
 								{ headers: { "X-TBA-Auth-Key": process.env.TBA_API_KEY ?? "" } },
 							).then((res) => res.json());
 							name = teamData.nickname ?? teamData.name ?? name;
-						} catch {}
+						} catch (err) {
+							debugLog({
+								category: "fms",
+								eventCode: event.code,
+								level: "warn",
+								message: `TBA team name lookup failed for ${num}, using placeholder name`,
+								data: { team: num, error: (err as Error)?.message },
+							});
+						}
 						return { number: num.toString(), name };
 					}),
 				);
@@ -640,7 +753,23 @@ export const eventRouter = router({
 			headers: { "X-TBA-Auth-Key": process.env.TBA_API_KEY ?? "" },
 		}).then((res) => res.json());
 
+		logPayload({
+			category: "tba-payload",
+			source: "tba event teams (reimport)",
+			eventCode: event.code,
+			payload: teamsData,
+		});
 		if (!teamsData || "Error" in teamsData) {
+			debugLog({
+				category: "event",
+				eventCode: event.code,
+				level: "error",
+				message: "TBA team import failed",
+				data: {
+					tbaError:
+						teamsData && "Error" in teamsData ? String(teamsData.Error).slice(0, 200) : "empty response",
+				},
+			});
 			throw new TRPCError({ code: "BAD_REQUEST", message: "Failed to fetch teams from TBA" });
 		}
 
@@ -650,6 +779,13 @@ export const eventRouter = router({
 		}));
 
 		if (newTeams.length === 0) return { count: 0 };
+		debugLog({
+			category: "event",
+			eventCode: event.code,
+			level: "info",
+			message: `Teams re-imported from TBA: ${newTeams.length}`,
+			data: { count: newTeams.length },
+		});
 
 		await db
 			.insert(schema.teams)
@@ -878,6 +1014,14 @@ export const eventRouter = router({
 				cached.name = newName;
 			}
 
+			debugLog({
+				category: "event",
+				eventCode: eventDB.code,
+				level: "info",
+				message: "Meshed event labels changed",
+				data: { subEvents: input.map((e) => e.code), name: newName },
+			});
+
 			return { subEvents: updated, name: newName };
 		}),
 
@@ -895,11 +1039,25 @@ export const eventRouter = router({
 				.returning({ publicNoteSubmit: events.publicTicketSubmit });
 
 			if (!updatedValue) {
+				debugLog({
+					category: "event",
+					eventCode: ctx.event.code,
+					level: "error",
+					message: "Public note submit update failed",
+					data: { state: input.state },
+				});
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to update public note submit status",
 				});
 			}
+			debugLog({
+				category: "event",
+				eventCode: ctx.event.code,
+				level: "info",
+				message: `Setting changed: publicTicketSubmit ${input.state}`,
+				data: { changed: ["publicTicketSubmit"], publicTicketSubmit: input.state },
+			});
 
 			return updatedValue;
 		}),
@@ -963,6 +1121,13 @@ export const eventRouter = router({
 				.update(events)
 				.set({ nexusApiKey: input.nexusApiKey || null })
 				.where(eq(events.code, event.code));
+			debugLog({
+				category: "event",
+				eventCode: event.code,
+				level: "info",
+				message: `Setting changed: Nexus API key ${input.nexusApiKey ? "set" : "cleared"}`,
+				data: { changed: ["nexusApiKey"], nowSet: !!input.nexusApiKey },
+			});
 			event.nexusApiKey = input.nexusApiKey || undefined;
 			nexusPoller.restartForEvent(event);
 			nexusEventPoller.restartForEvent(event);
@@ -1045,6 +1210,7 @@ export const eventRouter = router({
 		}
 
 		const data = await response.json();
+		logPayload({ category: "nexus-payload", source: "nexus pit map", eventCode: event.code, payload: data });
 		event.pitMap = { data, fetchedAt: new Date() };
 		return data;
 	}),
@@ -1061,6 +1227,13 @@ export const eventRouter = router({
 				.update(events)
 				.set({ fmsEventPassword: input.fmsEventPassword || null })
 				.where(eq(events.code, event.code));
+			debugLog({
+				category: "event",
+				eventCode: event.code,
+				level: "info",
+				message: `Setting changed: FMS event password ${input.fmsEventPassword ? "set" : "cleared"}`,
+				data: { changed: ["fmsEventPassword"], nowSet: !!input.fmsEventPassword },
+			});
 			event.fmsEventPassword = input.fmsEventPassword || undefined;
 			return { success: true };
 		}),
@@ -1092,6 +1265,14 @@ export const eventRouter = router({
 	/** Returns the FMS event password for use by the extension to authenticate against FMS APIs. */
 	getFmsEventPassword: eventProcedure.query(async ({ ctx }) => {
 		const event = ctx.event;
+		// The extension asks for this on start and after errors, so one row per event per 10 minutes.
+		debugLogThrottled(`fms-password-fetch:${event.code}`, 600_000, {
+			category: "fms",
+			eventCode: event.code,
+			level: event.fmsEventPassword ? "info" : "warn",
+			message: `Extension fetched the FMS event password (${event.fmsEventPassword ? "set" : "not set"})`,
+			data: { passwordSet: !!event.fmsEventPassword, extensionId: ctx.extensionId ?? null },
+		});
 		return { fmsEventPassword: event.fmsEventPassword ?? null };
 	}),
 
@@ -1184,6 +1365,13 @@ export const eventRouter = router({
 		await db
 			.delete(schema.checklist)
 			.where(and(eq(schema.checklist.eventCode, event.code), eq(schema.checklist.teamNumber, input.teamNumber)));
+		debugLog({
+			category: "event",
+			eventCode: event.code,
+			level: "info",
+			message: `Team ${input.teamNumber} removed from event`,
+			data: { team: input.teamNumber },
+		});
 
 		// Rebuild Redis cache and notify subscribers
 		const allRows = await db.select().from(schema.checklist).where(eq(schema.checklist.eventCode, event.code));
@@ -1248,6 +1436,21 @@ export const eventRouter = router({
 				}
 			}
 			await db.update(events).set({ autoEventSettings: newSettings }).where(eq(events.code, event.code));
+			const changedAuto = AUTO_EVENT_ISSUE_TYPES.filter(
+				(k) => (event.autoEventSettings?.[k] ?? true) !== (newSettings[k] ?? true),
+			);
+			if (changedAuto.length > 0) {
+				debugLog({
+					category: "event",
+					eventCode: event.code,
+					level: "info",
+					message: `Auto-event settings changed: ${changedAuto.join(", ")}`,
+					data: {
+						changed: changedAuto,
+						values: Object.fromEntries(changedAuto.map((k) => [k, newSettings[k] ?? true])),
+					},
+				});
+			}
 			event.autoEventSettings = newSettings;
 			// Keep the global cache in sync so log analysis picks up the change
 			// even for events that run across multiple analysis cycles
@@ -1274,12 +1477,40 @@ export const eventRouter = router({
 		.mutation(async ({ ctx, input }) => {
 			const event = ctx.event;
 			const settings: SlowWarningSettings = input;
+			const prevSlow = {
+				...DEFAULT_SLOW_WARNING_SETTINGS,
+				...(event.slowWarningSettings ?? {}),
+			} as unknown as Record<string, unknown>;
+			const changedSlow = Object.keys(settings).filter(
+				(k) => prevSlow[k] !== (settings as unknown as Record<string, unknown>)[k],
+			);
+			if (changedSlow.length > 0) {
+				debugLog({
+					category: "event",
+					eventCode: event.code,
+					level: "info",
+					message: `SLOW-warning settings changed: ${changedSlow.join(", ")}`,
+					data: {
+						changed: changedSlow,
+						values: Object.fromEntries(
+							changedSlow.map((k) => [k, (settings as unknown as Record<string, unknown>)[k]]),
+						),
+					},
+				});
+			}
 			await db.update(events).set({ slowWarningSettings: settings }).where(eq(events.code, event.code));
 			event.slowWarningSettings = settings;
 			// Recompute immediately so enabling/disabling or a mode change takes effect now.
-			await refreshSlowTeams(event.code).catch((err) =>
-				console.error(`[Event] refreshSlowTeams failed for ${event.code}:`, err),
-			);
+			await refreshSlowTeams(event.code).catch((err) => {
+				console.error(`[Event] refreshSlowTeams failed for ${event.code}:`, err);
+				debugLog({
+					category: "event",
+					eventCode: event.code,
+					level: "error",
+					message: "SLOW-team refresh failed after settings change",
+					data: { error: (err as Error)?.message },
+				});
+			});
 			return { success: true };
 		}),
 
@@ -1341,7 +1572,16 @@ export const eventRouter = router({
 		const membership = await db.query.eventUsers.findFirst({
 			where: and(eq(eventUsers.user_id, ctx.user.id), eq(eventUsers.event_code, input.eventCode)),
 		});
-		if (!membership) throw new TRPCError({ code: "FORBIDDEN", message: "Not a member of this event" });
+		if (!membership) {
+			debugLog({
+				category: "event",
+				eventCode: input.eventCode,
+				level: "info",
+				message: "Set active event refused: not a member",
+				data: { userId: ctx.user.id },
+			});
+			throw new TRPCError({ code: "FORBIDDEN", message: "Not a member of this event" });
+		}
 		await db.update(users).set({ active_event_code: input.eventCode }).where(eq(users.id, ctx.user.id));
 		return true;
 	}),
@@ -1359,6 +1599,12 @@ export const eventRouter = router({
 			if (!res.ok) return { matchNumber: 0, level: "None" as TournamentLevel };
 
 			const matches: any[] = await res.json();
+			logPayload({
+				category: "tba-payload",
+				source: "tba matches (current match)",
+				eventCode: ctx.event.code,
+				payload: matches,
+			});
 
 			// Find qual matches sorted by match_number descending
 			const qualMatches = matches
@@ -1397,6 +1643,13 @@ export const eventRouter = router({
 		const event = ctx.event;
 		await db.update(events).set({ notepadOnly: input.notepadOnly }).where(eq(events.code, event.code));
 		event.notepadOnly = input.notepadOnly;
+		debugLog({
+			category: "event",
+			eventCode: event.code,
+			level: "info",
+			message: `Setting changed: notepadOnly ${input.notepadOnly}`,
+			data: { changed: ["notepadOnly"], notepadOnly: input.notepadOnly },
+		});
 		bus.publish(`event:${event.code}:notepad_only`, input.notepadOnly);
 		return { notepadOnly: input.notepadOnly };
 	}),
@@ -1411,6 +1664,13 @@ export const eventRouter = router({
 		}
 		await db.update(events).set({ playoffMode: input.playoffMode }).where(eq(events.code, event.code));
 		event.playoffMode = input.playoffMode;
+		debugLog({
+			category: "event",
+			eventCode: event.code,
+			level: "info",
+			message: `Setting changed: playoffMode ${input.playoffMode}`,
+			data: { changed: ["playoffMode"], playoffMode: input.playoffMode },
+		});
 		// Broadcast to all instances so their cached event stays in sync
 		bus.publish(`event:${event.code}:playoff_mode`, input.playoffMode);
 		return { playoffMode: input.playoffMode };

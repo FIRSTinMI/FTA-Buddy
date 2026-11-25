@@ -3,6 +3,7 @@
 // channel list. Never posts. Activity is deliberately paced and jittered by the caller.
 
 import { SlackApiError } from "./slack-user-oauth";
+import { logFramePayload } from "./payload-log";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -56,6 +57,12 @@ export async function slackWebApi<T extends Record<string, unknown>>(
 			}
 			throw new SlackApiError(method, data.error ?? `http_${res.status}`);
 		}
+		logFramePayload({
+			category: "slack-payload",
+			source: `slack session api ${method}`,
+			payload: data,
+			transition: false,
+		});
 		return data as T & { ok: true };
 	}
 }

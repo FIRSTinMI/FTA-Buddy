@@ -21,7 +21,8 @@ import { connect, db } from "./db/db";
 import { cycleLogs, logPublishing, matchLogs, slackLinkTokens } from "./db/schema";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { adminRouter } from "./router/admin";
-import { startDebugLogBackground } from "./util/debug-log";
+import { debugLog, debugLogOnChange, flushDebugLogs, startDebugLogBackground } from "./util/debug-log";
+import { logPayload } from "./util/payload-log";
 import { checklistRouter } from "./router/checklist";
 import { cycleRouter } from "./router/cycles";
 import { eventRouter } from "./router/event";
@@ -238,6 +239,12 @@ app.get("/slack/oauth", async (req, res) => {
 		await slackOAuth(code);
 		res.send("Success! You can close this window now.");
 	} catch (err) {
+		debugLog({
+			category: "slack",
+			level: "error",
+			message: "Slack OAuth install failed",
+			data: { error: err instanceof Error ? err.message : "unknown error" },
+		});
 		if (err instanceof Error) {
 			res.status(500).send(err.message);
 		} else {
@@ -266,15 +273,28 @@ app.get("/slack/user-oauth/callback", async (req, res) => {
 	try {
 		const { teamName } = await completeUserInstall(code, userId);
 		console.log(`[SlackUser] user ${userId} connected workspace ${teamName}`);
+		debugLog({
+			category: "slack",
+			level: "info",
+			message: `Slack user-scope workspace connected: ${teamName}`,
+			data: { userId, teamName },
+		});
 		res.redirect(userOAuthReturnUrl("connected"));
 	} catch (err) {
 		console.error("[SlackUser] install failed:", (err as Error).message);
+		debugLog({
+			category: "slack",
+			level: "error",
+			message: "Slack user-scope install failed",
+			data: { userId, error: (err as Error).message },
+		});
 		res.redirect(userOAuthReturnUrl("error", (err as Error).message));
 	}
 });
 
 app.post("/slack/command", async (req, res) => {
 	const { command, text, response_url, trigger_id, user_id, user_name, team_id, channel_id, api_app_id } = req.body;
+	logPayload({ category: "slack-payload", source: "slack slash command", payload: req.body });
 
 	const args = text.split(" ");
 
@@ -315,6 +335,7 @@ app.post("/slack/command", async (req, res) => {
 app.post("/slack/interact", async (req, res) => {
 	try {
 		const payload = JSON.parse(req.body.payload);
+		logPayload({ category: "slack-payload", source: `slack interaction ${payload?.type ?? "unknown"}`, payload });
 
 		// Message shortcut: "Create FTA-Buddy Ticket" from the ⋮ menu on any message.
 		// Must respond 200 first, then open a modal (views.open requires trigger_id within 3s).
@@ -397,6 +418,12 @@ app.post("/slack/interact", async (req, res) => {
 		}
 	} catch (err) {
 		console.error("[slack/interact]", err);
+		debugLog({
+			category: "slack",
+			level: "error",
+			message: "Slack interaction handler failed",
+			data: { error: (err as Error)?.message },
+		});
 		if (!res.headersSent) res.sendStatus(200);
 	}
 });
@@ -419,6 +446,11 @@ app.post("/slack/events", async (req, res) => {
 		// Ignore events from the FTA Buddy bot itself
 		if (event && !isBotSelfEvent) {
 			console.log(event);
+			logPayload({
+				category: "slack-payload",
+				source: `slack event ${event.type ?? "unknown"}`,
+				payload: req.body,
+			});
 			// Nexus bot messages: create a ticket from the incoming CSA/volunteer request
 			if (
 				event.type === "message" &&
@@ -443,6 +475,19 @@ app.post("/slack/events", async (req, res) => {
 		}
 	} catch (err) {
 		console.error(err);
+		// A thread reply in the linked channel that is not an FTA-Buddy ticket also lands here (NOT_FOUND).
+		const notATicket = (err as { code?: string })?.code === "NOT_FOUND";
+		debugLog({
+			category: "slack",
+			level: notATicket ? "debug" : "error",
+			message: notATicket ? "Slack thread reply is not an FTA-Buddy ticket" : "Slack event handler failed",
+			data: {
+				eventType: event?.type,
+				subtype: event?.subtype,
+				channel: event?.channel,
+				error: (err as Error)?.message,
+			},
+		});
 	}
 	res.sendStatus(200);
 });
@@ -805,6 +850,12 @@ app.post("/api/nexus/event-status", async (req, res) => {
 	const expectedToken = process.env.NEXUS_WEBHOOK_TOKEN;
 	if (expectedToken && token !== expectedToken) {
 		console.warn("[NexusWebhook] Received request with invalid token - ignoring");
+		debugLogOnChange("nexus-webhook:token", "rejected", {
+			category: "nexus",
+			level: "warn",
+			message: "Nexus webhook rejected: invalid token",
+			data: { eventKey: (req.body as { eventKey?: string })?.eventKey ?? null },
+		});
 		return;
 	}
 
@@ -812,6 +863,20 @@ app.post("/api/nexus/event-status", async (req, res) => {
 	if (!body?.eventKey || typeof body.dataAsOfTime !== "number") return;
 
 	const eventCode = body.eventKey.toLowerCase();
+	logPayload({ category: "nexus-payload", source: "nexus webhook event-status", eventCode, payload: req.body });
+	// Webhooks arrive for every queue change, so only the first one per event (and the first after a rejection) is recorded.
+	debugLogOnChange("nexus-webhook:token", "accepted", {
+		category: "nexus",
+		level: "info",
+		message: "Nexus webhook token accepted again",
+	});
+	debugLogOnChange(`nexus-webhook:${eventCode}`, "receiving", {
+		category: "nexus",
+		eventCode,
+		level: "info",
+		message: "Nexus webhook updates started for event",
+		data: { matches: body.matches?.length ?? 0, nowQueuing: body.nowQueuing ?? null },
+	});
 	console.log(`[NexusWebhook] Received ${body.matches ? "match" : "event"} update for ${eventCode}`);
 	const newStatus = {
 		dataAsOfTime: body.dataAsOfTime,
@@ -850,8 +915,22 @@ connect().then(async () => {
 	try {
 		await migrate(db, { migrationsFolder: "./drizzle" });
 		console.log("✅ Migrations up to date");
+		debugLog({
+			category: "general",
+			level: "info",
+			message: "Migrations up to date",
+			data: { version: pjson.version },
+		});
 	} catch (err) {
 		console.error("❌ Migrations failed:", err);
+		// The row is buffered; write it before the process exits.
+		debugLog({
+			category: "general",
+			level: "error",
+			message: "Migrations failed, server exiting",
+			data: { error: (err as Error)?.message },
+		});
+		await flushDebugLogs();
 		process.exit(1);
 	}
 
@@ -864,6 +943,12 @@ connect().then(async () => {
 		}
 	} catch (err) {
 		console.error("[KnownIssue] Failed to load from Redis:", err);
+		debugLog({
+			category: "general",
+			level: "error",
+			message: "Known issue could not be loaded from Redis",
+			data: { error: (err as Error)?.message },
+		});
 	}
 	bus.subscribe("global:known_issue", (data) => {
 		knownIssue = data as typeof knownIssue;
@@ -877,11 +962,24 @@ connect().then(async () => {
 		while (true) {
 			try {
 				const isLeader = await acquireOrRenewLock("log_analysis", 15);
+				debugLogOnChange("leader:log_analysis", isLeader ? "leader" : "follower", {
+					category: "general",
+					level: "info",
+					message: `Log analysis leader lock: this instance is now ${isLeader ? "the leader" : "a follower"}`,
+					data: { isLeader },
+				});
 				if (isLeader) {
 					await logAnalysisLoop(3);
 				}
 			} catch (err) {
 				console.error("[LogAnalysis] Unhandled error in loop iteration - will retry in 3 s:", err);
+				// A persistent failure repeats every 3 s, so record each distinct message once.
+				debugLogOnChange("bg-error:log_analysis", String((err as Error)?.message), {
+					category: "general",
+					level: "error",
+					message: "Log analysis loop iteration failed, retrying in 3 s",
+					data: { error: (err as Error)?.message },
+				});
 			}
 			await new Promise((resolve) => setTimeout(resolve, 3e3));
 		}
@@ -917,13 +1015,25 @@ connect().then(async () => {
 						nexusEventPoller.fetchOnce(event);
 						nexusEventPoller.startFallbackPoller(event);
 					})
-					.catch(() => {
+					.catch((err) => {
 						/* ignore load errors on startup */
+						debugLog({
+							category: "nexus",
+							level: "warn",
+							message: "Could not load event to start Nexus poller on startup",
+							data: { error: (err as Error)?.message },
+						});
 					});
 			}
 		}
 	} catch (err) {
 		console.error("[Nexus] Failed to load events on startup:", (err as any)?.message);
+		debugLog({
+			category: "nexus",
+			level: "error",
+			message: "Failed to load events for Nexus pollers on startup",
+			data: { error: (err as any)?.message },
+		});
 	}
 
 	// Fix old-format calculated_cycle_time strings (e.g. "8:33") to the full format ("00:08:33.000")
@@ -949,13 +1059,31 @@ connect().then(async () => {
 					.execute();
 			}
 			console.log(`✅ Migrated ${shortCycles.length} old cycle time format(s) to full format`);
+			debugLog({
+				category: "general",
+				level: "info",
+				message: `Migrated ${shortCycles.length} old cycle time formats`,
+				data: { rows: shortCycles.length },
+			});
 		}
 	} catch (err) {
 		console.error("Failed to migrate old cycle time formats:", err);
+		debugLog({
+			category: "general",
+			level: "error",
+			message: "Failed to migrate old cycle time formats",
+			data: { error: (err as Error)?.message },
+		});
 	}
 
 	server.listen(port);
 	console.log("✅ HTTP Server listening on http://localhost:" + port);
+	debugLog({
+		category: "general",
+		level: "info",
+		message: `Server started on port ${port}`,
+		data: { version: pjson.version, port, pid: process.pid, dev: isDevMode() },
+	});
 
 	startDebugLogBackground();
 	startLegacyExtensionSnapshots();
@@ -969,6 +1097,13 @@ connect().then(async () => {
 				const event = events[code];
 				if ((eventLastSeen[code] ?? new Date(0)).getTime() < cutoff) {
 					console.log(`[Cleanup] Evicting inactive event ${code}`);
+					debugLog({
+						category: "general",
+						eventCode: code,
+						level: "info",
+						message: `Evicted inactive event ${code} from memory`,
+						data: { lastSeen: eventLastSeen[code] ?? null },
+					});
 					cleanupEventSubscriptions(code);
 					nexusEventPoller.stopForEvent(code);
 					if (event.token) delete eventCodes[event.token];
@@ -983,6 +1118,15 @@ connect().then(async () => {
 
 process.on("SIGTERM", () => {
 	console.log("SIGTERM");
+	debugLog({
+		category: "general",
+		level: "info",
+		message: "SIGTERM received, shutting down",
+		data: { pid: process.pid },
+	});
 	server.closeAllConnections();
-	server.close(() => process.exit(0));
+	// Write buffered log rows before exiting.
+	Promise.race([flushDebugLogs(), new Promise((r) => setTimeout(r, 3000))]).finally(() =>
+		server.close(() => process.exit(0)),
+	);
 });

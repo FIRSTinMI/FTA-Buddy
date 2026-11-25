@@ -13,6 +13,8 @@ import { subscriptionQueue } from "../util/subscription";
 import { sendSlackMessage } from "../util/slack";
 import { createSlackNoteMessage } from "./notes";
 import { bus } from "../util/eventBus";
+import { logPayload } from "../util/payload-log";
+import { debugLog } from "../util/debug-log";
 
 interface TBASimpleMatch {
 	key: string;
@@ -174,6 +176,12 @@ export const matchEventsRouter = router({
 				);
 				if (!res.ok) return null;
 				const matches: TBASimpleMatch[] = await res.json();
+				logPayload({
+					category: "tba-payload",
+					source: "tba team matches",
+					eventCode: tbaEventCode,
+					payload: matches,
+				});
 				if (!Array.isArray(matches)) return null;
 
 				// Also check local match logs so we don't show matches already played locally
@@ -301,6 +309,12 @@ export const matchEventsRouter = router({
 						);
 						if (!res.ok) continue;
 						const matches: TBASimpleMatch[] = await res.json();
+						logPayload({
+							category: "tba-payload",
+							source: "tba team matches",
+							eventCode: code,
+							payload: matches,
+						});
 						if (!Array.isArray(matches)) continue;
 
 						for (const m of matches) {
@@ -363,6 +377,13 @@ export const matchEventsRouter = router({
 			throw new TRPCError({ code: "NOT_FOUND", message: "Match event not found" });
 		}
 
+		debugLog({
+			category: "match-events",
+			eventCode: result[0].event_code,
+			level: "info",
+			message: "Match event dismissed by user",
+			data: { matchEventId: input.id, team: result[0].team, rule: "manual dismiss" },
+		});
 		bus.publish(`event:${result[0].event_code}:match_event:dismiss`, {
 			kind: "match_event_dismiss",
 			id: input.id,
@@ -475,6 +496,13 @@ export const matchEventsRouter = router({
 				return { noteId: newNoteId, newNote: insertedNote };
 			});
 
+			debugLog({
+				category: "match-events",
+				eventCode: event.code,
+				level: "info",
+				message: "Match event converted to note by user",
+				data: { matchEventId: input.id, noteId, team: matchEvent.team, rule: "manual convert" },
+			});
 			// Emit events
 			bus.publish(`event:${event.code}:note_update`, { kind: "create", note: newNote as Note });
 			bus.publish(`event:${event.code}:match_event:convert`, {
@@ -548,6 +576,13 @@ export const matchEventsRouter = router({
 			});
 		}
 
+		debugLog({
+			category: "match-events",
+			eventCode: event.code,
+			level: "info",
+			message: `Dismissed all active match events (${dismissed.length})`,
+			data: { count: dismissed.length, rule: "manual dismiss all" },
+		});
 		return { dismissed: dismissed.length };
 	}),
 

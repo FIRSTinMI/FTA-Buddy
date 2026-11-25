@@ -9,6 +9,8 @@ import { eventProcedure, publicProcedure, router } from "../trpc";
 import { compressStationLog } from "../util/log-analysis";
 import { generateReport } from "../util/report-generator";
 import { assertExtensionDataAllowed } from "../util/event-extensions";
+import { debugLog } from "../util/debug-log";
+import { logPayload } from "../util/payload-log";
 
 // FMS generates Windows-style GUIDs which may have version nibbles outside [1-8],
 // so we use a permissive hex pattern instead of the strict RFC 4122 z.string().uuid().
@@ -22,6 +24,26 @@ export const fmsGuid = z
 	.regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/, "Invalid GUID");
 
 export type MatchRouterOutputs = inferRouterOutputs<typeof matchRouter>;
+
+/**
+ * What is logged for an uploaded match log: the metadata, the row count per
+ * station and the first 3 rows of each. The whole log is already in `match_logs`.
+ */
+function matchLogSample(input: { logs: Record<string, unknown> } & Record<string, unknown>): Record<string, unknown> {
+	const { logs, ...meta } = input;
+	const rows: Record<string, number> = {};
+	const first: Record<string, unknown> = {};
+	for (const [station, value] of Object.entries(logs)) {
+		if (Array.isArray(value)) {
+			rows[station] = value.length;
+			first[station] = value.slice(0, 3);
+		} else if (typeof value === "string") {
+			rows[station] = value.length; // compressed form: characters, not rows
+			first[station] = `${value.slice(0, 60)}...`;
+		}
+	}
+	return { ...meta, logRows: rows, logFirstRows: first };
+}
 
 export const matchRouter = router({
 	putMatchLogs: publicProcedure
@@ -53,6 +75,12 @@ export const matchRouter = router({
 		.mutation(async ({ input }) => {
 			// Refused while an admin has extensions switched off for this event.
 			await assertExtensionDataAllowed(input.event);
+			logPayload({
+				category: "fms-payload",
+				source: "fms match log upload",
+				eventCode: input.event.trim().toLowerCase(),
+				payload: matchLogSample(input),
+			});
 			const existing = await db
 				.select({ id: matchLogs.id })
 				.from(matchLogs)
@@ -68,8 +96,21 @@ export const matchRouter = router({
 				input.teamNumberRed1 == null &&
 				input.teamNumberRed2 == null &&
 				input.teamNumberRed3 == null
-			)
+			) {
+				debugLog({
+					category: "fms",
+					eventCode: input.event.trim().toLowerCase(),
+					level: "debug",
+					message: `Match log discarded: no team in any station (${input.level} ${input.matchNumber})`,
+					data: {
+						fmsMatchId: input.fmsMatchId,
+						level: input.level,
+						match: input.matchNumber,
+						play: input.playNumber,
+					},
+				});
 				return;
+			}
 
 			await db
 				.insert(matchLogs)
@@ -113,6 +154,19 @@ export const matchRouter = router({
 							: null,
 				})
 				.execute();
+			debugLog({
+				category: "fms",
+				eventCode: input.event.trim().toLowerCase(),
+				level: "info",
+				message: `Match log imported (${input.level} ${input.matchNumber}, play ${input.playNumber})`,
+				data: {
+					fmsMatchId: input.fmsMatchId,
+					level: input.level,
+					match: input.matchNumber,
+					play: input.playNumber,
+					compressed: false,
+				},
+			});
 		}),
 
 	putCompressedMatchLogs: publicProcedure
@@ -144,6 +198,12 @@ export const matchRouter = router({
 		.mutation(async ({ input }) => {
 			// Refused while an admin has extensions switched off for this event.
 			await assertExtensionDataAllowed(input.event);
+			logPayload({
+				category: "fms-payload",
+				source: "fms match log upload (compressed)",
+				eventCode: input.event.trim().toLowerCase(),
+				payload: matchLogSample(input),
+			});
 			const existing = await db
 				.select({ id: matchLogs.id })
 				.from(matchLogs)
@@ -159,8 +219,21 @@ export const matchRouter = router({
 				input.teamNumberRed1 == null &&
 				input.teamNumberRed2 == null &&
 				input.teamNumberRed3 == null
-			)
+			) {
+				debugLog({
+					category: "fms",
+					eventCode: input.event.trim().toLowerCase(),
+					level: "debug",
+					message: `Match log discarded: no team in any station (${input.level} ${input.matchNumber})`,
+					data: {
+						fmsMatchId: input.fmsMatchId,
+						level: input.level,
+						match: input.matchNumber,
+						play: input.playNumber,
+					},
+				});
 				return;
+			}
 
 			await db
 				.insert(matchLogs)
@@ -186,6 +259,19 @@ export const matchRouter = router({
 					red3_log: input.teamNumberRed3 != null ? input.logs.red3 : null,
 				})
 				.execute();
+			debugLog({
+				category: "fms",
+				eventCode: input.event.trim().toLowerCase(),
+				level: "info",
+				message: `Match log imported (${input.level} ${input.matchNumber}, play ${input.playNumber}, compressed)`,
+				data: {
+					fmsMatchId: input.fmsMatchId,
+					level: input.level,
+					match: input.matchNumber,
+					play: input.playNumber,
+					compressed: true,
+				},
+			});
 		}),
 
 	/**
@@ -514,6 +600,12 @@ export const matchRouter = router({
 						red: { team_keys: string[] };
 					} | null;
 				}[] = await tbaRes.json();
+				logPayload({
+					category: "tba-payload",
+					source: "tba matches (schedule)",
+					eventCode: ctx.event.code,
+					payload: tbaMatches,
+				});
 
 				// Set of already-played qual match numbers (from DB)
 				const playedQualNums = new Set(

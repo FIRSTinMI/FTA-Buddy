@@ -10,6 +10,7 @@ import type {
 import { db } from "../db/db";
 import { events as eventsTable } from "../db/schema";
 import { eventCodes, events } from "../state";
+import { debugLog } from "./debug-log";
 import { instanceId } from "./leaderLock";
 import { redis } from "./redis";
 
@@ -40,6 +41,9 @@ export const PRESENCE_TTL_SECONDS = 24 * 60 * 60;
 export const PENDING_TTL_SECONDS = 10 * 60;
 /** An extension is online if it sent a heartbeat (or, legacy, a frame/state report) this recently. */
 export const ONLINE_WINDOW_MS = 150_000;
+
+/** An extension that has sent no frame for this long is recorded as stale. */
+export const STALE_FRAME_MS = 120_000;
 
 const LEGACY_SNAPSHOT_INTERVAL_MS = 20_000;
 const LEGACY_SNAPSHOT_TTL_SECONDS = 60;
@@ -122,6 +126,12 @@ export function parsePendingHash(hash: Record<string, string> | null | undefined
 	const parsed = extensionConfigSchema.safeParse(raw);
 	if (!parsed.success) {
 		console.warn("[ext-presence] dropped invalid pending config:", parsed.error.message);
+		debugLog({
+			category: "extension-admin",
+			level: "warn",
+			message: "Dropped invalid pending extension config",
+			data: { error: parsed.error.message.slice(0, 300), keys: Object.keys(raw) },
+		});
 		return null;
 	}
 	return Object.keys(parsed.data).length > 0 ? parsed.data : null;
@@ -229,7 +239,47 @@ export async function recordHeartbeat(
 		.exec();
 	const [err, hash] = res?.[3] ?? [null, null];
 	if (err) throw err;
-	return parsePendingHash(hash as Record<string, string> | null);
+	const pending = parsePendingHash(hash as Record<string, string> | null);
+	// Heartbeats arrive once a minute per extension; only changes are recorded.
+	const eventCode = server.eventCode ?? undefined;
+	if (pending) {
+		debugLog({
+			category: "extension-admin",
+			eventCode,
+			level: "info",
+			message: `Queued config delivered to extension ${input.extensionId}`,
+			data: { extensionId: input.extensionId, config: pending },
+		});
+	}
+	if (!previous) {
+		debugLog({
+			category: "field-monitor",
+			eventCode,
+			level: "info",
+			message: `Extension ${input.extensionId} connected (first heartbeat, state ${input.state})`,
+			data: {
+				extensionId: input.extensionId,
+				version: input.version,
+				state: input.state,
+				reportedEventCode: input.eventCode ?? null,
+			},
+		});
+	} else if (previous.state !== input.state || previous.eventCode !== server.eventCode) {
+		debugLog({
+			category: "field-monitor",
+			eventCode,
+			level: input.state === "running" ? "info" : "warn",
+			message: `Extension ${input.extensionId} state ${previous.state} -> ${input.state}`,
+			data: {
+				extensionId: input.extensionId,
+				from: previous.state,
+				to: input.state,
+				fromEvent: previous.eventCode,
+				toEvent: server.eventCode,
+			},
+		});
+	}
+	return pending;
 }
 
 /** Read one presence record (used to find an extension's event for a config push). */
@@ -277,8 +327,68 @@ export function snapshotInMemoryExtensions(): LegacyExtensionSnapshot[] {
 	return out;
 }
 
+/**
+ * Compare in-memory extensions against the stale threshold. `stale` is the set
+ * of extension keys already recorded as stale; it is updated in place. Returns
+ * the transitions so each one is logged once, not on every 20 s tick.
+ */
+export function detectStaleExtensions(
+	snapshot: { id: string; eventCode: string; lastFrame: number }[],
+	now: number,
+	stale: Set<string>,
+	thresholdMs = STALE_FRAME_MS,
+): {
+	becameStale: { id: string; eventCode: string; silentMs: number }[];
+	recovered: { id: string; eventCode: string }[];
+} {
+	const becameStale: { id: string; eventCode: string; silentMs: number }[] = [];
+	const recovered: { id: string; eventCode: string }[] = [];
+	const present = new Set<string>();
+	for (const ext of snapshot) {
+		const key = `${ext.eventCode}:${ext.id}`;
+		present.add(key);
+		const silentMs = now - ext.lastFrame;
+		if (silentMs >= thresholdMs) {
+			if (!stale.has(key)) {
+				stale.add(key);
+				becameStale.push({ id: ext.id, eventCode: ext.eventCode, silentMs });
+			}
+		} else if (stale.has(key)) {
+			stale.delete(key);
+			recovered.push({ id: ext.id, eventCode: ext.eventCode });
+		}
+	}
+	for (const key of stale) if (!present.has(key)) stale.delete(key);
+	return { becameStale, recovered };
+}
+
+const staleExtensions = new Set<string>();
+
+function logStaleExtensions(snapshot: LegacyExtensionSnapshot[]): void {
+	const { becameStale, recovered } = detectStaleExtensions(snapshot, Date.now(), staleExtensions);
+	for (const s of becameStale) {
+		debugLog({
+			category: "field-monitor",
+			eventCode: s.eventCode,
+			level: "warn",
+			message: `Extension ${s.id} sent no frames for ${Math.round(s.silentMs / 1000)} s`,
+			data: { extensionId: s.id, silentSeconds: Math.round(s.silentMs / 1000) },
+		});
+	}
+	for (const r of recovered) {
+		debugLog({
+			category: "field-monitor",
+			eventCode: r.eventCode,
+			level: "info",
+			message: `Extension ${r.id} sending frames again`,
+			data: { extensionId: r.id },
+		});
+	}
+}
+
 async function publishLegacySnapshot(): Promise<void> {
 	const snapshot = snapshotInMemoryExtensions();
+	logStaleExtensions(snapshot);
 	const key = LEGACY_PREFIX + instanceId;
 	if (snapshot.length === 0) await redis.del(key);
 	else await redis.set(key, JSON.stringify(snapshot), "EX", LEGACY_SNAPSHOT_TTL_SECONDS);

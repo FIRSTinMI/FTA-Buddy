@@ -1,3 +1,4 @@
+import { debugLog } from "./debug-log";
 import { and, eq, isNotNull, lt, or } from "drizzle-orm";
 import { db } from "../db/db";
 import { events as eventsTable } from "../db/schema";
@@ -91,9 +92,21 @@ export function startYearEndArchive(): void {
 			const archived = await archivePastYears();
 			if (archived.length > 0) {
 				console.log(`[YearEndArchive] archived ${archived.length} event(s): ${archived.join(", ")}`);
+				debugLog({
+					category: "event",
+					level: "info",
+					message: `Year-end archive: ${archived.length} events archived`,
+					data: { count: archived.length, events: archived.slice(0, 50) },
+				});
 			}
 		} catch (err) {
 			console.error("[YearEndArchive] sweep failed", err);
+			debugLog({
+				category: "general",
+				level: "error",
+				message: "Year-end archive sweep failed",
+				data: { error: (err as Error)?.message },
+			});
 		}
 	};
 

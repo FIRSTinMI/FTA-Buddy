@@ -5,6 +5,7 @@ import StreamType from "@the-orange-alliance/api/lib/esm/models/types/StreamType
 import { z } from "zod";
 import { publicProcedure, router } from "../trpc";
 import { abortableSleep } from "../util/subscription";
+import { logPayload } from "../util/payload-log";
 
 process.env.TZ = "UTC";
 
@@ -177,6 +178,9 @@ async function createEventTracker(key: string) {
 			toa.getEventTeams(key),
 			FTCAPIgetSeasonEvents(),
 		]);
+		logPayload({ category: "toa-payload", source: "toa event", eventCode: key, payload: event });
+		logPayload({ category: "toa-payload", source: "toa event matches", eventCode: key, payload: schedule });
+		logPayload({ category: "toa-payload", source: "toa event teams", eventCode: key, payload: teams });
 		for (const match of schedule) {
 			match.scheduledTime = match.scheduledTime?.substring(0, 22);
 		}
@@ -294,7 +298,10 @@ async function updateEventStatus(event: FTCEvent) {
 		event.currentMatch = null;
 		event.currentLevel = "QUALIFICATION";
 		event.completedMatches = 0;
-		event.totalMatches = Math.max(event.qualMatchCount + (event.allianceCount > 0 ? 2 * event.allianceCount - 1 : 0), 1);
+		event.totalMatches = Math.max(
+			event.qualMatchCount + (event.allianceCount > 0 ? 2 * event.allianceCount - 1 : 0),
+			1,
+		);
 		event.averageCycleTime = 0;
 		event.aheadBehind = null;
 		return;
@@ -454,7 +461,8 @@ const qualSchedules: { [code: string]: FTCAPIScheduledMatch[] } = {};
 async function getQualSchedule(code: string) {
 	if (qualSchedules[code]?.length) return qualSchedules[code];
 	const schedule =
-		(await FTCAPIget<{ schedule: FTCAPIScheduledMatch[] }>(`schedule/${code}?tournamentLevel=qual`))?.schedule ?? [];
+		(await FTCAPIget<{ schedule: FTCAPIScheduledMatch[] }>(`schedule/${code}?tournamentLevel=qual`))?.schedule ??
+		[];
 	qualSchedules[code] = schedule;
 	return schedule;
 }
@@ -463,6 +471,12 @@ async function refreshScheduleAndStreams(event: FTCEvent) {
 	// If the schedule is empty, try to get it again
 	if (event.schedule.length === 0) {
 		event.schedule = await toa.getEventMatches(event.key);
+		logPayload({
+			category: "toa-payload",
+			source: "toa event matches (refresh)",
+			eventCode: event.key,
+			payload: event.schedule,
+		});
 		for (const match of event.schedule) {
 			match.scheduledTime = match.scheduledTime?.substring(0, 22);
 		}
@@ -512,7 +526,11 @@ async function FTCAPIget<T>(path: string): Promise<T | null> {
 		return null;
 	}
 
-	return (await response.json()) as T;
+	const body = (await response.json()) as T;
+	// The path's first segment names the kind (matches, events, ...); the event key is the second.
+	const [kind, rest] = path.split("?")[0].split("/");
+	logPayload({ category: "ftc-payload", source: `ftc ${kind}`, eventCode: rest ?? null, payload: body });
+	return body;
 }
 
 async function FTCAPIgetMatches(eventKey: string) {

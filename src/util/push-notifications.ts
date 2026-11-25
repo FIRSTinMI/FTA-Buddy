@@ -7,6 +7,7 @@ import type { Notification } from "../../shared/types";
 import { CATEGORY_FOR_TOPIC } from "../../shared/notifications";
 import { db } from "../db/db";
 import { pushSubscriptions, users, events } from "../db/schema";
+import { debugLog } from "./debug-log";
 
 const publicVapidKey = process.env.VAPID_PUBLIC_KEY || "";
 const privateVapidKey = process.env.VAPID_PRIVATE_KEY || "";
@@ -16,6 +17,12 @@ export function initializePushNotifications() {
 		webpush.setVapidDetails("mailto:me@filipkin.com", publicVapidKey, privateVapidKey);
 	} catch (err) {
 		console.warn("[push-notifications] VAPID keys invalid or missing — web push disabled:", (err as Error).message);
+		debugLog({
+			category: "notifications",
+			level: "error",
+			message: "VAPID keys invalid or missing, web push disabled",
+			data: { error: (err as Error).message },
+		});
 	}
 }
 
@@ -85,6 +92,8 @@ export async function sendWebPushNotification(userIds: number[], data: Notificat
 
 	const notifications: Promise<SendResult | void>[] = [];
 	const subscriptionsToDelete: number[] = [];
+	const failedStatusCodes: Record<string, number> = {};
+	let lastFailure: string | undefined;
 
 	for (let subscription of subscriptions) {
 		const parsedUrl = new URL(subscription.endpoint);
@@ -119,6 +128,9 @@ export async function sendWebPushNotification(userIds: number[], data: Notificat
 						subscriptionsToDelete.push(subscription.id);
 					} else {
 						console.error("Error sending notification", err);
+						const code = String(err?.statusCode ?? "none");
+						failedStatusCodes[code] = (failedStatusCodes[code] ?? 0) + 1;
+						lastFailure = String(err?.message ?? err).slice(0, 200);
 					}
 				}),
 		);
@@ -126,7 +138,32 @@ export async function sendWebPushNotification(userIds: number[], data: Notificat
 
 	await Promise.all(notifications);
 
+	// One summary row per send batch (per notification event), not per subscription.
+	const failedCount = Object.values(failedStatusCodes).reduce((a, b) => a + b, 0);
+	debugLog({
+		category: "notifications",
+		eventCode,
+		level: failedCount > 0 ? "warn" : "debug",
+		message: `Push ${data.topic}: ${subscriptions.length} subscriptions targeted for ${filteredUserIds.length} users, ${failedCount} failed, ${subscriptionsToDelete.length} expired`,
+		data: {
+			topic: data.topic,
+			users: filteredUserIds.length,
+			subscriptions: subscriptions.length,
+			failed: failedCount,
+			failedStatusCodes,
+			lastFailure,
+			expired: subscriptionsToDelete.length,
+		},
+	});
+
 	if (subscriptionsToDelete.length > 0) {
 		await db.delete(pushSubscriptions).where(inArray(pushSubscriptions.id, subscriptionsToDelete)).execute();
+		debugLog({
+			category: "notifications",
+			eventCode,
+			level: "info",
+			message: `Removed ${subscriptionsToDelete.length} expired push subscriptions (HTTP 410)`,
+			data: { removed: subscriptionsToDelete.length, topic: data.topic },
+		});
 	}
 }

@@ -1,3 +1,4 @@
+import { shouldDisableForExpiry } from "../../shared/extension-state";
 import { updateValues } from "./trpc";
 
 const cloudCheckbox = document.getElementById("cloud") as HTMLInputElement;
@@ -210,6 +211,7 @@ function load() {
 			"eventToken",
 			"changed",
 			"enabled",
+			"remoteDisabled",
 			"fieldMonitor",
 			"useSignalR",
 			"fmsApiEnabled",
@@ -269,9 +271,16 @@ function load() {
 
 			urlContainer.style.display = Boolean(item.cloud) ? "none" : "block";
 
-			if (changed + 1000 * 60 * 60 * 24 * 4 < new Date().getTime()) {
+			if (
+				shouldDisableForExpiry({
+					enabled: Boolean(item.enabled),
+					remoteDisabled: item.remoteDisabled === true,
+					changed,
+					now: Date.now(),
+				})
+			) {
 				enabledInput.checked = false;
-				chrome.storage.local.set({ enabled: false });
+				expireStaleEnable();
 			}
 
 			cloudCheckbox.addEventListener("input", handleUpdate);
@@ -294,6 +303,23 @@ function load() {
 			updateStatusIndicators();
 		},
 	);
+}
+
+/**
+ * Ask the worker to clear Enable for expired settings. The worker re-checks, so
+ * a remote enable that arrived since this popup read storage is kept; the
+ * checkbox then shows the stored value again.
+ */
+function expireStaleEnable() {
+	chrome.runtime
+		.sendMessage({ type: "expireIfStale" })
+		.then((res: { expired?: boolean } | undefined) => {
+			if (res?.expired) return;
+			chrome.storage.local.get("enabled", (item) => {
+				enabledInput.checked = item.enabled === true;
+			});
+		})
+		.catch((err) => console.warn("[popup] expiry check failed:", err));
 }
 
 async function updateStatusIndicators() {

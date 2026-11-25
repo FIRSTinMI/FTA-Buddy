@@ -3,7 +3,7 @@ import { eventStore } from "../stores/event";
 import { settingsStore } from "../stores/settings";
 import { userStore } from "../stores/user";
 
-export const LATEST_EXTENSION_VERSION = "1.26.28";
+export const LATEST_EXTENSION_VERSION = "1.26.31";
 
 interface Version {
 	changelog?: string;
@@ -30,6 +30,15 @@ export function compareVersions(a: string, b: string): number {
 }
 
 export const VERSIONS: { [key: string]: Version } = {
+	"2.7.13.17": {
+		changelog: `
+        <h2 class="font-bold mt-2">Extension v1.26.31</h2>
+        <ul>
+        <li>Needed for remote enable/disable and the admin per-event switch</li>
+        <li>Radio kiosk: the connect page keeps the kiosk's own spinner after Program; no "Programming" panel left on the success or waiting screens</li>
+        </ul>
+        `,
+	},
 	"2.7.13.16": {
 		changelog: `
         <h2 class="font-bold mt-2">Admin dashboard</h2>

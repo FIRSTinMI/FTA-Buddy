@@ -130,7 +130,9 @@ const appExtensionData = chrome.runtime.getManifest();
 			sendPong({ fms: fms.fms });
 		} else if (evt.data.type === "enable") {
 			enabled = true;
-			const updates: Record<string, any> = { enabled };
+			// Same as a popup save: enabling restarts the four-day expiry.
+			changed = Date.now();
+			const updates: Record<string, any> = { enabled, changed };
 			if ("fieldMonitor" in evt.data) {
 				fieldMonitor = Boolean(evt.data.fieldMonitor);
 				updates.fieldMonitor = fieldMonitor;

@@ -21,7 +21,15 @@ import type {
 	ExtensionRealtimeFeed,
 	PowerTelemetry,
 } from "../../shared/types";
-import { deriveExtensionState, remoteConfigToStorageUpdates } from "../../shared/extension-state";
+import {
+	deriveExtensionState,
+	expiryRenewed,
+	type ExtensionStorageUpdates,
+	isExpired,
+	remoteConfigToStorageUpdates,
+	remoteSwitchToStorageUpdates,
+	shouldDisableForExpiry,
+} from "../../shared/extension-state";
 import { DEFAULT_SUBNET_PREFIX, isValidSubnetPrefix, monitorOrigins, PowerMonitorManager } from "./power-monitor";
 
 const ALARM_TEAM_POLL = "teamPoll";
@@ -110,6 +118,12 @@ export let cheesyPort: number = DEFAULT_CHEESY_PORT;
 export let cloud: boolean;
 export let useDev: boolean;
 export let changed: number;
+/**
+ * Newest `changed` this worker wrote for a remote enable or switch-on. Set
+ * before the storage write lands, so a popup expiry check that read the old
+ * value in between does not clear Enable over the top of it.
+ */
+let renewedChanged = 0;
 
 export let powerMonitorEnabled: boolean = false;
 /** First three octets of the /24 the monitors live on. The event network by default. */
@@ -266,7 +280,7 @@ async function startInner() {
 	await updateValues();
 	await startPowerMonitor();
 
-	if (changed && changed + 1000 * 60 * 60 * 24 * 4 < new Date().getTime()) {
+	if (isExpired(changed, Date.now())) {
 		console.log("Expired (power monitoring unaffected)");
 		return;
 	}
@@ -377,8 +391,14 @@ function applyRemoteConfig(config: ExtensionConfigDelivery) {
 		if (!remoteDisabled) chrome.storage.local.set({ remoteDisabled: true });
 		return;
 	}
-	const updates = remoteConfigToStorageUpdates(config, sanitizeCheesyPort);
-	if (Object.keys(updates).length > 0) chrome.storage.local.set(updates);
+	writeRemoteUpdates(remoteConfigToStorageUpdates(config, sanitizeCheesyPort, Date.now()));
+}
+
+/** Write remote updates, remembering any `changed` so a popup expiry check cannot undo them. */
+function writeRemoteUpdates(updates: ExtensionStorageUpdates) {
+	if (Object.keys(updates).length === 0) return;
+	if (typeof updates.changed === "number") renewedChanged = Math.max(renewedChanged, updates.changed);
+	chrome.storage.local.set(updates);
 }
 
 /** Report the current config + version to the server so any device can see it. */
@@ -467,7 +487,7 @@ function sendHeartbeat() {
 			// Older servers send no `remoteDisabled`; only a real boolean changes the flag.
 			if (typeof reply.remoteDisabled === "boolean" && reply.remoteDisabled !== remoteDisabled) {
 				console.log(reply.remoteDisabled ? "Admin switched this event off" : "Admin switched this event on");
-				chrome.storage.local.set({ remoteDisabled: reply.remoteDisabled });
+				writeRemoteUpdates(remoteSwitchToStorageUpdates(reply.remoteDisabled, Boolean(enabled), Date.now()));
 			}
 			if (reply.config) {
 				console.log("Applying config queued by an admin:", reply.config);
@@ -712,8 +732,23 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 		return false;
 	} else if (msg?.type === "enable") {
 		enabled = true;
-		chrome.storage.local.set({ enabled });
+		// Same as a popup save: enabling restarts the four-day expiry.
+		chrome.storage.local.set({ enabled, changed: Date.now() });
 		return false;
+	} else if (msg?.type === "expireIfStale") {
+		// The popup found the settings expired. Decide here, where remote enables
+		// are written, so a remote enable that landed after the popup read storage wins.
+		chrome.storage.local.get(["changed", "enabled", "remoteDisabled"], (item) => {
+			const expired = shouldDisableForExpiry({
+				enabled: item.enabled === true,
+				remoteDisabled: item.remoteDisabled === true,
+				changed: Math.max(Number(item.changed) || 0, renewedChanged) || undefined,
+				now: Date.now(),
+			});
+			if (expired) chrome.storage.local.set({ enabled: false });
+			sendResponse({ expired });
+		});
+		return true;
 	}
 
 	if (msg?.type === "getState") {
@@ -1159,6 +1194,9 @@ chrome.storage.local.onChanged.addListener((changes) => {
 	// note sync and polling - far too much for one toggle or one text box.
 	const touched = Object.keys(changes).filter((key) => key !== "changed");
 	const powerOnly = touched.length > 0 && touched.every((key) => key === "powerMonitor" || key === "powerSubnet");
+	// A `changed` that lifts the expiry restarts too, even with no other key changed.
+	const renewed =
+		changes.changed !== undefined && expiryRenewed(changes.changed.oldValue, changes.changed.newValue, Date.now());
 	if (powerOnly) {
 		if (changes.powerSubnet) {
 			const next = String(changes.powerSubnet.newValue ?? "");
@@ -1178,7 +1216,7 @@ chrome.storage.local.onChanged.addListener((changes) => {
 	}
 
 	for (const key of Object.keys(changes)) {
-		if (key === "changed") continue;
+		if (key === "changed" && !renewed) continue;
 		if (storageDebounce) clearTimeout(storageDebounce);
 		storageDebounce = setTimeout(() => {
 			storageDebounce = null;

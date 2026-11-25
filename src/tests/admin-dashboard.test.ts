@@ -1,6 +1,13 @@
 import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
 import { randomUUID } from "crypto";
-import { deriveExtensionState, EXTENSION_EXPIRY_MS, remoteConfigToStorageUpdates } from "../../shared/extension-state";
+import {
+	deriveExtensionState,
+	EXTENSION_EXPIRY_MS,
+	expiryRenewed,
+	remoteConfigToStorageUpdates,
+	remoteSwitchToStorageUpdates,
+	shouldDisableForExpiry,
+} from "../../shared/extension-state";
 import type { ExtensionPresence } from "../../shared/types";
 
 /**
@@ -71,16 +78,89 @@ describe("deriveExtensionState", () => {
 });
 
 describe("remoteConfigToStorageUpdates", () => {
+	const now = 1_800_000_000_000;
 	test("keeps only set keys and normalises", () => {
 		expect(
-			remoteConfigToStorageUpdates({ enabled: true, cheesyPort: 70000 }, (v) =>
-				Number(v) > 65535 ? 8080 : Number(v),
+			remoteConfigToStorageUpdates(
+				{ fieldMonitor: true, cheesyPort: 70000 },
+				(v) => (Number(v) > 65535 ? 8080 : Number(v)),
+				now,
 			),
-		).toEqual({ enabled: true, cheesyPort: 8080 });
+		).toEqual({ fieldMonitor: true, cheesyPort: 8080 });
 	});
 	test("ignores the remoteDisabled marker", () => {
 		const delivery = { enabled: false, remoteDisabled: true };
-		expect(remoteConfigToStorageUpdates(delivery, Number)).toEqual({ enabled: false });
+		expect(remoteConfigToStorageUpdates(delivery, Number, now)).toEqual({ enabled: false });
+	});
+	test("a remote enable restarts the expiry, so an extension idle for over four days runs", () => {
+		const updates = remoteConfigToStorageUpdates({ enabled: true }, Number, now);
+		expect(updates).toEqual({ enabled: true, changed: now });
+		const stored = {
+			enabled: true,
+			remoteDisabled: false,
+			changed: now - EXTENSION_EXPIRY_MS - 1,
+			eventToken: "tok",
+		};
+		expect(deriveExtensionState({ ...stored, now })).toBe("expired");
+		expect(deriveExtensionState({ ...stored, changed: updates.changed as number, now })).toBe("running");
+	});
+	test("a remote disable or a config without enabled leaves the expiry alone", () => {
+		expect(remoteConfigToStorageUpdates({ enabled: false }, Number, now)).toEqual({ enabled: false });
+		expect(remoteConfigToStorageUpdates({ useSignalR: false }, Number, now)).toEqual({ useSignalR: false });
+	});
+});
+
+describe("remoteSwitchToStorageUpdates", () => {
+	const now = 1_800_000_000_000;
+	const stale = now - EXTENSION_EXPIRY_MS * 3;
+	test("switch-on after more than four days off resumes an enabled extension", () => {
+		const updates = remoteSwitchToStorageUpdates(false, true, now);
+		expect(updates).toEqual({ remoteDisabled: false, changed: now });
+		expect(
+			deriveExtensionState({
+				enabled: true,
+				remoteDisabled: false,
+				changed: updates.changed as number,
+				eventToken: "tok",
+				now,
+			}),
+		).toBe("running");
+	});
+	test("switch-on leaves an extension the host disabled disabled, expiry untouched", () => {
+		const updates = remoteSwitchToStorageUpdates(false, false, now);
+		expect(updates).toEqual({ remoteDisabled: false });
+		expect(
+			deriveExtensionState({ enabled: false, remoteDisabled: false, changed: stale, eventToken: "tok", now }),
+		).toBe("disabled");
+	});
+	test("switch-off only sets the flag", () => {
+		expect(remoteSwitchToStorageUpdates(true, true, now)).toEqual({ remoteDisabled: true });
+	});
+});
+
+describe("popup expiry", () => {
+	const now = 1_800_000_000_000;
+	const stale = now - EXTENSION_EXPIRY_MS - 1;
+	test("an enabled extension with expired settings is disabled", () => {
+		expect(shouldDisableForExpiry({ enabled: true, remoteDisabled: false, changed: stale, now })).toBe(true);
+	});
+	test("fresh settings, already disabled, or switched off by an admin: no write", () => {
+		expect(shouldDisableForExpiry({ enabled: true, remoteDisabled: false, changed: now - 1000, now })).toBe(false);
+		expect(shouldDisableForExpiry({ enabled: false, remoteDisabled: false, changed: stale, now })).toBe(false);
+		expect(shouldDisableForExpiry({ enabled: true, remoteDisabled: true, changed: stale, now })).toBe(false);
+	});
+	test("a remote enable that landed after the popup read storage wins", () => {
+		// Worker check: newest of the stored `changed` and the one it just wrote for the remote enable.
+		const { changed: renewed } = remoteConfigToStorageUpdates({ enabled: true }, Number, now);
+		const changed = Math.max(stale, renewed as number);
+		expect(shouldDisableForExpiry({ enabled: true, remoteDisabled: false, changed, now })).toBe(false);
+	});
+	test("a changed write that lifts the expiry restarts the worker; others do not", () => {
+		expect(expiryRenewed(stale, now, now)).toBe(true);
+		expect(expiryRenewed(now - 1000, now, now)).toBe(false);
+		expect(expiryRenewed(stale - 5, stale, now)).toBe(false);
+		expect(expiryRenewed(undefined, now, now)).toBe(false);
+		expect(expiryRenewed(stale, undefined, now)).toBe(false);
 	});
 });
 

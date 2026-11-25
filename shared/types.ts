@@ -1149,7 +1149,6 @@ export interface EventIntegrationStatus {
 		parentCode: string | null;
 	};
 	/** Issue types that generate match events (a type is on unless explicitly false). */
-	autoMatchEvents: { enabledCount: number; total: number; enabled: AutoEventIssueType[] };
 	slowWarning: { enabled: boolean; mode: SlowWarningMode };
 	timezone: string | null;
 	startDate: string | null;

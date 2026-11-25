@@ -21,7 +21,6 @@ const base: EventIntegrationRow = {
 	powerMonitoring: false,
 	powerAlertSettings: {},
 	meshedEvent: null,
-	autoEventSettings: {},
 	slowWarningSettings: {},
 	timezone: null,
 	startDate: null,
@@ -40,7 +39,6 @@ describe("toEventIntegrationStatus", () => {
 		expect(s.nexus).toEqual({ configured: false });
 		expect(s.slack.connected).toBe(false);
 		expect(s.fms).toEqual({ passwordSet: false });
-		expect(s.autoMatchEvents.enabledCount).toBe(s.autoMatchEvents.total);
 		expect(s.slowWarning).toEqual({ enabled: false, mode: "percentile_floor" });
 	});
 
@@ -114,16 +112,6 @@ describe("toEventIntegrationStatus", () => {
 		});
 		const orphan = toEventIntegrationStatus({ ...base, slackChannel: "C1", slackTeam: "T1" }, ctx());
 		expect(orphan.slack.workspaceInstalled).toBe(false);
-	});
-
-	test("auto match events: on unless explicitly false", () => {
-		const s = toEventIntegrationStatus(
-			{ ...base, autoEventSettings: { Brownout: false, "High BWU": true } },
-			ctx(),
-		);
-		expect(s.autoMatchEvents.enabled).not.toContain("Brownout");
-		expect(s.autoMatchEvents.enabled).toContain("High BWU");
-		expect(s.autoMatchEvents.enabledCount).toBe(s.autoMatchEvents.total - 1);
 	});
 
 	test("slow warning merges defaults", () => {

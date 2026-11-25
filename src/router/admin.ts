@@ -436,7 +436,6 @@ export const adminRouter = router({
 				powerMonitoring: events.powerMonitoring,
 				powerAlertSettings: events.powerAlertSettings,
 				meshedEvent: events.meshedEvent,
-				autoEventSettings: events.autoEventSettings,
 				slowWarningSettings: events.slowWarningSettings,
 				timezone: events.timezone,
 				startDate: events.startDate,

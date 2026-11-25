@@ -1,9 +1,6 @@
 import {
-	AUTO_EVENT_ISSUE_TYPES,
 	DEFAULT_POWER_ALERT_SETTINGS,
 	DEFAULT_SLOW_WARNING_SETTINGS,
-	type AutoEventIssueType,
-	type EventAutoEventSettings,
 	type EventIntegrationStatus,
 	type NexusEventStatus,
 	type NexusStatus,
@@ -28,7 +25,6 @@ export interface EventIntegrationRow {
 	powerMonitoring: boolean;
 	powerAlertSettings: Partial<PowerAlertSettings> | null;
 	meshedEvent: unknown;
-	autoEventSettings: EventAutoEventSettings | null;
 	slowWarningSettings: Partial<SlowWarningSettings> | null;
 	timezone: string | null;
 	startDate: string | null;
@@ -77,9 +73,6 @@ export function toEventIntegrationStatus(row: EventIntegrationRow, ctx: Integrat
 	const live = ctx.live[row.code];
 	const online = ctx.extensionsOnline?.[row.code];
 
-	const auto = row.autoEventSettings ?? {};
-	// Same rule as log-analysis: a type generates events unless it is explicitly false.
-	const enabledTypes: AutoEventIssueType[] = AUTO_EVENT_ISSUE_TYPES.filter((t) => auto[t] !== false);
 	const slow = { ...DEFAULT_SLOW_WARNING_SETTINGS, ...(row.slowWarningSettings ?? {}) };
 	const power = { ...DEFAULT_POWER_ALERT_SETTINGS, ...(row.powerAlertSettings ?? {}) };
 
@@ -121,11 +114,6 @@ export function toEventIntegrationStatus(row: EventIntegrationRow, ctx: Integrat
 		meshed: {
 			subEvents: parseSubEvents(row.meshedEvent),
 			parentCode: ctx.parentByChild.get(row.code) ?? null,
-		},
-		autoMatchEvents: {
-			enabledCount: enabledTypes.length,
-			total: AUTO_EVENT_ISSUE_TYPES.length,
-			enabled: enabledTypes,
 		},
 		slowWarning: { enabled: slow.enabled === true, mode: slow.mode },
 		timezone: row.timezone,

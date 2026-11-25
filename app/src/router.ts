@@ -37,7 +37,6 @@ export const { p, navigate, isActive, preload, route } = createRouter({
 	"/power": () => import("./pages/Power.svelte"),
 
 	"/manage": () => import("./pages/management/Management.svelte"),
-	"/manage/debug-logs": () => import("./pages/management/DebugLogs.svelte"),
 	"/manage/login": () => import("./pages/management/Login.svelte"),
 	"/manage/host": () => import("./pages/management/Host.svelte"),
 	"/manage/host/create": () => import("./pages/management/Host.svelte"),

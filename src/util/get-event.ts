@@ -136,6 +136,7 @@ export async function getEvent(eventToken: string, eventCode?: string) {
 				notepadOnly: event.notepadOnly ?? false,
 				playoffMode: event.playoffMode ?? false,
 				powerMonitoring: event.powerMonitoring ?? false,
+				extensionsEnabled: event.extensionsEnabled !== false,
 				powerAlertSettings: {
 					...DEFAULT_POWER_ALERT_SETTINGS,
 					...((event.powerAlertSettings ?? {}) as Partial<PowerAlertSettings>),

@@ -32,6 +32,7 @@ import { createNotification } from "../util/push-notifications";
 import { generateToken } from "./user";
 import { setChecklist } from "../util/event-state";
 import { subscriptionQueue } from "../util/subscription";
+import { assertExtensionDataAllowed } from "../util/event-extensions";
 
 const fullEventList: {
 	fetched: Date | undefined;
@@ -197,6 +198,7 @@ export const eventRouter = router({
 				playoffMode: event.playoffMode,
 				notepadOnly: event.notepadOnly,
 				powerMonitoring: event.powerMonitoring,
+				extensionsEnabled: event.extensionsEnabled,
 				startDate: event.startDate,
 				endDate: event.endDate,
 			};
@@ -239,6 +241,7 @@ export const eventRouter = router({
 			playoffMode: event.playoffMode,
 			notepadOnly: event.notepadOnly,
 			powerMonitoring: event.powerMonitoring,
+			extensionsEnabled: event.extensionsEnabled,
 			startDate: event.startDate,
 			endDate: event.endDate,
 		};
@@ -541,6 +544,8 @@ export const eventRouter = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			const event = ctx.event;
+			// Refused while an admin has extensions switched off for this event.
+			await assertExtensionDataAllowed(event.code);
 
 			const existingRows = await db
 				.select({ teamNumber: schema.checklist.teamNumber })
@@ -1417,13 +1422,19 @@ export const eventRouter = router({
 			playoffMode: boolean;
 			notepadOnly: boolean;
 			powerMonitoring: boolean;
+			extensionsEnabled: boolean;
 		}>(signal!);
 
 		const current = () => ({
 			playoffMode: event.playoffMode,
 			notepadOnly: event.notepadOnly,
 			powerMonitoring: event.powerMonitoring,
+			extensionsEnabled: event.extensionsEnabled !== false,
 		});
+
+		// Current values first, so a client that just opened learns the admin
+		// extension switch (and the rest) without waiting for a change.
+		push(current());
 
 		const playoffUnsub = bus.subscribe(`event:${event.code}:playoff_mode`, (data) => {
 			push({ ...current(), playoffMode: data as boolean });
@@ -1435,12 +1446,17 @@ export const eventRouter = router({
 			push({ ...current(), powerMonitoring: data as boolean });
 		});
 
+		const extensionsUnsub = bus.subscribe(`event:${event.code}:extensions_enabled`, (data) => {
+			push({ ...current(), extensionsEnabled: data as boolean });
+		});
+
 		try {
 			yield* drain();
 		} finally {
 			playoffUnsub();
 			notepadUnsub();
 			powerUnsub();
+			extensionsUnsub();
 		}
 	}),
 });

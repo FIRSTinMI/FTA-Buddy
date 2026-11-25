@@ -1,23 +1,20 @@
 import { z } from "zod";
 import { bus } from "../util/eventBus";
-import type { ExtensionConfig, ServerEvent } from "../../shared/types";
-import { eventProcedure, router } from "../trpc";
+import type { ExtensionConfig, ExtensionConfigDelivery, ServerEvent } from "../../shared/types";
+import { getEventExtensionsEnabled, REMOTE_DISABLE_PUSH } from "../util/event-extensions";
+import { eventProcedure, publicProcedure, router } from "../trpc";
+import {
+	eventCodeForToken,
+	extensionConfigSchema,
+	heartbeatInputSchema,
+	recordHeartbeat,
+} from "../util/extension-presence";
 import { subscriptionQueue } from "../util/subscription";
 
-const extensionConfigSchema = z.object({
-	enabled: z.boolean().optional(),
-	fieldMonitor: z.boolean().optional(),
-	useSignalR: z.boolean().optional(),
-	fmsApiEnabled: z.boolean().optional(),
-	scoreAutofill: z.boolean().optional(),
-	sourceMode: z.enum(["fms", "cheesy"]).optional(),
-	cheesyPort: z.number().int().min(1).max(65535).optional(),
-});
-
 /** Bus payload for a config push from the web app to a connected extension. */
-interface ExtensionConfigPush {
+export interface ExtensionConfigPush {
 	extensionId?: string;
-	config: ExtensionConfig;
+	config: ExtensionConfigDelivery;
 }
 
 /** Public-facing view of a connected extension (no ip / user agent). */
@@ -49,6 +46,23 @@ function summarize(extensions: ServerEvent["stats"]["extensions"]): ExtensionSum
  * applies to chrome.storage -> reportState -> app sees the confirmed state.
  */
 export const extensionRouter = router({
+	// Extension -> server, once a minute whatever its state (disabled, expired,
+	// no event). Public because an extension without an event has no event token.
+	// Records presence for the admin dashboard and returns, once, any config an
+	// admin queued for this extension: that is how a disabled extension, which
+	// holds no subscription, gets re-enabled remotely. `remoteDisabled` is true
+	// while an admin has extensions switched off for the extension's event.
+	heartbeat: publicProcedure
+		.input(heartbeatInputSchema)
+		.mutation(async ({ ctx, input }): Promise<{ config: ExtensionConfig | null; remoteDisabled: boolean }> => {
+			const eventCode = await eventCodeForToken(ctx.eventToken);
+			const [config, enabledForEvent] = await Promise.all([
+				recordHeartbeat(input, { eventCode, ip: ctx.ip, userAgent: ctx.userAgent }),
+				eventCode ? getEventExtensionsEnabled(eventCode) : Promise.resolve(true),
+			]);
+			return { config, remoteDisabled: !enabledForEvent };
+		}),
+
 	// Extension -> server: report its current config + version so any device can
 	// see how it is set up and the management UI reflects live state.
 	reportState: eventProcedure
@@ -80,6 +94,13 @@ export const extensionRouter = router({
 			entry.config = { ...entry.config, ...input.config };
 			entry.lastFrame = new Date();
 			bus.publish(`event:${event.code}:extension-state`, event.stats.extensions);
+			// Extensions switched off for this event: an old extension that is still
+			// running (it was offline when the switch flipped, or the host turned it
+			// back on) gets the stop again.
+			if (event.extensionsEnabled === false && input.config.enabled !== false) {
+				const payload: ExtensionConfigPush = { extensionId: input.extensionId, config: REMOTE_DISABLE_PUSH };
+				bus.publish(`event:${event.code}:extension-config`, payload);
+			}
 			return { ok: true };
 		}),
 
@@ -112,11 +133,13 @@ export const extensionRouter = router({
 		signal,
 	}) {
 		const { event } = ctx;
-		const { push, drain } = subscriptionQueue<ExtensionConfig>(signal!);
+		const { push, drain } = subscriptionQueue<ExtensionConfigDelivery>(signal!);
 		const unsub = bus.subscribe(`event:${event.code}:extension-config`, (data) => {
 			const msg = data as ExtensionConfigPush;
 			if (!msg.extensionId || msg.extensionId === input.extensionId) push(msg.config);
 		});
+		// (Re)subscribing while extensions are switched off for the event: stop it now.
+		if (event.extensionsEnabled === false) push(REMOTE_DISABLE_PUSH);
 		try {
 			for await (const item of drain()) yield item;
 		} finally {

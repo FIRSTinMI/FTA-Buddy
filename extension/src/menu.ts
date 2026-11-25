@@ -16,6 +16,13 @@ const scoreAutofillRow = document.getElementById("score-autofill-row") as HTMLDi
 const sourceModeSelect = document.getElementById("sourceMode") as HTMLSelectElement;
 const cheesyPortInput = document.getElementById("cheesyPort") as HTMLInputElement;
 const cheesyPortRow = document.getElementById("cheesy-port-row") as HTMLDivElement;
+/**
+ * The power monitor controls are hidden: their markup is gone from menu.html,
+ * so the elements below are null and every power UI path is skipped. The
+ * feature itself is untouched; a stored `powerMonitor: true` keeps working in
+ * the background worker. Restore the markup and flip this to show them again.
+ */
+const POWER_MONITOR_UI = false;
 const powerMonitorInput = document.getElementById("powerMonitor") as HTMLInputElement;
 const powerMonitorRow = document.getElementById("power-monitor-row") as HTMLDivElement;
 const powerRescanButton = document.getElementById("power-rescan") as HTMLButtonElement;
@@ -44,6 +51,7 @@ async function bgGetState(): Promise<{
 	eventCode: string;
 	eventToken: string;
 	enabled: boolean;
+	remoteDisabled: boolean;
 	id: string;
 	fmsApi: boolean;
 	version: string;
@@ -144,6 +152,7 @@ async function handlePowerRescan() {
 }
 
 async function updatePowerMonitorStatus() {
+	if (!POWER_MONITOR_UI) return;
 	if (!powerMonitorInput.checked) {
 		powerMonitorRow.style.display = "none";
 		powerSubnetRow.style.display = "none";
@@ -249,10 +258,12 @@ function load() {
 			scoreAutofillRow.style.display = scoreAutofillVisible() ? "flex" : "none";
 			cheesyPortInput.value = String(item.cheesyPort || 8080);
 			cheesyPortRow.style.display = sourceModeSelect.value === "cheesy" ? "flex" : "none";
-			powerMonitorInput.checked = Boolean(item.powerMonitor);
-			powerMonitorRow.style.display = Boolean(item.powerMonitor) ? "flex" : "none";
-			powerSubnetInput.value = String(item.powerSubnet || DEFAULT_POWER_SUBNET);
-			powerSubnetRow.style.display = Boolean(item.powerMonitor) ? "grid" : "none";
+			if (POWER_MONITOR_UI) {
+				powerMonitorInput.checked = Boolean(item.powerMonitor);
+				powerMonitorRow.style.display = Boolean(item.powerMonitor) ? "flex" : "none";
+				powerSubnetInput.value = String(item.powerSubnet || DEFAULT_POWER_SUBNET);
+				powerSubnetRow.style.display = Boolean(item.powerMonitor) ? "grid" : "none";
+			}
 			tokenInput.value = String(item.eventToken);
 			let changed = Number(item.changed);
 
@@ -271,9 +282,11 @@ function load() {
 			scoreAutofillInput.addEventListener("input", handleUpdate);
 			sourceModeSelect.addEventListener("input", handleUpdate);
 			cheesyPortInput.addEventListener("input", handleUpdate);
-			powerMonitorInput.addEventListener("change", handlePowerMonitorToggle);
-			powerSubnetInput.addEventListener("change", handlePowerSubnetChange);
-			powerRescanButton.addEventListener("click", handlePowerRescan);
+			if (POWER_MONITOR_UI) {
+				powerMonitorInput.addEventListener("change", handlePowerMonitorToggle);
+				powerSubnetInput.addEventListener("change", handlePowerSubnetChange);
+				powerRescanButton.addEventListener("click", handlePowerRescan);
+			}
 			if (useDevCheckbox) useDevCheckbox.addEventListener("input", handleUpdate);
 			saveButton.addEventListener("click", handleUpdate);
 			refreshButton.addEventListener("click", () => chrome.runtime.reload());
@@ -287,10 +300,13 @@ async function updateStatusIndicators() {
 	let ftaBuddy, bgStatus;
 
 	const state = bgGetState().then((state) => {
-		const { enabled, eventCode, eventToken } = state;
+		const { enabled, remoteDisabled, eventCode, eventToken } = state;
 
 		extensionStatusIndicator.classList.remove("red", "green", "yellow");
-		if (!enabled) {
+		if (remoteDisabled) {
+			extensionStatusIndicator.classList.add("red");
+			extensionStatusText.textContent = "Off for this event (admin)";
+		} else if (!enabled) {
 			extensionStatusIndicator.classList.add("red");
 			extensionStatusText.textContent = "Not Enabled";
 		} else if (!eventCode || !eventToken) {

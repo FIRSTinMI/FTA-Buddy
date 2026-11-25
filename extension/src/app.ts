@@ -5,6 +5,7 @@ const appExtensionData = chrome.runtime.getManifest();
 		cloud: boolean,
 		changed: number,
 		enabled: boolean,
+		remoteDisabled: boolean,
 		fieldMonitor: boolean,
 		useSignalR: boolean,
 		fmsApiEnabled: boolean,
@@ -23,6 +24,7 @@ const appExtensionData = chrome.runtime.getManifest();
 				"event",
 				"changed",
 				"enabled",
+				"remoteDisabled",
 				"fieldMonitor",
 				"useSignalR",
 				"fmsApiEnabled",
@@ -39,6 +41,7 @@ const appExtensionData = chrome.runtime.getManifest();
 				eventCode = String(item.event);
 				changed = Number(item.changed);
 				enabled = Boolean(item.enabled);
+				remoteDisabled = item.remoteDisabled === true;
 				fieldMonitor = Boolean(item.fieldMonitor);
 				useSignalR = item.useSignalR !== false; // default true
 				fmsApiEnabled = item.fmsApiEnabled !== false; // default true
@@ -52,6 +55,11 @@ const appExtensionData = chrome.runtime.getManifest();
 		);
 	});
 
+	// The admin switch arrives through storage from the background worker.
+	chrome.storage.local.onChanged.addListener((changes) => {
+		if (changes.remoteDisabled) remoteDisabled = changes.remoteDisabled.newValue === true;
+	});
+
 	function sendPong(extra?: Record<string, any>) {
 		window.postMessage({
 			source: "ext",
@@ -59,14 +67,16 @@ const appExtensionData = chrome.runtime.getManifest();
 			type: "pong",
 			cloud,
 			eventCode,
-			enabled,
+			// An admin switch-off reads as not enabled, so setup pages do not advance.
+			enabled: enabled && !remoteDisabled,
+			remoteDisabled,
 			fieldMonitor,
 			useSignalR,
 			fmsApiEnabled,
 			scoreAutofill,
 			sourceMode,
 			cheesyPort,
-			signalR: enabled,
+			signalR: enabled && !remoteDisabled,
 			fms: extra?.fms ?? false,
 			id,
 			...extra,

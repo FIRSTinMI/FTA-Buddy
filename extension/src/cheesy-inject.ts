@@ -16,6 +16,7 @@ const CHEESY_RECONNECT_MS = 3000;
 
 interface CheesyInjectConfig {
 	enabled: boolean;
+	remoteDisabled: boolean;
 	sourceMode: string;
 	changed: number;
 	id: string;
@@ -143,10 +144,11 @@ function teardown(): void {
  */
 function evaluate(): void {
 	chrome.storage.local.get(
-		["enabled", "sourceMode", "changed", "id", "url", "cloud", "event", "useDev", "eventToken"],
+		["enabled", "remoteDisabled", "sourceMode", "changed", "id", "url", "cloud", "event", "useDev", "eventToken"],
 		(item) => {
 			const cfg: CheesyInjectConfig = {
 				enabled: Boolean(item.enabled),
+				remoteDisabled: item.remoteDisabled === true,
 				sourceMode: String(item.sourceMode ?? "fms"),
 				changed: Number(item.changed),
 				id: String(item.id ?? ""),
@@ -157,7 +159,7 @@ function evaluate(): void {
 				eventToken: String(item.eventToken ?? ""),
 			};
 			const expired = cfg.changed ? cfg.changed + 1000 * 60 * 60 * 24 * 4 < Date.now() : false;
-			const shouldRun = cfg.enabled && cfg.sourceMode === "cheesy" && !expired;
+			const shouldRun = cfg.enabled && !cfg.remoteDisabled && cfg.sourceMode === "cheesy" && !expired;
 			if (shouldRun && !active) {
 				active = true;
 				injectOverlay(cfg);

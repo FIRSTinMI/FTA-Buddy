@@ -70,6 +70,8 @@ import { uploadsRouter } from "./router/uploads";
 import { uploadHttpRouter } from "./router/upload-http";
 import { startGhostCsaPoller } from "./util/uploads/ghost-csa";
 import { startYearEndArchive } from "./util/year-end-archive";
+import { startLegacyExtensionSnapshots } from "./util/extension-presence";
+import { startEventExtensionsSync } from "./util/event-extensions";
 import { getTeamAverageCycle } from "./util/team-cycles";
 import { eventLastSeen, events, eventCodes } from "./state";
 import * as nexusEventPoller from "./util/nexusEventPoller";
@@ -956,6 +958,8 @@ connect().then(async () => {
 	console.log("✅ HTTP Server listening on http://localhost:" + port);
 
 	startDebugLogBackground();
+	startLegacyExtensionSnapshots();
+	startEventExtensionsSync();
 
 	// Evict events with no activity for more than 3 days
 	setInterval(

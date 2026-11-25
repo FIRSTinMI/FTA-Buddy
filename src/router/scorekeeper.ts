@@ -7,6 +7,7 @@ import { fieldLineups, lineupCards, matchLogs, playoffAlliances, type User } fro
 import { eventProcedure, router } from "../trpc";
 import { bus } from "../util/eventBus";
 import { subscriptionQueue } from "../util/subscription";
+import { assertExtensionDataAllowed } from "../util/event-extensions";
 import { computePlayoffDeadline, isLate, resolveLineup } from "../util/playoff-lineups";
 
 /** Roles allowed to create or change lineups. Admins always pass. */
@@ -186,6 +187,8 @@ export const scorekeeperRouter = router({
 				}),
 			)
 			.mutation(async ({ ctx, input }) => {
+				// Refused while an admin has extensions switched off for this event.
+				await assertExtensionDataAllowed(ctx.event.code);
 				let synced = 0;
 				for (const a of input.alliances) {
 					await db

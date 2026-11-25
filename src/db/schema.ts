@@ -74,6 +74,8 @@ export const events = pgTable("events", {
 	notepadOnly: boolean("notepadOnly").notNull().default(false),
 	playoffMode: boolean("playoffMode").notNull().default(false),
 	powerMonitoring: boolean("powerMonitoring").notNull().default(false),
+	/** Admin switch: false stops every extension on this event (see src/util/event-extensions.ts). */
+	extensionsEnabled: boolean("extensionsEnabled").notNull().default(true),
 	powerAlertSettings: jsonb("powerAlertSettings").$type<Partial<PowerAlertSettings>>().notNull().default({}),
 });
 
@@ -632,18 +634,6 @@ export const slackLinkTokens = pgTable("slack_link_tokens", {
 });
 
 export const logLevelEnum = pgEnum("log_level", ["debug", "info", "warn", "error"]);
-
-/**
- * Persistent toggle for which app sections emit debug logs. The util reads
- * this through an in-memory cache (5s refresh) so calls on hot paths are
- * essentially free when disabled. Categories are arbitrary strings — call
- * sites can use whatever name fits and the admin page picks them up.
- */
-export const debugLogCategories = pgTable("debug_log_categories", {
-	category: varchar("category").primaryKey(),
-	enabled: boolean("enabled").notNull().default(false),
-	updated_at: timestamp("updated_at").notNull().defaultNow(),
-});
 
 /**
  * General-purpose debug log table. Capped at 100k rows by a background

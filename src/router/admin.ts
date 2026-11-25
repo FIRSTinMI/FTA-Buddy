@@ -1,18 +1,24 @@
 import { and, count, desc, eq, gt, gte, ilike, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db/db";
-import {
-	appTelemetry,
-	debugLogCategories,
-	debugLogs,
-	events,
-	matchEvents,
-	matchLogs,
-	messages,
-	notes,
-	users,
-} from "../db/schema";
+import { appTelemetry, debugLogs, events, matchEvents, matchLogs, messages, notes, users } from "../db/schema";
+import type { ActiveUsersPoint, AdminExtensionEntry, ExtensionConfig } from "../../shared/types";
+import { events as eventsInMemory } from "../state";
 import { adminProcedure, router } from "../trpc";
+import { getActiveUsers } from "../util/active-users";
+import { debugLog } from "../util/debug-log";
+import { bus } from "../util/eventBus";
+import {
+	extensionConfigSchema,
+	getPresence,
+	legacyEventCodeFor,
+	listExtensions,
+	setPendingConfig,
+} from "../util/extension-presence";
+import { filterSeasonEvents } from "../util/season-events";
+import { listEventsWithExtensionsOff, setEventExtensionsEnabled } from "../util/event-extensions";
+import { TRPCError } from "@trpc/server";
+import type { ExtensionConfigPush } from "./extension";
 
 /** Returns midnight on the most recent Tuesday (the start of the FRC event week). */
 function getWeekStart(): Date {
@@ -246,48 +252,11 @@ export const adminRouter = router({
 
 	// #region Debug logs
 
-	/**
-	 * Returns the union of (a) categories that have a row in `debug_log_categories`
-	 * (i.e. were ever toggled) and (b) categories that appear in `debug_logs` even
-	 * without an explicit toggle row. Lets new categories show up automatically as
-	 * the first `debugLog` call lands.
-	 */
-	getLogCategories: adminProcedure.query(async () => {
-		const [stored, seen] = await Promise.all([
-			db
-				.select({
-					category: debugLogCategories.category,
-					enabled: debugLogCategories.enabled,
-					updated_at: debugLogCategories.updated_at,
-				})
-				.from(debugLogCategories),
-			db.selectDistinct({ category: debugLogs.category }).from(debugLogs),
-		]);
-		const map = new Map<string, { category: string; enabled: boolean; updated_at: Date | null }>();
-		for (const row of stored) {
-			map.set(row.category, { category: row.category, enabled: row.enabled, updated_at: row.updated_at });
-		}
-		for (const row of seen) {
-			if (!map.has(row.category)) {
-				map.set(row.category, { category: row.category, enabled: false, updated_at: null });
-			}
-		}
-		return [...map.values()].sort((a, b) => a.category.localeCompare(b.category));
+	/** Distinct categories present in `debug_logs`, sorted, for the filter dropdown. */
+	getLogCategories: adminProcedure.query(async (): Promise<string[]> => {
+		const rows = await db.selectDistinct({ category: debugLogs.category }).from(debugLogs);
+		return rows.map((r) => r.category).sort((x, y) => x.localeCompare(y));
 	}),
-
-	toggleLogCategory: adminProcedure
-		.input(z.object({ category: z.string().min(1), enabled: z.boolean() }))
-		.mutation(async ({ input }) => {
-			await db
-				.insert(debugLogCategories)
-				.values({ category: input.category, enabled: input.enabled, updated_at: new Date() })
-				.onConflictDoUpdate({
-					target: debugLogCategories.category,
-					set: { enabled: input.enabled, updated_at: new Date() },
-				})
-				.execute();
-			return { category: input.category, enabled: input.enabled };
-		}),
 
 	queryLogs: adminProcedure
 		.input(
@@ -337,4 +306,123 @@ export const adminRouter = router({
 				.execute();
 			return { deleted: result.rowCount ?? 0 };
 		}),
+
+	// #endregion
+
+	// #region Extensions
+
+	/**
+	 * Every extension that sent a heartbeat in the last 24 h, plus legacy
+	 * extensions (no heartbeat) known from any instance's in-memory event stats.
+	 * Legacy rows come from 20-second Redis snapshots, so they can lag by up to
+	 * 20 s; `online` for them means a frame or state report in the last 150 s, so
+	 * a legacy notepad-only extension (no frames) shows offline after that.
+	 */
+	listExtensions: adminProcedure.query(async (): Promise<AdminExtensionEntry[]> => listExtensions()),
+
+	/**
+	 * Change an extension's settings. Queued in Redis (10 min) for its next
+	 * heartbeat, which reaches it even when disabled or without an event, and,
+	 * when it is attached to an event, also pushed on the event's config channel
+	 * so a running extension applies it at once.
+	 */
+	setExtensionConfig: adminProcedure
+		.input(z.object({ extensionId: z.string().min(1).max(64), config: extensionConfigSchema }))
+		.mutation(async ({ ctx, input }): Promise<{ eventCode: string | null; pushedLive: boolean }> => {
+			const config: ExtensionConfig = input.config;
+			if (Object.keys(config).length === 0) return { eventCode: null, pushedLive: false };
+
+			await setPendingConfig(input.extensionId, config);
+
+			const presence = await getPresence(input.extensionId);
+			const eventCode = presence ? presence.eventCode : await legacyEventCodeFor(input.extensionId);
+			let pushedLive = false;
+			if (eventCode) {
+				const payload: ExtensionConfigPush = { extensionId: input.extensionId, config };
+				bus.publish(`event:${eventCode}:extension-config`, payload);
+				pushedLive = true;
+				// Same optimistic update the event-scoped setConfig does, so the host
+				// UI on this instance reflects it before the extension confirms.
+				const event = eventsInMemory[eventCode];
+				if (event) {
+					for (const e of event.stats.extensions) {
+						if (e.id === input.extensionId) e.config = { ...e.config, ...config };
+					}
+					bus.publish(`event:${eventCode}:extension-state`, event.stats.extensions);
+				}
+			}
+
+			debugLog({
+				category: "extension-admin",
+				eventCode,
+				message: `${ctx.user.username} (id ${ctx.user.id}) set extension ${input.extensionId} config ${JSON.stringify(config)}${eventCode ? ` on ${eventCode}` : ""}`,
+				data: {
+					adminUserId: ctx.user.id,
+					adminUsername: ctx.user.username,
+					extensionId: input.extensionId,
+					eventCode,
+					config,
+				},
+			});
+
+			return { eventCode, pushedLive };
+		}),
+
+	/**
+	 * Switch every extension on an event off or on. Stored on the event row
+	 * (durable), synced to both instances and to open app clients
+	 * (`event.settings` -> `extensionsEnabled`). Off: new extensions stop within
+	 * one heartbeat and resume by themselves when switched back on; old
+	 * extensions get `{ enabled: false }` and stay off until re-enabled locally.
+	 */
+	setEventExtensionEnabled: adminProcedure
+		.input(z.object({ eventCode: z.string().min(1).max(64), enabled: z.boolean() }))
+		.mutation(async ({ ctx, input }): Promise<{ eventCode: string; enabled: boolean }> => {
+			const eventCode = input.eventCode.trim().toLowerCase();
+			const found = await setEventExtensionsEnabled(eventCode, input.enabled);
+			if (!found) throw new TRPCError({ code: "NOT_FOUND", message: `Event ${eventCode} not found` });
+			debugLog({
+				category: "extension-admin",
+				eventCode,
+				message: `${ctx.user.username} (id ${ctx.user.id}) switched extensions ${input.enabled ? "on" : "off"} for ${eventCode}`,
+				data: { adminUserId: ctx.user.id, adminUsername: ctx.user.username, eventCode, enabled: input.enabled },
+			});
+			return { eventCode, enabled: input.enabled };
+		}),
+
+	/** Every event whose extensions are switched off (all others are on). */
+	listEventsWithExtensionsOff: adminProcedure.query(
+		async (): Promise<{ code: string; name: string }[]> => listEventsWithExtensionsOff(),
+	),
+
+	/**
+	 * Event codes for the current season (UTC calendar year, the same year the
+	 * year-end archive uses), newest first, for a dropdown.
+	 */
+	getSeasonEventCodes: adminProcedure.query(
+		async (): Promise<{ code: string; name: string; startDate: string | null }[]> => {
+			const rows = await db
+				.select({
+					code: events.code,
+					name: events.name,
+					startDate: events.startDate,
+					endDate: events.endDate,
+					created_at: events.created_at,
+				})
+				.from(events)
+				.execute();
+			return filterSeasonEvents(rows, new Date().getUTCFullYear());
+		},
+	),
+
+	// #endregion
+
+	// #region Active users
+
+	/** Distinct app users per bucket over the last 4 days, oldest first, zeros included. */
+	getActiveUsers: adminProcedure
+		.input(z.object({ bucketMinutes: z.union([z.literal(5), z.literal(15)]).default(5) }).optional())
+		.query(async ({ input }): Promise<ActiveUsersPoint[]> => getActiveUsers(input?.bucketMinutes ?? 5)),
+
+	// #endregion
 });
